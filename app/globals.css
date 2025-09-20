@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Print styles for student reports */
+@media print {
+  .print\\:shadow-none {
+    box-shadow: none !important;
+  }
+  
+  .print\\:rounded-none {
+    border-radius: 0 !important;
+  }
+  
+  /* Hide non-essential elements when printing */
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure proper page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+  
+  .page-break-after {
+    page-break-after: always;
+  }
+  
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+  
+  /* Optimize colors for printing */
+  .print\\:text-black {
+    color: black !important;
+  }
+  
+  .print\\:bg-white {
+    background-color: white !important;
+  }
+  
+  /* Ensure tables don't break across pages */
+  table {
+    page-break-inside: avoid;
+  }
+  
+  /* Optimize margins for printing */
+  body {
+    margin: 0;
+    padding: 0;
+  }
+  
+  .print-container {
+    margin: 0;
+    padding: 20px;
+    max-width: none;
+  }
+}
+
+/* Component utilities (for legacy w11-* classes used in auth pages) */
+@layer components {
+  .w11-card {
+    @apply bg-white/90 dark:bg-slate-800/80 backdrop-blur shadow-lg rounded-xl border border-gray-200/60 dark:border-slate-700/60;
+  }
+  .w11-title {
+    @apply font-semibold text-gray-900 dark:text-white;
+  }
+  .w11-muted {
+    @apply text-sm text-gray-600 dark:text-gray-300;
+  }
+  .w11-label {
+    @apply text-sm font-medium text-gray-700 dark:text-gray-200;
+  }
+  .w11-input {
+    @apply w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition;
+  }
+  .w11-btn {
+    @apply w-full px-4 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors;
+  }
+  .w11-link {
+    @apply text-blue-600 dark:text-blue-400 hover:underline;
+  }
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Loading animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Report specific styles */
+.report-container {
+  font-family: 'Times New Roman', serif;
+  line-height: 1.6;
+}
+
+.report-header {
+  border-bottom: 2px solid #333;
+  padding-bottom: 1rem;
+  margin-bottom: 2rem;
+}
+
+.report-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+
+.report-table th,
+.report-table td {
+  border: 1px solid #333;
+  padding: 0.5rem;
+  text-align: left;
+}
+
+.report-table th {
+  background-color: #f5f5f5;
+  font-weight: bold;
+}
+
+.report-signature-line {
+  border-bottom: 1px solid #333;
+  width: 200px;
+  margin: 0 auto;
+  margin-bottom: 0.25rem;
+}
+
+/* Responsive design improvements */
+@media (max-width: 768px) {
+  .report-container {
+    padding: 1rem;
+  }
+  
+  .report-table {
+    font-size: 0.875rem;
+  }
+  
+  .report-table th,
+  .report-table td {
+    padding: 0.25rem;
+  }
+}
