@@ -33,9 +33,7 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/paia-manual" className="hover:text-white transition-colors">
-                  PAIA Manual
-                </Link>
+                {/* Removed PAIA Manual link per request */}
               </li>
             </ul>
           </div>

@@ -120,13 +120,17 @@ export default function Home() {
               A quick walkthrough of onboarding, attendance, grading, and reporting.
             </p>
             <div className="relative w-full aspect-video bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden">
-              <iframe
+              {/* 60–90s product walkthrough video. Replace the src with your hosted MP4 URL. */}
+              <video
                 className="w-full h-full"
-                src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0"
-                title="PwezaCore Demo"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
+                controls
+                playsInline
+                preload="metadata"
+                poster="/opengraph-image.png"
+              >
+                <source src="/videos/pwezacore-walkthrough.mp4#t=0.1" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </div>
           </div>
         </section>

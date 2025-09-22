@@ -53,19 +53,24 @@ alter table public.affiliate_clicks enable row level security;
 alter table public.affiliate_earnings enable row level security;
 
 -- Allow authenticated users to view their own affiliate rows
-create policy if not exists affiliates_select_self on public.affiliates for select
+drop policy if exists affiliates_select_self on public.affiliates;
+create policy affiliates_select_self on public.affiliates for select
   using (auth.uid() = user_id);
-create policy if not exists affiliates_insert_self on public.affiliates for insert
+drop policy if exists affiliates_insert_self on public.affiliates;
+create policy affiliates_insert_self on public.affiliates for insert
   with check (auth.uid() = user_id);
 
 -- Codes visible via join; restrict inserts to owner/service role
-create policy if not exists affiliate_codes_select_join on public.affiliate_codes for select
+drop policy if exists affiliate_codes_select_join on public.affiliate_codes;
+create policy affiliate_codes_select_join on public.affiliate_codes for select
   using (exists(select 1 from public.affiliates a where a.affiliate_id = affiliate_codes.affiliate_id and a.user_id = auth.uid()));
 
 -- Clicks/Earnings readable by affiliate owner
-create policy if not exists affiliate_clicks_select_owner on public.affiliate_clicks for select
+drop policy if exists affiliate_clicks_select_owner on public.affiliate_clicks;
+create policy affiliate_clicks_select_owner on public.affiliate_clicks for select
   using (exists(select 1 from public.affiliates a where a.affiliate_id = affiliate_clicks.affiliate_id and a.user_id = auth.uid()));
-create policy if not exists affiliate_earnings_select_owner on public.affiliate_earnings for select
+drop policy if exists affiliate_earnings_select_owner on public.affiliate_earnings;
+create policy affiliate_earnings_select_owner on public.affiliate_earnings for select
   using (exists(select 1 from public.affiliates a where a.affiliate_id = affiliate_earnings.affiliate_id and a.user_id = auth.uid()));
 
 -- API routes should use service role for inserts to clicks/earnings
