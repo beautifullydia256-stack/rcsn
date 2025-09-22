@@ -1,10 +1,11 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import Script from 'next/script';
-import { ThemeToggle } from '@/src/components/theme-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
   return (
