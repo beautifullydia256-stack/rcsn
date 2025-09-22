@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThemeToggle } from '@/src/components/theme-toggle';
 
 export default function Home() {
@@ -16,7 +17,10 @@ export default function Home() {
               animate={{ opacity: 1, x: 0 }}
               className="flex items-center"
             >
-              <h1 className="text-2xl font-bold text-blue-600">PwezaCore</h1>
+              <div className="flex items-center gap-2">
+                <Image src="/logo.png" alt="PwezaCore" width={28} height={28} className="rounded" />
+                <h1 className="text-2xl font-bold text-blue-600">PwezaCore</h1>
+              </div>
             </motion.div>
             <motion.div
               initial={{ opacity: 0, x: 20 }}

@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -262,7 +263,8 @@ export default function Register() {
           transition={{ delay: 0.12 }}
           className="px-6 sm:px-8 pt-6 sm:pt-8 text-center"
         >
-          <div className="inline-flex items-center gap-2">
+          <div className="inline-flex items-center gap-2 justify-center">
+            <Image src="/logo.png" alt="PwezaCore" width={36} height={36} className="rounded" />
             <h1 className="text-3xl sm:text-4xl font-bold text-blue-600 tracking-tight">PwezaCore</h1>
           </div>
           <p className="mt-2 text-sm text-white/80">Register your school</p>
