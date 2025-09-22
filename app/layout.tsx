@@ -5,6 +5,7 @@ import { ReactQueryProvider } from "@/src/lib/queryClient";
 import { ThemeProvider } from "@/src/lib/theme-provider";
 import React from "react";
 import FooterGate from "@/src/components/FooterGate";
+import CookieConsent from "@/src/components/CookieConsent";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -37,6 +38,7 @@ export default function RootLayout({
         >
           <ReactQueryProvider>
             {children}
+            <CookieConsent />
             <FooterGate />
           </ReactQueryProvider>
         </ThemeProvider>
