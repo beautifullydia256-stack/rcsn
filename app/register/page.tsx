@@ -123,6 +123,19 @@ export default function Register() {
         throw new Error('Failed to create user account');
       }
 
+      // If user arrived with UTM, record conversion (server calculates earnings later)
+      try {
+        const url = new URL(window.location.href);
+        const utm_campaign = url.searchParams.get('utm_campaign');
+        if (utm_campaign) {
+          await fetch('/api/affiliate/convert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ utm_campaign, referred_user_id: authData.user.id, plan: 'Pro', amount_cents: 0 })
+          });
+        }
+      } catch (_) {}
+
       // Create user record in public.users table
       const { error: userError } = await supabase
         .from('users')

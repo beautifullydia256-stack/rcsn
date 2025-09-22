@@ -7,6 +7,7 @@ import React from "react";
 import FooterGate from "@/src/components/FooterGate";
 import CookieConsent from "@/src/components/CookieConsent";
 import LiveChatWidget from "@/src/components/LiveChatWidget";
+import UTMTracker from "@/src/components/UTMTracker";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -38,6 +39,7 @@ export default function RootLayout({
           storageKey="pwezacore-theme"
         >
           <ReactQueryProvider>
+            <UTMTracker />
             {children}
             <CookieConsent />
             <LiveChatWidget />
