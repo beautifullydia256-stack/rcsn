@@ -9,13 +9,7 @@ import { ThemeToggle } from '@/src/components/theme-toggle';
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 transition-colors duration-300">
-      <Script
-        id="adsense-home"
-        async
-        strategy="afterInteractive"
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3223074412064973"
-        crossOrigin="anonymous"
-      />
+      <Script id="adsense-home" strategy="beforeInteractive" async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3223074412064973" crossOrigin="anonymous" />
       {/* Navigation */}
       <nav className="bg-white dark:bg-slate-800 shadow-sm transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
