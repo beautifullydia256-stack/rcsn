@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/src/lib/theme-provider";
 import React from "react";
 import FooterGate from "@/src/components/FooterGate";
 import CookieConsent from "@/src/components/CookieConsent";
+import LiveChatWidget from "@/src/components/LiveChatWidget";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -39,6 +40,7 @@ export default function RootLayout({
           <ReactQueryProvider>
             {children}
             <CookieConsent />
+            <LiveChatWidget />
             <FooterGate />
           </ReactQueryProvider>
         </ThemeProvider>
