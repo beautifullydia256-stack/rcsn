@@ -409,11 +409,8 @@ export default function Home() {
         <section className="mt-20">
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-8 sm:p-10 text-white text-center shadow-lg">
             <h2 className="text-3xl font-bold">Ready to streamline your school?</h2>
-            <p className="mt-2 text-white/90">Book a demo or get started for free today.</p>
+            <p className="mt-2 text-white/90">Get started for free today.</p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/contact">
-                <span className="inline-block bg-white text-blue-700 font-semibold px-6 py-3 rounded-lg hover:bg-blue-50 transition">Book a Demo</span>
-              </Link>
               <Link href="/register">
                 <span className="inline-block border border-white text-white font-semibold px-6 py-3 rounded-lg hover:bg-white/10 transition">Get Started Free</span>
               </Link>
