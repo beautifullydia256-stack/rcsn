@@ -4,6 +4,7 @@ import "./globals.css";
 import { ReactQueryProvider } from "@/src/lib/queryClient";
 import { ThemeProvider } from "@/src/lib/theme-provider";
 import React from "react";
+import Footer from "@/src/components/Footer";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -34,7 +35,10 @@ export default function RootLayout({
           defaultTheme="light"
           storageKey="pwezacore-theme"
         >
-          <ReactQueryProvider>{children}</ReactQueryProvider>
+          <ReactQueryProvider>
+            {children}
+            <Footer />
+          </ReactQueryProvider>
         </ThemeProvider>
       </body>
     </html>
