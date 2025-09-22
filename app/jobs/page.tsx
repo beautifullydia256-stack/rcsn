@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Script from 'next/script';
 
 interface Job {
   job_id: string;
@@ -41,6 +42,13 @@ export default function Jobs() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Script
+        id="adsense-jobs"
+        async
+        strategy="afterInteractive"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3223074412064973"
+        crossOrigin="anonymous"
+      />
       {/* Navigation */}
       <nav className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
