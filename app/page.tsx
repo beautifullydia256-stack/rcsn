@@ -203,28 +203,7 @@ export default function Home() {
         </motion.div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-slate-950 text-white py-12 mt-20 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h3 className="text-2xl font-bold mb-4">PwezaCore</h3>
-            <p className="text-gray-400 mb-6">
-              Modern school management made simple
-            </p>
-            <div className="flex justify-center space-x-6">
-              <Link href="/library" className="text-gray-400 hover:text-white transition-colors">
-                Library
-              </Link>
-              <Link href="/jobs" className="text-gray-400 hover:text-white transition-colors">
-                Jobs
-              </Link>
-              <Link href="/register" className="text-gray-400 hover:text-white transition-colors">
-                Register
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Global footer renders via FooterGate in layout */}
     </div>
   );
 }

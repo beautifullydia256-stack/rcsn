@@ -4,7 +4,7 @@ import "./globals.css";
 import { ReactQueryProvider } from "@/src/lib/queryClient";
 import { ThemeProvider } from "@/src/lib/theme-provider";
 import React from "react";
-import Footer from "@/src/components/Footer";
+import FooterGate from "@/src/components/FooterGate";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -37,7 +37,7 @@ export default function RootLayout({
         >
           <ReactQueryProvider>
             {children}
-            <Footer />
+            <FooterGate />
           </ReactQueryProvider>
         </ThemeProvider>
       </body>
