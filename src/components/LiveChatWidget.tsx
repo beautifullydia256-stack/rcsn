@@ -2,9 +2,16 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
 
 export default function LiveChatWidget() {
+  const pathname = usePathname();
+  
+  // Only show on home page
+  if (pathname !== "/") {
+    return null;
+  }
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);

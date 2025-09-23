@@ -8,7 +8,6 @@ import FooterGate from "@/src/components/FooterGate";
 import CookieConsent from "@/src/components/CookieConsent";
 import LiveChatWidget from "@/src/components/LiveChatWidget";
 import UTMTracker from "@/src/components/UTMTracker";
-import { usePathname } from "next/navigation";
 
 const inter = Inter({
   variable: "--font-geist-sans",
@@ -25,11 +24,6 @@ export const metadata: Metadata = {
   description: "PwezaCore – Multi-tenant school management SaaS platform.",
 };
 
-function LiveChatGate() {
-  const pathname = usePathname();
-  if (pathname !== "/") return null;
-  return <LiveChatWidget />;
-}
 
 export default function RootLayout({
   children,
@@ -44,7 +38,7 @@ export default function RootLayout({
             <UTMTracker />
             {children}
             <CookieConsent />
-            <LiveChatGate />
+            <LiveChatWidget />
             <FooterGate />
           </ReactQueryProvider>
         </ThemeProvider>
