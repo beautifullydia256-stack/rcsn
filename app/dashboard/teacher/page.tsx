@@ -86,6 +86,12 @@ export default function TeacherDashboard() {
         if (trow2) teacherRow = trow2;
       }
       setTeacherRowId(teacherRow?.teacher_id || null);
+      console.log('Teacher resolution:', {
+        metaTeacherId,
+        teacherRow,
+        userEmail: user.email,
+        resolvedTeacherId: teacherRow?.teacher_id
+      });
 
       // Load current term window
       const { data: termRows } = await supabase
@@ -98,13 +104,37 @@ export default function TeacherDashboard() {
         .order('term', { ascending: false });
       const currentTermWindow = termRows && termRows.length > 0 ? termRows[0] : null;
 
-      // Load teacher assignments (classes & subjects) using teachers.teacher_id
-      const { data: tcs } = teacherRow?.teacher_id ? await supabase
-        .from('teacher_class_subjects')
-        .select('class_name, subject')
-        .eq('teacher_id', teacherRow.teacher_id)
-        .eq('school_id', userData.school_id)
-        : { data: [] as any[] } as any;
+      // Load teacher assignments (classes & subjects) - try both teacher_id and user_id
+      let tcs: any[] = [];
+      
+      // First try with teacher_id from teachers table
+      if (teacherRow?.teacher_id) {
+        const { data: tcs1, error: error1 } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name, subject')
+          .eq('teacher_id', teacherRow.teacher_id)
+          .eq('school_id', userData.school_id);
+        
+        if (!error1 && tcs1) {
+          tcs = tcs1;
+          console.log('Found assignments using teacher_id:', tcs);
+        } else {
+          console.log('No assignments found with teacher_id, trying user_id...');
+          // Fallback: try with user.id (user_id)
+          const { data: tcs2, error: error2 } = await supabase
+            .from('teacher_class_subjects')
+            .select('class_name, subject')
+            .eq('teacher_id', user.id)  // Try using user.id as teacher_id
+            .eq('school_id', userData.school_id);
+          
+          if (!error2 && tcs2) {
+            tcs = tcs2;
+            console.log('Found assignments using user_id:', tcs);
+          } else {
+            console.log('No assignments found with user_id either:', error2);
+          }
+        }
+      }
 
       type TCS = { class_name: string; subject: string };
       const tcsData: TCS[] = Array.isArray(tcs) ? (tcs as unknown as TCS[]) : [];
