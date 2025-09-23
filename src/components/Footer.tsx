@@ -70,7 +70,7 @@ export default function Footer() {
 
       <div className="border-t border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-sm text-gray-400">
-          © {year} PwezaCore. All rights reserved.
+          © {year} PwezaCore. All rights reserved. · Contact: <a href="tel:+256778976805" className="hover:text-white">+256778976805</a>
         </div>
       </div>
     </footer>

@@ -111,30 +111,6 @@ export default function Home() {
           </motion.div>
         </div>
 
-        {/* Demo / Explainer Video Section */}
-        {/* Replace the iframe src with your own video/GIF or use a video player */}
-        <section className="mt-16">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-lg p-6 sm:p-8">
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4 text-center">See How PwezaCore Works</h2>
-            <p className="text-gray-600 dark:text-gray-300 text-center mb-6">
-              A quick walkthrough of onboarding, attendance, grading, and reporting.
-            </p>
-            <div className="relative w-full aspect-video bg-slate-100 dark:bg-slate-700 rounded-xl overflow-hidden">
-              {/* 60–90s product walkthrough video. Replace the src with your hosted MP4 URL. */}
-              <video
-                className="w-full h-full"
-                controls
-                playsInline
-                preload="metadata"
-                poster="/opengraph-image.png"
-              >
-                <source src="/videos/pwezacore-walkthrough.mp4#t=0.1" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          </div>
-        </section>
-
         {/* Features Grid */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
