@@ -50,12 +50,23 @@ export default function TeacherDashboard() {
         return;
       }
 
-      // Get user's school_id
+      // Get user's school_id and school type
       const { data: userData } = await supabase
         .from('users')
         .select('school_id,name')
         .eq('user_id', user.id)
         .single();
+
+      // Get school info to check type
+      let schoolType = 'Unknown';
+      if (userData?.school_id) {
+        const { data: schoolData } = await supabase
+          .from('schools')
+          .select('type')
+          .eq('school_id', userData.school_id)
+          .single();
+        schoolType = schoolData?.type || 'Unknown';
+      }
 
       if (!userData?.school_id) {
         router.push('/login');
@@ -87,10 +98,13 @@ export default function TeacherDashboard() {
       }
       setTeacherRowId(teacherRow?.teacher_id || null);
       console.log('Teacher resolution:', {
+        schoolType,
         metaTeacherId,
         teacherRow,
         userEmail: user.email,
-        resolvedTeacherId: teacherRow?.teacher_id
+        resolvedTeacherId: teacherRow?.teacher_id,
+        schoolId: userData.school_id,
+        userMetadata: user.user_metadata
       });
 
       // Load current term window
@@ -135,6 +149,16 @@ export default function TeacherDashboard() {
           }
         }
       }
+
+      // Debug: Show all teacher_class_subjects for this school
+      console.log(`Debugging assignments for ${schoolType} school:`, {
+        schoolId: userData.school_id,
+        allAssignmentsInSchool: await supabase
+          .from('teacher_class_subjects')
+          .select('*')
+          .eq('school_id', userData.school_id)
+          .then(r => r.data)
+      });
 
       type TCS = { class_name: string; subject: string };
       const tcsData: TCS[] = Array.isArray(tcs) ? (tcs as unknown as TCS[]) : [];
