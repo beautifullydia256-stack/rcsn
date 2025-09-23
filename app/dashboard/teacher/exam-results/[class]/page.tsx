@@ -9,7 +9,12 @@ export default function TeacherExamResultsClassPage() {
   const router = useRouter();
   const params = useParams();
   const className = decodeURIComponent(params.class as string);
-  const isSecondary = useMemo(() => /^s\d/i.test(className?.trim() || "") || /^s\b/i.test(className?.trim() || ""), [className]);
+  const isSecondary = useMemo(() => {
+    const trimmed = className?.trim() || "";
+    const matches = /^s\d/i.test(trimmed) || /^s\b/i.test(trimmed);
+    console.log("Class name:", trimmed, "isSecondary:", matches); // Debug log
+    return matches;
+  }, [className]);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -341,7 +346,16 @@ export default function TeacherExamResultsClassPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-white text-2xl font-semibold">Insert Exam Results</h1>
-            <p className="text-white/80 text-sm mt-1">Class: {className}</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-white/80 text-sm">Class: {className}</p>
+              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                isSecondary 
+                  ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' 
+                  : 'bg-green-600/20 text-green-300 border border-green-500/30'
+              }`}>
+                {isSecondary ? 'Secondary Format' : 'Primary Format'}
+              </div>
+            </div>
           </div>
           <div className="flex gap-3">
             <button
