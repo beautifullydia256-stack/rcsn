@@ -11,8 +11,10 @@ export default function TeacherExamResultsClassPage() {
   const className = decodeURIComponent(params.class as string);
   const isSecondary = useMemo(() => {
     const trimmed = className?.trim() || "";
-    const matches = /^s\d/i.test(trimmed) || /^s\b/i.test(trimmed);
-    console.log("Class name:", trimmed, "isSecondary:", matches); // Debug log
+    // Check for secondary classes: Senior 1-6, S1-S6, or any class starting with "Senior" or "S" followed by number
+    // This covers: "Senior 1", "Senior1", "S1", "S 1", "senior 1", "Senior 1 West", etc.
+    const matches = /^(senior\s*[1-6]|s\s*[1-6])/i.test(trimmed);
+    console.log("Class name:", trimmed, "isSecondary:", matches, "Pattern match:", /^(senior\s*[1-6]|s\s*[1-6])/i.test(trimmed)); // Debug log
     return matches;
   }, [className]);
   
