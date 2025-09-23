@@ -92,6 +92,8 @@ export default function TeacherExamResultsClassPage() {
           schoolId = schoolId || userData?.school_id;
         }
         
+        console.log('Teacher ID:', teacherId, 'School ID:', schoolId);
+        
         if (!teacherId) {
           setError('Teacher ID not found. Please contact your administrator.');
           return;
@@ -103,6 +105,9 @@ export default function TeacherExamResultsClassPage() {
         }
 
         // Get teacher's subjects for this class
+        console.log('Fetching assignments for:', { schoolId, teacherId, className });
+        
+        // Try to get from teacher_class_subjects table first
         const { data: assignments, error: assignmentsError } = await supabase
           .from('teacher_class_subjects')
           .select('subject')
@@ -112,9 +117,44 @@ export default function TeacherExamResultsClassPage() {
 
         if (assignmentsError) {
           console.error('Error fetching teacher assignments:', assignmentsError);
-          throw assignmentsError;
+          
+          // Fallback: try to get from teachers table
+          console.log('Trying fallback: checking teachers table...');
+          const { data: teacherData, error: teacherError } = await supabase
+            .from('teachers')
+            .select('subjects')
+            .eq('school_id', schoolId)
+            .eq('teacher_id', teacherId)
+            .single();
+            
+          if (teacherError) {
+            console.error('Fallback also failed:', teacherError);
+            setError(`Failed to load your assignments: ${assignmentsError.message}`);
+            return;
+          }
+          
+          // Use subjects from teachers table
+          const teacherSubjects = teacherData?.subjects || [];
+          console.log('Using fallback subjects from teachers table:', teacherSubjects);
+          
+          if (teacherSubjects.length === 0) {
+            setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+            return;
+          }
+          
+          setTeacherSubjects(teacherSubjects);
+        } else {
+          console.log('Teacher assignments:', assignments);
+          const subjects = assignments?.map(a => a.subject) || [];
+          console.log('Subjects for this class:', subjects);
+          
+          if (subjects.length === 0) {
+            setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+            return;
+          }
+          
+          setTeacherSubjects(subjects);
         }
-        setTeacherSubjects(assignments?.map(a => a.subject) || []);
 
         // Get exam sets for this class that are active for input
         const { data: examSetsData, error: examSetsError } = await supabase
