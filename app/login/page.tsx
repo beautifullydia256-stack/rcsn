@@ -32,6 +32,93 @@ export default function Login() {
   }, [showSuccess]);
 
   // Note: Do not auto-redirect on mount to avoid refresh loops.
+  // Attempt to restore a remembered session from localStorage on mount
+  useEffect(() => {
+    const attemptRestore = async () => {
+      try {
+        const { data: current } = await supabase.auth.getSession();
+        if (current?.session) return; // already signed in
+
+        const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pwezacore_remember') : null;
+        if (!raw) return;
+        const saved = JSON.parse(raw);
+        if (!saved?.access_token || !saved?.refresh_token) return;
+
+        const { data, error } = await supabase.auth.setSession({
+          access_token: saved.access_token,
+          refresh_token: saved.refresh_token,
+        });
+        if (error || !data.session) {
+          // stored tokens invalid; cleanup
+          window.localStorage.removeItem('pwezacore_remember');
+          return;
+        }
+
+        setShowSuccess(true);
+        await completePostLogin(data.session, data.session.user);
+      } catch (e) {
+        // ignore restore errors
+      }
+    };
+    attemptRestore();
+  }, []);
+
+  // Shared post-login flow: sync cookies, resolve role, honor returnUrl, redirect
+  const completePostLogin = async (session: any, user: any) => {
+    try {
+      const access_token = session?.access_token as string | undefined;
+      const refresh_token = session?.refresh_token as string | undefined;
+      if (access_token && refresh_token) {
+        await fetch('/api/auth/session-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_token, refresh_token })
+        });
+      }
+    } catch (e) {
+      console.warn('Session sync failed (non-fatal):', e);
+    }
+
+    const userMetadata = user?.raw_user_meta_data || {};
+    const roleLower = (userMetadata?.role || '').toLowerCase();
+    const roleToPath: Record<string, string> = {
+      owner: '/dashboard/owner',
+      admin: '/dashboard/admin',
+      teacher: '/dashboard/teacher',
+      parent: '/dashboard/parent',
+      student: '/dashboard/student',
+    };
+
+    // Resolve role robustly: metadata → users table → student_id heuristic
+    let resolvedRole = roleLower as string | undefined;
+    if (!resolvedRole && user?.id) {
+      try {
+        const { data: userRows } = await supabase
+          .from('users')
+          .select('role')
+          .eq('user_id', user.id)
+          .limit(1);
+        const dbRole = userRows && userRows.length > 0 ? (userRows[0].role as string | undefined) : undefined;
+        resolvedRole = (dbRole || '').toLowerCase();
+      } catch {}
+    }
+    if (!resolvedRole) {
+      const studentId = (user?.raw_user_meta_data as any)?.student_id as string | undefined;
+      if (studentId) resolvedRole = 'student';
+    }
+
+    // Honor returnUrl if present
+    let targetUrl: string | null = null;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const returnUrl = urlParams.get('returnUrl');
+      if (returnUrl) targetUrl = decodeURIComponent(returnUrl);
+    } catch {}
+
+    const preferred = roleToPath[resolvedRole || ''] || '/';
+    const destination = targetUrl || preferred;
+    if (typeof window !== 'undefined') window.location.replace(destination);
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -152,26 +239,18 @@ export default function Login() {
       if (data.session) {
         setShowSuccess(true);
 
-        // Resolve role robustly: metadata → users table → student_id heuristic
-        let resolvedRole = roleLower;
-        if (!resolvedRole) {
-          try {
-            const { data: userRows } = await supabase
-              .from('users')
-              .select('role')
-              .eq('user_id', data.user.id)
-              .limit(1);
-            const dbRole = userRows && userRows.length > 0 ? (userRows[0].role as string | undefined) : undefined;
-            resolvedRole = (dbRole || '').toLowerCase();
-          } catch {}
-        }
-        if (!resolvedRole) {
-          const studentId = (data.user.raw_user_meta_data as any)?.student_id as string | undefined;
-          if (studentId) resolvedRole = 'student';
-        }
+        // Persist tokens if Remember me checked
+        try {
+          if (rememberMe && typeof window !== 'undefined') {
+            const access_token = data.session.access_token as string | undefined;
+            const refresh_token = data.session.refresh_token as string | undefined;
+            if (access_token && refresh_token) {
+              window.localStorage.setItem('pwezacore_remember', JSON.stringify({ access_token, refresh_token }));
+            }
+          }
+        } catch {}
 
-        const preferred = roleToPath[resolvedRole] || '/';
-        if (typeof window !== 'undefined') window.location.replace(preferred);
+        await completePostLogin(data.session, data.user);
         return;
       }
 
