@@ -52,7 +52,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // If we have a session and user is on auth pages, send them to their dashboard
+  // If we have a session and user is on auth pages, send them to their dashboard (relaxed login)
   if (session && isAuthPage) {
     const role = (session.user.user_metadata as any)?.role as string | undefined;
     return NextResponse.redirect(new URL(roleToDashboard(role), req.url));

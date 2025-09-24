@@ -1,21 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+// Use the shared Supabase client configured for per-tab sessions
+import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
-// Initialize Supabase client
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Supabase client is initialized in src/lib/supabase with per-tab sessionStorage
 
 export default function Login() {
   const [formData, setFormData] = useState({ 
@@ -142,9 +135,24 @@ export default function Login() {
         throw new Error('Login failed - no user data received');
       }
 
-      // Check user metadata first
+      // Immediate redirect based on role from metadata to avoid middleware race
       const userMetadata = data.user.raw_user_meta_data;
       const metadataRole = userMetadata?.role;
+      const roleLower = (metadataRole || '').toLowerCase();
+      const roleToPath: Record<string, string> = {
+        owner: '/dashboard/owner',
+        admin: '/dashboard/admin',
+        teacher: '/dashboard/teacher',
+        parent: '/dashboard/parent',
+        student: '/dashboard/student',
+      };
+
+      if (data.session && roleToPath[roleLower]) {
+        setShowSuccess(true);
+        // Redirect immediately; don't wait for DB lookups
+        router.push(roleToPath[roleLower]);
+        return;
+      }
 
       // Handle student login
       if (metadataRole === 'student') {
