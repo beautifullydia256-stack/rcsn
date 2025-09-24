@@ -31,25 +31,28 @@ export default function Login() {
     return () => clearTimeout(t);
   }, [showSuccess]);
 
-  // If a session already exists on the login page, redirect client-side as a safety net
+  // If a server-validated session already exists on the login page, redirect.
+  // Use server check to avoid client-only state causing loops.
   useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      const role = (data.session?.user?.user_metadata as any)?.role as string | undefined;
-      const lower = (role || '').toLowerCase();
-      const roleToPath: Record<string, string> = {
-        owner: '/dashboard/owner',
-        admin: '/dashboard/admin',
-        teacher: '/dashboard/teacher',
-        parent: '/dashboard/parent',
-        student: '/dashboard/student',
-      };
-      if (data.session) {
-        const preferred = roleToPath[lower] || '/dashboard';
-        if (typeof window !== 'undefined') window.location.replace(preferred);
-      }
+    const checkServerSession = async () => {
+      try {
+        const res = await fetch('/api/auth/whoami', { credentials: 'include', cache: 'no-store' });
+        const j = await res.json();
+        if (j?.authenticated) {
+          const lower = (j.role || '').toLowerCase();
+          const roleToPath: Record<string, string> = {
+            owner: '/dashboard/owner',
+            admin: '/dashboard/admin',
+            teacher: '/dashboard/teacher',
+            parent: '/dashboard/parent',
+            student: '/dashboard/student',
+          };
+          const preferred = roleToPath[lower] || '/dashboard';
+          if (typeof window !== 'undefined') window.location.replace(preferred);
+        }
+      } catch {}
     };
-    checkSession();
+    checkServerSession();
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
