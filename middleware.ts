@@ -79,6 +79,11 @@ export async function middleware(req: NextRequest) {
     const role = (session.user.user_metadata as any)?.role as string | undefined;
     const lower = (role || '').toLowerCase();
 
+    // If role is not yet known (common for staff accounts), allow client to resolve without redirecting
+    if (!lower) {
+      return res;
+    }
+
     // Enforce role-specific dashboard prefixes
     if (pathname.startsWith('/dashboard/admin') && lower !== 'admin' && lower !== 'owner') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
