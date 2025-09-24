@@ -63,22 +63,8 @@ export default function Login() {
     attemptRestore();
   }, []);
 
-  // Shared post-login flow: sync cookies, resolve role, honor returnUrl, redirect
+  // Shared post-login flow: resolve role, honor returnUrl, redirect (no cookie sync)
   const completePostLogin = async (session: any, user: any) => {
-    try {
-      const access_token = session?.access_token as string | undefined;
-      const refresh_token = session?.refresh_token as string | undefined;
-      if (access_token && refresh_token) {
-        await fetch('/api/auth/session-sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ access_token, refresh_token })
-        });
-      }
-    } catch (e) {
-      console.warn('Session sync failed (non-fatal):', e);
-    }
-
     const userMetadata = user?.raw_user_meta_data || {};
     const roleLower = (userMetadata?.role || '').toLowerCase();
     const roleToPath: Record<string, string> = {
