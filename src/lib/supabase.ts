@@ -8,7 +8,46 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Use per-tab session isolation in the browser to avoid session overwrite across tabs/users.
+// - Browser: sessionStorage-based auth with a unique storageKey per tab
+// - Server: non-persistent client (no auth persistence)
+const isBrowser = typeof window !== 'undefined';
+
+function getOrCreateTabId(): string {
+  if (!isBrowser) return 'server';
+  const tabKey = 'pwezacore_tab_id';
+  try {
+    let tabId = window.sessionStorage.getItem(tabKey);
+    if (!tabId) {
+      tabId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      window.sessionStorage.setItem(tabKey, tabId);
+    }
+    return tabId;
+  } catch {
+    // Fallback if sessionStorage is unavailable
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+export const supabase = isBrowser
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        // Persist session per tab to avoid cross-tab overwrites
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+        storageKey: `pwezacore-auth:${getOrCreateTabId()}`,
+      },
+    })
+  : createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        // On the server, do not persist or auto-refresh
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    });
 
 // Admin client for service role operations (only use on server-side)
 export const supabaseAdmin = supabaseServiceKey 
