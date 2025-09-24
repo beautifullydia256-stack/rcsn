@@ -64,10 +64,14 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url));
   }
 
-  // If we have a session and user is on auth pages, send them to their dashboard (redundant safety)
+  // If we have a session and user is on auth pages, send them to their dashboard when role is known
   if (session && isAuthPage) {
     const role = (session.user.user_metadata as any)?.role as string | undefined;
-    return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    if (role) {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+    // No role in metadata: allow auth page to render so client can resolve and redirect
+    return res;
   }
 
   // Optional role-based routing guard inside dashboard
@@ -89,9 +93,13 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
 
-    // If user hits generic /dashboard, route them to their role dashboard explicitly
+    // If user hits generic /dashboard, route them to their role dashboard only when role is known
     if (pathname === '/dashboard') {
-      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+      if (role) {
+        return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+      }
+      // No role in metadata; let the client resolve destination
+      return res;
     }
   }
 
