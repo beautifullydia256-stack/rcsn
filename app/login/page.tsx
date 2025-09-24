@@ -31,6 +31,27 @@ export default function Login() {
     return () => clearTimeout(t);
   }, [showSuccess]);
 
+  // If a session already exists on the login page, redirect client-side as a safety net
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const role = (data.session?.user?.user_metadata as any)?.role as string | undefined;
+      const lower = (role || '').toLowerCase();
+      const roleToPath: Record<string, string> = {
+        owner: '/dashboard/owner',
+        admin: '/dashboard/admin',
+        teacher: '/dashboard/teacher',
+        parent: '/dashboard/parent',
+        student: '/dashboard/student',
+      };
+      if (data.session) {
+        const preferred = roleToPath[lower] || '/dashboard';
+        if (typeof window !== 'undefined') window.location.replace(preferred);
+      }
+    };
+    checkSession();
+  }, []);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -147,7 +168,7 @@ export default function Login() {
         student: '/dashboard/student',
       };
 
-      if (data.session && roleToPath[roleLower]) {
+      if (data.session) {
         setShowSuccess(true);
         try {
           // Proactively sync session tokens to HTTP cookies for middleware immediately
@@ -160,8 +181,10 @@ export default function Login() {
             body: JSON.stringify({ access_token, refresh_token })
           });
         } catch {}
-        // Redirect immediately; don't wait for DB lookups
-        router.replace(roleToPath[roleLower]);
+        // Prefer role-specific path if known; otherwise use generic /dashboard for middleware to route
+        const fallbackPath = '/dashboard';
+        const preferred = roleToPath[roleLower] || fallbackPath;
+        if (typeof window !== 'undefined') window.location.replace(preferred);
         return;
       }
 
