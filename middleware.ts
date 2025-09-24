@@ -45,14 +45,29 @@ export async function middleware(req: NextRequest) {
   const isAuthPage = pathname === '/login' || pathname === '/register';
   const isProtected = pathname.startsWith('/dashboard');
 
-  // If no session and route is protected, redirect to login
-  if (!session && isProtected) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('redirect', pathname);
-    return NextResponse.redirect(loginUrl);
+  // Handle /login and /register first to avoid loops
+  if (pathname.startsWith('/login')) {
+    if (session) {
+      const role = (session.user.user_metadata as any)?.role as string | undefined;
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+    // Allow login page to render when no session
+    return res;
+  }
+  if (pathname.startsWith('/register')) {
+    if (session) {
+      const role = (session.user.user_metadata as any)?.role as string | undefined;
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+    return res;
   }
 
-  // If we have a session and user is on auth pages, send them to their dashboard (relaxed login)
+  // If no session and route is protected, redirect to login without redirect params to prevent loops
+  if (!session && isProtected) {
+    return NextResponse.redirect(new URL('/login', req.url));
+  }
+
+  // If we have a session and user is on auth pages, send them to their dashboard (redundant safety)
   if (session && isAuthPage) {
     const role = (session.user.user_metadata as any)?.role as string | undefined;
     return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
