@@ -149,6 +149,17 @@ export default function Login() {
 
       if (data.session && roleToPath[roleLower]) {
         setShowSuccess(true);
+        try {
+          // Proactively sync session tokens to HTTP cookies for middleware immediately
+          const access_token = data.session.access_token as string;
+          const refresh_token = data.session.refresh_token as string;
+          await fetch('/api/auth/session-sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ access_token, refresh_token })
+          });
+        } catch {}
         // Redirect immediately; don't wait for DB lookups
         router.replace(roleToPath[roleLower]);
         return;
