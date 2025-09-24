@@ -27,6 +27,22 @@ export async function GET(req: NextRequest) {
 	const { data: { session } } = await supabase.auth.getSession();
 	if (!session) return NextResponse.json({ authenticated: false });
 
-	const role = (session.user.user_metadata as any)?.role as string | undefined;
+	// Resolve role: metadata → users table → student_id heuristic
+	let role = (session.user.user_metadata as any)?.role as string | undefined;
+	if (!role) {
+		try {
+			const { data: userRow } = await supabase
+				.from('users')
+				.select('role')
+				.eq('user_id', session.user.id)
+				.single();
+			if (userRow?.role) role = userRow.role as string;
+		} catch {}
+	}
+	if (!role) {
+		const studentId = (session.user.user_metadata as any)?.student_id as string | undefined;
+		if (studentId) role = 'student';
+	}
+
 	return NextResponse.json({ authenticated: true, role: (role || '').toLowerCase() });
 }
