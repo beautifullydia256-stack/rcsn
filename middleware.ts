@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 
 function roleToDashboard(role?: string | null): string {
   switch ((role || '').toLowerCase()) {
@@ -19,16 +19,26 @@ function roleToDashboard(role?: string | null): string {
 }
 
 export async function middleware(req: NextRequest) {
-  // Create a response that we can pass to the client (allows Supabase to set cookies)
   const res = NextResponse.next();
 
-  // Create a Supabase client scoped to this request
-  const supabase = createMiddlewareClient({ req, res });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
-  // Wait for session hydration
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
+    cookies: {
+      get(name: string) {
+        return req.cookies.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        res.cookies.set({ name, value, ...options });
+      },
+      remove(name: string, options: any) {
+        res.cookies.set({ name, value: '', ...options, maxAge: 0 });
+      },
+    },
+  });
+
+  const { data: { session } } = await supabase.auth.getSession();
 
   const url = req.nextUrl;
   const pathname = url.pathname || '/';
