@@ -99,6 +99,8 @@ export async function middleware(req: NextRequest) {
 // Protect dashboard routes; leave public and assets alone
 export const config = {
   matcher: [
+    '/login',
+    '/register',
     '/dashboard/:path*',
   ],
 };

@@ -150,14 +150,14 @@ export default function Login() {
       if (data.session && roleToPath[roleLower]) {
         setShowSuccess(true);
         // Redirect immediately; don't wait for DB lookups
-        router.push(roleToPath[roleLower]);
+        router.replace(roleToPath[roleLower]);
         return;
       }
 
       // Handle student login
       if (metadataRole === 'student') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/student'), 250);
+        setTimeout(() => router.replace('/dashboard/student'), 250);
         return;
       }
 
@@ -187,7 +187,7 @@ export default function Login() {
             // Still allow login as admin based on metadata
             console.log('Admin login based on metadata - redirecting to admin dashboard');
             setShowSuccess(true);
-            setTimeout(() => router.push('/dashboard/admin'), 250);
+            setTimeout(() => router.replace('/dashboard/admin'), 250);
             return;
           }
 
@@ -230,14 +230,14 @@ export default function Login() {
 
           console.log('Admin login with created user record and school - redirecting to admin dashboard');
           setShowSuccess(true);
-          setTimeout(() => router.push('/dashboard/admin'), 250);
+          setTimeout(() => router.replace('/dashboard/admin'), 250);
           return;
         }
 
         const role = userData[0].role;
         if (role === 'admin' || role === 'owner') {
           setShowSuccess(true);
-          setTimeout(() => router.push('/dashboard/admin'), 250);
+          setTimeout(() => router.replace('/dashboard/admin'), 250);
           return;
         }
       }
@@ -253,7 +253,7 @@ export default function Login() {
         if (userError.message.includes('No rows found') || userError.message.includes('not found')) {
           const studentId = data.user.raw_user_meta_data?.student_id;
           if (studentId) {
-            router.push('/dashboard/student');
+            router.replace('/dashboard/student');
             return;
           }
           throw new Error('User profile not found. Please contact administrator.');
@@ -265,7 +265,7 @@ export default function Login() {
       if (!userData || userData.length === 0) {
         const studentId = data.user.raw_user_meta_data?.student_id;
         if (studentId) {
-          router.push('/dashboard/student');
+          router.replace('/dashboard/student');
           return;
         }
         throw new Error('User profile not found. Please contact administrator.');
@@ -278,19 +278,19 @@ export default function Login() {
       const role = userData[0].role;
       if (role === 'owner') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/owner'), 250);
+        setTimeout(() => router.replace('/dashboard/owner'), 250);
       } else if (role === 'teacher') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/teacher'), 250);
+        setTimeout(() => router.replace('/dashboard/teacher'), 250);
       } else if (role === 'parent') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/parent'), 250);
+        setTimeout(() => router.replace('/dashboard/parent'), 250);
       } else if (role === 'student') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/student'), 250);
+        setTimeout(() => router.replace('/dashboard/student'), 250);
       } else if (role === 'admin') {
         setShowSuccess(true);
-        setTimeout(() => router.push('/dashboard/admin'), 250);
+        setTimeout(() => router.replace('/dashboard/admin'), 250);
       } else throw new Error('Invalid role');
     } catch (err: any) {
       setError(err.message || 'Login failed');
