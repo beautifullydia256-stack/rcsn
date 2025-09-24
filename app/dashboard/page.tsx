@@ -11,7 +11,28 @@ export default function DashboardIndex() {
   useEffect(() => {
     const go = async () => {
       try {
-        // Ensure we are authenticated (middleware should enforce this already)
+        // 1) Prefer server-side whoami to avoid client-only role gaps
+        try {
+          const res = await fetch('/api/auth/whoami', { cache: 'no-store' });
+          if (res.ok) {
+            const j = await res.json();
+            if (j.authenticated) {
+              const roleToPath: Record<string, string> = {
+                owner: '/dashboard/owner',
+                admin: '/dashboard/admin',
+                teacher: '/dashboard/teacher',
+                parent: '/dashboard/parent',
+                student: '/dashboard/student',
+              };
+              const serverRole = (j.role || '').toLowerCase();
+              const serverDest = roleToPath[serverRole] || '/';
+              router.replace(serverDest);
+              return;
+            }
+          }
+        } catch {}
+
+        // 2) Fallback to client session
         const { data: sessionData } = await supabase.auth.getSession();
         const session = sessionData?.session;
         if (!session) {
@@ -53,7 +74,7 @@ export default function DashboardIndex() {
           if (studentId) resolvedRole = 'student';
         }
 
-        const destination = roleToPath[resolvedRole || ''] || '/';
+        const destination = roleToPath[resolvedRole || ''] || '/dashboard/admin';
         router.replace(destination);
       } catch {
         router.replace('/');
