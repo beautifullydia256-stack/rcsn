@@ -63,8 +63,25 @@ export default function Login() {
     attemptRestore();
   }, []);
 
-  // Shared post-login flow: resolve role, honor returnUrl, redirect (no cookie sync)
+  // Shared post-login flow: sync cookies for SSR, resolve role, honor returnUrl, redirect
   const completePostLogin = async (session: any, user: any) => {
+    // Sync session to HTTP-only cookies so middleware/SSR see the auth state
+    try {
+      const access_token = session?.access_token as string | undefined;
+      const refresh_token = session?.refresh_token as string | undefined;
+      if (access_token && refresh_token) {
+        await fetch('/api/auth/session-sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ access_token, refresh_token })
+        });
+        // Small delay to ensure cookies are committed before navigating
+        await new Promise(r => setTimeout(r, 100));
+      }
+    } catch (e) {
+      // Non-fatal: proceed with client redirect even if cookie sync fails
+      console.warn('Session cookie sync failed (non-fatal):', e);
+    }
     const userMetadata = user?.raw_user_meta_data || {};
     const roleLower = (userMetadata?.role || '').toLowerCase();
     const roleToPath: Record<string, string> = {
@@ -93,12 +110,17 @@ export default function Login() {
       if (studentId) resolvedRole = 'student';
     }
 
-    // Honor returnUrl if present
+    // Honor returnUrl if present (but never send back to /login)
     let targetUrl: string | null = null;
     try {
       const urlParams = new URLSearchParams(window.location.search);
       const returnUrl = urlParams.get('returnUrl');
-      if (returnUrl) targetUrl = decodeURIComponent(returnUrl);
+      if (returnUrl) {
+        const decoded = decodeURIComponent(returnUrl);
+        if (!decoded.startsWith('/login')) {
+          targetUrl = decoded;
+        }
+      }
     } catch {}
 
     const preferred = roleToPath[resolvedRole || ''] || '/';
