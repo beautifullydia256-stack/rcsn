@@ -31,29 +31,7 @@ export default function Login() {
     return () => clearTimeout(t);
   }, [showSuccess]);
 
-  // If a server-validated session already exists on the login page, redirect.
-  // Use server check to avoid client-only state causing loops.
-  useEffect(() => {
-    const checkServerSession = async () => {
-      try {
-        const res = await fetch('/api/auth/whoami', { credentials: 'include', cache: 'no-store' });
-        const j = await res.json();
-        if (j?.authenticated) {
-          const lower = (j.role || '').toLowerCase();
-          const roleToPath: Record<string, string> = {
-            owner: '/dashboard/owner',
-            admin: '/dashboard/admin',
-            teacher: '/dashboard/teacher',
-            parent: '/dashboard/parent',
-            student: '/dashboard/student',
-          };
-          const preferred = roleToPath[lower] || '/dashboard';
-          if (typeof window !== 'undefined') window.location.replace(preferred);
-        }
-      } catch {}
-    };
-    checkServerSession();
-  }, []);
+  // Note: Do not auto-redirect on mount to avoid refresh loops.
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -173,18 +151,7 @@ export default function Login() {
 
       if (data.session) {
         setShowSuccess(true);
-        try {
-          // Proactively sync session tokens to HTTP cookies for middleware immediately
-          const access_token = data.session.access_token as string;
-          const refresh_token = data.session.refresh_token as string;
-          await fetch('/api/auth/session-sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ access_token, refresh_token })
-          });
-        } catch {}
-        // Prefer role-specific path if known; otherwise use generic /dashboard for middleware to route
+        // Prefer role-specific path if known; otherwise use generic /dashboard
         const fallbackPath = '/dashboard';
         const preferred = roleToPath[roleLower] || fallbackPath;
         if (typeof window !== 'undefined') window.location.replace(preferred);

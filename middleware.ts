@@ -46,12 +46,9 @@ export async function middleware(req: NextRequest) {
   const isProtected = pathname.startsWith('/dashboard');
 
   // Handle /login and /register first to avoid loops
+  // Allow /login to render without forcing redirect (prevents flicker/loop);
+  // if you want to send already-signed-in users away from /login, the client will do it after sign-in
   if (pathname.startsWith('/login')) {
-    if (session) {
-      const role = (session.user.user_metadata as any)?.role as string | undefined;
-      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
-    }
-    // Allow login page to render when no session
     return res;
   }
   if (pathname.startsWith('/register')) {
