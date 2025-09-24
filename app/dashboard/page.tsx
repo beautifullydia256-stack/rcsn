@@ -13,7 +13,7 @@ export default function DashboardIndex() {
       try {
         // 1) Prefer server-side whoami to avoid client-only role gaps
         try {
-          const res = await fetch('/api/auth/whoami', { cache: 'no-store' });
+          const res = await fetch('/api/auth/whoami', { cache: 'no-store', credentials: 'same-origin' });
           if (res.ok) {
             const j = await res.json();
             if (j.authenticated) {
@@ -74,8 +74,11 @@ export default function DashboardIndex() {
           if (studentId) resolvedRole = 'student';
         }
 
-        const destination = roleToPath[resolvedRole || ''] || '/dashboard/admin';
-        router.replace(destination);
+        const destination = roleToPath[resolvedRole || ''] || '';
+        if (destination) {
+          router.replace(destination);
+          return;
+        }
       } catch {
         router.replace('/');
       } finally {
