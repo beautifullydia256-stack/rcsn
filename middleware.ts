@@ -88,6 +88,11 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith('/dashboard/student') && lower !== 'student' && lower !== 'owner' && lower !== 'admin') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
+
+    // If user hits generic /dashboard, route them to their role dashboard explicitly
+    if (pathname === '/dashboard') {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
   }
 
   return res;

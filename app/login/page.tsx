@@ -151,9 +151,26 @@ export default function Login() {
 
       if (data.session) {
         setShowSuccess(true);
-        // Prefer role-specific path if known; otherwise use generic /dashboard
-        const fallbackPath = '/dashboard';
-        const preferred = roleToPath[roleLower] || fallbackPath;
+
+        // Resolve role robustly: metadata → users table → student_id heuristic
+        let resolvedRole = roleLower;
+        if (!resolvedRole) {
+          try {
+            const { data: userRows } = await supabase
+              .from('users')
+              .select('role')
+              .eq('user_id', data.user.id)
+              .limit(1);
+            const dbRole = userRows && userRows.length > 0 ? (userRows[0].role as string | undefined) : undefined;
+            resolvedRole = (dbRole || '').toLowerCase();
+          } catch {}
+        }
+        if (!resolvedRole) {
+          const studentId = (data.user.raw_user_meta_data as any)?.student_id as string | undefined;
+          if (studentId) resolvedRole = 'student';
+        }
+
+        const preferred = roleToPath[resolvedRole] || '/';
         if (typeof window !== 'undefined') window.location.replace(preferred);
         return;
       }
