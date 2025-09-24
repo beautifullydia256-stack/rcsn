@@ -43,7 +43,8 @@ export default function ParentDashboard() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        const returnUrl = encodeURIComponent('/dashboard/parent');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
 
@@ -55,7 +56,8 @@ export default function ParentDashboard() {
         .single();
 
       if (!parentData?.student_id) {
-        router.push('/login');
+        const returnUrl = encodeURIComponent('/dashboard/parent');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
 

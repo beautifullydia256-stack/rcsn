@@ -52,7 +52,8 @@ export default function TeacherExamResultsClassPage() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          router.push('/');
+          const returnUrl = encodeURIComponent(`/dashboard/teacher/exam-results/${encodeURIComponent(className)}`);
+          router.push(`/login?returnUrl=${returnUrl}`);
           return;
         }
 

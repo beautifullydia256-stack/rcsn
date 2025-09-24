@@ -46,7 +46,8 @@ export default function TeacherDashboard() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        const returnUrl = encodeURIComponent('/dashboard/teacher');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
 
@@ -69,7 +70,8 @@ export default function TeacherDashboard() {
       }
 
       if (!userData?.school_id) {
-        router.push('/login');
+        const returnUrl = encodeURIComponent('/dashboard/teacher');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
       setSchoolId(userData.school_id);

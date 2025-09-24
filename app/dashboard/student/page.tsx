@@ -110,7 +110,8 @@ export default function StudentDashboard() {
       await supabase.auth.refreshSession();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push('/login');
+        const returnUrl = encodeURIComponent('/dashboard/student');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
 
