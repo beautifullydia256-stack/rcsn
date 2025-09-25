@@ -29,7 +29,7 @@ export default function TeacherExamResultsPage() {
           const { data: t1 } = await supabase.from('teachers')
             .select('teacher_id')
             .eq('school_id', schoolId)
-            .eq('email', userRow.email)
+            .ilike('email', (userRow.email || '').trim())
             .maybeSingle();
           teacherId = t1?.teacher_id as string | undefined;
         }

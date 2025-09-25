@@ -155,7 +155,7 @@ export default function TeacherDashboard() {
           .from('teacher_class_subjects')
           .select('class_name, subject, teachers!inner(email)')
           .eq('school_id', userData.school_id)
-          .eq('teachers.email', user.email);
+          .ilike('teachers.email', (user.email || '').trim());
         if (!joinErr && tcsJoin && tcsJoin.length > 0) {
           tcs = tcsJoin.map((r: any) => ({ class_name: r.class_name, subject: r.subject }));
           console.log('Found assignments via email join fallback:', tcsJoin);
