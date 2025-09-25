@@ -69,28 +69,28 @@ export default function TeacherExamResultsClassPage() {
         let teacherId = user.user_metadata?.teacher_id as string | undefined;
         let schoolId = user.user_metadata?.school_id as string | undefined;
 
-        const { data: userData, error: userError } = await supabase
-          .from('users')
+          const { data: userData, error: userError } = await supabase
+            .from('users')
           .select('school_id,name,email,user_metadata')
-          .eq('user_id', user.id)
-          .single();
-
-        if (userError) {
-          console.error('Error fetching user data:', userError);
-          setError('Failed to load teacher information');
-          return;
-        }
+            .eq('user_id', user.id)
+            .single();
+          
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            setError('Failed to load teacher information');
+            return;
+          }
 
         schoolId = schoolId || (userData?.school_id as string | undefined);
 
         // Fill initials from users.name if not from metadata
         const fallbackName = (userData?.name as string | undefined) || undefined;
-        if (!nameFromMeta && fallbackName) {
-          const parts = fallbackName.trim().split(/\s+/);
-          const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
-          setTeacherInitials(initials || "");
-        }
-
+          if (!nameFromMeta && fallbackName) {
+            const parts = fallbackName.trim().split(/\s+/);
+            const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
+            setTeacherInitials(initials || "");
+          }
+          
         // If no teacherId yet, try match teacher by email in same school
         if (!teacherId && (userData?.email || user.email) && schoolId) {
           const { data: tByEmail } = await supabase
