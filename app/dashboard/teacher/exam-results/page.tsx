@@ -45,7 +45,7 @@ export default function TeacherExamResultsPage() {
         // Get teacher's assigned classes and subjects
         let result: any[] = [];
         try {
-          const apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include' });
+          const apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
           if (apiRes.ok) {
             const payload = await apiRes.json();
             if (Array.isArray(payload?.assignments)) result = payload.assignments;

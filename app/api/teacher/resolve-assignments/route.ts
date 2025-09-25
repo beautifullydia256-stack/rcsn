@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
@@ -7,6 +9,7 @@ export async function GET(req: NextRequest) {
     const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
     const res = NextResponse.next();
+    res.headers.set('Cache-Control', 'no-store');
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {
       cookies: {
         get(name: string) {

@@ -133,7 +133,7 @@ export default function TeacherDashboard() {
       // Load teacher assignments (classes & subjects) - prefer server API using RLS
       let tcs: any[] = [];
       try {
-        const apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include' });
+        const apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
         if (apiRes.ok) {
           const payload = await apiRes.json();
           if (Array.isArray(payload?.assignments) && payload.assignments.length > 0) {
