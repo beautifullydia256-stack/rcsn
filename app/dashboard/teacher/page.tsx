@@ -130,22 +130,35 @@ export default function TeacherDashboard() {
         .order('term', { ascending: false });
       const currentTermWindow = termRows && termRows.length > 0 ? termRows[0] : null;
 
-      // Load teacher assignments (classes & subjects) - try teachers.teacher_id then fallback to auth user_id
+      // Load teacher assignments (classes & subjects) - prefer server API using RLS
       let tcs: any[] = [];
+      try {
+        const apiRes = await fetch('/api/teacher/assignments', { credentials: 'include' });
+        if (apiRes.ok) {
+          const payload = await apiRes.json();
+          if (Array.isArray(payload?.assignments) && payload.assignments.length > 0) {
+            tcs = payload.assignments;
+          }
+        }
+      } catch {}
+
+      // If API returned none, try teachers.teacher_id then fallback to auth user_id
       const candidateTeacherIds: string[] = [];
       if (teacherRow?.teacher_id) candidateTeacherIds.push(teacherRow.teacher_id);
       candidateTeacherIds.push(user.id);
 
-      for (const candidate of candidateTeacherIds) {
-        const { data: tcsTry, error: tryErr } = await supabase
-          .from('teacher_class_subjects')
-          .select('class_name, subject')
-          .eq('teacher_id', candidate)
-          .eq('school_id', userData.school_id);
-        if (!tryErr && tcsTry && tcsTry.length > 0) {
-          tcs = tcsTry;
-          console.log('Found assignments using candidate teacher_id', candidate, tcsTry);
-          break;
+      if (!tcs || tcs.length === 0) {
+        for (const candidate of candidateTeacherIds) {
+          const { data: tcsTry, error: tryErr } = await supabase
+            .from('teacher_class_subjects')
+            .select('class_name, subject')
+            .eq('teacher_id', candidate)
+            .eq('school_id', userData.school_id);
+          if (!tryErr && tcsTry && tcsTry.length > 0) {
+            tcs = tcsTry;
+            console.log('Found assignments using candidate teacher_id', candidate, tcsTry);
+            break;
+          }
         }
       }
 

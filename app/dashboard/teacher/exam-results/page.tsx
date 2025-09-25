@@ -43,15 +43,25 @@ export default function TeacherExamResultsPage() {
         }
 
         // Get teacher's assigned classes and subjects
-        const { data, error } = await supabase
-          .from('teacher_class_subjects')
-          .select('class_name, subject')
-          .eq('school_id', schoolId)
-          .eq('teacher_id', teacherId);
+        let result: any[] = [];
+        try {
+          const apiRes = await fetch('/api/teacher/assignments', { credentials: 'include' });
+          if (apiRes.ok) {
+            const payload = await apiRes.json();
+            if (Array.isArray(payload?.assignments)) result = payload.assignments;
+          }
+        } catch {}
 
-        if (error) throw error;
+        if (!result || result.length === 0) {
+          const { data, error } = await supabase
+            .from('teacher_class_subjects')
+            .select('class_name, subject')
+            .eq('school_id', schoolId)
+            .eq('teacher_id', teacherId);
+          if (error) throw error;
+          result = data || [];
+        }
 
-        let result = data || [];
         // Final fallback: rely on RLS with school scope only
         if (result.length === 0) {
           const { data: rlsData } = await supabase
