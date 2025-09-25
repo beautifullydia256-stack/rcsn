@@ -1,5 +1,8 @@
+// app/api/teacher/assignments/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
@@ -7,6 +10,8 @@ export async function GET(req: NextRequest) {
     const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
     const res = NextResponse.next();
+    res.headers.set('Cache-Control', 'no-store');
+
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {
       cookies: {
         get(name: string) {
@@ -21,43 +26,45 @@ export async function GET(req: NextRequest) {
       },
     });
 
+    // Get current session
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Resolve user's school_id and email
+    // Get user info (email, school_id)
     const { data: userRow, error: userErr } = await supabase
       .from('users')
       .select('school_id,email')
       .eq('user_id', session.user.id)
       .maybeSingle();
+
     if (userErr || !userRow?.school_id) {
       return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
     }
 
-    // Resolve teacher_id from the teachers table
-    const { data: teacher, error: teacherErr } = await supabase
-      .from('teachers')
-      .select('teacher_id')
-      .eq('school_id', userRow.school_id)
-      .ilike('email', userRow.email || '')
-      .maybeSingle();
+    // Try to resolve teacher_id from raw_user_meta_data
+    let teacherId: string | null = session.user.user_metadata?.teacher_id ?? null;
 
-    if (teacherErr || !teacher?.teacher_id) {
-      return NextResponse.json({ error: 'Teacher not found' }, { status: 400 });
+    // Fallback: resolve teacher_id by email if not present in metadata
+    if (!teacherId && userRow.email) {
+      const { data: t } = await supabase
+        .from('teachers')
+        .select('teacher_id')
+        .eq('school_id', userRow.school_id)
+        .ilike('email', userRow.email.trim())
+        .maybeSingle();
+      if (t) teacherId = t.teacher_id;
     }
 
-    // Fetch assignments for this teacher only
+    if (!teacherId) return NextResponse.json({ assignments: [] });
+
+    // Fetch teacher's classes and subjects
     const { data: rows, error: tcsErr } = await supabase
       .from('teacher_class_subjects')
-      .select('class_name, subject')
+      .select('class_name,subject')
       .eq('school_id', userRow.school_id)
-      .eq('teacher_id', teacher.teacher_id);
+      .eq('teacher_id', teacherId);
 
-    if (tcsErr) {
-      return NextResponse.json({ error: tcsErr.message }, { status: 500 });
-    }
+    if (tcsErr) return NextResponse.json({ error: tcsErr.message }, { status: 500 });
 
     return NextResponse.json({ assignments: rows || [] });
   } catch (e: any) {
