@@ -149,6 +149,19 @@ export default function TeacherDashboard() {
         }
       }
 
+      // Fallback: derive via teacher email within the same school (admin-style join)
+      if ((!tcs || tcs.length === 0) && user.email) {
+        const { data: tcsJoin, error: joinErr } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name, subject, teachers!inner(email)')
+          .eq('school_id', userData.school_id)
+          .eq('teachers.email', user.email);
+        if (!joinErr && tcsJoin && tcsJoin.length > 0) {
+          tcs = tcsJoin.map((r: any) => ({ class_name: r.class_name, subject: r.subject }));
+          console.log('Found assignments via email join fallback:', tcsJoin);
+        }
+      }
+
       // Debug: Show all teacher_class_subjects for this school
       console.log(`Debugging assignments for ${schoolType} school:`, {
         schoolId: userData.school_id,
