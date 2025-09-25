@@ -248,7 +248,7 @@ export default function TeacherDashboard() {
         .eq('teacher_id', user.id)
         .order('timestamp', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (data) {
         setLastPunch(data.type);
