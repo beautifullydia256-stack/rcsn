@@ -49,13 +49,13 @@ export async function middleware(req: NextRequest) {
   // Allow /login to render without forcing redirect (prevents flicker/loop);
   // if you want to send already-signed-in users away from /login, the client will do it after sign-in
   if (pathname.startsWith('/login')) {
+    res.headers.set('Cache-Control', 'no-store');
     return res;
   }
   if (pathname.startsWith('/register')) {
-    if (session) {
-      const role = (session.user.user_metadata as any)?.role as string | undefined;
-      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
-    }
+    // Always allow register page to render regardless of existing session.
+    // This prevents redirecting users away when they intend to create a new school.
+    res.headers.set('Cache-Control', 'no-store');
     return res;
   }
 
@@ -71,6 +71,7 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
     // No role in metadata: allow auth page to render so client can resolve and redirect
+    res.headers.set('Cache-Control', 'no-store');
     return res;
   }
 
