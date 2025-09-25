@@ -38,45 +38,59 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
     }
 
-    let teacherId: string | null = null;
-    const metaTeacherId = session.user.user_metadata?.teacher_id;
+    // Resolve teachers.teacher_id within this school (metadata → email → name), case-insensitive
+    let resolvedTeacherIdFromTeachers: string | null = null;
+    const metaTeacherId = session.user.user_metadata?.teacher_id as string | undefined;
     if (metaTeacherId) {
-      const { data: trow } = await supabase
+      const { data: tMeta } = await supabase
         .from('teachers')
         .select('teacher_id')
         .eq('school_id', userRow.school_id)
         .eq('teacher_id', metaTeacherId)
         .maybeSingle();
-      if (trow) teacherId = trow.teacher_id;
+      if (tMeta) resolvedTeacherIdFromTeachers = tMeta.teacher_id;
     }
-    if (!teacherId && userRow.email) {
-      const { data: trow } = await supabase
+    if (!resolvedTeacherIdFromTeachers && userRow.email) {
+      const { data: tEmail } = await supabase
         .from('teachers')
         .select('teacher_id')
         .eq('school_id', userRow.school_id)
-        .ilike('email', userRow.email.trim())
+        .ilike('email', (userRow.email || '').trim())
         .maybeSingle();
-      if (trow) teacherId = trow.teacher_id;
+      if (tEmail) resolvedTeacherIdFromTeachers = tEmail.teacher_id;
     }
-    if (!teacherId && userRow.name) {
-      const { data: trow } = await supabase
+    if (!resolvedTeacherIdFromTeachers && userRow.name) {
+      const { data: tName } = await supabase
         .from('teachers')
         .select('teacher_id')
         .eq('school_id', userRow.school_id)
-        .ilike('name', userRow.name.trim())
+        .ilike('name', (userRow.name || '').trim())
         .maybeSingle();
-      if (trow) teacherId = trow.teacher_id;
+      if (tName) resolvedTeacherIdFromTeachers = tName.teacher_id;
     }
-    if (!teacherId) teacherId = session.user.id;
 
-    const { data: rows, error: tcsErr } = await supabase
-      .from('teacher_class_subjects')
-      .select('class_name, subject')
-      .eq('school_id', userRow.school_id)
-      .eq('teacher_id', teacherId);
-    if (tcsErr) return NextResponse.json({ error: tcsErr.message }, { status: 500 });
+    // Try in order: teachers.teacher_id → auth user_id (legacy)
+    const candidateTeacherIds: string[] = [];
+    if (resolvedTeacherIdFromTeachers) candidateTeacherIds.push(resolvedTeacherIdFromTeachers);
+    candidateTeacherIds.push(session.user.id);
 
-    return NextResponse.json({ assignments: rows || [], resolved_teacher_id: teacherId });
+    let usedTeacherId: string = session.user.id;
+    let rows: { class_name: string; subject: string }[] = [];
+    for (const candidate of candidateTeacherIds) {
+      const { data, error } = await supabase
+        .from('teacher_class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', userRow.school_id)
+        .eq('teacher_id', candidate);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (data && data.length > 0) {
+        rows = data;
+        usedTeacherId = candidate;
+        break;
+      }
+    }
+
+    return NextResponse.json({ assignments: rows || [], resolved_teacher_id: usedTeacherId });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal error' }, { status: 500 });
   }
