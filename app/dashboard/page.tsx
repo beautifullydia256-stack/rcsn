@@ -1,100 +1,69 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '@/src/lib/supabase';
 
-export default function DashboardIndex() {
-  const router = useRouter();
-  const [redirecting, setRedirecting] = useState(true);
+interface Assignment {
+  class_name: string;
+  subject: string;
+}
+
+export default function TeacherDashboard() {
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const go = async () => {
+    const fetchAssignments = async () => {
+      setLoading(true);
       try {
-        // 1) Prefer server-side whoami to avoid client-only role gaps
-        try {
-          const res = await fetch('/api/auth/whoami', { cache: 'no-store', credentials: 'same-origin' });
-          if (res.ok) {
-            const j = await res.json();
-            if (j.authenticated) {
-              const roleToPath: Record<string, string> = {
-                owner: '/dashboard/owner',
-                admin: '/dashboard/admin',
-                teacher: '/dashboard/teacher',
-                parent: '/dashboard/parent',
-                student: '/dashboard/student',
-              };
-              const serverRole = (j.role || '').toLowerCase();
-              const serverDest = roleToPath[serverRole] || '/';
-              router.replace(serverDest);
-              return;
-            }
-          }
-        } catch {}
+        const res = await fetch('/api/teacher/assignments', { cache: 'no-store' });
+        const data = await res.json();
 
-        // 2) Fallback to client session
-        const { data: sessionData } = await supabase.auth.getSession();
-        const session = sessionData?.session;
-        if (!session) {
-          router.replace('/login');
-          return;
+        if (!res.ok) {
+          setError(data.error || 'Failed to fetch assignments');
+          setAssignments([]);
+        } else {
+          setAssignments(data.assignments || []);
+          setError(null);
         }
-
-        const user = session.user;
-        const roleFromMeta = (user.user_metadata?.role || '').toLowerCase();
-
-        // Role to path mapping
-        const roleToPath: Record<string, string> = {
-          owner: '/dashboard/owner',
-          admin: '/dashboard/admin',
-          teacher: '/dashboard/teacher',
-          parent: '/dashboard/parent',
-          student: '/dashboard/student',
-        };
-
-        let resolvedRole = roleFromMeta as string | undefined;
-
-        // Fallback to users table if metadata doesn't have role
-        if (!resolvedRole) {
-          try {
-            const { data: userRows, error } = await supabase
-              .from('users')
-              .select('role')
-              .eq('user_id', user.id)
-              .limit(1);
-            if (!error && userRows && userRows.length > 0) {
-              resolvedRole = (userRows[0].role || '').toLowerCase();
-            }
-          } catch {}
-        }
-
-        // Heuristic: students may have student_id in metadata
-        if (!resolvedRole) {
-          const studentId = (user.user_metadata as any)?.student_id as string | undefined;
-          if (studentId) resolvedRole = 'student';
-        }
-
-        const destination = roleToPath[resolvedRole || ''] || '';
-        if (destination) {
-          router.replace(destination);
-          return;
-        }
-      } catch {
-        router.replace('/');
+      } catch (e: any) {
+        setError(e.message || 'An error occurred');
+        setAssignments([]);
       } finally {
-        setRedirecting(false);
+        setLoading(false);
       }
     };
-    go();
-  }, [router]);
+
+    fetchAssignments();
+  }, []);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center text-gray-700">
-        {redirecting ? 'Redirecting…' : 'Preparing dashboard…'}
-      </div>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">My Classes & Subjects</h1>
+
+      {loading && <p>Loading your classes…</p>}
+
+      {!loading && error && (
+        <p className="text-red-500">Error: {error}</p>
+      )}
+
+      {!loading && !error && assignments.length === 0 && (
+        <p>No Classes Assigned. You haven't been assigned to any classes yet. Contact your administrator.</p>
+      )}
+
+      {!loading && !error && assignments.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {assignments.map((a, idx) => (
+            <div
+              key={idx}
+              className="border rounded p-4 shadow-sm hover:shadow-md transition"
+            >
+              <p className="font-semibold">{a.class_name}</p>
+              <p>{a.subject}</p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
-
-
