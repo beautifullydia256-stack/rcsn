@@ -51,7 +51,17 @@ export default function TeacherExamResultsPage() {
 
         if (error) throw error;
 
-        setAssignments(data || []);
+        let result = data || [];
+        // Final fallback: rely on RLS with school scope only
+        if (result.length === 0) {
+          const { data: rlsData } = await supabase
+            .from('teacher_class_subjects')
+            .select('class_name, subject')
+            .eq('school_id', schoolId);
+          if (rlsData && rlsData.length > 0) result = rlsData;
+        }
+
+        setAssignments(result);
       } catch (err) {
         console.error('Error fetching assignments:', err);
         setError('Failed to load your assignments');

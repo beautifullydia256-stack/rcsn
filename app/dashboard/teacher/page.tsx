@@ -162,6 +162,18 @@ export default function TeacherDashboard() {
         }
       }
 
+      // Final fallback: rely on RLS to return only the current teacher's rows within the school
+      if (!tcs || tcs.length === 0) {
+        const { data: tcsRls } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name, subject')
+          .eq('school_id', userData.school_id);
+        if (tcsRls && tcsRls.length > 0) {
+          tcs = tcsRls;
+          console.log('Found assignments via RLS-only school scope');
+        }
+      }
+
       // Debug: Show all teacher_class_subjects for this school
       console.log(`Debugging assignments for ${schoolType} school:`, {
         schoolId: userData.school_id,
