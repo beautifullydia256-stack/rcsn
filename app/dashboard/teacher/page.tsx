@@ -130,35 +130,22 @@ export default function TeacherDashboard() {
         .order('term', { ascending: false });
       const currentTermWindow = termRows && termRows.length > 0 ? termRows[0] : null;
 
-      // Load teacher assignments (classes & subjects) - try both teacher_id and user_id
+      // Load teacher assignments (classes & subjects) - try teachers.teacher_id then fallback to auth user_id
       let tcs: any[] = [];
-      
-      // First try with teacher_id from teachers table
-      if (teacherRow?.teacher_id) {
-        const { data: tcs1, error: error1 } = await supabase
+      const candidateTeacherIds: string[] = [];
+      if (teacherRow?.teacher_id) candidateTeacherIds.push(teacherRow.teacher_id);
+      candidateTeacherIds.push(user.id);
+
+      for (const candidate of candidateTeacherIds) {
+        const { data: tcsTry, error: tryErr } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject')
-          .eq('teacher_id', teacherRow.teacher_id)
+          .eq('teacher_id', candidate)
           .eq('school_id', userData.school_id);
-        
-        if (!error1 && tcs1) {
-          tcs = tcs1;
-          console.log('Found assignments using teacher_id:', tcs);
-        } else {
-          console.log('No assignments found with teacher_id, trying user_id...');
-          // Fallback: try with user.id (user_id)
-          const { data: tcs2, error: error2 } = await supabase
-            .from('teacher_class_subjects')
-            .select('class_name, subject')
-            .eq('teacher_id', user.id)  // Try using user.id as teacher_id
-            .eq('school_id', userData.school_id);
-          
-          if (!error2 && tcs2) {
-            tcs = tcs2;
-            console.log('Found assignments using user_id:', tcs);
-          } else {
-            console.log('No assignments found with user_id either:', error2);
-          }
+        if (!tryErr && tcsTry && tcsTry.length > 0) {
+          tcs = tcsTry;
+          console.log('Found assignments using candidate teacher_id', candidate, tcsTry);
+          break;
         }
       }
 
