@@ -21,11 +21,33 @@ export default function TeacherExamResultsPage() {
           return;
         }
 
+        // Resolve teacher_id within this school (metadata -> teachers by email -> teachers by name)
+        const { data: userRow } = await supabase.from('users').select('school_id,name,email').eq('user_id', user.id).single();
+        let teacherId = user.user_metadata?.teacher_id as string | undefined;
+        const schoolId = userRow?.school_id as string | undefined;
+        if (!teacherId && userRow?.email && schoolId) {
+          const { data: t1 } = await supabase.from('teachers')
+            .select('teacher_id')
+            .eq('school_id', schoolId)
+            .eq('email', userRow.email)
+            .maybeSingle();
+          teacherId = t1?.teacher_id as string | undefined;
+        }
+        if (!teacherId && (userRow?.name || '').trim() && schoolId) {
+          const { data: t2 } = await supabase.from('teachers')
+            .select('teacher_id')
+            .eq('school_id', schoolId)
+            .ilike('name', (userRow?.name || '').trim())
+            .maybeSingle();
+          teacherId = t2?.teacher_id as string | undefined;
+        }
+
         // Get teacher's assigned classes and subjects
         const { data, error } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject')
-          .eq('teacher_id', user.user_metadata?.teacher_id);
+          .eq('school_id', schoolId)
+          .eq('teacher_id', teacherId);
 
         if (error) throw error;
 

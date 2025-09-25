@@ -78,7 +78,7 @@ export default function TeacherDashboard() {
       setTeacherName(userData.name || 'Teacher');
 
       // Resolve teacher row id: prefer auth metadata; fallback to email match
-      let teacherRow = null as any;
+		let teacherRow = null as any;
       const metaTeacherId = (user as any)?.user_metadata?.teacher_id || (user as any)?.raw_user_meta_data?.teacher_id;
       if (metaTeacherId) {
         const { data: trow } = await supabase
@@ -98,6 +98,16 @@ export default function TeacherDashboard() {
           .maybeSingle();
         if (trow2) teacherRow = trow2;
       }
+		// Fallback: match by name within the same school if email differs
+		if (!teacherRow && (userData?.name || '').trim()) {
+			const { data: trow3 } = await supabase
+				.from('teachers')
+				.select('teacher_id')
+				.eq('school_id', userData.school_id)
+				.ilike('name', userData.name.trim())
+				.maybeSingle();
+			if (trow3) teacherRow = trow3;
+		}
       setTeacherRowId(teacherRow?.teacher_id || null);
       console.log('Teacher resolution:', {
         schoolType,

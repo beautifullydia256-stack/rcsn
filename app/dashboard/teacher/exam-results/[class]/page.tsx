@@ -65,32 +65,52 @@ export default function TeacherExamResultsClassPage() {
           setTeacherInitials(initials || "");
         }
 
-        // Try to get teacher_id from user_metadata or from users table
-        let teacherId = user.user_metadata?.teacher_id;
-        let schoolId = user.user_metadata?.school_id;
-        
-        if (!teacherId || !schoolId) {
-          // Fallback: get teacher_id and school_id from users table
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('user_metadata, school_id, name')
-            .eq('user_id', user.id)
-            .single();
-          
-          if (userError) {
-            console.error('Error fetching user data:', userError);
-            setError('Failed to load teacher information');
-            return;
-          }
-          const fallbackName = userData?.name as string | undefined;
-          if (!nameFromMeta && fallbackName) {
-            const parts = fallbackName.trim().split(/\s+/);
-            const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
-            setTeacherInitials(initials || "");
-          }
-          
-          teacherId = teacherId || userData?.user_metadata?.teacher_id;
-          schoolId = schoolId || userData?.school_id;
+        // Resolve teacher within user's school: metadata -> teachers by email -> teachers by name
+        let teacherId = user.user_metadata?.teacher_id as string | undefined;
+        let schoolId = user.user_metadata?.school_id as string | undefined;
+
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('school_id,name,email,user_metadata')
+          .eq('user_id', user.id)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user data:', userError);
+          setError('Failed to load teacher information');
+          return;
+        }
+
+        schoolId = schoolId || (userData?.school_id as string | undefined);
+
+        // Fill initials from users.name if not from metadata
+        const fallbackName = (userData?.name as string | undefined) || undefined;
+        if (!nameFromMeta && fallbackName) {
+          const parts = fallbackName.trim().split(/\s+/);
+          const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
+          setTeacherInitials(initials || "");
+        }
+
+        // If no teacherId yet, try match teacher by email in same school
+        if (!teacherId && (userData?.email || user.email) && schoolId) {
+          const { data: tByEmail } = await supabase
+            .from('teachers')
+            .select('teacher_id')
+            .eq('school_id', schoolId)
+            .eq('email', (userData?.email as string) || (user.email as string))
+            .maybeSingle();
+          teacherId = tByEmail?.teacher_id as string | undefined;
+        }
+
+        // If still not found, try match by name in same school
+        if (!teacherId && schoolId && (userData?.name || '').trim()) {
+          const { data: tByName } = await supabase
+            .from('teachers')
+            .select('teacher_id')
+            .eq('school_id', schoolId)
+            .ilike('name', (userData?.name || '').trim())
+            .maybeSingle();
+          teacherId = tByName?.teacher_id as string | undefined;
         }
         
         console.log('Teacher ID:', teacherId, 'School ID:', schoolId);
@@ -108,7 +128,7 @@ export default function TeacherExamResultsClassPage() {
         // Get teacher's subjects for this class
         console.log('Fetching assignments for:', { schoolId, teacherId, className });
         
-        // Try to get from teacher_class_subjects table first
+        // Try to get from teacher_class_subjects table first (scoped to school)
         const { data: assignments, error: assignmentsError } = await supabase
           .from('teacher_class_subjects')
           .select('subject')
