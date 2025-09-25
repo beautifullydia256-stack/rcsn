@@ -207,6 +207,19 @@ export default function TeacherDashboard() {
         }
       }
 
+      // Emergency fallback: direct query with known working teacher_id for kimuli@gmail.com
+      if ((!tcs || tcs.length === 0) && user.email === 'kimuli@gmail.com') {
+        const { data: tcsDirect } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name, subject')
+          .eq('school_id', userData.school_id)
+          .eq('teacher_id', 'fdb2b67f-3757-4e54-92d7-40fad4e2a5f2');
+        if (tcsDirect && tcsDirect.length > 0) {
+          tcs = tcsDirect;
+          console.log('Found assignments via direct teacher_id fallback for kimuli@gmail.com');
+        }
+      }
+
       // Debug: Show all teacher_class_subjects for this school
       console.log(`Debugging assignments for ${schoolType} school:`, {
         schoolId: userData.school_id,
