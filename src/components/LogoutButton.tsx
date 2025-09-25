@@ -15,6 +15,7 @@ export default function LogoutButton({ className, children, clearClientState }: 
 
   const handleLogout = async () => {
     try {
+      // Sign out on client (clears sessionStorage-based auth)
       await supabase.auth.signOut();
     } finally {
       try {
@@ -22,7 +23,13 @@ export default function LogoutButton({ className, children, clearClientState }: 
         if (typeof window !== 'undefined') {
           sessionStorage.clear();
           localStorage.removeItem('cookie-consent');
+          // Also clear any remembered token cache used by login
+          localStorage.removeItem('pwezacore_remember');
         }
+      } catch {}
+      // Ensure SSR cookies are cleared so middleware doesn't think we're still signed in
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
       } catch {}
       if (clearClientState) {
         try { clearClientState(); } catch {}
