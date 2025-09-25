@@ -45,7 +45,13 @@ export default function TeacherExamResultsPage() {
         // Get teacher's assigned classes and subjects
         let result: any[] = [];
         try {
-          const apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+          let apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+          if (!apiRes.ok) {
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            if (origin) {
+              apiRes = await fetch(`${origin}/api/teacher/resolve-assignments`, { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+            }
+          }
           if (apiRes.ok) {
             const payload = await apiRes.json();
             if (Array.isArray(payload?.assignments)) result = payload.assignments;
