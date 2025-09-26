@@ -399,7 +399,7 @@ export default function GenerateReportsPage() {
               >
                 <option className="text-black" value="template1">Template 1 - O-Level Format</option>
                 <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                <option className="text-black" value="template3">Template 3 - Coming Soon</option>
+                <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
               </select>
             </div>
 
@@ -979,33 +979,28 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
   );
 }
 
-// Template 2 - St. Adrian Kasozi Secondary School Format
-function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+// Template 3 - Kyotera Parents' Secondary School Format
+function Template3KyoteraReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
-  // Calculate level of achievement based on grade
-  const getLevelOfAchievement = (grade: string) => {
-    switch (grade) {
-      case 'A+': return '2.8';
-      case 'A': return '2.5';
-      case 'B': return '2.2';
-      case 'C': return '2.0';
-      case 'D': return '1.5';
-      case 'E': return '1.2';
-      default: return '';
-    }
+  // Calculate identifier based on grade/score
+  const getIdentifier = (score: number) => {
+    if (score >= 80) return '3'; // Accomplished
+    if (score >= 60) return '2'; // Moderate
+    if (score >= 50) return '1'; // Basic
+    return ''; // Blank for absent
   };
 
-  // Get descriptor based on level of achievement
-  const getDescriptor = (level: string) => {
-    const num = parseFloat(level);
-    if (num >= 2.5) return 'Outstanding';
-    if (num >= 1.5) return 'Moderate';
-    if (num >= 0.9) return 'Basic';
-    return '';
+  // Get grade based on score
+  const getGrade = (score: number) => {
+    if (score >= 80) return 'A';
+    if (score >= 70) return 'B';
+    if (score >= 60) return 'C';
+    if (score >= 50) return 'D';
+    return 'E';
   };
 
   return (
@@ -1013,36 +1008,34 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       
       {/* HEADER */}
       <div className="text-center mb-6">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
-        <div className="text-[9pt] mt-1">
-          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+        <div className="text-[10pt] mt-1">
+          {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
+          Tel: {school?.phone || '0701861636 / 0700338061'} | 
+          E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
         </div>
-      </div>
-
-      {/* REPORT TITLE */}
-      <div className="text-center mb-4">
-        <h1 className="text-[14pt] font-bold uppercase">O LEVEL TERMLY REPORT</h1>
+        <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+        <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
       </div>
 
       {/* STUDENT INFO */}
       <div className="mb-6 text-[11pt]">
         <div className="grid grid-cols-2 gap-4">
-          <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
-          <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
-          <div><strong>Name:</strong> {student.name}</div>
-          <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
-          <div><strong>Class:</strong> {student.current_class}</div>
+          <div><strong>STUDENT'S NAME:</strong> {student.name}</div>
+          <div><strong>YEAR:</strong> {examSet?.year || '2025'}</div>
+          <div><strong>STREAM:</strong> EAST</div>
+          <div><strong>CLASS:</strong> {student.current_class}</div>
+          <div><strong>LIN:</strong> __________</div>
+          <div><strong>Date:</strong> {examSet?.date || '26/05/2025'}</div>
         </div>
       </div>
 
       {/* SUBJECTS TABLE */}
       <div className="mb-4">
-        <h3 className="text-[12pt] font-bold mb-2">Learner's End of Year Summative Assessment Results {examSet?.year || '2022'}</h3>
         <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
           <thead>
             <tr>
-              {['Subject', 'Formative Score (20%)', 'EOY Summative Assessment (80%)', 'Total (100%)', 'Grade', 'Level of Achievement/3', 'Descriptor', "TR's Initial"].map(h => (
+              {['SUBJECT', 'C1', 'C2', 'AVG SCORE/20', 'FINAL EXAM/80', 'TOTAL SCORE 100%', 'IDENTIFIER', 'INIT'].map(h => (
                 <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
               ))}
             </tr>
@@ -1050,23 +1043,23 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                const formative = result.formative_score ?? '';
-                const exam = result.exam_score ?? '';
-                const finalScore = result.final_score ?? '';
-                const gradeText = result.grade ?? '';
-                const levelOfAchievement = getLevelOfAchievement(gradeText);
-                const descriptor = getDescriptor(levelOfAchievement);
+                const c1 = result.activity_score ? (parseFloat(result.activity_score) * 1.5).toFixed(1) : '';
+                const c2 = result.activity_score ? (parseFloat(result.activity_score) * 1.2).toFixed(1) : '';
+                const avgScore = result.formative_score ?? '';
+                const finalExam = result.exam_score ?? '';
+                const totalScore = result.final_score ?? '';
+                const identifier = getIdentifier(parseFloat(totalScore) || 0);
                 const teacherInitials = result.teacher_initials ?? '';
                 
                 return (
                   <tr key={index}>
                     <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{result.subject}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{formative}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{exam}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalScore}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{gradeText}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{levelOfAchievement}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{avgScore}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalExam}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{totalScore}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{identifier}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
                   </tr>
                 );
@@ -1080,64 +1073,73 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </table>
       </div>
 
-      {/* OVERALL SUMMARY */}
+      {/* SUMMARY */}
       <div className="mb-4 text-[11pt]">
         <div className="flex items-center gap-4">
-          <div><strong>Overall Average:</strong> {avg}</div>
-          <div><strong>Level of Achievement:</strong> 2</div>
-          <div><strong>Descriptor:</strong> Moderate</div>
-          <div className="text-[10pt] italic">Overall Learner's achievements for the subjects attended</div>
+          <div><strong>AVERAGE SCORE / PTS (OUT OF 20) / IDENTIFIER:</strong> 17</div>
+        </div>
+        <div className="mt-2">
+          <div><strong>Overall Total Score:</strong> {avg}</div>
+          <div><strong>Overall Identifier:</strong> 2</div>
+          <div><strong>Overall Learner Achievement:</strong> Moderate (Corresponding to Identifier 2)</div>
         </div>
       </div>
 
-      {/* KEY TO TERMS */}
+      {/* KEY TERMS */}
       <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-bold mb-2">Key to Terms Used:</h3>
+        <h3 className="text-[11pt] font-bold mb-2">Key Terms Used / Descriptors:</h3>
         <ul className="list-disc ml-6 space-y-1">
-          <li><strong>Blank/Absent:</strong> Learner does not do the subject/was absent.</li>
-          <li><strong>0.9-1.49 (Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement.</li>
-          <li><strong>1.5-2.48 (Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement.</li>
-          <li><strong>2.5-3.00 (Outstanding):</strong> Most or all learning outcomes achieved.</li>
+          <li><strong>(Blank Identifier):</strong> No Learning outcomes achieved (Learner was absent)</li>
+          <li><strong>Identifier 1:</strong> Some LOs achieved but not sufficient for overall achievement (Basic)</li>
+          <li><strong>Identifier 2:</strong> Most LOs achieved, enough for overall learning achievement (Moderate)</li>
+          <li><strong>Identifier 3:</strong> All LOs achieved, achievement with ease (Accomplished)</li>
+          <li><strong>LO = Learning Outcomes</strong></li>
+          <li><strong>C1 = Chapter 1 Assessment, etc</strong></li>
         </ul>
       </div>
 
-      {/* COMMENTS */}
+      {/* GRADING SCALE */}
       <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-1">Teacher's Comments</h3>
-        <div className="mb-3">
-          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || 'Can do even better.'}</p>
-          <p className="mt-1">Signature: {student.comments?.class_teacher_signature || '__________'}</p>
-        </div>
-        
-        <div className="mb-3">
-          <p><strong>Head Teacher's Comment:</strong> {student.comments?.head_teacher_text || 'More concentration needed'}</p>
-          <p className="mt-1">Signature: {student.comments?.head_teacher_signature || '__________'}</p>
-        </div>
-      </div>
-
-      {/* NEXT TERM INFO */}
-      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-bold mb-2">Grading Scale:</h3>
         <div className="flex gap-4">
-          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || '6TH FEBRUARY 2023'}</div>
-          <div><strong>Ends On:</strong> __________</div>
+          <span><strong>A:</strong> 80+</span>
+          <span><strong>B:</strong> 70+</span>
+          <span><strong>C:</strong> 60+</span>
+          <span><strong>D:</strong> 50+</span>
+          <span><strong>E:</strong> 0-49</span>
         </div>
       </div>
 
-      {/* DISCLAIMER */}
-      <div className="text-center text-[9pt] mt-4">
-        <p><strong>Disclaimer:</strong> "This report is not valid without a school stamp."</p>
+      {/* SIGNATURES */}
+      <div className="mb-4 text-[10pt]">
+        <div className="flex justify-between">
+          <div>
+            <p><strong>CLASS TEACHER:</strong> {student.comments?.class_teacher_signature || '__________'}</p>
+          </div>
+          <div>
+            <p><strong>HEAD TEACHER:</strong> {student.comments?.head_teacher_signature || '__________'}</p>
+          </div>
+        </div>
       </div>
 
-      {/* SCHOOL STAMP PLACEHOLDER */}
+      {/* NEXT TERM AND FEES */}
+      <div className="mb-4 text-[10pt]">
+        <div className="flex justify-between">
+          <div><strong>NEXT TERM BEGINS ON:</strong> {student?.nextTermBegins || '26/05/2025'}</div>
+          <div><strong>Fees Balance:</strong> Ugx 0</div>
+        </div>
+      </div>
+
+      {/* SCHOOL STAMP */}
       <div className="flex justify-end mt-4">
         <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
           <div className="text-center text-xs text-blue-700">
-            <div className="font-bold">ST. ADRIAN</div>
-            <div className="font-bold">KASOZI</div>
-            <div className="font-bold">SECONDARY</div>
+            <div className="font-bold">HEADTEACHER</div>
+            <div className="font-bold">KYOTERA</div>
+            <div className="font-bold">PARENTS'</div>
             <div className="font-bold">SCHOOL</div>
-            <div className="mt-1 text-[8pt]">HEAD TEACHER</div>
-            <div className="text-[7pt]">24/01/2023</div>
+            <div className="mt-1 text-[8pt]">02 MAY 2025</div>
+            <div className="text-[7pt]">P.O. BOX 11 KYOTERA</div>
           </div>
         </div>
       </div>
@@ -1152,6 +1154,9 @@ function ReportPreview({ student, examSet, school, template }: { student: any; e
   }
   if (template === 'template2') {
     return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+  }
+  if (template === 'template3') {
+    return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
   }
   
   if (isSecondaryClass(student.current_class)) {
@@ -1468,3 +1473,4 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
     </div>
   );
 }
+
