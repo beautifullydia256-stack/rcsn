@@ -387,21 +387,23 @@ export default function GenerateReportsPage() {
           <h2 className="text-white text-lg font-medium mb-4">Report Configuration</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Template Selection */}
-            <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
-                Report Template
-              </label>
-              <select
-                value={selectedTemplate}
-                onChange={(e) => setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3')}
-                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option className="text-black" value="template1">Template 1 - O-Level Format</option>
-                <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
-              </select>
-            </div>
+            {/* Template Selection - Only show for O-Level classes (Senior 1-4) */}
+            {isOLevelClass(selectedClass) && (
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Report Template
+                </label>
+                <select
+                  value={selectedTemplate}
+                  onChange={(e) => setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3')}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option className="text-black" value="template1">Template 1 - O-Level Format</option>
+                  <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
+                  <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
+                </select>
+              </div>
+            )}
 
             {/* Report Type */}
             <div>
@@ -573,6 +575,14 @@ export default function GenerateReportsPage() {
 function isSecondaryClass(className: string): boolean {
   if (!className) return false;
   return /^S\d/i.test(className.trim());
+}
+
+function isOLevelClass(className: string): boolean {
+  if (!className) return false;
+  const trimmed = className.trim();
+  // O-Level classes: Senior 1 - Senior 4 (S1-S4)
+  // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
+  return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
 }
 
 // Template 1 - O-Level Report Card (Exact format from sample)
@@ -1200,14 +1210,17 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
 
 // Report Preview Component with template selection
 function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
-  if (template === 'template1') {
-    return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
-  }
-  if (template === 'template2') {
-    return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
-  }
-  if (template === 'template3') {
-    return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+  // Only show O-Level templates for Senior 1-4 classes
+  if (isOLevelClass(student.current_class)) {
+    if (template === 'template1') {
+      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+    }
+    if (template === 'template2') {
+      return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+    }
+    if (template === 'template3') {
+      return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+    }
   }
   
   if (isSecondaryClass(student.current_class)) {
