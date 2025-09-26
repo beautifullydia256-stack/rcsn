@@ -128,43 +128,76 @@ export default function TeacherExamResultsClassPage() {
         // Get teacher's subjects for this class
         console.log('Fetching assignments for:', { schoolId, teacherId, className });
         
-        // Try to get from teacher_class_subjects table first (scoped to school)
-        const { data: assignments, error: assignmentsError } = await supabase
-          .from('teacher_class_subjects')
-          .select('subject')
-          .eq('school_id', schoolId)
-          .eq('teacher_id', teacherId)
-          .eq('class_name', className);
+        // Get teacher's assignments using the working API endpoint
+        let assignments: any[] = [];
+        try {
+          let apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+          if (!apiRes.ok) {
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            if (origin) {
+              apiRes = await fetch(`${origin}/api/teacher/resolve-assignments`, { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+            }
+          }
+          if (apiRes.ok) {
+            const payload = await apiRes.json();
+            if (Array.isArray(payload?.assignments)) {
+              // Filter assignments for the current class
+              assignments = payload.assignments.filter((a: any) => a.class_name === className);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching assignments from API:', err);
+        }
 
-        if (assignmentsError) {
-          console.error('Error fetching teacher assignments:', assignmentsError);
-          
-          // Fallback: try to get from teachers table
-          console.log('Trying fallback: checking teachers table...');
-          const { data: teacherData, error: teacherError } = await supabase
-            .from('teachers')
-            .select('subjects')
-            .eq('school_id', schoolId)
-            .eq('teacher_id', teacherId)
-            .single();
+        // If API failed, try direct database query as fallback
+        if (assignments.length === 0) {
+          try {
+            const { data: directAssignments, error: assignmentsError } = await supabase
+              .from('teacher_class_subjects')
+              .select('subject')
+              .eq('school_id', schoolId)
+              .eq('teacher_id', teacherId)
+              .eq('class_name', className);
+
+            if (assignmentsError) {
+              console.error('Error fetching teacher assignments:', assignmentsError);
+              
+              // Fallback: try to get from teachers table
+              console.log('Trying fallback: checking teachers table...');
+              const { data: teacherData, error: teacherError } = await supabase
+                .from('teachers')
+                .select('subjects')
+                .eq('school_id', schoolId)
+                .eq('teacher_id', teacherId)
+                .single();
             
-          if (teacherError) {
-            console.error('Fallback also failed:', teacherError);
-            setError(`Failed to load your assignments: ${assignmentsError.message}`);
-            return;
+              if (teacherError) {
+                console.error('Fallback also failed:', teacherError);
+                setError(`Failed to load your assignments: ${assignmentsError.message}`);
+                return;
+              }
+              
+              // Use subjects from teachers table
+              const teacherSubjects = teacherData?.subjects || [];
+              console.log('Using fallback subjects from teachers table:', teacherSubjects);
+              
+              if (teacherSubjects.length === 0) {
+                setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+                return;
+              }
+              
+              setTeacherSubjects(teacherSubjects);
+            } else {
+              // Use direct assignments
+              assignments = directAssignments || [];
+            }
+          } catch (err) {
+            console.error('Error in direct assignment query:', err);
           }
-          
-          // Use subjects from teachers table
-          const teacherSubjects = teacherData?.subjects || [];
-          console.log('Using fallback subjects from teachers table:', teacherSubjects);
-          
-          if (teacherSubjects.length === 0) {
-            setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
-            return;
-          }
-          
-          setTeacherSubjects(teacherSubjects);
-        } else {
+        }
+
+        // Process assignments (either from API or direct query)
+        if (assignments.length > 0) {
           console.log('Teacher assignments:', assignments);
           const subjects = assignments?.map(a => a.subject) || [];
           console.log('Subjects for this class:', subjects);
@@ -175,6 +208,9 @@ export default function TeacherExamResultsClassPage() {
           }
           
           setTeacherSubjects(subjects);
+        } else {
+          setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+          return;
         }
 
         // Get exam sets for this class that are active for input
