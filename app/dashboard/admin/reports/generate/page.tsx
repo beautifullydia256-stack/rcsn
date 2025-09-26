@@ -36,6 +36,7 @@ export default function GenerateReportsPage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
+  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3'>('template1');
   
   // Report data
   const [reportData, setReportData] = useState<any>(null);
@@ -385,7 +386,23 @@ export default function GenerateReportsPage() {
         >
           <h2 className="text-white text-lg font-medium mb-4">Report Configuration</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Template Selection */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">
+                Report Template
+              </label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3')}
+                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option className="text-black" value="template1">Template 1 - O-Level Format</option>
+                <option className="text-black" value="template2">Template 2 - Coming Soon</option>
+                <option className="text-black" value="template3">Template 3 - Coming Soon</option>
+              </select>
+            </div>
+
             {/* Report Type */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">
@@ -541,6 +558,7 @@ export default function GenerateReportsPage() {
                   student={student} 
                   examSet={reportData.examSet} 
                   school={reportData.school}
+                  template={selectedTemplate}
                 />
               </div>
             ))}
@@ -557,8 +575,488 @@ function isSecondaryClass(className: string): boolean {
   return /^S\d/i.test(className.trim());
 }
 
-// Report Preview Component with Ugandan-style layout (Primary default)
-function ReportPreview({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+// Template 1 - O-Level Report Card (Exact format from sample)
+function Template1OLevelReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays ?? '';
+  const totalDays = attendance.totalSchoolDays ?? '';
+  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  return (
+    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+      
+      {/* HEADER - School Logo and Info */}
+      <div className="flex items-start justify-between mb-4">
+        {/* School Logo Placeholder */}
+        <div className="w-20 h-20 border-2 border-gray-300 rounded-full flex items-center justify-center">
+          <div className="text-center text-xs">
+            <div className="font-bold">EMIRATES</div>
+            <div className="font-bold">COLLEGE</div>
+            <div className="font-bold">SCHOOL</div>
+          </div>
+        </div>
+        
+        {/* School Name and Contact */}
+        <div className="text-center flex-1">
+          <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
+          <div className="text-[9pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | P.O.BOX 31175, KAMPALA, UGANDA</div>
+          <div className="text-[9pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+        </div>
+        
+        {/* Student Photo Placeholder */}
+        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+          <div className="text-xs text-gray-500">Photo</div>
+        </div>
+      </div>
+
+      {/* REPORT TITLE */}
+      <div className="text-center bg-green-600 text-white py-2 mb-4">
+        <h1 className="text-[13pt] font-bold uppercase">
+          LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
+        </h1>
+      </div>
+
+      {/* LEARNER INFO */}
+      <div className="mb-4 text-[11pt]">
+        <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
+        <div><strong>NAME:</strong> {student.name}</div>
+        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+      </div>
+
+      {/* ATTENDANCE TABLE */}
+      <div className="flex justify-end mb-4">
+        <table style={{ borderCollapse: 'collapse', width: '300px' }}>
+          <thead>
+            <tr>
+              <th className="text-center text-[10pt] font-bold" style={{ border: '1px solid #000', padding: '6px', background: '#f0f0f0' }}>ATTENDANCE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>
+                <div><strong>Days Present:</strong> {daysPresent}</div>
+                <div><strong>Days Absent:</strong> {daysAbsent}</div>
+                <div><strong>Total:</strong> {totalDays}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* SUBJECTS TABLE */}
+      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+        <thead>
+          <tr>
+            {['Subjects & Topics Covered','Activity Score [3]','Descriptor','Formative Score [20%]','Exam Score [80%]','Final Score [100%]','Grade','Overall Remark','Subject Teacher'].map(h => (
+              <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#4CAF50', color: 'white', padding: '6px' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {student.results.length > 0 ? (
+            student.results.map((result: any, index: number) => {
+              const topics = Array.isArray(result.topics) ? result.topics : [];
+              const activity = result.activity_score ?? '';
+              const descriptor = result.descriptor ?? '';
+              const formative = result.formative_score ?? '';
+              const exam = result.exam_score ?? '';
+              const finalScore = result.final_score ?? '';
+              const gradeText = result.grade ?? '';
+              const overallRemark = result.overall_remark ?? '';
+              const teacherInitials = result.teacher_initials ?? '';
+              
+              return (
+                <tr key={index}>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>
+                    <div className="font-bold">{result.subject}</div>
+                    <div className="text-[9pt] leading-snug mt-1">
+                      {topics.length > 0 ? topics.map((t: any, i: number) => (
+                        <div key={i}>{typeof t === 'string' ? t : JSON.stringify(t)}</div>
+                      )) : (result.topic || '')}
+                    </div>
+                  </td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{activity}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{descriptor}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{formative}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{exam}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{finalScore}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{gradeText}</td>
+                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '6px' }}>{overallRemark}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{teacherInitials}</td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={9} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* PERFORMANCE SUMMARY */}
+      <div className="mb-4 text-[11pt]">
+        <p><strong>AVERAGE SCORES:</strong> {avg} {avgGrade}</p>
+        <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
+      </div>
+
+      {/* TERMLY PROJECTS */}
+      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+        <thead>
+          <tr>
+            {['Subject','Project Title','Remark','Score [10]','Teacher'].map(h => (
+              <th key={h} style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', background: '#f0f0f0' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(student.projects && student.projects.length > 0) ? (
+            student.projects.map((p: any, idx: number) => (
+              <tr key={idx}>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.subject || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.project_title || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.remark || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.score ?? 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.teacher || 'N/A'}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={5} style={{ border: '1px solid #000', padding: '6px' }}>N/A</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
+        <p>{student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'}</p>
+        <p>
+          Name: {student.comments?.class_teacher_name || '__________'} |
+          {' '}Signature: {student.comments?.class_teacher_signature || '__________'} |
+          {' '}Date: {student.comments?.class_teacher_date || '17 September, 2025'}
+        </p>
+
+        <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
+        <p>{student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
+        <p>
+          Name: {student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} |
+          {' '}Signature: {student.comments?.head_teacher_signature || '__________'} |
+          {' '}Date: {student.comments?.head_teacher_date || '17 September, 2025'}
+        </p>
+      </div>
+
+      <p className="mb-4 text-[11pt]"><strong>Next Term Begins:</strong> {student?.nextTermBegins || 'Saturday, 13 September, 2025'}</p>
+
+      {/* Grading system & descriptions */}
+      <div className="mb-4">
+        <h3 className="text-[11pt] font-semibold">Grading System</h3>
+        <p className="text-[10pt]"><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+        
+        <h3 className="text-[11pt] font-semibold mt-2">Description</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Grade</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Achievement Level</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Descriptor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>A</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Exceptional</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>B</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Outstanding</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>C</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Satisfactory</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>D</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Basic</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>E</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Elementary</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* FOOTER */}
+      <div className="flex justify-between items-center text-[9pt] mt-4">
+        <div>Printed from: Edusat ERP | 0700274249</div>
+        <div>School Motto: '{school?.motto || 'Education the Future'}'</div>
+        <div>Page 1 of 2</div>
+      </div>
+      
+      {/* QR Code Placeholder */}
+      <div className="flex justify-end mt-2">
+        <div className="w-16 h-16 border border-gray-300 bg-gray-100 flex items-center justify-center">
+          <div className="text-xs text-gray-500">VERIFICATION</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Template 1 - O-Level Report Card (Exact format from sample)
+function Template1OLevelReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays ?? '';
+  const totalDays = attendance.totalSchoolDays ?? '';
+  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  return (
+    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+      
+      {/* HEADER - School Logo and Info */}
+      <div className="flex items-start justify-between mb-4">
+        {/* School Logo Placeholder */}
+        <div className="w-20 h-20 border-2 border-gray-300 rounded-full flex items-center justify-center">
+          <div className="text-center text-xs">
+            <div className="font-bold">EMIRATES</div>
+            <div className="font-bold">COLLEGE</div>
+            <div className="font-bold">SCHOOL</div>
+          </div>
+        </div>
+        
+        {/* School Name and Contact */}
+        <div className="text-center flex-1">
+          <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
+          <div className="text-[9pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | P.O.BOX 31175, KAMPALA, UGANDA</div>
+          <div className="text-[9pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+        </div>
+        
+        {/* Student Photo Placeholder */}
+        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
+          <div className="text-xs text-gray-500">Photo</div>
+        </div>
+      </div>
+
+      {/* REPORT TITLE */}
+      <div className="text-center bg-green-600 text-white py-2 mb-4">
+        <h1 className="text-[13pt] font-bold uppercase">
+          LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
+        </h1>
+      </div>
+
+      {/* LEARNER INFO */}
+      <div className="mb-4 text-[11pt]">
+        <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
+        <div><strong>NAME:</strong> {student.name}</div>
+        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+      </div>
+
+      {/* ATTENDANCE TABLE */}
+      <div className="flex justify-end mb-4">
+        <table style={{ borderCollapse: 'collapse', width: '300px' }}>
+          <thead>
+            <tr>
+              <th className="text-center text-[10pt] font-bold" style={{ border: '1px solid #000', padding: '6px', background: '#f0f0f0' }}>ATTENDANCE</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>
+                <div><strong>Days Present:</strong> {daysPresent}</div>
+                <div><strong>Days Absent:</strong> {daysAbsent}</div>
+                <div><strong>Total:</strong> {totalDays}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* SUBJECTS TABLE */}
+      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+        <thead>
+          <tr>
+            {['Subjects & Topics Covered','Activity Score [3]','Descriptor','Formative Score [20%]','Exam Score [80%]','Final Score [100%]','Grade','Overall Remark','Subject Teacher'].map(h => (
+              <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#4CAF50', color: 'white', padding: '6px' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {student.results.length > 0 ? (
+            student.results.map((result: any, index: number) => {
+              const topics = Array.isArray(result.topics) ? result.topics : [];
+              const activity = result.activity_score ?? '';
+              const descriptor = result.descriptor ?? '';
+              const formative = result.formative_score ?? '';
+              const exam = result.exam_score ?? '';
+              const finalScore = result.final_score ?? '';
+              const gradeText = result.grade ?? '';
+              const overallRemark = result.overall_remark ?? '';
+              const teacherInitials = result.teacher_initials ?? '';
+              
+              return (
+                <tr key={index}>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>
+                    <div className="font-bold">{result.subject}</div>
+                    <div className="text-[9pt] leading-snug mt-1">
+                      {topics.length > 0 ? topics.map((t: any, i: number) => (
+                        <div key={i}>{typeof t === 'string' ? t : JSON.stringify(t)}</div>
+                      )) : (result.topic || '')}
+                    </div>
+                  </td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{activity}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{descriptor}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{formative}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{exam}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{finalScore}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{gradeText}</td>
+                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '6px' }}>{overallRemark}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{teacherInitials}</td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={9} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* PERFORMANCE SUMMARY */}
+      <div className="mb-4 text-[11pt]">
+        <p><strong>AVERAGE SCORES:</strong> {avg} {avgGrade}</p>
+        <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
+      </div>
+
+      {/* TERMLY PROJECTS */}
+      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+        <thead>
+          <tr>
+            {['Subject','Project Title','Remark','Score [10]','Teacher'].map(h => (
+              <th key={h} style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', background: '#f0f0f0' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(student.projects && student.projects.length > 0) ? (
+            student.projects.map((p: any, idx: number) => (
+              <tr key={idx}>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.subject || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.project_title || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.remark || 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.score ?? 'N/A'}</td>
+                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.teacher || 'N/A'}</td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan={5} style={{ border: '1px solid #000', padding: '6px' }}>N/A</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
+        <p>{student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'}</p>
+        <p>
+          Name: {student.comments?.class_teacher_name || '__________'} |
+          {' '}Signature: {student.comments?.class_teacher_signature || '__________'} |
+          {' '}Date: {student.comments?.class_teacher_date || '17 September, 2025'}
+        </p>
+
+        <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
+        <p>{student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
+        <p>
+          Name: {student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} |
+          {' '}Signature: {student.comments?.head_teacher_signature || '__________'} |
+          {' '}Date: {student.comments?.head_teacher_date || '17 September, 2025'}
+        </p>
+      </div>
+
+      <p className="mb-4 text-[11pt]"><strong>Next Term Begins:</strong> {student?.nextTermBegins || 'Saturday, 13 September, 2025'}</p>
+
+      {/* Grading system & descriptions */}
+      <div className="mb-4">
+        <h3 className="text-[11pt] font-semibold">Grading System</h3>
+        <p className="text-[10pt]"><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+        
+        <h3 className="text-[11pt] font-semibold mt-2">Description</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Grade</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Achievement Level</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Descriptor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>A</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Exceptional</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>B</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Outstanding</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>C</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Satisfactory</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>D</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Basic</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>E</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Elementary</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* FOOTER */}
+      <div className="flex justify-between items-center text-[9pt] mt-4">
+        <div>Printed from: Edusat ERP | 0700274249</div>
+        <div>School Motto: '{school?.motto || 'Education the Future'}'</div>
+        <div>Page 1 of 2</div>
+      </div>
+      
+      {/* QR Code Placeholder */}
+      <div className="flex justify-end mt-2">
+        <div className="w-16 h-16 border border-gray-300 bg-gray-100 flex items-center justify-center">
+          <div className="text-xs text-gray-500">VERIFICATION</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Report Preview Component with template selection
+function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
+  if (template === 'template1') {
+    return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+  }
+  
   if (isSecondaryClass(student.current_class)) {
     return <SecondaryReportPreview student={student} examSet={examSet} school={school} />;
   }

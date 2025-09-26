@@ -12,11 +12,14 @@ export default function TeacherExamResultsClassPage() {
   const className = decodeURIComponent(params.class as string);
   const isSecondary = useMemo(() => {
     const trimmed = className?.trim() || "";
-    // Check for secondary classes: Senior 1-6, S1-S6, or any class starting with "Senior" or "S" followed by number
-    // This covers: "Senior 1", "Senior1", "S1", "S 1", "senior 1", "Senior 1 West", etc.
-    const matches = /^(senior\s*[1-6]|s\s*[1-6])/i.test(trimmed);
-    console.log("Class name:", trimmed, "isSecondary:", matches, "Pattern match:", /^(senior\s*[1-6]|s\s*[1-6])/i.test(trimmed)); // Debug log
+    // O-Level classes: Senior 1 - Senior 4 (S1-S4)
+    // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
+    const matches = /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
     return matches;
+  }, [className]);
+  const isALevel = useMemo(() => {
+    const trimmed = className?.trim() || "";
+    return /^(senior\s*[5-6]|s\s*[5-6])/i.test(trimmed);
   }, [className]);
   
   const [loading, setLoading] = useState(true);
@@ -27,10 +30,12 @@ export default function TeacherExamResultsClassPage() {
   const [examSets, setExamSets] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
+  const [resolvedTeacherId, setResolvedTeacherId] = useState<string>("");
+  const [resolvedSchoolId, setResolvedSchoolId] = useState<string>("");
   const [selectedExamSet, setSelectedExamSet] = useState<string>("");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   // Primary layout state (existing)
-  const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string }>>({});
+  const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }>>({});
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
@@ -47,6 +52,44 @@ export default function TeacherExamResultsClassPage() {
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
+  const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
+    A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
+    B: 'Outstanding! Strive for excellence to reach the next level.',
+    C: 'Satisfactory, but there is room for improvement. Work harder to meet expectations.',
+    D: 'Fair effort. Keep working to improve your understanding and performance.',
+    E: 'Your effort needs Improvement. Work diligently to boost your performance.',
+    F: 'Insufficient performance. Seek support and put in more effort to improve.'
+  });
+  const [autoRemarkEnabled, setAutoRemarkEnabled] = useState<boolean>(true);
+  const [oLevelFormativeMax, setOLevelFormativeMax] = useState<number>(20);
+  const [selectedLevel, setSelectedLevel] = useState<'olevel' | 'alevel'>('olevel');
+  const [gradeRemarksOLevel, setGradeRemarksOLevel] = useState<Record<string, string>>({
+    A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
+    B: 'Outstanding! Strive for excellence to reach the next level.',
+    C: 'Satisfactory, but there is room for improvement. Work harder to meet expectations.',
+    D: 'Fair effort. Keep working to improve your understanding and performance.',
+    E: 'Your effort needs Improvement. Work diligently to boost your performance.',
+    F: 'Insufficient performance. Seek support and put in more effort to improve.'
+  });
+  const [gradeRemarksALevel, setGradeRemarksALevel] = useState<Record<string, string>>({
+    A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
+    B: 'Outstanding! Strive for excellence to reach the next level.',
+    C: 'Satisfactory, but there is room for improvement. Work harder to meet expectations.',
+    D: 'Fair effort. Keep working to improve your understanding and performance.',
+    E: 'Your effort needs Improvement. Work diligently to boost your performance.',
+    F: 'Insufficient performance. Seek support and put in more effort to improve.'
+  });
+
+  // Auto-set level based on class format
+  useEffect(() => {
+    if (isSecondary) {
+      setSelectedLevel('olevel');
+    } else if (isALevel) {
+      setSelectedLevel('alevel');
+    } else {
+      setSelectedLevel('olevel'); // Default to O-Level for Primary
+    }
+  }, [isSecondary, isALevel]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,8 +104,10 @@ export default function TeacherExamResultsClassPage() {
         // Compute teacher initials from metadata name if available
         const nameFromMeta: string | undefined = (user.user_metadata?.name || user.user_metadata?.full_name) as string | undefined;
         if (nameFromMeta) {
-          const parts = nameFromMeta.trim().split(/\s+/);
-          const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.') + (parts.length ? '' : '');
+          const parts = nameFromMeta.trim().split(/\s+/).filter(Boolean);
+          const first = (parts[0] || '').charAt(0).toUpperCase();
+          const last = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').charAt(0).toUpperCase();
+          const initials = [first, last].filter(Boolean).join('.');
           setTeacherInitials(initials || "");
         }
 
@@ -98,30 +143,32 @@ export default function TeacherExamResultsClassPage() {
         if (!userData) {
           try {
             const { data, error: userError } = await supabase
-              .from('users')
-              .select('school_id,name,email,user_metadata')
-              .eq('user_id', user.id)
-              .single();
-            
-            if (userError) {
-              console.error('Error fetching user data:', userError);
+            .from('users')
+          .select('school_id,name,email,user_metadata')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (userError) {
+            console.error('Error fetching user data:', userError);
             } else {
               userData = data;
             }
           } catch (err) {
             console.error('Exception fetching user data directly:', err);
           }
-        }
+          }
 
         schoolId = schoolId || (userData?.school_id as string | undefined);
 
         // Fill initials from users.name if not from metadata
         const fallbackName = (userData?.name as string | undefined) || undefined;
-        if (!nameFromMeta && fallbackName) {
-          const parts = fallbackName.trim().split(/\s+/);
-          const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
-          setTeacherInitials(initials || "");
-        }
+          if (!nameFromMeta && fallbackName) {
+          const parts = fallbackName.trim().split(/\s+/).filter(Boolean);
+          const first = (parts[0] || '').charAt(0).toUpperCase();
+          const last = (parts.length > 1 ? parts[parts.length - 1] : parts[0] || '').charAt(0).toUpperCase();
+          const initials = [first, last].filter(Boolean).join('.');
+            setTeacherInitials(initials || "");
+          }
           
         // If no teacherId yet, try match teacher by email in same school
         if (!teacherId && (userData?.email || user.email) && schoolId) {
@@ -173,6 +220,10 @@ export default function TeacherExamResultsClassPage() {
           setError('Teacher ID not found. Please contact your administrator.');
           return;
         }
+
+        // Cache resolved teacher id for later use (saving)
+        setResolvedTeacherId(teacherId);
+        if (schoolId) setResolvedSchoolId(schoolId);
         
         if (!schoolId) {
           setError('School ID not found. Please contact your administrator.');
@@ -207,41 +258,41 @@ export default function TeacherExamResultsClassPage() {
         if (assignments.length === 0) {
           try {
             const { data: directAssignments, error: assignmentsError } = await supabase
-              .from('teacher_class_subjects')
-              .select('subject')
-              .eq('school_id', schoolId)
-              .eq('teacher_id', teacherId)
-              .eq('class_name', className);
+          .from('teacher_class_subjects')
+          .select('subject')
+          .eq('school_id', schoolId)
+          .eq('teacher_id', teacherId)
+          .eq('class_name', className);
 
-            if (assignmentsError) {
-              console.error('Error fetching teacher assignments:', assignmentsError);
-              
-              // Fallback: try to get from teachers table
-              console.log('Trying fallback: checking teachers table...');
-              const { data: teacherData, error: teacherError } = await supabase
-                .from('teachers')
-                .select('subjects')
-                .eq('school_id', schoolId)
-                .eq('teacher_id', teacherId)
-                .single();
+        if (assignmentsError) {
+          console.error('Error fetching teacher assignments:', assignmentsError);
+          
+          // Fallback: try to get from teachers table
+          console.log('Trying fallback: checking teachers table...');
+          const { data: teacherData, error: teacherError } = await supabase
+            .from('teachers')
+            .select('subjects')
+            .eq('school_id', schoolId)
+            .eq('teacher_id', teacherId)
+            .single();
             
-              if (teacherError) {
-                console.error('Fallback also failed:', teacherError);
-                setError(`Failed to load your assignments: ${assignmentsError.message}`);
-                return;
-              }
-              
-              // Use subjects from teachers table
-              const teacherSubjects = teacherData?.subjects || [];
-              console.log('Using fallback subjects from teachers table:', teacherSubjects);
-              
-              if (teacherSubjects.length === 0) {
-                setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
-                return;
-              }
-              
-              setTeacherSubjects(teacherSubjects);
-            } else {
+          if (teacherError) {
+            console.error('Fallback also failed:', teacherError);
+            setError(`Failed to load your assignments: ${assignmentsError.message}`);
+            return;
+          }
+          
+          // Use subjects from teachers table
+          const teacherSubjects = teacherData?.subjects || [];
+          console.log('Using fallback subjects from teachers table:', teacherSubjects);
+          
+          if (teacherSubjects.length === 0) {
+            setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+            return;
+          }
+          
+          setTeacherSubjects(teacherSubjects);
+        } else {
               // Use direct assignments
               assignments = directAssignments || [];
             }
@@ -289,11 +340,11 @@ export default function TeacherExamResultsClassPage() {
         let studentsData: any[] = [];
         try {
           const { data, error: studentsError } = await supabase
-            .from('students')
-            .select('student_id, name, current_class')
-            .eq('school_id', schoolId)
-            .eq('current_class', className)
-            .order('name');
+          .from('students')
+          .select('student_id, name, current_class')
+          .eq('school_id', schoolId)
+          .eq('current_class', className)
+          .order('name');
 
           if (studentsError) {
             console.error('Error fetching students:', studentsError);
@@ -382,37 +433,95 @@ export default function TeacherExamResultsClassPage() {
     const marksNum = parseFloat(newMarks) || 0;
     const totalMarksNum = parseFloat(newTotalMarks) || 100;
     const grade = calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
+    const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
+    const autoRemark = autoRemarkEnabled ? (currentGradeRemarks[grade as keyof typeof currentGradeRemarks] || '') : (examResults[studentId]?.remark || '');
     setExamResults(prev => ({
       ...prev,
-      [studentId]: { marks: newMarks, totalMarks: newTotalMarks, grade }
+      [studentId]: { marks: newMarks, totalMarks: newTotalMarks, grade, remark: autoRemark }
     }));
   };
 
-  // Secondary change handler
+  // Secondary change handler: Activity is fully manual; Formative updates Activity; both allow clearing
   const handleSecondaryChange = (studentId: string, field: keyof typeof examResultsSecondary[string], value: string) => {
     setExamResultsSecondary(prev => {
       const current = prev[studentId] || { topic: topicFilter || "", activityScore: "", descriptor: "", formative: "", exam: "", final: "", grade: "", remark: "", initials: teacherInitials };
       let next = { ...current, [field]: value } as typeof current;
-      const activityNum = parseFloat(next.activityScore) || 0;
-      const descriptor = calculateDescriptor(activityNum);
-      next.descriptor = descriptor;
-      // If missed, force scores to 0 and gray them out via read-only style
-      let formativeNum = parseFloat(next.formative) || 0;
-      let examNum = parseFloat(next.exam) || 0;
-      if (descriptor === 'Missed') {
-        formativeNum = 0; examNum = 0; next.formative = '0'; next.exam = '0';
+      const trunc1 = (n: number) => Math.trunc((n || 0) * 10) / 10;
+      const trunc0 = (n: number) => Math.trunc(n || 0);
+
+      if (field === 'activityScore') {
+        // Do NOT format or sync while typing activity; allow any string (including empty)
+        next.activityScore = value;
+      } else if (field === 'formative') {
+        if (value === '') {
+          next.formative = '';
+          next.activityScore = '';
       } else {
-        // clamp
-        if (formativeNum > 40) { formativeNum = 40; next.formative = '40'; }
-        if (examNum > 60) { examNum = 60; next.exam = '60'; }
-        if (formativeNum < 0) { formativeNum = 0; next.formative = '0'; }
-        if (examNum < 0) { examNum = 0; next.exam = '0'; }
+          let f = Math.max(0, Math.min(oLevelFormativeMax, parseFloat(value) || 0));
+          f = trunc0(f);
+          const a = trunc1((f / oLevelFormativeMax) * 3);
+          next.formative = String(f);
+          next.activityScore = a.toFixed(1);
+        }
+      } else if (field === 'exam') {
+        if (value === '') {
+          next.exam = '' as any;
+        } else {
+          let e = Math.max(0, Math.min(80, parseFloat(value) || 0));
+          next.exam = String(trunc0(e));
+        }
       }
-      const finalNum = formativeNum + examNum;
+
+      const aNum = Math.max(0, Math.min(3, parseFloat(next.activityScore)));
+      const fNum = Math.max(0, Math.min(oLevelFormativeMax, parseFloat(next.formative)));
+      const eNum = Math.max(0, Math.min(80, parseFloat(next.exam)));
+      const aSafe = isNaN(aNum) ? 0 : aNum;
+      const fSafe = isNaN(fNum) ? 0 : fNum;
+      const eSafe = isNaN(eNum) ? 0 : eNum;
+      next.descriptor = calculateDescriptor(aSafe);
+      const finalNum = Math.trunc(fSafe + eSafe);
       next.final = String(finalNum);
-      next.grade = calculateSecondaryGrade(finalNum);
+      const newGrade = calculateSecondaryGrade(finalNum);
+      next.grade = newGrade;
+      if (autoRemarkEnabled) {
+        const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
+        next.remark = currentGradeRemarks[newGrade] || '';
+      }
       // keep initials auto
       next.initials = teacherInitials || next.initials;
+      return { ...prev, [studentId]: next };
+    });
+  };
+
+  // Secondary blur handler: clamp and two-way sync
+  const handleSecondaryBlur = (studentId: string, field: keyof typeof examResultsSecondary[string]) => {
+    setExamResultsSecondary(prev => {
+      const current = prev[studentId];
+      if (!current) return prev;
+      const trunc1 = (n: number) => Math.trunc((n || 0) * 10) / 10;
+      const trunc0 = (n: number) => Math.trunc(n || 0);
+      let next = { ...current };
+      if (field === 'formative') {
+        // clamp formative, sync activity
+        const f = Math.max(0, Math.min(oLevelFormativeMax, parseFloat(next.formative) || 0));
+        next.formative = String(trunc0(f));
+        const a = Math.max(0, Math.min(3, (f / oLevelFormativeMax) * 3));
+        next.activityScore = (trunc1(a)).toFixed(1);
+      } else if (field === 'activityScore') {
+        // clamp activity, sync formative
+        const a = Math.max(0, Math.min(3, parseFloat(next.activityScore) || 0));
+        next.activityScore = (trunc1(a)).toFixed(1);
+        const f = Math.max(0, Math.min(oLevelFormativeMax, (a / 3) * oLevelFormativeMax));
+        next.formative = String(trunc0(f));
+      } else if (field === 'exam') {
+        const e = Math.max(0, Math.min(80, parseFloat(next.exam) || 0));
+        next.exam = String(trunc0(e));
+      }
+      // Recompute final after clamping
+      const fnum = parseFloat(next.formative) || 0;
+      const enum_ = parseFloat(next.exam) || 0;
+      next.final = String(trunc0(fnum + enum_));
+      next.grade = calculateSecondaryGrade(trunc0(fnum + enum_));
       return { ...prev, [studentId]: next };
     });
   };
@@ -430,75 +539,111 @@ export default function TeacherExamResultsClassPage() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       const schoolId = user?.user_metadata?.school_id;
+      const teacherIdForSave = resolvedTeacherId || (user?.user_metadata as any)?.teacher_id || "";
+
+      if (!teacherIdForSave) {
+        setError('Unable to resolve teacher ID. Please reload and try again.');
+        return;
+      }
 
       if (!isSecondary) {
-        const resultsToSave = Object.entries(examResults)
-          .filter(([_, data]) => data.marks && data.totalMarks)
-          .map(([studentId, data]) => ({
-            school_id: schoolId,
-            exam_set_id: selectedExamSet,
-            student_id: studentId,
-            class_name: className,
-            subject: selectedSubject,
-            marks_obtained: parseFloat(data.marks),
-            total_marks: parseFloat(data.totalMarks),
-            grade: data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks), selectedSubject)
-          }));
-
-        if (resultsToSave.length === 0) {
+        const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+        if (entries.length === 0) {
           setError('Please enter marks for at least one student');
           return;
         }
-
-        const { error: insertError } = await supabase
-          .from('exam_results')
-          .upsert(resultsToSave, { onConflict: 'exam_set_id,student_id,subject', ignoreDuplicates: false });
-        if (insertError) throw insertError;
-
-        setSuccess(`Successfully saved ${resultsToSave.length} exam results`);
-        setExamResults({});
+        // Use secure RPC (server-side checks) for reliability
+        const saves = entries.map(async ([studentId, data]) => {
+          const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
+          const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
+          const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+          const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+            p_school_id: schoolId,
+            p_exam_set_id: selectedExamSet,
+            p_student_id: studentId,
+            p_class_name: className,
+            p_subject: (selectedSubject || '').trim(),
+            p_marks_obtained: parseFloat(data.marks),
+            p_total_marks: parseFloat(data.totalMarks || '100'),
+            p_grade: computedGrade,
+            // optional extras if RPC supports them; ignored if not
+            p_overall_remark: computedRemark,
+            p_topic: topicFilter || null,
+            p_teacher_initials: teacherInitials || null
+          });
+          if (resp.error) {
+            console.error('RPC primary save error:', {
+              code: resp.error.code,
+              message: resp.error.message,
+              details: resp.error.details,
+              hint: resp.error.hint,
+            });
+            throw resp.error;
+          }
+        });
+        await Promise.all(saves);
+        setSuccess(`Successfully saved ${entries.length} exam results`);
+        await reloadSavedResults();
       } else {
         // Secondary
-        const resultsToSave = Object.entries(examResultsSecondary)
-          .map(([studentId, data]) => {
-            const activityNum = parseFloat(data.activityScore) || 0;
-            const descriptor = calculateDescriptor(activityNum);
-            const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), 40);
-            const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 60);
-            const finalNum = formativeNum + examNum;
-            const grade = calculateSecondaryGrade(finalNum);
-            return {
-              school_id: schoolId,
-              exam_set_id: selectedExamSet,
-              student_id: studentId,
-              class_name: className,
-              subject: selectedSubject,
-              topic: data.topic || topicFilter || '',
-              activity_score: activityNum,
-              descriptor,
-              formative: formativeNum,
-              exam: examNum,
-              final: finalNum,
-              grade,
-              remark: data.remark || '',
-              teacher_initials: data.initials || teacherInitials || '',
-            };
-          });
-
-        // Validate at least one filled row
-        const anyValid = resultsToSave.some(r => r.topic || r.activity_score !== 0 || r.formative !== 0 || r.exam !== 0 || r.remark);
-        if (!anyValid) {
-          setError('Please enter at least one secondary record');
+        // Guard: subject selected
+        if (!selectedSubject || !(selectedSubject || '').trim()) {
+          setError('Please select a subject');
           return;
         }
 
-        const { error: insertError } = await supabase
-          .from('exam_results')
-          .upsert(resultsToSave as any, { onConflict: 'exam_set_id,student_id,subject', ignoreDuplicates: false });
-        if (insertError) throw insertError;
-
-        setSuccess(`Successfully saved ${resultsToSave.length} exam results`);
-        setExamResultsSecondary({});
+        // Build and filter valid rows (at least one numeric > 0 or non-empty text)
+        const entries = Object.entries(examResultsSecondary)
+          .map(([studentId, data]) => ({ studentId, data }))
+          .filter(({ data }) => {
+            const a = parseFloat(data.activityScore);
+            const f = parseFloat(data.formative);
+            const e = parseFloat(data.exam);
+            const hasNum = (!isNaN(a) && a > 0) || (!isNaN(f) && f > 0) || (!isNaN(e) && e > 0);
+            const hasText = (data.topic && data.topic.trim() !== '') || (data.remark && data.remark.trim() !== '');
+            return hasNum || hasText;
+          });
+        if (entries.length === 0) {
+          setError('Please enter at least one secondary record');
+          return;
+        }
+        const saves = entries.map(async ({ studentId, data }) => {
+            const activityNum = parseFloat(data.activityScore) || 0;
+            const descriptor = calculateDescriptor(activityNum);
+          const formativeCap = typeof oLevelFormativeMax === 'number' ? oLevelFormativeMax : 40;
+          const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
+          const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
+            const finalNum = formativeNum + examNum;
+            const grade = calculateSecondaryGrade(finalNum);
+          const resp = await supabase.rpc('teacher_upsert_exam_result_olevel', {
+            p_school_id: schoolId,
+            p_exam_set_id: selectedExamSet,
+            p_student_id: studentId,
+            p_class_name: className,
+            p_subject: (selectedSubject || '').trim(),
+            p_activity_score: activityNum,
+            p_formative_score: formativeNum,
+            p_exam_score: examNum,
+            p_final_score: finalNum,
+            p_grade: grade,
+            p_overall_remark: (data.remark || '').trim(),
+            p_topic: (data.topic || topicFilter || '').trim(),
+            p_teacher_initials: data.initials || teacherInitials || ''
+          });
+          if (resp.error) {
+            console.error('RPC olevel save error:', {
+              code: resp.error.code,
+              message: resp.error.message,
+              details: resp.error.details,
+              hint: resp.error.hint,
+            });
+            setError(resp.error.message || 'Failed to save exam results');
+            throw resp.error;
+          }
+        });
+        await Promise.all(saves);
+        setSuccess(`Successfully saved ${entries.length} exam results`);
+        await reloadSavedResults();
       }
       
     } catch (err) {
@@ -508,6 +653,110 @@ export default function TeacherExamResultsClassPage() {
       setSaving(false);
     }
   };
+
+  // Prefill previously saved results when exam set + subject selected
+  useEffect(() => {
+    const prefill = async () => {
+      if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject || students.length === 0) return;
+      try {
+        const { data, error } = await supabase
+          .from('exam_results')
+          .select('*')
+          .eq('school_id', resolvedSchoolId)
+          .eq('class_name', className)
+          .eq('exam_set_id', selectedExamSet)
+          .eq('subject', selectedSubject)
+          .eq('teacher_id', resolvedTeacherId);
+        if (error) return;
+
+        const rows = data || [];
+        if (!isSecondary) {
+          const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+          rows.forEach(r => {
+            map[r.student_id] = {
+              marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+              totalMarks: r.total_marks != null ? String(r.total_marks) : '',
+              grade: r.grade || ''
+            };
+          });
+          setExamResults(map);
+        } else {
+          const map: Record<string, any> = {};
+          rows.forEach(r => {
+            map[r.student_id] = {
+              topic: r.topic || '',
+              activityScore: r.activity_score != null ? String(r.activity_score) : '',
+              formative: r.formative_score != null ? String(r.formative_score) : '',
+              exam: r.exam_score != null ? String(r.exam_score) : '',
+              remark: r.overall_remark || '',
+              initials: r.teacher_initials || ''
+            };
+          });
+          setExamResultsSecondary(map);
+        }
+      } catch {}
+    };
+    prefill();
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className]);
+
+  // Allow manual refresh of saved results after save
+  const reloadSavedResults = async () => {
+    if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) return;
+    try {
+      const { data, error } = await supabase
+        .from('exam_results')
+        .select('*')
+        .eq('school_id', resolvedSchoolId)
+        .eq('class_name', className)
+        .eq('exam_set_id', selectedExamSet)
+        .eq('subject', selectedSubject)
+        .eq('teacher_id', resolvedTeacherId);
+      if (error) return;
+      const rows = data || [];
+      if (!isSecondary) {
+        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+        rows.forEach(r => {
+          map[r.student_id] = {
+            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
+            grade: r.grade || ''
+          };
+        });
+        setExamResults(map);
+      } else {
+        const map: Record<string, any> = {};
+        rows.forEach(r => {
+          const activity = r.activity_score != null ? Number(r.activity_score) : NaN;
+          const descriptor = r.descriptor || (isNaN(activity) ? '' : calculateDescriptor(activity));
+          map[r.student_id] = {
+            topic: r.topic || '',
+            activityScore: r.activity_score != null ? String(r.activity_score) : '',
+            descriptor,
+            formative: r.formative_score != null ? String(r.formative_score) : '',
+            exam: r.exam_score != null ? String(r.exam_score) : '',
+            final: r.final_score != null ? String(r.final_score) : '',
+            grade: r.grade || '',
+            remark: r.overall_remark || '',
+            initials: r.teacher_initials || ''
+          };
+        });
+        setExamResultsSecondary(map);
+      }
+    } catch {}
+  };
+
+  // When switching Exam Set or Subject, clear current UI state and load saved rows for the new selection
+  useEffect(() => {
+    if (!selectedExamSet || !selectedSubject) {
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    setExamResults({});
+    setExamResultsSecondary({});
+    (async () => { await reloadSavedResults(); })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedExamSet, selectedSubject]);
 
 
   if (loading) {
@@ -537,7 +786,7 @@ export default function TeacherExamResultsClassPage() {
                   ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' 
                   : 'bg-green-600/20 text-green-300 border border-green-500/30'
               }`}>
-                {isSecondary ? 'Secondary Format' : 'Primary Format'}
+                {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : 'Primary Format')}
               </div>
             </div>
           </div>
@@ -607,9 +856,9 @@ export default function TeacherExamResultsClassPage() {
                 ))}
               </select>
             </div>
-            {isSecondary && (
+            {(isSecondary || isALevel) && (
               <div>
-                <label className="block text_white/80 text-sm mb-2">Topic (for this entry)</label>
+                <label className="block text_white/80 text-sm mb-2">Paper</label>
                 <input
                   type="text"
                   value={topicFilter}
@@ -632,7 +881,9 @@ export default function TeacherExamResultsClassPage() {
             <div className="p-6 border-b border-white/10">
               <h3 className="text-white font-medium">Enter {isSecondary ? 'Scores' : 'Marks'} for {selectedSubject}</h3>
               <p className="text-white/80 text-sm mt-1">
-                {isSecondary ? 'Secondary format with Activity, Formative, Exam, Final, Grade.' : 'Enter marks out of 100.'}
+                {isSecondary
+                  ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
+                  : (isALevel ? 'A-Level format: Enter marks out of 100 (same as Primary).' : 'Enter marks out of 100.')}
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -641,9 +892,16 @@ export default function TeacherExamResultsClassPage() {
                   <thead className="bg-white/5">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
+                      {isALevel && <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Paper</th>}
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
+                      {isALevel && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
+                      )}
+                      {isALevel && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Initials</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
@@ -651,9 +909,21 @@ export default function TeacherExamResultsClassPage() {
                       const marks = examResults[student.student_id]?.marks || '';
                       const totalMarks = examResults[student.student_id]?.totalMarks || '100';
                       const grade = examResults[student.student_id]?.grade || '';
+                      const remark = examResults[student.student_id]?.remark || '';
                       return (
                         <tr key={student.student_id} className="hover:bg-white/5">
                           <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
+                          {isALevel && (
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="text"
+                                value={topicFilter}
+                                onChange={(e) => setTopicFilter(e.target.value)}
+                                className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm"
+                                placeholder="Paper"
+                              />
+                            </td>
+                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
                           </td>
@@ -670,6 +940,22 @@ export default function TeacherExamResultsClassPage() {
                               'text-white/60'
                             }`}>{grade || '-'}</span>
                           </td>
+                          {isALevel && (
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input
+                                type="text"
+                                value={remark}
+                                onChange={(e) => setExamResults(prev => ({ ...prev, [student.student_id]: { ...(prev[student.student_id] || { marks: '', totalMarks: '100', grade: '' }), remark: e.target.value } }))}
+                                placeholder="Comment"
+                                className="w-56 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm"
+                              />
+                            </td>
+                          )}
+                          {isALevel && (
+                            <td className="px-6 py-4 whitespace-nowrap text-white/90">
+                              {teacherInitials || '-'}
+                            </td>
+                          )}
                         </tr>
                       );
                     })}
@@ -680,12 +966,12 @@ export default function TeacherExamResultsClassPage() {
                   <thead className="bg-white/5">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Topic</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{isALevel ? 'Paper' : 'Topic'}</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Activity [3]</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Descriptor</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Formative [40]</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Exam [60]</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Final</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Formative Score [20%]</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Exam Score [80%]</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Final Score [100%]</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Initials</th>
@@ -699,19 +985,19 @@ export default function TeacherExamResultsClassPage() {
                         <tr key={student.student_id} className={`hover:bg-white/5 ${missed ? 'opacity-70' : ''}`}>
                           <td className="px-4 py-3 whitespace-nowrap text-white">{student.name}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input type="text" value={row.topic} onChange={e => handleSecondaryChange(student.student_id, 'topic', e.target.value)} placeholder="e.g., 1 Classification" className="w-44 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
+                            <input type="text" value={row.topic} onChange={e => handleSecondaryChange(student.student_id, 'topic', e.target.value)} placeholder={isALevel ? 'e.g., Paper 1' : 'e.g., 1 Classification'} className="w-44 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input type="number" min="0" max="3" step="0.1" value={row.activityScore} onChange={e => handleSecondaryChange(student.student_id, 'activityScore', e.target.value)} className="w-20 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
+                            <input type="number" min="0" max="3" step="0.1" value={row.activityScore} onChange={e => handleSecondaryChange(student.student_id, 'activityScore', e.target.value)} onBlur={() => handleSecondaryBlur(student.student_id, 'activityScore')} className="w-20 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-white/90">
                             {row.descriptor || '-'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input type="number" min="0" max="40" step="1" value={row.formative} onChange={e => handleSecondaryChange(student.student_id, 'formative', e.target.value)} disabled={missed} className={`w-24 rounded border border-white/10 ${missed ? 'bg-white/5 text-white/50 cursor-not-allowed' : 'bg-white/10 text-white'} px-2 py-1 text-sm`} />
+                            <input type="number" min="0" max={oLevelFormativeMax} step="0.1" value={row.formative} onChange={e => handleSecondaryChange(student.student_id, 'formative', e.target.value)} onBlur={() => handleSecondaryBlur(student.student_id, 'formative')} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input type="number" min="0" max="60" step="1" value={row.exam} onChange={e => handleSecondaryChange(student.student_id, 'exam', e.target.value)} disabled={missed} className={`w-24 rounded border border-white/10 ${missed ? 'bg_WHITE/5 text_white/50 cursor-not-allowed' : 'bg-white/10 text-white'} px-2 py-1 text-sm`} />
+                            <input type="number" min="0" max="80" step="0.5" value={row.exam} onChange={e => handleSecondaryChange(student.student_id, 'exam', e.target.value)} onBlur={() => handleSecondaryBlur(student.student_id, 'exam')} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-white">{row.final || '0'}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-white">{row.grade || '-'}</td>
@@ -744,6 +1030,84 @@ export default function TeacherExamResultsClassPage() {
                 <button onClick={() => setShowGradeSettings(false)} className="text-white/60 hover:text-white">✕</button>
               </div>
               <div className="space-y-4">
+                {/* Level Selector */}
+                <div className="border border-white/10 rounded-lg p-4">
+                  <h3 className="text-white font-medium mb-3">Subject Level</h3>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 text-white/90 text-sm">
+                      <input
+                        type="radio"
+                        name="level"
+                        checked={selectedLevel === 'olevel'}
+                        onChange={() => setSelectedLevel('olevel')}
+                      />
+                      O-Level (Senior 1-4)
+                    </label>
+                    <label className="flex items-center gap-2 text-white/90 text-sm">
+                      <input
+                        type="radio"
+                        name="level"
+                        checked={selectedLevel === 'alevel'}
+                        onChange={() => setSelectedLevel('alevel')}
+                      />
+                      A-Level (Senior 5-6)
+                    </label>
+                  </div>
+                </div>
+
+                {/* Auto Remark - Available for all levels */}
+                <div className="border border-white/10 rounded-lg p-4">
+                  <h3 className="text-white font-medium mb-3">Auto Remark</h3>
+                  <label className="flex items-center gap-2 text-white/90 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={autoRemarkEnabled}
+                      onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
+                    />
+                    Automatically set remark based on grade
+                  </label>
+                </div>
+
+                {/* Grade Remarks - Available for all levels */}
+                <div className="border border-white/10 rounded-lg p-4">
+                  <h3 className="text-white font-medium mb-3">Grade Remarks ({selectedLevel === 'olevel' ? 'O-Level' : 'A-Level'})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(['A','B','C','D','E','F'] as const).map(g => (
+                      <div key={g} className="flex flex-col gap-2">
+                        <label className="text-white/80 text-sm">Remark for Grade {g}</label>
+                        <textarea
+                          value={selectedLevel === 'olevel' ? (gradeRemarksOLevel[g] || '') : (gradeRemarksALevel[g] || '')}
+                          onChange={(e) => {
+                            if (selectedLevel === 'olevel') {
+                              setGradeRemarksOLevel(prev => ({ ...prev, [g]: e.target.value }));
+                            } else {
+                              setGradeRemarksALevel(prev => ({ ...prev, [g]: e.target.value }));
+                            }
+                          }}
+                          className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* O-Level Specific Settings */}
+                {selectedLevel === 'olevel' && (
+                  <div className="border border-white/10 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-3">O-Level Settings</h3>
+                    <div className="flex items-center gap-3">
+                      <label className="text-white/80 text-sm">Formative Max</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={oLevelFormativeMax}
+                        onChange={(e) => setOLevelFormativeMax(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                        className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
                 {teacherSubjects.map(subject => (
                   <div key={subject} className="border border-white/10 rounded-lg p-4">
                     <h3 className="text-white font-medium mb-3">{subject}</h3>

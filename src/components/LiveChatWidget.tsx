@@ -8,10 +8,6 @@ import { supabase } from "@/src/lib/supabase";
 export default function LiveChatWidget() {
   const pathname = usePathname();
   
-  // Only show on home page
-  if (pathname !== "/") {
-    return null;
-  }
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +44,9 @@ export default function LiveChatWidget() {
   }
 
   return (
+    <>
+      {/* Hide widget on non-home routes, but keep hooks order intact */}
+      {pathname !== "/" ? null : (
     <>
       {/* Floating chat button */}
       <button
@@ -153,6 +152,8 @@ export default function LiveChatWidget() {
           </motion.div>
         )}
       </AnimatePresence>
+        </>
+      )}
     </>
   );
 }

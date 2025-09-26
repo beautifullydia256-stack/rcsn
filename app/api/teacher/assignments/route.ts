@@ -81,10 +81,10 @@ export async function GET(req: NextRequest) {
     // Fallback: Use regular client with explicit teacher_id
     if (!assignments || assignErr) {
       const result = await supabase
-        .from('teacher_class_subjects')
-        .select('class_name, subject')
-        .eq('school_id', userRow.school_id)
-        .eq('teacher_id', resolvedTeacherId);
+      .from('teacher_class_subjects')
+      .select('class_name, subject')
+      .eq('school_id', userRow.school_id)
+      .eq('teacher_id', resolvedTeacherId);
       assignments = result.data;
       assignErr = result.error;
     }
