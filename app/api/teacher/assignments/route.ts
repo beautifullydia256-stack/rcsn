@@ -63,12 +63,46 @@ export async function GET(req: NextRequest) {
 
     if (!resolvedTeacherId) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
 
-    // 4. Get assignments using service role to bypass RLS
-    const { data: assignments, error: assignErr } = await supabaseService
-      .from('teacher_class_subjects')
-      .select('class_name, subject')
-      .eq('school_id', userRow.school_id)
-      .eq('teacher_id', resolvedTeacherId);
+    // 4. Get assignments - try multiple approaches
+    let assignments = null;
+    let assignErr = null;
+
+    // First try: Direct query with service role (if available)
+    if (supabaseServiceKey) {
+      const result = await supabaseService
+        .from('teacher_class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', userRow.school_id)
+        .eq('teacher_id', resolvedTeacherId);
+      assignments = result.data;
+      assignErr = result.error;
+    }
+
+    // Fallback: Use regular client with explicit teacher_id
+    if (!assignments || assignErr) {
+      const result = await supabase
+        .from('teacher_class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', userRow.school_id)
+        .eq('teacher_id', resolvedTeacherId);
+      assignments = result.data;
+      assignErr = result.error;
+    }
+
+    // Final fallback: Query by email match
+    if (!assignments || assignErr) {
+      const result = await supabase
+        .from('teacher_class_subjects')
+        .select('class_name, subject, teachers!inner(email)')
+        .eq('school_id', userRow.school_id)
+        .eq('teachers.email', userRow.email);
+      if (result.data) {
+        assignments = result.data.map((r: any) => ({ class_name: r.class_name, subject: r.subject }));
+        assignErr = null;
+      } else {
+        assignErr = result.error;
+      }
+    }
 
     console.log('Teacher assignments API debug:', {
       userRow,
