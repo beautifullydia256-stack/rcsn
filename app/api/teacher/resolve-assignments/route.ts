@@ -91,23 +91,9 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: assignErr.message }, { status: 500 });
     }
 
-    // Group subjects by class
-    const groupedAssignments: Record<string, string[]> = {};
-    (assignments || []).forEach(({ class_name, subject }) => {
-      if (!groupedAssignments[class_name]) {
-        groupedAssignments[class_name] = [];
-      }
-      groupedAssignments[class_name].push(subject);
-    });
-
-    // Transform to array format for easier frontend consumption
-    const result = Object.entries(groupedAssignments).map(([class_name, subjects]) => ({
-      class_name,
-      subjects
-    }));
-
+    // Return assignments in the format expected by the frontend
     return NextResponse.json({
-      assignments: result,
+      assignments: assignments || [],
       resolved_teacher_id: resolvedTeacherId
     });
   } catch (e: any) {
