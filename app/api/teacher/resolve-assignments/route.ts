@@ -45,11 +45,6 @@ export async function GET(req: NextRequest) {
     // Resolve teacher_id - try multiple approaches
     let resolvedTeacherId: string | null = null;
 
-    console.log('Teacher resolution debug:', {
-      sessionUser: session.user,
-      userRow,
-      metaTeacherId: session.user.user_metadata?.teacher_id
-    });
 
     // Try 1: From user metadata
     const metaTeacherId = session.user.user_metadata?.teacher_id as string | undefined;
@@ -62,7 +57,6 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       if (tMeta) {
         resolvedTeacherId = tMeta.teacher_id;
-        console.log('Found teacher via metadata:', resolvedTeacherId);
       }
     }
 
@@ -76,7 +70,6 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       if (tEmail) {
         resolvedTeacherId = tEmail.teacher_id;
-        console.log('Found teacher via email:', resolvedTeacherId);
       }
     }
 
@@ -90,14 +83,25 @@ export async function GET(req: NextRequest) {
         .maybeSingle();
       if (tName) {
         resolvedTeacherId = tName.teacher_id;
-        console.log('Found teacher via name:', resolvedTeacherId);
       }
     }
 
-    // Try 4: Direct query for kimuli@gmail.com (known working case)
-    if (!resolvedTeacherId && userRow.email === 'kimuli@gmail.com') {
-      resolvedTeacherId = 'fdb2b67f-3757-4e54-92d7-40fad4e2a5f2';
-      console.log('Using hardcoded teacher_id for kimuli@gmail.com:', resolvedTeacherId);
+    // Try 4: Fallback - check if user is a teacher in the system
+    if (!resolvedTeacherId) {
+      const { data: allTeachers } = await supabase
+        .from('teachers')
+        .select('teacher_id, email, name')
+        .eq('school_id', userRow.school_id);
+      
+      // Try to match by email or name
+      const matchingTeacher = allTeachers?.find(t => 
+        t.email?.toLowerCase() === userRow.email?.toLowerCase() ||
+        t.name?.toLowerCase() === userRow.name?.toLowerCase()
+      );
+      
+      if (matchingTeacher) {
+        resolvedTeacherId = matchingTeacher.teacher_id;
+      }
     }
 
     if (!resolvedTeacherId) {
@@ -148,12 +152,6 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: assignErr.message }, { status: 500 });
     }
 
-    console.log('Resolve assignments API debug:', {
-      userRow,
-      resolvedTeacherId,
-      assignments,
-      assignErr
-    });
 
     // Return assignments in the format expected by the frontend
     return NextResponse.json({

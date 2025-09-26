@@ -143,10 +143,8 @@ export default function TeacherDashboard() {
         }
         if (apiRes.ok) {
           const payload = await apiRes.json();
-          console.log('API Response payload:', payload);
           if (Array.isArray(payload?.assignments)) {
             tcs = payload.assignments;
-            console.log('Assignments from API:', tcs);
           }
         }
       } catch {}

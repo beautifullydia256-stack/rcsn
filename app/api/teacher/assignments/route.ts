@@ -104,12 +104,6 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    console.log('Teacher assignments API debug:', {
-      userRow,
-      resolvedTeacherId,
-      assignments,
-      assignErr
-    });
 
     if (assignErr) {
       return NextResponse.json({ error: assignErr.message }, { status: 500 });
