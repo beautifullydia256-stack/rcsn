@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
     const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
 
     const res = NextResponse.next();
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {
@@ -20,6 +21,15 @@ export async function GET(req: NextRequest) {
         remove(name: string, options: any) {
           res.cookies.set({ name, value: '', ...options, maxAge: 0 });
         },
+      },
+    });
+
+    // Create a service role client to bypass RLS for this specific query
+    const supabaseService = createServerClient(supabaseUrl, supabaseServiceKey, {
+      cookies: {
+        get() { return ''; },
+        set() {},
+        remove() {},
       },
     });
 
@@ -53,8 +63,8 @@ export async function GET(req: NextRequest) {
 
     if (!resolvedTeacherId) return NextResponse.json({ error: 'Teacher not found' }, { status: 404 });
 
-    // 4. Get assignments
-    const { data: assignments, error: assignErr } = await supabase
+    // 4. Get assignments using service role to bypass RLS
+    const { data: assignments, error: assignErr } = await supabaseService
       .from('teacher_class_subjects')
       .select('class_name, subject')
       .eq('school_id', userRow.school_id)
