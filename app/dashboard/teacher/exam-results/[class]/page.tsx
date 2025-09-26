@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 
 export default function TeacherExamResultsClassPage() {
@@ -284,16 +285,47 @@ export default function TeacherExamResultsClassPage() {
         );
         setExamSets(filteredExamSets);
 
-        // Get students in this class
-        const { data: studentsData, error: studentsError } = await supabase
-          .from('students')
-          .select('student_id, name, current_class')
-          .eq('school_id', schoolId)
-          .eq('current_class', className)
-          .order('name');
+        // Get students in this class with better error handling
+        let studentsData: any[] = [];
+        try {
+          const { data, error: studentsError } = await supabase
+            .from('students')
+            .select('student_id, name, current_class')
+            .eq('school_id', schoolId)
+            .eq('current_class', className)
+            .order('name');
 
-        if (studentsError) throw studentsError;
-        setStudents(studentsData || []);
+          if (studentsError) {
+            console.error('Error fetching students:', studentsError);
+            // Don't throw error, just log it and continue with empty array
+          } else {
+            studentsData = data || [];
+          }
+        } catch (err) {
+          console.error('Exception fetching students:', err);
+        }
+
+        // If no students found, try using API endpoint
+        if (studentsData.length === 0) {
+          try {
+            const apiRes = await fetch(`/api/teacher/students?class=${encodeURIComponent(className)}`, { 
+              credentials: 'include', 
+              cache: 'no-store' as any, 
+              headers: { 'Cache-Control': 'no-store' } 
+            });
+            
+            if (apiRes.ok) {
+              const payload = await apiRes.json();
+              if (Array.isArray(payload?.students)) {
+                studentsData = payload.students;
+              }
+            }
+          } catch (err) {
+            console.error('Error fetching students via API:', err);
+          }
+        }
+
+        setStudents(studentsData);
 
       } catch (err) {
         console.error('Error fetching data:', err);
