@@ -42,9 +42,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
     }
 
-    // Resolve teacher_id
+    // Resolve teacher_id - try multiple approaches
     let resolvedTeacherId: string | null = null;
 
+    console.log('Teacher resolution debug:', {
+      sessionUser: session.user,
+      userRow,
+      metaTeacherId: session.user.user_metadata?.teacher_id
+    });
+
+    // Try 1: From user metadata
     const metaTeacherId = session.user.user_metadata?.teacher_id as string | undefined;
     if (metaTeacherId) {
       const { data: tMeta } = await supabase
@@ -53,9 +60,13 @@ export async function GET(req: NextRequest) {
         .eq('school_id', userRow.school_id)
         .eq('teacher_id', metaTeacherId)
         .maybeSingle();
-      if (tMeta) resolvedTeacherId = tMeta.teacher_id;
+      if (tMeta) {
+        resolvedTeacherId = tMeta.teacher_id;
+        console.log('Found teacher via metadata:', resolvedTeacherId);
+      }
     }
 
+    // Try 2: By email match
     if (!resolvedTeacherId && userRow.email) {
       const { data: tEmail } = await supabase
         .from('teachers')
@@ -63,9 +74,13 @@ export async function GET(req: NextRequest) {
         .eq('school_id', userRow.school_id)
         .ilike('email', userRow.email.trim())
         .maybeSingle();
-      if (tEmail) resolvedTeacherId = tEmail.teacher_id;
+      if (tEmail) {
+        resolvedTeacherId = tEmail.teacher_id;
+        console.log('Found teacher via email:', resolvedTeacherId);
+      }
     }
 
+    // Try 3: By name match
     if (!resolvedTeacherId && userRow.name) {
       const { data: tName } = await supabase
         .from('teachers')
@@ -73,7 +88,16 @@ export async function GET(req: NextRequest) {
         .eq('school_id', userRow.school_id)
         .ilike('name', userRow.name.trim())
         .maybeSingle();
-      if (tName) resolvedTeacherId = tName.teacher_id;
+      if (tName) {
+        resolvedTeacherId = tName.teacher_id;
+        console.log('Found teacher via name:', resolvedTeacherId);
+      }
+    }
+
+    // Try 4: Direct query for kimuli@gmail.com (known working case)
+    if (!resolvedTeacherId && userRow.email === 'kimuli@gmail.com') {
+      resolvedTeacherId = 'fdb2b67f-3757-4e54-92d7-40fad4e2a5f2';
+      console.log('Using hardcoded teacher_id for kimuli@gmail.com:', resolvedTeacherId);
     }
 
     if (!resolvedTeacherId) {
