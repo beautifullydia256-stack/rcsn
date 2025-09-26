@@ -104,6 +104,35 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Try 5: Service role fallback for known working cases
+    if (!resolvedTeacherId && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseService = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            get() { return ''; },
+            set() {},
+            remove() {},
+          },
+        }
+      );
+      
+      const { data: serviceTeachers } = await supabaseService
+        .from('teachers')
+        .select('teacher_id, email, name')
+        .eq('school_id', userRow.school_id);
+      
+      const matchingServiceTeacher = serviceTeachers?.find(t => 
+        t.email?.toLowerCase() === userRow.email?.toLowerCase() ||
+        t.name?.toLowerCase() === userRow.name?.toLowerCase()
+      );
+      
+      if (matchingServiceTeacher) {
+        resolvedTeacherId = matchingServiceTeacher.teacher_id;
+      }
+    }
+
     if (!resolvedTeacherId) {
       return NextResponse.json({ assignments: [], resolved_teacher_id: null });
     }
