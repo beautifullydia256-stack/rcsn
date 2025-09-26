@@ -585,6 +585,21 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
+  // O-Level calculation functions (matching exam results page logic)
+  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
+    if (activityScore < 1) return "Missed";
+    if (activityScore < 2.5) return "Moderate";
+    return "Outstanding";
+  };
+
+  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
+    if (finalScore >= 80) return "A";
+    if (finalScore >= 70) return "B";
+    if (finalScore >= 60) return "C";
+    if (finalScore >= 50) return "D";
+    return "E";
+  };
+
   return (
     <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
       
@@ -658,24 +673,25 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         <tbody>
           {student.results.length > 0 ? (
             student.results.map((result: any, index: number) => {
-              const topics = Array.isArray(result.topics) ? result.topics : [];
+              // Use proper O-Level data structure
               const activity = result.activity_score ?? '';
-              const descriptor = result.descriptor ?? '';
+              const activityNum = parseFloat(activity) || 0;
+              const descriptor = result.descriptor || calculateDescriptor(activityNum);
               const formative = result.formative_score ?? '';
               const exam = result.exam_score ?? '';
               const finalScore = result.final_score ?? '';
-              const gradeText = result.grade ?? '';
+              const finalNum = parseFloat(finalScore) || 0;
+              const gradeText = result.grade || calculateGrade(finalNum);
               const overallRemark = result.overall_remark ?? '';
               const teacherInitials = result.teacher_initials ?? '';
+              const topic = result.topic || '';
               
               return (
                 <tr key={index}>
                   <td style={{ border: '1px solid #000', padding: '6px' }}>
                     <div className="font-bold">{result.subject}</div>
                     <div className="text-[9pt] leading-snug mt-1">
-                      {topics.length > 0 ? topics.map((t: any, i: number) => (
-                        <div key={i}>{typeof t === 'string' ? t : JSON.stringify(t)}</div>
-                      )) : (result.topic || '')}
+                      {topic}
                     </div>
                   </td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{activity}</td>
@@ -820,11 +836,25 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
-  // Calculate level of achievement based on grade
+  // O-Level calculation functions (matching exam results page logic)
+  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
+    if (activityScore < 1) return "Missed";
+    if (activityScore < 2.5) return "Moderate";
+    return "Outstanding";
+  };
+
+  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
+    if (finalScore >= 80) return "A";
+    if (finalScore >= 70) return "B";
+    if (finalScore >= 60) return "C";
+    if (finalScore >= 50) return "D";
+    return "E";
+  };
+
+  // Calculate level of achievement based on grade (Template 2 specific)
   const getLevelOfAchievement = (grade: string) => {
     switch (grade) {
-      case 'A+': return '2.8';
-      case 'A': return '2.5';
+      case 'A': return '2.8';
       case 'B': return '2.2';
       case 'C': return '2.0';
       case 'D': return '1.5';
@@ -833,7 +863,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
     }
   };
 
-  // Get descriptor based on level of achievement
+  // Get descriptor based on level of achievement (Template 2 specific)
   const getDescriptor = (level: string) => {
     const num = parseFloat(level);
     if (num >= 2.5) return 'Outstanding';
@@ -884,10 +914,12 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
+                // Use proper O-Level data structure
                 const formative = result.formative_score ?? '';
                 const exam = result.exam_score ?? '';
                 const finalScore = result.final_score ?? '';
-                const gradeText = result.grade ?? '';
+                const finalNum = parseFloat(finalScore) || 0;
+                const gradeText = result.grade || calculateGrade(finalNum);
                 const levelOfAchievement = getLevelOfAchievement(gradeText);
                 const descriptor = getDescriptor(levelOfAchievement);
                 const teacherInitials = result.teacher_initials ?? '';
@@ -986,7 +1018,22 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
-  // Calculate identifier based on grade/score
+  // O-Level calculation functions (matching exam results page logic)
+  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
+    if (activityScore < 1) return "Missed";
+    if (activityScore < 2.5) return "Moderate";
+    return "Outstanding";
+  };
+
+  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
+    if (finalScore >= 80) return "A";
+    if (finalScore >= 70) return "B";
+    if (finalScore >= 60) return "C";
+    if (finalScore >= 50) return "D";
+    return "E";
+  };
+
+  // Calculate identifier based on grade/score (Template 3 specific)
   const getIdentifier = (score: number) => {
     if (score >= 80) return '3'; // Accomplished
     if (score >= 60) return '2'; // Moderate
@@ -994,7 +1041,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
     return ''; // Blank for absent
   };
 
-  // Get grade based on score
+  // Get grade based on score (Template 3 specific)
   const getGrade = (score: number) => {
     if (score >= 80) return 'A';
     if (score >= 70) return 'B';
@@ -1043,12 +1090,16 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                const c1 = result.activity_score ? (parseFloat(result.activity_score) * 1.5).toFixed(1) : '';
-                const c2 = result.activity_score ? (parseFloat(result.activity_score) * 1.2).toFixed(1) : '';
+                // Use proper O-Level data structure
+                const activity = result.activity_score ?? '';
+                const activityNum = parseFloat(activity) || 0;
+                const c1 = activityNum > 0 ? (activityNum * 1.5).toFixed(1) : '';
+                const c2 = activityNum > 0 ? (activityNum * 1.2).toFixed(1) : '';
                 const avgScore = result.formative_score ?? '';
                 const finalExam = result.exam_score ?? '';
                 const totalScore = result.final_score ?? '';
-                const identifier = getIdentifier(parseFloat(totalScore) || 0);
+                const totalNum = parseFloat(totalScore) || 0;
+                const identifier = getIdentifier(totalNum);
                 const teacherInitials = result.teacher_initials ?? '';
                 
                 return (
