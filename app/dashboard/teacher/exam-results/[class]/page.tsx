@@ -69,27 +69,34 @@ export default function TeacherExamResultsClassPage() {
         let teacherId = user.user_metadata?.teacher_id as string | undefined;
         let schoolId = user.user_metadata?.school_id as string | undefined;
 
-          const { data: userData, error: userError } = await supabase
+        // Get user data with better error handling
+        let userData: any = null;
+        try {
+          const { data, error: userError } = await supabase
             .from('users')
-          .select('school_id,name,email,user_metadata')
+            .select('school_id,name,email,user_metadata')
             .eq('user_id', user.id)
             .single();
           
           if (userError) {
             console.error('Error fetching user data:', userError);
-            setError('Failed to load teacher information');
-            return;
+            // Don't return immediately, try to continue with available data
+          } else {
+            userData = data;
           }
+        } catch (err) {
+          console.error('Exception fetching user data:', err);
+        }
 
         schoolId = schoolId || (userData?.school_id as string | undefined);
 
         // Fill initials from users.name if not from metadata
         const fallbackName = (userData?.name as string | undefined) || undefined;
-          if (!nameFromMeta && fallbackName) {
-            const parts = fallbackName.trim().split(/\s+/);
-            const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
-            setTeacherInitials(initials || "");
-          }
+        if (!nameFromMeta && fallbackName) {
+          const parts = fallbackName.trim().split(/\s+/);
+          const initials = parts.slice(0, 2).map(p => (p[0] || '').toUpperCase()).join('.')
+          setTeacherInitials(initials || "");
+        }
           
         // If no teacherId yet, try match teacher by email in same school
         if (!teacherId && (userData?.email || user.email) && schoolId) {
@@ -111,6 +118,28 @@ export default function TeacherExamResultsClassPage() {
             .ilike('name', (userData?.name || '').trim())
             .maybeSingle();
           teacherId = tByName?.teacher_id as string | undefined;
+        }
+
+        // If still no teacherId, try using the API endpoint to resolve it
+        if (!teacherId) {
+          try {
+            let apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+            if (!apiRes.ok) {
+              const origin = typeof window !== 'undefined' ? window.location.origin : '';
+              if (origin) {
+                apiRes = await fetch(`${origin}/api/teacher/resolve-assignments`, { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+              }
+            }
+            if (apiRes.ok) {
+              const payload = await apiRes.json();
+              if (payload?.resolved_teacher_id) {
+                teacherId = payload.resolved_teacher_id;
+                console.log('Resolved teacher_id via API:', teacherId);
+              }
+            }
+          } catch (err) {
+            console.error('Error resolving teacher_id via API:', err);
+          }
         }
         
         console.log('Teacher ID:', teacherId, 'School ID:', schoolId);
