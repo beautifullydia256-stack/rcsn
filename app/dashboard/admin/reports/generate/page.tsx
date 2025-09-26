@@ -398,7 +398,7 @@ export default function GenerateReportsPage() {
                 className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
                 <option className="text-black" value="template1">Template 1 - O-Level Format</option>
-                <option className="text-black" value="template2">Template 2 - Coming Soon</option>
+                <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
                 <option className="text-black" value="template3">Template 3 - Coming Soon</option>
               </select>
             </div>
@@ -813,10 +813,345 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
   );
 }
 
+// Template 2 - St. Adrian Kasozi Secondary School Format
+function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Calculate level of achievement based on grade
+  const getLevelOfAchievement = (grade: string) => {
+    switch (grade) {
+      case 'A+': return '2.8';
+      case 'A': return '2.5';
+      case 'B': return '2.2';
+      case 'C': return '2.0';
+      case 'D': return '1.5';
+      case 'E': return '1.2';
+      default: return '';
+    }
+  };
+
+  // Get descriptor based on level of achievement
+  const getDescriptor = (level: string) => {
+    const num = parseFloat(level);
+    if (num >= 2.5) return 'Outstanding';
+    if (num >= 1.5) return 'Moderate';
+    if (num >= 0.9) return 'Basic';
+    return '';
+  };
+
+  return (
+    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+      
+      {/* HEADER */}
+      <div className="text-center mb-6">
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
+        <div className="text-[9pt] mt-1">
+          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+        </div>
+      </div>
+
+      {/* REPORT TITLE */}
+      <div className="text-center mb-4">
+        <h1 className="text-[14pt] font-bold uppercase">O LEVEL TERMLY REPORT</h1>
+      </div>
+
+      {/* STUDENT INFO */}
+      <div className="mb-6 text-[11pt]">
+        <div className="grid grid-cols-2 gap-4">
+          <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
+          <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
+          <div><strong>Name:</strong> {student.name}</div>
+          <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
+          <div><strong>Class:</strong> {student.current_class}</div>
+        </div>
+      </div>
+
+      {/* SUBJECTS TABLE */}
+      <div className="mb-4">
+        <h3 className="text-[12pt] font-bold mb-2">Learner's End of Year Summative Assessment Results {examSet?.year || '2022'}</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
+          <thead>
+            <tr>
+              {['Subject', 'Formative Score (20%)', 'EOY Summative Assessment (80%)', 'Total (100%)', 'Grade', 'Level of Achievement/3', 'Descriptor', "TR's Initial"].map(h => (
+                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {student.results.length > 0 ? (
+              student.results.map((result: any, index: number) => {
+                const formative = result.formative_score ?? '';
+                const exam = result.exam_score ?? '';
+                const finalScore = result.final_score ?? '';
+                const gradeText = result.grade ?? '';
+                const levelOfAchievement = getLevelOfAchievement(gradeText);
+                const descriptor = getDescriptor(levelOfAchievement);
+                const teacherInitials = result.teacher_initials ?? '';
+                
+                return (
+                  <tr key={index}>
+                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{result.subject}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{formative}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{exam}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalScore}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{gradeText}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{levelOfAchievement}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* OVERALL SUMMARY */}
+      <div className="mb-4 text-[11pt]">
+        <div className="flex items-center gap-4">
+          <div><strong>Overall Average:</strong> {avg}</div>
+          <div><strong>Level of Achievement:</strong> 2</div>
+          <div><strong>Descriptor:</strong> Moderate</div>
+          <div className="text-[10pt] italic">Overall Learner's achievements for the subjects attended</div>
+        </div>
+      </div>
+
+      {/* KEY TO TERMS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-bold mb-2">Key to Terms Used:</h3>
+        <ul className="list-disc ml-6 space-y-1">
+          <li><strong>Blank/Absent:</strong> Learner does not do the subject/was absent.</li>
+          <li><strong>0.9-1.49 (Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement.</li>
+          <li><strong>1.5-2.48 (Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement.</li>
+          <li><strong>2.5-3.00 (Outstanding):</strong> Most or all learning outcomes achieved.</li>
+        </ul>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Teacher's Comments</h3>
+        <div className="mb-3">
+          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || 'Can do even better.'}</p>
+          <p className="mt-1">Signature: {student.comments?.class_teacher_signature || '__________'}</p>
+        </div>
+        
+        <div className="mb-3">
+          <p><strong>Head Teacher's Comment:</strong> {student.comments?.head_teacher_text || 'More concentration needed'}</p>
+          <p className="mt-1">Signature: {student.comments?.head_teacher_signature || '__________'}</p>
+        </div>
+      </div>
+
+      {/* NEXT TERM INFO */}
+      <div className="mb-4 text-[10pt]">
+        <div className="flex gap-4">
+          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || '6TH FEBRUARY 2023'}</div>
+          <div><strong>Ends On:</strong> __________</div>
+        </div>
+      </div>
+
+      {/* DISCLAIMER */}
+      <div className="text-center text-[9pt] mt-4">
+        <p><strong>Disclaimer:</strong> "This report is not valid without a school stamp."</p>
+      </div>
+
+      {/* SCHOOL STAMP PLACEHOLDER */}
+      <div className="flex justify-end mt-4">
+        <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
+          <div className="text-center text-xs text-blue-700">
+            <div className="font-bold">ST. ADRIAN</div>
+            <div className="font-bold">KASOZI</div>
+            <div className="font-bold">SECONDARY</div>
+            <div className="font-bold">SCHOOL</div>
+            <div className="mt-1 text-[8pt]">HEAD TEACHER</div>
+            <div className="text-[7pt]">24/01/2023</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Template 2 - St. Adrian Kasozi Secondary School Format
+function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Calculate level of achievement based on grade
+  const getLevelOfAchievement = (grade: string) => {
+    switch (grade) {
+      case 'A+': return '2.8';
+      case 'A': return '2.5';
+      case 'B': return '2.2';
+      case 'C': return '2.0';
+      case 'D': return '1.5';
+      case 'E': return '1.2';
+      default: return '';
+    }
+  };
+
+  // Get descriptor based on level of achievement
+  const getDescriptor = (level: string) => {
+    const num = parseFloat(level);
+    if (num >= 2.5) return 'Outstanding';
+    if (num >= 1.5) return 'Moderate';
+    if (num >= 0.9) return 'Basic';
+    return '';
+  };
+
+  return (
+    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+      
+      {/* HEADER */}
+      <div className="text-center mb-6">
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
+        <div className="text-[9pt] mt-1">
+          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+        </div>
+      </div>
+
+      {/* REPORT TITLE */}
+      <div className="text-center mb-4">
+        <h1 className="text-[14pt] font-bold uppercase">O LEVEL TERMLY REPORT</h1>
+      </div>
+
+      {/* STUDENT INFO */}
+      <div className="mb-6 text-[11pt]">
+        <div className="grid grid-cols-2 gap-4">
+          <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
+          <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
+          <div><strong>Name:</strong> {student.name}</div>
+          <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
+          <div><strong>Class:</strong> {student.current_class}</div>
+        </div>
+      </div>
+
+      {/* SUBJECTS TABLE */}
+      <div className="mb-4">
+        <h3 className="text-[12pt] font-bold mb-2">Learner's End of Year Summative Assessment Results {examSet?.year || '2022'}</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
+          <thead>
+            <tr>
+              {['Subject', 'Formative Score (20%)', 'EOY Summative Assessment (80%)', 'Total (100%)', 'Grade', 'Level of Achievement/3', 'Descriptor', "TR's Initial"].map(h => (
+                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {student.results.length > 0 ? (
+              student.results.map((result: any, index: number) => {
+                const formative = result.formative_score ?? '';
+                const exam = result.exam_score ?? '';
+                const finalScore = result.final_score ?? '';
+                const gradeText = result.grade ?? '';
+                const levelOfAchievement = getLevelOfAchievement(gradeText);
+                const descriptor = getDescriptor(levelOfAchievement);
+                const teacherInitials = result.teacher_initials ?? '';
+                
+                return (
+                  <tr key={index}>
+                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{result.subject}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{formative}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{exam}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalScore}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{gradeText}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{levelOfAchievement}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* OVERALL SUMMARY */}
+      <div className="mb-4 text-[11pt]">
+        <div className="flex items-center gap-4">
+          <div><strong>Overall Average:</strong> {avg}</div>
+          <div><strong>Level of Achievement:</strong> 2</div>
+          <div><strong>Descriptor:</strong> Moderate</div>
+          <div className="text-[10pt] italic">Overall Learner's achievements for the subjects attended</div>
+        </div>
+      </div>
+
+      {/* KEY TO TERMS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-bold mb-2">Key to Terms Used:</h3>
+        <ul className="list-disc ml-6 space-y-1">
+          <li><strong>Blank/Absent:</strong> Learner does not do the subject/was absent.</li>
+          <li><strong>0.9-1.49 (Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement.</li>
+          <li><strong>1.5-2.48 (Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement.</li>
+          <li><strong>2.5-3.00 (Outstanding):</strong> Most or all learning outcomes achieved.</li>
+        </ul>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Teacher's Comments</h3>
+        <div className="mb-3">
+          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || 'Can do even better.'}</p>
+          <p className="mt-1">Signature: {student.comments?.class_teacher_signature || '__________'}</p>
+        </div>
+        
+        <div className="mb-3">
+          <p><strong>Head Teacher's Comment:</strong> {student.comments?.head_teacher_text || 'More concentration needed'}</p>
+          <p className="mt-1">Signature: {student.comments?.head_teacher_signature || '__________'}</p>
+        </div>
+      </div>
+
+      {/* NEXT TERM INFO */}
+      <div className="mb-4 text-[10pt]">
+        <div className="flex gap-4">
+          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || '6TH FEBRUARY 2023'}</div>
+          <div><strong>Ends On:</strong> __________</div>
+        </div>
+      </div>
+
+      {/* DISCLAIMER */}
+      <div className="text-center text-[9pt] mt-4">
+        <p><strong>Disclaimer:</strong> "This report is not valid without a school stamp."</p>
+      </div>
+
+      {/* SCHOOL STAMP PLACEHOLDER */}
+      <div className="flex justify-end mt-4">
+        <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
+          <div className="text-center text-xs text-blue-700">
+            <div className="font-bold">ST. ADRIAN</div>
+            <div className="font-bold">KASOZI</div>
+            <div className="font-bold">SECONDARY</div>
+            <div className="font-bold">SCHOOL</div>
+            <div className="mt-1 text-[8pt]">HEAD TEACHER</div>
+            <div className="text-[7pt]">24/01/2023</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Report Preview Component with template selection
 function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
   if (template === 'template1') {
     return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+  }
+  if (template === 'template2') {
+    return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
   }
   
   if (isSecondaryClass(student.current_class)) {
