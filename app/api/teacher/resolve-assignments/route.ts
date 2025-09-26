@@ -185,7 +185,10 @@ export async function GET(req: NextRequest) {
     // Return assignments in the format expected by the frontend
     return NextResponse.json({
       assignments: assignments || [],
-      resolved_teacher_id: resolvedTeacherId
+      resolved_teacher_id: resolvedTeacherId,
+      school_id: userRow.school_id,
+      user_email: userRow.email,
+      user_name: userRow.name
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal error' }, { status: 500 });

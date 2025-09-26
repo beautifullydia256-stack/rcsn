@@ -69,23 +69,47 @@ export default function TeacherExamResultsClassPage() {
         let teacherId = user.user_metadata?.teacher_id as string | undefined;
         let schoolId = user.user_metadata?.school_id as string | undefined;
 
-        // Get user data with better error handling
+        // Get user data using the working API endpoint instead of direct query
         let userData: any = null;
         try {
-          const { data, error: userError } = await supabase
-            .from('users')
-            .select('school_id,name,email,user_metadata')
-            .eq('user_id', user.id)
-            .single();
-          
-          if (userError) {
-            console.error('Error fetching user data:', userError);
-            // Don't return immediately, try to continue with available data
-          } else {
-            userData = data;
+          // Use the working API endpoint to get user info
+          let apiRes = await fetch('/api/teacher/resolve-assignments', { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+          if (!apiRes.ok) {
+            const origin = typeof window !== 'undefined' ? window.location.origin : '';
+            if (origin) {
+              apiRes = await fetch(`${origin}/api/teacher/resolve-assignments`, { credentials: 'include', cache: 'no-store' as any, headers: { 'Cache-Control': 'no-store' } });
+            }
+          }
+          if (apiRes.ok) {
+            const payload = await apiRes.json();
+            // Extract user info from the API response
+            userData = {
+              school_id: payload.school_id,
+              name: payload.user_name || user.user_metadata?.name || user.user_metadata?.full_name,
+              email: payload.user_email || user.email
+            };
           }
         } catch (err) {
-          console.error('Exception fetching user data:', err);
+          console.error('Exception fetching user data via API:', err);
+        }
+
+        // Fallback: try direct query if API fails
+        if (!userData) {
+          try {
+            const { data, error: userError } = await supabase
+              .from('users')
+              .select('school_id,name,email,user_metadata')
+              .eq('user_id', user.id)
+              .single();
+            
+            if (userError) {
+              console.error('Error fetching user data:', userError);
+            } else {
+              userData = data;
+            }
+          } catch (err) {
+            console.error('Exception fetching user data directly:', err);
+          }
         }
 
         schoolId = schoolId || (userData?.school_id as string | undefined);
