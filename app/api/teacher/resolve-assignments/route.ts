@@ -91,6 +91,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: assignErr.message }, { status: 500 });
     }
 
+    console.log('Resolve assignments API debug:', {
+      userRow,
+      resolvedTeacherId,
+      assignments,
+      assignErr
+    });
+
     // Return assignments in the format expected by the frontend
     return NextResponse.json({
       assignments: assignments || [],
