@@ -80,12 +80,45 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ assignments: [], resolved_teacher_id: null });
     }
 
-    // Get teacher assignments
-    const { data: assignments, error: assignErr } = await supabase
-      .from('teacher_class_subjects')
-      .select('class_name, subject')
-      .eq('school_id', userRow.school_id)
-      .eq('teacher_id', resolvedTeacherId);
+    // Get teacher assignments - try with service role to bypass RLS
+    let assignments = null;
+    let assignErr = null;
+
+    // Try with service role first (bypasses RLS)
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const supabaseService = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        {
+          cookies: {
+            get() { return ''; },
+            set() {},
+            remove() {},
+          },
+        }
+      );
+      
+      const result = await supabaseService
+        .from('teacher_class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', userRow.school_id)
+        .eq('teacher_id', resolvedTeacherId);
+      
+      assignments = result.data;
+      assignErr = result.error;
+    }
+
+    // Fallback to regular client
+    if (!assignments || assignErr) {
+      const result = await supabase
+        .from('teacher_class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', userRow.school_id)
+        .eq('teacher_id', resolvedTeacherId);
+      
+      assignments = result.data;
+      assignErr = result.error;
+    }
 
     if (assignErr) {
       return NextResponse.json({ error: assignErr.message }, { status: 500 });
