@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle } from 'docx';
+import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel, BorderStyle, ShadingType } from 'docx';
 import JSZip from 'jszip';
 import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, formatPercentage, formatAttendance, formatPosition } from '@/src/lib/reportUtils';
 
@@ -57,6 +57,10 @@ async function generateSingleReport(reportData: any) {
   const student = students[0];
 
   const isSecondaryClass = (className: string) => /^S\d/i.test((className || '').trim());
+  const isOLevelClass = (className: string) => {
+    const trimmed = (className || '').trim();
+    return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
+  };
 
   if (isSecondaryClass(student.current_class)) {
     return generateSecondaryReport(reportData);
@@ -85,7 +89,20 @@ async function generateSingleReport(reportData: any) {
   const createTableCell = (text: string, options: any = {}) => {
     return new TableCell({
       children: [createParagraph(text, { ...options, spacing: { after: 0 } })],
-      margins: { top: 50, bottom: 50, left: 50, right: 50 }
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: options.shading || {}
+    });
+  };
+
+  // Helper function to create a header cell with green background
+  const createHeaderCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 }, bold: true, color: 'FFFFFF' })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: '4CAF50'
+      }
     });
   };
 
@@ -108,18 +125,31 @@ async function generateSingleReport(reportData: any) {
       },
       children: [
         // School Header
-        createHeading(school?.name || 'School Name'),
-        createParagraph(school?.motto || 'School Motto', { 
+        createHeading(school?.name || 'EMIRATES COLLEGE SCHOOL'),
+        createParagraph(school?.motto || 'Education the Future', { 
           alignment: AlignmentType.CENTER,
           size: 18
         }),
-        createParagraph(`${school?.address || 'School Address'} | Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}`, {
+        createParagraph(`TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}`, {
           alignment: AlignmentType.CENTER,
           size: 16
         }),
         
-        // Student Report Title
-        createHeading('STUDENT REPORT', HeadingLevel.HEADING_2),
+        // Report Title with green background
+        new Paragraph({
+          children: [new TextRun({ 
+            text: `LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`,
+            bold: true,
+            size: 26,
+            color: 'FFFFFF'
+          })],
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 200 },
+          shading: {
+            type: ShadingType.SOLID,
+            color: '4CAF50'
+          }
+        }),
         
         // Student Information
         createHeading('Student Information', HeadingLevel.HEADING_3),
@@ -128,38 +158,20 @@ async function generateSingleReport(reportData: any) {
           rows: [
             new TableRow({
               children: [
-                createTableCell('Name:', { bold: true }),
-                createTableCell(student.name)
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Admission No:', { bold: true }),
+                createTableCell('LNo.:', { bold: true }),
                 createTableCell(student.admission_number || student.student_id)
               ]
             }),
             new TableRow({
               children: [
-                createTableCell('Class:', { bold: true }),
+                createTableCell('NAME:', { bold: true }),
+                createTableCell(student.name)
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('CLASS & STREAM:', { bold: true }),
                 createTableCell(student.current_class)
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Year:', { bold: true }),
-                createTableCell(examSet.year.toString())
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Term:', { bold: true }),
-                createTableCell(examSet.term.toString())
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Exam Set:', { bold: true }),
-                createTableCell(examSet.name)
               ]
             })
           ]
@@ -172,29 +184,48 @@ async function generateSingleReport(reportData: any) {
           rows: [
             new TableRow({
               children: [
-                createTableCell('Subject', { bold: true, alignment: AlignmentType.CENTER }),
-                createTableCell('Marks', { bold: true, alignment: AlignmentType.CENTER }),
-                createTableCell('Grade', { bold: true, alignment: AlignmentType.CENTER }),
-                createTableCell('Remarks', { bold: true, alignment: AlignmentType.CENTER }),
-                createTableCell('Teacher Initials', { bold: true, alignment: AlignmentType.CENTER })
+                createHeaderCell('Subjects & Topics Covered'),
+                createHeaderCell('Activity Score [3]'),
+                createHeaderCell('Descriptor'),
+                createHeaderCell('Formative Score [20%]'),
+                createHeaderCell('Exam Score [80%]'),
+                createHeaderCell('Final Score [100%]'),
+                createHeaderCell('Grade'),
+                createHeaderCell('Overall Remark'),
+                createHeaderCell('Subject Teacher')
               ]
             }),
             ...(student.results.length > 0 ? 
               student.results.map((result: any) => {
-                const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
+                const activity = result.activity_score ?? '';
+                const activityNum = parseFloat(activity) || 0;
+                const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+                const formative = result.formative_score ?? '';
+                const exam = result.exam_score ?? '';
+                const finalScore = result.final_score ?? '';
+                const finalNum = parseFloat(finalScore) || 0;
+                const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+                const overallRemark = result.overall_remark ?? '';
+                const teacherInitials = result.teacher_initials ?? '';
+                const topic = result.topic || '';
+
                 return new TableRow({
                   children: [
-                    createTableCell(result.subject),
-                    createTableCell(`${result.marks_obtained}/${result.total_marks}`, { alignment: AlignmentType.CENTER }),
-                    createTableCell(gradeInfo.grade, { alignment: AlignmentType.CENTER }),
-                    createTableCell(gradeInfo.remark, { alignment: AlignmentType.CENTER }),
-                    createTableCell('-', { alignment: AlignmentType.CENTER })
+                    createTableCell(`${result.subject}\n${topic}`),
+                    createTableCell(activity, { alignment: AlignmentType.CENTER }),
+                    createTableCell(descriptor, { alignment: AlignmentType.CENTER }),
+                    createTableCell(formative, { alignment: AlignmentType.CENTER }),
+                    createTableCell(exam, { alignment: AlignmentType.CENTER }),
+                    createTableCell(finalScore, { alignment: AlignmentType.CENTER }),
+                    createTableCell(gradeText, { alignment: AlignmentType.CENTER }),
+                    createTableCell(overallRemark),
+                    createTableCell(teacherInitials, { alignment: AlignmentType.CENTER })
                   ]
                 });
               }) : [
                 new TableRow({
                   children: [
-                    createTableCell('N/A - Student did not sit for this exam set', { 
+                    createTableCell('N/A - Student did not sit for this term', { 
                       alignment: AlignmentType.CENTER 
                     })
                   ]
@@ -211,50 +242,14 @@ async function generateSingleReport(reportData: any) {
           rows: [
             new TableRow({
               children: [
-                createTableCell('Total Marks:', { bold: true }),
-                createTableCell(`${formatValue(student.summary.totalMarks)}/${formatValue(student.summary.totalPossibleMarks)}`)
+                createTableCell('AVERAGE SCORES:', { bold: true }),
+                createTableCell(`${student.summary.average ?? ''} ${student.summary.division ?? ''}`)
               ]
             }),
             new TableRow({
               children: [
-                createTableCell('Average:', { bold: true }),
-                createTableCell(formatPercentage(student.summary.average))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Aggregate:', { bold: true }),
-                createTableCell(formatValue(student.summary.aggregate))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Division:', { bold: true }),
-                createTableCell(formatValue(student.summary.division))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Class Position:', { bold: true }),
-                createTableCell(formatPosition(student.summary.classPosition, student.summary.average))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Stream Position:', { bold: true }),
-                createTableCell(formatPosition(student.summary.streamPosition, student.summary.average))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Attendance:', { bold: true }),
-                createTableCell(formatAttendance(student.summary.attendanceDetails.presentDays, student.summary.attendanceDetails.totalSchoolDays, student.summary.attendancePercentage))
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Performance:', { bold: true }),
-                createTableCell(formatValue(student.summary.performanceRemark))
+                createTableCell('OVERALL PERFORMANCE:', { bold: true }),
+                createTableCell(student.summary.performanceRemark ?? '')
               ]
             })
           ]
@@ -300,16 +295,72 @@ async function generateSingleReport(reportData: any) {
           })
         ] : []),
         
-        // Remarks
+        // Comments
         createHeading('Remarks', HeadingLevel.HEADING_3),
         createParagraph('Class Teacher\'s Remarks:', { bold: true }),
-        createParagraph(''),
-        createParagraph(''),
-        createParagraph(''),
+        createParagraph(student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'),
+        createParagraph(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`),
+        
         createParagraph('Head Teacher\'s Remarks:', { bold: true }),
-        createParagraph(''),
-        createParagraph(''),
-        createParagraph(''),
+        createParagraph(student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'),
+        createParagraph(`Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}`),
+        
+        // Next Term
+        createParagraph(`Next Term Begins: ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}`, { bold: true }),
+        
+        // Grading System
+        createHeading('Grading System', HeadingLevel.HEADING_3),
+        createParagraph('80 - A | 70 - B | 50 - C | 40 - D | 0 - E', { bold: true }),
+        
+        // Description Table
+        createHeading('Description', HeadingLevel.HEADING_3),
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({
+              children: [
+                createHeaderCell('Grade'),
+                createHeaderCell('Achievement Level'),
+                createHeaderCell('Descriptor')
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('A'),
+                createTableCell('Exceptional'),
+                createTableCell('Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations')
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('B'),
+                createTableCell('Outstanding'),
+                createTableCell('Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations')
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('C'),
+                createTableCell('Satisfactory'),
+                createTableCell('Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations')
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('D'),
+                createTableCell('Basic'),
+                createTableCell('Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations')
+              ]
+            }),
+            new TableRow({
+              children: [
+                createTableCell('E'),
+                createTableCell('Elementary'),
+                createTableCell('Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations')
+              ]
+            })
+          ]
+        }),
         
         // Footer
         createHeading('', HeadingLevel.HEADING_3),
@@ -318,33 +369,8 @@ async function generateSingleReport(reportData: any) {
           rows: [
             new TableRow({
               children: [
-                createTableCell('Next Term Opens: ________________'),
-                createTableCell(`Fees Balance: ${student.fees.length > 0 ? formatCurrency(student.fees[0].balance || 0) : 'N/A'}`)
-              ]
-            })
-          ]
-        }),
-        
-        createParagraph(''),
-        new Table({
-          width: { size: 100, type: WidthType.PERCENTAGE },
-          rows: [
-            new TableRow({
-              children: [
-                createTableCell('', { alignment: AlignmentType.CENTER }),
-                createTableCell('', { alignment: AlignmentType.CENTER })
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('________________', { alignment: AlignmentType.CENTER }),
-                createTableCell('________________', { alignment: AlignmentType.CENTER })
-              ]
-            }),
-            new TableRow({
-              children: [
-                createTableCell('Class Teacher\'s Signature', { alignment: AlignmentType.CENTER }),
-                createTableCell('Head Teacher\'s Signature', { alignment: AlignmentType.CENTER })
+                createTableCell('Printed from: Pwezacore'),
+                createTableCell(`School Motto: '${school?.motto || 'Education the Future'}'`, { alignment: AlignmentType.RIGHT })
               ]
             })
           ]
