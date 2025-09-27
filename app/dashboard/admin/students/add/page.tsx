@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import ImageUpload from "@/src/components/ImageUpload";
+import { CompressionResult } from "@/src/lib/imageCompression";
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -48,6 +50,9 @@ export default function AddStudentPage() {
   const [initialPayment, setInitialPayment] = useState("");
 
   const [saving, setSaving] = useState(false);
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -174,6 +179,44 @@ export default function AddStudentPage() {
         });
       }
 
+      // Upload profile photo if provided
+      if (profilePhoto && insertedStudent?.student_id) {
+        try {
+          const filePath = `${schoolId}/${insertedStudent.student_id}/profile.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('student-photos')
+            .upload(filePath, profilePhoto, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error('Photo upload error:', uploadError);
+            // Don't fail the entire operation for photo upload
+          } else {
+            // Get the public URL
+            const { data: urlData } = supabase.storage
+              .from('student-photos')
+              .getPublicUrl(filePath);
+
+            // Save photo record to database
+            await supabase.from('student_photos').insert({
+              student_id: insertedStudent.student_id,
+              school_id: schoolId,
+              photo_url: urlData.publicUrl,
+              photo_filename: profilePhoto.name,
+              photo_size: profilePhoto.size,
+              photo_type: profilePhoto.type,
+              is_primary: true
+            });
+          }
+        } catch (photoError) {
+          console.error('Photo processing error:', photoError);
+          // Don't fail the entire operation for photo upload
+        }
+      }
+
       // Login creation is now manual - admin must create login through Student Details page
 
       alert(`Student added successfully. Admission No: ${admission_number}\nTo create login: Go to Student Details page and use "Create Login" button.`);
@@ -184,6 +227,7 @@ export default function AddStudentPage() {
       setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianEmail(""); setGuardianOccupation(""); setGuardianAddress("");
       setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate("");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
+      setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to add student: ${e?.message || e}`);
@@ -218,6 +262,29 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Nationality" value={nationality} onChange={(e)=>setNationality(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Religion (optional)" value={religion} onChange={(e)=>setReligion(e.target.value)} />
             
+            <div className="text-white/90 font-medium col-span-full mt-2">Profile Photo (Passport Size)</div>
+            <div className="col-span-full">
+              <ImageUpload
+                onImageSelect={(file, result) => {
+                  setProfilePhoto(file);
+                  setCompressionResult(result);
+                  setUploadError(null);
+                }}
+                onError={(error) => {
+                  setUploadError(error);
+                  setProfilePhoto(null);
+                  setCompressionResult(null);
+                }}
+                maxSizeKB={500}
+                maxWidth={600}
+                maxHeight={600}
+                placeholder="Upload student passport photo"
+                className="text-white"
+              />
+              {uploadError && (
+                <div className="mt-2 text-red-300 text-sm">{uploadError}</div>
+              )}
+            </div>
 
             <div className="text-white/90 font-medium col-span-full mt-2">Contact & Address</div>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Home Address" value={address} onChange={(e)=>setAddress(e.target.value)} />

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
+import ImageUpload from "@/src/components/ImageUpload";
+import { CompressionResult } from "@/src/lib/imageCompression";
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -28,6 +30,10 @@ export default function StudentDetailPage() {
     password: '',
     newPassword: ''
   });
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -51,6 +57,9 @@ export default function StudentDetailPage() {
 
       // Check if student already has a login
       await checkExistingLogin(data?.student_id, data?.admission_number);
+
+      // Load current profile photo
+      await loadCurrentPhoto(data?.student_id, data?.school_id);
     };
     run();
   }, [studentId]);
@@ -78,6 +87,23 @@ export default function StudentDetailPage() {
     }
   };
 
+  const loadCurrentPhoto = async (studentId: string, schoolId: string) => {
+    try {
+      const { data: photoData } = await supabase
+        .from('student_photos')
+        .select('photo_url')
+        .eq('student_id', studentId)
+        .eq('is_primary', true)
+        .single();
+
+      if (photoData?.photo_url) {
+        setCurrentPhotoUrl(photoData.photo_url);
+      }
+    } catch (error) {
+      console.warn('No existing photo found:', error);
+    }
+  };
+
   const save = async () => {
     if (!student) return;
     setSaving(true);
@@ -90,8 +116,58 @@ export default function StudentDetailPage() {
         .update(payload)
         .eq("student_id", student.student_id);
       if (error) throw error;
+
+      // Upload new profile photo if provided
+      if (profilePhoto && student.student_id) {
+        try {
+          const filePath = `${student.school_id}/${student.student_id}/profile.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('student-photos')
+            .upload(filePath, profilePhoto, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
+
+          if (uploadError) {
+            console.error('Photo upload error:', uploadError);
+            // Don't fail the entire operation for photo upload
+            alert(`Photo upload failed: ${uploadError.message}. Student data was saved successfully.`);
+          } else {
+            // Get the public URL
+            const { data: urlData } = supabase.storage
+              .from('student-photos')
+              .getPublicUrl(filePath);
+
+            // Update or insert photo record
+            const { error: photoRecordError } = await supabase.from('student_photos').upsert({
+              student_id: student.student_id,
+              school_id: student.school_id,
+              photo_url: urlData.publicUrl,
+              photo_filename: profilePhoto.name,
+              photo_size: profilePhoto.size,
+              photo_type: profilePhoto.type,
+              is_primary: true
+            });
+
+            if (photoRecordError) {
+              console.error('Photo record error:', photoRecordError);
+              alert(`Photo uploaded but database record failed: ${photoRecordError.message}`);
+            } else {
+              setCurrentPhotoUrl(urlData.publicUrl);
+            }
+          }
+        } catch (photoError) {
+          console.error('Photo processing error:', photoError);
+          alert(`Photo processing failed: ${photoError instanceof Error ? photoError.message : 'Unknown error'}. Student data was saved successfully.`);
+        }
+      }
+
       setStudent({ ...student, ...form });
       setEditing(false);
+      setProfilePhoto(null);
+      setCompressionResult(null);
+      setUploadError(null);
       alert("Student updated.");
     } catch (e: any) {
       alert(`Failed to update: ${e?.message || e}`);
@@ -224,6 +300,41 @@ export default function StudentDetailPage() {
             {field('Date of Birth','date_of_birth','date')}
             {field('Nationality','nationality')}
             {field('Religion','religion')}
+
+            <div className="text-white/90 font-medium col-span-full mt-2">Profile Photo</div>
+            <div className="col-span-full">
+              {currentPhotoUrl && !editing && (
+                <div className="mb-4">
+                  <img
+                    src={currentPhotoUrl}
+                    alt="Current profile photo"
+                    className="w-32 h-32 object-cover rounded-lg border-2 border-white/20"
+                  />
+                </div>
+              )}
+              {editing && (
+                <ImageUpload
+                  onImageSelect={(file, result) => {
+                    setProfilePhoto(file);
+                    setCompressionResult(result);
+                    setUploadError(null);
+                  }}
+                  onError={(error) => {
+                    setUploadError(error);
+                    setProfilePhoto(null);
+                    setCompressionResult(null);
+                  }}
+                  maxSizeKB={500}
+                  maxWidth={600}
+                  maxHeight={600}
+                  placeholder="Upload new passport photo"
+                  className="text-white"
+                />
+              )}
+              {uploadError && (
+                <div className="mt-2 text-red-300 text-sm">{uploadError}</div>
+              )}
+            </div>
 
             <div className="text-white/90 font-medium col-span-full mt-2">Contact</div>
             {field('Address','address')}

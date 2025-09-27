@@ -11,10 +11,13 @@ export async function POST(request: NextRequest) {
       const doc = await generateSingleReport(reportData);
       const buffer = await Packer.toBuffer(doc);
       
+      const student = reportData.students[0];
+      const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.doc`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      
       return new NextResponse(buffer as any, {
         headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'Content-Disposition': `attachment; filename="${reportData.students[0].name}_Report_${reportData.examSet.name}.docx"`
+          'Content-Type': 'application/msword',
+          'Content-Disposition': `attachment; filename="${filename}"`
         }
       });
     } else if (type === 'class') {
@@ -27,15 +30,17 @@ export async function POST(request: NextRequest) {
         };
         const doc = await generateSingleReport(studentReportData);
         const buffer = await Packer.toBuffer(doc);
-        zip.file(`${student.name}_Report_${reportData.examSet.name}.docx`, buffer);
+        const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.doc`.replace(/[^a-zA-Z0-9._-]/g, '_');
+        zip.file(filename, buffer);
       }
       
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+      const classFilename = `${reportData.students[0].current_class}_Reports_${reportData.examSet.name}.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
       
       return new NextResponse(zipBuffer as any, {
         headers: {
           'Content-Type': 'application/zip',
-          'Content-Disposition': `attachment; filename="${reportData.students[0].current_class}_Reports_${reportData.examSet.name}.zip"`
+          'Content-Disposition': `attachment; filename="${classFilename}"`
         }
       });
     }
@@ -62,17 +67,17 @@ async function generateSingleReport(reportData: any) {
     return new Paragraph({
       children: [new TextRun({ text, ...options })],
       alignment: options.alignment || AlignmentType.LEFT,
-      spacing: { after: 200 }
+      spacing: { after: options.spacing?.after || 100 }
     });
   };
 
   // Helper function to create a heading
   const createHeading = (text: string, level: any = HeadingLevel.HEADING_1) => {
     return new Paragraph({
-      children: [new TextRun({ text, bold: true, size: 24 })],
+      children: [new TextRun({ text, bold: true, size: 20 })],
       heading: level,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 }
+      spacing: { after: 200 }
     });
   };
 
@@ -80,23 +85,37 @@ async function generateSingleReport(reportData: any) {
   const createTableCell = (text: string, options: any = {}) => {
     return new TableCell({
       children: [createParagraph(text, { ...options, spacing: { after: 0 } })],
-      margins: { top: 100, bottom: 100, left: 100, right: 100 }
+      margins: { top: 50, bottom: 50, left: 50, right: 50 }
     });
   };
 
   const doc = new Document({
     sections: [{
-      properties: {},
+      properties: {
+        page: {
+          size: {
+            orientation: 'portrait',
+            width: 595, // A4 width in points
+            height: 842  // A4 height in points
+          },
+          margin: {
+            top: 720,    // 0.5 inch
+            right: 720,  // 0.5 inch
+            bottom: 720, // 0.5 inch
+            left: 720    // 0.5 inch
+          }
+        }
+      },
       children: [
         // School Header
         createHeading(school?.name || 'School Name'),
         createParagraph(school?.motto || 'School Motto', { 
           alignment: AlignmentType.CENTER,
-          size: 20
+          size: 18
         }),
         createParagraph(`${school?.address || 'School Address'} | Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}`, {
           alignment: AlignmentType.CENTER,
-          size: 18
+          size: 16
         }),
         
         // Student Report Title
@@ -347,14 +366,14 @@ function createCentered(text: string, options: any = {}) {
 function cell(text: string, opts: any = {}) {
   return new TableCell({
     children: [new Paragraph({ children: [new TextRun({ text, ...opts })] })],
-    margins: { top: 100, bottom: 100, left: 100, right: 100 },
+    margins: { top: 50, bottom: 50, left: 50, right: 50 },
   });
 }
 
 function cellRich(paragraphs: Paragraph[]) {
   return new TableCell({
     children: paragraphs,
-    margins: { top: 100, bottom: 100, left: 100, right: 100 },
+    margins: { top: 50, bottom: 50, left: 50, right: 50 },
   });
 }
 
@@ -381,41 +400,55 @@ async function generateSecondaryReport(reportData: any) {
   const doc = new Document({
     sections: [
       {
-        properties: {},
+        properties: {
+          page: {
+            size: {
+              orientation: 'portrait',
+              width: 595, // A4 width in points
+              height: 842  // A4 height in points
+            },
+            margin: {
+              top: 720,    // 0.5 inch
+              right: 720,  // 0.5 inch
+              bottom: 720, // 0.5 inch
+              left: 720    // 0.5 inch
+            }
+          }
+        },
         children: [
           // HEADER
-          createCentered(school?.name || 'School Name', { bold: true, size: 36, allCaps: true }),
-          createCentered(`TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}`, { size: 18 }),
-          createCentered(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, { italics: true, size: 18 }),
+          createCentered(school?.name || 'School Name', { bold: true, size: 28, allCaps: true }),
+          createCentered(`TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}`, { size: 16 }),
+          createCentered(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, { italics: true, size: 16 }),
 
           // TITLE
-          new Paragraph({ spacing: { before: 200, after: 200 } }),
-          createCentered(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}`, { bold: true, size: 26, allCaps: true }),
+          new Paragraph({ spacing: { before: 100, after: 100 } }),
+          createCentered(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}`, { bold: true, size: 22, allCaps: true }),
 
           // META
           new Paragraph({
             children: [
-              new TextRun({ text: 'LNo. ', bold: true, size: 22 }),
-              new TextRun({ text: `${student.admission_number || student.student_id}    `, size: 22 }),
-              new TextRun({ text: 'NAME: ', bold: true, size: 22 }),
-              new TextRun({ text: `${student.name}    `, size: 22 }),
-              new TextRun({ text: 'CLASS & STREAM: ', bold: true, size: 22 }),
-              new TextRun({ text: `${student.current_class}`, size: 22 }),
+              new TextRun({ text: 'LNo. ', bold: true, size: 18 }),
+              new TextRun({ text: `${student.admission_number || student.student_id}    `, size: 18 }),
+              new TextRun({ text: 'NAME: ', bold: true, size: 18 }),
+              new TextRun({ text: `${student.name}    `, size: 18 }),
+              new TextRun({ text: 'CLASS & STREAM: ', bold: true, size: 18 }),
+              new TextRun({ text: `${student.current_class}`, size: 18 }),
             ],
-            spacing: { after: 100 },
+            spacing: { after: 50 },
           }),
 
           // ATTENDANCE TABLE
           new Table({
             width: { size: 3000, type: WidthType.DXA },
             rows: [
-              new TableRow({ children: [cell('Days Present', { bold: true, size: 20 }), cell('Days Absent', { bold: true, size: 20 }), cell('Total', { bold: true, size: 20 })] }),
+              new TableRow({ children: [cell('Days Present', { bold: true, size: 16 }), cell('Days Absent', { bold: true, size: 16 }), cell('Total', { bold: true, size: 16 })] }),
               new TableRow({ children: [cell(daysPresent), cell(daysAbsent), cell(totalDays)] }),
             ],
-            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideH: borderThin, insideV: borderThin },
+            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin },
           }),
 
-          new Paragraph({ spacing: { after: 100 } }),
+          new Paragraph({ spacing: { after: 50 } }),
 
           // SUBJECTS TABLE
           new Table({
@@ -466,13 +499,13 @@ async function generateSecondaryReport(reportData: any) {
                 new TableRow({ children: [cell('N/A - Student did not sit for this term')], })
               ]),
             ],
-            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideH: borderThin, insideV: borderThin },
+            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin },
           }),
 
           // PERFORMANCE SUMMARY
-          new Paragraph({ spacing: { before: 200, after: 100 } }),
-          new Paragraph({ children: [new TextRun({ text: 'AVERAGE SCORES: ', bold: true, size: 22 }), new TextRun({ text: `${avg} ${avgGrade}`, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'OVERALL PERFORMANCE: ', bold: true, size: 22 }), new TextRun({ text: overallPerf, size: 22 })] }),
+          new Paragraph({ spacing: { before: 100, after: 50 } }),
+          new Paragraph({ children: [new TextRun({ text: 'AVERAGE SCORES: ', bold: true, size: 18 }), new TextRun({ text: `${avg} ${avgGrade}`, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'OVERALL PERFORMANCE: ', bold: true, size: 18 }), new TextRun({ text: overallPerf, size: 18 })] }),
 
           // TERMLY PROJECTS
           new Table({
@@ -491,39 +524,39 @@ async function generateSecondaryReport(reportData: any) {
                   : [new TableRow({ children: [cell('N/A'), cell('N/A'), cell('N/A'), cell('N/A'), cell('N/A')] })]
               )
             ],
-            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideH: borderThin, insideV: borderThin },
+            borders: { top: borderThin, bottom: borderThin, left: borderThin, right: borderThin, insideHorizontal: borderThin, insideVertical: borderThin },
           }),
 
           // COMMENTS
-          new Paragraph({ spacing: { before: 200, after: 100 } }),
-          new Paragraph({ children: [new TextRun({ text: "Class Teacher's Comment", bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: String(comments?.class_teacher_text ?? '..............................................................'), size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: `Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, size: 20 })] }),
-          new Paragraph({ spacing: { before: 100 } }),
-          new Paragraph({ children: [new TextRun({ text: "Head Teacher's Comment", bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: String(comments?.head_teacher_text ?? '..............................................................'), size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: `Name: ${String(comments?.head_teacher_name ?? '__________')} | Signature: ${String(comments?.head_teacher_signature ?? '__________')} | Date: ${String(comments?.head_teacher_date ?? '__________')}`, size: 20 })] }),
+          new Paragraph({ spacing: { before: 100, after: 50 } }),
+          new Paragraph({ children: [new TextRun({ text: "Class Teacher's Comment", bold: true, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: String(comments?.class_teacher_text ?? '..............................................................'), size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: `Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, size: 16 })] }),
+          new Paragraph({ spacing: { before: 50 } }),
+          new Paragraph({ children: [new TextRun({ text: "Head Teacher's Comment", bold: true, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: String(comments?.head_teacher_text ?? '..............................................................'), size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: `Name: ${String(comments?.head_teacher_name ?? '__________')} | Signature: ${String(comments?.head_teacher_signature ?? '__________')} | Date: ${String(comments?.head_teacher_date ?? '__________')}`, size: 16 })] }),
 
           // NEXT TERM & GRADING
-          new Paragraph({ spacing: { before: 200, after: 100 } }),
-          new Paragraph({ children: [new TextRun({ text: `Next Term Begins: ${nextTermBegins}`, bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'Grading System', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'A (80–100)', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'B (70–79)', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'C (50–69)', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'D (40–49)', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'E (0–39)', size: 20 })] }),
+          new Paragraph({ spacing: { before: 100, after: 50 } }),
+          new Paragraph({ children: [new TextRun({ text: `Next Term Begins: ${nextTermBegins}`, bold: true, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'Grading System', bold: true, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'A (80–100)', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'B (70–79)', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'C (50–69)', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'D (40–49)', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'E (0–39)', size: 16 })] }),
 
-          new Paragraph({ children: [new TextRun({ text: 'Grade Descriptions', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'A: Excellent mastery and application of concepts.', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'B: Very good understanding with minor gaps.', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'C: Satisfactory performance with notable room for improvement.', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'D: Below average; needs significant improvement.', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'E: Poor performance; urgent intervention required.', size: 20 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'Grade Descriptions', bold: true, size: 18 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'A: Excellent mastery and application of concepts.', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'B: Very good understanding with minor gaps.', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'C: Satisfactory performance with notable room for improvement.', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'D: Below average; needs significant improvement.', size: 16 })] }),
+          new Paragraph({ children: [new TextRun({ text: 'E: Poor performance; urgent intervention required.', size: 16 })] }),
 
           // FOOTER
-          new Paragraph({ spacing: { before: 200 } }),
-          createCentered(`Printed from: Edusat ERP | 0700274249 — Page X of Y — School Motto: '${school?.motto || 'Education the Future'}'`, { size: 18 }),
+          new Paragraph({ spacing: { before: 100 } }),
+          createCentered(`Printed from: Pwezacore`, { size: 16 }),
         ],
       },
     ],

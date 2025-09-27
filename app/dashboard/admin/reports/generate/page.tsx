@@ -4,6 +4,33 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
+
+// A4 Print Styles
+const printStyles = `
+  @media print {
+    @page {
+      size: A4;
+      margin: 15mm;
+    }
+    
+    body {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    .print-break {
+      page-break-before: always;
+    }
+    
+    .print-avoid-break {
+      page-break-inside: avoid;
+    }
+    
+    .print-keep-together {
+      page-break-inside: avoid;
+    }
+  }
+`;
 import { 
   calculateGrade, 
   calculateDivision, 
@@ -19,6 +46,8 @@ import {
   formatAttendance,
   formatPosition
 } from "@/src/lib/reportUtils";
+import ImageUpload from "@/src/components/ImageUpload";
+import { CompressionResult } from "@/src/lib/imageCompression";
 
 export default function GenerateReportsPage() {
   const router = useRouter();
@@ -44,6 +73,21 @@ export default function GenerateReportsPage() {
   const [generating, setGenerating] = useState(false);
   const [studentSearch, setStudentSearch] = useState<string>("");
   const [showStudentSuggestions, setShowStudentSuggestions] = useState<boolean>(false);
+  
+  // Header customization state
+  const [customHeader, setCustomHeader] = useState({
+    schoolName: '',
+    motto: '',
+    phone: '',
+    email: '',
+    address: '',
+    logo: null as File | null,
+    logoPreview: null as string | null
+  });
+  const [showHeaderCustomization, setShowHeaderCustomization] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoCompressionResult, setLogoCompressionResult] = useState<CompressionResult | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -64,6 +108,24 @@ export default function GenerateReportsPage() {
           .eq('school_id', u.school_id)
           .single();
         setSchoolInfo(school);
+        
+        // Load saved header customizations
+        const { data: customizations } = await supabase
+          .from('school_report_customizations')
+          .select('*')
+          .eq('school_id', u.school_id)
+          .single();
+
+        // Initialize custom header with saved customizations or school defaults
+        setCustomHeader({
+          schoolName: customizations?.custom_school_name || school?.name || '',
+          motto: customizations?.custom_motto || school?.motto || '',
+          phone: customizations?.custom_phone || school?.phone || '',
+          email: customizations?.custom_email || school?.email || '',
+          address: customizations?.custom_address || school?.address || '',
+          logo: null,
+          logoPreview: customizations?.logo_url || null
+        });
         
         // Load exam sets
         const { data: examSetsData } = await supabase
@@ -209,11 +271,27 @@ export default function GenerateReportsPage() {
         commentsData = cd || [];
       }
 
+      // Fetch student profile photos
+      const { data: studentPhotos } = await supabase
+        .from('student_photos')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('is_primary', true)
+        .in('student_id', targetStudents.map(s => s.student_id));
+
       const referenceExamSet = [...(examSets || [])]
         .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
 
       const reportData = {
-        school: schoolInfo,
+        school: {
+          ...schoolInfo,
+          name: customHeader.schoolName || schoolInfo?.name,
+          motto: customHeader.motto || schoolInfo?.motto,
+          phone: customHeader.phone || schoolInfo?.phone,
+          email: customHeader.email || schoolInfo?.email,
+          address: customHeader.address || schoolInfo?.address,
+          logo: customHeader.logoPreview
+        },
         examSet: currentTermInfo ? { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' } : null,
         nextTermBegins: nextTermBegins,
         students: targetStudents.map(student => {
@@ -224,6 +302,7 @@ export default function GenerateReportsPage() {
           const studentComments = commentsData
             .filter(c => c.student_id === student.student_id)
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
+          const studentPhoto = studentPhotos?.find(p => p.student_id === student.student_id);
           
           // Calculate summary with enhanced grading (handle missing data)
           const totalMarks = studentResults.length > 0 ? studentResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
@@ -241,6 +320,7 @@ export default function GenerateReportsPage() {
             fees: studentFees,
             projects: studentProjects,
             comments: studentComments,
+            profile_photo: studentPhoto?.photo_url || null,
             nextTermBegins: nextTermBegins,
             summary: {
               totalMarks,
@@ -297,13 +377,44 @@ export default function GenerateReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${reportData.students[0].name}_Report_${reportData.examSet.name}.docx`;
+      const student = reportData.students[0];
+      a.download = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.doc`.replace(/[^a-zA-Z0-9._-]/g, '_');
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
       setError(`Failed to download report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const downloadSingleReportPDF = async () => {
+    if (!reportData || reportData.students.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/reports/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportData,
+          type: 'single'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate PDF');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const student = reportData.students[0];
+      a.download = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(`Failed to download PDF report: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
 
@@ -326,7 +437,7 @@ export default function GenerateReportsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${selectedClass}_Reports_${reportData.examSet.name}.zip`;
+      a.download = `${selectedClass}_Reports_${reportData.examSet.name}.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -336,8 +447,153 @@ export default function GenerateReportsPage() {
     }
   };
 
+  const downloadClassReportsPDF = async () => {
+    if (!reportData || reportData.students.length === 0) return;
+    
+    try {
+      const response = await fetch('/api/reports/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportData,
+          type: 'class'
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate PDF documents');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${selectedClass}_Reports_${reportData.examSet.name}.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setError(`Failed to download PDF reports: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
   const printReport = () => {
     window.print();
+  };
+
+  // Header customization handlers
+  const handleHeaderChange = (field: string, value: string) => {
+    setCustomHeader(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setCustomHeader(prev => ({
+        ...prev,
+        logo: file,
+        logoPreview: URL.createObjectURL(file)
+      }));
+    }
+  };
+
+  const resetHeaderToDefault = async () => {
+    if (!schoolId) return;
+    
+    try {
+      // Delete saved customizations from database
+      await supabase
+        .from('school_report_customizations')
+        .delete()
+        .eq('school_id', schoolId);
+
+      // Reset to school defaults
+      setCustomHeader({
+        schoolName: schoolInfo?.name || '',
+        motto: schoolInfo?.motto || '',
+        phone: schoolInfo?.phone || '',
+        email: schoolInfo?.email || '',
+        address: schoolInfo?.address || '',
+        logo: null,
+        logoPreview: null
+      });
+      setLogoFile(null);
+      setLogoCompressionResult(null);
+      setLogoUploadError(null);
+      
+      alert('Header reset to default school information');
+    } catch (error) {
+      alert(`Failed to reset header: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  const saveHeaderCustomization = async () => {
+    if (!schoolId) return;
+
+    try {
+      // Save header customizations to database
+      const { error: customError } = await supabase
+        .from('school_report_customizations')
+        .upsert({
+          school_id: schoolId,
+          custom_school_name: customHeader.schoolName || null,
+          custom_motto: customHeader.motto || null,
+          custom_phone: customHeader.phone || null,
+          custom_email: customHeader.email || null,
+          custom_address: customHeader.address || null,
+          logo_url: customHeader.logoPreview || null,
+          logo_filename: logoFile?.name || null
+        }, {
+          onConflict: 'school_id'
+        });
+
+      if (customError) {
+        setError(`Failed to save header customization: ${customError.message}`);
+        return;
+      }
+
+      // Upload logo if provided
+      if (logoFile && schoolId) {
+        try {
+          const filePath = `${schoolId}/logo.jpg`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('school-logos')
+            .upload(filePath, logoFile, {
+              contentType: 'image/jpeg',
+              upsert: true
+            });
+
+          if (uploadError) {
+            setError(`Failed to upload logo: ${uploadError.message}`);
+            return;
+          }
+
+          // Get the public URL
+          const { data: urlData } = supabase.storage
+            .from('school-logos')
+            .getPublicUrl(filePath);
+
+          // Update the customization with the logo URL
+          await supabase
+            .from('school_report_customizations')
+            .update({ logo_url: urlData.publicUrl })
+            .eq('school_id', schoolId);
+
+          setCustomHeader(prev => ({ ...prev, logoPreview: urlData.publicUrl }));
+        } catch (logoError) {
+          setError(`Failed to process logo: ${logoError instanceof Error ? logoError.message : 'Unknown error'}`);
+          return;
+        }
+      }
+
+      setShowHeaderCustomization(false);
+      alert('Header customization saved successfully! It will be remembered for future reports.');
+    } catch (error) {
+      setError(`Failed to save customization: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   if (loading) {
@@ -354,6 +610,8 @@ export default function GenerateReportsPage() {
   }
 
   return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: printStyles }} />
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -364,18 +622,160 @@ export default function GenerateReportsPage() {
             <h1 className="text-white text-2xl font-semibold">Student Report Generator</h1>
             <p className="text-white/80 text-sm mt-1">Generate and download student academic reports</p>
           </div>
-          <button
-            onClick={() => router.push('/dashboard/admin/reports')}
-            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
-          >
-            Back to Reports
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowHeaderCustomization(!showHeaderCustomization)}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
+            >
+              {showHeaderCustomization ? 'Hide' : 'Customize'} Header
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/admin/reports')}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+            >
+              Back to Reports
+            </button>
+          </div>
         </div>
 
         {error && (
           <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-4 py-3">
             {error}
           </div>
+        )}
+
+        {/* Header Customization Section */}
+        {showHeaderCustomization && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-6"
+          >
+            <h2 className="text-white text-lg font-medium mb-4">Customize Report Header</h2>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* School Information */}
+              <div className="space-y-4">
+                <h3 className="text-white/80 text-sm font-medium">School Information</h3>
+                
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    School Name
+                  </label>
+                  <input
+                    type="text"
+                    value={customHeader.schoolName}
+                    onChange={(e) => handleHeaderChange('schoolName', e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter school name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    School Motto
+                  </label>
+                  <input
+                    type="text"
+                    value={customHeader.motto}
+                    onChange={(e) => handleHeaderChange('motto', e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter school motto"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    Address
+                  </label>
+                  <textarea
+                    value={customHeader.address}
+                    onChange={(e) => handleHeaderChange('address', e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter school address"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Contact Information & Logo */}
+              <div className="space-y-4">
+                <h3 className="text-white/80 text-sm font-medium">Contact Information & Logo</h3>
+                
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={customHeader.phone}
+                    onChange={(e) => handleHeaderChange('phone', e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={customHeader.email}
+                    onChange={(e) => handleHeaderChange('email', e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Enter email address"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    School Logo
+                  </label>
+                  <ImageUpload
+                    onImageSelect={(file, result) => {
+                      setLogoFile(file);
+                      setLogoCompressionResult(result);
+                      setLogoUploadError(null);
+                      setCustomHeader(prev => ({ 
+                        ...prev, 
+                        logoPreview: URL.createObjectURL(file) 
+                      }));
+                    }}
+                    onError={(error) => {
+                      setLogoUploadError(error);
+                      setLogoFile(null);
+                      setLogoCompressionResult(null);
+                    }}
+                    maxSizeKB={500}
+                    maxWidth={200}
+                    maxHeight={200}
+                    placeholder="Upload school logo"
+                    className="text-white"
+                  />
+                  {logoUploadError && (
+                    <div className="mt-2 text-red-300 text-sm">{logoUploadError}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6 pt-4 border-t border-white/10">
+              <button
+                onClick={resetHeaderToDefault}
+                className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white"
+              >
+                Reset to Default
+              </button>
+              <button
+                onClick={saveHeaderCustomization}
+                className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white"
+              >
+                Save Changes
+              </button>
+            </div>
+          </motion.div>
         )}
 
         {/* Report Generation Form */}
@@ -518,21 +918,39 @@ export default function GenerateReportsPage() {
             
             {showPreview && reportData && (
               <>
-                <button
-                  onClick={downloadSingleReport}
-                  className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium"
-                >
-                  Download as DOCX (Single)
-                </button>
-                
-                {reportType === 'class' && (
+                <div className="flex flex-wrap gap-3">
                   <button
-                    onClick={downloadClassReports}
-                    className="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium"
+                    onClick={downloadSingleReport}
+                    className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium"
                   >
-                    Download All (Class)
+                    Download as DOC (Single)
                   </button>
-                )}
+                  
+                  <button
+                    onClick={downloadSingleReportPDF}
+                    className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium"
+                  >
+                    Download as PDF (Single)
+                  </button>
+                  
+                  {reportType === 'class' && (
+                    <>
+                      <button
+                        onClick={downloadClassReports}
+                        className="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium"
+                      >
+                        Download All as DOC (Class)
+                      </button>
+                      
+                      <button
+                        onClick={downloadClassReportsPDF}
+                        className="px-6 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium"
+                      >
+                        Download All as PDF (Class)
+                      </button>
+                    </>
+                  )}
+                </div>
                 
                 <button
                   onClick={printReport}
@@ -568,6 +986,7 @@ export default function GenerateReportsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -584,6 +1003,24 @@ function isOLevelClass(className: string): boolean {
   // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
   return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
 }
+
+// Report Preview Component
+function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
+  if (isOLevelClass(student.current_class)) {
+    switch (template) {
+      case 'template1':
+        return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+      case 'template2':
+        return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+      case 'template3':
+        return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+      default:
+        return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+    }
+  }
+  return <SecondaryReportPreview student={student} examSet={examSet} school={school} />;
+}
+
 
 // Template 1 - O-Level Report Card (Exact format from sample)
 function Template1OLevelReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
@@ -611,29 +1048,52 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
   };
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+    <div style={{ 
+      fontFamily: 'Times New Roman, Arial, sans-serif',
+      width: '210mm',
+      minHeight: '297mm',
+      margin: '0 auto',
+      padding: '15mm',
+      boxSizing: 'border-box'
+    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
       {/* HEADER - School Logo and Info */}
       <div className="flex items-start justify-between mb-4">
-        {/* School Logo Placeholder */}
-        <div className="w-20 h-20 border-2 border-gray-300 rounded-full flex items-center justify-center">
-          <div className="text-center text-xs">
-            <div className="font-bold">EMIRATES</div>
-            <div className="font-bold">COLLEGE</div>
-            <div className="font-bold">SCHOOL</div>
-          </div>
+        {/* School Logo */}
+        <div className="w-20 h-20 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+          {school?.logo ? (
+            <img
+              src={school.logo}
+              alt="School Logo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-center text-xs">
+              <div className="font-bold">EMIRATES</div>
+              <div className="font-bold">COLLEGE</div>
+              <div className="font-bold">SCHOOL</div>
+            </div>
+          )}
         </div>
         
         {/* School Name and Contact */}
         <div className="text-center flex-1">
           <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
-          <div className="text-[9pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | P.O.BOX 31175, KAMPALA, UGANDA</div>
+          <div className="text-[9pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
           <div className="text-[9pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
         </div>
         
-        {/* Student Photo Placeholder */}
-        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center">
-          <div className="text-xs text-gray-500">Photo</div>
+        {/* Student Photo */}
+        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {student.profile_photo ? (
+            <img
+              src={student.profile_photo}
+              alt="Student Photo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-gray-500">Photo</div>
+          )}
         </div>
       </div>
 
@@ -651,25 +1111,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
       </div>
 
-      {/* ATTENDANCE TABLE */}
-      <div className="flex justify-end mb-4">
-        <table style={{ borderCollapse: 'collapse', width: '300px' }}>
-          <thead>
-            <tr>
-              <th className="text-center text-[10pt] font-bold" style={{ border: '1px solid #000', padding: '6px', background: '#f0f0f0' }}>ATTENDANCE</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>
-                <div><strong>Days Present:</strong> {daysPresent}</div>
-                <div><strong>Days Absent:</strong> {daysAbsent}</div>
-                <div><strong>Total:</strong> {totalDays}</div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
 
       {/* SUBJECTS TABLE */}
       <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
@@ -729,33 +1170,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
       </div>
 
-      {/* TERMLY PROJECTS */}
-      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
-        <thead>
-          <tr>
-            {['Subject','Project Title','Remark','Score [10]','Teacher'].map(h => (
-              <th key={h} style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', background: '#f0f0f0' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(student.projects && student.projects.length > 0) ? (
-            student.projects.map((p: any, idx: number) => (
-              <tr key={idx}>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.subject || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.project_title || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.remark || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.score ?? 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.teacher || 'N/A'}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={5} style={{ border: '1px solid #000', padding: '6px' }}>N/A</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
 
       {/* COMMENTS */}
       <div className="mb-4 text-[10pt]">
@@ -824,16 +1238,8 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 
       {/* FOOTER */}
       <div className="flex justify-between items-center text-[9pt] mt-4">
-        <div>Printed from: Edusat ERP | 0700274249</div>
+        <div>Printed from: Pwezacore</div>
         <div>School Motto: '{school?.motto || 'Education the Future'}'</div>
-        <div>Page 1 of 2</div>
-      </div>
-      
-      {/* QR Code Placeholder */}
-      <div className="flex justify-end mt-2">
-        <div className="w-16 h-16 border border-gray-300 bg-gray-100 flex items-center justify-center">
-          <div className="text-xs text-gray-500">VERIFICATION</div>
-        </div>
       </div>
     </div>
   );
@@ -883,7 +1289,14 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
   };
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+    <div style={{ 
+      fontFamily: 'Times New Roman, Arial, sans-serif',
+      width: '210mm',
+      minHeight: '297mm',
+      margin: '0 auto',
+      padding: '15mm',
+      boxSizing: 'border-box'
+    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
       {/* HEADER */}
       <div className="text-center mb-6">
@@ -901,12 +1314,27 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* STUDENT INFO */}
       <div className="mb-6 text-[11pt]">
-        <div className="grid grid-cols-2 gap-4">
-          <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
-          <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
-          <div><strong>Name:</strong> {student.name}</div>
-          <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
-          <div><strong>Class:</strong> {student.current_class}</div>
+        <div className="flex justify-between items-start">
+          <div className="grid grid-cols-2 gap-4">
+            <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
+            <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
+            <div><strong>Name:</strong> {student.name}</div>
+            <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
+            <div><strong>Class:</strong> {student.current_class}</div>
+          </div>
+          
+          {/* Student Photo */}
+          <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+            {student.profile_photo ? (
+              <img
+                src={student.profile_photo}
+                alt="Student Photo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-xs text-gray-500">Photo</div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1061,7 +1489,14 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
   };
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+    <div style={{ 
+      fontFamily: 'Times New Roman, Arial, sans-serif',
+      width: '210mm',
+      minHeight: '297mm',
+      margin: '0 auto',
+      padding: '15mm',
+      boxSizing: 'border-box'
+    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
       {/* HEADER */}
       <div className="text-center mb-6">
@@ -1077,13 +1512,28 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
 
       {/* STUDENT INFO */}
       <div className="mb-6 text-[11pt]">
-        <div className="grid grid-cols-2 gap-4">
-          <div><strong>STUDENT'S NAME:</strong> {student.name}</div>
-          <div><strong>YEAR:</strong> {examSet?.year || '2025'}</div>
-          <div><strong>STREAM:</strong> EAST</div>
-          <div><strong>CLASS:</strong> {student.current_class}</div>
-          <div><strong>LIN:</strong> __________</div>
-          <div><strong>Date:</strong> {examSet?.date || '26/05/2025'}</div>
+        <div className="flex justify-between items-start">
+          <div className="grid grid-cols-2 gap-4">
+            <div><strong>STUDENT'S NAME:</strong> {student.name}</div>
+            <div><strong>YEAR:</strong> {examSet?.year || '2025'}</div>
+            <div><strong>STREAM:</strong> EAST</div>
+            <div><strong>CLASS:</strong> {student.current_class}</div>
+            <div><strong>LIN:</strong> __________</div>
+            <div><strong>Date:</strong> {examSet?.date || '26/05/2025'}</div>
+          </div>
+          
+          {/* Student Photo */}
+          <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+            {student.profile_photo ? (
+              <img
+                src={student.profile_photo}
+                alt="Student Photo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-xs text-gray-500">Photo</div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1208,155 +1658,6 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
   );
 }
 
-// Report Preview Component with template selection
-function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
-  // Only show O-Level templates for Senior 1-4 classes
-  if (isOLevelClass(student.current_class)) {
-    if (template === 'template1') {
-      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
-    }
-    if (template === 'template2') {
-      return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
-    }
-    if (template === 'template3') {
-      return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
-    }
-  }
-  
-  if (isSecondaryClass(student.current_class)) {
-    return <SecondaryReportPreview student={student} examSet={examSet} school={school} />;
-  }
-  return (
-    <div className="bg-white text-black p-8 rounded-lg shadow-lg max-w-4xl mx-auto print:shadow-none print:rounded-none">
-      {/* School Header */}
-      <div className="text-center mb-8 border-b-2 border-gray-300 pb-4">
-        <h1 className="text-2xl font-bold text-gray-800">{school?.name || 'School Name'}</h1>
-        <p className="text-sm text-gray-600 mt-1">{school?.motto || 'School Motto'}</p>
-        <p className="text-xs text-gray-500 mt-2">
-          {school?.address || 'School Address'} | Tel: {school?.phone || 'Phone'} | Email: {school?.email || 'Email'}
-        </p>
-      </div>
-
-      {/* Student Information */}
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-4 text-gray-800">STUDENT REPORT</h2>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><strong>Name:</strong> {student.name}</div>
-          <div><strong>Admission No:</strong> {student.admission_number || student.student_id}</div>
-          <div><strong>Class:</strong> {student.current_class}</div>
-          <div><strong>Year:</strong> {examSet.year}</div>
-          <div><strong>Term:</strong> {examSet.term}</div>
-          <div><strong>Exam Set:</strong> {examSet.name}</div>
-        </div>
-      </div>
-
-      {/* Subject Performance Table */}
-      <div className="mb-6">
-        <h3 className="text-md font-semibold mb-3 text-gray-800">SUBJECT PERFORMANCE</h3>
-        <table className="w-full border-collapse border border-gray-400 text-sm">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-gray-400 px-2 py-1 text-left">Subject</th>
-              <th className="border border-gray-400 px-2 py-1 text-center">Marks</th>
-              <th className="border border-gray-400 px-2 py-1 text-center">Grade</th>
-              <th className="border border-gray-400 px-2 py-1 text-center">Remarks</th>
-              <th className="border border-gray-400 px-2 py-1 text-center">Teacher Initials</th>
-            </tr>
-          </thead>
-          <tbody>
-            {student.results.length > 0 ? (
-              student.results.map((result: any, index: number) => {
-                const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-                return (
-                  <tr key={index}>
-                    <td className="border border-gray-400 px-2 py-1">{result.subject}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center">{result.marks_obtained}/{result.total_marks}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center">{gradeInfo.grade}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center">{gradeInfo.remark}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center">-</td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={5} className="border border-gray-400 px-2 py-4 text-center text-gray-500">
-                  N/A - Student did not sit for this exam set
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Summary Section */}
-      <div className="mb-6">
-        <h3 className="text-md font-semibold mb-3 text-gray-800">SUMMARY</h3>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div><strong>Total Marks:</strong> {formatValue(student.summary.totalMarks)}/{formatValue(student.summary.totalPossibleMarks)}</div>
-          <div><strong>Average:</strong> {formatPercentage(student.summary.average)}</div>
-          <div><strong>Aggregate:</strong> {formatValue(student.summary.aggregate)}</div>
-          <div><strong>Division:</strong> {formatValue(student.summary.division)}</div>
-          <div><strong>Class Position:</strong> {formatPosition(student.summary.classPosition, student.summary.average)}</div>
-          <div><strong>Stream Position:</strong> {formatPosition(student.summary.streamPosition, student.summary.average)}</div>
-          <div><strong>Attendance:</strong> {formatAttendance(student.summary.attendanceDetails.presentDays, student.summary.attendanceDetails.totalSchoolDays, student.summary.attendancePercentage)}</div>
-          <div><strong>Performance:</strong> {formatValue(student.summary.performanceRemark)}</div>
-        </div>
-      </div>
-
-      {/* Attendance Details Section */}
-      {student.summary.attendanceDetails.totalSchoolDays !== null && (
-        <div className="mb-6">
-          <h3 className="text-md font-semibold mb-3 text-gray-800">ATTENDANCE DETAILS</h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            <div><strong>Period:</strong> {formatValue(student.summary.attendanceDetails.firstAttendanceDate)} to {formatValue(student.summary.attendanceDetails.lastSchoolDay)}</div>
-            <div><strong>Last Exam Set:</strong> {formatValue(student.summary.attendanceDetails.lastExamSetName)}</div>
-            <div><strong>Total School Days:</strong> {formatValue(student.summary.attendanceDetails.totalSchoolDays)}</div>
-            <div><strong>Days Present:</strong> {formatValue(student.summary.attendanceDetails.presentDays)}</div>
-            <div><strong>Days Absent:</strong> {formatValue(student.summary.attendanceDetails.absentDays)}</div>
-          </div>
-        </div>
-      )}
-
-      {/* Remarks Section */}
-      <div className="mb-6">
-        <h3 className="text-md font-semibold mb-3 text-gray-800">REMARKS</h3>
-        <div className="space-y-4">
-          <div>
-            <strong>Class Teacher's Remarks:</strong>
-            <div className="border border-gray-300 h-16 mt-1"></div>
-          </div>
-          <div>
-            <strong>Head Teacher's Remarks:</strong>
-            <div className="border border-gray-300 h-16 mt-1"></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="text-xs text-gray-600 border-t border-gray-300 pt-4">
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div>
-            <strong>Next Term Opens:</strong> ________________
-          </div>
-          <div>
-            <strong>Fees Balance:</strong> {student.fees.length > 0 ? formatCurrency(student.fees[0].balance || 0) : 'N/A'}
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="text-center">
-            <div className="border-b border-gray-400 w-32 mx-auto mb-1"></div>
-            <div>Class Teacher's Signature</div>
-          </div>
-          <div className="text-center">
-            <div className="border-b border-gray-400 w-32 mx-auto mb-1"></div>
-            <div>Head Teacher's Signature</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // Secondary school report preview matching provided structure
 function SecondaryReportPreview({ student, examSet, school }: { student: any; examSet: any; school: any }) {
   const attendance = student.summary.attendanceDetails || {};
@@ -1382,29 +1683,27 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
       </h1>
 
       {/* META */}
-      <div className="my-2 flex flex-wrap gap-5 text-[11pt]">
-        <div><strong>LNo.</strong> {student.admission_number || student.student_id}</div>
-        <div><strong>NAME:</strong> {student.name}</div>
-        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+      <div className="my-2 flex justify-between items-start">
+        <div className="flex flex-wrap gap-5 text-[11pt]">
+          <div><strong>LNo.</strong> {student.admission_number || student.student_id}</div>
+          <div><strong>NAME:</strong> {student.name}</div>
+          <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+        </div>
+        
+        {/* Student Photo */}
+        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {student.profile_photo ? (
+            <img
+              src={student.profile_photo}
+              alt="Student Photo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-gray-500">Photo</div>
+          )}
+        </div>
       </div>
 
-      {/* ATTENDANCE TABLE */}
-      <table className="mb-3" style={{ borderCollapse: 'collapse', width: '300px' }}>
-        <thead>
-          <tr>
-            <th className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>Days Present</th>
-            <th className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>Days Absent</th>
-            <th className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>{daysPresent}</td>
-            <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>{daysAbsent}</td>
-            <td className="text-center text-[10pt]" style={{ border: '1px solid #000', padding: '6px' }}>{totalDays}</td>
-          </tr>
-        </tbody>
-      </table>
 
       {/* SUBJECTS TABLE */}
       <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
@@ -1532,7 +1831,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
 
       {/* FOOTER */}
       <div className="text-center text-[9pt] mt-4">
-        Printed from: Edusat ERP | 0700274249 — Page X of Y — School Motto: '{school?.motto || 'Education the Future'}'
+        Printed from: Pwezacore — School Motto: '{school?.motto || 'Education the Future'}'
       </div>
     </div>
   );
