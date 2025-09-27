@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
     const { reportData, type } = await request.json();
     console.log('Report data received, type:', type);
 
+    // Validate required data
+    if (!reportData) {
+      console.error('No report data provided');
+      return NextResponse.json({ error: 'No report data provided' }, { status: 400 });
+    }
+
+    if (!reportData.students || !Array.isArray(reportData.students) || reportData.students.length === 0) {
+      console.error('No students data provided');
+      return NextResponse.json({ error: 'No students data provided' }, { status: 400 });
+    }
+
     if (type === 'single') {
       const pdfBuffer = await generateSingleReportPDF(reportData);
       
@@ -102,10 +113,35 @@ async function generateSingleReportPDF(reportData: any) {
   const { school, examSet, students } = reportData;
   const student = students[0];
 
+  // Validate required data
+  if (!student) {
+    throw new Error('No student data provided');
+  }
+
+  if (!school) {
+    throw new Error('No school data provided');
+  }
+
+  if (!examSet) {
+    throw new Error('No exam set data provided');
+  }
+
   // Convert images to base64 for embedding
   console.log('Converting images to base64...');
-  const schoolLogoBase64 = school?.logo ? await convertImageToBase64(school.logo) : null;
-  const studentPhotoBase64 = student?.profile_photo ? await convertImageToBase64(student.profile_photo) : null;
+  let schoolLogoBase64 = null;
+  let studentPhotoBase64 = null;
+  
+  try {
+    schoolLogoBase64 = school?.logo ? await convertImageToBase64(school.logo) : null;
+  } catch (error) {
+    console.error('Failed to convert school logo:', error);
+  }
+  
+  try {
+    studentPhotoBase64 = student?.profile_photo ? await convertImageToBase64(student.profile_photo) : null;
+  } catch (error) {
+    console.error('Failed to convert student photo:', error);
+  }
   
   console.log('School logo converted:', !!schoolLogoBase64);
   console.log('Student photo converted:', !!studentPhotoBase64);
@@ -183,17 +219,20 @@ async function generateSingleReportPDF(reportData: any) {
           </tr>
         </thead>
         <tbody>
-          ${student.results.map((r: any) => `
-            <tr>
-              <td>${r.subject || 'N/A'}</td>
-              <td>${r.activity_score || 'N/A'}</td>
-              <td>${r.formative_score || 'N/A'}</td>
-              <td>${r.exam_score || 'N/A'}</td>
-              <td>${r.final_score || 'N/A'}</td>
-              <td>${r.grade || 'N/A'}</td>
-              <td>${r.overall_remark || 'N/A'}</td>
-            </tr>
-          `).join('')}
+          ${(student.results && Array.isArray(student.results) && student.results.length > 0) ? 
+            student.results.map((r: any) => `
+              <tr>
+                <td>${r.subject || 'N/A'}</td>
+                <td>${r.activity_score || 'N/A'}</td>
+                <td>${r.formative_score || 'N/A'}</td>
+                <td>${r.exam_score || 'N/A'}</td>
+                <td>${r.final_score || 'N/A'}</td>
+                <td>${r.grade || 'N/A'}</td>
+                <td>${r.overall_remark || 'N/A'}</td>
+              </tr>
+            `).join('') : 
+            '<tr><td colspan="7" style="text-align: center; color: #666;">No results available</td></tr>'
+          }
         </tbody>
       </table>
       
@@ -233,30 +272,53 @@ async function generateSingleReportPDF(reportData: any) {
 
   // Launch Puppeteer with improved configuration for reliability
   console.log('Launching Puppeteer browser...');
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-gpu',
-      '--no-first-run',
-      '--disable-extensions',
-      '--disable-default-apps',
-      '--disable-web-security',
-      '--disable-features=VizDisplayCompositor',
-      '--run-all-compositor-stages-before-draw',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding'
-    ],
-    timeout: 30000
-  });
-  console.log('Puppeteer browser launched successfully');
+  let browser;
+  try {
+    // Try with full configuration first
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-first-run',
+        '--disable-extensions',
+        '--disable-default-apps',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--run-all-compositor-stages-before-draw',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding'
+      ],
+      timeout: 30000
+    });
+    console.log('Puppeteer browser launched successfully with full configuration');
+  } catch (browserError) {
+    console.error('Failed to launch Puppeteer browser with full config, trying minimal config:', browserError);
+    try {
+      // Fallback to minimal configuration
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage'
+        ],
+        timeout: 30000
+      });
+      console.log('Puppeteer browser launched successfully with minimal configuration');
+    } catch (minimalError) {
+      console.error('Failed to launch Puppeteer browser with minimal config:', minimalError);
+      throw new Error(`Failed to launch browser: ${minimalError instanceof Error ? minimalError.message : String(minimalError)}`);
+    }
+  }
 
   try {
     console.log('Creating new page...');
     const page = await browser.newPage();
+    console.log('Page created successfully');
     
     // Set viewport for consistent rendering
     await page.setViewport({ width: 1200, height: 800, deviceScaleFactor: 2 });
@@ -264,14 +326,24 @@ async function generateSingleReportPDF(reportData: any) {
     
     // Set content with proper wait for images to load
     console.log('Setting page content...');
-    await page.setContent(htmlContent, { 
-      waitUntil: 'networkidle0',
-      timeout: 15000 
-    });
-    console.log('Page content set successfully');
+    try {
+      await page.setContent(htmlContent, { 
+        waitUntil: 'networkidle0',
+        timeout: 15000 
+      });
+      console.log('Page content set successfully with networkidle0');
+    } catch (contentError) {
+      console.error('Failed to set content with networkidle0, trying domcontentloaded:', contentError);
+      // Fallback to domcontentloaded
+      await page.setContent(htmlContent, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 10000 
+      });
+      console.log('Page content set successfully with domcontentloaded');
+    }
     
     // Wait a bit more for any remaining images to load
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Generate PDF with improved settings
     console.log('Generating PDF...');
@@ -288,6 +360,10 @@ async function generateSingleReportPDF(reportData: any) {
       timeout: 15000
     });
     console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
+
+    if (!pdfBuffer || pdfBuffer.length === 0) {
+      throw new Error('Generated PDF buffer is empty');
+    }
 
     return pdfBuffer;
   } catch (error) {
