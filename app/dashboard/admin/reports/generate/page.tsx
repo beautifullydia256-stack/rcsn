@@ -409,7 +409,8 @@ export default function GenerateReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportData,
-          type: 'single'
+          type: 'single',
+          template: selectedTemplate
         })
       });
 
@@ -478,7 +479,8 @@ export default function GenerateReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportData,
-          type: 'class'
+          type: 'class',
+          template: selectedTemplate
         })
       });
 
@@ -1010,18 +1012,33 @@ export default function GenerateReportsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6"
           >
-            <h2 className="text-white text-lg font-medium mb-4">Report Preview</h2>
-            
-            {reportData.students.map((student: any, index: number) => (
-              <div key={student.student_id} className="mb-8 last:mb-0">
-                <ReportPreview 
-                  student={student} 
-                  examSet={reportData.examSet} 
-                  school={reportData.school}
-                  template={selectedTemplate}
-                />
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-lg font-medium">Report Preview</h2>
+              <div className="text-white/70 text-sm">
+                Template: {selectedTemplate === 'template1' ? 'O-Level Format' : 
+                          selectedTemplate === 'template2' ? 'St. Adrian Kasozi Format' : 
+                          selectedTemplate === 'template3' ? 'Kyotera Parents Format' : 'Default'}
               </div>
-            ))}
+            </div>
+            
+            <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-[80vh]">
+              <div className="bg-white shadow-lg mx-auto" style={{ width: '210mm', minHeight: '297mm' }}>
+                {reportData.students.map((student: any, index: number) => (
+                  <div key={student.student_id} className={index > 0 ? 'mt-8' : ''}>
+                    <ReportPreview 
+                      student={student} 
+                      examSet={reportData.examSet} 
+                      school={reportData.school}
+                      template={selectedTemplate}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="mt-4 text-white/70 text-sm text-center">
+              This preview shows exactly how the PDF will look when downloaded
+            </div>
           </motion.div>
         )}
       </div>
