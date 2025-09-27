@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
 import JSZip from 'jszip';
 import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, formatPercentage, formatAttendance, formatPosition } from '@/src/lib/reportUtils';
+import chromium from '@sparticuz/chromium';
 
 // Helper function to check if class is O-Level
 function isOLevelClass(className: string): boolean {
@@ -20,9 +21,10 @@ async function convertImageToBase64(url: string): Promise<string | null> {
     
     console.log('Converting image to base64:', url);
     
-    // Add timeout to fetch request
+    // Add timeout to fetch request (optimized for Vercel)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout for speed
+    const timeout = process.env.VERCEL === '1' ? 3000 : 5000; // Shorter timeout for Vercel
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     const response = await fetch(url, {
       signal: controller.signal,
@@ -142,12 +144,14 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     schoolLogoBase64 = school?.logo ? await convertImageToBase64(school.logo) : null;
   } catch (error) {
     console.error('Failed to convert school logo:', error);
+    schoolLogoBase64 = null; // Ensure it's null if conversion fails
   }
   
   try {
     studentPhotoBase64 = student?.profile_photo ? await convertImageToBase64(student.profile_photo) : null;
   } catch (error) {
     console.error('Failed to convert student photo:', error);
+    studentPhotoBase64 = null; // Ensure it's null if conversion fails
   }
   
   console.log('School logo converted:', !!schoolLogoBase64);
@@ -191,48 +195,83 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
   console.log('School logo URL:', school?.logo);
   console.log('Student photo URL:', student.profile_photo);
 
-  // Launch Puppeteer with improved configuration for reliability
+  // Launch Puppeteer with Vercel-compatible configuration
   console.log('Launching Puppeteer browser...');
   let browser;
+  
+  // Check if we're running on Vercel
+  const isVercel = process.env.VERCEL === '1';
+  console.log('Environment:', isVercel ? 'Vercel' : 'Local');
+  
   try {
-    // Try with full configuration first
-    browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--no-first-run',
-        '--disable-extensions',
-        '--disable-default-apps',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--run-all-compositor-stages-before-draw',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding'
-      ],
-      timeout: 30000
-    });
-    console.log('Puppeteer browser launched successfully with full configuration');
-  } catch (browserError) {
-    console.error('Failed to launch Puppeteer browser with full config, trying minimal config:', browserError);
-    try {
-      // Fallback to minimal configuration
+    if (isVercel) {
+      // Vercel-specific configuration
+      console.log('Using Vercel-optimized Puppeteer configuration...');
+      browser = await puppeteer.launch({
+        args: [
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--single-process',
+          '--no-zygote',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
+        ],
+        defaultViewport: { width: 1200, height: 800 },
+        executablePath: await chromium.executablePath(),
+        headless: true,
+        timeout: 30000
+      });
+      console.log('Puppeteer browser launched successfully with Vercel configuration');
+    } else {
+      // Local development configuration
+      console.log('Using local development Puppeteer configuration...');
       browser = await puppeteer.launch({
         headless: true,
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',
-          '--disable-dev-shm-usage'
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--no-first-run',
+          '--disable-extensions',
+          '--disable-default-apps',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--run-all-compositor-stages-before-draw',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding'
         ],
         timeout: 30000
       });
-      console.log('Puppeteer browser launched successfully with minimal configuration');
-    } catch (minimalError) {
-      console.error('Failed to launch Puppeteer browser with minimal config:', minimalError);
-      throw new Error(`Failed to launch browser: ${minimalError instanceof Error ? minimalError.message : String(minimalError)}`);
+      console.log('Puppeteer browser launched successfully with local configuration');
+    }
+  } catch (browserError) {
+    console.error('Failed to launch Puppeteer browser:', browserError);
+    
+    // Fallback configuration for both environments
+    try {
+      console.log('Trying fallback configuration...');
+      browser = await puppeteer.launch({
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--single-process'
+        ],
+        headless: true,
+        timeout: 30000
+      });
+      console.log('Puppeteer browser launched successfully with fallback configuration');
+    } catch (fallbackError) {
+      console.error('Failed to launch Puppeteer browser with fallback config:', fallbackError);
+      throw new Error(`Failed to launch browser: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`);
     }
   }
 
@@ -241,8 +280,11 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     const page = await browser.newPage();
     console.log('Page created successfully');
     
-    // Set viewport for consistent rendering
-    await page.setViewport({ width: 1200, height: 800, deviceScaleFactor: 2 });
+    // Set viewport for consistent rendering (optimized for Vercel)
+    const viewportConfig = isVercel 
+      ? { width: 1200, height: 800, deviceScaleFactor: 1 } // Reduced scale for Vercel
+      : { width: 1200, height: 800, deviceScaleFactor: 2 };
+    await page.setViewport(viewportConfig);
     console.log('Viewport set');
     
     // Set content with proper wait for images to load
@@ -263,13 +305,14 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       console.log('Page content set successfully with domcontentloaded');
     }
     
-    // Wait a bit more for any remaining images to load (reduced for speed)
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Wait a bit more for any remaining images to load (optimized for Vercel)
+    const waitTime = isVercel ? 500 : 1000; // Shorter wait for Vercel
+    await new Promise(resolve => setTimeout(resolve, waitTime));
     
-    // Generate PDF with improved settings
+    // Generate PDF with improved settings (optimized for Vercel)
     console.log('Generating PDF...');
-    const pdfBuffer = await page.pdf({
-      format: 'A4',
+    const pdfOptions = {
+      format: 'A4' as const,
       margin: {
         top: '15mm',
         right: '15mm',
@@ -278,8 +321,10 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       },
       printBackground: true,
       preferCSSPageSize: true,
-      timeout: 15000
-    });
+      timeout: isVercel ? 10000 : 15000 // Shorter timeout for Vercel
+    };
+    
+    const pdfBuffer = await page.pdf(pdfOptions);
     console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
 
     if (!pdfBuffer || pdfBuffer.length === 0) {
@@ -297,7 +342,14 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     throw error;
   } finally {
     console.log('Closing browser...');
-    await browser.close();
+    try {
+      if (browser) {
+        await browser.close();
+        console.log('Browser closed successfully');
+      }
+    } catch (closeError) {
+      console.error('Error closing browser:', closeError);
+    }
   }
 }
 
