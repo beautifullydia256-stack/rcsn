@@ -57,12 +57,35 @@ async function generateSingleReportPDF(reportData: any) {
   const student = students[0];
 
   const isSecondaryClass = (className: string) => /^S\d/i.test((className || '').trim());
+  const isOLevelClass = (className: string) => {
+    const trimmed = (className || '').trim();
+    return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
+  };
 
   if (isSecondaryClass(student.current_class)) {
     return generateSecondaryReportPDF(reportData);
   }
 
-  // Create A4 PDF (210mm x 297mm)
+  if (isOLevelClass(student.current_class)) {
+    return generateOLevelReportPDF(reportData);
+  }
+
+  // Default primary report
+  return generatePrimaryReportPDF(reportData);
+}
+
+async function generateOLevelReportPDF(reportData: any) {
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays ?? '';
+  const totalDays = attendance.totalSchoolDays ?? '';
+  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Create A4 PDF
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -75,7 +98,7 @@ async function generateSingleReportPDF(reportData: any) {
   const contentWidth = pageWidth - (2 * margin);
   let yPosition = margin;
 
-  // Helper function to add text with word wrap
+  // Helper functions
   const addText = (text: string, x: number, y: number, options: any = {}) => {
     const fontSize = options.fontSize || 10;
     const fontStyle = options.fontStyle || 'normal';
@@ -90,16 +113,15 @@ async function generateSingleReportPDF(reportData: any) {
     return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
   };
 
-  // Helper function to add centered text
   const addCenteredText = (text: string, y: number, options: any = {}) => {
     return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
   };
 
-  // Helper function to add table
-  const addTable = (data: string[][], startY: number, columnWidths: number[]) => {
+  const addTable = (data: string[][], startY: number, columnWidths: number[], options: any = {}) => {
     let currentY = startY;
-    const rowHeight = 8;
-    const cellPadding = 2;
+    const rowHeight = options.rowHeight || 8;
+    const cellPadding = options.cellPadding || 2;
+    const fontSize = options.fontSize || 8;
 
     data.forEach((row, rowIndex) => {
       let xPosition = margin;
@@ -111,6 +133,382 @@ async function generateSingleReportPDF(reportData: any) {
         pdf.rect(xPosition, currentY, cellWidth, rowHeight);
         
         // Add cell text
+        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
+        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
+        
+        pdf.setFontSize(fontSize);
+        pdf.text(textLines, xPosition + cellPadding, textY);
+        
+        xPosition += cellWidth;
+      });
+      
+      currentY += rowHeight;
+    });
+    
+    return currentY + 5;
+  };
+
+  // HEADER - School Logo and Info
+  yPosition += 5;
+
+  // School Name (centered)
+  yPosition = addCenteredText(school?.name || 'EMIRATES COLLEGE SCHOOL', yPosition, { fontSize: 18, fontStyle: 'bold' });
+  
+  // Contact Info
+  yPosition = addCenteredText(`TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}`, yPosition, { fontSize: 9 });
+  
+  // School Motto
+  yPosition = addCenteredText(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, yPosition, { fontSize: 9, fontStyle: 'italic' });
+  
+  yPosition += 10;
+
+  // REPORT TITLE
+  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`, yPosition, { fontSize: 13, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // LEARNER INFO
+  yPosition = addText(`LNo.: ${student.admission_number || student.student_id}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText(`NAME: ${student.name}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText(`CLASS & STREAM: ${student.current_class}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // SUBJECTS TABLE
+  const subjectHeaders = [
+    'Subjects & Topics Covered',
+    'Activity Score [3]',
+    'Descriptor',
+    'Formative Score [20%]',
+    'Exam Score [80%]',
+    'Final Score [100%]',
+    'Grade',
+    'Overall Remark',
+    'Subject Teacher'
+  ];
+  
+  const subjectData = [subjectHeaders];
+
+  if (student.results.length > 0) {
+    student.results.forEach((result: any) => {
+      const activity = result.activity_score ?? '';
+      const activityNum = parseFloat(activity) || 0;
+      const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+      const formative = result.formative_score ?? '';
+      const exam = result.exam_score ?? '';
+      const finalScore = result.final_score ?? '';
+      const finalNum = parseFloat(finalScore) || 0;
+      const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+      const overallRemark = result.overall_remark ?? '';
+      const teacherInitials = result.teacher_initials ?? '';
+      const topic = result.topic || '';
+
+      subjectData.push([
+        `${result.subject}\n${topic}`,
+        activity,
+        descriptor,
+        formative,
+        exam,
+        finalScore,
+        gradeText,
+        overallRemark,
+        teacherInitials
+      ]);
+    });
+  } else {
+    subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
+  }
+
+  yPosition = addTable(subjectData, yPosition, [25, 8, 10, 8, 8, 8, 6, 15, 8], { rowHeight: 12, fontSize: 7 });
+  yPosition += 5;
+
+  // PERFORMANCE SUMMARY
+  yPosition = addText(`AVERAGE SCORES: ${avg} ${avgGrade}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText(`OVERALL PERFORMANCE: ${overallPerf}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // COMMENTS
+  yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText(student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.', margin, yPosition, { fontSize: 10 });
+  yPosition = addText(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`, margin, yPosition, { fontSize: 10 });
+  yPosition += 5;
+
+  yPosition = addText("Head Teacher's Comment", margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText(student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.', margin, yPosition, { fontSize: 10 });
+  yPosition = addText(`Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}`, margin, yPosition, { fontSize: 10 });
+  yPosition += 5;
+
+  // NEXT TERM
+  yPosition = addText(`Next Term Begins: ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // GRADING SYSTEM
+  yPosition = addText('Grading System', margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addText('80 - A | 70 - B | 50 - C | 40 - D | 0 - E', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // DESCRIPTION TABLE
+  const descHeaders = ['Grade', 'Achievement Level', 'Descriptor'];
+  const descData = [
+    descHeaders,
+    ['A', 'Exceptional', 'Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations'],
+    ['B', 'Outstanding', 'Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations'],
+    ['C', 'Satisfactory', 'Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations'],
+    ['D', 'Basic', 'Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations'],
+    ['E', 'Elementary', 'Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations']
+  ];
+
+  yPosition = addText('Description', margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
+  yPosition = addTable(descData, yPosition, [15, 20, 65], { rowHeight: 10, fontSize: 8 });
+  yPosition += 5;
+
+  // FOOTER
+  yPosition = addText('Printed from: Pwezacore', margin, yPosition, { fontSize: 9 });
+  yPosition = addText(`School Motto: '${school?.motto || 'Education the Future'}'`, pageWidth - margin - 50, yPosition, { fontSize: 9, align: 'right' });
+
+  return pdf;
+}
+
+async function generateSecondaryReportPDF(reportData: any) {
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  const nextTermBegins = student?.nextTermBegins || reportData?.nextTermBegins || '______________________';
+
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays != null ? String(attendance.presentDays) : 'N/A';
+  const totalDays = attendance.totalSchoolDays != null ? String(attendance.totalSchoolDays) : 'N/A';
+  const daysAbsent = (attendance.presentDays != null && attendance.totalSchoolDays != null)
+    ? String(Math.max(attendance.totalSchoolDays - attendance.presentDays, 0))
+    : 'N/A';
+
+  const avg = student.summary.average != null ? String(student.summary.average) : 'N/A';
+  const avgGrade = student.summary.division != null ? String(student.summary.division) : 'N/A';
+  const overallPerf = student.summary.performanceRemark != null ? String(student.summary.performanceRemark) : 'N/A';
+  const projects = Array.isArray(student.projects) ? student.projects : [];
+  const comments = student.comments || null;
+
+  // Create A4 PDF
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - (2 * margin);
+  let yPosition = margin;
+
+  // Helper functions
+  const addText = (text: string, x: number, y: number, options: any = {}) => {
+    const fontSize = options.fontSize || 10;
+    const fontStyle = options.fontStyle || 'normal';
+    const align = options.align || 'left';
+    
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', fontStyle);
+    
+    const lines = pdf.splitTextToSize(text, contentWidth);
+    pdf.text(lines, x, y, { align });
+    
+    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
+  };
+
+  const addCenteredText = (text: string, y: number, options: any = {}) => {
+    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
+  };
+
+  const addTable = (data: string[][], startY: number, columnWidths: number[], options: any = {}) => {
+    let currentY = startY;
+    const rowHeight = options.rowHeight || 8;
+    const cellPadding = options.cellPadding || 2;
+    const fontSize = options.fontSize || 8;
+
+    data.forEach((row, rowIndex) => {
+      let xPosition = margin;
+      
+      row.forEach((cell, colIndex) => {
+        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
+        
+        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
+        
+        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
+        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
+        
+        pdf.setFontSize(fontSize);
+        pdf.text(textLines, xPosition + cellPadding, textY);
+        
+        xPosition += cellWidth;
+      });
+      
+      currentY += rowHeight;
+    });
+    
+    return currentY + 5;
+  };
+
+  // HEADER
+  yPosition = addCenteredText(school?.name || 'School Name', yPosition, { fontSize: 16, fontStyle: 'bold' });
+  yPosition = addCenteredText(`TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}`, yPosition, { fontSize: 10 });
+  yPosition = addCenteredText(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, yPosition, { fontSize: 10, fontStyle: 'italic' });
+
+  yPosition += 10;
+
+  // TITLE
+  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}`, yPosition, { fontSize: 14, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // STUDENT META
+  yPosition = addText(`LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}`, margin, yPosition, { fontSize: 10 });
+  yPosition += 5;
+
+  // ATTENDANCE TABLE
+  const attendanceData = [
+    ['Days Present', 'Days Absent', 'Total'],
+    [daysPresent, daysAbsent, totalDays]
+  ];
+  yPosition = addTable(attendanceData, yPosition, [33, 33, 34]);
+  yPosition += 5;
+
+  // SUBJECTS TABLE
+  const subjectHeaders = ['Subjects & Topics', 'Activity [3]', 'Descriptor', 'Formative (20%)', 'Exam (80%)', 'Final (100%)', 'Grade', 'Overall Remark', 'Teacher'];
+  const subjectData = [subjectHeaders];
+
+  if (student.results.length > 0) {
+    student.results.forEach((result: any) => {
+      const activity = result.activity_score != null ? String(result.activity_score) : 'N/A';
+      const descriptor = result.descriptor ?? 'N/A';
+      const formative = result.formative_score != null ? String(result.formative_score) : 'N/A';
+      const exam = result.exam_score != null ? String(result.exam_score) : 'N/A';
+      const finalScore = result.final_score != null ? String(result.final_score) : (result.total_marks ? String(Math.round((result.marks_obtained / result.total_marks) * 100)) : 'N/A');
+      const gradeText = result.grade ?? 'N/A';
+      const overallRemark = result.overall_remark ?? 'N/A';
+      const teacherName = result.teacher_name ?? '-';
+
+      subjectData.push([
+        result.subject,
+        activity,
+        descriptor,
+        formative,
+        exam,
+        finalScore,
+        gradeText,
+        overallRemark,
+        teacherName
+      ]);
+    });
+  } else {
+    subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
+  }
+
+  yPosition = addTable(subjectData, yPosition, [20, 10, 15, 10, 10, 10, 8, 12, 5], { rowHeight: 10, fontSize: 7 });
+  yPosition += 5;
+
+  // PERFORMANCE SUMMARY
+  yPosition = addText(`AVERAGE SCORES: ${avg} ${avgGrade}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText(`OVERALL PERFORMANCE: ${overallPerf}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition += 5;
+
+  // PROJECTS TABLE
+  const projectHeaders = ['Subject', 'Project Title', 'Remark', 'Score', 'Teacher'];
+  const projectData = [projectHeaders];
+
+  if (projects.length > 0) {
+    projects.forEach((p: any) => {
+      projectData.push([
+        String(p.subject ?? 'N/A'),
+        String(p.project_title ?? 'N/A'),
+        String(p.remark ?? 'N/A'),
+        p.score != null ? String(p.score) : 'N/A',
+        String(p.teacher ?? 'N/A')
+      ]);
+    });
+  } else {
+    projectData.push(['N/A', 'N/A', 'N/A', 'N/A', 'N/A']);
+  }
+
+  yPosition = addTable(projectData, yPosition, [25, 35, 20, 10, 10], { rowHeight: 8, fontSize: 8 });
+  yPosition += 5;
+
+  // COMMENTS
+  yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText(String(comments?.class_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
+  yPosition = addText(`Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
+  yPosition += 5;
+
+  yPosition = addText("Head Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText(String(comments?.head_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
+  yPosition = addText(`Name: ${String(comments?.head_teacher_name ?? '__________')} | Signature: ${String(comments?.head_teacher_signature ?? '__________')} | Date: ${String(comments?.head_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
+  yPosition += 5;
+
+  // NEXT TERM & GRADING
+  yPosition = addText(`Next Term Begins: ${nextTermBegins}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText('Grading System', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText('A (80–100) | B (70–79) | C (50–69) | D (40–49) | E (0–39)', margin, yPosition, { fontSize: 9 });
+  yPosition += 5;
+
+  yPosition = addText('Grade Descriptions', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
+  yPosition = addText('A: Excellent mastery and application of concepts.', margin, yPosition, { fontSize: 9 });
+  yPosition = addText('B: Very good understanding with minor gaps.', margin, yPosition, { fontSize: 9 });
+  yPosition = addText('C: Satisfactory performance with notable room for improvement.', margin, yPosition, { fontSize: 9 });
+  yPosition = addText('D: Below average; needs significant improvement.', margin, yPosition, { fontSize: 9 });
+  yPosition = addText('E: Poor performance; urgent intervention required.', margin, yPosition, { fontSize: 9 });
+  yPosition += 5;
+
+  // FOOTER
+  yPosition = addCenteredText('Printed from: Pwezacore', yPosition, { fontSize: 10 });
+
+  return pdf;
+}
+
+async function generatePrimaryReportPDF(reportData: any) {
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+
+  // Create A4 PDF
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 15;
+  const contentWidth = pageWidth - (2 * margin);
+  let yPosition = margin;
+
+  // Helper functions
+  const addText = (text: string, x: number, y: number, options: any = {}) => {
+    const fontSize = options.fontSize || 10;
+    const fontStyle = options.fontStyle || 'normal';
+    const align = options.align || 'left';
+    
+    pdf.setFontSize(fontSize);
+    pdf.setFont('helvetica', fontStyle);
+    
+    const lines = pdf.splitTextToSize(text, contentWidth);
+    pdf.text(lines, x, y, { align });
+    
+    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
+  };
+
+  const addCenteredText = (text: string, y: number, options: any = {}) => {
+    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
+  };
+
+  const addTable = (data: string[][], startY: number, columnWidths: number[]) => {
+    let currentY = startY;
+    const rowHeight = 8;
+    const cellPadding = 2;
+
+    data.forEach((row, rowIndex) => {
+      let xPosition = margin;
+      
+      row.forEach((cell, colIndex) => {
+        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
+        
+        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
+        
         const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
         const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
         
@@ -204,199 +602,6 @@ async function generateSingleReportPDF(reportData: any) {
 
   yPosition = addText('Head Teacher\'s Remarks:', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
   yPosition += 15;
-
-  // Footer
-  yPosition = addCenteredText('Printed from: Pwezacore', yPosition, { fontSize: 10 });
-
-  return pdf;
-}
-
-async function generateSecondaryReportPDF(reportData: any) {
-  const { school, examSet, students } = reportData;
-  const student = students[0];
-  const nextTermBegins = student?.nextTermBegins || reportData?.nextTermBegins || '______________________';
-
-  const attendance = student.summary.attendanceDetails || {};
-  const daysPresent = attendance.presentDays != null ? String(attendance.presentDays) : 'N/A';
-  const totalDays = attendance.totalSchoolDays != null ? String(attendance.totalSchoolDays) : 'N/A';
-  const daysAbsent = (attendance.presentDays != null && attendance.totalSchoolDays != null)
-    ? String(Math.max(attendance.totalSchoolDays - attendance.presentDays, 0))
-    : 'N/A';
-
-  const avg = student.summary.average != null ? String(student.summary.average) : 'N/A';
-  const avgGrade = student.summary.division != null ? String(student.summary.division) : 'N/A';
-  const overallPerf = student.summary.performanceRemark != null ? String(student.summary.performanceRemark) : 'N/A';
-  const projects = Array.isArray(student.projects) ? student.projects : [];
-  const comments = student.comments || null;
-
-  // Create A4 PDF
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = 210;
-  const pageHeight = 297;
-  const margin = 15;
-  const contentWidth = pageWidth - (2 * margin);
-  let yPosition = margin;
-
-  // Helper functions (same as primary report)
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
-    const fontSize = options.fontSize || 10;
-    const fontStyle = options.fontStyle || 'normal';
-    const align = options.align || 'left';
-    
-    pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
-    
-    const lines = pdf.splitTextToSize(text, contentWidth);
-    pdf.text(lines, x, y, { align });
-    
-    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
-  };
-
-  const addCenteredText = (text: string, y: number, options: any = {}) => {
-    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
-  };
-
-  const addTable = (data: string[][], startY: number, columnWidths: number[]) => {
-    let currentY = startY;
-    const rowHeight = 8;
-    const cellPadding = 2;
-
-    data.forEach((row, rowIndex) => {
-      let xPosition = margin;
-      
-      row.forEach((cell, colIndex) => {
-        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
-        
-        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
-        
-        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
-        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
-        
-        pdf.setFontSize(8);
-        pdf.text(textLines, xPosition + cellPadding, textY);
-        
-        xPosition += cellWidth;
-      });
-      
-      currentY += rowHeight;
-    });
-    
-    return currentY + 5;
-  };
-
-  // Header
-  yPosition = addCenteredText(school?.name || 'School Name', yPosition, { fontSize: 16, fontStyle: 'bold' });
-  yPosition = addCenteredText(`TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}`, yPosition, { fontSize: 10 });
-  yPosition = addCenteredText(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, yPosition, { fontSize: 10, fontStyle: 'italic' });
-
-  yPosition += 10;
-
-  // Title
-  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}`, yPosition, { fontSize: 14, fontStyle: 'bold' });
-  yPosition += 5;
-
-  // Student Meta
-  yPosition = addText(`LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}`, margin, yPosition, { fontSize: 10 });
-  yPosition += 5;
-
-  // Attendance Table
-  const attendanceData = [
-    ['Days Present', 'Days Absent', 'Total'],
-    [daysPresent, daysAbsent, totalDays]
-  ];
-  yPosition = addTable(attendanceData, yPosition, [33, 33, 34]);
-  yPosition += 5;
-
-  // Subjects Table
-  const subjectHeaders = ['Subjects & Topics', 'Activity [3]', 'Descriptor', 'Formative (20%)', 'Exam (80%)', 'Final (100%)', 'Grade', 'Overall Remark', 'Teacher'];
-  const subjectData = [subjectHeaders];
-
-  if (student.results.length > 0) {
-    student.results.forEach((result: any) => {
-      const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-      const activity = result.activity_score != null ? String(result.activity_score) : 'N/A';
-      const descriptor = result.descriptor ?? gradeInfo.remark ?? 'N/A';
-      const formative = result.formative_score != null ? String(result.formative_score) : 'N/A';
-      const exam = result.exam_score != null ? String(result.exam_score) : 'N/A';
-      const finalScore = result.final_score != null ? String(result.final_score) : (result.total_marks ? String(Math.round((result.marks_obtained / result.total_marks) * 100)) : 'N/A');
-      const gradeText = result.grade ?? gradeInfo.grade ?? 'N/A';
-      const overallRemark = result.overall_remark ?? gradeInfo.remark ?? 'N/A';
-      const teacherName = result.teacher_name ?? '-';
-
-      subjectData.push([
-        result.subject,
-        activity,
-        descriptor,
-        formative,
-        exam,
-        finalScore,
-        gradeText,
-        overallRemark,
-        teacherName
-      ]);
-    });
-  } else {
-    subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
-  }
-
-  yPosition = addTable(subjectData, yPosition, [20, 10, 15, 10, 10, 10, 8, 12, 5]);
-  yPosition += 10;
-
-  // Performance Summary
-  yPosition = addText(`AVERAGE SCORES: ${avg} ${avgGrade}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(`OVERALL PERFORMANCE: ${overallPerf}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition += 5;
-
-  // Projects Table
-  const projectHeaders = ['Subject', 'Project Title', 'Remark', 'Score', 'Teacher'];
-  const projectData = [projectHeaders];
-
-  if (projects.length > 0) {
-    projects.forEach((p: any) => {
-      projectData.push([
-        String(p.subject ?? 'N/A'),
-        String(p.project_title ?? 'N/A'),
-        String(p.remark ?? 'N/A'),
-        p.score != null ? String(p.score) : 'N/A',
-        String(p.teacher ?? 'N/A')
-      ]);
-    });
-  } else {
-    projectData.push(['N/A', 'N/A', 'N/A', 'N/A', 'N/A']);
-  }
-
-  yPosition = addTable(projectData, yPosition, [25, 35, 20, 10, 10]);
-  yPosition += 10;
-
-  // Comments
-  yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(String(comments?.class_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
-  yPosition = addText(`Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  yPosition = addText("Head Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(String(comments?.head_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
-  yPosition = addText(`Name: ${String(comments?.head_teacher_name ?? '__________')} | Signature: ${String(comments?.head_teacher_signature ?? '__________')} | Date: ${String(comments?.head_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
-  yPosition += 10;
-
-  // Next Term & Grading
-  yPosition = addText(`Next Term Begins: ${nextTermBegins}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('Grading System', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('A (80–100) | B (70–79) | C (50–69) | D (40–49) | E (0–39)', margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  yPosition = addText('Grade Descriptions', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('A: Excellent mastery and application of concepts.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('B: Very good understanding with minor gaps.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('C: Satisfactory performance with notable room for improvement.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('D: Below average; needs significant improvement.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('E: Poor performance; urgent intervention required.', margin, yPosition, { fontSize: 9 });
-  yPosition += 10;
 
   // Footer
   yPosition = addCenteredText('Printed from: Pwezacore', yPosition, { fontSize: 10 });
