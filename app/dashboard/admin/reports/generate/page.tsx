@@ -1357,12 +1357,42 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       boxSizing: 'border-box'
     }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
+      {/* WATERMARK */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
+        <div className="w-72 h-72 border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-4xl font-bold text-gray-400">
+            SCHOOL<br/>LOGO
+          </div>
+        </div>
+      </div>
+      
       {/* HEADER */}
-      <div className="text-center mb-6">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
-        <div className="text-[9pt] mt-1">
-          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+      <div className="flex items-start justify-between mb-6">
+        {/* School Logo */}
+        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+          {school?.logo ? (
+            <img
+              src={school.logo}
+              alt="School Logo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-center text-xs">
+              <div className="font-bold">ST. ADRIAN</div>
+              <div className="font-bold">KASOZI</div>
+              <div className="font-bold">SECONDARY</div>
+              <div className="font-bold">SCHOOL</div>
+            </div>
+          )}
+        </div>
+        
+        {/* School Info */}
+        <div className="text-center flex-1">
+          <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+          <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
+          <div className="text-[9pt] mt-1">
+            P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+          </div>
         </div>
       </div>
 
@@ -1557,16 +1587,46 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       boxSizing: 'border-box'
     }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
-      {/* HEADER */}
-      <div className="text-center mb-6">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
-        <div className="font-bold text-[13pt] mt-1">
-          {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
-          Tel: {school?.phone || '0701861636 / 0700338061'} | 
-          E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
+      {/* WATERMARK */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
+        <div className="w-72 h-72 border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-4xl font-bold text-gray-400">
+            SCHOOL<br/>LOGO
+          </div>
         </div>
-        <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
-        <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
+      </div>
+      
+      {/* HEADER */}
+      <div className="flex items-start justify-between mb-6">
+        {/* School Logo */}
+        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+          {school?.logo ? (
+            <img
+              src={school.logo}
+              alt="School Logo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-center text-xs">
+              <div className="font-bold">KYOTERA</div>
+              <div className="font-bold">PARENTS'</div>
+              <div className="font-bold">SECONDARY</div>
+              <div className="font-bold">SCHOOL</div>
+            </div>
+          )}
+        </div>
+        
+        {/* School Info */}
+        <div className="text-center flex-1">
+          <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+          <div className="font-bold text-[13pt] mt-1">
+            {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
+            Tel: {school?.phone || '0701861636 / 0700338061'} | 
+            E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
+          </div>
+          <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+          <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
+        </div>
       </div>
 
       {/* STUDENT INFO */}

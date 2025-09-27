@@ -821,7 +821,9 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .header {
-          text-align: center;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
           margin-bottom: 30px;
         }
         
@@ -835,7 +837,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           justify-content: center;
           overflow: hidden;
           background: #f0f0f0;
-          margin: 0 auto 15px;
+          flex-shrink: 0;
         }
         
         .school-logo img {
@@ -974,12 +976,15 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       <div class="header">
         <!-- School Logo -->
         <div class="school-logo">
-          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">ST. ADRIAN</div><div style="font-weight: bold;">KASOZI</div><div style="font-weight: bold;">SECONDARY</div><div style="font-weight: bold;">SCHOOL</div></div>'}
         </div>
         
-        <div class="school-name">${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-        <div class="school-contact">P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}</div>
-        <div class="school-motto">MOTTO: "${school?.motto || 'Excellence Through Discipline'}"</div>
+        <!-- School Info -->
+        <div class="school-info">
+          <div class="school-name">${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+          <div class="school-contact">P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}</div>
+          <div class="school-motto">MOTTO: "${school?.motto || 'Excellence Through Discipline'}"</div>
+        </div>
       </div>
 
       <!-- REPORT TITLE -->
@@ -1123,8 +1128,34 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
         
         .header {
-          text-align: center;
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
           margin-bottom: 30px;
+        }
+        
+        .school-logo {
+          width: 200px;
+          height: 200px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #f0f0f0;
+          flex-shrink: 0;
+        }
+        
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .school-info {
+          text-align: center;
+          flex: 1;
         }
         
         .school-name {
@@ -1241,14 +1272,22 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       
       <!-- HEADER -->
       <div class="header">
-        <div class="school-name">${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
-        <div class="school-contact">
-          ${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
-          Tel: ${school?.phone || '0701861636 / 0700338061'} | 
-          E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}
+        <!-- School Logo -->
+        <div class="school-logo">
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">KYOTERA</div><div style="font-weight: bold;">PARENTS\'</div><div style="font-weight: bold;">SECONDARY</div><div style="font-weight: bold;">SCHOOL</div></div>'}
         </div>
-        <div class="report-title">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
-        <div class="report-number">No. ${student.admission_number || student.student_id}</div>
+        
+        <!-- School Info -->
+        <div class="school-info">
+          <div class="school-name">${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+          <div class="school-contact">
+            ${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
+            Tel: ${school?.phone || '0701861636 / 0700338061'} | 
+            E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}
+          </div>
+          <div class="report-title">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+          <div class="report-number">No. ${student.admission_number || student.student_id}</div>
+        </div>
       </div>
 
       <!-- STUDENT INFO -->
