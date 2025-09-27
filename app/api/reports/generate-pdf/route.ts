@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jsPDF } from 'jspdf';
+import puppeteer from 'puppeteer';
 import JSZip from 'jszip';
 import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, formatPercentage, formatAttendance, formatPosition } from '@/src/lib/reportUtils';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('PDF generation request received');
     const { reportData, type } = await request.json();
+    console.log('Report data received, type:', type);
 
     if (type === 'single') {
-      const pdf = await generateSingleReportPDF(reportData);
-      const buffer = Buffer.from(pdf.output('arraybuffer'));
+      const pdfBuffer = await generateSingleReportPDF(reportData);
       
       const student = reportData.students[0];
       const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
       
-      return new NextResponse(buffer, {
+      return new NextResponse(pdfBuffer, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${filename}"`
@@ -28,10 +29,9 @@ export async function POST(request: NextRequest) {
           ...reportData,
           students: [student]
         };
-        const pdf = await generateSingleReportPDF(studentReportData);
-        const buffer = Buffer.from(pdf.output('arraybuffer'));
+        const pdfBuffer = await generateSingleReportPDF(studentReportData);
         const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
-        zip.file(filename, buffer);
+        zip.file(filename, pdfBuffer);
       }
       
       const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' });
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateSingleReportPDF(reportData: any) {
+  console.log('Starting PDF generation for student:', reportData.students[0]?.name);
   const { school, examSet, students } = reportData;
   const student = students[0];
 
@@ -62,19 +63,81 @@ async function generateSingleReportPDF(reportData: any) {
     return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
   };
 
+  // Generate HTML content based on class type
+  let htmlContent = '';
+  
   if (isSecondaryClass(student.current_class)) {
-    return generateSecondaryReportPDF(reportData);
+    console.log('Generating Secondary report HTML');
+    htmlContent = generateSecondaryReportHTML(reportData);
+  } else if (isOLevelClass(student.current_class)) {
+    console.log('Generating O-Level report HTML');
+    htmlContent = generateOLevelReportHTML(reportData);
+  } else {
+    console.log('Generating Primary report HTML');
+    htmlContent = generatePrimaryReportHTML(reportData);
   }
+  
+  console.log('HTML content generated, length:', htmlContent.length);
 
-  if (isOLevelClass(student.current_class)) {
-    return generateOLevelReportPDF(reportData);
+  // Launch Puppeteer
+  console.log('Launching Puppeteer browser...');
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu'
+    ]
+  });
+  console.log('Puppeteer browser launched successfully');
+
+  try {
+    console.log('Creating new page...');
+    const page = await browser.newPage();
+    
+    // Set viewport for consistent rendering
+    await page.setViewport({ width: 1200, height: 800 });
+    console.log('Viewport set');
+    
+    // Set content and wait for images to load
+    console.log('Setting page content...');
+    await page.setContent(htmlContent, { 
+      waitUntil: 'networkidle0',
+      timeout: 30000 
+    });
+    console.log('Page content set successfully');
+    
+    // Generate PDF with A4 settings
+    console.log('Generating PDF...');
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '15mm',
+        right: '15mm',
+        bottom: '15mm',
+        left: '15mm'
+      },
+      preferCSSPageSize: true,
+      timeout: 30000
+    });
+    console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
+
+    return pdfBuffer;
+  } catch (error) {
+    console.error('Puppeteer PDF generation error:', error);
+    throw error;
+  } finally {
+    console.log('Closing browser...');
+    await browser.close();
   }
-
-  // Default primary report
-  return generatePrimaryReportPDF(reportData);
 }
 
-async function generateOLevelReportPDF(reportData: any) {
+function generateOLevelReportHTML(reportData: any) {
   const { school, examSet, students } = reportData;
   const student = students[0];
   const attendance = student.summary.attendanceDetails || {};
@@ -85,221 +148,382 @@ async function generateOLevelReportPDF(reportData: any) {
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
-  // Create A4 PDF
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = 210;
-  const pageHeight = 297;
-  const margin = 15;
-  const contentWidth = pageWidth - (2 * margin);
-  let yPosition = margin;
-
-  // Helper functions
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
-    const fontSize = options.fontSize || 10;
-    const fontStyle = options.fontStyle || 'normal';
-    const align = options.align || 'left';
-    const color = options.color || '#000000';
-    
-    pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
-    pdf.setTextColor(color);
-    
-    const lines = pdf.splitTextToSize(text, contentWidth);
-    pdf.text(lines, x, y, { align });
-    
-    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
-  };
-
-  const addCenteredText = (text: string, y: number, options: any = {}) => {
-    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
-  };
-
-  const addTable = (data: string[][], startY: number, columnWidths: number[], options: any = {}) => {
-    let currentY = startY;
-    const rowHeight = options.rowHeight || 8;
-    const cellPadding = options.cellPadding || 2;
-    const fontSize = options.fontSize || 8;
-    const headerBg = options.headerBg || '#4CAF50';
-    const headerTextColor = options.headerTextColor || '#FFFFFF';
-
-    data.forEach((row, rowIndex) => {
-      let xPosition = margin;
-      
-      row.forEach((cell, colIndex) => {
-        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
-        
-        // Draw cell border
-        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
-        
-        // Add background color for header
-        if (rowIndex === 0) {
-          pdf.setFillColor(headerBg);
-          pdf.rect(xPosition, currentY, cellWidth, rowHeight, 'F');
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
         }
         
-        // Add cell text
-        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
-        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
-        
-        pdf.setFontSize(fontSize);
-        if (rowIndex === 0) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(headerTextColor);
-        } else {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor('#000000');
+        body {
+          font-family: 'Times New Roman', Arial, sans-serif;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 15mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
         }
-        pdf.text(textLines, xPosition + cellPadding, textY);
         
-        xPosition += cellWidth;
-      });
-      
-      currentY += rowHeight;
-    });
-    
-    return currentY + 5;
-  };
+        .header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          margin-bottom: 20px;
+        }
+        
+        .school-logo {
+          width: 80px;
+          height: 80px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #f0f0f0;
+        }
+        
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .school-info {
+          text-align: center;
+          flex: 1;
+        }
+        
+        .school-name {
+          font-weight: bold;
+          font-size: 18pt;
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+        
+        .school-contact {
+          font-size: 9pt;
+          margin-bottom: 5px;
+        }
+        
+        .school-motto {
+          font-size: 9pt;
+          font-style: italic;
+        }
+        
+        .student-photo {
+          width: 80px;
+          height: 96px;
+          border: 2px solid #ccc;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .report-title {
+          background: #4CAF50;
+          color: white;
+          text-align: center;
+          padding: 10px;
+          margin: 20px 0;
+          font-size: 13pt;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+        
+        .student-info {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .student-info div {
+          margin-bottom: 5px;
+        }
+        
+        .student-info strong {
+          font-weight: bold;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        th, td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: left;
+        }
+        
+        th {
+          background: #4CAF50;
+          color: white;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .center {
+          text-align: center;
+        }
+        
+        .summary {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .summary p {
+          margin-bottom: 5px;
+        }
+        
+        .summary strong {
+          font-weight: bold;
+        }
+        
+        .comments {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .comments h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .comments p {
+          margin-bottom: 5px;
+        }
+        
+        .next-term {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .next-term strong {
+          font-weight: bold;
+        }
+        
+        .grading-system {
+          margin-bottom: 20px;
+        }
+        
+        .grading-system h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .grading-system p {
+          font-size: 10pt;
+          font-weight: bold;
+          margin-bottom: 10px;
+        }
+        
+        .description-table th {
+          background: #f0f0f0;
+          color: black;
+        }
+        
+        .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 9pt;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- HEADER - School Logo and Info -->
+      <div class="header">
+        <!-- School Logo -->
+        <div class="school-logo">
+          ${school?.logo ? `<img src="${school.logo}" alt="School Logo">` : `
+            <div style="text-align: center; font-size: 8px;">
+              <div style="font-weight: bold;">EMIRATES</div>
+              <div style="font-weight: bold;">COLLEGE</div>
+              <div style="font-weight: bold;">SCHOOL</div>
+            </div>
+          `}
+        </div>
+        
+        <!-- School Name and Contact -->
+        <div class="school-info">
+          <div class="school-name">${school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
+          <div class="school-contact">TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
+          <div class="school-motto">SCHOOL MOTTO: ${school?.motto || 'Education the Future'}</div>
+        </div>
+        
+        <!-- Student Photo -->
+        <div class="student-photo">
+          ${student.profile_photo ? `<img src="${student.profile_photo}" alt="Student Photo">` : `
+            <div style="font-size: 10px; color: #666;">Photo</div>
+          `}
+        </div>
+      </div>
 
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPosition + requiredHeight > pageHeight - margin) {
-      pdf.addPage();
-      yPosition = margin;
-      return true;
-    }
-    return false;
-  };
+      <!-- REPORT TITLE -->
+      <div class="report-title">
+        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}
+      </div>
 
-  // HEADER - School Logo and Info
-  yPosition += 5;
+      <!-- LEARNER INFO -->
+      <div class="student-info">
+        <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
+        <div><strong>NAME:</strong> ${student.name}</div>
+        <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
+      </div>
 
-  // School Name (centered)
-  yPosition = addCenteredText(school?.name || 'EMIRATES COLLEGE SCHOOL', yPosition, { fontSize: 18, fontStyle: 'bold' });
-  
-  // Contact Info
-  yPosition = addCenteredText(`TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}`, yPosition, { fontSize: 9 });
-  
-  // School Motto
-  yPosition = addCenteredText(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, yPosition, { fontSize: 9, fontStyle: 'italic' });
-  
-  yPosition += 10;
+      <!-- SUBJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Subjects & Topics Covered</th>
+            <th>Activity Score [3]</th>
+            <th>Descriptor</th>
+            <th>Formative Score [20%]</th>
+            <th>Exam Score [80%]</th>
+            <th>Final Score [100%]</th>
+            <th>Grade</th>
+            <th>Overall Remark</th>
+            <th>Subject Teacher</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.length > 0 ? 
+            student.results.map((result: any) => {
+              const activity = result.activity_score ?? '';
+              const activityNum = parseFloat(activity) || 0;
+              const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+              const formative = result.formative_score ?? '';
+              const exam = result.exam_score ?? '';
+              const finalScore = result.final_score ?? '';
+              const finalNum = parseFloat(finalScore) || 0;
+              const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+              const overallRemark = result.overall_remark ?? '';
+              const teacherInitials = result.teacher_initials ?? '';
+              const topic = result.topic || '';
 
-  // REPORT TITLE with green background
-  checkPageBreak(15);
-  pdf.setFillColor('#4CAF50');
-  pdf.rect(margin, yPosition, contentWidth, 15, 'F');
-  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`, yPosition + 5, { fontSize: 13, fontStyle: 'bold', color: '#FFFFFF' });
-  yPosition += 10;
+              return `
+                <tr>
+                  <td>
+                    <strong>${result.subject}</strong>
+                    <div style="font-size: 9pt; line-height: 1.2; margin-top: 2px;">
+                      ${topic}
+                    </div>
+                  </td>
+                  <td class="center">${activity}</td>
+                  <td class="center">${descriptor}</td>
+                  <td class="center">${formative}</td>
+                  <td class="center">${exam}</td>
+                  <td class="center">${finalScore}</td>
+                  <td class="center">${gradeText}</td>
+                  <td style="font-size: 9pt;">${overallRemark}</td>
+                  <td class="center">${teacherInitials}</td>
+                </tr>
+              `;
+            }).join('') : `
+              <tr>
+                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
 
-  // LEARNER INFO
-  yPosition = addText(`LNo.: ${student.admission_number || student.student_id}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText(`NAME: ${student.name}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText(`CLASS & STREAM: ${student.current_class}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition += 5;
+      <!-- PERFORMANCE SUMMARY -->
+      <div class="summary">
+        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
+        <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
+      </div>
 
-  // SUBJECTS TABLE
-  const subjectHeaders = [
-    'Subjects & Topics Covered',
-    'Activity Score [3]',
-    'Descriptor',
-    'Formative Score [20%]',
-    'Exam Score [80%]',
-    'Final Score [100%]',
-    'Grade',
-    'Overall Remark',
-    'Subject Teacher'
-  ];
-  
-  const subjectData = [subjectHeaders];
+      <!-- COMMENTS -->
+      <div class="comments">
+        <h3>Class Teacher's Comment</h3>
+        <p>${student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'}</p>
+        <p>Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}</p>
 
-  if (student.results.length > 0) {
-    student.results.forEach((result: any) => {
-      const activity = result.activity_score ?? '';
-      const activityNum = parseFloat(activity) || 0;
-      const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
-      const formative = result.formative_score ?? '';
-      const exam = result.exam_score ?? '';
-      const finalScore = result.final_score ?? '';
-      const finalNum = parseFloat(finalScore) || 0;
-      const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
-      const overallRemark = result.overall_remark ?? '';
-      const teacherInitials = result.teacher_initials ?? '';
-      const topic = result.topic || '';
+        <h3>Head Teacher's Comment</h3>
+        <p>${student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
+        <p>Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}</p>
+      </div>
 
-      subjectData.push([
-        `${result.subject}\n${topic}`,
-        activity,
-        descriptor,
-        formative,
-        exam,
-        finalScore,
-        gradeText,
-        overallRemark,
-        teacherInitials
-      ]);
-    });
-  } else {
-    subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
-  }
+      <div class="next-term">
+        <strong>Next Term Begins:</strong> ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}
+      </div>
 
-  checkPageBreak(subjectData.length * 12 + 20);
-  yPosition = addTable(subjectData, yPosition, [25, 8, 10, 8, 8, 8, 6, 15, 8], { rowHeight: 12, fontSize: 7 });
-  yPosition += 5;
+      <!-- Grading system & descriptions -->
+      <div class="grading-system">
+        <h3>Grading System</h3>
+        <p><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+        
+        <h3>Description</h3>
+        <table class="description-table">
+          <thead>
+            <tr>
+              <th>Grade</th>
+              <th>Achievement Level</th>
+              <th>Descriptor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>A</td>
+              <td>Exceptional</td>
+              <td>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>B</td>
+              <td>Outstanding</td>
+              <td>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>C</td>
+              <td>Satisfactory</td>
+              <td>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>D</td>
+              <td>Basic</td>
+              <td>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td>E</td>
+              <td>Elementary</td>
+              <td>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
-  // PERFORMANCE SUMMARY
-  yPosition = addText(`AVERAGE SCORES: ${avg} ${avgGrade}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText(`OVERALL PERFORMANCE: ${overallPerf}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition += 5;
-
-  // COMMENTS
-  checkPageBreak(50);
-  yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText(student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.', margin, yPosition, { fontSize: 10 });
-  yPosition = addText(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`, margin, yPosition, { fontSize: 10 });
-  yPosition += 5;
-
-  yPosition = addText("Head Teacher's Comment", margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText(student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.', margin, yPosition, { fontSize: 10 });
-  yPosition = addText(`Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}`, margin, yPosition, { fontSize: 10 });
-  yPosition += 5;
-
-  // NEXT TERM
-  yPosition = addText(`Next Term Begins: ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition += 5;
-
-  // GRADING SYSTEM
-  yPosition = addText('Grading System', margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addText('80 - A | 70 - B | 50 - C | 40 - D | 0 - E', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition += 5;
-
-  // DESCRIPTION TABLE
-  const descHeaders = ['Grade', 'Achievement Level', 'Descriptor'];
-  const descData = [
-    descHeaders,
-    ['A', 'Exceptional', 'Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations'],
-    ['B', 'Outstanding', 'Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations'],
-    ['C', 'Satisfactory', 'Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations'],
-    ['D', 'Basic', 'Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations'],
-    ['E', 'Elementary', 'Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations']
-  ];
-
-  checkPageBreak(descData.length * 10 + 20);
-  yPosition = addText('Description', margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addTable(descData, yPosition, [15, 20, 65], { rowHeight: 10, fontSize: 8, headerBg: '#f0f0f0', headerTextColor: '#000000' });
-  yPosition += 5;
-
-  // FOOTER
-  yPosition = addText('Printed from: Pwezacore', margin, yPosition, { fontSize: 9 });
-  yPosition = addText(`School Motto: '${school?.motto || 'Education the Future'}'`, pageWidth - margin - 50, yPosition, { fontSize: 9, align: 'right' });
-
-  return pdf;
+      <!-- FOOTER -->
+      <div class="footer">
+        <div>Printed from: Pwezacore</div>
+        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
-async function generateSecondaryReportPDF(reportData: any) {
+function generateSecondaryReportHTML(reportData: any) {
   const { school, examSet, students } = reportData;
   const student = students[0];
   const nextTermBegins = student?.nextTermBegins || reportData?.nextTermBegins || '______________________';
@@ -317,368 +541,543 @@ async function generateSecondaryReportPDF(reportData: any) {
   const projects = Array.isArray(student.projects) ? student.projects : [];
   const comments = student.comments || null;
 
-  // Create A4 PDF
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = 210;
-  const pageHeight = 297;
-  const margin = 15;
-  const contentWidth = pageWidth - (2 * margin);
-  let yPosition = margin;
-
-  // Helper functions
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
-    const fontSize = options.fontSize || 10;
-    const fontStyle = options.fontStyle || 'normal';
-    const align = options.align || 'left';
-    const color = options.color || '#000000';
-    
-    pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
-    pdf.setTextColor(color);
-    
-    const lines = pdf.splitTextToSize(text, contentWidth);
-    pdf.text(lines, x, y, { align });
-    
-    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
-  };
-
-  const addCenteredText = (text: string, y: number, options: any = {}) => {
-    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
-  };
-
-  const addTable = (data: string[][], startY: number, columnWidths: number[], options: any = {}) => {
-    let currentY = startY;
-    const rowHeight = options.rowHeight || 8;
-    const cellPadding = options.cellPadding || 2;
-    const fontSize = options.fontSize || 8;
-    const headerBg = options.headerBg || '#f0f0f0';
-    const headerTextColor = options.headerTextColor || '#000000';
-
-    data.forEach((row, rowIndex) => {
-      let xPosition = margin;
-      
-      row.forEach((cell, colIndex) => {
-        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
-        
-        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
-        
-        // Add background color for header
-        if (rowIndex === 0) {
-          pdf.setFillColor(headerBg);
-          pdf.rect(xPosition, currentY, cellWidth, rowHeight, 'F');
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
         }
         
-        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
-        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
-        
-        pdf.setFontSize(fontSize);
-        if (rowIndex === 0) {
-          pdf.setFont('helvetica', 'bold');
-          pdf.setTextColor(headerTextColor);
-        } else {
-          pdf.setFont('helvetica', 'normal');
-          pdf.setTextColor('#000000');
+        body {
+          font-family: 'Times New Roman', Arial, sans-serif;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 15mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
         }
-        pdf.text(textLines, xPosition + cellPadding, textY);
         
-        xPosition += cellWidth;
-      });
-      
-      currentY += rowHeight;
-    });
-    
-    return currentY + 5;
-  };
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        
+        .school-name {
+          font-weight: bold;
+          font-size: 18pt;
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+        
+        .school-contact {
+          font-size: 10pt;
+          margin-bottom: 5px;
+        }
+        
+        .school-motto {
+          font-size: 10pt;
+          font-style: italic;
+        }
+        
+        .report-title {
+          text-align: center;
+          margin: 20px 0;
+          font-size: 14pt;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+        
+        .student-meta {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .student-photo {
+          width: 80px;
+          height: 96px;
+          border: 2px solid #ccc;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          float: right;
+          margin-left: 20px;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 9pt;
+        }
+        
+        th, td {
+          border: 1px solid #000;
+          padding: 4px;
+          text-align: left;
+        }
+        
+        th {
+          background: #f0f0f0;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .center {
+          text-align: center;
+        }
+        
+        .summary {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .summary strong {
+          font-weight: bold;
+        }
+        
+        .comments {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .comments h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .comments p {
+          margin-bottom: 5px;
+        }
+        
+        .next-term {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .next-term strong {
+          font-weight: bold;
+        }
+        
+        .grading-system {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .grading-system h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .grading-system p {
+          margin-bottom: 5px;
+        }
+        
+        .footer {
+          text-align: center;
+          font-size: 9pt;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- HEADER -->
+      <div class="header">
+        <div class="school-name">${school?.name || 'School Name'}</div>
+        <div class="school-motto">"${school?.motto || 'Education the Future'}"</div>
+        <div class="school-contact">TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}</div>
+      </div>
 
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPosition + requiredHeight > pageHeight - margin) {
-      pdf.addPage();
-      yPosition = margin;
-      return true;
-    }
-    return false;
-  };
+      <!-- TITLE -->
+      <div class="report-title">
+        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}
+      </div>
 
-  // HEADER
-  yPosition = addCenteredText(school?.name || 'School Name', yPosition, { fontSize: 16, fontStyle: 'bold' });
-  yPosition = addCenteredText(`TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}`, yPosition, { fontSize: 10 });
-  yPosition = addCenteredText(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, yPosition, { fontSize: 10, fontStyle: 'italic' });
+      <!-- STUDENT META -->
+      <div class="student-meta">
+        <div class="student-photo">
+          ${student.profile_photo ? `<img src="${student.profile_photo}" alt="Student Photo">` : `
+            <div style="font-size: 10px; color: #666;">Photo</div>
+          `}
+        </div>
+        <div>LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}</div>
+      </div>
 
-  yPosition += 10;
+      <!-- ATTENDANCE TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Days Present</th>
+            <th>Days Absent</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="center">${daysPresent}</td>
+            <td class="center">${daysAbsent}</td>
+            <td class="center">${totalDays}</td>
+          </tr>
+        </tbody>
+      </table>
 
-  // TITLE
-  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || ''}, ${examSet?.year || ''}`, yPosition, { fontSize: 14, fontStyle: 'bold' });
-  yPosition += 5;
+      <!-- SUBJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Subjects & Topics</th>
+            <th>Activity [3]</th>
+            <th>Descriptor</th>
+            <th>Formative (20%)</th>
+            <th>Exam (80%)</th>
+            <th>Final (100%)</th>
+            <th>Grade</th>
+            <th>Overall Remark</th>
+            <th>Teacher</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.length > 0 ? 
+            student.results.map((result: any) => {
+              const activity = result.activity_score != null ? String(result.activity_score) : 'N/A';
+              const descriptor = result.descriptor ?? 'N/A';
+              const formative = result.formative_score != null ? String(result.formative_score) : 'N/A';
+              const exam = result.exam_score != null ? String(result.exam_score) : 'N/A';
+              const finalScore = result.final_score != null ? String(result.final_score) : (result.total_marks ? String(Math.round((result.marks_obtained / result.total_marks) * 100)) : 'N/A');
+              const gradeText = result.grade ?? 'N/A';
+              const overallRemark = result.overall_remark ?? 'N/A';
+              const teacherName = result.teacher_name ?? '-';
 
-  // STUDENT META
-  yPosition = addText(`LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}`, margin, yPosition, { fontSize: 10 });
-  yPosition += 5;
+              return `
+                <tr>
+                  <td><strong>${result.subject}</strong></td>
+                  <td class="center">${activity}</td>
+                  <td class="center">${descriptor}</td>
+                  <td class="center">${formative}</td>
+                  <td class="center">${exam}</td>
+                  <td class="center">${finalScore}</td>
+                  <td class="center">${gradeText}</td>
+                  <td>${overallRemark}</td>
+                  <td class="center">${teacherName}</td>
+                </tr>
+              `;
+            }).join('') : `
+              <tr>
+                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
 
-  // ATTENDANCE TABLE
-  const attendanceData = [
-    ['Days Present', 'Days Absent', 'Total'],
-    [daysPresent, daysAbsent, totalDays]
-  ];
-  yPosition = addTable(attendanceData, yPosition, [33, 33, 34]);
-  yPosition += 5;
+      <!-- PERFORMANCE SUMMARY -->
+      <div class="summary">
+        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
+        <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
+      </div>
 
-  // SUBJECTS TABLE
-  const subjectHeaders = ['Subjects & Topics', 'Activity [3]', 'Descriptor', 'Formative (20%)', 'Exam (80%)', 'Final (100%)', 'Grade', 'Overall Remark', 'Teacher'];
-  const subjectData = [subjectHeaders];
+      <!-- PROJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Project Title</th>
+            <th>Remark</th>
+            <th>Score</th>
+            <th>Teacher</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${projects.length > 0 ? 
+            projects.map((p: any) => `
+              <tr>
+                <td>${p.subject ?? 'N/A'}</td>
+                <td>${p.project_title ?? 'N/A'}</td>
+                <td>${p.remark ?? 'N/A'}</td>
+                <td class="center">${p.score != null ? String(p.score) : 'N/A'}</td>
+                <td>${p.teacher ?? 'N/A'}</td>
+              </tr>
+            `).join('') : `
+              <tr>
+                <td class="center">N/A</td>
+                <td class="center">N/A</td>
+                <td class="center">N/A</td>
+                <td class="center">N/A</td>
+                <td class="center">N/A</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
 
-  if (student.results.length > 0) {
-    student.results.forEach((result: any) => {
-      const activity = result.activity_score != null ? String(result.activity_score) : 'N/A';
-      const descriptor = result.descriptor ?? 'N/A';
-      const formative = result.formative_score != null ? String(result.formative_score) : 'N/A';
-      const exam = result.exam_score != null ? String(result.exam_score) : 'N/A';
-      const finalScore = result.final_score != null ? String(result.final_score) : (result.total_marks ? String(Math.round((result.marks_obtained / result.total_marks) * 100)) : 'N/A');
-      const gradeText = result.grade ?? 'N/A';
-      const overallRemark = result.overall_remark ?? 'N/A';
-      const teacherName = result.teacher_name ?? '-';
+      <!-- COMMENTS -->
+      <div class="comments">
+        <h3>Class Teacher's Comment</h3>
+        <p>${comments?.class_teacher_text ?? '..............................................................'}</p>
+        <p>Name: ${comments?.class_teacher_name ?? '__________'} | Signature: ${comments?.class_teacher_signature ?? '__________'} | Date: ${comments?.class_teacher_date ?? '__________'}</p>
 
-      subjectData.push([
-        result.subject,
-        activity,
-        descriptor,
-        formative,
-        exam,
-        finalScore,
-        gradeText,
-        overallRemark,
-        teacherName
-      ]);
-    });
-  } else {
-    subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
-  }
+        <h3>Head Teacher's Comment</h3>
+        <p>${comments?.head_teacher_text ?? '..............................................................'}</p>
+        <p>Name: ${comments?.head_teacher_name ?? '__________'} | Signature: ${comments?.head_teacher_signature ?? '__________'} | Date: ${comments?.head_teacher_date ?? '__________'}</p>
+      </div>
 
-  checkPageBreak(subjectData.length * 10 + 20);
-  yPosition = addTable(subjectData, yPosition, [20, 10, 15, 10, 10, 10, 8, 12, 5], { rowHeight: 10, fontSize: 7 });
-  yPosition += 5;
+      <!-- NEXT TERM & GRADING -->
+      <div class="next-term">
+        <strong>Next Term Begins:</strong> ${nextTermBegins}
+      </div>
 
-  // PERFORMANCE SUMMARY
-  yPosition = addText(`AVERAGE SCORES: ${avg} ${avgGrade}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(`OVERALL PERFORMANCE: ${overallPerf}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition += 5;
+      <div class="grading-system">
+        <h3>Grading System</h3>
+        <p><strong>A (80–100) | B (70–79) | C (50–69) | D (40–49) | E (0–39)</strong></p>
+        
+        <h3>Grade Descriptions</h3>
+        <p>A: Excellent mastery and application of concepts.</p>
+        <p>B: Very good understanding with minor gaps.</p>
+        <p>C: Satisfactory performance with notable room for improvement.</p>
+        <p>D: Below average; needs significant improvement.</p>
+        <p>E: Poor performance; urgent intervention required.</p>
+      </div>
 
-  // PROJECTS TABLE
-  const projectHeaders = ['Subject', 'Project Title', 'Remark', 'Score', 'Teacher'];
-  const projectData = [projectHeaders];
-
-  if (projects.length > 0) {
-    projects.forEach((p: any) => {
-      projectData.push([
-        String(p.subject ?? 'N/A'),
-        String(p.project_title ?? 'N/A'),
-        String(p.remark ?? 'N/A'),
-        p.score != null ? String(p.score) : 'N/A',
-        String(p.teacher ?? 'N/A')
-      ]);
-    });
-  } else {
-    projectData.push(['N/A', 'N/A', 'N/A', 'N/A', 'N/A']);
-  }
-
-  checkPageBreak(projectData.length * 8 + 20);
-  yPosition = addTable(projectData, yPosition, [25, 35, 20, 10, 10], { rowHeight: 8, fontSize: 8 });
-  yPosition += 5;
-
-  // COMMENTS
-  checkPageBreak(50);
-  yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(String(comments?.class_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
-  yPosition = addText(`Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  yPosition = addText("Head Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText(String(comments?.head_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
-  yPosition = addText(`Name: ${String(comments?.head_teacher_name ?? '__________')} | Signature: ${String(comments?.head_teacher_signature ?? '__________')} | Date: ${String(comments?.head_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  // NEXT TERM & GRADING
-  yPosition = addText(`Next Term Begins: ${nextTermBegins}`, margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('Grading System', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('A (80–100) | B (70–79) | C (50–69) | D (40–49) | E (0–39)', margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  yPosition = addText('Grade Descriptions', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition = addText('A: Excellent mastery and application of concepts.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('B: Very good understanding with minor gaps.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('C: Satisfactory performance with notable room for improvement.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('D: Below average; needs significant improvement.', margin, yPosition, { fontSize: 9 });
-  yPosition = addText('E: Poor performance; urgent intervention required.', margin, yPosition, { fontSize: 9 });
-  yPosition += 5;
-
-  // FOOTER
-  yPosition = addCenteredText('Printed from: Pwezacore', yPosition, { fontSize: 10 });
-
-  return pdf;
+      <!-- FOOTER -->
+      <div class="footer">
+        Printed from: Pwezacore
+      </div>
+    </body>
+    </html>
+  `;
 }
 
-async function generatePrimaryReportPDF(reportData: any) {
+function generatePrimaryReportHTML(reportData: any) {
   const { school, examSet, students } = reportData;
   const student = students[0];
 
-  // Create A4 PDF
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4'
-  });
-
-  const pageWidth = 210;
-  const pageHeight = 297;
-  const margin = 15;
-  const contentWidth = pageWidth - (2 * margin);
-  let yPosition = margin;
-
-  // Helper functions
-  const addText = (text: string, x: number, y: number, options: any = {}) => {
-    const fontSize = options.fontSize || 10;
-    const fontStyle = options.fontStyle || 'normal';
-    const align = options.align || 'left';
-    const color = options.color || '#000000';
-    
-    pdf.setFontSize(fontSize);
-    pdf.setFont('helvetica', fontStyle);
-    pdf.setTextColor(color);
-    
-    const lines = pdf.splitTextToSize(text, contentWidth);
-    pdf.text(lines, x, y, { align });
-    
-    return y + (lines.length * fontSize * 0.35) + (options.spacing || 5);
-  };
-
-  const addCenteredText = (text: string, y: number, options: any = {}) => {
-    return addText(text, pageWidth / 2, y, { ...options, align: 'center' });
-  };
-
-  const addTable = (data: string[][], startY: number, columnWidths: number[]) => {
-    let currentY = startY;
-    const rowHeight = 8;
-    const cellPadding = 2;
-
-    data.forEach((row, rowIndex) => {
-      let xPosition = margin;
-      
-      row.forEach((cell, colIndex) => {
-        const cellWidth = (columnWidths[colIndex] / 100) * contentWidth;
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
         
-        pdf.rect(xPosition, currentY, cellWidth, rowHeight);
+        body {
+          font-family: 'Times New Roman', Arial, sans-serif;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 15mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
+        }
         
-        const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
-        const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
+        .header {
+          text-align: center;
+          margin-bottom: 20px;
+        }
         
-        pdf.setFontSize(8);
-        pdf.text(textLines, xPosition + cellPadding, textY);
+        .school-name {
+          font-weight: bold;
+          font-size: 16pt;
+          margin-bottom: 10px;
+        }
         
-        xPosition += cellWidth;
-      });
-      
-      currentY += rowHeight;
-    });
-    
-    return currentY + 5;
-  };
+        .school-motto {
+          font-size: 12pt;
+          margin-bottom: 5px;
+        }
+        
+        .school-contact {
+          font-size: 10pt;
+        }
+        
+        .report-title {
+          text-align: center;
+          margin: 20px 0;
+          font-size: 14pt;
+          font-weight: bold;
+        }
+        
+        .section-title {
+          font-size: 12pt;
+          font-weight: bold;
+          margin: 20px 0 10px 0;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        th, td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: left;
+        }
+        
+        th {
+          background: #f0f0f0;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .center {
+          text-align: center;
+        }
+        
+        .footer {
+          text-align: center;
+          font-size: 10pt;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- School Header -->
+      <div class="header">
+        <div class="school-name">${school?.name || 'School Name'}</div>
+        <div class="school-motto">${school?.motto || 'School Motto'}</div>
+        <div class="school-contact">${school?.address || 'School Address'} | Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}</div>
+      </div>
 
-  const checkPageBreak = (requiredHeight: number) => {
-    if (yPosition + requiredHeight > pageHeight - margin) {
-      pdf.addPage();
-      yPosition = margin;
-      return true;
-    }
-    return false;
-  };
+      <!-- Report Title -->
+      <div class="report-title">STUDENT REPORT</div>
 
-  // School Header
-  yPosition = addCenteredText(school?.name || 'School Name', yPosition, { fontSize: 16, fontStyle: 'bold' });
-  yPosition = addCenteredText(school?.motto || 'School Motto', yPosition, { fontSize: 12 });
-  yPosition = addCenteredText(`${school?.address || 'School Address'} | Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}`, yPosition, { fontSize: 10 });
-  
-  yPosition += 10;
+      <!-- Student Information -->
+      <div class="section-title">Student Information</div>
+      <table>
+        <tr>
+          <td><strong>Name:</strong></td>
+          <td>${student.name}</td>
+        </tr>
+        <tr>
+          <td><strong>Admission No:</strong></td>
+          <td>${student.admission_number || student.student_id}</td>
+        </tr>
+        <tr>
+          <td><strong>Class:</strong></td>
+          <td>${student.current_class}</td>
+        </tr>
+        <tr>
+          <td><strong>Year:</strong></td>
+          <td>${examSet.year}</td>
+        </tr>
+        <tr>
+          <td><strong>Term:</strong></td>
+          <td>${examSet.term}</td>
+        </tr>
+        <tr>
+          <td><strong>Exam Set:</strong></td>
+          <td>${examSet.name}</td>
+        </tr>
+      </table>
 
-  // Report Title
-  yPosition = addCenteredText('STUDENT REPORT', yPosition, { fontSize: 14, fontStyle: 'bold' });
-  yPosition += 5;
+      <!-- Subject Performance -->
+      <div class="section-title">Subject Performance</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Marks</th>
+            <th>Grade</th>
+            <th>Remarks</th>
+            <th>Teacher Initials</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.length > 0 ? 
+            student.results.map((result: any) => {
+              const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
+              return `
+                <tr>
+                  <td>${result.subject}</td>
+                  <td class="center">${result.marks_obtained}/${result.total_marks}</td>
+                  <td class="center">${gradeInfo.grade}</td>
+                  <td class="center">${gradeInfo.remark}</td>
+                  <td class="center">-</td>
+                </tr>
+              `;
+            }).join('') : `
+              <tr>
+                <td colspan="5" class="center" style="color: #555;">N/A - Student did not sit for this exam set</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
 
-  // Student Information
-  yPosition = addText('Student Information', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
-  yPosition += 5;
+      <!-- Summary -->
+      <div class="section-title">Summary</div>
+      <table>
+        <tr>
+          <td><strong>Total Marks:</strong></td>
+          <td>${formatValue(student.summary.totalMarks)}/${formatValue(student.summary.totalPossibleMarks)}</td>
+        </tr>
+        <tr>
+          <td><strong>Average:</strong></td>
+          <td>${formatPercentage(student.summary.average)}</td>
+        </tr>
+        <tr>
+          <td><strong>Aggregate:</strong></td>
+          <td>${formatValue(student.summary.aggregate)}</td>
+        </tr>
+        <tr>
+          <td><strong>Division:</strong></td>
+          <td>${formatValue(student.summary.division)}</td>
+        </tr>
+        <tr>
+          <td><strong>Class Position:</strong></td>
+          <td>${formatPosition(student.summary.classPosition, student.summary.average)}</td>
+        </tr>
+        <tr>
+          <td><strong>Stream Position:</strong></td>
+          <td>${formatPosition(student.summary.streamPosition, student.summary.average)}</td>
+        </tr>
+        <tr>
+          <td><strong>Attendance:</strong></td>
+          <td>${formatAttendance(student.summary.attendanceDetails.presentDays, student.summary.attendanceDetails.totalSchoolDays, student.summary.attendancePercentage)}</td>
+        </tr>
+        <tr>
+          <td><strong>Performance:</strong></td>
+          <td>${formatValue(student.summary.performanceRemark)}</td>
+        </tr>
+      </table>
 
-  const studentInfo = [
-    ['Name:', student.name],
-    ['Admission No:', student.admission_number || student.student_id],
-    ['Class:', student.current_class],
-    ['Year:', examSet.year.toString()],
-    ['Term:', examSet.term.toString()],
-    ['Exam Set:', examSet.name]
-  ];
+      <!-- Remarks -->
+      <div class="section-title">Remarks</div>
+      <p><strong>Class Teacher's Remarks:</strong></p>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+      <p><strong>Head Teacher's Remarks:</strong></p>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
+      <p>&nbsp;</p>
 
-  yPosition = addTable(studentInfo, yPosition, [30, 70]);
-  yPosition += 10;
-
-  // Subject Performance
-  yPosition = addText('Subject Performance', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
-  yPosition += 5;
-
-  const subjectHeaders = ['Subject', 'Marks', 'Grade', 'Remarks'];
-  const subjectData = [subjectHeaders];
-
-  if (student.results.length > 0) {
-    student.results.forEach((result: any) => {
-      const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-      subjectData.push([
-        result.subject,
-        `${result.marks_obtained}/${result.total_marks}`,
-        gradeInfo.grade,
-        gradeInfo.remark
-      ]);
-    });
-  } else {
-    subjectData.push(['N/A - Student did not sit for this exam set', '', '', '']);
-  }
-
-  checkPageBreak(subjectData.length * 8 + 20);
-  yPosition = addTable(subjectData, yPosition, [40, 20, 20, 20]);
-  yPosition += 10;
-
-  // Summary
-  yPosition = addText('Summary', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
-  yPosition += 5;
-
-  const summaryData = [
-    ['Total Marks:', `${formatValue(student.summary.totalMarks)}/${formatValue(student.summary.totalPossibleMarks)}`],
-    ['Average:', formatPercentage(student.summary.average)],
-    ['Aggregate:', formatValue(student.summary.aggregate)],
-    ['Division:', formatValue(student.summary.division)],
-    ['Class Position:', formatPosition(student.summary.classPosition, student.summary.average)],
-    ['Stream Position:', formatPosition(student.summary.streamPosition, student.summary.average)],
-    ['Attendance:', formatAttendance(student.summary.attendanceDetails.presentDays, student.summary.attendanceDetails.totalSchoolDays, student.summary.attendancePercentage)],
-    ['Performance:', formatValue(student.summary.performanceRemark)]
-  ];
-
-  yPosition = addTable(summaryData, yPosition, [40, 60]);
-  yPosition += 10;
-
-  // Remarks
-  checkPageBreak(50);
-  yPosition = addText('Remarks', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
-  yPosition += 5;
-
-  yPosition = addText('Class Teacher\'s Remarks:', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition += 15;
-
-  yPosition = addText('Head Teacher\'s Remarks:', margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
-  yPosition += 15;
-
-  // Footer
-  yPosition = addCenteredText('Printed from: Pwezacore', yPosition, { fontSize: 10 });
-
-  return pdf;
+      <!-- Footer -->
+      <div class="footer">Printed from: Pwezacore</div>
+    </body>
+    </html>
+  `;
 }
