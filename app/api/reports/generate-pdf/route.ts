@@ -441,12 +441,14 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-contact {
-          font-size: 9pt;
+          font-size: 11pt;
+          font-weight: bold;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 9pt;
+          font-size: 11pt;
+          font-weight: bold;
           font-style: italic;
         }
         
@@ -850,12 +852,14 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-contact {
-          font-size: 10pt;
+          font-size: 13pt;
+          font-weight: bold;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 10pt;
+          font-size: 13pt;
+          font-weight: bold;
           font-style: italic;
         }
         
@@ -1131,7 +1135,8 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
         
         .school-contact {
-          font-size: 10pt;
+          font-size: 13pt;
+          font-weight: bold;
           margin-bottom: 5px;
         }
         
@@ -1417,12 +1422,14 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .school-contact {
-          font-size: 9pt;
+          font-size: 11pt;
+          font-weight: bold;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 9pt;
+          font-size: 11pt;
+          font-weight: bold;
           font-style: italic;
         }
         
@@ -1833,12 +1840,14 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-contact {
-          font-size: 10pt;
+          font-size: 13pt;
+          font-weight: bold;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 10pt;
+          font-size: 13pt;
+          font-weight: bold;
           font-style: italic;
         }
         

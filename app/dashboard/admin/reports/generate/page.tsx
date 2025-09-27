@@ -1138,8 +1138,8 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         {/* School Name and Contact */}
         <div className="text-center flex-1">
           <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
-          <div className="text-[9pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
-          <div className="text-[9pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+          <div className="font-bold text-[11pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
+          <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
         </div>
         
         {/* Student Photo */}
@@ -1560,7 +1560,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       {/* HEADER */}
       <div className="text-center mb-6">
         <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
-        <div className="text-[10pt] mt-1">
+        <div className="font-bold text-[13pt] mt-1">
           {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
           Tel: {school?.phone || '0701861636 / 0700338061'} | 
           E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
@@ -1748,8 +1748,8 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </div>
         
         <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
-        <div className="text-[9pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
-        <div className="text-[9pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+        <div className="font-bold text-[11pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
+        <div className="font-bold text-[11pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
       </div>
 
       {/* TITLE */}
