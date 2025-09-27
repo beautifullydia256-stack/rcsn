@@ -1119,7 +1119,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       {/* HEADER - School Logo and Info */}
       <div className="flex items-start justify-between mb-4">
         {/* School Logo */}
-        <div className="w-24 h-24 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
           {school?.logo ? (
             <img
               src={school.logo}
@@ -1731,6 +1731,22 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
     <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
       {/* HEADER */}
       <div className="text-center mb-2">
+        {/* School Logo */}
+        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden mx-auto mb-4">
+          {school?.logo ? (
+            <img
+              src={school.logo}
+              alt="School Logo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-center text-xs">
+              <div className="font-bold">SCHOOL</div>
+              <div className="font-bold">LOGO</div>
+            </div>
+          )}
+        </div>
+        
         <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
         <div className="text-[9pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
         <div className="text-[9pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>

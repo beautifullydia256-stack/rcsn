@@ -411,8 +411,8 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-logo {
-          width: 100px;
-          height: 100px;
+          width: 200px;
+          height: 200px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
@@ -824,8 +824,8 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-logo {
-          width: 100px;
-          height: 100px;
+          width: 200px;
+          height: 200px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
@@ -1387,8 +1387,8 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .school-logo {
-          width: 100px;
-          height: 100px;
+          width: 200px;
+          height: 200px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
@@ -1806,6 +1806,25 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           margin-bottom: 20px;
         }
         
+        .school-logo {
+          width: 200px;
+          height: 200px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #f0f0f0;
+          margin: 0 auto 15px;
+        }
+        
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
         .school-name {
           font-weight: bold;
           font-size: 18pt;
@@ -1941,6 +1960,11 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
       
       <!-- HEADER -->
       <div class="header">
+        <!-- School Logo -->
+        <div class="school-logo">
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
+        </div>
+        
         <div class="school-name">${school?.name || 'School Name'}</div>
         <div class="school-motto">"${school?.motto || 'Education the Future'}"</div>
         <div class="school-contact">TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}</div>
