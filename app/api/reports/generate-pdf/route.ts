@@ -103,9 +103,11 @@ async function generateOLevelReportPDF(reportData: any) {
     const fontSize = options.fontSize || 10;
     const fontStyle = options.fontStyle || 'normal';
     const align = options.align || 'left';
+    const color = options.color || '#000000';
     
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
+    pdf.setTextColor(color);
     
     const lines = pdf.splitTextToSize(text, contentWidth);
     pdf.text(lines, x, y, { align });
@@ -122,6 +124,8 @@ async function generateOLevelReportPDF(reportData: any) {
     const rowHeight = options.rowHeight || 8;
     const cellPadding = options.cellPadding || 2;
     const fontSize = options.fontSize || 8;
+    const headerBg = options.headerBg || '#4CAF50';
+    const headerTextColor = options.headerTextColor || '#FFFFFF';
 
     data.forEach((row, rowIndex) => {
       let xPosition = margin;
@@ -132,11 +136,24 @@ async function generateOLevelReportPDF(reportData: any) {
         // Draw cell border
         pdf.rect(xPosition, currentY, cellWidth, rowHeight);
         
+        // Add background color for header
+        if (rowIndex === 0) {
+          pdf.setFillColor(headerBg);
+          pdf.rect(xPosition, currentY, cellWidth, rowHeight, 'F');
+        }
+        
         // Add cell text
         const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
         const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
         
         pdf.setFontSize(fontSize);
+        if (rowIndex === 0) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(headerTextColor);
+        } else {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor('#000000');
+        }
         pdf.text(textLines, xPosition + cellPadding, textY);
         
         xPosition += cellWidth;
@@ -146,6 +163,15 @@ async function generateOLevelReportPDF(reportData: any) {
     });
     
     return currentY + 5;
+  };
+
+  const checkPageBreak = (requiredHeight: number) => {
+    if (yPosition + requiredHeight > pageHeight - margin) {
+      pdf.addPage();
+      yPosition = margin;
+      return true;
+    }
+    return false;
   };
 
   // HEADER - School Logo and Info
@@ -162,9 +188,12 @@ async function generateOLevelReportPDF(reportData: any) {
   
   yPosition += 10;
 
-  // REPORT TITLE
-  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`, yPosition, { fontSize: 13, fontStyle: 'bold' });
-  yPosition += 5;
+  // REPORT TITLE with green background
+  checkPageBreak(15);
+  pdf.setFillColor('#4CAF50');
+  pdf.rect(margin, yPosition, contentWidth, 15, 'F');
+  yPosition = addCenteredText(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`, yPosition + 5, { fontSize: 13, fontStyle: 'bold', color: '#FFFFFF' });
+  yPosition += 10;
 
   // LEARNER INFO
   yPosition = addText(`LNo.: ${student.admission_number || student.student_id}`, margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
@@ -217,6 +246,7 @@ async function generateOLevelReportPDF(reportData: any) {
     subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
   }
 
+  checkPageBreak(subjectData.length * 12 + 20);
   yPosition = addTable(subjectData, yPosition, [25, 8, 10, 8, 8, 8, 6, 15, 8], { rowHeight: 12, fontSize: 7 });
   yPosition += 5;
 
@@ -226,6 +256,7 @@ async function generateOLevelReportPDF(reportData: any) {
   yPosition += 5;
 
   // COMMENTS
+  checkPageBreak(50);
   yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
   yPosition = addText(student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.', margin, yPosition, { fontSize: 10 });
   yPosition = addText(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`, margin, yPosition, { fontSize: 10 });
@@ -256,8 +287,9 @@ async function generateOLevelReportPDF(reportData: any) {
     ['E', 'Elementary', 'Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations']
   ];
 
+  checkPageBreak(descData.length * 10 + 20);
   yPosition = addText('Description', margin, yPosition, { fontSize: 11, fontStyle: 'bold' });
-  yPosition = addTable(descData, yPosition, [15, 20, 65], { rowHeight: 10, fontSize: 8 });
+  yPosition = addTable(descData, yPosition, [15, 20, 65], { rowHeight: 10, fontSize: 8, headerBg: '#f0f0f0', headerTextColor: '#000000' });
   yPosition += 5;
 
   // FOOTER
@@ -303,9 +335,11 @@ async function generateSecondaryReportPDF(reportData: any) {
     const fontSize = options.fontSize || 10;
     const fontStyle = options.fontStyle || 'normal';
     const align = options.align || 'left';
+    const color = options.color || '#000000';
     
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
+    pdf.setTextColor(color);
     
     const lines = pdf.splitTextToSize(text, contentWidth);
     pdf.text(lines, x, y, { align });
@@ -322,6 +356,8 @@ async function generateSecondaryReportPDF(reportData: any) {
     const rowHeight = options.rowHeight || 8;
     const cellPadding = options.cellPadding || 2;
     const fontSize = options.fontSize || 8;
+    const headerBg = options.headerBg || '#f0f0f0';
+    const headerTextColor = options.headerTextColor || '#000000';
 
     data.forEach((row, rowIndex) => {
       let xPosition = margin;
@@ -331,10 +367,23 @@ async function generateSecondaryReportPDF(reportData: any) {
         
         pdf.rect(xPosition, currentY, cellWidth, rowHeight);
         
+        // Add background color for header
+        if (rowIndex === 0) {
+          pdf.setFillColor(headerBg);
+          pdf.rect(xPosition, currentY, cellWidth, rowHeight, 'F');
+        }
+        
         const textLines = pdf.splitTextToSize(cell, cellWidth - (2 * cellPadding));
         const textY = currentY + (rowHeight / 2) + (textLines.length > 1 ? 2 : 3);
         
         pdf.setFontSize(fontSize);
+        if (rowIndex === 0) {
+          pdf.setFont('helvetica', 'bold');
+          pdf.setTextColor(headerTextColor);
+        } else {
+          pdf.setFont('helvetica', 'normal');
+          pdf.setTextColor('#000000');
+        }
         pdf.text(textLines, xPosition + cellPadding, textY);
         
         xPosition += cellWidth;
@@ -344,6 +393,15 @@ async function generateSecondaryReportPDF(reportData: any) {
     });
     
     return currentY + 5;
+  };
+
+  const checkPageBreak = (requiredHeight: number) => {
+    if (yPosition + requiredHeight > pageHeight - margin) {
+      pdf.addPage();
+      yPosition = margin;
+      return true;
+    }
+    return false;
   };
 
   // HEADER
@@ -400,6 +458,7 @@ async function generateSecondaryReportPDF(reportData: any) {
     subjectData.push(['N/A - Student did not sit for this term', '', '', '', '', '', '', '', '']);
   }
 
+  checkPageBreak(subjectData.length * 10 + 20);
   yPosition = addTable(subjectData, yPosition, [20, 10, 15, 10, 10, 10, 8, 12, 5], { rowHeight: 10, fontSize: 7 });
   yPosition += 5;
 
@@ -426,10 +485,12 @@ async function generateSecondaryReportPDF(reportData: any) {
     projectData.push(['N/A', 'N/A', 'N/A', 'N/A', 'N/A']);
   }
 
+  checkPageBreak(projectData.length * 8 + 20);
   yPosition = addTable(projectData, yPosition, [25, 35, 20, 10, 10], { rowHeight: 8, fontSize: 8 });
   yPosition += 5;
 
   // COMMENTS
+  checkPageBreak(50);
   yPosition = addText("Class Teacher's Comment", margin, yPosition, { fontSize: 10, fontStyle: 'bold' });
   yPosition = addText(String(comments?.class_teacher_text ?? '..............................................................'), margin, yPosition, { fontSize: 9 });
   yPosition = addText(`Name: ${String(comments?.class_teacher_name ?? '__________')} | Signature: ${String(comments?.class_teacher_signature ?? '__________')} | Date: ${String(comments?.class_teacher_date ?? '__________')}`, margin, yPosition, { fontSize: 9 });
@@ -482,9 +543,11 @@ async function generatePrimaryReportPDF(reportData: any) {
     const fontSize = options.fontSize || 10;
     const fontStyle = options.fontStyle || 'normal';
     const align = options.align || 'left';
+    const color = options.color || '#000000';
     
     pdf.setFontSize(fontSize);
     pdf.setFont('helvetica', fontStyle);
+    pdf.setTextColor(color);
     
     const lines = pdf.splitTextToSize(text, contentWidth);
     pdf.text(lines, x, y, { align });
@@ -522,6 +585,15 @@ async function generatePrimaryReportPDF(reportData: any) {
     });
     
     return currentY + 5;
+  };
+
+  const checkPageBreak = (requiredHeight: number) => {
+    if (yPosition + requiredHeight > pageHeight - margin) {
+      pdf.addPage();
+      yPosition = margin;
+      return true;
+    }
+    return false;
   };
 
   // School Header
@@ -572,6 +644,7 @@ async function generatePrimaryReportPDF(reportData: any) {
     subjectData.push(['N/A - Student did not sit for this exam set', '', '', '']);
   }
 
+  checkPageBreak(subjectData.length * 8 + 20);
   yPosition = addTable(subjectData, yPosition, [40, 20, 20, 20]);
   yPosition += 10;
 
@@ -594,6 +667,7 @@ async function generatePrimaryReportPDF(reportData: any) {
   yPosition += 10;
 
   // Remarks
+  checkPageBreak(50);
   yPosition = addText('Remarks', margin, yPosition, { fontSize: 12, fontStyle: 'bold' });
   yPosition += 5;
 
