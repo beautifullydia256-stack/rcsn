@@ -1359,8 +1359,8 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       
       {/* WATERMARK */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
-        <div className="w-72 h-72 border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
-          <div className="text-center text-4xl font-bold text-gray-400">
+        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-9xl font-bold text-gray-400">
             SCHOOL<br/>LOGO
           </div>
         </div>
@@ -1589,8 +1589,8 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       
       {/* WATERMARK */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
-        <div className="w-72 h-72 border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
-          <div className="text-center text-4xl font-bold text-gray-400">
+        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-9xl font-bold text-gray-400">
             SCHOOL<br/>LOGO
           </div>
         </div>

@@ -665,7 +665,7 @@ async function generateTemplate1OLevelReport(reportData: any) {
           // WATERMARK - School Logo as watermark
           createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
             bold: true, 
-            size: 48, 
+            size: 144, 
             color: 'CCCCCC',
             spacing: { before: 2000, after: 2000 }
           }),
@@ -897,7 +897,7 @@ function generateTemplate2KasoziReport(reportData: any) {
           // WATERMARK - School Logo as watermark
           createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
             bold: true, 
-            size: 48, 
+            size: 144, 
             color: 'CCCCCC',
             spacing: { before: 2000, after: 2000 }
           }),
@@ -1069,7 +1069,7 @@ function generateTemplate3KyoteraReport(reportData: any) {
           // WATERMARK - School Logo as watermark
           createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
             bold: true, 
-            size: 48, 
+            size: 144, 
             color: 'CCCCCC',
             spacing: { before: 2000, after: 2000 }
           }),

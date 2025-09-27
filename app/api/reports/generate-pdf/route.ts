@@ -594,21 +594,21 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .watermark img {
-          width: 300px;
-          height: 300px;
+          width: 900px;
+          height: 900px;
           object-fit: contain;
         }
         
         .watermark-placeholder {
-          width: 300px;
-          height: 300px;
+          width: 900px;
+          height: 900px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #f0f0f0;
-          font-size: 36pt;
+          font-size: 108pt;
           font-weight: bold;
           color: #ccc;
           text-align: center;
@@ -1614,21 +1614,21 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .watermark img {
-          width: 300px;
-          height: 300px;
+          width: 900px;
+          height: 900px;
           object-fit: contain;
         }
         
         .watermark-placeholder {
-          width: 300px;
-          height: 300px;
+          width: 900px;
+          height: 900px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #f0f0f0;
-          font-size: 36pt;
+          font-size: 108pt;
           font-weight: bold;
           color: #ccc;
           text-align: center;
