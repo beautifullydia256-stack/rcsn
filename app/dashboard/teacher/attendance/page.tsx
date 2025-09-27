@@ -24,8 +24,8 @@ export default function TeacherAttendanceLanding() {
         teacherId = trow?.teacher_id || null;
       }
       const { data: tcs } = teacherId ? await supabase.from('teacher_class_subjects').select('class_name').eq('teacher_id', teacherId).eq('school_id', u.school_id) : { data: [] as any[] } as any;
-      const cls = Array.from(new Set((tcs || []).map(r => r.class_name)));
-      setClasses(cls);
+      const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
+      setClasses(cls as string[]);
     };
     load();
   }, [router]);

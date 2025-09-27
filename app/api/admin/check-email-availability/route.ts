@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             name: userRecord.name,
             authUserExists: false,
             isOrphaned: true,
-            error: error.message
+            error: error instanceof Error ? error.message : String(error)
           };
         }
       } else {

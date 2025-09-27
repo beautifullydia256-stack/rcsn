@@ -14,12 +14,12 @@ export async function POST(request: NextRequest) {
 
     // Try to find the user by trying different email formats
     let user = null;
-    let users = { users: [] };
+    let users: any[] = [];
     
     try {
       const result = await supabaseAdmin.auth.admin.listUsers();
       if (result.data) {
-        users = result.data;
+        users = result.data.users || [];
       }
     } catch (listError) {
       return NextResponse.json(
@@ -29,13 +29,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Try to find user by admission number in metadata first
-    user = users.users.find(u => 
-      u.raw_user_meta_data?.admission_number === admission_number
+    user = users.find(u => 
+      u.user_metadata?.admission_number === admission_number
     );
 
     // If not found, try by email format
     if (!user) {
-      user = users.users.find(u => 
+      user = users.find(u => 
         u.email === `${admission_number}@school.local`
       );
     }

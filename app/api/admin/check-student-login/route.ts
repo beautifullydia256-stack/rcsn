@@ -13,11 +13,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if student already has a login
-    let existingUsers = { users: [] };
+    let existingUsers: any[] = [];
     try {
       const result = await supabaseAdmin.auth.admin.listUsers();
       if (result.data) {
-        existingUsers = result.data;
+        existingUsers = result.data.users || [];
       }
     } catch (listError) {
       console.warn('Could not list users:', listError);
@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if student already has a login account
-    const existingUser = existingUsers.users.find(u => 
-      u.raw_user_meta_data?.student_id === student_id ||
-      u.raw_user_meta_data?.admission_number === admission_number
+    const existingUser = existingUsers.find(u => 
+      u.user_metadata?.student_id === student_id ||
+      u.user_metadata?.admission_number === admission_number
     );
 
     return NextResponse.json({

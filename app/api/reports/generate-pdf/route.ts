@@ -3,6 +3,25 @@ import puppeteer from 'puppeteer';
 import JSZip from 'jszip';
 import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, formatPercentage, formatAttendance, formatPosition } from '@/src/lib/reportUtils';
 
+// Helper function to convert image URL to base64 data URL
+async function convertImageToBase64(url: string): Promise<string | null> {
+  try {
+    if (!url) return null;
+    
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    
+    const buffer = await response.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error converting image to base64:', error);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('PDF generation request received');
@@ -15,7 +34,7 @@ export async function POST(request: NextRequest) {
       const student = reportData.students[0];
       const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
       
-      return new NextResponse(pdfBuffer, {
+      return new NextResponse(pdfBuffer as any, {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${filename}"`
@@ -53,33 +72,105 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateSingleReportPDF(reportData: any) {
-  console.log('Starting PDF generation for student:', reportData.students[0]?.name);
+  console.log('Starting fast PDF generation for student:', reportData.students[0]?.name);
   const { school, examSet, students } = reportData;
   const student = students[0];
 
-  const isSecondaryClass = (className: string) => /^S\d/i.test((className || '').trim());
-  const isOLevelClass = (className: string) => {
-    const trimmed = (className || '').trim();
-    return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
-  };
-
-  // Generate HTML content based on class type
-  let htmlContent = '';
+  // Generate simple, fast HTML without complex styling
+  console.log('Generating simple HTML for fast PDF generation');
   
-  if (isSecondaryClass(student.current_class)) {
-    console.log('Generating Secondary report HTML');
-    htmlContent = generateSecondaryReportHTML(reportData);
-  } else if (isOLevelClass(student.current_class)) {
-    console.log('Generating O-Level report HTML');
-    htmlContent = generateOLevelReportHTML(reportData);
-  } else {
-    console.log('Generating Primary report HTML');
-    htmlContent = generatePrimaryReportHTML(reportData);
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .student-info { margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+        th { background: #f0f0f0; font-weight: bold; }
+        .summary { margin-top: 20px; padding: 10px; background: #f9f9f9; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>${school?.name || 'School Name'}</h1>
+        <p>${school?.address || 'School Address'}</p>
+        <p>Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}</p>
+        <h2>LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '1'}, ${examSet?.year || '2025'}</h2>
+      </div>
+      
+      <div class="student-info">
+        <p><strong>Name:</strong> ${student.name}</p>
+        <p><strong>Class:</strong> ${student.current_class}</p>
+        <p><strong>Admission Number:</strong> ${student.admission_number || student.student_id}</p>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Activity Score</th>
+            <th>Formative Score</th>
+            <th>Exam Score</th>
+            <th>Final Score</th>
+            <th>Grade</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.map((r: any) => `
+            <tr>
+              <td>${r.subject || 'N/A'}</td>
+              <td>${r.activity_score || 'N/A'}</td>
+              <td>${r.formative_score || 'N/A'}</td>
+              <td>${r.exam_score || 'N/A'}</td>
+              <td>${r.final_score || 'N/A'}</td>
+              <td>${r.grade || 'N/A'}</td>
+              <td>${r.overall_remark || 'N/A'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      
+      <div class="summary">
+        <p><strong>Average Score:</strong> ${student.summary?.average || 'N/A'}</p>
+        <p><strong>Division:</strong> ${student.summary?.division || 'N/A'}</p>
+        <p><strong>Attendance:</strong> ${student.summary?.attendanceDetails?.presentDays || 0} out of ${student.summary?.attendanceDetails?.totalSchoolDays || 0} days (${student.summary?.attendanceDetails?.percentage || 0}%)</p>
+        <p><strong>Class Teacher Comment:</strong> ${student.comments?.class_teacher_text || 'No comment'}</p>
+        <p><strong>Head Teacher Comment:</strong> ${student.comments?.head_teacher_text || 'No comment'}</p>
+      </div>
+      
+      <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+        <div>
+          <p>Class Teacher: ${student.comments?.class_teacher_name || 'N/A'}</p>
+          <p>Signature: ${student.comments?.class_teacher_signature || 'N/A'}</p>
+          <p>Date: ${student.comments?.class_teacher_date || 'N/A'}</p>
+        </div>
+        <div>
+          <p>Head Teacher: ${student.comments?.head_teacher_name || 'N/A'}</p>
+          <p>Signature: ${student.comments?.head_teacher_signature || 'N/A'}</p>
+          <p>Date: ${student.comments?.head_teacher_date || 'N/A'}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  // Add error handling for HTML generation
+  if (!htmlContent || htmlContent.length === 0) {
+    console.error('HTML content is empty or undefined');
+    throw new Error('Failed to generate HTML content');
   }
   
   console.log('HTML content generated, length:', htmlContent.length);
+  console.log('School logo URL:', school?.logo);
+  console.log('Student photo URL:', student.profile_photo);
 
-  // Launch Puppeteer
+  // Launch Puppeteer with minimal configuration for speed
   console.log('Launching Puppeteer browser...');
   const browser = await puppeteer.launch({
     headless: true,
@@ -87,11 +178,12 @@ async function generateSingleReportPDF(reportData: any) {
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
+      '--disable-gpu',
       '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu'
-    ]
+      '--disable-extensions',
+      '--disable-default-apps'
+    ],
+    timeout: 10000
   });
   console.log('Puppeteer browser launched successfully');
 
@@ -100,36 +192,39 @@ async function generateSingleReportPDF(reportData: any) {
     const page = await browser.newPage();
     
     // Set viewport for consistent rendering
-    await page.setViewport({ width: 1200, height: 800 });
+    await page.setViewport({ width: 800, height: 600 });
     console.log('Viewport set');
     
-    // Set content and wait for images to load
+    // Set content with minimal wait
     console.log('Setting page content...');
     await page.setContent(htmlContent, { 
-      waitUntil: 'networkidle0',
-      timeout: 30000 
+      waitUntil: 'domcontentloaded',
+      timeout: 5000 
     });
     console.log('Page content set successfully');
     
-    // Generate PDF with A4 settings
+    // Generate PDF with minimal settings for speed
     console.log('Generating PDF...');
     const pdfBuffer = await page.pdf({
       format: 'A4',
-      printBackground: true,
       margin: {
-        top: '15mm',
-        right: '15mm',
-        bottom: '15mm',
-        left: '15mm'
+        top: '10mm',
+        right: '10mm',
+        bottom: '10mm',
+        left: '10mm'
       },
-      preferCSSPageSize: true,
-      timeout: 30000
+      timeout: 5000
     });
     console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
 
     return pdfBuffer;
   } catch (error) {
     console.error('Puppeteer PDF generation error:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     throw error;
   } finally {
     console.log('Closing browser...');
@@ -355,13 +450,11 @@ function generateOLevelReportHTML(reportData: any) {
       <div class="header">
         <!-- School Logo -->
         <div class="school-logo">
-          ${school?.logo ? `<img src="${school.logo}" alt="School Logo">` : `
-            <div style="text-align: center; font-size: 8px;">
-              <div style="font-weight: bold;">EMIRATES</div>
-              <div style="font-weight: bold;">COLLEGE</div>
-              <div style="font-weight: bold;">SCHOOL</div>
-            </div>
-          `}
+          <div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;">
+            <div style="font-weight: bold;">EMIRATES</div>
+            <div style="font-weight: bold;">COLLEGE</div>
+            <div style="font-weight: bold;">SCHOOL</div>
+          </div>
         </div>
         
         <!-- School Name and Contact -->
@@ -373,9 +466,7 @@ function generateOLevelReportHTML(reportData: any) {
         
         <!-- Student Photo -->
         <div class="student-photo">
-          ${student.profile_photo ? `<img src="${student.profile_photo}" alt="Student Photo">` : `
-            <div style="font-size: 10px; color: #666;">Photo</div>
-          `}
+          <div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>
         </div>
       </div>
 
@@ -712,9 +803,7 @@ function generateSecondaryReportHTML(reportData: any) {
       <!-- STUDENT META -->
       <div class="student-meta">
         <div class="student-photo">
-          ${student.profile_photo ? `<img src="${student.profile_photo}" alt="Student Photo">` : `
-            <div style="font-size: 10px; color: #666;">Photo</div>
-          `}
+          <div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>
         </div>
         <div>LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}</div>
       </div>

@@ -1213,5 +1213,19 @@ function ExamSets({ classOptions, schoolId, schoolType }: { classOptions: string
   );
 }
 
+function SchoolBranding({ schoolId }: { schoolId: string | null }) {
+  return (
+    <div>
+      <SectionHeader
+        title="School Branding"
+        desc="Customize your school's visual identity: logo, colors, and branding elements."
+      />
+      <div className="text-white/80 text-sm">
+        School branding customization will be available here. This feature is under development.
+      </div>
+    </div>
+  );
+}
+
 
 

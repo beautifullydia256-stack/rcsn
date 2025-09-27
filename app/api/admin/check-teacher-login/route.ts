@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     if (result.error) return NextResponse.json({ error: result.error.message }, { status: 400 });
 
     const users = result.data?.users || [];
-    const byTeacherId = teacher_id ? users.find(u => u.raw_user_meta_data?.teacher_id === teacher_id) : null;
+    const byTeacherId = teacher_id ? users.find(u => u.user_metadata?.teacher_id === teacher_id) : null;
     const byEmail = email ? users.find(u => (u.email || '').toLowerCase() === String(email).toLowerCase()) : null;
     const found = byTeacherId || byEmail || null;
 
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
       email: found.email,
       confirmed_at: found.email_confirmed_at,
       last_sign_in_at: found.last_sign_in_at,
-      role: found.raw_user_meta_data?.role,
-      teacher_id: found.raw_user_meta_data?.teacher_id
+      role: found.user_metadata?.role,
+      teacher_id: found.user_metadata?.teacher_id
     });
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 });

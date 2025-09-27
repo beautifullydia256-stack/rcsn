@@ -71,6 +71,10 @@ export default function GenerateReportsPage() {
   const [reportData, setReportData] = useState<any>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
+  const [downloadingDOCX, setDownloadingDOCX] = useState(false);
+  const [downloadingClassPDF, setDownloadingClassPDF] = useState(false);
+  const [downloadingClassDOCX, setDownloadingClassDOCX] = useState(false);
   const [studentSearch, setStudentSearch] = useState<string>("");
   const [showStudentSuggestions, setShowStudentSuggestions] = useState<boolean>(false);
   
@@ -361,6 +365,9 @@ export default function GenerateReportsPage() {
   const downloadSingleReport = async () => {
     if (!reportData || reportData.students.length === 0) return;
     
+    setDownloadingDOCX(true);
+    setError(null);
+    
     try {
       const response = await fetch('/api/reports/generate-docx', {
         method: 'POST',
@@ -385,11 +392,16 @@ export default function GenerateReportsPage() {
       document.body.removeChild(a);
     } catch (err) {
       setError(`Failed to download report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDownloadingDOCX(false);
     }
   };
 
   const downloadSingleReportPDF = async () => {
     if (!reportData || reportData.students.length === 0) return;
+    
+    setDownloadingPDF(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
@@ -415,11 +427,16 @@ export default function GenerateReportsPage() {
       document.body.removeChild(a);
     } catch (err) {
       setError(`Failed to download PDF report: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDownloadingPDF(false);
     }
   };
 
   const downloadClassReports = async () => {
     if (!reportData || reportData.students.length === 0) return;
+    
+    setDownloadingClassDOCX(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/reports/generate-docx', {
@@ -444,11 +461,16 @@ export default function GenerateReportsPage() {
       document.body.removeChild(a);
     } catch (err) {
       setError(`Failed to download reports: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDownloadingClassDOCX(false);
     }
   };
 
   const downloadClassReportsPDF = async () => {
     if (!reportData || reportData.students.length === 0) return;
+    
+    setDownloadingClassPDF(true);
+    setError(null);
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
@@ -473,6 +495,8 @@ export default function GenerateReportsPage() {
       document.body.removeChild(a);
     } catch (err) {
       setError(`Failed to download PDF reports: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setDownloadingClassPDF(false);
     }
   };
 
@@ -921,32 +945,48 @@ export default function GenerateReportsPage() {
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={downloadSingleReport}
-                    className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium"
+                    disabled={downloadingDOCX || downloadingPDF || downloadingClassDOCX || downloadingClassPDF}
+                    className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center gap-2"
                   >
-                    Download as DOC (Single)
+                    {downloadingDOCX && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    )}
+                    {downloadingDOCX ? 'Processing...' : 'Download as DOC (Single)'}
                   </button>
                   
                   <button
                     onClick={downloadSingleReportPDF}
-                    className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium"
+                    disabled={downloadingDOCX || downloadingPDF || downloadingClassDOCX || downloadingClassPDF}
+                    className="px-6 py-2 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center gap-2"
                   >
-                    Download as PDF (Single)
+                    {downloadingPDF && (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    )}
+                    {downloadingPDF ? 'Processing...' : 'Download as PDF (Single)'}
                   </button>
                   
                   {reportType === 'class' && (
                     <>
                       <button
                         onClick={downloadClassReports}
-                        className="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white font-medium"
+                        disabled={downloadingDOCX || downloadingPDF || downloadingClassDOCX || downloadingClassPDF}
+                        className="px-6 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center gap-2"
                       >
-                        Download All as DOC (Class)
+                        {downloadingClassDOCX && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        {downloadingClassDOCX ? 'Processing...' : 'Download All as DOC (Class)'}
                       </button>
                       
                       <button
                         onClick={downloadClassReportsPDF}
-                        className="px-6 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 text-white font-medium"
+                        disabled={downloadingDOCX || downloadingPDF || downloadingClassDOCX || downloadingClassPDF}
+                        className="px-6 py-2 rounded-lg bg-orange-600 hover:bg-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium flex items-center gap-2"
                       >
-                        Download All as PDF (Class)
+                        {downloadingClassPDF && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        {downloadingClassPDF ? 'Processing...' : 'Download All as PDF (Class)'}
                       </button>
                     </>
                   )}

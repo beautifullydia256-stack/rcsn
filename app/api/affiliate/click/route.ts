@@ -5,7 +5,7 @@ import { supabaseAdmin } from '@/src/lib/supabase';
 export async function POST(req: NextRequest) {
   try {
     const url = new URL(req.url);
-    const ip = req.headers.get('x-forwarded-for') || req.ip || '';
+    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
     const ua = req.headers.get('user-agent') || '';
 
     const json = await req.json().catch(() => ({}));

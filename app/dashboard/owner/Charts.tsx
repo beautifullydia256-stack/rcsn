@@ -14,7 +14,6 @@ import {
   Pie,
   Cell,
   CartesianGrid,
-  HeatMap,
 } from "recharts";
 
 const COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#9333ea", "#ef4444"];

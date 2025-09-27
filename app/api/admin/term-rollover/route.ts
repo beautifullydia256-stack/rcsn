@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
       const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
       const users = userList?.users || [];
       const candidateIds = new Set(candidates.map(c => c.student_id));
-      const toDelete = users.filter(u => (u.raw_user_meta_data?.student_id && candidateIds.has(u.raw_user_meta_data.student_id)));
+      const toDelete = users.filter(u => (u.user_metadata?.student_id && candidateIds.has(u.user_metadata.student_id)));
       for (const u of toDelete) {
         await supabaseAdmin.auth.admin.deleteUser(u.id);
       }

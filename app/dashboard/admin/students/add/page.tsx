@@ -70,7 +70,7 @@ export default function AddStudentPage() {
   }, [router]);
 
   const save = async (): Promise<boolean> => {
-    if (!schoolId || !firstName || !lastName || !klass || !admissionDate) return;
+    if (!schoolId || !firstName || !lastName || !klass || !admissionDate) return false;
     
     // Prevent multiple submissions
     if (saving) {
@@ -84,7 +84,7 @@ export default function AddStudentPage() {
       const today = new Date();
       if (dobDate > today) {
         alert('Date of Birth cannot be in the future.');
-        return;
+        return false;
       }
     }
     // Validate payment numbers
@@ -92,11 +92,11 @@ export default function AddStudentPage() {
     const initialNum = initialPayment ? Number(initialPayment) : 0;
     if (initialNum < 0 || expectedNum < 0) {
       alert('Amounts cannot be negative.');
-      return;
+      return false;
     }
     if (initialNum > expectedNum && expectedNum > 0) {
       alert('Initial payment cannot exceed Tuition/Fee Amount Due.');
-      return;
+      return false;
     }
     setSaving(true);
     try {

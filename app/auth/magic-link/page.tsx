@@ -78,7 +78,7 @@ function MagicLinkAuthContent() {
 
         if (userError || !userData) {
           // Check if this might be a student login
-          const studentId = user.raw_user_meta_data?.student_id;
+          const studentId = user.user_metadata?.student_id;
           if (studentId) {
             router.push('/dashboard/student');
             return;
