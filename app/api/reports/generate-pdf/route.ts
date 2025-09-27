@@ -6,15 +6,41 @@ import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, form
 // Helper function to convert image URL to base64 data URL
 async function convertImageToBase64(url: string): Promise<string | null> {
   try {
-    if (!url) return null;
+    if (!url || url.trim() === '') {
+      console.log('No image URL provided');
+      return null;
+    }
     
-    const response = await fetch(url);
-    if (!response.ok) return null;
+    console.log('Converting image to base64:', url);
+    
+    // Add timeout to fetch request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    const response = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      console.log('Image fetch failed:', response.status, response.statusText);
+      return null;
+    }
     
     const buffer = await response.arrayBuffer();
+    if (buffer.byteLength === 0) {
+      console.log('Image buffer is empty');
+      return null;
+    }
+    
     const base64 = Buffer.from(buffer).toString('base64');
     const contentType = response.headers.get('content-type') || 'image/jpeg';
     
+    console.log('Image converted successfully, size:', buffer.byteLength, 'bytes, type:', contentType);
     return `data:${contentType};base64,${base64}`;
   } catch (error) {
     console.error('Error converting image to base64:', error);
@@ -72,12 +98,20 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateSingleReportPDF(reportData: any) {
-  console.log('Starting fast PDF generation for student:', reportData.students[0]?.name);
+  console.log('Starting PDF generation for student:', reportData.students[0]?.name);
   const { school, examSet, students } = reportData;
   const student = students[0];
 
-  // Generate simple, fast HTML without complex styling
-  console.log('Generating simple HTML for fast PDF generation');
+  // Convert images to base64 for embedding
+  console.log('Converting images to base64...');
+  const schoolLogoBase64 = school?.logo ? await convertImageToBase64(school.logo) : null;
+  const studentPhotoBase64 = student?.profile_photo ? await convertImageToBase64(student.profile_photo) : null;
+  
+  console.log('School logo converted:', !!schoolLogoBase64);
+  console.log('Student photo converted:', !!studentPhotoBase64);
+
+  // Generate HTML with embedded images
+  console.log('Generating HTML with embedded images...');
   
   const htmlContent = `
     <!DOCTYPE html>
@@ -87,7 +121,15 @@ async function generateSingleReportPDF(reportData: any) {
       <title>Student Report</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 20px; font-size: 12px; }
-        .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .school-logo { width: 80px; height: 80px; border: 2px solid #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f0f0f0; }
+        .school-logo img { width: 100%; height: 100%; object-fit: cover; }
+        .school-info { text-align: center; flex: 1; }
+        .school-name { font-weight: bold; font-size: 16pt; margin-bottom: 5px; }
+        .school-contact { font-size: 10pt; margin-bottom: 5px; }
+        .student-photo { width: 80px; height: 96px; border: 2px solid #ccc; background: #f0f0f0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .student-photo img { width: 100%; height: 100%; object-fit: cover; }
+        .report-title { text-align: center; margin: 20px 0; font-size: 14pt; font-weight: bold; }
         .student-info { margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         th, td { border: 1px solid #000; padding: 8px; text-align: left; }
@@ -96,13 +138,32 @@ async function generateSingleReportPDF(reportData: any) {
       </style>
     </head>
     <body>
+      <!-- HEADER with School Logo and Student Photo -->
       <div class="header">
-        <h1>${school?.name || 'School Name'}</h1>
-        <p>${school?.address || 'School Address'}</p>
-        <p>Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}</p>
-        <h2>LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '1'}, ${examSet?.year || '2025'}</h2>
+        <!-- School Logo -->
+        <div class="school-logo">
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
       </div>
       
+        <!-- School Info -->
+        <div class="school-info">
+          <div class="school-name">${school?.name || 'School Name'}</div>
+          <div class="school-contact">${school?.address || 'School Address'}</div>
+          <div class="school-contact">Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}</div>
+        </div>
+        
+        <!-- Student Photo -->
+        <div class="student-photo">
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
+        </div>
+      </div>
+
+      <!-- Report Title -->
+      <div class="report-title">
+        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '1'}, ${examSet?.year || '2025'}
+      </div>
+      
+      <!-- Student Info -->
       <div class="student-info">
         <p><strong>Name:</strong> ${student.name}</p>
         <p><strong>Class:</strong> ${student.current_class}</p>
@@ -170,7 +231,7 @@ async function generateSingleReportPDF(reportData: any) {
   console.log('School logo URL:', school?.logo);
   console.log('Student photo URL:', student.profile_photo);
 
-  // Launch Puppeteer with minimal configuration for speed
+  // Launch Puppeteer with improved configuration for reliability
   console.log('Launching Puppeteer browser...');
   const browser = await puppeteer.launch({
     headless: true,
@@ -181,9 +242,15 @@ async function generateSingleReportPDF(reportData: any) {
       '--disable-gpu',
       '--no-first-run',
       '--disable-extensions',
-      '--disable-default-apps'
+      '--disable-default-apps',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor',
+      '--run-all-compositor-stages-before-draw',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding'
     ],
-    timeout: 10000
+    timeout: 30000
   });
   console.log('Puppeteer browser launched successfully');
 
@@ -192,28 +259,33 @@ async function generateSingleReportPDF(reportData: any) {
     const page = await browser.newPage();
     
     // Set viewport for consistent rendering
-    await page.setViewport({ width: 800, height: 600 });
+    await page.setViewport({ width: 1200, height: 800, deviceScaleFactor: 2 });
     console.log('Viewport set');
     
-    // Set content with minimal wait
+    // Set content with proper wait for images to load
     console.log('Setting page content...');
     await page.setContent(htmlContent, { 
-      waitUntil: 'domcontentloaded',
-      timeout: 5000 
+      waitUntil: 'networkidle0',
+      timeout: 15000 
     });
     console.log('Page content set successfully');
     
-    // Generate PDF with minimal settings for speed
+    // Wait a bit more for any remaining images to load
+    await page.waitForTimeout(2000);
+    
+    // Generate PDF with improved settings
     console.log('Generating PDF...');
     const pdfBuffer = await page.pdf({
       format: 'A4',
       margin: {
-        top: '10mm',
-        right: '10mm',
-        bottom: '10mm',
-        left: '10mm'
+        top: '15mm',
+        right: '15mm',
+        bottom: '15mm',
+        left: '15mm'
       },
-      timeout: 5000
+      printBackground: true,
+      preferCSSPageSize: true,
+      timeout: 15000
     });
     console.log('PDF generated successfully, buffer size:', pdfBuffer.length);
 
@@ -232,7 +304,7 @@ async function generateSingleReportPDF(reportData: any) {
   }
 }
 
-function generateOLevelReportHTML(reportData: any) {
+function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
   const attendance = student.summary.attendanceDetails || {};
@@ -450,11 +522,7 @@ function generateOLevelReportHTML(reportData: any) {
       <div class="header">
         <!-- School Logo -->
         <div class="school-logo">
-          <div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;">
-            <div style="font-weight: bold;">EMIRATES</div>
-            <div style="font-weight: bold;">COLLEGE</div>
-            <div style="font-weight: bold;">SCHOOL</div>
-          </div>
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
         </div>
         
         <!-- School Name and Contact -->
@@ -466,7 +534,7 @@ function generateOLevelReportHTML(reportData: any) {
         
         <!-- Student Photo -->
         <div class="student-photo">
-          <div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
         </div>
       </div>
 
@@ -614,7 +682,7 @@ function generateOLevelReportHTML(reportData: any) {
   `;
 }
 
-function generateSecondaryReportHTML(reportData: any) {
+function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
   const nextTermBegins = student?.nextTermBegins || reportData?.nextTermBegins || '______________________';
@@ -952,7 +1020,7 @@ function generateSecondaryReportHTML(reportData: any) {
   `;
 }
 
-function generatePrimaryReportHTML(reportData: any) {
+function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
 
