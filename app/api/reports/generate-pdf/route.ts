@@ -580,9 +580,46 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           font-size: 9pt;
           margin-top: 20px;
         }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.1;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          width: 300px;
+          height: 300px;
+          object-fit: contain;
+        }
+        
+        .watermark-placeholder {
+          width: 300px;
+          height: 300px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f0f0;
+          font-size: 36pt;
+          font-weight: bold;
+          color: #ccc;
+          text-align: center;
+          line-height: 1.2;
+        }
       </style>
     </head>
     <body>
+      <!-- WATERMARK -->
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+      </div>
+      
       <!-- HEADER - School Logo and Info -->
       <div class="header">
         <!-- School Logo -->
@@ -924,6 +961,11 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       </style>
     </head>
     <body>
+      <!-- WATERMARK -->
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+      </div>
+      
       <!-- HEADER -->
       <div class="header">
         <!-- School Logo -->
@@ -1187,6 +1229,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       </style>
     </head>
     <body>
+      <!-- WATERMARK -->
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+      </div>
+      
       <!-- HEADER -->
       <div class="header">
         <div class="school-name">${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
@@ -1509,9 +1556,46 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           font-size: 9pt;
           margin-top: 20px;
         }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.1;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          width: 300px;
+          height: 300px;
+          object-fit: contain;
+        }
+        
+        .watermark-placeholder {
+          width: 300px;
+          height: 300px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f0f0;
+          font-size: 36pt;
+          font-weight: bold;
+          color: #ccc;
+          text-align: center;
+          line-height: 1.2;
+        }
       </style>
     </head>
     <body>
+      <!-- WATERMARK -->
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+      </div>
+      
       <!-- HEADER - School Logo and Info -->
       <div class="header">
         <!-- School Logo -->
@@ -1850,6 +1934,11 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
       </style>
     </head>
     <body>
+      <!-- WATERMARK -->
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+      </div>
+      
       <!-- HEADER -->
       <div class="header">
         <div class="school-name">${school?.name || 'School Name'}</div>

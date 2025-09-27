@@ -662,6 +662,14 @@ async function generateTemplate1OLevelReport(reportData: any) {
       {
         properties: {},
         children: [
+          // WATERMARK - School Logo as watermark
+          createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
+            bold: true, 
+            size: 48, 
+            color: 'CCCCCC',
+            spacing: { before: 2000, after: 2000 }
+          }),
+          
           // HEADER - School Logo and Info
           createCentered(`${school?.name || 'EMIRATES COLLEGE SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
           createCentered(`TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}`, { size: 18, spacing: { after: 200 } }),
@@ -886,6 +894,14 @@ function generateTemplate2KasoziReport(reportData: any) {
       {
         properties: {},
         children: [
+          // WATERMARK - School Logo as watermark
+          createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
+            bold: true, 
+            size: 48, 
+            color: 'CCCCCC',
+            spacing: { before: 2000, after: 2000 }
+          }),
+          
           // HEADER - School Logo and Info
           createCentered(`${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
           createCentered(`P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}`, { size: 18, spacing: { after: 200 } }),
@@ -1050,6 +1066,14 @@ function generateTemplate3KyoteraReport(reportData: any) {
       {
         properties: {},
         children: [
+          // WATERMARK - School Logo as watermark
+          createCentered(`${school?.name || 'SCHOOL LOGO'}`, { 
+            bold: true, 
+            size: 48, 
+            color: 'CCCCCC',
+            spacing: { before: 2000, after: 2000 }
+          }),
+          
           // HEADER
           createCentered(`${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
           createCentered(`${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | Tel: ${school?.phone || '0701861636 / 0700338061'} | E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}`, { size: 18, spacing: { after: 200 } }),
