@@ -374,7 +374,8 @@ export default function GenerateReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportData,
-          type: 'single'
+          type: 'single',
+          template: selectedTemplate
         })
       });
 
@@ -445,7 +446,8 @@ export default function GenerateReportsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reportData,
-          type: 'class'
+          type: 'class',
+          template: selectedTemplate
         })
       });
 
@@ -1117,7 +1119,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       {/* HEADER - School Logo and Info */}
       <div className="flex items-start justify-between mb-4">
         {/* School Logo */}
-        <div className="w-20 h-20 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+        <div className="w-24 h-24 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
           {school?.logo ? (
             <img
               src={school.logo}

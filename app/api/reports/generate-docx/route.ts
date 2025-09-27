@@ -5,18 +5,18 @@ import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, form
 
 export async function POST(request: NextRequest) {
   try {
-    const { reportData, type } = await request.json();
+    const { reportData, type, template } = await request.json();
 
     if (type === 'single') {
-      const doc = await generateSingleReport(reportData);
+      const doc = await generateSingleReport(reportData, template);
       const buffer = await Packer.toBuffer(doc);
       
       const student = reportData.students[0];
-      const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.doc`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.docx`.replace(/[^a-zA-Z0-9._-]/g, '_');
       
       return new NextResponse(buffer as any, {
         headers: {
-          'Content-Type': 'application/msword',
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
           'Content-Disposition': `attachment; filename="${filename}"`
         }
       });
@@ -28,9 +28,9 @@ export async function POST(request: NextRequest) {
           ...reportData,
           students: [student]
         };
-        const doc = await generateSingleReport(studentReportData);
+        const doc = await generateSingleReport(studentReportData, template);
         const buffer = await Packer.toBuffer(doc);
-        const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.doc`.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.docx`.replace(/[^a-zA-Z0-9._-]/g, '_');
         zip.file(filename, buffer);
       }
       
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateSingleReport(reportData: any) {
+async function generateSingleReport(reportData: any, template: string = 'template1') {
   const { school, examSet, students } = reportData;
   const student = students[0];
 
@@ -62,7 +62,19 @@ async function generateSingleReport(reportData: any) {
     return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
   };
 
-  if (isSecondaryClass(student.current_class)) {
+  // Check if this is an O-Level class and use the appropriate template
+  if (isOLevelClass(student.current_class)) {
+    switch (template) {
+      case 'template1':
+        return generateTemplate1OLevelReport(reportData);
+      case 'template2':
+        return generateTemplate2KasoziReport(reportData);
+      case 'template3':
+        return generateTemplate3KyoteraReport(reportData);
+      default:
+        return generateTemplate1OLevelReport(reportData);
+    }
+  } else if (isSecondaryClass(student.current_class)) {
     return generateSecondaryReport(reportData);
   }
 
@@ -589,4 +601,249 @@ async function generateSecondaryReport(reportData: any) {
   });
 
   return doc;
+}
+
+// Template 1 - O-Level Report Card (matches PDF Template 1 exactly)
+async function generateTemplate1OLevelReport(reportData: any) {
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  
+  // Helper function to create a paragraph
+  const createParagraph = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: options.alignment || AlignmentType.LEFT,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  // Helper function to create a heading
+  const createHeading = (text: string, level: any = HeadingLevel.HEADING_1) => {
+    return new Paragraph({
+      children: [new TextRun({ text, bold: true, size: 20 })],
+      heading: level,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 200 }
+    });
+  };
+
+  // Helper function to create a table cell
+  const createTableCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 } })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: options.shading || {}
+    });
+  };
+
+  // Helper function to create a header cell with green background
+  const createHeaderCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 }, bold: true, color: 'FFFFFF' })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: '4CAF50'
+      }
+    });
+  };
+
+  // Helper function to create centered text
+  const createCentered = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          // HEADER - School Logo and Info
+          createCentered(`${school?.name || 'EMIRATES COLLEGE SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
+          createCentered(`TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}`, { size: 18, spacing: { after: 200 } }),
+          createCentered(`SCHOOL MOTTO: ${school?.motto || 'Education the Future'}`, { italic: true, size: 18, spacing: { after: 400 } }),
+
+          // REPORT TITLE
+          createCentered(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}`, { 
+            bold: true, 
+            size: 20, 
+            color: 'FFFFFF',
+            spacing: { after: 400 }
+          }),
+
+          // LEARNER INFO
+          createParagraph(`LNo.: ${student.admission_number || student.student_id}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`NAME: ${student.name}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`CLASS & STREAM: ${student.current_class}`, { size: 18, spacing: { after: 300 } }),
+
+          // SUBJECTS TABLE
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              // Header row
+              new TableRow({
+                children: [
+                  createHeaderCell('Subjects & Topics Covered'),
+                  createHeaderCell('Activity Score [3]'),
+                  createHeaderCell('Descriptor'),
+                  createHeaderCell('Formative Score [20%]'),
+                  createHeaderCell('Exam Score [80%]'),
+                  createHeaderCell('Final Score [100%]'),
+                  createHeaderCell('Grade'),
+                  createHeaderCell('Overall Remark'),
+                  createHeaderCell('Subject Teacher')
+                ]
+              }),
+              // Data rows
+              ...(student.results && student.results.length > 0 ? 
+                student.results.map((result: any) => {
+                  const activity = result.activity_score ?? '';
+                  const activityNum = parseFloat(activity) || 0;
+                  const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+                  const formative = result.formative_score ?? '';
+                  const exam = result.exam_score ?? '';
+                  const finalScore = result.final_score ?? '';
+                  const finalNum = parseFloat(finalScore) || 0;
+                  const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+                  const overallRemark = result.overall_remark ?? '';
+                  const teacherInitials = result.teacher_initials ?? '';
+                  const topic = result.topic || '';
+
+                  return new TableRow({
+                    children: [
+                      createTableCell(`${result.subject}\n${topic}`, { size: 16 }),
+                      createTableCell(activity, { alignment: AlignmentType.CENTER }),
+                      createTableCell(descriptor, { alignment: AlignmentType.CENTER }),
+                      createTableCell(formative, { alignment: AlignmentType.CENTER }),
+                      createTableCell(exam, { alignment: AlignmentType.CENTER }),
+                      createTableCell(finalScore, { alignment: AlignmentType.CENTER }),
+                      createTableCell(gradeText, { alignment: AlignmentType.CENTER }),
+                      createTableCell(overallRemark, { size: 14 }),
+                      createTableCell(teacherInitials, { alignment: AlignmentType.CENTER })
+                    ]
+                  });
+                }) : [
+                  new TableRow({
+                    children: [
+                      createTableCell('N/A - Student did not sit for this term', { alignment: AlignmentType.CENTER })
+                    ]
+                  })
+                ]
+              )
+            ]
+          }),
+
+          // PERFORMANCE SUMMARY
+          createParagraph(`AVERAGE SCORES: ${student.summary?.average || ''} ${student.summary?.division || ''}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { before: 300, after: 200 } 
+          }),
+          createParagraph(`OVERALL PERFORMANCE: ${student.summary?.performanceRemark || ''}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 300 } 
+          }),
+
+          // COMMENTS
+          createParagraph('Class Teacher\'s Comment', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph(student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.', { size: 16, spacing: { after: 100 } }),
+          createParagraph(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`, { size: 16, spacing: { after: 200 } }),
+
+          createParagraph('Head Teacher\'s Comment', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph(student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.', { size: 16, spacing: { after: 100 } }),
+          createParagraph(`Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}`, { size: 16, spacing: { after: 200 } }),
+
+          createParagraph(`Next Term Begins: ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 300 } 
+          }),
+
+          // Grading system & descriptions
+          createParagraph('Grading System', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph('80 - A | 70 - B | 50 - C | 40 - D | 0 - E', { bold: true, size: 16, spacing: { after: 200 } }),
+          
+          createParagraph('Description', { bold: true, size: 18, spacing: { after: 100 } }),
+          
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  createHeaderCell('Grade'),
+                  createHeaderCell('Achievement Level'),
+                  createHeaderCell('Descriptor')
+                ]
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('A'),
+                  createTableCell('Exceptional'),
+                  createTableCell('Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations')
+                ]
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('B'),
+                  createTableCell('Outstanding'),
+                  createTableCell('Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations')
+                ]
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('C'),
+                  createTableCell('Satisfactory'),
+                  createTableCell('Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations')
+                ]
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('D'),
+                  createTableCell('Basic'),
+                  createTableCell('Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations')
+                ]
+              }),
+              new TableRow({
+                children: [
+                  createTableCell('E'),
+                  createTableCell('Elementary'),
+                  createTableCell('Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations')
+                ]
+              })
+            ]
+          }),
+
+          // FOOTER
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              new TableRow({
+                children: [
+                  createTableCell('Printed from: Pwezacore'),
+                  createTableCell(`School Motto: '${school?.motto || 'Education the Future'}'`, { alignment: AlignmentType.RIGHT })
+                ]
+              })
+            ]
+          })
+        ]
+      }
+    ]
+  });
+
+  return doc;
+}
+
+function generateTemplate2KasoziReport(reportData: any) {
+  // For now, use Template 1 as a placeholder - you can implement Template 2 later
+  return generateTemplate1OLevelReport(reportData);
+}
+
+function generateTemplate3KyoteraReport(reportData: any) {
+  // For now, use Template 1 as a placeholder - you can implement Template 3 later
+  return generateTemplate1OLevelReport(reportData);
 }

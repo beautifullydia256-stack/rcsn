@@ -411,8 +411,8 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-logo {
-          width: 80px;
-          height: 80px;
+          width: 100px;
+          height: 100px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
@@ -799,8 +799,8 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .school-logo {
-          width: 80px;
-          height: 80px;
+          width: 100px;
+          height: 100px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
