@@ -839,11 +839,321 @@ async function generateTemplate1OLevelReport(reportData: any) {
 }
 
 function generateTemplate2KasoziReport(reportData: any) {
-  // For now, use Template 1 as a placeholder - you can implement Template 2 later
-  return generateTemplate1OLevelReport(reportData);
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  
+  // Helper function to create a paragraph
+  const createParagraph = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: options.alignment || AlignmentType.LEFT,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  // Helper function to create a table cell
+  const createTableCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 } })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: options.shading || {}
+    });
+  };
+
+  // Helper function to create a header cell with green background
+  const createHeaderCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 }, bold: true, color: 'FFFFFF' })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: '2E7D32'
+      }
+    });
+  };
+
+  // Helper function to create centered text
+  const createCentered = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          // HEADER - School Logo and Info
+          createCentered(`${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
+          createCentered(`P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}`, { size: 18, spacing: { after: 200 } }),
+          createCentered(`MOTTO: "${school?.motto || 'Excellence Through Discipline'}"`, { italic: true, size: 18, spacing: { after: 400 } }),
+
+          // REPORT TITLE
+          createCentered(`LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || 'THREE'}, ${examSet?.year || '2022'}`, { 
+            bold: true, 
+            size: 20, 
+            color: 'FFFFFF',
+            spacing: { after: 400 }
+          }),
+
+          // STUDENT INFO
+          createParagraph(`Report Number: ${student.admission_number || student.student_id}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`Name: ${student.name}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`Class: ${student.current_class}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`Term: ${examSet?.term || 'THREE'}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`Year: ${examSet?.year || '2022'}`, { size: 18, spacing: { after: 300 } }),
+
+          // SUBJECTS TABLE
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              // Header row
+              new TableRow({
+                children: [
+                  createHeaderCell('Subject'),
+                  createHeaderCell('Activity Score [3]'),
+                  createHeaderCell('Descriptor'),
+                  createHeaderCell('Formative Score [20%]'),
+                  createHeaderCell('Exam Score [80%]'),
+                  createHeaderCell('Final Score [100%]'),
+                  createHeaderCell('Grade'),
+                  createHeaderCell('Overall Remark'),
+                  createHeaderCell('Subject Teacher')
+                ]
+              }),
+              // Data rows
+              ...(student.results && student.results.length > 0 ? 
+                student.results.map((result: any) => {
+                  const activity = result.activity_score ?? '';
+                  const activityNum = parseFloat(activity) || 0;
+                  const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+                  const formative = result.formative_score ?? '';
+                  const exam = result.exam_score ?? '';
+                  const finalScore = result.final_score ?? '';
+                  const finalNum = parseFloat(finalScore) || 0;
+                  const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+                  const overallRemark = result.overall_remark ?? '';
+                  const teacherInitials = result.teacher_initials ?? '';
+
+                  return new TableRow({
+                    children: [
+                      createTableCell(result.subject, { size: 16 }),
+                      createTableCell(activity, { alignment: AlignmentType.CENTER }),
+                      createTableCell(descriptor, { alignment: AlignmentType.CENTER }),
+                      createTableCell(formative, { alignment: AlignmentType.CENTER }),
+                      createTableCell(exam, { alignment: AlignmentType.CENTER }),
+                      createTableCell(finalScore, { alignment: AlignmentType.CENTER }),
+                      createTableCell(gradeText, { alignment: AlignmentType.CENTER }),
+                      createTableCell(overallRemark, { size: 14 }),
+                      createTableCell(teacherInitials, { alignment: AlignmentType.CENTER })
+                    ]
+                  });
+                }) : [
+                  new TableRow({
+                    children: [
+                      createTableCell('N/A - Student did not sit for this term', { alignment: AlignmentType.CENTER })
+                    ]
+                  })
+                ]
+              )
+            ]
+          }),
+
+          // PERFORMANCE SUMMARY
+          createParagraph(`AVERAGE SCORES: ${student.summary?.average || ''} ${student.summary?.division || ''}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { before: 300, after: 200 } 
+          }),
+          createParagraph(`OVERALL PERFORMANCE: ${student.summary?.performanceRemark || ''}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 300 } 
+          }),
+
+          // COMMENTS
+          createParagraph('Class Teacher\'s Comment', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph(student.comments?.class_teacher_text || 'Student is progressing well but needs to focus more on specific subjects for better results.', { size: 16, spacing: { after: 100 } }),
+          createParagraph(`Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}`, { size: 16, spacing: { after: 200 } }),
+
+          createParagraph('Head Teacher\'s Comment', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph(student.comments?.head_teacher_text || 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.', { size: 16, spacing: { after: 100 } }),
+          createParagraph(`Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}`, { size: 16, spacing: { after: 200 } }),
+
+          // FOOTER
+          createCentered('Printed from: Pwezacore', { size: 16 }),
+          createCentered(`School Motto: '${school?.motto || 'Excellence Through Discipline'}'`, { size: 16 })
+        ]
+      }
+    ]
+  });
+
+  return doc;
 }
 
 function generateTemplate3KyoteraReport(reportData: any) {
-  // For now, use Template 1 as a placeholder - you can implement Template 3 later
-  return generateTemplate1OLevelReport(reportData);
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  
+  // Helper function to create a paragraph
+  const createParagraph = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: options.alignment || AlignmentType.LEFT,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  // Helper function to create a table cell
+  const createTableCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 } })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: options.shading || {}
+    });
+  };
+
+  // Helper function to create a header cell with gray background
+  const createHeaderCell = (text: string, options: any = {}) => {
+    return new TableCell({
+      children: [createParagraph(text, { ...options, spacing: { after: 0 }, bold: true })],
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      shading: {
+        type: ShadingType.SOLID,
+        color: 'f0f0f0'
+      }
+    });
+  };
+
+  // Helper function to create centered text
+  const createCentered = (text: string, options: any = {}) => {
+    return new Paragraph({
+      children: [new TextRun({ text, ...options })],
+      alignment: AlignmentType.CENTER,
+      spacing: { after: options.spacing?.after || 100 }
+    });
+  };
+
+  // Calculate identifier based on grade/score (Template 3 specific)
+  const getIdentifier = (score: number) => {
+    if (score >= 80) return '3'; // Accomplished
+    if (score >= 60) return '2'; // Moderate
+    if (score >= 50) return '1'; // Basic
+    return ''; // Blank for absent
+  };
+
+  const doc = new Document({
+    sections: [
+      {
+        properties: {},
+        children: [
+          // HEADER
+          createCentered(`${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}`, { bold: true, size: 24, spacing: { after: 200 } }),
+          createCentered(`${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | Tel: ${school?.phone || '0701861636 / 0700338061'} | E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}`, { size: 18, spacing: { after: 200 } }),
+          createCentered('END OF TERM ONE STUDENT\'S PROGRESSIVE REPORT', { bold: true, size: 20, spacing: { after: 100 } }),
+          createCentered(`No. ${student.admission_number || student.student_id}`, { size: 18, spacing: { after: 400 } }),
+
+          // STUDENT INFO
+          createParagraph(`STUDENT'S NAME: ${student.name}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`YEAR: ${examSet?.year || '2025'}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`STREAM: EAST`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`CLASS: ${student.current_class}`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`LIN: __________`, { size: 18, spacing: { after: 100 } }),
+          createParagraph(`Date: ${examSet?.date || '26/05/2025'}`, { size: 18, spacing: { after: 300 } }),
+
+          // SUBJECTS TABLE
+          new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+              // Header row
+              new TableRow({
+                children: [
+                  createHeaderCell('SUBJECT'),
+                  createHeaderCell('C1'),
+                  createHeaderCell('C2'),
+                  createHeaderCell('AVG SCORE/20'),
+                  createHeaderCell('FINAL EXAM/80'),
+                  createHeaderCell('TOTAL SCORE 100%'),
+                  createHeaderCell('IDENTIFIER'),
+                  createHeaderCell('INIT')
+                ]
+              }),
+              // Data rows
+              ...(student.results && student.results.length > 0 ? 
+                student.results.map((result: any) => {
+                  const activity = result.activity_score ?? '';
+                  const activityNum = parseFloat(activity) || 0;
+                  const c1 = activityNum > 0 ? (activityNum * 1.5).toFixed(1) : '';
+                  const c2 = activityNum > 0 ? (activityNum * 1.2).toFixed(1) : '';
+                  const avgScore = result.formative_score ?? '';
+                  const finalExam = result.exam_score ?? '';
+                  const totalScore = result.final_score ?? '';
+                  const totalNum = parseFloat(totalScore) || 0;
+                  const identifier = getIdentifier(totalNum);
+                  const teacherInitials = result.teacher_initials ?? '';
+
+                  return new TableRow({
+                    children: [
+                      createTableCell(result.subject, { bold: true }),
+                      createTableCell(c1, { alignment: AlignmentType.CENTER }),
+                      createTableCell(c2, { alignment: AlignmentType.CENTER }),
+                      createTableCell(avgScore, { alignment: AlignmentType.CENTER }),
+                      createTableCell(finalExam, { alignment: AlignmentType.CENTER }),
+                      createTableCell(totalScore, { alignment: AlignmentType.CENTER }),
+                      createTableCell(identifier, { alignment: AlignmentType.CENTER }),
+                      createTableCell(teacherInitials, { alignment: AlignmentType.CENTER })
+                    ]
+                  });
+                }) : [
+                  new TableRow({
+                    children: [
+                      createTableCell('N/A - Student did not sit for this term', { alignment: AlignmentType.CENTER })
+                    ]
+                  })
+                ]
+              )
+            ]
+          }),
+
+          // SUMMARY
+          createParagraph('AVERAGE SCORE / PTS (OUT OF 20) / IDENTIFIER: 17', { 
+            bold: true, 
+            size: 18, 
+            spacing: { before: 300, after: 200 } 
+          }),
+          createParagraph(`Overall Total Score: ${student.summary?.average || ''}`, { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 100 } 
+          }),
+          createParagraph('Overall Identifier: 2', { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 100 } 
+          }),
+          createParagraph('Overall Learner Achievement: Moderate (Corresponding to Identifier 2)', { 
+            bold: true, 
+            size: 18, 
+            spacing: { after: 300 } 
+          }),
+
+          // KEY TERMS
+          createParagraph('KEY TERMS', { bold: true, size: 18, spacing: { after: 100 } }),
+          createParagraph('3: Accomplished (80% and above)', { size: 16, spacing: { after: 100 } }),
+          createParagraph('2: Moderate (60% - 79%)', { size: 16, spacing: { after: 100 } }),
+          createParagraph('1: Basic (50% - 59%)', { size: 16, spacing: { after: 100 } }),
+          createParagraph('Blank: Below Basic (Below 50%)', { size: 16, spacing: { after: 300 } }),
+
+          // FOOTER
+          createCentered('Printed from: Pwezacore', { size: 16 }),
+          createCentered(`School Motto: '${school?.motto || 'Education the Future'}'`, { size: 16 })
+        ]
+      }
+    ]
+  });
+
+  return doc;
 }

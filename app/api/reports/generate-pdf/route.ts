@@ -748,13 +748,554 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
 }
 
 function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
-  // For now, use Template 1 as a placeholder - you can implement Template 2 later
-  return generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays ?? '';
+  const totalDays = attendance.totalSchoolDays ?? '';
+  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
+        
+        body {
+          font-family: 'Times New Roman', Arial, sans-serif;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 15mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+        }
+        
+        .school-logo {
+          width: 100px;
+          height: 100px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          background: #f0f0f0;
+          margin: 0 auto 15px;
+        }
+        
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        .school-name {
+          font-weight: bold;
+          font-size: 18pt;
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+        
+        .school-contact {
+          font-size: 10pt;
+          margin-bottom: 5px;
+        }
+        
+        .school-motto {
+          font-size: 10pt;
+          font-style: italic;
+        }
+        
+        .report-title {
+          background: #2E7D32;
+          color: white;
+          text-align: center;
+          padding: 12px;
+          margin: 20px 0;
+          font-size: 14pt;
+          font-weight: bold;
+          text-transform: uppercase;
+        }
+        
+        .student-info {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .student-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+        
+        .student-photo {
+          width: 80px;
+          height: 96px;
+          border: 2px solid #ccc;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          float: right;
+          margin-left: 20px;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        th, td {
+          border: 1px solid #000;
+          padding: 6px;
+          text-align: left;
+        }
+        
+        th {
+          background: #2E7D32;
+          color: white;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .center {
+          text-align: center;
+        }
+        
+        .summary {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .summary p {
+          margin-bottom: 5px;
+        }
+        
+        .summary strong {
+          font-weight: bold;
+        }
+        
+        .comments {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .comments h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .comments p {
+          margin-bottom: 5px;
+        }
+        
+        .footer {
+          text-align: center;
+          font-size: 9pt;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- HEADER -->
+      <div class="header">
+        <!-- School Logo -->
+        <div class="school-logo">
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
+        </div>
+        
+        <div class="school-name">${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+        <div class="school-contact">P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}</div>
+        <div class="school-motto">MOTTO: "${school?.motto || 'Excellence Through Discipline'}"</div>
+      </div>
+
+      <!-- REPORT TITLE -->
+      <div class="report-title">
+        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || 'THREE'}, ${examSet?.year || '2022'}
+      </div>
+
+      <!-- STUDENT INFO -->
+      <div class="student-info">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div class="student-info-grid">
+            <div><strong>Report Number:</strong> ${student.admission_number || student.student_id}</div>
+            <div><strong>Term:</strong> ${examSet?.term || 'THREE'}</div>
+            <div><strong>Name:</strong> ${student.name}</div>
+            <div><strong>Year:</strong> ${examSet?.year || '2022'}</div>
+            <div><strong>Class:</strong> ${student.current_class}</div>
+          </div>
+          
+          <!-- Student Photo -->
+          <div class="student-photo">
+            ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Activity Score [3]</th>
+            <th>Descriptor</th>
+            <th>Formative Score [20%]</th>
+            <th>Exam Score [80%]</th>
+            <th>Final Score [100%]</th>
+            <th>Grade</th>
+            <th>Overall Remark</th>
+            <th>Subject Teacher</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.length > 0 ? 
+            student.results.map((result: any) => {
+              const activity = result.activity_score ?? '';
+              const activityNum = parseFloat(activity) || 0;
+              const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+              const formative = result.formative_score ?? '';
+              const exam = result.exam_score ?? '';
+              const finalScore = result.final_score ?? '';
+              const finalNum = parseFloat(finalScore) || 0;
+              const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
+              const overallRemark = result.overall_remark ?? '';
+              const teacherInitials = result.teacher_initials ?? '';
+
+              return `
+                <tr>
+                  <td>${result.subject}</td>
+                  <td class="center">${activity}</td>
+                  <td class="center">${descriptor}</td>
+                  <td class="center">${formative}</td>
+                  <td class="center">${exam}</td>
+                  <td class="center">${finalScore}</td>
+                  <td class="center">${gradeText}</td>
+                  <td style="font-size: 9pt;">${overallRemark}</td>
+                  <td class="center">${teacherInitials}</td>
+                </tr>
+              `;
+            }).join('') : `
+              <tr>
+                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
+
+      <!-- PERFORMANCE SUMMARY -->
+      <div class="summary">
+        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
+        <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
+      </div>
+
+      <!-- COMMENTS -->
+      <div class="comments">
+        <h3>Class Teacher's Comment</h3>
+        <p>${student.comments?.class_teacher_text || 'Student is progressing well but needs to focus more on specific subjects for better results.'}</p>
+        <p>Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}</p>
+
+        <h3>Head Teacher's Comment</h3>
+        <p>${student.comments?.head_teacher_text || 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
+        <p>Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}</p>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="footer">
+        <div>Printed from: Pwezacore</div>
+        <div>School Motto: '${school?.motto || 'Excellence Through Discipline'}'</div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
-  // For now, use Template 1 as a placeholder - you can implement Template 3 later
-  return generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  const attendance = student.summary.attendanceDetails || {};
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Calculate identifier based on grade/score (Template 3 specific)
+  const getIdentifier = (score: number) => {
+    if (score >= 80) return '3'; // Accomplished
+    if (score >= 60) return '2'; // Moderate
+    if (score >= 50) return '1'; // Basic
+    return ''; // Blank for absent
+  };
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Student Report</title>
+      <style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
+        
+        body {
+          font-family: 'Times New Roman', Arial, sans-serif;
+          width: 210mm;
+          min-height: 297mm;
+          margin: 0 auto;
+          padding: 15mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
+        }
+        
+        .header {
+          text-align: center;
+          margin-bottom: 30px;
+        }
+        
+        .school-name {
+          font-weight: bold;
+          font-size: 18pt;
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+        
+        .school-contact {
+          font-size: 10pt;
+          margin-bottom: 5px;
+        }
+        
+        .report-title {
+          font-size: 12pt;
+          font-weight: bold;
+          text-transform: uppercase;
+          margin-bottom: 5px;
+        }
+        
+        .report-number {
+          font-size: 10pt;
+          margin-bottom: 20px;
+        }
+        
+        .student-info {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .student-info-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+        
+        .student-photo {
+          width: 80px;
+          height: 96px;
+          border: 2px solid #ccc;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          float: right;
+          margin-left: 20px;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+          font-size: 9pt;
+        }
+        
+        th, td {
+          border: 1px solid #000;
+          padding: 4px;
+          text-align: left;
+        }
+        
+        th {
+          background: #f0f0f0;
+          font-weight: bold;
+          text-align: center;
+        }
+        
+        .center {
+          text-align: center;
+        }
+        
+        .summary {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .summary strong {
+          font-weight: bold;
+        }
+        
+        .key-terms {
+          margin-bottom: 20px;
+          font-size: 10pt;
+        }
+        
+        .key-terms h3 {
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .footer {
+          text-align: center;
+          font-size: 9pt;
+          margin-top: 20px;
+        }
+      </style>
+    </head>
+    <body>
+      <!-- HEADER -->
+      <div class="header">
+        <div class="school-name">${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+        <div class="school-contact">
+          ${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
+          Tel: ${school?.phone || '0701861636 / 0700338061'} | 
+          E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}
+        </div>
+        <div class="report-title">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+        <div class="report-number">No. ${student.admission_number || student.student_id}</div>
+      </div>
+
+      <!-- STUDENT INFO -->
+      <div class="student-info">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div class="student-info-grid">
+            <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
+            <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
+            <div><strong>STREAM:</strong> EAST</div>
+            <div><strong>CLASS:</strong> ${student.current_class}</div>
+            <div><strong>LIN:</strong> __________</div>
+            <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
+          </div>
+          
+          <!-- Student Photo -->
+          <div class="student-photo">
+            ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+          </div>
+        </div>
+      </div>
+
+      <!-- SUBJECTS TABLE -->
+      <table>
+        <thead>
+          <tr>
+            <th>SUBJECT</th>
+            <th>C1</th>
+            <th>C2</th>
+            <th>AVG SCORE/20</th>
+            <th>FINAL EXAM/80</th>
+            <th>TOTAL SCORE 100%</th>
+            <th>IDENTIFIER</th>
+            <th>INIT</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${student.results.length > 0 ? 
+            student.results.map((result: any) => {
+              const activity = result.activity_score ?? '';
+              const activityNum = parseFloat(activity) || 0;
+              const c1 = activityNum > 0 ? (activityNum * 1.5).toFixed(1) : '';
+              const c2 = activityNum > 0 ? (activityNum * 1.2).toFixed(1) : '';
+              const avgScore = result.formative_score ?? '';
+              const finalExam = result.exam_score ?? '';
+              const totalScore = result.final_score ?? '';
+              const totalNum = parseFloat(totalScore) || 0;
+              const identifier = getIdentifier(totalNum);
+              const teacherInitials = result.teacher_initials ?? '';
+
+              return `
+                <tr>
+                  <td style="font-weight: bold;">${result.subject}</td>
+                  <td class="center">${c1}</td>
+                  <td class="center">${c2}</td>
+                  <td class="center">${avgScore}</td>
+                  <td class="center">${finalExam}</td>
+                  <td class="center">${totalScore}</td>
+                  <td class="center">${identifier}</td>
+                  <td class="center">${teacherInitials}</td>
+                </tr>
+              `;
+            }).join('') : `
+              <tr>
+                <td colspan="8" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+              </tr>
+            `
+          }
+        </tbody>
+      </table>
+
+      <!-- SUMMARY -->
+      <div class="summary">
+        <div style="display: flex; align-items: center; gap: 20px;">
+          <div><strong>AVERAGE SCORE / PTS (OUT OF 20) / IDENTIFIER:</strong> 17</div>
+        </div>
+        <div style="margin-top: 10px;">
+          <div><strong>Overall Total Score:</strong> ${avg}</div>
+          <div><strong>Overall Identifier:</strong> 2</div>
+          <div><strong>Overall Learner Achievement:</strong> Moderate (Corresponding to Identifier 2)</div>
+        </div>
+      </div>
+
+      <!-- KEY TERMS -->
+      <div class="key-terms">
+        <h3>KEY TERMS</h3>
+        <p><strong>3:</strong> Accomplished (80% and above)</p>
+        <p><strong>2:</strong> Moderate (60% - 79%)</p>
+        <p><strong>1:</strong> Basic (50% - 59%)</p>
+        <p><strong>Blank:</strong> Below Basic (Below 50%)</p>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="footer">
+        <div>Printed from: Pwezacore</div>
+        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
+      </div>
+    </body>
+    </html>
+  `;
 }
 
 function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
