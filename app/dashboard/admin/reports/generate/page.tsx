@@ -1481,23 +1481,23 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                // Use proper O-Level data structure
-                const formative = result.formative_score ?? '';
-                const exam = result.exam_score ?? '';
-                const finalScore = result.final_score ?? '';
-                const finalNum = parseFloat(finalScore) || 0;
-                const gradeText = result.grade || calculateGrade(finalNum);
-                const levelOfAchievement = getLevelOfAchievement(gradeText);
-                const descriptor = getDescriptor(levelOfAchievement);
-                const teacherInitials = result.teacher_initials ?? '';
+                // Correct Template 2 data mapping as specified
+                const subject = result.subject ?? '';
+                const formative = result.formative_score ?? ''; // Formative Score [20%]
+                const exam = result.exam_score ?? ''; // EOY Summative Assessment (80%)
+                const finalScore = result.final_score ?? ''; // Total (100%)
+                const grade = result.grade ?? '';
+                const levelOfAchievement = result.activity_score ?? ''; // Level of Achievement/3 (Activity Score [3])
+                const descriptor = result.descriptor ?? '';
+                const teacherInitials = result.teacher_initials ?? ''; // TR's Initial
                 
                 return (
                   <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{result.subject}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{formative}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{exam}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalScore}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{gradeText}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{grade}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{levelOfAchievement}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>

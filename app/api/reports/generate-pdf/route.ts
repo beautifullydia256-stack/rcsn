@@ -1132,56 +1132,35 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         <thead>
           <tr>
             <th>SUBJECT</th>
-            <th>FORMATIVE</th>
-            <th>EXAM</th>
-            <th>FINAL SCORE</th>
+            <th>FORMATIVE SCORE [20%]</th>
+            <th>EOY SUMMATIVE ASSESSMENT (80%)</th>
+            <th>TOTAL (100%)</th>
             <th>GRADE</th>
-            <th>LEVEL OF ACHIEVEMENT</th>
+            <th>LEVEL OF ACHIEVEMENT/3</th>
             <th>DESCRIPTOR</th>
-            <th>INIT</th>
+            <th>TR'S INITIAL</th>
           </tr>
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
-              const formative = result.formative_score ?? '';
-              const exam = result.exam_score ?? '';
-              const finalScore = result.final_score ?? '';
-              const finalNum = parseFloat(finalScore) || 0;
-              const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
-              
-              // Calculate level of achievement based on grade (Template 2 specific)
-              const getLevelOfAchievement = (grade: string) => {
-                switch (grade) {
-                  case 'A': return '2.8';
-                  case 'B': return '2.2';
-                  case 'C': return '2.0';
-                  case 'D': return '1.5';
-                  case 'E': return '1.2';
-                  default: return '';
-                }
-              };
-              
-              // Get descriptor based on level of achievement (Template 2 specific)
-              const getDescriptor = (level: string) => {
-                const num = parseFloat(level);
-                if (num >= 2.5) return 'Outstanding';
-                if (num >= 1.5) return 'Moderate';
-                if (num >= 0.9) return 'Basic';
-                return '';
-              };
-              
-              const levelOfAchievement = getLevelOfAchievement(gradeText);
-              const descriptor = getDescriptor(levelOfAchievement);
-              const teacherInitials = result.teacher_initials ?? '';
+              // Correct Template 2 data mapping as specified
+              const subject = result.subject ?? '';
+              const formative = result.formative_score ?? ''; // Formative Score [20%]
+              const exam = result.exam_score ?? ''; // EOY Summative Assessment (80%)
+              const finalScore = result.final_score ?? ''; // Total (100%)
+              const grade = result.grade ?? '';
+              const levelOfAchievement = result.activity_score ?? ''; // Level of Achievement/3 (Activity Score [3])
+              const descriptor = result.descriptor ?? '';
+              const teacherInitials = result.teacher_initials ?? ''; // TR's Initial
 
               return `
                 <tr>
-                  <td style="border: 1px solid #000; padding: 4px; font-weight: bold;">${result.subject}</td>
+                  <td style="border: 1px solid #000; padding: 4px; font-weight: bold;">${subject}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${formative}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${exam}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${finalScore}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${gradeText}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${grade}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${levelOfAchievement}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${descriptor}</td>
                   <td style="border: 1px solid #000; padding: 4px; text-align: center;">${teacherInitials}</td>
