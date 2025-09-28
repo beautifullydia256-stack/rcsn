@@ -302,12 +302,14 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     const page = await browser.newPage();
     console.log('Page created successfully');
     
-    // Set viewport for WYSIWYG rendering to match A4 exactly
-    const viewportConfig = isVercel 
-      ? { width: 794, height: 1123, deviceScaleFactor: 1 } // A4 dimensions at 96 DPI for Vercel
-      : { width: 794, height: 1123, deviceScaleFactor: 2 }; // A4 dimensions at 96 DPI for local
+    // Set viewport for perfect WYSIWYG rendering to match A4 exactly
+    const viewportConfig = { 
+      width: 794, 
+      height: 1123, 
+      deviceScaleFactor: 1 // Consistent 1:1 scaling for perfect WYSIWYG
+    };
     await page.setViewport(viewportConfig);
-    console.log('Viewport set');
+    console.log('Viewport set for WYSIWYG fidelity');
     
     // Set content with proper wait for images to load
     console.log('Setting page content...');
@@ -327,12 +329,11 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       console.log('Page content set successfully with domcontentloaded');
     }
     
-    // Wait a bit more for any remaining images to load (optimized for Vercel)
-    const waitTime = isVercel ? 500 : 1000; // Shorter wait for Vercel
-    await new Promise(resolve => setTimeout(resolve, waitTime));
+    // Wait for fonts and images to load completely for perfect WYSIWYG
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Generate PDF with WYSIWYG settings to match preview exactly
-    console.log('Generating PDF...');
+    // Generate PDF with perfect WYSIWYG settings to match preview exactly
+    console.log('Generating PDF with WYSIWYG fidelity...');
     const pdfOptions = {
       format: 'A4' as const,
       margin: {
@@ -343,7 +344,10 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       },
       printBackground: true,
       preferCSSPageSize: false, // Use our custom page size
-      timeout: isVercel ? 10000 : 15000 // Shorter timeout for Vercel
+      scale: 1.0, // No scaling - exact 1:1 match
+      width: '210mm', // Exact A4 width
+      height: '297mm', // Exact A4 height
+      timeout: 15000
     };
     
     const pdfBuffer = await page.pdf(pdfOptions);
@@ -408,14 +412,19 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -423,6 +432,10 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
@@ -828,14 +841,19 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -843,6 +861,10 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
@@ -1171,14 +1193,19 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -1186,6 +1213,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
@@ -1498,14 +1529,19 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -1513,6 +1549,10 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
@@ -1925,14 +1965,19 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -1940,6 +1985,10 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
@@ -2280,14 +2329,19 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
     <head>
       <meta charset="utf-8">
       <title>Student Report</title>
+      <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         @page {
           size: A4;
           margin: 0;
         }
         
+        * {
+          box-sizing: border-box;
+        }
+        
         body {
-          font-family: 'Times New Roman', Arial, sans-serif;
+          font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
@@ -2295,6 +2349,10 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
           box-sizing: border-box;
           background: white;
           color: black;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
         }
         
         .header {
