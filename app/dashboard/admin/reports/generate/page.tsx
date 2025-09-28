@@ -404,6 +404,9 @@ export default function GenerateReportsPage() {
     setDownloadingPDF(true);
     setError(null);
     
+    console.log('Downloading PDF with template:', selectedTemplate);
+    console.log('Student class:', reportData.students[0]?.current_class);
+    
     try {
       const response = await fetch('/api/reports/generate-pdf', {
         method: 'POST',
