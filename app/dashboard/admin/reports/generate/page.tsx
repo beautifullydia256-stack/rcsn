@@ -51,6 +51,20 @@ import { CompressionResult } from "@/src/lib/imageCompression";
 
 export default function GenerateReportsPage() {
   const router = useRouter();
+  
+  // Load custom templates
+  const loadCustomTemplates = async () => {
+    try {
+      const response = await fetch('/api/templates');
+      if (response.ok) {
+        const data = await response.json();
+        setCustomTemplates(data.templates || []);
+      }
+    } catch (error) {
+      console.error('Error loading custom templates:', error);
+    }
+  };
+
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [examSets, setExamSets] = useState<any[]>([]);
@@ -65,7 +79,8 @@ export default function GenerateReportsPage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
-  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3'>('template1');
+  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | string>('template1');
+  const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   
   // Report data
   const [reportData, setReportData] = useState<any>(null);
@@ -120,6 +135,9 @@ export default function GenerateReportsPage() {
           .select('*')
           .eq('school_id', u.school_id)
           .single();
+
+        // Load custom templates
+        await loadCustomTemplates();
 
         // Initialize custom header with saved customizations or school defaults
         setCustomHeader({
@@ -661,6 +679,12 @@ export default function GenerateReportsPage() {
               {showHeaderCustomization ? 'Hide' : 'Customize'} Header
             </button>
             <button
+              onClick={() => router.push('/dashboard/admin/report-card-editor')}
+              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white"
+            >
+              Customize Report Card
+            </button>
+            <button
               onClick={() => router.push('/dashboard/admin/reports')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
             >
@@ -827,13 +851,24 @@ export default function GenerateReportsPage() {
                 <select
                   value={selectedTemplate}
                   onChange={(e) => {
-                    setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3');
+                    setSelectedTemplate(e.target.value);
                   }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option className="text-black" value="template1">Template 1 - O-Level Format</option>
-                  <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                  <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
+                  <optgroup label="Default Templates" className="text-black">
+                    <option className="text-black" value="template1">Template 1 - O-Level Format</option>
+                    <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
+                    <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
+                  </optgroup>
+                  {customTemplates.length > 0 && (
+                    <optgroup label="Custom Templates" className="text-black">
+                      {customTemplates.map((template) => (
+                        <option key={template.id} className="text-black" value={`custom_${template.id}`}>
+                          {template.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             )}
@@ -1025,7 +1060,10 @@ export default function GenerateReportsPage() {
               <div className="text-white/70 text-sm">
                 Template: {selectedTemplate === 'template1' ? 'O-Level Format' : 
                           selectedTemplate === 'template2' ? 'St. Adrian Kasozi Format' : 
-                          selectedTemplate === 'template3' ? 'Kyotera Parents Format' : 'Default'}
+                          selectedTemplate === 'template3' ? 'Kyotera Parents Format' : 
+                          selectedTemplate.startsWith('custom_') ? 
+                            customTemplates.find(t => t.id === selectedTemplate.replace('custom_', ''))?.name || 'Custom Template' :
+                            'Default'}
               </div>
             </div>
             

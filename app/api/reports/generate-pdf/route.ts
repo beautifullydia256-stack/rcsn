@@ -3,12 +3,107 @@ import puppeteer from 'puppeteer-core';
 import JSZip from 'jszip';
 import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, formatPercentage, formatAttendance, formatPosition } from '@/src/lib/reportUtils';
 import chromium from '@sparticuz/chromium';
+import { supabase } from '@/src/lib/supabase';
 
 // Helper function to check if class is O-Level
 function isOLevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
   return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
+}
+
+// Helper function to load custom template from Supabase
+async function loadCustomTemplate(schoolId: string, templateId?: string): Promise<{ html: string; css: string } | null> {
+  try {
+    // Use the imported supabase client
+    
+    let query = supabase
+      .from('report_templates')
+      .select('html_content, css_content')
+      .eq('school_id', schoolId);
+    
+    if (templateId) {
+      query = query.eq('id', templateId);
+    } else {
+      query = query.eq('is_default', true);
+    }
+    
+    const { data, error } = await query.single();
+    
+    if (error || !data) {
+      console.log('No custom template found, using default');
+      return null;
+    }
+    
+    return {
+      html: data.html_content,
+      css: data.css_content || ''
+    };
+  } catch (error) {
+    console.error('Error loading custom template:', error);
+    return null;
+  }
+}
+
+// Helper function to replace placeholders in custom template
+function replaceTemplatePlaceholders(html: string, css: string, reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null): string {
+  const { school, examSet, students } = reportData;
+  const student = students[0];
+  
+  // Replace common placeholders
+  let processedHtml = html
+    .replace(/\[SCHOOL_NAME\]/g, school?.name || 'School Name')
+    .replace(/\[SCHOOL_ADDRESS\]/g, school?.address || 'Address')
+    .replace(/\[SCHOOL_PHONE\]/g, school?.phone || 'Phone')
+    .replace(/\[SCHOOL_EMAIL\]/g, school?.email || 'Email')
+    .replace(/\[SCHOOL_MOTTO\]/g, school?.motto || 'Motto')
+    .replace(/\[STUDENT_ID\]/g, student.admission_number || student.student_id || '')
+    .replace(/\[STUDENT_NAME\]/g, student.name || '')
+    .replace(/\[STUDENT_CLASS\]/g, student.current_class || '')
+    .replace(/\[TERM\]/g, examSet?.term || '')
+    .replace(/\[YEAR\]/g, examSet?.year || '')
+    .replace(/\[AVERAGE_SCORE\]/g, student.summary?.average || '')
+    .replace(/\[OVERALL_GRADE\]/g, student.summary?.division || '')
+    .replace(/\[POSITION\]/g, student.summary?.position || '')
+    .replace(/\[TEACHER_COMMENT\]/g, student.comments?.class_teacher_text || '')
+    .replace(/\[TEACHER_NAME\]/g, student.comments?.class_teacher_name || '')
+    .replace(/\[DATE\]/g, new Date().toLocaleDateString());
+  
+  // Replace school logo
+  if (schoolLogoBase64) {
+    processedHtml = processedHtml.replace(
+      /<div[^>]*class="[^"]*school-logo[^"]*"[^>]*>[\s\S]*?<\/div>/g,
+      `<div class="school-logo"><img src="${schoolLogoBase64}" alt="School Logo" /></div>`
+    );
+  }
+  
+  // Replace student photo
+  if (studentPhotoBase64) {
+    processedHtml = processedHtml.replace(
+      /<div[^>]*class="[^"]*student-photo[^"]*"[^>]*>[\s\S]*?<\/div>/g,
+      `<div class="student-photo"><img src="${studentPhotoBase64}" alt="Student Photo" /></div>`
+    );
+  }
+  
+  // Replace results table with actual data
+  if (student.results && student.results.length > 0) {
+    const resultsRows = student.results.map((result: any) => `
+      <tr>
+        <td>${result.subject || ''}</td>
+        <td>${result.marks_obtained || result.exam_score || ''}</td>
+        <td>${result.total_marks || '100'}</td>
+        <td>${result.grade || ''}</td>
+        <td>${result.remark || result.overall_remark || ''}</td>
+      </tr>
+    `).join('');
+    
+    processedHtml = processedHtml.replace(
+      /<tbody>[\s\S]*?<\/tbody>/g,
+      `<tbody>${resultsRows}</tbody>`
+    );
+  }
+  
+  return processedHtml;
 }
 
 // Helper function to convert image URL to base64 data URL
@@ -173,8 +268,6 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
   // Generate HTML with embedded images using the correct template
   console.log('Generating HTML with embedded images using template:', template);
   
-  let htmlContent: string;
-  
   // Check if this is an O-Level class and use the appropriate template
   console.log('=== TEMPLATE SELECTION DEBUG ===');
   console.log('Student class:', student.current_class);
@@ -185,30 +278,62 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
   console.log('Template parameter === "template2":', template === 'template2');
   console.log('Template parameter === "template3":', template === 'template3');
   
-  if (isOLevelClass(student.current_class)) {
-    console.log('Using O-Level template selection logic');
-    switch (template) {
-      case 'template1':
-        console.log('✅ SELECTED: Generating Template 1 (O-Level) HTML');
-        htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
-        break;
-      case 'template2':
-        console.log('✅ SELECTED: Generating Template 2 (Kasozi) HTML');
-        htmlContent = generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64);
-        break;
-      case 'template3':
-        console.log('✅ SELECTED: Generating Template 3 (Kyotera) HTML');
-        htmlContent = generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
-        break;
-      default:
-        console.log('❌ DEFAULT: Template not recognized, defaulting to Template 1');
-        console.log('Template value was:', JSON.stringify(template));
-        htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+  // Initialize htmlContent variable
+  let htmlContent = '';
+  
+  // Try to load custom template if template ID is provided
+  if (template && template.startsWith('custom_')) {
+    const templateId = template.replace('custom_', '');
+    console.log('Loading custom template with ID:', templateId);
+    
+    try {
+      const customTemplate = await loadCustomTemplate(school.id, templateId);
+      if (customTemplate) {
+        console.log('✅ Using custom template');
+        htmlContent = replaceTemplatePlaceholders(
+          customTemplate.html, 
+          customTemplate.css, 
+          reportData, 
+          schoolLogoBase64, 
+          studentPhotoBase64
+        );
+      } else {
+        console.log('❌ Custom template not found, falling back to default');
+        // Fall back to default template logic below
+      }
+    } catch (error) {
+      console.error('Error loading custom template:', error);
+      // Fall back to default template logic below
     }
-  } else {
-    console.log('Using Secondary template (non-O-Level class)');
-    // For non-O-Level classes, use the secondary template
-    htmlContent = generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+  }
+  
+  // Use default templates if no custom template was loaded
+  if (!htmlContent) {
+    if (isOLevelClass(student.current_class)) {
+      console.log('Using O-Level template selection logic');
+      switch (template) {
+        case 'template1':
+          console.log('✅ SELECTED: Generating Template 1 (O-Level) HTML');
+          htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+          break;
+        case 'template2':
+          console.log('✅ SELECTED: Generating Template 2 (Kasozi) HTML');
+          htmlContent = generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+          break;
+        case 'template3':
+          console.log('✅ SELECTED: Generating Template 3 (Kyotera) HTML');
+          htmlContent = generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+          break;
+        default:
+          console.log('❌ DEFAULT: Template not recognized, defaulting to Template 1');
+          console.log('Template value was:', JSON.stringify(template));
+          htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      }
+    } else {
+      console.log('Using Secondary template (non-O-Level class)');
+      // For non-O-Level classes, use the secondary template
+      htmlContent = generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+    }
   }
   console.log('=== END TEMPLATE SELECTION DEBUG ===');
   
