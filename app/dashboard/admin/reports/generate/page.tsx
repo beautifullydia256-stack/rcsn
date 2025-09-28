@@ -404,8 +404,15 @@ export default function GenerateReportsPage() {
     setDownloadingPDF(true);
     setError(null);
     
-    console.log('Downloading PDF with template:', selectedTemplate);
+    console.log('=== FRONTEND TEMPLATE DEBUG ===');
+    console.log('Selected template:', selectedTemplate);
+    console.log('Template type:', typeof selectedTemplate);
+    console.log('Template === "template1":', selectedTemplate === 'template1');
+    console.log('Template === "template2":', selectedTemplate === 'template2');
+    console.log('Template === "template3":', selectedTemplate === 'template3');
     console.log('Student class:', reportData.students[0]?.current_class);
+    console.log('Is O-Level class:', isOLevelClass(reportData.students[0]?.current_class));
+    console.log('=== END FRONTEND DEBUG ===');
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
@@ -477,6 +484,11 @@ export default function GenerateReportsPage() {
     
     setDownloadingClassPDF(true);
     setError(null);
+    
+    console.log('=== CLASS PDF TEMPLATE DEBUG ===');
+    console.log('Selected template for class reports:', selectedTemplate);
+    console.log('Template type:', typeof selectedTemplate);
+    console.log('=== END CLASS DEBUG ===');
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
