@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
     console.log('PDF generation request received');
     const { reportData, type, template } = await request.json();
     console.log('Report data received, type:', type, 'template:', template);
+    console.log('Template type:', typeof template);
+    console.log('Template value:', JSON.stringify(template));
 
     // Validate required data
     if (!reportData) {
@@ -75,6 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'single') {
+      console.log('Calling generateSingleReportPDF with template:', template);
       const pdfBuffer = await generateSingleReportPDF(reportData, template);
       
       const student = reportData.students[0];
@@ -87,6 +90,7 @@ export async function POST(request: NextRequest) {
         }
       });
     } else if (type === 'class') {
+      console.log('Generating class reports with template:', template);
       const zip = new JSZip();
       
       for (const student of reportData.students) {
@@ -94,6 +98,7 @@ export async function POST(request: NextRequest) {
           ...reportData,
           students: [student]
         };
+        console.log('Generating PDF for student:', student.name, 'with template:', template);
         const pdfBuffer = await generateSingleReportPDF(studentReportData, template);
         const filename = `${student.name}_${student.current_class}_Report_${reportData.examSet.name}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_');
         zip.file(filename, pdfBuffer);
