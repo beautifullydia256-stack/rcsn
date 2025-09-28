@@ -280,10 +280,10 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     const page = await browser.newPage();
     console.log('Page created successfully');
     
-    // Set viewport for consistent rendering (optimized for Vercel)
+    // Set viewport for WYSIWYG rendering to match A4 exactly
     const viewportConfig = isVercel 
-      ? { width: 1200, height: 800, deviceScaleFactor: 1 } // Reduced scale for Vercel
-      : { width: 1200, height: 800, deviceScaleFactor: 2 };
+      ? { width: 794, height: 1123, deviceScaleFactor: 1 } // A4 dimensions at 96 DPI for Vercel
+      : { width: 794, height: 1123, deviceScaleFactor: 2 }; // A4 dimensions at 96 DPI for local
     await page.setViewport(viewportConfig);
     console.log('Viewport set');
     
@@ -309,18 +309,18 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     const waitTime = isVercel ? 500 : 1000; // Shorter wait for Vercel
     await new Promise(resolve => setTimeout(resolve, waitTime));
     
-    // Generate PDF with improved settings (optimized for Vercel)
+    // Generate PDF with WYSIWYG settings to match preview exactly
     console.log('Generating PDF...');
     const pdfOptions = {
       format: 'A4' as const,
       margin: {
-        top: '15mm',
-        right: '15mm',
-        bottom: '15mm',
-        left: '15mm'
+        top: '0mm',
+        right: '0mm', 
+        bottom: '0mm',
+        left: '0mm'
       },
       printBackground: true,
-      preferCSSPageSize: true,
+      preferCSSPageSize: false, // Use our custom page size
       timeout: isVercel ? 10000 : 15000 // Shorter timeout for Vercel
     };
     
@@ -389,14 +389,14 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;
@@ -806,14 +806,14 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;
@@ -1113,14 +1113,14 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;
@@ -1409,14 +1409,14 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;
@@ -1833,14 +1833,14 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;
@@ -2188,14 +2188,14 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
       <style>
         @page {
           size: A4;
-          margin: 15mm;
+          margin: 0;
         }
         
         body {
           font-family: 'Times New Roman', Arial, sans-serif;
           width: 210mm;
           min-height: 297mm;
-          margin: 0 auto;
+          margin: 0;
           padding: 15mm;
           box-sizing: border-box;
           background: white;

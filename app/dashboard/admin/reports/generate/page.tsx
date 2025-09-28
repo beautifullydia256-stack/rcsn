@@ -1025,16 +1025,16 @@ export default function GenerateReportsPage() {
             
             <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-[80vh]">
               <div className="bg-white shadow-lg mx-auto" style={{ width: '210mm', minHeight: '297mm' }}>
-                {reportData.students.map((student: any, index: number) => (
+            {reportData.students.map((student: any, index: number) => (
                   <div key={student.student_id} className={index > 0 ? 'mt-8' : ''}>
-                    <ReportPreview 
-                      student={student} 
-                      examSet={reportData.examSet} 
-                      school={reportData.school}
-                      template={selectedTemplate}
-                    />
-                  </div>
-                ))}
+                <ReportPreview 
+                  student={student} 
+                  examSet={reportData.examSet} 
+                  school={reportData.school}
+                  template={selectedTemplate}
+                />
+              </div>
+            ))}
               </div>
             </div>
             
@@ -1150,8 +1150,25 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
           <div className="font-bold text-[11pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
           <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
         </div>
+        </div>
         
-        {/* Student Photo */}
+      {/* REPORT TITLE */}
+      <div className="text-center bg-green-600 text-white py-2 mb-4">
+        <h1 className="text-[13pt] font-bold uppercase">
+          LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
+        </h1>
+      </div>
+
+      {/* Student Info and Photo - Side by side */}
+      <div className="flex justify-between items-start mb-4">
+        {/* LEARNER INFO - Left side */}
+        <div className="text-[11pt]">
+          <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
+          <div><strong>NAME:</strong> {student.name}</div>
+          <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+        </div>
+        
+        {/* Student Photo - Right side */}
         <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
           {student.profile_photo ? (
             <img
@@ -1163,20 +1180,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
             <div className="text-xs text-gray-500">Photo</div>
           )}
         </div>
-      </div>
-
-      {/* REPORT TITLE */}
-      <div className="text-center bg-green-600 text-white py-2 mb-4">
-        <h1 className="text-[13pt] font-bold uppercase">
-          LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
-        </h1>
-      </div>
-
-      {/* LEARNER INFO */}
-      <div className="mb-4 text-[11pt]">
-        <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
-        <div><strong>NAME:</strong> {student.name}</div>
-        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
       </div>
 
 
@@ -1397,10 +1400,10 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         
         {/* School Info */}
         <div className="text-center flex-1">
-          <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-          <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
-          <div className="text-[9pt] mt-1">
-            P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
+        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
+        <div className="text-[9pt] mt-1">
+          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
           </div>
         </div>
       </div>
@@ -1627,14 +1630,14 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         
         {/* School Info */}
         <div className="text-center flex-1">
-          <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
           <div className="font-bold text-[13pt] mt-1">
-            {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
-            Tel: {school?.phone || '0701861636 / 0700338061'} | 
-            E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
-          </div>
-          <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
-          <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
+          {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
+          Tel: {school?.phone || '0701861636 / 0700338061'} | 
+          E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
+        </div>
+        <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+        <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
         </div>
       </div>
 
