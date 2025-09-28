@@ -359,29 +359,11 @@ export default function ReportCardEditor() {
   // Load templates from Supabase
   const loadTemplates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error || !data) return;
-
-      const { data: templates, error: templateError } = await supabase
-        .from('report_templates')
-        .select('*')
-        .eq('school_id', data.id)
-        .order('created_at', { ascending: false });
-
-      if (templateError) {
-        console.error('Error loading templates:', templateError);
-        return;
+      const response = await fetch('/api/templates');
+      if (response.ok) {
+        const data = await response.json();
+        setTemplates(data.templates || []);
       }
-
-      setTemplates(templates || []);
     } catch (error) {
       console.error('Error loading templates:', error);
     }
@@ -395,44 +377,28 @@ export default function ReportCardEditor() {
     setSaveMessage('');
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setSaveMessage('Error: User not authenticated');
-        setIsSaving(false);
-        return;
-      }
-
-      const { data: schoolData, error: schoolError } = await supabase
-        .from('schools')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (schoolError || !schoolData) {
-        setSaveMessage('Error: School not found');
-        setIsSaving(false);
-        return;
-      }
-
       const html = editor.getHtml();
       const css = editor.getCss();
-      const templateData = {
-        name: templateName,
-        school_id: schoolData.id,
-        html_content: html,
-        css_content: css,
-        is_default: false
-      };
+      
+      const response = await fetch('/api/templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: templateName,
+          html_content: html,
+          css_content: css,
+          is_default: false
+        }),
+      });
 
-      const { error } = await supabase
-        .from('report_templates')
-        .upsert(templateData);
-
-      if (error) {
-        setSaveMessage('Error saving template: ' + error.message);
-      } else {
+      if (response.ok) {
         setSaveMessage('Template saved successfully!');
         loadTemplates();
+      } else {
+        const errorData = await response.json();
+        setSaveMessage('Error saving template: ' + errorData.error);
       }
     } catch (error) {
       setSaveMessage('Error saving template: ' + (error as Error).message);
@@ -498,7 +464,7 @@ export default function ReportCardEditor() {
               <option value="">Select a template...</option>
               {templates.map((template) => (
                 <option key={template.id} value={template.id}>
-                  {template.name}
+                  {template.school_id === null ? `📋 ${template.name} (Default)` : `🏫 ${template.name}`}
                 </option>
               ))}
             </select>

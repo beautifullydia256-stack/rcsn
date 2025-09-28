@@ -856,9 +856,9 @@ export default function GenerateReportsPage() {
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <optgroup label="Default Templates" className="text-black">
-                    <option className="text-black" value="template1">Template 1 - O-Level Format</option>
-                    <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                    <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
+                  <option className="text-black" value="template1">Template 1 - O-Level Format</option>
+                  <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
+                  <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
                   </optgroup>
                   {customTemplates.length > 0 && (
                     <optgroup label="Custom Templates" className="text-black">

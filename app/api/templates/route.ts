@@ -23,11 +23,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'School not found' }, { status: 404 });
     }
 
-    // Fetch templates for the school
+    // Fetch both global default templates and school-specific templates
     const { data: templates, error: templatesError } = await supabase
       .from('report_templates')
       .select('*')
-      .eq('school_id', school.id)
+      .or(`school_id.is.null,school_id.eq.${school.id}`)
+      .order('school_id', { ascending: false }) // School templates first, then defaults
       .order('created_at', { ascending: false });
 
     if (templatesError) {
@@ -71,16 +72,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Name and HTML content are required' }, { status: 400 });
     }
 
+    // Check if this is editing a default template (by checking if a template with this name exists as global default)
+    const { data: existingDefault } = await supabase
+      .from('report_templates')
+      .select('id')
+      .eq('name', name)
+      .is('school_id', null)
+      .single();
+
+    // If editing a default template, create a school-specific copy
+    const templateData = {
+      school_id: school.id,
+      name: existingDefault ? `${name} (Custom)` : name, // Add "(Custom)" suffix for default template copies
+      html_content,
+      css_content: css_content || '',
+      is_default: false // School-specific templates are never marked as default
+    };
+
     // Create template
     const { data: template, error: templateError } = await supabase
       .from('report_templates')
-      .insert({
-        school_id: school.id,
-        name,
-        html_content,
-        css_content: css_content || '',
-        is_default
-      })
+      .insert(templateData)
       .select()
       .single();
 
