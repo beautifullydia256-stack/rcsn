@@ -2291,39 +2291,6 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
       </div>
 
-      <!-- PROJECTS TABLE -->
-      <table>
-        <thead>
-          <tr>
-            <th>Subject</th>
-            <th>Project Title</th>
-            <th>Remark</th>
-            <th>Score</th>
-            <th>Teacher</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${projects.length > 0 ? 
-            projects.map((p: any) => `
-              <tr>
-                <td>${p.subject ?? 'N/A'}</td>
-                <td>${p.project_title ?? 'N/A'}</td>
-                <td>${p.remark ?? 'N/A'}</td>
-                <td class="center">${p.score != null ? String(p.score) : 'N/A'}</td>
-                <td>${p.teacher ?? 'N/A'}</td>
-              </tr>
-            `).join('') : `
-              <tr>
-                <td class="center">N/A</td>
-                <td class="center">N/A</td>
-                <td class="center">N/A</td>
-                <td class="center">N/A</td>
-                <td class="center">N/A</td>
-              </tr>
-            `
-          }
-        </tbody>
-      </table>
 
       <!-- COMMENTS -->
       <div class="comments">

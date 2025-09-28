@@ -1959,33 +1959,6 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
       </div>
 
-      {/* TERMLY PROJECTS */}
-      <table className="w-full mt-3" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
-        <thead>
-          <tr>
-            {['Subject','Project Title','Remark','Score','Teacher'].map(h => (
-              <th key={h} style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {(student.projects && student.projects.length > 0) ? (
-            student.projects.map((p: any, idx: number) => (
-              <tr key={idx}>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.subject || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.project_title || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.remark || 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.score ?? 'N/A'}</td>
-                <td style={{ border: '1px solid #000', padding: '6px' }}>{p.teacher || 'N/A'}</td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={5} style={{ border: '1px solid #000', padding: '6px' }}>N/A</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
 
       {/* COMMENTS */}
       <div className="mt-4 text-[10pt]">
