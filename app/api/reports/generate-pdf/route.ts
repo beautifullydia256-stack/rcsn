@@ -417,12 +417,14 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          border: none;
         }
         
         .school-logo img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border: none;
         }
         
         .school-info {
@@ -1438,12 +1440,14 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           align-items: center;
           justify-content: center;
           overflow: hidden;
+          border: none;
         }
         
         .school-logo img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border: none;
         }
         
         .school-info {
