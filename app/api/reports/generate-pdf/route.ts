@@ -2248,45 +2248,37 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
       <table>
         <thead>
           <tr>
-            <th>Subjects & Topics</th>
-            <th>Activity [3]</th>
-            <th>Descriptor</th>
-            <th>Formative (20%)</th>
-            <th>Exam (80%)</th>
-            <th>Final (100%)</th>
-            <th>Grade</th>
-            <th>Overall Remark</th>
-            <th>Teacher</th>
+            <th>SUBJECT & PAPER</th>
+            <th>MARKS OBTAINED</th>
+            <th>TOTAL MARKS</th>
+            <th>GRADE</th>
+            <th>REMARK</th>
+            <th>INITIALS</th>
           </tr>
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
-              const activity = result.activity_score != null ? String(result.activity_score) : 'N/A';
-              const descriptor = result.descriptor ?? 'N/A';
-              const formative = result.formative_score != null ? String(result.formative_score) : 'N/A';
-              const exam = result.exam_score != null ? String(result.exam_score) : 'N/A';
-              const finalScore = result.final_score != null ? String(result.final_score) : (result.total_marks ? String(Math.round((result.marks_obtained / result.total_marks) * 100)) : 'N/A');
-              const gradeText = result.grade ?? 'N/A';
-              const overallRemark = result.overall_remark ?? 'N/A';
-              const teacherName = result.teacher_name ?? '-';
+              const subject = result.subject ?? '';
+              const marksObtained = result.marks_obtained != null ? String(result.marks_obtained) : '';
+              const totalMarks = result.total_marks != null ? String(result.total_marks) : '';
+              const grade = result.grade ?? '';
+              const remark = result.remark ?? result.overall_remark ?? '';
+              const initials = result.teacher_initials ?? result.teacher_name ?? '';
 
               return `
                 <tr>
-                  <td><strong>${result.subject}</strong></td>
-                  <td class="center">${activity}</td>
-                  <td class="center">${descriptor}</td>
-                  <td class="center">${formative}</td>
-                  <td class="center">${exam}</td>
-                  <td class="center">${finalScore}</td>
-                  <td class="center">${gradeText}</td>
-                  <td>${overallRemark}</td>
-                  <td class="center">${teacherName}</td>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${subject}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${marksObtained}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${totalMarks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${grade}</td>
+                  <td style="border: 1px solid #000; padding: 6px;">${remark}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${initials}</td>
                 </tr>
               `;
             }).join('') : `
               <tr>
-                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+                <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">N/A - Student did not sit for this term</td>
               </tr>
             `
           }

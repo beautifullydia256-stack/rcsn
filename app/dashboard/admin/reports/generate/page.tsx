@@ -1919,7 +1919,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
       <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
         <thead>
           <tr>
-            {['Subjects & Topics Covered','Activity Score [3]','Descriptor','Formative (20%)','Exam (80%)','Final (100%)','Grade','Overall Remark','Subject Teacher'].map(h => (
+            {['SUBJECT & PAPER', 'MARKS OBTAINED', 'TOTAL MARKS', 'GRADE', 'REMARK', 'INITIALS'].map(h => (
               <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '6px' }}>{h}</th>
             ))}
           </tr>
@@ -1927,40 +1927,27 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         <tbody>
           {student.results.length > 0 ? (
             student.results.map((result: any, index: number) => {
-              const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-              const topics = Array.isArray(result.topics) ? result.topics : [];
-              const activity = result.activity_score ?? 'N/A';
-              const descriptor = result.descriptor ?? (gradeInfo.remark || 'N/A');
-              const formative = result.formative_score ?? 'N/A';
-              const exam = result.exam_score ?? 'N/A';
-              const finalScore = result.final_score ?? (result.total_marks ? Math.round((result.marks_obtained / result.total_marks) * 100) : 'N/A');
-              const gradeText = result.grade ?? gradeInfo.grade ?? 'N/A';
-              const overallRemark = result.overall_remark ?? gradeInfo.remark ?? 'N/A';
-              const teacherName = result.teacher_name ?? '-';
+              const subject = result.subject ?? '';
+              const marksObtained = result.marks_obtained ?? '';
+              const totalMarks = result.total_marks ?? '';
+              const grade = result.grade ?? '';
+              const remark = result.remark ?? result.overall_remark ?? '';
+              const initials = result.teacher_initials ?? result.teacher_name ?? '';
+              
               return (
                 <tr key={index}>
-                  <td style={{ border: '1px solid #000', padding: '6px' }}>
-                    <strong>{result.subject}</strong>
-                    <div className="text-[9pt] leading-snug">
-                      {topics.length > 0 ? topics.map((t: any, i: number) => (
-                        <div key={i}>{typeof t === 'string' ? t : JSON.stringify(t)}</div>
-                      )) : null}
-                    </div>
-                  </td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{activity}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{descriptor}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{formative}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{exam}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{finalScore}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{gradeText}</td>
-                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '6px' }}>{overallRemark}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px' }}>{teacherName}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold' }}>{subject}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{marksObtained}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{totalMarks}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{grade}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{remark}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
                 </tr>
               );
             })
           ) : (
             <tr>
-              <td colSpan={9} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+              <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
             </tr>
           )}
         </tbody>
