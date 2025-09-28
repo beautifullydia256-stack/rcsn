@@ -140,6 +140,14 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     throw new Error('No exam set data provided');
   }
 
+  // Log data validation for debugging
+  console.log('Data validation passed:');
+  console.log('- Student:', student.name, 'Class:', student.current_class);
+  console.log('- School:', school.name);
+  console.log('- Exam Set:', examSet.name);
+  console.log('- Student summary exists:', !!student.summary);
+  console.log('- Student subjects count:', student.subjects?.length || 0);
+
   // Convert images to base64 for embedding
   console.log('Converting images to base64...');
   let schoolLogoBase64 = null;
@@ -365,7 +373,33 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       message: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined
     });
-    throw error;
+    
+    // If there's an error, still try to generate a basic PDF with Template 1 as fallback
+    console.log('Attempting fallback PDF generation with Template 1...');
+    try {
+      const fallbackHtml = generateTemplate1OLevelHTML(reportData, null, null);
+      const fallbackPage = await browser.newPage();
+      await fallbackPage.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+      await fallbackPage.setContent(fallbackHtml, { waitUntil: 'domcontentloaded', timeout: 10000 });
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const fallbackPdf = await fallbackPage.pdf({
+        format: 'A4',
+        margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+        printBackground: true,
+        preferCSSPageSize: false,
+        scale: 1.0,
+        width: '210mm',
+        height: '297mm'
+      });
+      
+      await fallbackPage.close();
+      console.log('Fallback PDF generated successfully');
+      return fallbackPdf;
+    } catch (fallbackError) {
+      console.error('Fallback PDF generation also failed:', fallbackError);
+      throw error; // Throw original error if fallback also fails
+    }
   } finally {
     console.log('Closing browser...');
     try {
