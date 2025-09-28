@@ -89,6 +89,11 @@ export default function GenerateReportsPage() {
     logoPreview: null as string | null
   });
   const [showHeaderCustomization, setShowHeaderCustomization] = useState(false);
+
+  // Debug template selection changes
+  useEffect(() => {
+    console.log('selectedTemplate state changed to:', selectedTemplate);
+  }, [selectedTemplate]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoCompressionResult, setLogoCompressionResult] = useState<CompressionResult | null>(null);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
@@ -838,7 +843,10 @@ export default function GenerateReportsPage() {
                 </label>
                 <select
                   value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3')}
+                  onChange={(e) => {
+                    console.log('Template selection changed to:', e.target.value);
+                    setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3');
+                  }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option className="text-black" value="template1">Template 1 - O-Level Format</option>
@@ -847,6 +855,11 @@ export default function GenerateReportsPage() {
                 </select>
               </div>
             )}
+            
+            {/* Debug info for template selection */}
+            <div className="text-white/50 text-xs">
+              Debug: selectedClass="{selectedClass}", isOLevel={isOLevelClass(selectedClass).toString()}, selectedTemplate="{selectedTemplate}"
+            </div>
 
             {/* Report Type */}
             <div>
