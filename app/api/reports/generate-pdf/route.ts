@@ -636,10 +636,6 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           <div class="school-motto">SCHOOL MOTTO: ${school?.motto || 'Education the Future'}</div>
         </div>
         
-        <!-- Student Photo -->
-        <div class="student-photo">
-          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
-        </div>
       </div>
 
       <!-- REPORT TITLE -->
@@ -647,11 +643,19 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}
       </div>
 
-      <!-- LEARNER INFO -->
-      <div class="student-info">
-        <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
-        <div><strong>NAME:</strong> ${student.name}</div>
-        <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
+      <!-- Student Info and Photo - Side by side -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+        <!-- LEARNER INFO - Left side -->
+        <div class="student-info" style="margin-bottom: 0;">
+          <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
+          <div><strong>NAME:</strong> ${student.name}</div>
+          <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
+        </div>
+        
+        <!-- Student Photo - Right side -->
+        <div class="student-photo">
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
+        </div>
       </div>
 
       <!-- SUBJECTS TABLE -->
@@ -1656,10 +1660,6 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           <div class="school-motto">SCHOOL MOTTO: ${school?.motto || 'Education the Future'}</div>
         </div>
         
-        <!-- Student Photo -->
-        <div class="student-photo">
-          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
-        </div>
       </div>
 
       <!-- REPORT TITLE -->
@@ -1667,11 +1667,19 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}
       </div>
 
-      <!-- LEARNER INFO -->
-      <div class="student-info">
-        <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
-        <div><strong>NAME:</strong> ${student.name}</div>
-        <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
+      <!-- Student Info and Photo - Side by side -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+        <!-- LEARNER INFO - Left side -->
+        <div class="student-info" style="margin-bottom: 0;">
+          <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
+          <div><strong>NAME:</strong> ${student.name}</div>
+          <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
+        </div>
+        
+        <!-- Student Photo - Right side -->
+        <div class="student-photo">
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
+        </div>
       </div>
 
       <!-- SUBJECTS TABLE -->
