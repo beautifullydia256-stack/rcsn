@@ -65,6 +65,19 @@ export default function GenerateReportsPage() {
     }
   };
 
+  // Load class template settings
+  const loadClassTemplateSettings = async () => {
+    try {
+      const response = await fetch('/api/class-template-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setClassTemplateSettings(data.settings || []);
+      }
+    } catch (error) {
+      console.error('Error loading class template settings:', error);
+    }
+  };
+
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [examSets, setExamSets] = useState<any[]>([]);
@@ -81,6 +94,8 @@ export default function GenerateReportsPage() {
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | string>('template1');
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
+  const [classTemplateSettings, setClassTemplateSettings] = useState<any[]>([]);
+  const [showClassTemplateSettings, setShowClassTemplateSettings] = useState(false);
   
   // Report data
   const [reportData, setReportData] = useState<any>(null);
@@ -136,8 +151,9 @@ export default function GenerateReportsPage() {
           .eq('school_id', u.school_id)
           .single();
 
-        // Load custom templates
+        // Load custom templates and class template settings
         await loadCustomTemplates();
+        await loadClassTemplateSettings();
 
         // Initialize custom header with saved customizations or school defaults
         setCustomHeader({
@@ -207,6 +223,21 @@ export default function GenerateReportsPage() {
     
     init();
   }, []);
+
+  // Auto-select template based on class-specific settings
+  useEffect(() => {
+    if (selectedClass && classTemplateSettings.length > 0) {
+      const classSetting = classTemplateSettings.find(s => s.class_name === selectedClass);
+      if (classSetting) {
+        // Check if it's a custom template or default template
+        if (classSetting.template_id.startsWith('template')) {
+          setSelectedTemplate(classSetting.template_id);
+        } else {
+          setSelectedTemplate(`custom_${classSetting.template_id}`);
+        }
+      }
+    }
+  }, [selectedClass, classTemplateSettings]);
 
   const filteredStudents = selectedClass 
     ? students.filter(s => s.current_class === selectedClass)
@@ -685,6 +716,12 @@ export default function GenerateReportsPage() {
               Customize Report Card
             </button>
             <button
+              onClick={() => setShowClassTemplateSettings(!showClassTemplateSettings)}
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
+            >
+              {showClassTemplateSettings ? 'Hide' : 'Class Template'} Settings
+            </button>
+            <button
               onClick={() => router.push('/dashboard/admin/reports')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
             >
@@ -829,6 +866,99 @@ export default function GenerateReportsPage() {
               >
                 Save Changes
               </button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Class Template Settings */}
+        {showClassTemplateSettings && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-6"
+          >
+            <h2 className="text-white text-lg font-medium mb-4">Class Template Settings</h2>
+            <p className="text-white/70 text-sm mb-6">Configure which template to use for each class. This allows different classes to use different report card designs.</p>
+            
+            <div className="space-y-4">
+              {classes.map((className) => {
+                const currentSetting = classTemplateSettings.find(s => s.class_name === className);
+                const isOLevel = isOLevelClass(className);
+                
+                return (
+                  <div key={className} className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                      <div>
+                        <div className="text-white font-medium">{className}</div>
+                        <div className="text-white/60 text-sm">
+                          {isOLevel ? 'O-Level Class' : 'Secondary Class'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={currentSetting?.template_id || ''}
+                        onChange={async (e) => {
+                          const templateId = e.target.value;
+                          if (templateId) {
+                            try {
+                              const response = await fetch('/api/class-template-settings', {
+                                method: 'POST',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                  class_name: className,
+                                  template_id: templateId,
+                                  is_o_level: isOLevel
+                                }),
+                              });
+                              
+                              if (response.ok) {
+                                await loadClassTemplateSettings();
+                              }
+                            } catch (error) {
+                              console.error('Error saving class template setting:', error);
+                            }
+                          }
+                        }}
+                        className="px-3 py-1 rounded bg-white/10 border border-white/20 text-white text-sm"
+                      >
+                        <option value="">Select Template</option>
+                        <optgroup label="Default Templates">
+                          <option value="template1">Template 1 - O-Level Format</option>
+                          <option value="template2">Template 2 - St. Adrian Kasozi Format</option>
+                          <option value="template3">Template 3 - Kyotera Parents Format</option>
+                        </optgroup>
+                        {customTemplates.length > 0 && (
+                          <optgroup label="Custom Templates">
+                            {customTemplates.map((template) => (
+                              <option key={template.id} value={template.id}>
+                                {template.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                      
+                      {currentSetting && (
+                        <div className="text-green-400 text-sm">
+                          ✓ {currentSetting.template?.name || 'Template Set'}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="mt-6 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+              <div className="text-blue-300 text-sm">
+                <strong>💡 Tip:</strong> When a class has a template assigned, it will automatically use that template when generating reports. 
+                If no template is assigned, the system will use the default template selection.
+              </div>
             </div>
           </motion.div>
         )}
