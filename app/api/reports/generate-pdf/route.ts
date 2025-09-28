@@ -825,7 +825,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         
         .header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           margin-bottom: 30px;
         }
@@ -833,13 +833,11 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         .school-logo {
           width: 200px;
           height: 200px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: #f0f0f0;
+          border: none;
           flex-shrink: 0;
         }
         
@@ -847,6 +845,12 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border: none;
+        }
+        
+        .school-info {
+          text-align: right;
+          flex: 1;
         }
         
         .school-name {
@@ -966,6 +970,38 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           text-align: center;
           font-size: 9pt;
           margin-top: 20px;
+        }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.1;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          width: 900px;
+          height: 900px;
+          object-fit: contain;
+        }
+        
+        .watermark-placeholder {
+          width: 900px;
+          height: 900px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f0f0;
+          font-size: 108pt;
+          font-weight: bold;
+          color: #ccc;
+          text-align: center;
+          line-height: 1.2;
         }
       </style>
     </head>
@@ -1132,7 +1168,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         
         .header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           margin-bottom: 30px;
         }
@@ -1140,13 +1176,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .school-logo {
           width: 200px;
           height: 200px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: #f0f0f0;
+          border: none;
           flex-shrink: 0;
         }
         
@@ -1154,6 +1188,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border: none;
         }
         
         .school-info {
@@ -1264,6 +1299,38 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           text-align: center;
           font-size: 9pt;
           margin-top: 20px;
+        }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.1;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          width: 900px;
+          height: 900px;
+          object-fit: contain;
+        }
+        
+        .watermark-placeholder {
+          width: 900px;
+          height: 900px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f0f0;
+          font-size: 108pt;
+          font-weight: bold;
+          color: #ccc;
+          text-align: center;
+          line-height: 1.2;
         }
       </style>
     </head>
