@@ -405,7 +405,7 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         
         .header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
         }
@@ -428,7 +428,7 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-info {
-          text-align: center;
+          text-align: right;
           flex: 1;
         }
         
@@ -1157,7 +1157,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
         
         .school-info {
-          text-align: center;
+          text-align: right;
           flex: 1;
         }
         
@@ -1428,7 +1428,7 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         
         .header {
           display: flex;
-          align-items: flex-start;
+          align-items: center;
           justify-content: space-between;
           margin-bottom: 20px;
         }
@@ -1451,7 +1451,7 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .school-info {
-          text-align: center;
+          text-align: right;
           flex: 1;
         }
         
