@@ -1379,14 +1379,14 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       </div>
       
       {/* HEADER */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-center justify-between mb-6">
         {/* School Logo */}
-        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo ? (
             <img
               src={school.logo}
               alt="School Logo"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover border-0"
             />
           ) : (
             <div className="text-center text-xs">
@@ -1399,7 +1399,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
         
         {/* School Info */}
-        <div className="text-center flex-1">
+        <div className="text-right flex-1">
         <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
         <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
         <div className="text-[9pt] mt-1">
@@ -1609,14 +1609,14 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       </div>
       
       {/* HEADER */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-center justify-between mb-6">
         {/* School Logo */}
-        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo ? (
             <img
               src={school.logo}
               alt="School Logo"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover border-0"
             />
           ) : (
             <div className="text-center text-xs">
@@ -1629,7 +1629,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         </div>
         
         {/* School Info */}
-        <div className="text-center flex-1">
+        <div className="text-right flex-1">
         <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
           <div className="font-bold text-[13pt] mt-1">
           {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
@@ -1811,9 +1811,9 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
       </div>
       
       {/* HEADER */}
-      <div className="text-center mb-2">
+      <div className="flex items-center justify-between mb-2">
         {/* School Logo */}
-        <div className="w-48 h-48 flex items-center justify-center overflow-hidden mx-auto mb-4 border-0">
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo ? (
             <img
               src={school.logo}
@@ -1828,9 +1828,12 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
           )}
         </div>
         
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
-        <div className="font-bold text-[11pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
-        <div className="font-bold text-[11pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+        {/* School Info */}
+        <div className="text-right flex-1">
+          <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
+          <div className="font-bold text-[11pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
+          <div className="font-bold text-[11pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+        </div>
       </div>
 
       {/* TITLE */}
