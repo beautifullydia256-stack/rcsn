@@ -2043,27 +2043,33 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .header {
-          text-align: center;
-          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 30px;
         }
         
         .school-logo {
           width: 200px;
           height: 200px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: #f0f0f0;
-          margin: 0 auto 15px;
+          border: none;
+          flex-shrink: 0;
         }
         
         .school-logo img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          border: none;
+        }
+        
+        .school-info {
+          text-align: right;
+          flex: 1;
         }
         
         .school-name {
@@ -2074,13 +2080,13 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-contact {
-          font-size: 13pt;
+          font-size: 11pt;
           font-weight: bold;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 13pt;
+          font-size: 11pt;
           font-weight: bold;
           font-style: italic;
         }
@@ -2095,7 +2101,16 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         
         .student-meta {
           margin-bottom: 20px;
-          font-size: 10pt;
+          font-size: 11pt;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+        
+        .student-info {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 20px;
         }
         
         .student-photo {
@@ -2107,8 +2122,6 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          float: right;
-          margin-left: 20px;
         }
         
         .student-photo img {
@@ -2193,6 +2206,38 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           font-size: 9pt;
           margin-top: 20px;
         }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.1;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          width: 900px;
+          height: 900px;
+          object-fit: contain;
+        }
+        
+        .watermark-placeholder {
+          width: 900px;
+          height: 900px;
+          border: 2px solid #ccc;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f0f0f0;
+          font-size: 108pt;
+          font-weight: bold;
+          color: #ccc;
+          text-align: center;
+          line-height: 1.2;
+        }
       </style>
     </head>
     <body>
@@ -2208,9 +2253,12 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
         </div>
         
-        <div class="school-name">${school?.name || 'School Name'}</div>
-        <div class="school-motto">"${school?.motto || 'Education the Future'}"</div>
-        <div class="school-contact">TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}</div>
+        <!-- School Info -->
+        <div class="school-info">
+          <div class="school-name">${school?.name || 'School Name'}</div>
+          <div class="school-contact">TEL: ${school?.phone || 'Phone'} | EMAIL: ${school?.email || 'Email'} | ${school?.address || 'Address'}</div>
+          <div class="school-motto">SCHOOL MOTTO: ${school?.motto || 'Education the Future'}</div>
+        </div>
       </div>
 
       <!-- TITLE -->
@@ -2220,10 +2268,16 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
 
       <!-- STUDENT META -->
       <div class="student-meta">
-        <div class="student-photo">
-          <div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>
+        <div class="student-info">
+          <div><strong>LNo.</strong> ${student.admission_number || student.student_id}</div>
+          <div><strong>NAME:</strong> ${student.name}</div>
+          <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
         </div>
-        <div>LNo. ${student.admission_number || student.student_id}    NAME: ${student.name}    CLASS & STREAM: ${student.current_class}</div>
+        
+        <!-- Student Photo -->
+        <div class="student-photo">
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+        </div>
       </div>
 
       <!-- ATTENDANCE TABLE -->
