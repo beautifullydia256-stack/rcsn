@@ -1488,7 +1488,14 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                 const finalScore = result.final_score ?? ''; // Total (100%)
                 const grade = result.grade ?? '';
                 const levelOfAchievement = result.activity_score ?? ''; // Level of Achievement/3 (Activity Score [3])
-                const descriptor = result.descriptor ?? '';
+                // Provide fallback for descriptor if not available
+                const descriptor = result.descriptor ?? (() => {
+                  const activityNum = parseFloat(levelOfAchievement) || 0;
+                  if (activityNum >= 2.5) return 'Outstanding';
+                  if (activityNum >= 1.5) return 'Moderate';
+                  if (activityNum >= 0.9) return 'Basic';
+                  return '';
+                })();
                 const teacherInitials = result.teacher_initials ?? ''; // TR's Initial
                 
                 return (
@@ -1723,7 +1730,14 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                 const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
                 const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
                 const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
-                const descriptor = result.descriptor ?? ''; // DESCRIPTOR
+                // Provide fallback for descriptor if not available
+                const descriptor = result.descriptor ?? (() => {
+                  const activityNum = parseFloat(c1) || 0;
+                  if (activityNum >= 2.5) return 'Outstanding';
+                  if (activityNum >= 1.5) return 'Moderate';
+                  if (activityNum >= 0.9) return 'Basic';
+                  return '';
+                })();
                 const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
                 
                 // Check if C2 data is available for this result
