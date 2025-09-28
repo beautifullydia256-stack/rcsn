@@ -168,27 +168,33 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
   let htmlContent: string;
   
   // Check if this is an O-Level class and use the appropriate template
+  console.log('=== TEMPLATE SELECTION DEBUG ===');
   console.log('Student class:', student.current_class);
   console.log('Is O-Level class:', isOLevelClass(student.current_class));
   console.log('Template parameter received:', template);
+  console.log('Template parameter type:', typeof template);
+  console.log('Template parameter === "template1":', template === 'template1');
+  console.log('Template parameter === "template2":', template === 'template2');
+  console.log('Template parameter === "template3":', template === 'template3');
   
   if (isOLevelClass(student.current_class)) {
     console.log('Using O-Level template selection logic');
     switch (template) {
       case 'template1':
-        console.log('Generating Template 1 (O-Level) HTML');
+        console.log('✅ SELECTED: Generating Template 1 (O-Level) HTML');
         htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
         break;
       case 'template2':
-        console.log('Generating Template 2 (Kasozi) HTML');
+        console.log('✅ SELECTED: Generating Template 2 (Kasozi) HTML');
         htmlContent = generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64);
         break;
       case 'template3':
-        console.log('Generating Template 3 (Kyotera) HTML');
+        console.log('✅ SELECTED: Generating Template 3 (Kyotera) HTML');
         htmlContent = generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
         break;
       default:
-        console.log('Template not recognized, defaulting to Template 1');
+        console.log('❌ DEFAULT: Template not recognized, defaulting to Template 1');
+        console.log('Template value was:', JSON.stringify(template));
         htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
     }
   } else {
@@ -196,6 +202,7 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     // For non-O-Level classes, use the secondary template
     htmlContent = generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
   }
+  console.log('=== END TEMPLATE SELECTION DEBUG ===');
   
   // Use the generated HTML content from the template
   const htmlContentFinal = htmlContent;
