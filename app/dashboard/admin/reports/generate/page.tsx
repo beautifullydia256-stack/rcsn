@@ -1179,7 +1179,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
           <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
         </div>
       </div>
-        
+
       {/* REPORT TITLE */}
       <div className="text-center bg-green-600 text-white py-2 mb-4">
         <h1 className="text-[13pt] font-bold uppercase">
@@ -1191,9 +1191,9 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       <div className="flex justify-between items-start mb-4">
         {/* LEARNER INFO - Left side */}
         <div className="text-[11pt]">
-          <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
-          <div><strong>NAME:</strong> {student.name}</div>
-          <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+        <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
+        <div><strong>NAME:</strong> {student.name}</div>
+        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
         </div>
         
         {/* Student Photo - Right side */}
@@ -1701,42 +1701,51 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
           <thead>
             <tr>
-              {['SUBJECT', 'C1', 'C2', 'AVG SCORE/20', 'FINAL EXAM/80', 'TOTAL SCORE 100%', 'IDENTIFIER', 'INIT'].map(h => (
+              {(() => {
+                const hasC2 = student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '');
+                const headers = ['SUBJECT', 'AVG SCORE/20'];
+                if (hasC2) headers.push('C2');
+                headers.push('FINAL EXAM/80', 'TOTAL SCORE 100%', 'C1', 'IDENTIFIER', 'DESCRIPTOR', 'INIT');
+                return headers.map(h => (
                 <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
-              ))}
+                ));
+              })()}
             </tr>
           </thead>
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                // Use proper O-Level data structure
-                const activity = result.activity_score ?? '';
-                const activityNum = parseFloat(activity) || 0;
-                const c1 = activityNum > 0 ? (activityNum * 1.5).toFixed(1) : '';
-                const c2 = activityNum > 0 ? (activityNum * 1.2).toFixed(1) : '';
-                const avgScore = result.formative_score ?? '';
-                const finalExam = result.exam_score ?? '';
-                const totalScore = result.final_score ?? '';
-                const totalNum = parseFloat(totalScore) || 0;
-                const identifier = getIdentifier(totalNum);
-                const teacherInitials = result.teacher_initials ?? '';
+                // Correct Template 3 data mapping as specified
+                const subject = result.subject ?? '';
+                const avgScore = result.formative_score ?? ''; // AVG SCORE/20 (Formative Score [20%])
+                const c2 = result.activity_score_2 ?? ''; // C2 (Activity Score [3] of second set of exam)
+                const finalExam = result.exam_score ?? ''; // FINAL EXAM/80 (Exam Score [80%])
+                const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
+                const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
+                const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
+                const descriptor = result.descriptor ?? ''; // DESCRIPTOR
+                const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
+                
+                // Check if C2 data is available for this result
+                const hasC2 = c2 !== undefined && c2 !== null && c2 !== '';
                 
                 return (
                   <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{result.subject}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{avgScore}</td>
+                    {hasC2 && <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>}
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalExam}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{totalScore}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{identifier}</td>
+                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
                     <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+                <td colSpan={student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? 9 : 8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
               </tr>
             )}
           </tbody>
@@ -1858,7 +1867,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         
         {/* School Info */}
         <div className="text-right flex-1">
-          <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
+        <div className="font-bold text-[18pt] uppercase">{school?.name || 'School Name'}</div>
           <div className="font-bold text-[11pt] mt-0.5">TEL: {school?.phone || 'Phone'} | EMAIL: {school?.email || 'Email'} | {school?.address || 'Address'}</div>
           <div className="font-bold text-[11pt] mt-0.5 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
         </div>

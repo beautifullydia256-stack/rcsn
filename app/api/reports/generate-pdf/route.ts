@@ -1468,44 +1468,50 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         <thead>
           <tr>
             <th>SUBJECT</th>
-            <th>C1</th>
-            <th>C2</th>
             <th>AVG SCORE/20</th>
+            ${student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? '<th>C2</th>' : ''}
             <th>FINAL EXAM/80</th>
             <th>TOTAL SCORE 100%</th>
+            <th>C1</th>
             <th>IDENTIFIER</th>
+            <th>DESCRIPTOR</th>
             <th>INIT</th>
           </tr>
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
-              const activity = result.activity_score ?? '';
-              const activityNum = parseFloat(activity) || 0;
-              const c1 = activityNum > 0 ? (activityNum * 1.5).toFixed(1) : '';
-              const c2 = activityNum > 0 ? (activityNum * 1.2).toFixed(1) : '';
-              const avgScore = result.formative_score ?? '';
-              const finalExam = result.exam_score ?? '';
-              const totalScore = result.final_score ?? '';
-              const totalNum = parseFloat(totalScore) || 0;
-              const identifier = getIdentifier(totalNum);
-              const teacherInitials = result.teacher_initials ?? '';
+              // Correct Template 3 data mapping as specified
+              const subject = result.subject ?? '';
+              const avgScore = result.formative_score ?? ''; // AVG SCORE/20 (Formative Score [20%])
+              const c2 = result.activity_score_2 ?? ''; // C2 (Activity Score [3] of second set of exam)
+              const finalExam = result.exam_score ?? ''; // FINAL EXAM/80 (Exam Score [80%])
+              const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
+              const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
+              const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
+              const descriptor = result.descriptor ?? ''; // DESCRIPTOR
+              const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
+              
+              // Check if C2 data is available for this result
+              const hasC2 = c2 !== undefined && c2 !== null && c2 !== '';
+              const c2Column = hasC2 ? `<td style="border: 1px solid #000; padding: 4px; text-align: center;">${c2}</td>` : '';
 
               return `
                 <tr>
-                  <td style="font-weight: bold;">${result.subject}</td>
-                  <td class="center">${c1}</td>
-                  <td class="center">${c2}</td>
-                  <td class="center">${avgScore}</td>
-                  <td class="center">${finalExam}</td>
-                  <td class="center">${totalScore}</td>
-                  <td class="center">${identifier}</td>
-                  <td class="center">${teacherInitials}</td>
+                  <td style="border: 1px solid #000; padding: 4px; font-weight: bold;">${subject}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${avgScore}</td>
+                  ${c2Column}
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${finalExam}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${totalScore}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${c1}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${identifier}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${descriptor}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${teacherInitials}</td>
                 </tr>
               `;
             }).join('') : `
               <tr>
-                <td colspan="8" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+                <td colspan="${student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? '9' : '8'}" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">N/A - Student did not sit for this term</td>
               </tr>
             `
           }
