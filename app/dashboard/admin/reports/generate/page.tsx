@@ -90,10 +90,6 @@ export default function GenerateReportsPage() {
   });
   const [showHeaderCustomization, setShowHeaderCustomization] = useState(false);
 
-  // Debug template selection changes
-  useEffect(() => {
-    console.log('selectedTemplate state changed to:', selectedTemplate);
-  }, [selectedTemplate]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoCompressionResult, setLogoCompressionResult] = useState<CompressionResult | null>(null);
   const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
@@ -409,15 +405,6 @@ export default function GenerateReportsPage() {
     setDownloadingPDF(true);
     setError(null);
     
-    console.log('=== FRONTEND TEMPLATE DEBUG ===');
-    console.log('Selected template:', selectedTemplate);
-    console.log('Template type:', typeof selectedTemplate);
-    console.log('Template === "template1":', selectedTemplate === 'template1');
-    console.log('Template === "template2":', selectedTemplate === 'template2');
-    console.log('Template === "template3":', selectedTemplate === 'template3');
-    console.log('Student class:', reportData.students[0]?.current_class);
-    console.log('Is O-Level class:', isOLevelClass(reportData.students[0]?.current_class));
-    console.log('=== END FRONTEND DEBUG ===');
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
@@ -490,10 +477,6 @@ export default function GenerateReportsPage() {
     setDownloadingClassPDF(true);
     setError(null);
     
-    console.log('=== CLASS PDF TEMPLATE DEBUG ===');
-    console.log('Selected template for class reports:', selectedTemplate);
-    console.log('Template type:', typeof selectedTemplate);
-    console.log('=== END CLASS DEBUG ===');
     
     try {
       const response = await fetch('/api/reports/generate-pdf', {
@@ -844,7 +827,6 @@ export default function GenerateReportsPage() {
                 <select
                   value={selectedTemplate}
                   onChange={(e) => {
-                    console.log('Template selection changed to:', e.target.value);
                     setSelectedTemplate(e.target.value as 'template1' | 'template2' | 'template3');
                   }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -856,10 +838,6 @@ export default function GenerateReportsPage() {
               </div>
             )}
             
-            {/* Debug info for template selection */}
-            <div className="text-white/50 text-xs">
-              Debug: selectedClass="{selectedClass}", isOLevel={isOLevelClass(selectedClass).toString()}, selectedTemplate="{selectedTemplate}"
-            </div>
 
             {/* Report Type */}
             <div>
