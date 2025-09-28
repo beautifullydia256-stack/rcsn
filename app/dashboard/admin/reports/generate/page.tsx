@@ -1128,7 +1128,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       {/* HEADER - School Logo and Info */}
       <div className="flex items-start justify-between mb-4">
         {/* School Logo */}
-        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden">
           {school?.logo ? (
             <img
               src={school.logo}
@@ -1813,7 +1813,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
       {/* HEADER */}
       <div className="text-center mb-2">
         {/* School Logo */}
-        <div className="w-48 h-48 border-2 border-gray-300 rounded-full flex items-center justify-center overflow-hidden mx-auto mb-4">
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden mx-auto mb-4">
           {school?.logo ? (
             <img
               src={school.logo}

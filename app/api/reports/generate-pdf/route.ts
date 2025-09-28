@@ -413,13 +413,10 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         .school-logo {
           width: 200px;
           height: 200px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: #f0f0f0;
         }
         
         .school-logo img {
@@ -1437,13 +1434,10 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         .school-logo {
           width: 200px;
           height: 200px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          background: #f0f0f0;
         }
         
         .school-logo img {
