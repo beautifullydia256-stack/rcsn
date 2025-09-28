@@ -1131,47 +1131,65 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       <table>
         <thead>
           <tr>
-            <th>Subject</th>
-            <th>Activity Score [3]</th>
-            <th>Descriptor</th>
-            <th>Formative Score [20%]</th>
-            <th>Exam Score [80%]</th>
-            <th>Final Score [100%]</th>
-            <th>Grade</th>
-            <th>Overall Remark</th>
-            <th>Subject Teacher</th>
+            <th>SUBJECT</th>
+            <th>FORMATIVE</th>
+            <th>EXAM</th>
+            <th>FINAL SCORE</th>
+            <th>GRADE</th>
+            <th>LEVEL OF ACHIEVEMENT</th>
+            <th>DESCRIPTOR</th>
+            <th>INIT</th>
           </tr>
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
-              const activity = result.activity_score ?? '';
-              const activityNum = parseFloat(activity) || 0;
-              const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
               const formative = result.formative_score ?? '';
               const exam = result.exam_score ?? '';
               const finalScore = result.final_score ?? '';
               const finalNum = parseFloat(finalScore) || 0;
               const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
-              const overallRemark = result.overall_remark ?? '';
+              
+              // Calculate level of achievement based on grade (Template 2 specific)
+              const getLevelOfAchievement = (grade: string) => {
+                switch (grade) {
+                  case 'A': return '2.8';
+                  case 'B': return '2.2';
+                  case 'C': return '2.0';
+                  case 'D': return '1.5';
+                  case 'E': return '1.2';
+                  default: return '';
+                }
+              };
+              
+              // Get descriptor based on level of achievement (Template 2 specific)
+              const getDescriptor = (level: string) => {
+                const num = parseFloat(level);
+                if (num >= 2.5) return 'Outstanding';
+                if (num >= 1.5) return 'Moderate';
+                if (num >= 0.9) return 'Basic';
+                return '';
+              };
+              
+              const levelOfAchievement = getLevelOfAchievement(gradeText);
+              const descriptor = getDescriptor(levelOfAchievement);
               const teacherInitials = result.teacher_initials ?? '';
 
               return `
                 <tr>
-                  <td>${result.subject}</td>
-                  <td class="center">${activity}</td>
-                  <td class="center">${descriptor}</td>
-                  <td class="center">${formative}</td>
-                  <td class="center">${exam}</td>
-                  <td class="center">${finalScore}</td>
-                  <td class="center">${gradeText}</td>
-                  <td style="font-size: 9pt;">${overallRemark}</td>
-                  <td class="center">${teacherInitials}</td>
+                  <td style="border: 1px solid #000; padding: 4px; font-weight: bold;">${result.subject}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${formative}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${exam}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${finalScore}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${gradeText}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${levelOfAchievement}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${descriptor}</td>
+                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${teacherInitials}</td>
                 </tr>
               `;
             }).join('') : `
               <tr>
-                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+                <td colspan="8" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">N/A - Student did not sit for this term</td>
               </tr>
             `
           }
