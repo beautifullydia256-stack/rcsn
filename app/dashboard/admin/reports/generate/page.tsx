@@ -1125,9 +1125,9 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
       
-      {/* HEADER - School Logo */}
-      <div className="flex justify-center mb-4">
-        {/* School Logo */}
+      {/* HEADER - School Logo and Info Side by Side */}
+      <div className="flex items-start justify-between mb-4">
+        {/* School Logo - Left side */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0">
           {school?.logo ? (
             <img
@@ -1143,11 +1143,9 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
             </div>
           )}
         </div>
-      </div>
-
-      {/* School Info - Positioned below logo, opposite to badge */}
-      <div className="flex justify-end mb-4">
-        <div className="text-center">
+        
+        {/* School Info - Right side */}
+        <div className="text-center flex-1">
           <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
           <div className="font-bold text-[11pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
           <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
