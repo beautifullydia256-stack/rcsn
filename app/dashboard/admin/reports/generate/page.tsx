@@ -1116,6 +1116,15 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       boxSizing: 'border-box'
     }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
+      {/* WATERMARK */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
+        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-9xl font-bold text-gray-400">
+            SCHOOL<br/>LOGO
+          </div>
+        </div>
+      </div>
+      
       {/* HEADER - School Logo and Info */}
       <div className="flex items-start justify-between mb-4">
         {/* School Logo */}
@@ -1789,6 +1798,15 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
 
   return (
     <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+      {/* WATERMARK */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
+        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-9xl font-bold text-gray-400">
+            SCHOOL<br/>LOGO
+          </div>
+        </div>
+      </div>
+      
       {/* HEADER */}
       <div className="text-center mb-2">
         {/* School Logo */}
