@@ -939,26 +939,25 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .school-contact {
-          font-size: 13pt;
-          font-weight: bold;
+          font-size: 9pt;
+          font-weight: normal;
           margin-bottom: 5px;
         }
         
         .school-motto {
-          font-size: 13pt;
-          font-weight: bold;
+          font-size: 10pt;
+          font-weight: normal;
           font-style: italic;
+          margin-bottom: 5px;
         }
         
         .report-title {
-          background: #2E7D32;
-          color: white;
           text-align: center;
-          padding: 12px;
           margin: 20px 0;
           font-size: 14pt;
           font-weight: bold;
           text-transform: uppercase;
+          color: black;
         }
         
         .student-info {
@@ -969,7 +968,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         .student-info-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
+          gap: 16px;
           margin-bottom: 15px;
         }
         
@@ -1099,14 +1098,14 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         <!-- School Info -->
         <div class="school-info">
           <div class="school-name">${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-          <div class="school-contact">P.O. BOX 12345, KAMPALA | TEL: ${school?.phone || '0414-123456'} | EMAIL: ${school?.email || 'info@kasozi.sc.ug'}</div>
-          <div class="school-motto">MOTTO: "${school?.motto || 'Excellence Through Discipline'}"</div>
+          <div class="school-motto">"${school?.motto || 'WITH GOD, WE CAN'}"</div>
+          <div class="school-contact">P.O BOX 10 KALISIZO (U), ${school?.email || 'st.adriankasozisec@gmail.com'}, ${school?.phone || '0772/754-642058'}</div>
         </div>
       </div>
 
       <!-- REPORT TITLE -->
       <div class="report-title">
-        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || 'THREE'}, ${examSet?.year || '2022'}
+        O LEVEL TERMLY REPORT
       </div>
 
       <!-- STUDENT INFO -->
