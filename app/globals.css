@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* GrapesJS CSS */
+@import "grapesjs/dist/css/grapes.min.css";
+
 /* Print styles for student reports */
 @media print {
   .print\\:shadow-none {

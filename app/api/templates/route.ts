@@ -13,21 +13,21 @@ export async function GET(request: NextRequest) {
     }
 
     // Get school ID for the user
-    const { data: school, error: schoolError } = await supabase
-      .from('schools')
-      .select('id')
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('school_id')
       .eq('user_id', user.id)
       .single();
 
-    if (schoolError || !school) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+    if (userDataError || !userData) {
+      return NextResponse.json({ error: 'User school not found' }, { status: 404 });
     }
 
     // Fetch both global default templates and school-specific templates
     const { data: templates, error: templatesError } = await supabase
       .from('report_templates')
       .select('*')
-      .or(`school_id.is.null,school_id.eq.${school.id}`)
+      .or(`school_id.is.null,school_id.eq.${userData.school_id}`)
       .order('school_id', { ascending: false }) // School templates first, then defaults
       .order('created_at', { ascending: false });
 
@@ -54,14 +54,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get school ID for the user
-    const { data: school, error: schoolError } = await supabase
-      .from('schools')
-      .select('id')
+    const { data: userData, error: userDataError } = await supabase
+      .from('users')
+      .select('school_id')
       .eq('user_id', user.id)
       .single();
 
-    if (schoolError || !school) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+    if (userDataError || !userData) {
+      return NextResponse.json({ error: 'User school not found' }, { status: 404 });
     }
 
     // Parse request body
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // If editing a default template, create a school-specific copy
     const templateData = {
-      school_id: school.id,
+      school_id: userData.school_id,
       name: existingDefault ? `${name} (Custom)` : name, // Add "(Custom)" suffix for default template copies
       html_content,
       css_content: css_content || '',

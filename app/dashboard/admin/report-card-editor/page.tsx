@@ -3,8 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/src/lib/supabase';
-import dynamic from 'next/dynamic';
-import 'grapesjs/dist/css/grapes.min.css';
 
 // Import GrapesJS dynamically to avoid SSR issues
 
@@ -25,7 +23,12 @@ export default function ReportCardEditor() {
   // Initialize GrapesJS editor with proper Vercel compatibility
   useEffect(() => {
     const initEditor = async () => {
-      if (!editorRef.current) return;
+      // Wait for editorRef to be mounted
+      if (!editorRef.current) {
+        // Retry after a short delay
+        setTimeout(initEditor, 100);
+        return;
+      }
 
       try {
         // Set a timeout to prevent infinite loading
@@ -66,11 +69,6 @@ export default function ReportCardEditor() {
           },
           selectorManager: {
             appendTo: '.styles-container'
-          },
-          canvas: {
-            styles: [
-              'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css'
-            ]
           }
         });
 
@@ -186,9 +184,14 @@ export default function ReportCardEditor() {
       if (response.ok) {
         const data = await response.json();
         setTemplates(data.templates || []);
+        console.log('Templates loaded:', data.templates);
+      } else {
+        console.error('Failed to load templates:', response.status, response.statusText);
+        setSaveMessage('Failed to load templates. Please check your connection.');
       }
     } catch (error) {
       console.error('Error loading templates:', error);
+      setSaveMessage('Error loading templates. Please refresh the page.');
     }
   };
 
