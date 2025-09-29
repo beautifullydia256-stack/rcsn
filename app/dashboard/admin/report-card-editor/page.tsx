@@ -20,82 +20,14 @@ export default function ReportCardEditor() {
   const router = useRouter();
   // Use the imported supabase client
 
-  // Initialize GrapesJS editor
+  // Initialize editor - skip GrapesJS for now due to Vercel issues
   useEffect(() => {
-    const initEditor = async () => {
-      if (!editorRef.current) return;
-
-      try {
-        // Set a timeout to prevent infinite loading
-        const timeoutId = setTimeout(() => {
-          setIsLoading(false);
-          setSaveMessage('Editor failed to load. Please refresh the page or try again later.');
-          console.error('GrapesJS loading timeout');
-        }, 15000);
-
-        // Check if we're in browser environment
-        if (typeof window === 'undefined') {
-          clearTimeout(timeoutId);
-          setIsLoading(false);
-          setSaveMessage('Editor can only be loaded in browser environment.');
-          return;
-        }
-
-        // Dynamically import GrapesJS with error handling
-        let grapesjsDefault;
-        try {
-          const grapesjs = await import('grapesjs');
-          grapesjsDefault = grapesjs.default;
-        } catch (importError) {
-          console.error('Failed to import GrapesJS:', importError);
-          clearTimeout(timeoutId);
-          setIsLoading(false);
-          setSaveMessage('Visual editor failed to load. Using fallback HTML editor.');
-          setUseFallbackEditor(true);
-          return;
-        }
-        
-        clearTimeout(timeoutId);
-
-        const editorInstance = grapesjsDefault.init({
-          container: editorRef.current,
-          height: '100vh',
-          width: '100%',
-          storageManager: false,
-          plugins: [],
-          pluginsOpts: {},
-          blockManager: {
-            appendTo: '.blocks-container'
-          },
-          layerManager: {
-            appendTo: '.layers-container'
-          },
-          traitManager: {
-            appendTo: '.traits-container'
-          },
-          selectorManager: {
-            appendTo: '.styles-container'
-          }
-        });
-
-        // Load default report card template
-        loadDefaultTemplate(editorInstance);
-        
-        setEditor(editorInstance);
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error initializing GrapesJS:', error);
-        setIsLoading(false);
-        // Show error message to user
-        setSaveMessage('Error loading editor. Please refresh the page.');
-      }
-    };
-
-    initEditor();
-  }, []);
-
-  // Load default report card template
-  const loadDefaultTemplate = (editorInstance: any) => {
+    // For now, just use the HTML editor directly to avoid Vercel issues
+    setIsLoading(false);
+    setUseFallbackEditor(true);
+    setSaveMessage('Using HTML/CSS editor for better compatibility.');
+    
+    // Load default template content
     const defaultTemplate = `
       <!DOCTYPE html>
       <html>
@@ -302,9 +234,15 @@ export default function ReportCardEditor() {
       </body>
       </html>
     `;
+    
+    // Extract HTML and CSS from the template
+    const htmlMatch = defaultTemplate.match(/<body>([\s\S]*?)<\/body>/);
+    const cssMatch = defaultTemplate.match(/<style>([\s\S]*?)<\/style>/);
+    
+    setHtmlContent(htmlMatch ? htmlMatch[1] : '');
+    setCssContent(cssMatch ? cssMatch[1] : '');
+  }, []);
 
-    editorInstance.setComponents(defaultTemplate);
-  };
 
   // Load templates from Supabase
   const loadTemplates = async () => {
@@ -367,9 +305,9 @@ export default function ReportCardEditor() {
   // Load selected template
   const loadTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
-    if (template && editor) {
-      const fullHtml = template.html_content + '<style>' + template.css_content + '</style>';
-      editor.setComponents(fullHtml);
+    if (template) {
+      setHtmlContent(template.html_content);
+      setCssContent(template.css_content);
       setSelectedTemplate(templateId);
     }
   };
@@ -409,17 +347,6 @@ export default function ReportCardEditor() {
             <p className="text-white/80 text-sm mt-1">Design and customize your school's report card templates</p>
           </div>
           <div className="flex gap-3">
-            {!useFallbackEditor && (
-              <button
-                onClick={() => {
-                  setUseFallbackEditor(true);
-                  setSaveMessage('Switched to HTML/CSS editor');
-                }}
-                className="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white"
-              >
-                Use HTML Editor
-              </button>
-            )}
             <button
               onClick={() => router.push('/dashboard/admin/reports/generate')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
@@ -509,25 +436,6 @@ export default function ReportCardEditor() {
         )}
       </div>
 
-      {/* GrapesJS Panels */}
-      <div className="fixed top-20 left-4 z-50">
-        <div className="panel__basic-actions"></div>
-      </div>
-      <div className="fixed top-20 right-4 z-50">
-        <div className="panel__devices"></div>
-      </div>
-      <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50">
-        <div className="blocks-container"></div>
-      </div>
-      <div className="fixed bottom-4 left-4 z-50">
-        <div className="layers-container"></div>
-      </div>
-      <div className="fixed bottom-4 right-4 z-50">
-        <div className="traits-container"></div>
-      </div>
-      <div className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50">
-        <div className="styles-container"></div>
-      </div>
     </div>
   );
 }
