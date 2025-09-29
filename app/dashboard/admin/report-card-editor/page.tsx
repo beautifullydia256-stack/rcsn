@@ -5,12 +5,6 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/src/lib/supabase';
 
 // Import GrapesJS dynamically to avoid SSR issues
-let grapesjs: any = null;
-if (typeof window !== 'undefined') {
-  import('grapesjs').then((module) => {
-    grapesjs = module.default;
-  });
-}
 
 export default function ReportCardEditor() {
   const editorRef = useRef<HTMLDivElement>(null);
@@ -26,36 +20,28 @@ export default function ReportCardEditor() {
   // Initialize GrapesJS editor
   useEffect(() => {
     const initEditor = async () => {
-      if (!grapesjs || !editorRef.current) return;
+      if (!editorRef.current) return;
 
       try {
-        const editorInstance = grapesjs.init({
+        // Set a timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          setIsLoading(false);
+          console.error('GrapesJS loading timeout');
+        }, 10000);
+
+        // Dynamically import GrapesJS
+        const grapesjs = await import('grapesjs');
+        const grapesjsDefault = grapesjs.default;
+        
+        clearTimeout(timeoutId);
+
+        const editorInstance = grapesjsDefault.init({
           container: editorRef.current,
           height: '100vh',
           width: '100%',
-          storageManager: false, // We'll handle storage manually
-          plugins: [
-            'gjs-blocks-basic',
-            'gjs-preset-webpage',
-            'gjs-plugin-forms',
-            'gjs-component-countdown',
-            'gjs-plugin-export',
-            'gjs-tabs',
-            'gjs-custom-code',
-            'gjs-touch',
-            'gjs-parser-postcss',
-            'gjs-style-bg'
-          ],
-          pluginsOpts: {
-            'gjs-blocks-basic': { flexGrid: 1 },
-            'gjs-preset-webpage': {
-              modalImportTitle: 'Import Template',
-              modalImportLabel: '<div style="margin-bottom: 10px; font-size: 13px;">Paste here your HTML/CSS and click Import</div>',
-              modalImportContent: function(editor: any) {
-                return editor.getHtml() + '<style>' + editor.getCss() + '</style>';
-              }
-            }
-          },
+          storageManager: false,
+          plugins: [],
+          pluginsOpts: {},
           blockManager: {
             appendTo: '.blocks-container'
           },
@@ -67,66 +53,6 @@ export default function ReportCardEditor() {
           },
           selectorManager: {
             appendTo: '.styles-container'
-          },
-          deviceManager: {
-            devices: [
-              {
-                name: 'Desktop',
-                width: ''
-              },
-              {
-                name: 'Tablet',
-                width: '768px',
-                widthMedia: '992px'
-              },
-              {
-                name: 'Mobile',
-                width: '320px',
-                widthMedia: '768px'
-              }
-            ]
-          },
-          panels: {
-            defaults: [
-              {
-                id: 'basic-actions',
-                el: '.panel__basic-actions',
-                buttons: [
-                  {
-                    id: 'visibility',
-                    active: true,
-                    className: 'btn-toggle-borders',
-                    label: '<i class="fa fa-clone"></i>',
-                    command: 'sw-visibility'
-                  }
-                ]
-              },
-              {
-                id: 'panel-devices',
-                el: '.panel__devices',
-                buttons: [
-                  {
-                    id: 'device-desktop',
-                    label: '<i class="fa fa-television"></i>',
-                    command: 'set-device-desktop',
-                    active: true,
-                    togglable: false
-                  },
-                  {
-                    id: 'device-tablet',
-                    label: '<i class="fa fa-tablet"></i>',
-                    command: 'set-device-tablet',
-                    togglable: false
-                  },
-                  {
-                    id: 'device-mobile',
-                    label: '<i class="fa fa-mobile"></i>',
-                    command: 'set-device-mobile',
-                    togglable: false
-                  }
-                ]
-              }
-            ]
           }
         });
 
@@ -138,6 +64,8 @@ export default function ReportCardEditor() {
       } catch (error) {
         console.error('Error initializing GrapesJS:', error);
         setIsLoading(false);
+        // Show error message to user
+        setSaveMessage('Error loading editor. Please refresh the page.');
       }
     };
 
@@ -425,7 +353,13 @@ export default function ReportCardEditor() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-white text-xl">Loading Report Card Editor...</div>
+        <div className="text-center">
+          <div className="text-white text-xl mb-4">Loading Report Card Editor...</div>
+          <div className="text-white/60 text-sm">This may take a few moments</div>
+          {saveMessage && (
+            <div className="mt-4 text-red-300 text-sm">{saveMessage}</div>
+          )}
+        </div>
       </div>
     );
   }
