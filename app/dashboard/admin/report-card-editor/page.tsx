@@ -14,6 +14,9 @@ export default function ReportCardEditor() {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [useFallbackEditor, setUseFallbackEditor] = useState(false);
+  const [htmlContent, setHtmlContent] = useState('');
+  const [cssContent, setCssContent] = useState('');
   const router = useRouter();
   // Use the imported supabase client
 
@@ -26,12 +29,31 @@ export default function ReportCardEditor() {
         // Set a timeout to prevent infinite loading
         const timeoutId = setTimeout(() => {
           setIsLoading(false);
+          setSaveMessage('Editor failed to load. Please refresh the page or try again later.');
           console.error('GrapesJS loading timeout');
-        }, 10000);
+        }, 15000);
 
-        // Dynamically import GrapesJS
-        const grapesjs = await import('grapesjs');
-        const grapesjsDefault = grapesjs.default;
+        // Check if we're in browser environment
+        if (typeof window === 'undefined') {
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          setSaveMessage('Editor can only be loaded in browser environment.');
+          return;
+        }
+
+        // Dynamically import GrapesJS with error handling
+        let grapesjsDefault;
+        try {
+          const grapesjs = await import('grapesjs');
+          grapesjsDefault = grapesjs.default;
+        } catch (importError) {
+          console.error('Failed to import GrapesJS:', importError);
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          setSaveMessage('Visual editor failed to load. Using fallback HTML editor.');
+          setUseFallbackEditor(true);
+          return;
+        }
         
         clearTimeout(timeoutId);
 
@@ -299,14 +321,21 @@ export default function ReportCardEditor() {
 
   // Save template to Supabase
   const saveTemplate = async (templateName: string) => {
-    if (!editor) return;
-
     setIsSaving(true);
     setSaveMessage('');
 
     try {
-      const html = editor.getHtml();
-      const css = editor.getCss();
+      let html, css;
+      
+      if (useFallbackEditor) {
+        html = htmlContent;
+        css = cssContent;
+      } else if (editor) {
+        html = editor.getHtml();
+        css = editor.getCss();
+      } else {
+        throw new Error('No editor available');
+      }
       
       const response = await fetch('/api/templates', {
         method: 'POST',
@@ -352,13 +381,19 @@ export default function ReportCardEditor() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-white text-xl mb-4">Loading Report Card Editor...</div>
-          <div className="text-white/60 text-sm">This may take a few moments</div>
-          {saveMessage && (
-            <div className="mt-4 text-red-300 text-sm">{saveMessage}</div>
-          )}
+      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+              <div className="text-white text-xl mb-2">Loading Report Card Editor...</div>
+              <div className="text-white/60 text-sm">This may take a few moments</div>
+              {saveMessage && (
+                <div className="mt-4 text-red-300 text-sm">{saveMessage}</div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -374,6 +409,17 @@ export default function ReportCardEditor() {
             <p className="text-white/80 text-sm mt-1">Design and customize your school's report card templates</p>
           </div>
           <div className="flex gap-3">
+            {!useFallbackEditor && (
+              <button
+                onClick={() => {
+                  setUseFallbackEditor(true);
+                  setSaveMessage('Switched to HTML/CSS editor');
+                }}
+                className="px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white"
+              >
+                Use HTML Editor
+              </button>
+            )}
             <button
               onClick={() => router.push('/dashboard/admin/reports/generate')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
@@ -433,9 +479,34 @@ export default function ReportCardEditor() {
         </div>
       </div>
 
-      {/* GrapesJS Editor */}
+      {/* GrapesJS Editor or Fallback */}
       <div className="h-screen">
-        <div ref={editorRef} className="h-full" />
+        {useFallbackEditor ? (
+          <div className="h-full flex">
+            {/* HTML Editor */}
+            <div className="w-1/2 p-4">
+              <h3 className="text-white text-lg mb-2">HTML Content</h3>
+              <textarea
+                value={htmlContent}
+                onChange={(e) => setHtmlContent(e.target.value)}
+                className="w-full h-96 p-3 bg-slate-800 text-white border border-white/20 rounded"
+                placeholder="Enter HTML content here..."
+              />
+            </div>
+            {/* CSS Editor */}
+            <div className="w-1/2 p-4">
+              <h3 className="text-white text-lg mb-2">CSS Content</h3>
+              <textarea
+                value={cssContent}
+                onChange={(e) => setCssContent(e.target.value)}
+                className="w-full h-96 p-3 bg-slate-800 text-white border border-white/20 rounded"
+                placeholder="Enter CSS content here..."
+              />
+            </div>
+          </div>
+        ) : (
+          <div ref={editorRef} className="h-full" />
+        )}
       </div>
 
       {/* GrapesJS Panels */}
