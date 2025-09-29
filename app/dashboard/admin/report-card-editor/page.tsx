@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/src/lib/supabase';
+import dynamic from 'next/dynamic';
+import 'grapesjs/dist/css/grapes.min.css';
 
 // Import GrapesJS dynamically to avoid SSR issues
 
@@ -20,137 +22,77 @@ export default function ReportCardEditor() {
   const router = useRouter();
   // Use the imported supabase client
 
-  // Initialize editor - skip GrapesJS for now due to Vercel issues
+  // Initialize GrapesJS editor with proper Vercel compatibility
   useEffect(() => {
-    // For now, just use the HTML editor directly to avoid Vercel issues
-    setIsLoading(false);
-    setUseFallbackEditor(true);
-    setSaveMessage('Using HTML/CSS editor for better compatibility.');
-    
-    // Load default template content
+    const initEditor = async () => {
+      if (!editorRef.current) return;
+
+      try {
+        // Set a timeout to prevent infinite loading
+        const timeoutId = setTimeout(() => {
+          setIsLoading(false);
+          setSaveMessage('Editor failed to load. Please refresh the page.');
+          console.error('GrapesJS loading timeout');
+        }, 10000);
+
+        // Check if we're in browser environment
+        if (typeof window === 'undefined') {
+          clearTimeout(timeoutId);
+          setIsLoading(false);
+          return;
+        }
+
+        // Dynamically import GrapesJS with proper error handling
+        const grapesjs = await import('grapesjs');
+        const grapesjsDefault = grapesjs.default;
+        
+        clearTimeout(timeoutId);
+
+        const editorInstance = grapesjsDefault.init({
+          container: editorRef.current,
+          height: '100vh',
+          width: '100%',
+          storageManager: false,
+          plugins: [],
+          pluginsOpts: {},
+          blockManager: {
+            appendTo: '.blocks-container'
+          },
+          layerManager: {
+            appendTo: '.layers-container'
+          },
+          traitManager: {
+            appendTo: '.traits-container'
+          },
+          selectorManager: {
+            appendTo: '.styles-container'
+          },
+          canvas: {
+            styles: [
+              'https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css'
+            ]
+          }
+        });
+
+        // Load default report card template
+        loadDefaultTemplate(editorInstance);
+        
+        setEditor(editorInstance);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing GrapesJS:', error);
+        setIsLoading(false);
+        setSaveMessage('Visual editor failed to load. Please refresh the page.');
+      }
+    };
+
+    initEditor();
+  }, []);
+
+  // Load default report card template
+  const loadDefaultTemplate = (editorInstance: any) => {
     const defaultTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Student Report Card</title>
-        <style>
-          body {
-            font-family: 'Times New Roman', serif;
-            margin: 0;
-            padding: 20px;
-            background: white;
-            color: black;
-          }
-          .header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #333;
-            padding-bottom: 20px;
-          }
-          .school-logo {
-            width: 120px;
-            height: 120px;
-            border: 2px solid #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f0f0f0;
-          }
-          .school-info {
-            text-align: right;
-            flex: 1;
-          }
-          .school-name {
-            font-size: 18pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 5px;
-          }
-          .school-contact {
-            font-size: 10pt;
-            margin-bottom: 5px;
-          }
-          .school-motto {
-            font-size: 10pt;
-            font-style: italic;
-          }
-          .report-title {
-            text-align: center;
-            font-size: 16pt;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin: 20px 0;
-            padding: 10px;
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-          }
-          .student-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-          }
-          .student-details {
-            flex: 1;
-          }
-          .student-photo {
-            width: 80px;
-            height: 100px;
-            border: 2px solid #ccc;
-            background: #f0f0f0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 20px;
-          }
-          .results-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-          }
-          .results-table th,
-          .results-table td {
-            border: 1px solid #333;
-            padding: 8px;
-            text-align: center;
-          }
-          .results-table th {
-            background: #f0f0f0;
-            font-weight: bold;
-          }
-          .summary {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-          }
-          .comments {
-            margin: 20px 0;
-            padding: 15px;
-            background: #f9f9f9;
-            border: 1px solid #ddd;
-          }
-          .watermark {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            opacity: 0.1;
-            z-index: -1;
-            pointer-events: none;
-            font-size: 72pt;
-            font-weight: bold;
-            color: #ccc;
-          }
-        </style>
-      </head>
-      <body>
+      <div class="report-card">
         <!-- Watermark -->
         <div class="watermark">SCHOOL LOGO</div>
         
@@ -231,18 +173,11 @@ export default function ReportCardEditor() {
           <p>[TEACHER_COMMENT]</p>
           <p><strong>Class Teacher:</strong> [TEACHER_NAME] | <strong>Date:</strong> [DATE]</p>
         </div>
-      </body>
-      </html>
+      </div>
     `;
-    
-    // Extract HTML and CSS from the template
-    const htmlMatch = defaultTemplate.match(/<body>([\s\S]*?)<\/body>/);
-    const cssMatch = defaultTemplate.match(/<style>([\s\S]*?)<\/style>/);
-    
-    setHtmlContent(htmlMatch ? htmlMatch[1] : '');
-    setCssContent(cssMatch ? cssMatch[1] : '');
-  }, []);
 
+    editorInstance.setComponents(defaultTemplate);
+  };
 
   // Load templates from Supabase
   const loadTemplates = async () => {
@@ -259,21 +194,17 @@ export default function ReportCardEditor() {
 
   // Save template to Supabase
   const saveTemplate = async (templateName: string) => {
+    if (!editor) {
+      setSaveMessage('Editor not ready. Please wait for it to load.');
+      return;
+    }
+
     setIsSaving(true);
     setSaveMessage('');
 
     try {
-      let html, css;
-      
-      if (useFallbackEditor) {
-        html = htmlContent;
-        css = cssContent;
-      } else if (editor) {
-        html = editor.getHtml();
-        css = editor.getCss();
-      } else {
-        throw new Error('No editor available');
-      }
+      const html = editor.getHtml();
+      const css = editor.getCss();
       
       const response = await fetch('/api/templates', {
         method: 'POST',
@@ -305,9 +236,9 @@ export default function ReportCardEditor() {
   // Load selected template
   const loadTemplate = (templateId: string) => {
     const template = templates.find(t => t.id === templateId);
-    if (template) {
-      setHtmlContent(template.html_content);
-      setCssContent(template.css_content);
+    if (template && editor) {
+      editor.setComponents(template.html_content);
+      editor.setStyle(template.css_content);
       setSelectedTemplate(templateId);
     }
   };
@@ -406,34 +337,23 @@ export default function ReportCardEditor() {
         </div>
       </div>
 
-      {/* GrapesJS Editor or Fallback */}
+      {/* GrapesJS Visual Editor */}
       <div className="h-screen">
-        {useFallbackEditor ? (
-          <div className="h-full flex">
-            {/* HTML Editor */}
-            <div className="w-1/2 p-4">
-              <h3 className="text-white text-lg mb-2">HTML Content</h3>
-              <textarea
-                value={htmlContent}
-                onChange={(e) => setHtmlContent(e.target.value)}
-                className="w-full h-96 p-3 bg-slate-800 text-white border border-white/20 rounded"
-                placeholder="Enter HTML content here..."
-              />
-            </div>
-            {/* CSS Editor */}
-            <div className="w-1/2 p-4">
-              <h3 className="text-white text-lg mb-2">CSS Content</h3>
-              <textarea
-                value={cssContent}
-                onChange={(e) => setCssContent(e.target.value)}
-                className="w-full h-96 p-3 bg-slate-800 text-white border border-white/20 rounded"
-                placeholder="Enter CSS content here..."
-              />
-            </div>
-          </div>
-        ) : (
-          <div ref={editorRef} className="h-full" />
-        )}
+        <div ref={editorRef} className="h-full" />
+      </div>
+
+      {/* GrapesJS Panels */}
+      <div className="fixed top-20 left-4 z-50">
+        <div className="blocks-container"></div>
+      </div>
+      <div className="fixed bottom-4 left-4 z-50">
+        <div className="layers-container"></div>
+      </div>
+      <div className="fixed bottom-4 right-4 z-50">
+        <div className="traits-container"></div>
+      </div>
+      <div className="fixed top-1/2 right-4 transform -translate-y-1/2 z-50">
+        <div className="styles-container"></div>
       </div>
 
     </div>
