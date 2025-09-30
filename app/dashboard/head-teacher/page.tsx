@@ -11,6 +11,8 @@ export default function HeadTeacherDashboard() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [kpis, setKpis] = useState<any>({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
   const [notices, setNotices] = useState<any[]>([]);
+  const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
+  const [pendingResults, setPendingResults] = useState<Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string }>>([]);
 
   useEffect(() => {
     const run = async () => {
@@ -51,6 +53,47 @@ export default function HeadTeacherDashboard() {
       // Load recent notices
       const { data: recent } = await supabase.from('notifications').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }).limit(5);
       setNotices(recent || []);
+
+      // Teacher Load (classes/subjects count)
+      try {
+        const { data: links } = await supabase
+          .from('teacher_class_subjects')
+          .select('teacher_id, class_name, subject, teachers!inner(name)')
+          .eq('school_id', u.school_id);
+        const map = new Map<string, { name: string; classes: Set<string>; subjects: Set<string> }>();
+        (links || []).forEach((r: any) => {
+          const key = r.teacher_id;
+          if (!map.has(key)) map.set(key, { name: r.teachers?.name || 'Unknown', classes: new Set(), subjects: new Set() });
+          const obj = map.get(key)!;
+          if (r.class_name) obj.classes.add(r.class_name);
+          if (r.subject) obj.subjects.add(r.subject);
+        });
+        const load = Array.from(map.entries()).map(([teacher_id, v]) => ({
+          teacher_id,
+          name: v.name,
+          classes: v.classes.size,
+          subjects: v.subjects.size,
+          periods: v.classes.size * v.subjects.size, // simple heuristic
+        })).sort((a,b)=> b.periods - a.periods);
+        setTeacherLoad(load);
+      } catch {}
+
+      // Pending Results to approve/publish (heuristic: exam sets active_for_input true => pending, per class subjects in assignments)
+      try {
+        const { data: activeSets } = await supabase
+          .from('exam_sets')
+          .select('id,name,term,year,target_classes,active_for_input')
+          .eq('school_id', u.school_id)
+          .eq('active_for_input', true)
+          .order('year', { ascending: false })
+          .order('term', { ascending: true });
+        const pending: Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string }> = [];
+        (activeSets || []).forEach((es: any) => {
+          const classes: string[] = es.target_classes && es.target_classes.length ? es.target_classes : [];
+          classes.forEach((cn) => pending.push({ exam_set_id: es.id, name: es.name, term: es.term, year: es.year, class_name: cn }));
+        });
+        setPendingResults(pending);
+      } catch {}
 
       setLoading(false);
     };
@@ -101,6 +144,31 @@ export default function HeadTeacherDashboard() {
               <li>Assign Subjects to Teachers</li>
               <li>View Teacher Load</li>
             </ul>
+            {/* Teacher Load Table */}
+            <div className="mt-4 overflow-x-auto rounded-lg border border-white/10">
+              <table className="min-w-full text-sm">
+                <thead className="bg-white/5">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-white/80">Teacher</th>
+                    <th className="px-4 py-2 text-left text-white/80">Classes</th>
+                    <th className="px-4 py-2 text-left text-white/80">Subjects</th>
+                    <th className="px-4 py-2 text-left text-white/80">Load</th>
+                  </tr>
+                </thead>
+                <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+                  {teacherLoad.length === 0 ? (
+                    <tr><td className="px-4 py-3 text-white/70" colSpan={4}>No assignments</td></tr>
+                  ) : teacherLoad.map(t => (
+                    <tr key={t.teacher_id} className="border-t border-white/10">
+                      <td className="px-4 py-2 text-white">{t.name}</td>
+                      <td className="px-4 py-2 text-white/90">{t.classes}</td>
+                      <td className="px-4 py-2 text-white/90">{t.subjects}</td>
+                      <td className="px-4 py-2 text-white/90">{t.periods} periods/wk</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Notices & Events */}
@@ -127,6 +195,37 @@ export default function HeadTeacherDashboard() {
               <button onClick={()=>router.push('/dashboard/head-teacher/headed-paper')} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Headed Paper</button>
               <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Manage Teachers</button>
               <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Generate Reports</button>
+            </div>
+          </div>
+
+          {/* Approvals / Pending Results */}
+          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-white font-medium">Approvals</h2>
+              <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Open Reports</button>
+            </div>
+            <div className="text-white/80 text-sm mb-2">Pending Exam Sets (Active for Input)</div>
+            <div className="overflow-x-auto rounded-lg border border-white/10">
+              <table className="min-w-full text-sm">
+                <thead className="bg-white/5">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-white/80">Exam Set</th>
+                    <th className="px-4 py-2 text-left text-white/80">Class</th>
+                    <th className="px-4 py-2 text-left text-white/80">Term/Year</th>
+                  </tr>
+                </thead>
+                <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+                  {pendingResults.length === 0 ? (
+                    <tr><td className="px-4 py-3 text-white/70" colSpan={3}>No pending items</td></tr>
+                  ) : pendingResults.map(r => (
+                    <tr key={r.exam_set_id + r.class_name} className="border-t border-white/10">
+                      <td className="px-4 py-2 text-white">{r.name}</td>
+                      <td className="px-4 py-2 text-white/90">{r.class_name || 'All Classes'}</td>
+                      <td className="px-4 py-2 text-white/90">Term {r.term}, {r.year}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
