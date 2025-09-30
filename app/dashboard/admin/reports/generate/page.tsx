@@ -82,6 +82,7 @@ export default function GenerateReportsPage() {
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [examSets, setExamSets] = useState<any[]>([]);
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
+  const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
   const [nextTermBegins, setNextTermBegins] = useState<string | null>(null);
   const [nextTermBeginsRaw, setNextTermBeginsRaw] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
@@ -278,16 +279,23 @@ export default function GenerateReportsPage() {
         return;
       }
 
-      // Fetch exam results for ALL exam sets in the current term
-      const { data: examResults } = await supabase
+      // Fetch exam results for either all sets in the term or a specific selected set
+      let examResultsQuery = supabase
         .from('exam_results')
         .select(`
           *,
           exam_sets!inner(*)
         `)
         .eq('school_id', schoolId)
-        .in('exam_set_id', (examSets || []).map(es => es.id))
         .in('student_id', targetStudents.map(s => s.student_id));
+
+      if (selectedExamSetId && selectedExamSetId !== 'all') {
+        examResultsQuery = examResultsQuery.eq('exam_set_id', selectedExamSetId);
+      } else {
+        examResultsQuery = examResultsQuery.in('exam_set_id', (examSets || []).map(es => es.id));
+      }
+
+      const { data: examResults } = await examResultsQuery;
 
       // Fetch attendance data for the entire class (to get first attendance date for the class)
       const { data: attendanceData } = await supabase
@@ -339,8 +347,10 @@ export default function GenerateReportsPage() {
         .eq('is_primary', true)
         .in('student_id', targetStudents.map(s => s.student_id));
 
-      const referenceExamSet = [...(examSets || [])]
-        .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
+      const referenceExamSet = (selectedExamSetId && selectedExamSetId !== 'all')
+        ? (examSets || []).find(es => es.id === selectedExamSetId)
+        : [...(examSets || [])]
+            .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
 
       const reportData = {
         school: {
@@ -352,7 +362,14 @@ export default function GenerateReportsPage() {
           address: customHeader.address || schoolInfo?.address,
           logo: customHeader.logoPreview
         },
-        examSet: currentTermInfo ? { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' } : null,
+        examSet: (() => {
+          if (!currentTermInfo) return null;
+          if (selectedExamSetId && selectedExamSetId !== 'all') {
+            const sel = (examSets || []).find(es => es.id === selectedExamSetId);
+            return sel ? { year: sel.year, term: sel.term, name: sel.name || `Exam Set ${sel.term}/${sel.year}` } : { year: currentTermInfo.year, term: currentTermInfo.term, name: 'Selected Exam Set' };
+          }
+          return { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' };
+        })(),
         nextTermBegins: nextTermBegins,
         students: targetStudents.map(student => {
           const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
@@ -1090,6 +1107,27 @@ export default function GenerateReportsPage() {
                 <option className="text-black" value="class">Entire Class</option>
               </select>
             </div>
+
+            {/* Exam Set Selection */}
+            {examSets && examSets.length > 0 && (
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Exam Set
+                </label>
+                <select
+                  value={selectedExamSetId}
+                  onChange={(e) => setSelectedExamSetId(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option className="text-black" value="all">All Exam Sets (Current Term)</option>
+                  {examSets.map((es) => (
+                    <option className="text-black" key={es.id} value={es.id}>
+                      {es.name || `Set - Term ${es.term}, ${es.year}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             {/* Next Term Begins (set on report generation page) */}
             {currentTermInfo && (
               <div>
