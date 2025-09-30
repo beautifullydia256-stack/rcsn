@@ -36,6 +36,8 @@ export default function TeacherExamResultsClassPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   // Primary layout state (existing)
   const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }>>({});
+  // Primary aggregate points for core subjects (English, Mathematics, Science, Social Studies)
+  const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
@@ -62,6 +64,17 @@ export default function TeacherExamResultsClassPage() {
   });
   const [autoRemarkEnabled, setAutoRemarkEnabled] = useState<boolean>(true);
   const [oLevelFormativeMax, setOLevelFormativeMax] = useState<number>(20);
+  // Primary division mapping (aggregate points -> Division)
+  const [primaryDivisionSettings, setPrimaryDivisionSettings] = useState({
+    div1_min: 4,
+    div1_max: 12,
+    div2_min: 13,
+    div2_max: 23,
+    div3_min: 24,
+    div3_max: 29,
+    div4_min: 30,
+    div4_max: 34,
+  });
   const [selectedLevel, setSelectedLevel] = useState<'olevel' | 'alevel'>('olevel');
   const [gradeRemarksOLevel, setGradeRemarksOLevel] = useState<Record<string, string>>({
     A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
@@ -87,7 +100,7 @@ export default function TeacherExamResultsClassPage() {
     } else if (isALevel) {
       setSelectedLevel('alevel');
     } else {
-      setSelectedLevel('olevel'); // Default to O-Level for Primary
+      setSelectedLevel('olevel');
     }
   }, [isSecondary, isALevel]);
 
@@ -401,15 +414,59 @@ export default function TeacherExamResultsClassPage() {
     return 'F';
   };
 
+  const getPrimaryBadgeClass = (grade: string): string => {
+    switch ((grade || '').toLowerCase()) {
+      case 'division 1':
+        return 'bg-green-600/20 text-green-300';
+      case 'division 2':
+        return 'bg-blue-600/20 text-blue-300';
+      case 'class 3':
+        return 'bg-yellow-600/20 text-yellow-300';
+      case 'class 4':
+        return 'bg-orange-600/20 text-orange-300';
+      case 'class 5':
+        return 'bg-purple-600/20 text-purple-300';
+      case 'class 6 (fail)':
+      case 'f9':
+        return 'bg-red-600/20 text-red-300';
+      default:
+        return 'text-white/60';
+    }
+  };
+
+  // Primary grading (Divisions) per provided policy
+  // Div 1: 81-100, Div 2: 72-80.99, Class 3: 68-71.99, Class 4: 61-67.99,
+  // Class 5: 53-60.99, Class 6 (Fail): 36-52.99, F9: 0-35.99
   const getDefaultGrades = () => [
-    { min: 0, max: 40, grade: 'F' },
-    { min: 41, max: 50, grade: 'D' },
-    { min: 51, max: 60, grade: 'C' },
-    { min: 61, max: 70, grade: 'B' },
-    { min: 71, max: 80, grade: 'B+' },
-    { min: 81, max: 90, grade: 'A' },
-    { min: 91, max: 100, grade: 'A+' }
+    { min: 81, max: 100, grade: 'Division 1' },
+    { min: 72, max: 80.99, grade: 'Division 2' },
+    { min: 68, max: 71.99, grade: 'Class 3' },
+    { min: 61, max: 67.99, grade: 'Class 4' },
+    { min: 53, max: 60.99, grade: 'Class 5' },
+    { min: 36, max: 52.99, grade: 'Class 6 (Fail)' },
+    { min: 0, max: 35.99, grade: 'F9' },
   ];
+
+  // Given an aggregate points value, compute primary Division label
+  const getPrimaryDivisionFromAggregate = (aggregatePoints: number): string => {
+    const s = primaryDivisionSettings;
+    if (aggregatePoints >= s.div1_min && aggregatePoints <= s.div1_max) return 'Division 1 (Grade 1)';
+    if (aggregatePoints >= s.div2_min && aggregatePoints <= s.div2_max) return 'Division 2 (Grade 2)';
+    if (aggregatePoints >= s.div3_min && aggregatePoints <= s.div3_max) return 'Division 3 (Grade 3)';
+    if (aggregatePoints >= s.div4_min && aggregatePoints <= s.div4_max) return 'Division 4 (Grade 4)';
+    return '';
+  };
+
+  const getPrimaryAggregateForStudent = (studentId: string) => {
+    const row = primaryAggregatePoints[studentId];
+    const e = parseInt(row?.eng || '0') || 0;
+    const m = parseInt(row?.math || '0') || 0;
+    const s = parseInt(row?.sci || '0') || 0;
+    const t = parseInt(row?.sst || '0') || 0;
+    const agg = e + m + s + t;
+    const div = getPrimaryDivisionFromAggregate(agg);
+    return { agg, div };
+  };
 
   // Secondary helpers
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
@@ -856,7 +913,7 @@ export default function TeacherExamResultsClassPage() {
                 ))}
               </select>
             </div>
-            {(isSecondary || isALevel) && (
+            {isSecondary && (
               <div>
                 <label className="block text_white/80 text-sm mb-2">Paper</label>
                 <input
@@ -883,7 +940,7 @@ export default function TeacherExamResultsClassPage() {
               <p className="text-white/80 text-sm mt-1">
                 {isSecondary
                   ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
-                  : (isALevel ? 'A-Level format: Enter marks out of 100 (same as Primary).' : 'Enter marks out of 100.')}
+                  : 'Enter marks out of 100.'}
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -892,16 +949,11 @@ export default function TeacherExamResultsClassPage() {
                   <thead className="bg-white/5">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
-                      {isALevel && <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Paper</th>}
+                      {/* Primary has no Paper column */}
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
-                      {isALevel && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
-                      )}
-                      {isALevel && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Initials</th>
-                      )}
+                      {/* Primary has no per-row remark/initials columns */}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
@@ -931,31 +983,9 @@ export default function TeacherExamResultsClassPage() {
                             <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded ${
-                              grade === 'A' ? 'bg-green-600/20 text-green-300' :
-                              grade === 'B' ? 'bg-blue-600/20 text-blue-300' :
-                              grade === 'C' ? 'bg-yellow-600/20 text-yellow-300' :
-                              grade === 'D' ? 'bg-orange-600/20 text-orange-300' :
-                              grade === 'F' ? 'bg-red-600/20 text-red-300' :
-                              'text-white/60'
-                            }`}>{grade || '-'}</span>
+                            <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
                           </td>
-                          {isALevel && (
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={remark}
-                                onChange={(e) => setExamResults(prev => ({ ...prev, [student.student_id]: { ...(prev[student.student_id] || { marks: '', totalMarks: '100', grade: '' }), remark: e.target.value } }))}
-                                placeholder="Comment"
-                                className="w-56 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm"
-                              />
-                            </td>
-                          )}
-                          {isALevel && (
-                            <td className="px-6 py-4 whitespace-nowrap text-white/90">
-                              {teacherInitials || '-'}
-                            </td>
-                          )}
+                          {/* Primary has no per-row remark/initials */}
                         </tr>
                       );
                     })}
@@ -1030,6 +1060,39 @@ export default function TeacherExamResultsClassPage() {
                 <button onClick={() => setShowGradeSettings(false)} className="text-white/60 hover:text-white">✕</button>
               </div>
               <div className="space-y-4">
+                {/* Primary Division Settings */}
+                {!isSecondary && !isALevel && (
+                  <div className="border border-white/10 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-3">Primary Divisions (Aggregate Points)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-white/90 text-sm">
+                      <label className="flex items-center gap-2">
+                        Div 1 (Grade 1):
+                        <input type="number" value={primaryDivisionSettings.div1_min} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div1_min: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                        to
+                        <input type="number" value={primaryDivisionSettings.div1_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div1_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        Div 2 (Grade 2):
+                        <input type="number" value={primaryDivisionSettings.div2_min} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div2_min: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                        to
+                        <input type="number" value={primaryDivisionSettings.div2_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div2_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        Div 3 (Grade 3):
+                        <input type="number" value={primaryDivisionSettings.div3_min} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div3_min: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                        to
+                        <input type="number" value={primaryDivisionSettings.div3_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div3_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                      <label className="flex items-center gap-2">
+                        Div 4 (Grade 4):
+                        <input type="number" value={primaryDivisionSettings.div4_min} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div4_min: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                        to
+                        <input type="number" value={primaryDivisionSettings.div4_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div4_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
+                    </div>
+                    <p className="text-white/60 text-xs mt-3">These are based on aggregate points across subjects and will be auto-assigned on reports.</p>
+                  </div>
+                )}
                 {/* Level Selector */}
                 <div className="border border-white/10 rounded-lg p-4">
                   <h3 className="text-white font-medium mb-3">Subject Level</h3>

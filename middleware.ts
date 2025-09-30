@@ -13,12 +13,23 @@ function roleToDashboard(role?: string | null): string {
       return '/dashboard/parent';
     case 'student':
       return '/dashboard/student';
+    case 'librarian':
+      return '/dashboard/librarian';
+    case 'accountant':
+      return '/dashboard/accountant';
     default:
       return '/dashboard';
   }
 }
 
 export async function middleware(req: NextRequest) {
+  // Rewrite favicon to icon.png to avoid 500s
+  if (req.nextUrl.pathname === '/favicon.ico') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/icon.png';
+    return NextResponse.rewrite(url);
+  }
+
   const res = NextResponse.next();
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
@@ -98,6 +109,12 @@ export async function middleware(req: NextRequest) {
     if (pathname.startsWith('/dashboard/student') && lower !== 'student' && lower !== 'owner' && lower !== 'admin') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
+    if (pathname.startsWith('/dashboard/librarian') && lower !== 'librarian' && lower !== 'owner' && lower !== 'admin') {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+    if (pathname.startsWith('/dashboard/accountant') && lower !== 'accountant' && lower !== 'owner' && lower !== 'admin') {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
 
     // If user hits generic /dashboard, route them to their role dashboard only when role is known
     if (pathname === '/dashboard') {
@@ -115,6 +132,7 @@ export async function middleware(req: NextRequest) {
 // Protect dashboard routes; leave public and assets alone
 export const config = {
   matcher: [
+    '/favicon.ico',
     '/login',
     '/register',
     '/dashboard/:path*',

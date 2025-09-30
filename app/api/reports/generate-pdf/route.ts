@@ -103,6 +103,20 @@ function replaceTemplatePlaceholders(html: string, css: string, reportData: any,
     );
   }
   
+  // For primary format (non O-Level), strip attendance table/fields so PDF matches preview
+  try {
+    const isPrimary = !isOLevelClass(student.current_class || '');
+    if (isPrimary) {
+      // Remove attendance placeholders if present
+      processedHtml = processedHtml
+        .replace(/\[DAYS_PRESENT\]/g, '')
+        .replace(/\[DAYS_ABSENT\]/g, '')
+        .replace(/\[TOTAL_DAYS\]/g, '');
+      // Remove any table that contains Days Present/Days Absent/Total in header
+      processedHtml = processedHtml.replace(/<table[\s\S]*?<thead>[\s\S]*?<tr>[\s\S]*?<th>\s*Days\s*Present\s*<\/th>[\s\S]*?<th>\s*Days\s*Absent\s*<\/th>[\s\S]*?<th>\s*Total\s*<\/th>[\s\S]*?<\/tr>[\s\S]*?<\/thead>[\s\S]*?<\/table>/i, '');
+    }
+  } catch {}
+  
   return processedHtml;
 }
 
@@ -601,7 +615,7 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: 12px;
         }
         
         .school-logo {
@@ -666,15 +680,15 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           background: #4CAF50;
           color: white;
           text-align: center;
-          padding: 10px;
-          margin: 20px 0;
-          font-size: 13pt;
+          padding: 8px;
+          margin: 12px 0;
+          font-size: 12.5pt;
           font-weight: bold;
           text-transform: uppercase;
         }
         
         .student-info {
-          margin-bottom: 20px;
+          margin-bottom: 12px;
           font-size: 11pt;
         }
         
@@ -689,13 +703,13 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 20px;
-          font-size: 10pt;
+          margin-bottom: 12px;
+          font-size: 9.5pt;
         }
         
         th, td {
           border: 1px solid #000;
-          padding: 6px;
+          padding: 4px;
           text-align: left;
         }
         
@@ -711,8 +725,8 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .summary {
-          margin-bottom: 20px;
-          font-size: 11pt;
+          margin-bottom: 10px;
+          font-size: 10.5pt;
         }
         
         .summary p {
@@ -724,7 +738,7 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .comments {
-          margin-bottom: 20px;
+          margin-bottom: 12px;
           font-size: 10pt;
         }
         
@@ -908,25 +922,15 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
         </tbody>
       </table>
 
-      <!-- PERFORMANCE SUMMARY -->
-      <div class="summary">
-        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
-        <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
-      </div>
-
-      <!-- COMMENTS -->
+      <!-- COMMENTS (Reworked per request) -->
       <div class="comments">
         <h3>Class Teacher's Comment</h3>
-        <p>${student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'}</p>
-        <p>Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}</p>
+        <div style="height: 60px; border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
+        <p>Name: ${student.comments?.class_teacher_name || ''} | Signature: ____________________</p>
 
         <h3>Head Teacher's Comment</h3>
-        <p>${student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
-        <p>Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}</p>
-      </div>
-
-      <div class="next-term">
-        <strong>Next Term Begins:</strong> ${student?.nextTermBegins || 'Saturday, 13 September, 2025'}
+        <div style="height: 60px; border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
+        <p>Name: ${student.comments?.head_teacher_name || ''} | Signature: ____________________</p>
       </div>
 
       <!-- Grading system & descriptions -->
@@ -2121,13 +2125,7 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
   const student = students[0];
   const nextTermBegins = student?.nextTermBegins || reportData?.nextTermBegins || '______________________';
 
-  const attendance = student.summary.attendanceDetails || {};
-  const daysPresent = attendance.presentDays != null ? String(attendance.presentDays) : 'N/A';
-  const totalDays = attendance.totalSchoolDays != null ? String(attendance.totalSchoolDays) : 'N/A';
-  const daysAbsent = (attendance.presentDays != null && attendance.totalSchoolDays != null)
-    ? String(Math.max(attendance.totalSchoolDays - attendance.presentDays, 0))
-    : 'N/A';
-
+  // We no longer include attendance block for primary/secondary non O-Level
   const avg = student.summary.average != null ? String(student.summary.average) : 'N/A';
   const avgGrade = student.summary.division != null ? String(student.summary.division) : 'N/A';
   const overallPerf = student.summary.performanceRemark != null ? String(student.summary.performanceRemark) : 'N/A';
@@ -2404,23 +2402,7 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
         </div>
       </div>
 
-      <!-- ATTENDANCE TABLE -->
-      <table>
-        <thead>
-          <tr>
-            <th>Days Present</th>
-            <th>Days Absent</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="center">${daysPresent}</td>
-            <td class="center">${daysAbsent}</td>
-            <td class="center">${totalDays}</td>
-          </tr>
-        </tbody>
-      </table>
+      <!-- ATTENDANCE TABLE REMOVED PER REQUIREMENT -->
 
       <!-- SUBJECTS TABLE -->
       <table>
@@ -2435,8 +2417,10 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
           </tr>
         </thead>
         <tbody>
-          ${student.results.length > 0 ? 
-            student.results.map((result: any) => {
+          ${(() => {
+            const coreNames = ['english','mathematics','science','social studies','sst'];
+            const core = (student.results || []).filter((r:any) => coreNames.includes(String(r.subject||'').toLowerCase())).slice(0,4);
+            return core.length > 0 ? core.map((result: any) => {
               const subject = result.subject ?? '';
               const marksObtained = result.marks_obtained != null ? String(result.marks_obtained) : '';
               const totalMarks = result.total_marks != null ? String(result.total_marks) : '';
@@ -2458,14 +2442,13 @@ function generateSecondaryReportHTML(reportData: any, schoolLogoBase64?: string 
               <tr>
                 <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">N/A - Student did not sit for this term</td>
               </tr>
-            `
-          }
+            `;
+          })()}
         </tbody>
       </table>
 
       <!-- PERFORMANCE SUMMARY -->
       <div class="summary">
-        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
         <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
       </div>
 

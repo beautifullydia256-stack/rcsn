@@ -83,6 +83,7 @@ export default function GenerateReportsPage() {
   const [examSets, setExamSets] = useState<any[]>([]);
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [nextTermBegins, setNextTermBegins] = useState<string | null>(null);
+  const [nextTermBeginsRaw, setNextTermBeginsRaw] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -198,7 +199,12 @@ export default function GenerateReportsPage() {
             .eq('term', term)
             .maybeSingle();
           if (termInfo?.next_term_begins) {
-            setNextTermBegins(new Date(termInfo.next_term_begins).toLocaleDateString());
+            const iso = String(termInfo.next_term_begins);
+            setNextTermBegins(new Date(iso).toLocaleDateString());
+            // For input type=date, keep YYYY-MM-DD
+            setNextTermBeginsRaw(iso.substring(0, 10));
+          } else {
+            setNextTermBeginsRaw(null);
           }
         }
         
@@ -445,6 +451,38 @@ export default function GenerateReportsPage() {
       setError(`Failed to download report: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setDownloadingDOCX(false);
+    }
+  };
+
+  // Save "Next Term Begins" for the current term
+  const saveNextTermBegins = async () => {
+    if (!schoolId || !currentTermInfo) return;
+    if (!nextTermBeginsRaw) {
+      setError('Please pick a date for Next Term Begins');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('school_terms')
+        .upsert({
+          school_id: schoolId,
+          year: currentTermInfo.year,
+          term: currentTermInfo.term,
+          next_term_begins: nextTermBeginsRaw,
+        }, {
+          onConflict: 'school_id,year,term'
+        });
+
+      if (error) {
+        setError(`Failed to save Next Term Begins: ${error.message}`);
+        return;
+      }
+
+      setNextTermBegins(new Date(nextTermBeginsRaw).toLocaleDateString());
+      alert('Next Term Begins date saved');
+    } catch (e) {
+      setError(`Failed to save Next Term Begins: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
   };
 
@@ -709,12 +747,7 @@ export default function GenerateReportsPage() {
             >
               {showHeaderCustomization ? 'Hide' : 'Customize'} Header
             </button>
-            <button
-              onClick={() => router.push('/dashboard/admin/report-card-editor')}
-              className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white"
-            >
-              Customize Report Card
-            </button>
+            {/* Customize Report Card button removed */}
             <button
               onClick={() => setShowClassTemplateSettings(!showClassTemplateSettings)}
               className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
@@ -942,6 +975,42 @@ export default function GenerateReportsPage() {
                           </optgroup>
                         )}
                       </select>
+
+                      {/* Class Teacher selector */}
+                      <select
+                        value={currentSetting?.class_teacher_id || ''}
+                        onChange={async (e) => {
+                          const classTeacherId = e.target.value || null;
+                          try {
+                            const response = await fetch('/api/class-template-settings', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                class_name: className,
+                                template_id: currentSetting?.template_id || 'template1',
+                                is_o_level: isOLevel,
+                                class_teacher_id: classTeacherId
+                              })
+                            });
+                            if (response.ok) {
+                              await loadClassTemplateSettings();
+                            }
+                          } catch (error) {
+                            console.error('Error saving class teacher:', error);
+                          }
+                        }}
+                        className="px-3 py-1 rounded bg-white/10 border border-white/20 text-white text-sm"
+                        title="Assign Class Teacher"
+                      >
+                        <option value="">Select Class Teacher</option>
+                        {students
+                          .filter(s => !!s.teacher_id) // if students table has teacher_id link, else replace with teachers list later
+                          .map(s => (
+                            <option key={s.teacher_id} value={s.teacher_id}>
+                              {s.teacher_name || s.teacher_id}
+                            </option>
+                          ))}
+                      </select>
                       
                       {currentSetting && (
                         <div className="text-green-400 text-sm">
@@ -1021,6 +1090,32 @@ export default function GenerateReportsPage() {
                 <option className="text-black" value="class">Entire Class</option>
               </select>
             </div>
+            {/* Next Term Begins (set on report generation page) */}
+            {currentTermInfo && (
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Next Term Begins (Term {currentTermInfo.term}, {currentTermInfo.year})
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="date"
+                    value={nextTermBeginsRaw || ''}
+                    onChange={(e) => setNextTermBeginsRaw(e.target.value || null)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={saveNextTermBegins}
+                    className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white"
+                  >
+                    Save
+                  </button>
+                </div>
+                {nextTermBegins && (
+                  <div className="mt-1 text-white/70 text-xs">Current: {nextTermBegins}</div>
+                )}
+              </div>
+            )}
 
             {/* Class Selection */}
             <div>
@@ -1286,7 +1381,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       width: '210mm',
       minHeight: '297mm',
       margin: '0 auto',
-      padding: '15mm',
+      padding: '12mm',
       boxSizing: 'border-box'
     }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
       
@@ -1327,14 +1422,14 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       </div>
 
       {/* REPORT TITLE */}
-      <div className="text-center bg-green-600 text-white py-2 mb-4">
-        <h1 className="text-[13pt] font-bold uppercase">
+      <div className="text-center bg-green-600 text-white py-1.5 mb-3">
+        <h1 className="text-[12.5pt] font-bold uppercase">
           LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
         </h1>
       </div>
 
       {/* Student Info and Photo - Side by side */}
-      <div className="flex justify-between items-start mb-4">
+      <div className="flex justify-between items-start mb-3">
         {/* LEARNER INFO - Left side */}
         <div className="text-[11pt]">
         <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
@@ -1358,7 +1453,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 
 
       {/* SUBJECTS TABLE */}
-      <table className="w-full mb-4" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+      <table className="w-full mb-3" style={{ borderCollapse: 'collapse', fontSize: '9.5pt' }}>
         <thead>
           <tr>
             {['Subjects & Topics Covered','Activity Score [3]','Descriptor','Formative Score [20%]','Exam Score [80%]','Final Score [100%]','Grade','Overall Remark','Subject Teacher'].map(h => (
@@ -1396,7 +1491,7 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{exam}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{finalScore}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{gradeText}</td>
-                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '6px' }}>{overallRemark}</td>
+                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '4px' }}>{overallRemark}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{teacherInitials}</td>
                 </tr>
               );
@@ -1409,33 +1504,34 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         </tbody>
       </table>
 
-      {/* PERFORMANCE SUMMARY */}
-      <div className="mb-4 text-[11pt]">
-        <p><strong>AVERAGE SCORES:</strong> {avg} {avgGrade}</p>
-        <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
+      {/* COMMENTS & SIGNATURES (Reworked, remove average/overall text) */}
+      <div className="mb-3 text-[10.5pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
+        <div style={{ height: '48px', borderBottom: '1px solid #000', marginBottom: '6px' }} />
+        <p>
+          Name: {student.comments?.class_teacher_name || ''} | Signature: ____________________
+        </p>
+
+        <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
+        <div style={{ height: '48px', borderBottom: '1px solid #000', marginBottom: '6px' }} />
+        <p>
+          Name: {student.comments?.head_teacher_name || ''} | Signature: ____________________
+        </p>
       </div>
 
 
       {/* COMMENTS */}
       <div className="mb-4 text-[10pt]">
         <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
-        <p>{student.comments?.class_teacher_text || 'Shafic is progressing well but needs to focus more on specific subject for better results.'}</p>
-        <p>
-          Name: {student.comments?.class_teacher_name || '__________'} |
-          {' '}Signature: {student.comments?.class_teacher_signature || '__________'} |
-          {' '}Date: {student.comments?.class_teacher_date || '17 September, 2025'}
-        </p>
+        <div style={{ height: '60px', borderBottom: '1px solid #000', marginBottom: '8px' }} />
+        <p>Name: {student.comments?.class_teacher_name || ''} | Signature: ____________________</p>
 
         <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
-        <p>{student.comments?.head_teacher_text || 'Shafic needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
-        <p>
-          Name: {student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} |
-          {' '}Signature: {student.comments?.head_teacher_signature || '__________'} |
-          {' '}Date: {student.comments?.head_teacher_date || '17 September, 2025'}
-        </p>
+        <div style={{ height: '60px', borderBottom: '1px solid #000', marginBottom: '8px' }} />
+        <p>Name: {student.comments?.head_teacher_name || ''} | Signature: ____________________</p>
       </div>
 
-      <p className="mb-4 text-[11pt]"><strong>Next Term Begins:</strong> {student?.nextTermBegins || 'Saturday, 13 September, 2025'}</p>
+      {/* Next Term removed for this template per request */}
 
       {/* Grading system & descriptions */}
       <div className="mb-4">
@@ -1992,12 +2088,26 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
   const daysPresent = attendance.presentDays ?? 'N/A';
   const totalDays = attendance.totalSchoolDays ?? 'N/A';
   const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : 'N/A';
-  const avg = student.summary.average ?? 'N/A';
-  const avgGrade = student.summary.division ?? 'N/A';
   const overallPerf = student.summary.performanceRemark ?? 'N/A';
+  
+  // Ensure only the four core subjects are shown so the preview fits one A4 page
+  const coreSubjectNames = ['english', 'mathematics', 'science', 'social studies', 'sst'];
+  const coreResults = (student.results || [])
+    .filter((r: any) => coreSubjectNames.includes(String(r.subject || '').toLowerCase()))
+    .slice(0, 4);
 
   return (
-    <div style={{ fontFamily: 'Times New Roman, Arial, sans-serif' }} className="bg-white text-black p-6 md:p-8 rounded-lg shadow-lg max-w-5xl mx-auto print:shadow-none print:rounded-none">
+    <div
+      style={{ 
+        fontFamily: 'Times New Roman, Arial, sans-serif',
+        width: '210mm',
+        minHeight: '297mm',
+        margin: '0 auto',
+        padding: '15mm',
+        boxSizing: 'border-box'
+      }}
+      className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full"
+    >
       {/* WATERMARK */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
         <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
@@ -2071,8 +2181,8 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
           </tr>
         </thead>
         <tbody>
-          {student.results.length > 0 ? (
-            student.results.map((result: any, index: number) => {
+          {coreResults.length > 0 ? (
+            coreResults.map((result: any, index: number) => {
               const subject = result.subject ?? '';
               const marksObtained = result.marks_obtained ?? '';
               const totalMarks = result.total_marks ?? '';
@@ -2099,9 +2209,8 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </tbody>
       </table>
 
-      {/* PERFORMANCE SUMMARY */}
+      {/* PERFORMANCE SUMMARY (remove average line for primary to match requested format) */}
       <div className="mt-2 text-[11pt]">
-        <p><strong>AVERAGE SCORES:</strong> {avg} {avgGrade}</p>
         <p><strong>OVERALL PERFORMANCE:</strong> {overallPerf}</p>
       </div>
 

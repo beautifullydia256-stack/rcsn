@@ -33,13 +33,30 @@ export default function TeacherDashboard() {
   const [showGradeForm, setShowGradeForm] = useState(false);
   const [gradeForm, setGradeForm] = useState({ student_id: '', subject: '', grade: '', term: 'Term 1' });
   const [lastPunch, setLastPunch] = useState<'punch_in' | 'punch_out' | null>(null);
+  const [punching, setPunching] = useState<'punch_in' | 'punch_out' | null>(null);
+  const [wifiSSID, setWifiSSID] = useState<string | null>(null);
+  const [schoolSSIDs, setSchoolSSIDs] = useState<string[]>([]);
+  const [attendanceStatus, setAttendanceStatus] = useState<{
+    punchedIn: boolean;
+    punchedOut: boolean;
+    punchInTime: string | null;
+    punchOutTime: string | null;
+  }>({
+    punchedIn: false,
+    punchedOut: false,
+    punchInTime: null,
+    punchOutTime: null
+  });
+  const [wifiVerificationFailed, setWifiVerificationFailed] = useState(false);
   const [teacherName, setTeacherName] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [teacherRowId, setTeacherRowId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
-    checkLastPunch();
+    checkAttendanceStatus();
+    loadSchoolSSIDs();
+    detectWifiSSID();
   }, []);
 
   const fetchData = async () => {
@@ -263,28 +280,43 @@ export default function TeacherDashboard() {
     }
   };
 
-  const checkLastPunch = async () => {
+  const detectWifiSSID = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
-        .from('attendance')
-        .select('type')
-        .eq('teacher_id', user.id)
-        .order('timestamp', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (data) {
-        setLastPunch(data.type);
+      // Try to detect WiFi SSID using Web API (limited browser support)
+      if ('connection' in navigator && (navigator as any).connection) {
+        const connection = (navigator as any).connection;
+        if (connection.effectiveType) {
+          // This is a fallback - real WiFi SSID detection requires native app
+          setWifiSSID('School WiFi (Detected)');
+        }
       }
+      
+      // For demo purposes, we'll simulate WiFi detection
+      // In a real app, you'd use a native plugin or WebRTC
+      setWifiSSID('School WiFi');
+      
+      // Check WiFi verification status
+      checkWifiVerification();
     } catch (error) {
-      console.error('Error checking last punch:', error);
+      console.error('Error detecting WiFi SSID:', error);
+      setWifiSSID('Unknown WiFi');
+      setWifiVerificationFailed(true);
     }
   };
 
-  const handlePunch = async (type: 'punch_in' | 'punch_out') => {
+  const checkWifiVerification = () => {
+    if (schoolSSIDs.length > 0 && wifiSSID) {
+      const isValidSSID = schoolSSIDs.some(ssid => 
+        wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
+        ssid.toLowerCase().includes(wifiSSID.toLowerCase())
+      );
+      setWifiVerificationFailed(!isValidSSID);
+    } else {
+      setWifiVerificationFailed(false);
+    }
+  };
+
+  const loadSchoolSSIDs = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -297,22 +329,151 @@ export default function TeacherDashboard() {
 
       if (!userData?.school_id) return;
 
-      // Get current location/IP (simplified)
-      const ipAddress = 'School WiFi';
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('wifi_ssids')
+        .eq('school_id', userData.school_id)
+        .single();
 
-      const { error } = await supabase.from('attendance').insert({
+      setSchoolSSIDs(schoolData?.wifi_ssids || []);
+      
+      // Re-check WiFi verification after loading school SSIDs
+      setTimeout(() => checkWifiVerification(), 100);
+    } catch (error) {
+      console.error('Error loading school SSIDs:', error);
+    }
+  };
+
+  const checkAttendanceStatus = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData?.school_id) return;
+
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data: attendanceData } = await supabase
+        .from('teacher_attendance_logs')
+        .select('punch_in, punch_out')
+        .eq('teacher_id', user.id)
+        .eq('date', today)
+        .single();
+
+      if (attendanceData) {
+        setAttendanceStatus({
+          punchedIn: !!attendanceData.punch_in,
+          punchedOut: !!attendanceData.punch_out,
+          punchInTime: attendanceData.punch_in,
+          punchOutTime: attendanceData.punch_out
+        });
+      } else {
+        setAttendanceStatus({
+          punchedIn: false,
+          punchedOut: false,
+          punchInTime: null,
+          punchOutTime: null
+        });
+      }
+    } catch (error) {
+      console.error('Error checking attendance status:', error);
+    }
+  };
+
+  const handlePunch = async (type: 'punch_in' | 'punch_out') => {
+    setPunching(type);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!userData?.school_id) {
+        alert('Error: School not found');
+        return;
+      }
+
+      // Check WiFi SSID verification
+      if (schoolSSIDs.length > 0 && wifiSSID) {
+        const isValidSSID = schoolSSIDs.some(ssid => 
+          wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
+          ssid.toLowerCase().includes(wifiSSID.toLowerCase())
+        );
+        
+        if (!isValidSSID) {
+          setWifiVerificationFailed(true);
+          alert(`WiFi verification failed. Please connect to school WiFi.\nConnected to: ${wifiSSID}\nExpected: ${schoolSSIDs.join(', ')}`);
+          return;
+        } else {
+          setWifiVerificationFailed(false);
+        }
+      }
+
+      const today = new Date().toISOString().split('T')[0];
+      const now = new Date().toISOString();
+
+      if (type === 'punch_in') {
+        // Check if already punched in today
+        if (attendanceStatus.punchedIn) {
+          alert('You have already punched in today!');
+          return;
+        }
+
+        // Create new attendance record
+        const { error } = await supabase.from('teacher_attendance_logs').insert({
         teacher_id: user.id,
         school_id: userData.school_id,
-        type,
-        ip_address: ipAddress
+          ssid_name: wifiSSID || 'Unknown',
+          punch_in: now,
+          date: today
       });
 
       if (error) throw error;
 
-      setLastPunch(type);
-      fetchData();
+        alert('Successfully punched in!');
+      } else {
+        // Punch out
+        if (!attendanceStatus.punchedIn) {
+          alert('Please punch in first!');
+          return;
+        }
+
+        if (attendanceStatus.punchedOut) {
+          alert('You have already punched out today!');
+          return;
+        }
+
+        // Update existing record with punch out time
+        const { error } = await supabase
+          .from('teacher_attendance_logs')
+          .update({ punch_out: now })
+          .eq('teacher_id', user.id)
+          .eq('date', today);
+
+        if (error) throw error;
+        
+        alert('Successfully punched out!');
+      }
+
+      // Refresh attendance status
+      await checkAttendanceStatus();
+      
     } catch (error) {
       console.error('Error punching in/out:', error);
+      alert('Error processing attendance. Please try again.');
+    } finally {
+      setPunching(null);
     }
   };
 
@@ -385,52 +546,142 @@ export default function TeacherDashboard() {
 
       {/* Punch In/Out Section */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-8 text-white">
-          <h2 className="text-xl font-semibold mb-4">Attendance</h2>
+          <h2 className="text-xl font-semibold mb-4">Teacher Attendance</h2>
+          
+          {/* WiFi Status */}
+          <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-white/70">WiFi Connection:</span>
+              <span className={`text-sm font-medium ${
+                wifiVerificationFailed 
+                  ? 'text-red-400' 
+                  : schoolSSIDs.length > 0 && wifiSSID && schoolSSIDs.some(ssid => 
+                      wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
+                      ssid.toLowerCase().includes(wifiSSID.toLowerCase())
+                    ) ? 'text-green-400' : 'text-yellow-400'
+              }`}>
+                {wifiVerificationFailed 
+                  ? 'Failed to Connect' 
+                  : wifiSSID || 'Detecting...'
+                }
+              </span>
+            </div>
+            {schoolSSIDs.length > 0 && (
+              <div className="text-xs text-white/60 mt-1">
+                Expected: {schoolSSIDs.join(', ')}
+              </div>
+            )}
+            {wifiVerificationFailed && (
+              <div className="text-xs text-red-400 mt-1 flex items-center">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Please connect to school WiFi to punch in/out
+              </div>
+            )}
+          </div>
+
+          {/* Attendance Status */}
+          <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-white/70">Punch In:</span>
+                <span className={`ml-2 font-medium ${
+                  attendanceStatus.punchedIn ? 'text-green-400' : 'text-white/50'
+                }`}>
+                  {attendanceStatus.punchedIn 
+                    ? new Date(attendanceStatus.punchInTime!).toLocaleTimeString()
+                    : 'Not punched in'
+                  }
+                </span>
+              </div>
+              <div>
+                <span className="text-white/70">Punch Out:</span>
+                <span className={`ml-2 font-medium ${
+                  attendanceStatus.punchedOut ? 'text-red-400' : 'text-white/50'
+                }`}>
+                  {attendanceStatus.punchedOut 
+                    ? new Date(attendanceStatus.punchOutTime!).toLocaleTimeString()
+                    : 'Not punched out'
+                  }
+                </span>
+              </div>
+            </div>
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-4">
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: punching ? 1 : 1.05 }}
+              whileTap={{ scale: punching ? 1 : 0.95 }}
               onClick={() => handlePunch('punch_in')}
-              disabled={lastPunch === 'punch_in'}
+              disabled={attendanceStatus.punchedIn || punching !== null || wifiVerificationFailed}
               className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                lastPunch === 'punch_in'
+                attendanceStatus.punchedIn || punching !== null || wifiVerificationFailed
                   ? 'bg-white/10 text-white/50 cursor-not-allowed border border-white/10'
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
             >
               <div className="flex items-center justify-center">
+                {punching === 'punch_in' ? (
+                  <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : wifiVerificationFailed ? (
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                ) : (
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Punch In
+                )}
+                {punching === 'punch_in' 
+                  ? 'Processing...' 
+                  : wifiVerificationFailed 
+                    ? 'Failed to Connect' 
+                    : attendanceStatus.punchedIn 
+                      ? 'Punched In' 
+                      : 'Punch In'
+                }
               </div>
             </motion.button>
             
             <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: punching ? 1 : 1.05 }}
+              whileTap={{ scale: punching ? 1 : 0.95 }}
               onClick={() => handlePunch('punch_out')}
-              disabled={lastPunch === 'punch_out'}
+              disabled={!attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || wifiVerificationFailed}
               className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                lastPunch === 'punch_out'
+                !attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || wifiVerificationFailed
                   ? 'bg-white/10 text-white/50 cursor-not-allowed border border-white/10'
                   : 'bg-red-600 text-white hover:bg-red-700'
               }`}
             >
               <div className="flex items-center justify-center">
+                {punching === 'punch_out' ? (
+                  <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                ) : wifiVerificationFailed ? (
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                ) : (
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Punch Out
+                )}
+                {punching === 'punch_out' 
+                  ? 'Processing...' 
+                  : wifiVerificationFailed 
+                    ? 'Failed to Connect' 
+                    : attendanceStatus.punchedOut 
+                      ? 'Punched Out' 
+                      : 'Punch Out'
+                }
               </div>
             </motion.button>
           </div>
-          
-          {lastPunch && (
-            <p className="text-sm text-white/80 mt-4 text-center">
-              Last action: {lastPunch === 'punch_in' ? 'Punched In' : 'Punched Out'}
-            </p>
-          )}
         </motion.div>
 
         {/* KPIs */}
