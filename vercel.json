@@ -1,8 +1,11 @@
 {
   "functions": {
-    "app/api/reports/generate-pdf/route.ts": {
-      "maxDuration": 60
-    }
+    "app/api/reports/generate-pdf/route.ts": { "maxDuration": 60 },
+    "app/api/receipts/pdf/route.ts": { "maxDuration": 60 },
+    "app/api/accountant/collections.pdf/route.ts": { "maxDuration": 60 },
+    "app/api/accountant/balances.pdf/route.ts": { "maxDuration": 60 },
+    "app/api/accountant/term-summary.pdf/route.ts": { "maxDuration": 60 },
+    "app/api/headed-paper/generate-pdf/route.ts": { "maxDuration": 60 }
   },
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true",

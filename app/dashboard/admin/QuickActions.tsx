@@ -145,8 +145,8 @@ export function AdminQuickActions() {
           >
             {busy === "wifi" ? "Adding..." : "Add"}
           </button>
-        </div>
-        
+      </div>
+
         <div className="text-xs text-white/60 mt-2">
           Teachers can only punch in/out when connected to these WiFi networks
         </div>

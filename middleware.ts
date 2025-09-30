@@ -98,6 +98,11 @@ export async function middleware(req: NextRequest) {
       return res;
     }
 
+    // Explicitly protect owner dashboard: only owners may access
+    if (pathname.startsWith('/dashboard/owner') && lower !== 'owner') {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+
     // Enforce role-specific dashboard prefixes
     if (pathname.startsWith('/dashboard/admin') && lower !== 'admin' && lower !== 'owner') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));

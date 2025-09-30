@@ -22,6 +22,10 @@ export default function AccountantDashboardPage() {
   const [search, setSearch] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [classes, setClasses] = useState<string[]>([]);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [method, setMethod] = useState<string>("");
+  const [minBalance, setMinBalance] = useState<string>("0");
 
   useEffect(() => {
     const init = async () => {
@@ -172,9 +176,74 @@ export default function AccountantDashboardPage() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          <select
+            value={method}
+            onChange={(e)=>setMethod(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          >
+            <option value="">All Methods</option>
+            <option value="cash">Cash</option>
+            <option value="bank">Bank</option>
+            <option value="mobile_money">Mobile Money</option>
+          </select>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e)=>setStartDate(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e)=>setEndDate(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          />
+          <input
+            type="number"
+            placeholder="Min Balance"
+            value={minBalance}
+            onChange={(e)=>setMinBalance(e.target.value)}
+            className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+          />
           <div className="flex-1" />
           <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Record Payment</button>
           <button className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Generate Receipt</button>
+        </div>
+
+        {/* Export buttons */}
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <button
+            onClick={()=>{
+              const q = new URLSearchParams();
+              if (startDate) q.set('start', startDate);
+              if (endDate) q.set('end', endDate);
+              if (selectedClass) q.set('class', selectedClass);
+              if (method) q.set('method', method);
+              window.open(`/api/accountant/collections.pdf?${q.toString()}`,'_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+          >Download Collections (PDF)</button>
+
+          <button
+            onClick={()=>{
+              const q = new URLSearchParams();
+              if (selectedClass) q.set('class', selectedClass);
+              if (minBalance) q.set('minBalance', minBalance);
+              window.open(`/api/accountant/balances.pdf?${q.toString()}`,'_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+          >Download Balances (PDF)</button>
+
+          <button
+            onClick={()=>{
+              const q = new URLSearchParams();
+              if (startDate) q.set('start', startDate);
+              if (endDate) q.set('end', endDate);
+              if (selectedClass) q.set('class', selectedClass);
+              window.open(`/api/accountant/term-summary.pdf?${q.toString()}`,'_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
+          >Download Term Summary (PDF)</button>
         </div>
 
         {/* Payments table */}

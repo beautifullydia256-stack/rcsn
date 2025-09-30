@@ -12,7 +12,7 @@ export default function HeadTeacherDashboard() {
   const [kpis, setKpis] = useState<any>({ students: 0, teachers: 0, attendance_students: 0, attendance_teachers: 0, exams: 0, discipline: 0 });
   const [notices, setNotices] = useState<any[]>([]);
   const [teacherLoad, setTeacherLoad] = useState<Array<{ teacher_id: string; name: string; classes: number; subjects: number; periods: number }>>([]);
-  const [pendingResults, setPendingResults] = useState<Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string }>>([]);
+  const [pendingResults, setPendingResults] = useState<Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string; published?: boolean; published_at?: string }>>([]);
 
   useEffect(() => {
     const run = async () => {
@@ -87,11 +87,35 @@ export default function HeadTeacherDashboard() {
           .eq('active_for_input', true)
           .order('year', { ascending: false })
           .order('term', { ascending: true });
-        const pending: Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string }> = [];
+        // Load publication statuses for these exam sets
+        const setIds = (activeSets || []).map((es:any)=> es.id);
+        let pubs: any[] = [];
+        if (setIds.length > 0) {
+          const { data: pubData } = await supabase
+            .from('exam_set_publications')
+            .select('exam_set_id,class_name,published,published_at')
+            .eq('school_id', u.school_id)
+            .in('exam_set_id', setIds);
+          pubs = pubData || [];
+        }
+
+        const pending: Array<{ exam_set_id: string; name: string; term: number; year: number; class_name: string; published?: boolean; published_at?: string }> = [];
         (activeSets || []).forEach((es: any) => {
           const classes: string[] = es.target_classes && es.target_classes.length ? es.target_classes : [];
-          classes.forEach((cn) => pending.push({ exam_set_id: es.id, name: es.name, term: es.term, year: es.year, class_name: cn }));
+          classes.forEach((cn) => {
+            const pub = pubs.find(p => p.exam_set_id === es.id && p.class_name === cn);
+            pending.push({
+              exam_set_id: es.id,
+              name: es.name,
+              term: es.term,
+              year: es.year,
+              class_name: cn,
+              published: !!pub?.published,
+              published_at: pub?.published_at || null
+            });
+          });
         });
+        // Keep both published and pending; UI will indicate status
         setPendingResults(pending);
       } catch {}
 
@@ -204,7 +228,7 @@ export default function HeadTeacherDashboard() {
               <h2 className="text-white font-medium">Approvals</h2>
               <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Open Reports</button>
             </div>
-            <div className="text-white/80 text-sm mb-2">Pending Exam Sets (Active for Input)</div>
+            <div className="text-white/80 text-sm mb-2">Exam Sets (Active for Input)</div>
             <div className="overflow-x-auto rounded-lg border border-white/10">
               <table className="min-w-full text-sm">
                 <thead className="bg-white/5">
@@ -212,16 +236,52 @@ export default function HeadTeacherDashboard() {
                     <th className="px-4 py-2 text-left text-white/80">Exam Set</th>
                     <th className="px-4 py-2 text-left text-white/80">Class</th>
                     <th className="px-4 py-2 text-left text-white/80">Term/Year</th>
+                    <th className="px-4 py-2 text-left text-white/80">Status</th>
+                    <th className="px-4 py-2 text-left text-white/80">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="[&>tr:nth-child(even)]:bg-white/5">
                   {pendingResults.length === 0 ? (
-                    <tr><td className="px-4 py-3 text-white/70" colSpan={3}>No pending items</td></tr>
+                    <tr><td className="px-4 py-3 text-white/70" colSpan={5}>No pending items</td></tr>
                   ) : pendingResults.map(r => (
                     <tr key={r.exam_set_id + r.class_name} className="border-t border-white/10">
                       <td className="px-4 py-2 text-white">{r.name}</td>
                       <td className="px-4 py-2 text-white/90">{r.class_name || 'All Classes'}</td>
                       <td className="px-4 py-2 text-white/90">Term {r.term}, {r.year}</td>
+                      <td className="px-4 py-2 text-white/90">
+                        {r.published ? (
+                          <span className="px-2 py-1 rounded bg-green-500/20 text-green-300 border border-green-500/30">Published{r.published_at ? ` • ${new Date(r.published_at).toLocaleDateString()}` : ''}</span>
+                        ) : (
+                          <span className="px-2 py-1 rounded bg-yellow-500/20 text-yellow-300 border border-yellow-500/30">Pending</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2 text-white/90">
+                        <button
+                          className="px-3 py-1 rounded bg-green-600 hover:bg-green-500 text-white mr-2"
+                          onClick={async ()=>{
+                            try {
+                              const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: true }) });
+                              const j = await res.json();
+                              if (!res.ok) throw new Error(j.error || 'Failed');
+                              alert('Published successfully');
+                              // refresh row locally
+                              setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: true, published_at: new Date().toISOString() } : x));
+                            } catch (e:any) { alert(e.message); }
+                          }}
+                        >Publish</button>
+                        <button
+                          className="px-3 py-1 rounded bg-red-600 hover:bg-red-500 text-white"
+                          onClick={async ()=>{
+                            try {
+                              const res = await fetch('/api/exam-sets/publish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ exam_set_id: r.exam_set_id, class_name: r.class_name, publish: false }) });
+                              const j = await res.json();
+                              if (!res.ok) throw new Error(j.error || 'Failed');
+                              alert('Unpublished');
+                              setPendingResults(prev => prev.map(x => (x.exam_set_id===r.exam_set_id && x.class_name===r.class_name) ? { ...x, published: false, published_at: null as any } : x));
+                            } catch (e:any) { alert(e.message); }
+                          }}
+                        >Unpublish</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

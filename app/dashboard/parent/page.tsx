@@ -232,7 +232,7 @@ export default function ParentDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div>
-              <h1 className="text-2xl font-bold text-blue-600">Parent Dashboard</h1>
+            <h1 className="text-2xl font-bold text-blue-600">Parent Dashboard</h1>
               <p className="text-sm text-gray-600">{summary.student_name} - {summary.current_class}</p>
             </div>
             <button
@@ -255,7 +255,7 @@ export default function ParentDashboard() {
           {/* Attendance Card */}
           <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
             <div className="flex items-center justify-between">
-              <div>
+            <div>
                 <p className="text-sm font-medium text-gray-600">Attendance</p>
                 <p className="text-3xl font-bold text-gray-900">{attendancePercentage}%</p>
                 <p className="text-xs text-gray-500 mt-1">This Month</p>
@@ -271,18 +271,18 @@ export default function ParentDashboard() {
           {/* Fee Balance Card */}
           <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
             <div className="flex items-center justify-between">
-              <div>
+            <div>
                 <p className="text-sm font-medium text-gray-600">Outstanding Balance</p>
                 <p className="text-3xl font-bold text-gray-900">UGX {summary.balance?.toLocaleString() || 0}</p>
                 <p className="text-xs text-gray-500 mt-1">Paid: {summary.total_paid?.toLocaleString() || 0}</p>
-              </div>
+            </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-              </div>
             </div>
-          </motion.div>
+          </div>
+        </motion.div>
 
           {/* Unread Notifications */}
           <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
@@ -377,9 +377,9 @@ export default function ParentDashboard() {
                         <span className={`font-semibold ${summary.discipline_incidents_30d > 0 ? 'text-red-600' : 'text-green-600'}`}>
                           {summary.discipline_incidents_30d}
                         </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
 
                   {/* Upcoming Events */}
                   <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
@@ -394,12 +394,12 @@ export default function ParentDashboard() {
                               <span className="text-xl">
                                 {event.event_type === 'exam' ? '📝' : event.event_type === 'holiday' ? '🏖️' : event.event_type === 'meeting' ? '👥' : '📅'}
                               </span>
-                            </div>
+                          </div>
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-gray-900">{event.title}</p>
                               <p className="text-sm text-gray-600">{new Date(event.start_date).toLocaleDateString()}</p>
-                            </div>
-                          </div>
+                        </div>
+                      </div>
                         ))}
                       </div>
                     )}
@@ -456,11 +456,11 @@ export default function ParentDashboard() {
                 {/* Report Cards */}
                 <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-gray-900 mb-4">Report Cards</h3>
-                  {reports.length === 0 ? (
+                {reports.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No report cards available</p>
-                  ) : (
+                ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {reports.map((report) => (
+                    {reports.map((report) => (
                         <div key={report.report_id} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
                           <div>
                             <h4 className="font-medium text-gray-900">{report.template_name}</h4>
@@ -479,10 +479,10 @@ export default function ParentDashboard() {
                               Download
                             </a>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 </div>
 
                 {/* Exam Results */}
@@ -608,7 +608,7 @@ export default function ParentDashboard() {
                   <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
                     Pay Now (Coming Soon)
                   </button>
-                </div>
+                  </div>
               </motion.div>
             )}
 

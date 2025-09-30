@@ -49,6 +49,9 @@ export default function AddStudentPage() {
   const [expectedFee, setExpectedFee] = useState("");
   const [initialPayment, setInitialPayment] = useState("");
 
+  // Medical
+  const [medicalCondition, setMedicalCondition] = useState<string>("");
+
   const [saving, setSaving] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
@@ -157,6 +160,7 @@ export default function AddStudentPage() {
         guardian_email: guardianEmail || null,
         guardian_occupation: guardianOccupation || null,
         guardian_address: guardianAddress || null,
+        medical_condition: medicalCondition || null,
         admission_number,
         stream: stream || null,
         previous_school: previousSchool || null,
@@ -330,6 +334,15 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Stream / Section (optional)" value={stream} onChange={(e)=>setStream(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Previous School (if transfer)" value={previousSchool} onChange={(e)=>setPreviousSchool(e.target.value)} />
             <input type="date" readOnly className="rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2" placeholder="Admission Date" value={admissionDate} />
+
+            <div className="text-white/90 font-medium col-span-full mt-2">Medical</div>
+            <textarea
+              className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 col-span-full"
+              placeholder="Medical condition / allergies / special notes (optional)"
+              rows={3}
+              value={medicalCondition}
+              onChange={(e)=>setMedicalCondition(e.target.value)}
+            />
 
             <div className="text-white/90 font-medium col-span-full mt-2">Fees & Finance</div>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Enrollment / Registration Fee" value={enrollmentFee} onChange={(e)=>setEnrollmentFee(e.target.value)} />

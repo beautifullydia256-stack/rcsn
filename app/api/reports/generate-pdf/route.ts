@@ -5,6 +5,9 @@ import { calculateGrade, formatCurrency, getAttendanceDetails, formatValue, form
 import chromium from '@sparticuz/chromium';
 import { supabase } from '@/src/lib/supabase';
 
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+
 // Helper function to check if class is O-Level
 function isOLevelClass(className: string): boolean {
   if (!className) return false;
