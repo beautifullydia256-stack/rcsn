@@ -119,6 +119,16 @@ export default function HeadTeacherDashboard() {
               </div>
             )}
           </div>
+
+          {/* Quick Actions */}
+          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 lg:col-span-3">
+            <h2 className="text-white font-medium mb-3">Quick Actions</h2>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={()=>router.push('/dashboard/head-teacher/headed-paper')} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Headed Paper</button>
+              <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Manage Teachers</button>
+              <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Generate Reports</button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
