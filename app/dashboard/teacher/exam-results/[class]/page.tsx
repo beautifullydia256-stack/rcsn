@@ -54,6 +54,7 @@ export default function TeacherExamResultsClassPage() {
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
+  const [commentRules, setCommentRules] = useState<Array<{ min_avg: number; max_avg: number; comment: string }>>([]);
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
     A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
     B: 'Outstanding! Strive for excellence to reach the next level.',
@@ -349,6 +350,15 @@ export default function TeacherExamResultsClassPage() {
         );
         setExamSets(filteredExamSets);
 
+        // Load teacher comment rules for this class
+        try {
+          const res = await fetch(`/api/teacher-comment-rules?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
+          if (res.ok) {
+            const j = await res.json();
+            setCommentRules(j.rules || []);
+          }
+        } catch {}
+
         // Get students in this class with better error handling
         let studentsData: any[] = [];
         try {
@@ -610,10 +620,19 @@ export default function TeacherExamResultsClassPage() {
           return;
         }
         // Use secure RPC (server-side checks) for reliability
+        // Helper to compute auto teacher comment from rules by average
+        const autoTeacherComment = (avgPercent: number): string => {
+          if (!Array.isArray(commentRules) || commentRules.length === 0) return '';
+          const rule = commentRules.find(r => avgPercent >= r.min_avg && avgPercent <= r.max_avg);
+          return rule?.comment || '';
+        };
+
         const saves = entries.map(async ([studentId, data]) => {
           const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
           const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+          const avgPercent = Math.max(0, Math.min(100, parseFloat(data.marks)));
+          const teacherComment = autoTeacherComment(avgPercent);
           const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
@@ -625,6 +644,7 @@ export default function TeacherExamResultsClassPage() {
             p_grade: computedGrade,
             // optional extras if RPC supports them; ignored if not
             p_overall_remark: computedRemark,
+            p_teacher_comment: teacherComment || null,
             p_topic: topicFilter || null,
             p_teacher_initials: teacherInitials || null
           });
@@ -664,6 +684,12 @@ export default function TeacherExamResultsClassPage() {
           setError('Please enter at least one secondary record');
           return;
         }
+        const autoTeacherComment = (finalNum: number): string => {
+          if (!Array.isArray(commentRules) || commentRules.length === 0) return '';
+          const rule = commentRules.find(r => finalNum >= r.min_avg && finalNum <= r.max_avg);
+          return rule?.comment || '';
+        };
+
         const saves = entries.map(async ({ studentId, data }) => {
             const activityNum = parseFloat(data.activityScore) || 0;
             const descriptor = calculateDescriptor(activityNum);
@@ -684,6 +710,7 @@ export default function TeacherExamResultsClassPage() {
             p_final_score: finalNum,
             p_grade: grade,
             p_overall_remark: (data.remark || '').trim(),
+            p_teacher_comment: autoTeacherComment(finalNum),
             p_topic: (data.topic || topicFilter || '').trim(),
             p_teacher_initials: data.initials || teacherInitials || ''
           });
