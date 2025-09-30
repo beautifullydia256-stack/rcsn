@@ -19,6 +19,8 @@ export default function TeacherProfilePage() {
   const [assignClass, setAssignClass] = useState<string>("");
   const [assignSubjects, setAssignSubjects] = useState<string[]>([]);
   const [savingAssign, setSavingAssign] = useState(false);
+  const [appointing, setAppointing] = useState(false);
+  const [classTeacherOf, setClassTeacherOf] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -52,6 +54,15 @@ export default function TeacherProfilePage() {
           .eq('teacher_id', teacher.teacher_id)
           .order('class_name');
         setAssignedLinks((tsub || []) as any);
+
+        // Load class where this teacher is class teacher
+        const { data: cls } = await supabase
+          .from('class_template_settings')
+          .select('class_name')
+          .eq('school_id', teacher.school_id)
+          .eq('class_teacher_id', teacher.teacher_id)
+          .maybeSingle();
+        setClassTeacherOf(cls?.class_name || null);
       }
       setLoading(false);
     };
@@ -149,6 +160,9 @@ export default function TeacherProfilePage() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xl">👤</div>
             <h1 className="text-white text-2xl font-semibold">{name || 'Teacher Profile'}</h1>
+            {classTeacherOf && (
+              <span className="ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/40">Class Teacher · {classTeacherOf}</span>
+            )}
           </div>
           <div className="flex gap-2">
             <button className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={()=>router.push('/dashboard/admin/teachers')}>Back to Teacher List</button>
@@ -164,6 +178,23 @@ export default function TeacherProfilePage() {
                 alert('Password reset successfully.');
               }
             }}>Reset Password</button>
+            <button className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white" onClick={async ()=>{
+              if (!row?.teacher_id) return;
+              const class_name = prompt('Enter class name to appoint this teacher as class teacher (exact name):');
+              if (!class_name) return;
+              setAppointing(true);
+              try {
+                const res = await fetch('/api/class-teachers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name, teacher_id: row.teacher_id }) });
+                const j = await res.json();
+                if (!res.ok) throw new Error(j.error || 'Failed to appoint class teacher');
+                setClassTeacherOf(class_name);
+                alert('Appointed as class teacher successfully.');
+              } catch (e:any) {
+                alert(e.message);
+              } finally {
+                setAppointing(false);
+              }
+            }}>{appointing ? 'Appointing...' : 'Appoint as Class Teacher'}</button>
           </div>
         </div>
 
