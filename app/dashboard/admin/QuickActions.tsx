@@ -99,6 +99,7 @@ export function AdminQuickActions() {
         <button className="px-3 py-2 rounded-lg bg-purple-500 hover:bg-purple-400 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/admin/jobs/post')}>Post Job Vacancy</button>
         <button className="px-3 py-2 rounded-lg bg-orange-500 hover:bg-orange-400 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/admin/librarian/add')}>Add Librarian</button>
         <button className="px-3 py-2 rounded-lg bg-slate-500 hover:bg-slate-400 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/admin/settings')}>System Settings</button>
+        <button className="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/head-teacher/headed-paper')}>Headed Paper</button>
         <button className="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/admin/head-teacher/appoint')}>Appoint Head Teacher</button>
       </div>
 
