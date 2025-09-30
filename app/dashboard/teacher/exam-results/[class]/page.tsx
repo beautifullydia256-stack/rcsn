@@ -55,6 +55,7 @@ export default function TeacherExamResultsClassPage() {
   const [showGradeSettings, setShowGradeSettings] = useState(false);
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
   const [commentRules, setCommentRules] = useState<Array<{ min_avg: number; max_avg: number; comment: string }>>([]);
+  const [showCommentRules, setShowCommentRules] = useState(false);
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
     A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
     B: 'Outstanding! Strive for excellence to reach the next level.',
@@ -881,6 +882,12 @@ export default function TeacherExamResultsClassPage() {
             >
               Grade Settings
             </button>
+          <button
+            onClick={() => setShowCommentRules(true)}
+            className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
+          >
+            Comment Rules
+          </button>
             <button
               onClick={() => router.push('/dashboard/teacher/exam-results')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
@@ -1229,6 +1236,70 @@ export default function TeacherExamResultsClassPage() {
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <button onClick={() => setShowGradeSettings(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Comment Rules Modal */}
+        {showCommentRules && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-white text-xl font-semibold">Comment Rules for {className}</h2>
+                <button onClick={() => setShowCommentRules(false)} className="text-white/60 hover:text-white">✕</button>
+              </div>
+              <p className="text-white/70 text-sm mb-4">Comments will auto-apply based on a student's average performance.</p>
+              <div className="space-y-3">
+                {commentRules.map((r, idx) => (
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
+                    <label className="text-white/70 text-sm">Min %
+                      <input type="number" min={0} max={100} value={r.min_avg}
+                        onChange={e=>{
+                          const v = Math.max(0, Math.min(100, parseFloat(e.target.value)||0));
+                          setCommentRules(prev => prev.map((x,i)=> i===idx ? { ...x, min_avg: v } : x));
+                        }}
+                        className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                    </label>
+                    <label className="text-white/70 text-sm">Max %
+                      <input type="number" min={0} max={100} value={r.max_avg}
+                        onChange={e=>{
+                          const v = Math.max(0, Math.min(100, parseFloat(e.target.value)||0));
+                          setCommentRules(prev => prev.map((x,i)=> i===idx ? { ...x, max_avg: v } : x));
+                        }}
+                        className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                    </label>
+                    <div className="md:col-span-3">
+                      <label className="text-white/70 text-sm">Comment</label>
+                      <textarea value={r.comment}
+                        onChange={e=> setCommentRules(prev => prev.map((x,i)=> i===idx ? { ...x, comment: e.target.value } : x))}
+                        rows={2}
+                        className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                    </div>
+                    <div className="flex items-end">
+                      <button onClick={()=> setCommentRules(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between mt-4">
+                <button onClick={()=> setCommentRules(prev => [...prev, { min_avg: 0, max_avg: 100, comment: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+                <div className="flex gap-2">
+                  <button onClick={()=> setShowCommentRules(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
+                  <button onClick={async ()=>{
+                    try {
+                      const resp = await fetch('/api/teacher-comment-rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: className, rules: commentRules }) });
+                      if (!resp.ok) {
+                        const j = await resp.json().catch(()=>({}));
+                        throw new Error(j.error || 'Failed to save rules');
+                      }
+                      alert('Comment rules saved');
+                      setShowCommentRules(false);
+                    } catch (e:any) {
+                      alert(e.message);
+                    }
+                  }} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Save Rules</button>
+                </div>
               </div>
             </div>
           </div>
