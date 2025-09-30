@@ -350,7 +350,32 @@ export default function GenerateReportsPage() {
       const referenceExamSet = (selectedExamSetId && selectedExamSetId !== 'all')
         ? (examSets || []).find(es => es.id === selectedExamSetId)
         : [...(examSets || [])]
-            .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
+        .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
+
+      // Load class teacher name and comment rules for selected class
+      let classTeacherName: string | null = null;
+      try {
+        const classSetting = classTemplateSettings.find((s:any) => s.class_name === (selectedClass || targetStudents[0].current_class));
+        if (classSetting?.class_teacher_id) {
+          const { data: tname } = await supabase
+            .from('teachers')
+            .select('name')
+            .eq('teacher_id', classSetting.class_teacher_id)
+            .maybeSingle();
+          classTeacherName = tname?.name || null;
+        }
+      } catch {}
+
+      let commentRules: Array<{ min_avg: number; max_avg: number; comment: string }> = [];
+      try {
+        const { data: rules } = await supabase
+          .from('teacher_comment_rules')
+          .select('min_avg,max_avg,comment')
+          .eq('school_id', schoolId)
+          .eq('class_name', targetStudents[0].current_class)
+          .order('min_avg');
+        commentRules = rules || [];
+      } catch {}
 
       const reportData = {
         school: {
@@ -390,13 +415,25 @@ export default function GenerateReportsPage() {
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
+          // Teacher comment from rules
+          const teacherComment = (() => {
+            const avg = average != null ? Math.max(0, Math.min(100, average)) : null;
+            if (avg == null || commentRules.length === 0) return '';
+            const rule = commentRules.find(r => avg >= Number(r.min_avg) && avg <= Number(r.max_avg));
+            return rule?.comment || '';
+          })();
+
           return {
             ...student,
             results: studentResults,
             attendance: studentAttendance,
             fees: studentFees,
             projects: studentProjects,
-            comments: studentComments,
+            comments: {
+              ...studentComments,
+              class_teacher_name: classTeacherName || (studentComments?.class_teacher_name || ''),
+              class_teacher_text: teacherComment || (studentComments?.class_teacher_text || ''),
+            },
             profile_photo: studentPhoto?.photo_url || null,
             nextTermBegins: nextTermBegins,
             summary: {
