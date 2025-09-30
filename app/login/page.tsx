@@ -614,40 +614,6 @@ export default function Login() {
   );
 }
 
-          }
-
-
-
-          // Also create a school if the user doesn't have one
-
-          const { data: schoolData } = await supabase
-
-            .from('schools')
-
-            .select('school_id')
-
-            .eq('admin_id', data.user.id);
-
-
-
-          if (!schoolData || schoolData.length === 0) {
-
-            console.log('Creating default school for admin');
-
-            const { error: schoolError } = await supabase
-
-              .from('schools')
-
-              .insert({
-
-                name: userMetadata?.school_name || 'My School',
-
-                location: userMetadata?.school_location || 'Location TBD',
-
-                type: userMetadata?.school_type || 'Nursery/Primary',
-
-                admin_email: data.user.email,
-
                 admin_name: userMetadata?.admin_name || userMetadata?.name || 'Admin User',
 
                 admin_id: data.user.id,
