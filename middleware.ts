@@ -17,6 +17,8 @@ function roleToDashboard(role?: string | null): string {
       return '/dashboard/librarian';
     case 'accountant':
       return '/dashboard/accountant';
+    case 'head_teacher':
+      return '/dashboard/head-teacher';
     default:
       return '/dashboard';
   }
@@ -113,6 +115,9 @@ export async function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
     if (pathname.startsWith('/dashboard/accountant') && lower !== 'accountant' && lower !== 'owner' && lower !== 'admin') {
+      return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
+    }
+    if (pathname.startsWith('/dashboard/head-teacher') && lower !== 'head_teacher' && lower !== 'owner' && lower !== 'admin') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
 
