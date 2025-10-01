@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -29,35 +29,60 @@ function getOrCreateTabId(): string {
   }
 }
 
-export const supabase = isBrowser
-  ? createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        // Persist session per tab to avoid cross-tab overwrites
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
-        storageKey: `pwezacore-auth:${getOrCreateTabId()}`,
-      },
-    })
-  : createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        // On the server, do not persist or auto-refresh
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
+// Singleton instance cache to prevent multiple client creations
+let _supabaseInstance: SupabaseClient | null = null;
+
+function createSupabaseClient(): SupabaseClient {
+  if (_supabaseInstance) {
+    return _supabaseInstance;
+  }
+
+  _supabaseInstance = isBrowser
+    ? createClient(supabaseUrl!, supabaseAnonKey!, {
+        auth: {
+          // Persist session per tab to avoid cross-tab overwrites
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storage: typeof window !== 'undefined' ? window.sessionStorage : undefined,
+          storageKey: `pwezacore-auth:${getOrCreateTabId()}`,
+        },
+      })
+    : createClient(supabaseUrl!, supabaseAnonKey!, {
+        auth: {
+          // On the server, do not persist or auto-refresh
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        },
+      });
+
+  return _supabaseInstance;
+}
+
+export const supabase = createSupabaseClient();
 
 // Admin client for service role operations (only use on server-side)
-export const supabaseAdmin = supabaseServiceKey 
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null;
+let _supabaseAdminInstance: SupabaseClient | null = null;
+
+function createSupabaseAdmin(): SupabaseClient | null {
+  if (!supabaseServiceKey) return null;
+  
+  if (_supabaseAdminInstance) {
+    return _supabaseAdminInstance;
+  }
+
+  _supabaseAdminInstance = createClient(supabaseUrl!, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+
+  return _supabaseAdminInstance;
+}
+
+export const supabaseAdmin = createSupabaseAdmin();
 
 // Database types
 export interface School {
