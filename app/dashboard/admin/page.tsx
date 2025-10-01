@@ -14,7 +14,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <AdminHeader onSearch={setSearch} onFilter={setFilters} />
       <AdminGlobalSearch query={search} filters={filters} />
