@@ -237,7 +237,7 @@ ALTER TABLE report_templates ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies (safe defaults)
 
--- Users: self access; owner full access
+-- Users: self access; admin/owner can manage users in their school
 CREATE POLICY "users self select" ON users
 FOR SELECT TO authenticated USING (user_id = auth.uid());
 
@@ -249,6 +249,36 @@ FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "owner all on users" ON users
 FOR ALL TO authenticated USING ((SELECT role FROM users WHERE user_id = auth.uid()) = 'owner');
+
+-- Allow admins to manage users in their school
+CREATE POLICY "admin select users in school" ON users
+FOR SELECT TO authenticated
+USING (
+  school_id IN (
+    SELECT u.school_id FROM users u WHERE u.user_id = auth.uid() AND u.role IN ('admin', 'owner')
+  )
+);
+
+CREATE POLICY "admin insert users in school" ON users
+FOR INSERT TO authenticated
+WITH CHECK (
+  school_id IN (
+    SELECT u.school_id FROM users u WHERE u.user_id = auth.uid() AND u.role IN ('admin', 'owner')
+  )
+);
+
+CREATE POLICY "admin update users in school" ON users
+FOR UPDATE TO authenticated
+USING (
+  school_id IN (
+    SELECT u.school_id FROM users u WHERE u.user_id = auth.uid() AND u.role IN ('admin', 'owner')
+  )
+)
+WITH CHECK (
+  school_id IN (
+    SELECT u.school_id FROM users u WHERE u.user_id = auth.uid() AND u.role IN ('admin', 'owner')
+  )
+);
 
 -- Schools: admin can manage their school; owner all
 CREATE POLICY "schools admin manage" ON schools
