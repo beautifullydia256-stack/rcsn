@@ -197,10 +197,10 @@ export default function Login() {
       let authError: any = null;
 
       // Try login with the provided credentials directly
+      // Note: Don't pass Turnstile token to Supabase - it expects hCaptcha tokens
       const loginResult = await supabase.auth.signInWithPassword({
         email: email,
         password: password,
-        options: { captchaToken },
       });
       
       data = loginResult.data;
@@ -212,7 +212,6 @@ export default function Login() {
         const fallbackResult = await supabase.auth.signInWithPassword({
           email: fallbackEmail,
           password: password,
-          options: { captchaToken },
         });
         
         if (!fallbackResult.error) {

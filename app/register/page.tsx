@@ -113,11 +113,11 @@ export default function Register() {
 
     try {
       // Create auth user first
+      // Note: Don't pass Turnstile token to Supabase - it expects hCaptcha tokens
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
-          captchaToken,
           data: {
             school_name: formData.schoolName,
             admin_name: formData.adminName,
