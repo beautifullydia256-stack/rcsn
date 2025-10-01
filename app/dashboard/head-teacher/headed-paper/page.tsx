@@ -6,9 +6,60 @@ import { supabase } from "@/src/lib/supabase";
 export default function HeadedPaperPage() {
   const [html, setHtml] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [schoolInfo, setSchoolInfo] = useState<{
+    name: string;
+    motto: string;
+    logo_url: string | null;
+    contact_email: string;
+    contact_phone: string;
+    location: string;
+    website: string;
+  } | null>(null);
+
+  // Fetch school information
+  useEffect(() => {
+    const fetchSchoolInfo = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('school_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (!userData?.school_id) return;
+
+        const { data: school } = await supabase
+          .from('schools')
+          .select('name, motto, logo_url, contact_email, contact_phone, location, website')
+          .eq('school_id', userData.school_id)
+          .single();
+
+        if (school) {
+          setSchoolInfo({
+            name: school.name || 'Sunrise Junior School',
+            motto: school.motto || 'Excellence Through Discipline',
+            logo_url: school.logo_url || null,
+            contact_email: school.contact_email || 'info@school.ac.ug',
+            contact_phone: school.contact_phone || '+256 700 123456',
+            location: school.location || 'Kampala',
+            website: school.website || 'www.school.ac.ug'
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching school info:', error);
+      }
+    };
+
+    fetchSchoolInfo();
+  }, []);
 
   useEffect(() => {
-    // Store provided HTML template as-is (no changes) in state
+    if (!schoolInfo) return;
+
+    // Generate template with school information
     const template = `<!doctype html>
 <html lang="en">
 <head>
@@ -89,15 +140,15 @@ export default function HeadedPaperPage() {
       <header class="header">
         <div class="logo" id="logo">
           <!-- placeholder for logo image -->
-          <img id="logoImg" src="" alt="logo" style="display:none"/>
-          <div id="logoText" style="font-weight:700;color:var(--accent)">SCHOOL</div>
+          <img id="logoImg" src="${schoolInfo.logo_url || ''}" alt="logo" style="${schoolInfo.logo_url ? 'display:block' : 'display:none'}"/>
+          <div id="logoText" style="font-weight:700;color:var(--accent);${schoolInfo.logo_url ? 'display:none' : ''}">SCHOOL</div>
         </div>
 
         <div class="head-right">
           <div style="display:flex;width:100%">
             <div>
-              <div contenteditable id="schoolName" class="school-name">Sunrise Junior School</div>
-              <div contenteditable id="schoolTag" class="school-tag">Excellence Through Discipline</div>
+              <div contenteditable id="schoolName" class="school-name">${schoolInfo.name}</div>
+              <div contenteditable id="schoolTag" class="school-tag">${schoolInfo.motto}</div>
             </div>
           </div>
         </div>
@@ -112,7 +163,7 @@ export default function HeadedPaperPage() {
 
       <div class="footer-strip" aria-hidden="true"></div>
       <div class="footer-info">
-        <div class="contacts" id="footerContacts">Sunrise Junior School • www.sunrise.ac.ug • Tel: +256 700 123456 • Email: info@sunrise.ac.ug • P.O. Box 123, Kampala</div>
+        <div class="contacts" contenteditable id="footerContacts">${schoolInfo.name} • ${schoolInfo.website} • Tel: ${schoolInfo.contact_phone} • Email: ${schoolInfo.contact_email} • ${schoolInfo.location}</div>
       </div>
 
     </article>
@@ -170,7 +221,7 @@ export default function HeadedPaperPage() {
 </body>
 </html>`;
     setHtml(template);
-  }, []);
+  }, [schoolInfo]);
 
   const handlePreview = async () => {
     // We render the raw HTML in an iframe for preview
@@ -200,6 +251,20 @@ export default function HeadedPaperPage() {
     }
   };
 
+  if (!schoolInfo || !html) {
+    return (
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+          <div className="text-white text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+            <p>Loading school information...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
@@ -207,7 +272,7 @@ export default function HeadedPaperPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-white text-2xl font-semibold">Headed Paper</h1>
-            <p className="text-white/70 text-sm">Preview and download school headed paper</p>
+            <p className="text-white/70 text-sm">Preview and download school headed paper (all fields are editable)</p>
           </div>
           <div className="flex gap-3">
             <button onClick={handlePreview} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Preview</button>
