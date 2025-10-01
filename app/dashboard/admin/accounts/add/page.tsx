@@ -84,62 +84,29 @@ export default function AddAccountsManagerPage() {
     
     setSaving(true);
     try {
-      let authUserId = null;
-      
-      if (sendEmailInvite) {
-        // Send email invite
-        const { data, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(email, {
-          data: {
-            name,
-            role,
-            school_id: schoolId,
-            department,
-            position,
-            phone
-          }
-        });
-        
-        if (inviteError) throw inviteError;
-        authUserId = data.user?.id;
-      } else {
-        // Create user with password
-        const { data, error: signupError } = await supabase.auth.admin.createUser({
+      // Call API endpoint to create user (server-side with service role)
+      const response = await fetch('/api/admin/create-user-account', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email,
+          name,
+          role,
+          phone,
           password,
-          email_confirm: true,
-          user_metadata: {
-            name,
-            role,
-            school_id: schoolId,
-            department,
-            position,
-            phone
-          }
-        });
-        
-        if (signupError) throw signupError;
-        authUserId = data.user?.id;
-      }
-      
-      // Create user profile in users table
-      const { error: profileError } = await supabase.from('users').insert({
-        user_id: authUserId,
-        email,
-        name,
-        role,
-        school_id: schoolId,
-        phone,
-        department,
-        position,
-        created_by: (await supabase.auth.getUser()).data.user?.id
+          sendEmailInvite,
+          department,
+          position
+        })
       });
-      
-      if (profileError) throw profileError;
-      
-      setSuccess(sendEmailInvite 
-        ? "User invited successfully! They will receive an email to set up their account."
-        : "User created successfully! They can now log in with their credentials."
-      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      setSuccess(result.message);
       
       // Reset form
       setEmail("");
