@@ -182,7 +182,9 @@ export default function Login() {
     setLoading(true);
     setError('');
 
-    if (!captchaToken) {
+    // Only require CAPTCHA if Turnstile is configured
+    const hasTurnstileKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== '';
+    if (hasTurnstileKey && !captchaToken) {
       setError('Please complete the CAPTCHA');
       setLoading(false);
       return;
@@ -502,6 +504,17 @@ export default function Login() {
 
             {/* Role selection removed: system detects role automatically after login */}
 
+            {/* Cloudflare Turnstile CAPTCHA - only show if configured */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== '' && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+                <Turnstile
+                  siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+                  onSuccess={(token) => setCaptchaToken(token)}
+                  options={{ theme: 'auto' }}
+                />
+              </motion.div>
+            )}
+
             {error && (
               <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-red-500/10 border border-red-400/30 text-red-200 px-4 py-3 rounded-lg">
                 {error}
@@ -578,15 +591,6 @@ export default function Login() {
               {googleLoading ? 'Signing in with Google...' : 'Continue with Google'}
             </motion.button>
           </form>
-
-          {/* Cloudflare Turnstile CAPTCHA */}
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} className="mt-4">
-            <Turnstile
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || ''}
-              onSuccess={(token) => setCaptchaToken(token)}
-              options={{ theme: 'auto' }}
-            />
-          </motion.div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }} className="text-center mt-6">
             <p className="text-white/80">

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 function roleToDashboard(role?: string | null): string {
   switch ((role || '').toLowerCase()) {
@@ -27,9 +28,10 @@ function roleToDashboard(role?: string | null): string {
 export default async function DashboardEntry() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
   const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+  const cookieStore = await cookies();
   const supabase = createServerClient(supabaseUrl, supabaseAnon, {
     cookies: {
-      get(name: string) { return (global as any)?.cookies?.get(name)?.value; },
+      get(name: string) { return cookieStore.get(name)?.value; },
       set() {},
       remove() {},
     },
