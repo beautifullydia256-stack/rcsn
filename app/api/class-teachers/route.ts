@@ -49,13 +49,42 @@ export async function POST(request: NextRequest) {
       .eq('class_name', class_name);
     if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 });
 
-    // Upsert the class to set the new class teacher
-    const { data: setting, error: upErr } = await supabase
+    // Check if class template setting exists
+    const { data: existing } = await supabase
       .from('class_template_settings')
-      .upsert({ school_id, class_name, class_teacher_id: teacher_id }, { onConflict: 'school_id,class_name' })
       .select('*')
-      .single();
-    if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+      .eq('school_id', school_id)
+      .eq('class_name', class_name)
+      .maybeSingle();
+
+    let setting;
+    if (existing) {
+      // Update existing record with class teacher
+      const { data, error: upErr } = await supabase
+        .from('class_template_settings')
+        .update({ class_teacher_id: teacher_id })
+        .eq('school_id', school_id)
+        .eq('class_name', class_name)
+        .select('*')
+        .single();
+      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
+      setting = data;
+    } else {
+      // Create new record with default template
+      const { data, error: insErr } = await supabase
+        .from('class_template_settings')
+        .insert({ 
+          school_id, 
+          class_name, 
+          class_teacher_id: teacher_id,
+          template_id: 'template1', // Default template
+          is_o_level: false
+        })
+        .select('*')
+        .single();
+      if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
+      setting = data;
+    }
 
     return NextResponse.json({ success: true, setting });
   } catch (error) {
