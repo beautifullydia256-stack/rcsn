@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
 export default function AccountantDashboardPage() {
   const router = useRouter();
@@ -10,6 +11,8 @@ export default function AccountantDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>("");
+  const [schoolName, setSchoolName] = useState<string>("");
 
   // KPIs
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
@@ -39,7 +42,7 @@ export default function AccountantDashboardPage() {
 
         const { data: userRow } = await supabase
           .from("users")
-          .select("school_id, role")
+          .select("school_id, role, name")
           .eq("user_id", user.id)
           .single();
         if (!userRow?.school_id) {
@@ -48,6 +51,15 @@ export default function AccountantDashboardPage() {
         }
         setSchoolId(userRow.school_id);
         setRole(userRow.role || null);
+        setUserName(userRow.name || "User");
+
+        // Load school name
+        const { data: schoolData } = await supabase
+          .from("schools")
+          .select("name")
+          .eq("school_id", userRow.school_id)
+          .single();
+        setSchoolName(schoolData?.name || "School");
 
         // Role guard: only accountant or admin
         if (userRow.role !== "accountant" && userRow.role !== "admin") {
@@ -123,95 +135,147 @@ export default function AccountantDashboardPage() {
     });
   }, [payments, search, selectedClass]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-600"></div>
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-red-600">
-        {error}
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <div className="text-red-400 bg-red-500/10 border border-red-400/30 rounded-lg px-6 py-4">
+          {error}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-800">Accountant Dashboard</h1>
-            <p className="text-slate-500 text-sm">Manage fees collection, balances, and receipts</p>
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+      
+      {/* Header */}
+      <div className="relative border-b border-white/10 bg-white/5 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
+                <span className="text-emerald-300 text-lg">💰</span>
+              </div>
+              <div>
+                <h1 className="text-white text-xl font-semibold">{schoolName}</h1>
+                <p className="text-white/60 text-sm">Accountant Dashboard • {userName}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+            >
+              Logout
+            </button>
           </div>
         </div>
+      </div>
+
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <h2 className="text-white text-2xl font-semibold mb-2">Fees & Collections</h2>
+          <p className="text-white/70 text-sm">Manage fees collection, balances, and receipts</p>
+        </motion.div>
 
         {/* KPIs */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        >
           <KpiCard title="Collected Today" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
           <KpiCard title="Collected This Term" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
           <KpiCard title="Outstanding Balances" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
           <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-red-500" />
-        </div>
+        </motion.div>
 
         {/* Filters / Quick actions */}
-        <div className="flex flex-wrap items-center gap-3 mb-4">
-          <input
-            type="text"
-            placeholder="Search student by name/admission/ID"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full md:w-80 rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
-          />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-4 mb-6"
+        >
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <input
+              type="text"
+              placeholder="Search student by name/admission/ID"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full md:w-80 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+            />
           <select
             value={selectedClass}
             onChange={(e) => setSelectedClass(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
           >
-            <option value="">All Classes</option>
+            <option value="" className="bg-slate-800">All Classes</option>
             {classes.map(c => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c} className="bg-slate-800">{c}</option>
             ))}
           </select>
           <select
             value={method}
             onChange={(e)=>setMethod(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
           >
-            <option value="">All Methods</option>
-            <option value="cash">Cash</option>
-            <option value="bank">Bank</option>
-            <option value="mobile_money">Mobile Money</option>
+            <option value="" className="bg-slate-800">All Methods</option>
+            <option value="cash" className="bg-slate-800">Cash</option>
+            <option value="bank" className="bg-slate-800">Bank</option>
+            <option value="mobile_money" className="bg-slate-800">Mobile Money</option>
           </select>
           <input
             type="date"
             value={startDate}
             onChange={(e)=>setStartDate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
           />
           <input
             type="date"
             value={endDate}
             onChange={(e)=>setEndDate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
           />
           <input
             type="number"
             placeholder="Min Balance"
             value={minBalance}
             onChange={(e)=>setMinBalance(e.target.value)}
-            className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-slate-800"
+            className="w-36 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
           />
-          <div className="flex-1" />
-          <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Record Payment</button>
-          <button className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white">Generate Receipt</button>
-        </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg">Record Payment</button>
+            <button className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg">Generate Receipt</button>
+          </div>
+        </motion.div>
 
         {/* Export buttons */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-wrap items-center gap-3 mb-6"
+        >
           <button
             onClick={()=>{
               const q = new URLSearchParams();
@@ -221,8 +285,8 @@ export default function AccountantDashboardPage() {
               if (method) q.set('method', method);
               window.open(`/api/accountant/collections.pdf?${q.toString()}`,'_blank');
             }}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
-          >Download Collections (PDF)</button>
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
+          >📥 Collections (PDF)</button>
 
           <button
             onClick={()=>{
@@ -231,8 +295,8 @@ export default function AccountantDashboardPage() {
               if (minBalance) q.set('minBalance', minBalance);
               window.open(`/api/accountant/balances.pdf?${q.toString()}`,'_blank');
             }}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
-          >Download Balances (PDF)</button>
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
+          >📥 Balances (PDF)</button>
 
           <button
             onClick={()=>{
@@ -242,14 +306,19 @@ export default function AccountantDashboardPage() {
               if (selectedClass) q.set('class', selectedClass);
               window.open(`/api/accountant/term-summary.pdf?${q.toString()}`,'_blank');
             }}
-            className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white"
-          >Download Term Summary (PDF)</button>
-        </div>
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
+          >📥 Term Summary (PDF)</button>
+        </motion.div>
 
         {/* Payments table */}
-        <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
+        >
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+            <thead className="bg-white/5 text-white/80">
               <tr>
                 <Th>Student</Th>
                 <Th>Class</Th>
@@ -259,11 +328,11 @@ export default function AccountantDashboardPage() {
                 <Th>Date</Th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="[&>tr:nth-child(even)]:bg-white/5">
               {filteredPayments.map((p, idx) => {
                 const s = p.students || {};
                 return (
-                  <tr key={p.id || idx} className="border-t border-slate-100">
+                  <tr key={p.id || idx} className="border-t border-white/10">
                     <Td>{s.name}</Td>
                     <Td>{s.current_class}</Td>
                     <Td>{s.admission_number}</Td>
@@ -275,12 +344,12 @@ export default function AccountantDashboardPage() {
               })}
               {filteredPayments.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-center text-slate-500 py-10">No records</td>
+                  <td colSpan={6} className="text-center text-white/60 py-10">No payment records found</td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
@@ -288,10 +357,10 @@ export default function AccountantDashboardPage() {
 
 function KpiCard({ title, value, accent }: { title: string; value: string; accent: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
-      <div className="text-slate-500 text-xs uppercase tracking-wide mb-2">{title}</div>
+    <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-4">
+      <div className="text-white/60 text-xs uppercase tracking-wide mb-2">{title}</div>
       <div className="flex items-end justify-between">
-        <div className="text-2xl font-semibold text-slate-800">{value}</div>
+        <div className="text-2xl font-semibold text-white">{value}</div>
         <div className={`w-2 h-8 rounded ${accent}`} />
       </div>
     </div>
@@ -306,7 +375,7 @@ function Th({ children }: { children: React.ReactNode }) {
 
 function Td({ children }: { children: React.ReactNode }) {
   return (
-    <td className="px-4 py-3">{children}</td>
+    <td className="px-4 py-3 text-white/90">{children}</td>
   );
 }
 
