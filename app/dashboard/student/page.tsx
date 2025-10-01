@@ -264,16 +264,19 @@ export default function StudentDashboard() {
       if (!u?.school_id) return;
 
       const today = new Date().toISOString().slice(0,10);
-      const { data: currentTerm } = await supabase
+      // Fetch all terms and filter in JavaScript to handle NULL dates
+      const { data: allTerms } = await supabase
         .from('school_terms')
         .select('start_date, end_date')
         .eq('school_id', u.school_id)
-        .lte('start_date', today)
-        .gte('end_date', today)
         .order('year', { ascending: false })
-        .order('term', { ascending: false })
-        .limit(1)
-        .single();
+        .order('term', { ascending: false });
+      
+      const currentTerm = (allTerms || []).find((t: any) => 
+        t.start_date ? 
+          (t.start_date <= today && t.end_date >= today) : 
+          (t.end_date >= today)
+      ) || null;
 
       // Fetch all related data in parallel, scoped to current term where applicable
       const [
@@ -364,17 +367,20 @@ export default function StudentDashboard() {
         if (!user) return;
         const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
         if (!u?.school_id) return;
-        // Find current term (today within start/end) or latest
+        // Find current term (today within start/end) or latest - fetch all and filter in JS
         const today = new Date().toISOString().slice(0,10);
         const { data: terms } = await supabase
           .from('school_terms')
           .select('*')
           .eq('school_id', u.school_id)
-          .lte('start_date', today)
-          .gte('end_date', today)
           .order('year', { ascending: false })
           .order('term', { ascending: false });
-        const term = (terms && terms.length > 0) ? terms[0] : null;
+        
+        const term = (terms || []).find((t: any) => 
+          t.start_date ? 
+            (t.start_date <= today && t.end_date >= today) : 
+            (t.end_date >= today)
+        ) || null;
         if (!term) { setTermDays({ present: 0, total: 0 }); return; }
         const start = new Date(term.start_date);
         const end = new Date(term.end_date);

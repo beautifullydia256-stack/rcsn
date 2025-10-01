@@ -20,32 +20,42 @@ export function AdminWidgets() {
       const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
       if (!u?.school_id) return;
 
-      // Get current term date range
+      // Get current term date range - fetch all and filter in JS to handle NULL dates
       const today = new Date().toISOString().slice(0,10);
-      const { data: currentTerm } = await supabase
+      const { data: allTerms } = await supabase
         .from('school_terms')
         .select('start_date, end_date')
         .eq('school_id', u.school_id)
-        .lte('start_date', today)
-        .gte('end_date', today)
         .order('year', { ascending: false })
-        .order('term', { ascending: false })
-        .limit(1)
-        .single();
+        .order('term', { ascending: false });
+      
+      const currentTerm = (allTerms || []).find((t: any) => 
+        t.start_date ? 
+          (t.start_date <= today && t.end_date >= today) : 
+          (t.end_date >= today)
+      ) || null;
+
+      // Build queries conditionally to avoid NULL date filters
+      let paymentsQuery = supabase.from("payments").select("*, student_id").eq("school_id", u.school_id);
+      let reportsQuery = supabase.from("reports").select("*");
+      
+      if (currentTerm) {
+        if (currentTerm.start_date) {
+          paymentsQuery = paymentsQuery.gte('created_at', currentTerm.start_date);
+          reportsQuery = reportsQuery.gte('created_at', currentTerm.start_date);
+        }
+        if (currentTerm.end_date) {
+          paymentsQuery = paymentsQuery.lte('created_at', currentTerm.end_date);
+          reportsQuery = reportsQuery.lte('created_at', currentTerm.end_date);
+        }
+      }
+      
+      paymentsQuery = paymentsQuery.order("created_at", { ascending: false }).limit(10);
+      reportsQuery = reportsQuery.order("created_at", { ascending: false }).limit(10);
 
       const [p, r, n] = await Promise.all([
-        currentTerm ?
-          supabase.from("payments").select("*, student_id").eq("school_id", u.school_id)
-            .gte('created_at', currentTerm.start_date)
-            .lte('created_at', currentTerm.end_date)
-            .order("created_at", { ascending: false }).limit(10) :
-          supabase.from("payments").select("*, student_id").eq("school_id", u.school_id).order("created_at", { ascending: false }).limit(10),
-        currentTerm ?
-          supabase.from("reports").select("*")
-            .gte('created_at', currentTerm.start_date)
-            .lte('created_at', currentTerm.end_date)
-            .order("created_at", { ascending: false }).limit(10) :
-          supabase.from("reports").select("*").order("created_at", { ascending: false }).limit(10),
+        paymentsQuery,
+        reportsQuery,
         supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(10),
       ]);
       setPayments(p.data || []);
