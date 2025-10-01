@@ -82,6 +82,7 @@ export default function GenerateReportsPage() {
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [examSets, setExamSets] = useState<any[]>([]);
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
+  const [nextTermInfo, setNextTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
   const [nextTermBegins, setNextTermBegins] = useState<string | null>(null);
   const [nextTermBeginsRaw, setNextTermBeginsRaw] = useState<string | null>(null);
@@ -168,45 +169,69 @@ export default function GenerateReportsPage() {
           logoPreview: customizations?.logo_url || null
         });
         
-        // Load exam sets
+        // Detect current term from school_terms table based on actual calendar dates
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const { data: allTerms } = await supabase
+          .from('school_terms')
+          .select('*')
+          .eq('school_id', u.school_id)
+          .order('year', { ascending: false })
+          .order('term', { ascending: false });
+        
+        const currentTermData = (allTerms || []).find((t: any) => 
+          (t.start_date ? (t.start_date <= todayStr && t.end_date >= todayStr) : (t.end_date >= todayStr))
+        );
+        
+        let detectedCurrentYear = new Date().getFullYear();
+        let detectedCurrentTerm = 1;
+        
+        if (currentTermData) {
+          detectedCurrentYear = currentTermData.year;
+          detectedCurrentTerm = currentTermData.term;
+          setCurrentTermInfo({ year: currentTermData.year, term: currentTermData.term });
+        } else {
+          // Fallback: guess based on current month
+          const month = new Date().getMonth() + 1;
+          detectedCurrentTerm = month <= 4 ? 1 : month <= 7 ? 2 : 3;
+          setCurrentTermInfo({ year: detectedCurrentYear, term: detectedCurrentTerm });
+        }
+        
+        // Calculate next term
+        let nextYear = detectedCurrentYear;
+        let nextTerm = detectedCurrentTerm + 1;
+        if (nextTerm > 3) {
+          nextTerm = 1;
+          nextYear = detectedCurrentYear + 1;
+        }
+        setNextTermInfo({ year: nextYear, term: nextTerm });
+
+        // Load exam sets for the current term
         const { data: examSetsData } = await supabase
           .from('exam_sets')
           .select('*')
           .eq('school_id', u.school_id)
           .eq('is_active', true)
-          .order('year', { ascending: false })
-          .order('term', { ascending: true });
-        // Filter to only the current term (latest year, then latest term in that year)
-        const allSets = examSetsData || [];
-        let currentTermSets = allSets;
-        if (allSets.length > 0) {
-          const maxYear = Math.max(...allSets.map(es => es.year || 0));
-          const setsThisYear = allSets.filter(es => es.year === maxYear);
-          const maxTerm = Math.max(...setsThisYear.map(es => es.term || 0));
-          currentTermSets = allSets.filter(es => es.year === maxYear && es.term === maxTerm);
-          setCurrentTermInfo({ year: maxYear, term: maxTerm });
-        }
-        setExamSets(currentTermSets);
+          .eq('year', detectedCurrentYear)
+          .eq('term', detectedCurrentTerm)
+          .order('name', { ascending: true });
+        
+        setExamSets(examSetsData || []);
 
-        // Load next term begins date (optional table: school_terms)
-        if (currentTermSets.length > 0) {
-          const year = Math.max(...currentTermSets.map(es => es.year || 0));
-          const term = Math.max(...currentTermSets.filter(es => es.year === year).map(es => es.term || 0));
-          const { data: termInfo } = await supabase
-            .from('school_terms')
-            .select('next_term_begins')
-            .eq('school_id', u.school_id)
-            .eq('year', year)
-            .eq('term', term)
-            .maybeSingle();
-          if (termInfo?.next_term_begins) {
-            const iso = String(termInfo.next_term_begins);
-            setNextTermBegins(new Date(iso).toLocaleDateString());
-            // For input type=date, keep YYYY-MM-DD
-            setNextTermBeginsRaw(iso.substring(0, 10));
-          } else {
-            setNextTermBeginsRaw(null);
-          }
+        // Load next term begins date from school_terms table
+        const { data: nextTermData } = await supabase
+          .from('school_terms')
+          .select('start_date')
+          .eq('school_id', u.school_id)
+          .eq('year', nextYear)
+          .eq('term', nextTerm)
+          .maybeSingle();
+        
+        if (nextTermData?.start_date) {
+          const iso = String(nextTermData.start_date);
+          setNextTermBegins(new Date(iso).toLocaleDateString());
+          setNextTermBeginsRaw(iso.substring(0, 10));
+        } else {
+          setNextTermBeginsRaw(null);
         }
         
         // Load students
@@ -508,22 +533,25 @@ export default function GenerateReportsPage() {
     }
   };
 
-  // Save "Next Term Begins" for the current term
+  // Save "Next Term Begins" for the next term
   const saveNextTermBegins = async () => {
-    if (!schoolId || !currentTermInfo) return;
+    if (!schoolId || !nextTermInfo) return;
     if (!nextTermBeginsRaw) {
       setError('Please pick a date for Next Term Begins');
       return;
     }
 
     try {
+      // Save as the start_date for the next term in school_terms table
       const { error } = await supabase
         .from('school_terms')
         .upsert({
           school_id: schoolId,
-          year: currentTermInfo.year,
-          term: currentTermInfo.term,
-          next_term_begins: nextTermBeginsRaw,
+          year: nextTermInfo.year,
+          term: nextTermInfo.term,
+          start_date: nextTermBeginsRaw,
+          // Set a default end date (4 months later) if not already set
+          end_date: nextTermBeginsRaw // This will be updated later in Term Settings
         }, {
           onConflict: 'school_id,year,term'
         });
@@ -534,7 +562,7 @@ export default function GenerateReportsPage() {
       }
 
       setNextTermBegins(new Date(nextTermBeginsRaw).toLocaleDateString());
-      alert('Next Term Begins date saved');
+      alert(`Next Term (Term ${nextTermInfo.term}, ${nextTermInfo.year}) start date saved successfully! This will appear on all reports and sync with Term Settings.`);
     } catch (e) {
       setError(`Failed to save Next Term Begins: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
@@ -1165,11 +1193,19 @@ export default function GenerateReportsPage() {
                 </select>
               </div>
             )}
-            {/* Next Term Begins (set on report generation page) */}
+            {/* Current Term Info */}
             {currentTermInfo && (
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3 mb-4">
+                <div className="text-white/80 text-sm">
+                  <strong>Current Term:</strong> Term {currentTermInfo.term}, {currentTermInfo.year}
+                </div>
+              </div>
+            )}
+            {/* Next Term Begins (set on report generation page) */}
+            {nextTermInfo && (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
-                  Next Term Begins (Term {currentTermInfo.term}, {currentTermInfo.year})
+                  Next Term Begins (Term {nextTermInfo.term}, {nextTermInfo.year})
                 </label>
                 <div className="flex gap-2 items-center">
                   <input
@@ -1187,8 +1223,11 @@ export default function GenerateReportsPage() {
                   </button>
                 </div>
                 {nextTermBegins && (
-                  <div className="mt-1 text-white/70 text-xs">Current: {nextTermBegins}</div>
+                  <div className="mt-1 text-white/70 text-xs">Saved: {nextTermBegins}</div>
                 )}
+                <div className="mt-1 text-white/60 text-xs">
+                  This date will be shown on all student reports and syncs with Term Settings
+                </div>
               </div>
             )}
 
