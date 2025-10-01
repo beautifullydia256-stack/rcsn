@@ -59,10 +59,10 @@ export default function Register() {
     setLoading(true);
     setError('');
 
-    // Only require CAPTCHA if Turnstile is configured
+    // Require CAPTCHA if Turnstile is configured (since it's enabled in Supabase)
     const hasTurnstileKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== '';
     if (hasTurnstileKey && !captchaToken) {
-      setError('Please complete the CAPTCHA');
+      setError('Please complete the CAPTCHA verification. Wait for the widget to load and verify.');
       setLoading(false);
       return;
     }
@@ -113,11 +113,12 @@ export default function Register() {
 
     try {
       // Create auth user first
-      // Note: Don't pass Turnstile token to Supabase - it expects hCaptcha tokens
+      // Pass captchaToken if Turnstile is enabled in Supabase
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
+          ...(captchaToken && { captchaToken }),
           data: {
             school_name: formData.schoolName,
             admin_name: formData.adminName,
@@ -404,14 +405,33 @@ export default function Register() {
               />
             </motion.div>
 
-            {/* Cloudflare Turnstile CAPTCHA - only show if configured */}
-            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== '' && (
+            {/* Cloudflare Turnstile CAPTCHA - required since enabled in Supabase */}
+            {process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY !== '' ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}>
                 <Turnstile
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
-                  onSuccess={(token) => setCaptchaToken(token)}
-                  options={{ theme: 'auto' }}
+                  onSuccess={(token) => {
+                    console.log('Turnstile token received');
+                    setCaptchaToken(token);
+                  }}
+                  onError={(error) => {
+                    console.error('Turnstile error:', error);
+                    setError('CAPTCHA verification failed. Please refresh and try again.');
+                  }}
+                  onExpire={() => {
+                    console.log('Turnstile token expired');
+                    setCaptchaToken(undefined);
+                    setError('CAPTCHA expired. Please verify again.');
+                  }}
+                  options={{ 
+                    theme: 'dark',
+                    size: 'normal'
+                  }}
                 />
+              </motion.div>
+            ) : (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }} className="bg-yellow-500/10 border border-yellow-400/30 text-yellow-200 px-4 py-3 rounded-lg text-sm">
+                ⚠️ CAPTCHA not configured. Please add NEXT_PUBLIC_TURNSTILE_SITE_KEY to environment variables.
               </motion.div>
             )}
 
