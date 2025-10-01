@@ -32,15 +32,22 @@ export function AdminKpis() {
           (t.end_date >= today) // If no start date, consider it current if end date is in future
       ) || null;
 
+      // Build receipts query conditionally to avoid NULL date filters
+      let receiptsQuery = supabase.from("receipts").select("receipt_id,created_at").eq("school_id", u.school_id);
+      if (currentTerm) {
+        if (currentTerm.start_date) {
+          receiptsQuery = receiptsQuery.gte('created_at', currentTerm.start_date);
+        }
+        if (currentTerm.end_date) {
+          receiptsQuery = receiptsQuery.lte('created_at', currentTerm.end_date);
+        }
+      }
+
       const [students, teachers, payments, receipts] = await Promise.all([
         supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", u.school_id).eq('status','active'),
         supabase.from("teachers").select("*", { count: "exact", head: true }).eq("school_id", u.school_id),
         supabase.from("payments").select("amount,status,student_id").eq("school_id", u.school_id),
-        currentTerm ? 
-          supabase.from("receipts").select("receipt_id,created_at").eq("school_id", u.school_id)
-            .gte('created_at', currentTerm.start_date)
-            .lte('created_at', currentTerm.end_date) :
-        supabase.from("receipts").select("receipt_id,created_at").eq("school_id", u.school_id),
+        receiptsQuery,
       ]);
       // Attendance today (students present) based on student_attendance
       const { data: stAtt } = await supabase
