@@ -21,6 +21,10 @@ export default function TeacherProfilePage() {
   const [savingAssign, setSavingAssign] = useState(false);
   const [appointing, setAppointing] = useState(false);
   const [classTeacherOf, setClassTeacherOf] = useState<string | null>(null);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  const [allClasses, setAllClasses] = useState<string[]>([]);
+  const [showAppointModal, setShowAppointModal] = useState(false);
+  const [selectedClassToAppoint, setSelectedClassToAppoint] = useState<string>('');
 
   useEffect(() => {
     const run = async () => {
@@ -63,6 +67,26 @@ export default function TeacherProfilePage() {
           .eq('class_teacher_id', teacher.teacher_id)
           .maybeSingle();
         setClassTeacherOf(cls?.class_name || null);
+
+        // Load all classes from students table
+        const { data: students } = await supabase
+          .from('students')
+          .select('current_class')
+          .eq('school_id', teacher.school_id);
+        
+        const uniqueClasses = Array.from(new Set((students || []).map(s => s.current_class).filter(Boolean))).sort();
+        setAllClasses(uniqueClasses);
+
+        // Load all class teachers to find available classes
+        const { data: classTeachers } = await supabase
+          .from('class_template_settings')
+          .select('class_name, class_teacher_id')
+          .eq('school_id', teacher.school_id)
+          .not('class_teacher_id', 'is', null);
+        
+        const classesWithTeachers = new Set((classTeachers || []).map(ct => ct.class_name));
+        const available = uniqueClasses.filter(c => !classesWithTeachers.has(c));
+        setAvailableClasses(available);
       }
       setLoading(false);
     };
@@ -152,6 +176,57 @@ export default function TeacherProfilePage() {
     }
   };
 
+  const appointAsClassTeacher = async () => {
+    if (!row?.teacher_id || !selectedClassToAppoint || !schoolId) return;
+    setAppointing(true);
+    try {
+      const res = await fetch('/api/class-teachers', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ class_name: selectedClassToAppoint, teacher_id: row.teacher_id }) 
+      });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'Failed to appoint class teacher');
+      
+      setClassTeacherOf(selectedClassToAppoint);
+      setAvailableClasses(prev => prev.filter(c => c !== selectedClassToAppoint));
+      setShowAppointModal(false);
+      setSelectedClassToAppoint('');
+      alert(`Successfully appointed as class teacher for ${selectedClassToAppoint}`);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setAppointing(false);
+    }
+  };
+
+  const unappointAsClassTeacher = async () => {
+    if (!row?.teacher_id || !classTeacherOf || !schoolId) return;
+    if (!confirm(`Are you sure you want to un-appoint this teacher from ${classTeacherOf}?`)) return;
+    
+    setAppointing(true);
+    try {
+      // Remove class teacher assignment by setting class_teacher_id to null
+      const { error } = await supabase
+        .from('class_template_settings')
+        .update({ class_teacher_id: null })
+        .eq('school_id', schoolId)
+        .eq('class_name', classTeacherOf)
+        .eq('class_teacher_id', row.teacher_id);
+      
+      if (error) throw error;
+      
+      const previousClass = classTeacherOf;
+      setClassTeacherOf(null);
+      setAvailableClasses(prev => [...prev, previousClass].sort());
+      alert(`Successfully un-appointed from ${previousClass}`);
+    } catch (e: any) {
+      alert(`Failed to un-appoint: ${e.message}`);
+    } finally {
+      setAppointing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
@@ -178,23 +253,23 @@ export default function TeacherProfilePage() {
                 alert('Password reset successfully.');
               }
             }}>Reset Password</button>
-            <button className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white" onClick={async ()=>{
-              if (!row?.teacher_id) return;
-              const class_name = prompt('Enter class name to appoint this teacher as class teacher (exact name):');
-              if (!class_name) return;
-              setAppointing(true);
-              try {
-                const res = await fetch('/api/class-teachers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name, teacher_id: row.teacher_id }) });
-                const j = await res.json();
-                if (!res.ok) throw new Error(j.error || 'Failed to appoint class teacher');
-                setClassTeacherOf(class_name);
-                alert('Appointed as class teacher successfully.');
-              } catch (e:any) {
-                alert(e.message);
-              } finally {
-                setAppointing(false);
-              }
-            }}>{appointing ? 'Appointing...' : 'Appoint as Class Teacher'}</button>
+            {classTeacherOf ? (
+              <button 
+                className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white" 
+                onClick={unappointAsClassTeacher}
+                disabled={appointing}
+              >
+                {appointing ? 'Un-appointing...' : `Un-appoint from ${classTeacherOf}`}
+              </button>
+            ) : (
+              <button 
+                className="px-3 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white" 
+                onClick={() => setShowAppointModal(true)}
+                disabled={availableClasses.length === 0}
+              >
+                Appoint as Class Teacher
+              </button>
+            )}
           </div>
         </div>
 
@@ -289,6 +364,71 @@ export default function TeacherProfilePage() {
                 <div><span className="text-white/60">Salary:</span> {row.salary != null ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(Number(row.salary)) : '-'}</div>
                 <div><span className="text-white/60">Subjects:</span> {filteredSubjects.length ? filteredSubjects.join(', ') : '-'}</div>
                 <div><span className="text-white/60">Classes Assigned:</span> {filteredClasses.length ? filteredClasses.join(', ') : '-'}</div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Appoint as Class Teacher Modal */}
+        {showAppointModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowAppointModal(false)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-white text-xl font-semibold mb-4">Appoint as Class Teacher</h3>
+              
+              {availableClasses.length === 0 ? (
+                <div className="text-white/70 mb-4">
+                  No classes available. All classes already have assigned class teachers, or no classes exist in the system.
+                </div>
+              ) : (
+                <>
+                  <p className="text-white/70 text-sm mb-4">
+                    Select a class to appoint <strong className="text-white">{name}</strong> as its class teacher.
+                  </p>
+                  
+                  <div className="mb-4">
+                    <label className="block text-white/80 text-sm mb-2">Available Classes (without class teacher)</label>
+                    <select 
+                      value={selectedClassToAppoint}
+                      onChange={(e) => setSelectedClassToAppoint(e.target.value)}
+                      className="w-full rounded-lg border border-white/20 bg-slate-700 text-white px-3 py-2"
+                    >
+                      <option value="">Select a class...</option>
+                      {availableClasses.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {allClasses.length > availableClasses.length && (
+                    <div className="mb-4 text-xs text-white/60">
+                      {allClasses.length - availableClasses.length} class(es) already have appointed class teachers
+                    </div>
+                  )}
+                </>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowAppointModal(false);
+                    setSelectedClassToAppoint('');
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={appointAsClassTeacher}
+                  disabled={!selectedClassToAppoint || appointing}
+                  className="flex-1 px-4 py-2 rounded-lg bg-yellow-600 hover:bg-yellow-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {appointing ? 'Appointing...' : 'Appoint'}
+                </button>
               </div>
             </motion.div>
           </div>
