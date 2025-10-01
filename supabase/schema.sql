@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS "pg_cron";
 -- Users table
 CREATE TABLE users (
   user_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  role TEXT CHECK (role IN ('owner','admin','teacher','parent','student')) NOT NULL,
+  role TEXT CHECK (role IN ('owner','admin','teacher','parent','student','accountant','librarian','head_teacher')) NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   school_id UUID REFERENCES schools(school_id),
