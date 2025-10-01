@@ -18,16 +18,19 @@ export function AdminKpis() {
 
       // Get current term date range
       const today = new Date().toISOString().slice(0,10);
-      const { data: currentTerm } = await supabase
+      // Query all terms and filter in JavaScript to handle NULL start_dates
+      const { data: allTerms } = await supabase
         .from('school_terms')
         .select('start_date, end_date')
         .eq('school_id', u.school_id)
-        .lte('start_date', today)
-        .gte('end_date', today)
         .order('year', { ascending: false })
-        .order('term', { ascending: false })
-        .limit(1)
-        .single();
+        .order('term', { ascending: false });
+      
+      const currentTerm = (allTerms || []).find((t: any) => 
+        t.start_date ? 
+          (t.start_date <= today && t.end_date >= today) : 
+          (t.end_date >= today) // If no start date, consider it current if end date is in future
+      ) || null;
 
       const [students, teachers, payments, receipts] = await Promise.all([
         supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", u.school_id).eq('status','active'),
