@@ -92,6 +92,9 @@ export default function Login() {
       teacher: '/dashboard/teacher',
       parent: '/dashboard/parent',
       student: '/dashboard/student',
+      librarian: '/dashboard/librarian',
+      accountant: '/dashboard/accountant',
+      head_teacher: '/dashboard/head-teacher',
     };
 
     // Resolve role robustly: metadata → users table → student_id heuristic
@@ -125,8 +128,9 @@ export default function Login() {
       }
     } catch {}
 
-    const preferred = roleToPath[resolvedRole || ''] || '/';
+    const preferred = roleToPath[resolvedRole || ''] || '/dashboard';
     const destination = targetUrl || preferred;
+    console.log('Login redirect:', { resolvedRole, preferred, destination });
     if (typeof window !== 'undefined') window.location.replace(destination);
   };
 
@@ -255,6 +259,9 @@ export default function Login() {
         teacher: '/dashboard/teacher',
         parent: '/dashboard/parent',
         student: '/dashboard/student',
+        librarian: '/dashboard/librarian',
+        accountant: '/dashboard/accountant',
+        head_teacher: '/dashboard/head-teacher',
       };
 
       if (data.session) {
