@@ -552,6 +552,16 @@ function RecordPaymentModal({
 
       const student = students.find(s => s.student_id === selectedStudent);
       
+      // Auto-generate transaction reference for cash payments
+      let finalTransactionRef = transactionRef;
+      if (paymentMethod === 'cash' && !transactionRef) {
+        // Generate cash transaction ref: CASH-YYYY-NNNN
+        const today = new Date();
+        const year = today.getFullYear();
+        const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
+        finalTransactionRef = `CASH-${year}-${timestamp}`;
+      }
+      
       const { error: insertError } = await supabase
         .from("student_payments")
         .insert({
@@ -561,7 +571,7 @@ function RecordPaymentModal({
           class_id: student?.class_id,
           amount_paid: parseFloat(amount),
           payment_method: paymentMethod,
-          transaction_ref: transactionRef || null,
+          transaction_ref: finalTransactionRef || null,
           recorded_by: userId,
           notes: notes || null,
           payment_date: new Date().toISOString().split('T')[0]
@@ -722,14 +732,23 @@ function RecordPaymentModal({
             </div>
 
             <div>
-              <label className="block text-white/80 text-sm mb-2">Transaction Reference</label>
-              <input
-                type="text"
-                value={transactionRef}
-                onChange={(e) => setTransactionRef(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-                placeholder="MM2025001234"
-              />
+              <label className="block text-white/80 text-sm mb-2">
+                Transaction Reference {paymentMethod !== 'cash' && <span className="text-red-400">*</span>}
+              </label>
+              {paymentMethod === 'cash' ? (
+                <div className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-300 text-sm">
+                  ✓ Will be auto-generated (e.g., CASH-2025-123456)
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={transactionRef}
+                  onChange={(e) => setTransactionRef(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                  placeholder="MM2025001234 or Bank Ref"
+                  required
+                />
+              )}
             </div>
 
             <div>
