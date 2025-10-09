@@ -43,10 +43,9 @@ export function AdminKpis() {
         }
       }
 
-      const [students, teachers, payments, receipts] = await Promise.all([
+      const [students, teachers, receipts] = await Promise.all([
         supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", u.school_id).eq('status','active'),
         supabase.from("teachers").select("*", { count: "exact", head: true }).eq("school_id", u.school_id),
-        supabase.from("payments").select("amount,status,student_id").eq("school_id", u.school_id),
         receiptsQuery,
       ]);
       // Attendance today (students present) based on student_attendance
@@ -57,17 +56,31 @@ export function AdminKpis() {
         .eq('date', today)
         .eq('present', true);
 
-      // Outstanding = SUM(expected_fee_amount) - SUM(Approved payments) across active students
-      const { data: studsRows } = await supabase
-        .from('students')
-        .select('student_id, expected_fee_amount')
-        .eq('school_id', u.school_id)
-        .eq('status','active');
-      const totalExpected = (studsRows || []).reduce((sum: number, r: any) => sum + Number(r.expected_fee_amount || 0), 0);
-      const totalPaidApproved = (payments.data || [])
-        .filter((p: any) => (p.status || 'Pending') === 'Approved')
-        .reduce((s: number, p: any) => s + Number(p.amount || 0), 0);
-      const outstanding = Math.max(0, totalExpected - totalPaidApproved);
+      // Outstanding = Sum all balances from student_balances for current term
+      // This uses the same calculation as accountant dashboard
+      let balancesQuery = supabase
+        .from('student_balances')
+        .select('balance')
+        .eq('school_id', u.school_id);
+      
+      // Filter by current term if available
+      if (currentTerm) {
+        const { data: currentTermData } = await supabase
+          .from('school_terms')
+          .select('id')
+          .eq('school_id', u.school_id)
+          .eq('year', (currentTerm as any).year)
+          .eq('term', (currentTerm as any).term)
+          .single();
+        
+        if (currentTermData?.id) {
+          balancesQuery = balancesQuery.eq('term_id', currentTermData.id);
+        }
+      }
+      
+      const { data: balancesData } = await balancesQuery;
+      const outstanding = Math.max(0, (balancesData || [])
+        .reduce((sum: number, b: any) => sum + Number(b.balance || 0), 0));
       setK({
         students: students.count || 0,
         teachers: teachers.count || 0,

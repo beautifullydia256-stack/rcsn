@@ -75,6 +75,7 @@ export default function AccountantDashboardPage() {
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
   const [kpiCollectedThisTerm, setKpiCollectedThisTerm] = useState<number>(0);
   const [kpiOutstanding, setKpiOutstanding] = useState<number>(0);
+  const [kpiOutstandingAllTime, setKpiOutstandingAllTime] = useState<number>(0);
   const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
 
   // Data
@@ -222,6 +223,17 @@ export default function AccountantDashboardPage() {
       setKpiOutstanding(outstanding);
       setKpiDebtorsCount(debtors);
 
+      // Fetch ALL TIME balances (across all terms)
+      const { data: allTimeBalancesData } = await supabase
+        .from("student_balances")
+        .select("balance")
+        .eq("school_id", userRow.school_id);
+      
+      const outstandingAllTime = (allTimeBalancesData || [])
+        .reduce((sum, b: any) => sum + Math.max(0, Number(b.balance || 0)), 0);
+      
+      setKpiOutstandingAllTime(outstandingAllTime);
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -330,12 +342,13 @@ export default function AccountantDashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
         >
           <KpiCard title="Collected Today" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
           <KpiCard title="Collected This Term" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
-          <KpiCard title="Outstanding Balances" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
-          <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-red-500" />
+          <KpiCard title="Outstanding This Term" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
+          <KpiCard title="Outstanding All Time" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
+          <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
         </motion.div>
 
         {/* Action Buttons */}

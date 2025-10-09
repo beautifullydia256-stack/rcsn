@@ -17,13 +17,73 @@ export default function TeacherAttendanceLanding() {
       const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
       if (!u?.school_id) return router.push('/login');
       setSchoolId(u.school_id);
+      
+      // Resolve teacher_id with multiple fallbacks (same as dashboard)
+      let teacherRow = null as any;
       const metaTeacherId = (user as any)?.user_metadata?.teacher_id || (user as any)?.raw_user_meta_data?.teacher_id;
-      let teacherId = metaTeacherId as string | null;
-      if (!teacherId && user.email) {
-        const { data: trow } = await supabase.from('teachers').select('teacher_id').eq('school_id', u.school_id).eq('email', user.email).maybeSingle();
-        teacherId = trow?.teacher_id || null;
+      if (metaTeacherId) {
+        const { data: trow } = await supabase
+          .from('teachers')
+          .select('teacher_id')
+          .eq('school_id', u.school_id)
+          .eq('teacher_id', metaTeacherId)
+          .maybeSingle();
+        if (trow) teacherRow = trow;
       }
-      const { data: tcs } = teacherId ? await supabase.from('teacher_class_subjects').select('class_name').eq('teacher_id', teacherId).eq('school_id', u.school_id) : { data: [] as any[] } as any;
+      if (!teacherRow && user.email) {
+        const { data: trow2 } = await supabase
+          .from('teachers')
+          .select('teacher_id')
+          .eq('school_id', u.school_id)
+          .eq('email', user.email)
+          .maybeSingle();
+        if (trow2) teacherRow = trow2;
+      }
+
+      // Try to load assignments with multiple fallback strategies
+      let tcs: any[] = [];
+      
+      // Build candidate teacher IDs to try
+      const candidateTeacherIds: string[] = [];
+      if (teacherRow?.teacher_id) candidateTeacherIds.push(teacherRow.teacher_id);
+      candidateTeacherIds.push(user.id);
+
+      // Try each candidate teacher ID
+      for (const candidate of candidateTeacherIds) {
+        const { data: tcsTry, error: tryErr } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name')
+          .eq('teacher_id', candidate)
+          .eq('school_id', u.school_id);
+        if (!tryErr && tcsTry && tcsTry.length > 0) {
+          tcs = tcsTry;
+          break;
+        }
+      }
+
+      // Fallback: email-based join
+      if ((!tcs || tcs.length === 0) && user.email) {
+        const { data: tcsJoin, error: joinErr } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name, teachers!inner(email)')
+          .eq('school_id', u.school_id)
+          .ilike('teachers.email', (user.email || '').trim());
+        if (!joinErr && tcsJoin && tcsJoin.length > 0) {
+          tcs = tcsJoin;
+        }
+      }
+
+      // Final fallback: RLS-only (relies on RLS policies to filter)
+      if (!tcs || tcs.length === 0) {
+        const { data: tcsRls } = await supabase
+          .from('teacher_class_subjects')
+          .select('class_name')
+          .eq('school_id', u.school_id);
+        if (tcsRls && tcsRls.length > 0) {
+          tcs = tcsRls;
+        }
+      }
+
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
       setClasses(cls as string[]);
     };
