@@ -520,12 +520,24 @@ function RecordPaymentModal({
   onSuccess: () => void;
 }) {
   const [selectedStudent, setSelectedStudent] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [amount, setAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [transactionRef, setTransactionRef] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Filter students based on search
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    (s.admission_number || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+    s.classes?.class_name.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+  // Get selected student object
+  const selectedStudentObj = students.find(s => s.student_id === selectedStudent);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -559,6 +571,8 @@ function RecordPaymentModal({
 
       // Reset form
       setSelectedStudent("");
+      setStudentSearch("");
+      setShowStudentDropdown(false);
       setAmount("");
       setPaymentMethod("cash");
       setTransactionRef("");
@@ -607,21 +621,75 @@ function RecordPaymentModal({
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+            <div className="relative">
               <label className="block text-white/80 text-sm mb-2">Student *</label>
-              <select
-                value={selectedStudent}
-                onChange={(e) => setSelectedStudent(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-                required
-              >
-                <option value="" className="bg-slate-800">Select Student</option>
-                {students.map(s => (
-                  <option key={s.student_id} value={s.student_id} className="bg-slate-800">
-                    {s.name} - {s.classes?.class_name} ({s.admission_number})
-                  </option>
-                ))}
-              </select>
+              
+              {/* Selected Student Display or Search Input */}
+              {selectedStudent ? (
+                <div className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{selectedStudentObj?.name}</div>
+                    <div className="text-xs text-white/60">
+                      {selectedStudentObj?.classes?.class_name} • {selectedStudentObj?.admission_number}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudent("");
+                      setStudentSearch("");
+                      setShowStudentDropdown(false);
+                    }}
+                    className="text-white/60 hover:text-white ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => {
+                      setStudentSearch(e.target.value);
+                      setShowStudentDropdown(true);
+                    }}
+                    onFocus={() => setShowStudentDropdown(true)}
+                    placeholder="Search by name, admission number, or class..."
+                    className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/50"
+                    required={!selectedStudent}
+                  />
+                  
+                  {/* Dropdown Results */}
+                  {showStudentDropdown && studentSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/20 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      {filteredStudents.length > 0 ? (
+                        filteredStudents.map((student) => (
+                          <button
+                            key={student.student_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedStudent(student.student_id);
+                              setStudentSearch("");
+                              setShowStudentDropdown(false);
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0"
+                          >
+                            <div className="font-medium text-white">{student.name}</div>
+                            <div className="text-xs text-white/60 mt-1">
+                              {student.classes?.class_name} • {student.admission_number || "No admission #"}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-white/60 text-sm">
+                          No students found matching "{studentSearch}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             <div>
