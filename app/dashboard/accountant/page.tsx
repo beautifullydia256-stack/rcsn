@@ -5,6 +5,45 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
+interface StudentBalance {
+  balance_id: string;
+  student_id: string;
+  term_id: string;
+  total_fees: number;
+  total_paid: number;
+  balance: number;
+  last_payment_date: string | null;
+  students: {
+    name: string;
+    admission_number: string;
+  };
+  classes: {
+    class_name: string;
+  };
+  school_terms: {
+    year: number;
+    term: number;
+    academic_year: string;
+  };
+}
+
+interface Payment {
+  payment_id: string;
+  student_id: string;
+  amount_paid: number;
+  payment_method: string;
+  payment_date: string;
+  transaction_ref: string;
+  notes: string;
+  students: {
+    name: string;
+    admission_number: string;
+  };
+  classes: {
+    class_name: string;
+  };
+}
+
 export default function AccountantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -13,6 +52,7 @@ export default function AccountantDashboardPage() {
   const [role, setRole] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [schoolName, setSchoolName] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"balances" | "payments">("balances");
 
   // KPIs
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
@@ -20,15 +60,16 @@ export default function AccountantDashboardPage() {
   const [kpiOutstanding, setKpiOutstanding] = useState<number>(0);
   const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
 
-  // Payments listing
-  const [payments, setPayments] = useState<any[]>([]);
+  // Data
+  const [balances, setBalances] = useState<StudentBalance[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
+  
+  // Filters
   const [search, setSearch] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [classes, setClasses] = useState<string[]>([]);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
-  const [method, setMethod] = useState<string>("");
-  const [minBalance, setMinBalance] = useState<string>("0");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   useEffect(() => {
     const init = async () => {
@@ -67,86 +108,97 @@ export default function AccountantDashboardPage() {
           return;
         }
 
-        // Load classes
-        const { data: classData } = await supabase
-          .from("students")
-          .select("current_class")
-          .eq("school_id", userRow.school_id);
-        const uniqueClasses = [...new Set((classData || []).map(s => s.current_class).filter(Boolean))].sort();
-        setClasses(uniqueClasses as string[]);
-
-        // Get current term for term-specific calculations
-        const today = new Date();
-        const todayISO = today.toISOString().slice(0, 10);
+        // Get current term
+        const today = new Date().toISOString().slice(0, 10);
         const { data: allTerms } = await supabase
           .from('school_terms')
-          .select('start_date, end_date')
+          .select('id, start_date, end_date, year, term')
           .eq('school_id', userRow.school_id)
           .order('year', { ascending: false })
           .order('term', { ascending: false });
         
         const currentTerm = (allTerms || []).find((t: any) => 
           t.start_date && t.end_date &&
-          t.start_date <= todayISO && t.end_date >= todayISO
-        ) || null;
+          t.start_date <= today && t.end_date >= today
+        ) || (allTerms && allTerms[0]) || null;
 
-        // Fetch all payments for this school
-        const { data: allPayments } = await supabase
-          .from("payments")
-          .select("*, students(name, current_class, admission_number)")
+        if (currentTerm) {
+          setCurrentTermId(currentTerm.id);
+        }
+
+        // Load classes
+        const { data: classesData } = await supabase
+          .from("classes")
+          .select("class_name")
           .eq("school_id", userRow.school_id)
-          .order("created_at", { ascending: false });
+          .order("class_name");
+        const uniqueClasses = (classesData || []).map(c => c.class_name);
+        setClasses(uniqueClasses);
 
-        // Initial payments list (latest 50 for display)
-        setPayments((allPayments || []).slice(0, 50));
+        // Fetch student balances for current term
+        const { data: balancesData } = await supabase
+          .from("student_balances")
+          .select(`
+            balance_id,
+            student_id,
+            term_id,
+            total_fees,
+            total_paid,
+            balance,
+            last_payment_date,
+            students!inner(name, admission_number),
+            classes!inner(class_name),
+            school_terms!inner(year, term, academic_year)
+          `)
+          .eq("school_id", userRow.school_id)
+          .eq("term_id", currentTerm?.id || "")
+          .order("balance", { ascending: false });
 
-        // KPI: Collected Today
-        const collectedToday = (allPayments || [])
-          .filter(p => (p.created_at || "").slice(0, 10) === todayISO)
-          .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        setBalances(balancesData as any || []);
+
+        // Fetch all payments for this term
+        const { data: paymentsData } = await supabase
+          .from("student_payments")
+          .select(`
+            payment_id,
+            student_id,
+            amount_paid,
+            payment_method,
+            payment_date,
+            transaction_ref,
+            notes,
+            students!inner(name, admission_number),
+            classes(class_name)
+          `)
+          .eq("school_id", userRow.school_id)
+          .eq("term_id", currentTerm?.id || "")
+          .order("payment_date", { ascending: false });
+
+        setPayments(paymentsData as any || []);
+
+        // Calculate KPIs
+        const todayISO = today;
+        
+        // Collected Today
+        const collectedToday = (paymentsData || [])
+          .filter(p => p.payment_date === todayISO)
+          .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
         setKpiCollectedToday(collectedToday);
 
-        // KPI: Collected This Term
-        let collectedThisTerm = 0;
-        if (currentTerm && currentTerm.start_date && currentTerm.end_date) {
-          collectedThisTerm = (allPayments || [])
-            .filter(p => {
-              const pDate = (p.created_at || "").slice(0, 10);
-              return pDate >= currentTerm.start_date && pDate <= currentTerm.end_date;
-            })
-            .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        } else {
-          // If no current term, use all payments
-          collectedThisTerm = (allPayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
-        }
+        // Collected This Term (all payments in current term)
+        const collectedThisTerm = (paymentsData || [])
+          .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
         setKpiCollectedThisTerm(collectedThisTerm);
 
-        // Outstanding: expected - paid per active student
-        const { data: students } = await supabase
-          .from("students")
-          .select("student_id, expected_fee_amount, status")
-          .eq("school_id", userRow.school_id);
+        // Outstanding and debtors from balances
+        const outstanding = (balancesData || [])
+          .reduce((sum, b: any) => sum + Number(b.balance || 0), 0);
+        const debtors = (balancesData || [])
+          .filter((b: any) => Number(b.balance || 0) > 0).length;
         
-        const byStudentPaid = new Map<string, number>();
-        for (const p of allPayments || []) {
-          const key = p.student_id;
-          byStudentPaid.set(key, (byStudentPaid.get(key) || 0) + Number(p.amount || 0));
-        }
-        
-        let outstanding = 0;
-        let debtors = 0;
-        for (const student of students || []) {
-          // Only count active students
-          if ((student.status || 'active') !== 'active') continue;
-          
-          const expected = Number(student.expected_fee_amount || 0);
-          const paid = byStudentPaid.get(student.student_id) || 0;
-          const bal = Math.max(expected - paid, 0);
-          outstanding += bal;
-          if (bal > 0) debtors += 1;
-        }
         setKpiOutstanding(outstanding);
         setKpiDebtorsCount(debtors);
+
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -156,12 +208,34 @@ export default function AccountantDashboardPage() {
     init();
   }, [router]);
 
+  const filteredBalances = useMemo(() => {
+    const q = search.toLowerCase();
+    return balances.filter(b => {
+      const matchClass = selectedClass ? (b.classes.class_name === selectedClass) : true;
+      const matchSearch = !q || 
+        b.students.name.toLowerCase().includes(q) || 
+        (b.students.admission_number || "").toLowerCase().includes(q);
+      
+      let matchStatus = true;
+      if (statusFilter === "fully_paid") {
+        matchStatus = b.balance <= 0;
+      } else if (statusFilter === "partial") {
+        matchStatus = b.total_paid > 0 && b.balance > 0;
+      } else if (statusFilter === "not_paid") {
+        matchStatus = b.total_paid === 0;
+      }
+      
+      return matchClass && matchSearch && matchStatus;
+    });
+  }, [balances, search, selectedClass, statusFilter]);
+
   const filteredPayments = useMemo(() => {
     const q = search.toLowerCase();
     return payments.filter(p => {
-      const s = p.students || {};
-      const matchClass = selectedClass ? (s.current_class === selectedClass) : true;
-      const matchSearch = !q || String(s.name || "").toLowerCase().includes(q) || String(s.admission_number || "").toLowerCase().includes(q) || String(p.student_id || "").toLowerCase().includes(q);
+      const matchClass = selectedClass ? (p.classes?.class_name === selectedClass) : true;
+      const matchSearch = !q || 
+        p.students.name.toLowerCase().includes(q) || 
+        (p.students.admission_number || "").toLowerCase().includes(q);
       return matchClass && matchSearch;
     });
   }, [payments, search, selectedClass]);
@@ -222,8 +296,8 @@ export default function AccountantDashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <h2 className="text-white text-2xl font-semibold mb-2">Fees & Collections</h2>
-          <p className="text-white/70 text-sm">Manage fees collection, balances, and receipts</p>
+          <h2 className="text-white text-2xl font-semibold mb-2">Student Accounting System</h2>
+          <p className="text-white/70 text-sm">Multi-payment tracking with automatic balance calculation</p>
         </motion.div>
 
         {/* KPIs */}
@@ -239,150 +313,186 @@ export default function AccountantDashboardPage() {
           <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-red-500" />
         </motion.div>
 
-        {/* Filters / Quick actions */}
+        {/* Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-4 mb-6"
+          className="flex gap-2 mb-6"
         >
-          <div className="flex flex-wrap items-center gap-3 mb-4">
-            <input
-              type="text"
-              placeholder="Search student by name/admission/ID"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full md:w-80 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
-            />
-          <select
-            value={selectedClass}
-            onChange={(e) => setSelectedClass(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          <button
+            onClick={() => setActiveTab("balances")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+              activeTab === "balances"
+                ? "bg-white text-indigo-900 shadow-lg"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
           >
-            <option value="" className="bg-slate-800">All Classes</option>
-            {classes.map(c => (
-              <option key={c} value={c} className="bg-slate-800">{c}</option>
-            ))}
-          </select>
-          <select
-            value={method}
-            onChange={(e)=>setMethod(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            Student Balances
+          </button>
+          <button
+            onClick={() => setActiveTab("payments")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+              activeTab === "payments"
+                ? "bg-white text-indigo-900 shadow-lg"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
           >
-            <option value="" className="bg-slate-800">All Methods</option>
-            <option value="cash" className="bg-slate-800">Cash</option>
-            <option value="bank" className="bg-slate-800">Bank</option>
-            <option value="mobile_money" className="bg-slate-800">Mobile Money</option>
-          </select>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e)=>setStartDate(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-          />
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e)=>setEndDate(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-          />
-          <input
-            type="number"
-            placeholder="Min Balance"
-            value={minBalance}
-            onChange={(e)=>setMinBalance(e.target.value)}
-            className="w-36 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
-          />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <button className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg">Record Payment</button>
-            <button className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg">Generate Receipt</button>
-          </div>
+            Payment History
+          </button>
         </motion.div>
 
-        {/* Export buttons */}
+        {/* Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="flex flex-wrap items-center gap-3 mb-6"
+          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-4 mb-6"
         >
-          <button
-            onClick={()=>{
-              const q = new URLSearchParams();
-              if (startDate) q.set('start', startDate);
-              if (endDate) q.set('end', endDate);
-              if (selectedClass) q.set('class', selectedClass);
-              if (method) q.set('method', method);
-              window.open(`/api/accountant/collections.pdf?${q.toString()}`,'_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
-          >📥 Collections (PDF)</button>
-
-          <button
-            onClick={()=>{
-              const q = new URLSearchParams();
-              if (selectedClass) q.set('class', selectedClass);
-              if (minBalance) q.set('minBalance', minBalance);
-              window.open(`/api/accountant/balances.pdf?${q.toString()}`,'_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
-          >📥 Balances (PDF)</button>
-
-          <button
-            onClick={()=>{
-              const q = new URLSearchParams();
-              if (startDate) q.set('start', startDate);
-              if (endDate) q.set('end', endDate);
-              if (selectedClass) q.set('class', selectedClass);
-              window.open(`/api/accountant/term-summary.pdf?${q.toString()}`,'_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20"
-          >📥 Term Summary (PDF)</button>
+          <div className="flex flex-wrap items-center gap-3">
+            <input
+              type="text"
+              placeholder="Search by name or admission number"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full md:w-80 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+            />
+            <select
+              value={selectedClass}
+              onChange={(e) => setSelectedClass(e.target.value)}
+              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            >
+              <option value="" className="bg-slate-800">All Classes</option>
+              {classes.map(c => (
+                <option key={c} value={c} className="bg-slate-800">{c}</option>
+              ))}
+            </select>
+            {activeTab === "balances" && (
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              >
+                <option value="" className="bg-slate-800">All Status</option>
+                <option value="fully_paid" className="bg-slate-800">Fully Paid</option>
+                <option value="partial" className="bg-slate-800">Partial Payment</option>
+                <option value="not_paid" className="bg-slate-800">Not Paid</option>
+              </select>
+            )}
+          </div>
         </motion.div>
 
-        {/* Payments table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
-        >
-          <table className="w-full text-sm">
-            <thead className="bg-white/5 text-white/80">
-              <tr>
-                <Th>Student</Th>
-                <Th>Class</Th>
-                <Th>Admission</Th>
-                <Th>Amount</Th>
-                <Th>Method</Th>
-                <Th>Date</Th>
-              </tr>
-            </thead>
-            <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-              {filteredPayments.map((p, idx) => {
-                const s = p.students || {};
-                return (
-                  <tr key={p.payment_id || idx} className="border-t border-white/10">
-                    <Td>{s.name}</Td>
-                    <Td>{s.current_class}</Td>
-                    <Td>{s.admission_number}</Td>
-                    <Td>{formatCurrency(p.amount)}</Td>
-                    <Td>{p.payment_method || "-"}</Td>
-                    <Td>{new Date(p.created_at).toLocaleString()}</Td>
-                  </tr>
-                );
-              })}
-              {filteredPayments.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="text-center text-white/60 py-10">No payment records found</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </motion.div>
+        {/* Content based on active tab */}
+        {activeTab === "balances" ? (
+          <BalancesTable balances={filteredBalances} />
+        ) : (
+          <PaymentsTable payments={filteredPayments} />
+        )}
       </div>
     </div>
+  );
+}
+
+function BalancesTable({ balances }: { balances: StudentBalance[] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-white/5 text-white/80">
+            <tr>
+              <Th>Student</Th>
+              <Th>Admission #</Th>
+              <Th>Class</Th>
+              <Th>Term</Th>
+              <Th>Total Fees</Th>
+              <Th>Total Paid</Th>
+              <Th>Balance</Th>
+              <Th>Last Payment</Th>
+              <Th>Status</Th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {balances.map((b) => {
+              const status = b.balance <= 0 ? "Fully Paid" : b.total_paid === 0 ? "Not Paid" : "Partial";
+              const statusColor = b.balance <= 0 ? "text-emerald-400" : b.total_paid === 0 ? "text-red-400" : "text-yellow-400";
+              
+              return (
+                <tr key={b.balance_id} className="border-t border-white/10">
+                  <Td>{b.students.name}</Td>
+                  <Td>{b.students.admission_number || "-"}</Td>
+                  <Td>{b.classes.class_name}</Td>
+                  <Td>T{b.school_terms.term} {b.school_terms.year}</Td>
+                  <Td>{formatCurrency(b.total_fees)}</Td>
+                  <Td>{formatCurrency(b.total_paid)}</Td>
+                  <Td className={b.balance > 0 ? "text-red-400 font-semibold" : "text-emerald-400"}>
+                    {formatCurrency(b.balance)}
+                  </Td>
+                  <Td>{b.last_payment_date ? new Date(b.last_payment_date).toLocaleDateString() : "-"}</Td>
+                  <Td className={statusColor}>{status}</Td>
+                </tr>
+              );
+            })}
+            {balances.length === 0 && (
+              <tr>
+                <td colSpan={9} className="text-center text-white/60 py-10">No balance records found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
+  );
+}
+
+function PaymentsTable({ payments }: { payments: Payment[] }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.4 }}
+      className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-white/5 text-white/80">
+            <tr>
+              <Th>Date</Th>
+              <Th>Student</Th>
+              <Th>Admission #</Th>
+              <Th>Class</Th>
+              <Th>Amount</Th>
+              <Th>Method</Th>
+              <Th>Transaction Ref</Th>
+              <Th>Notes</Th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {payments.map((p) => (
+              <tr key={p.payment_id} className="border-t border-white/10">
+                <Td>{new Date(p.payment_date).toLocaleDateString()}</Td>
+                <Td>{p.students.name}</Td>
+                <Td>{p.students.admission_number || "-"}</Td>
+                <Td>{p.classes?.class_name || "-"}</Td>
+                <Td className="text-emerald-400 font-semibold">{formatCurrency(p.amount_paid)}</Td>
+                <Td>{p.payment_method || "-"}</Td>
+                <Td className="text-xs text-white/60">{p.transaction_ref || "-"}</Td>
+                <Td className="text-xs text-white/60">{p.notes || "-"}</Td>
+              </tr>
+            ))}
+            {payments.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center text-white/60 py-10">No payment records found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
   );
 }
 
@@ -404,9 +514,9 @@ function Th({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Td({ children }: { children: React.ReactNode }) {
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <td className="px-4 py-3 text-white/90">{children}</td>
+    <td className={`px-4 py-3 text-white/90 ${className}`}>{children}</td>
   );
 }
 
@@ -414,5 +524,3 @@ function formatCurrency(amount: number | null | undefined): string {
   const n = Number(amount || 0);
   return new Intl.NumberFormat(undefined, { style: "currency", currency: "UGX", maximumFractionDigits: 0 }).format(n);
 }
-
-
