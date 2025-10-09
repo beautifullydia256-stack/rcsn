@@ -359,6 +359,47 @@ export default function AccountantDashboardPage() {
           </button>
         </motion.div>
 
+        {/* Export PDF Buttons */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="flex flex-wrap items-center gap-3 mb-6"
+        >
+          <button
+            onClick={() => {
+              const q = new URLSearchParams();
+              if (selectedClass) q.set('class', selectedClass);
+              window.open(`/api/accountant/collections.pdf?${q.toString()}`, '_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+          >
+            📥 Collections (PDF)
+          </button>
+
+          <button
+            onClick={() => {
+              const q = new URLSearchParams();
+              if (selectedClass) q.set('class', selectedClass);
+              window.open(`/api/accountant/balances.pdf?${q.toString()}`, '_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+          >
+            📥 Balances (PDF)
+          </button>
+
+          <button
+            onClick={() => {
+              const q = new URLSearchParams();
+              if (selectedClass) q.set('class', selectedClass);
+              window.open(`/api/accountant/term-summary.pdf?${q.toString()}`, '_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+          >
+            📥 Term Summary (PDF)
+          </button>
+        </motion.div>
+
         {/* Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
