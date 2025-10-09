@@ -68,11 +68,11 @@ export default function AccountantDashboardPage() {
         }
 
         // Load classes
-        const { data: students } = await supabase
+        const { data: classData } = await supabase
           .from("students")
           .select("current_class")
           .eq("school_id", userRow.school_id);
-        const uniqueClasses = [...new Set((students || []).map(s => s.current_class).filter(Boolean))].sort();
+        const uniqueClasses = [...new Set((classData || []).map(s => s.current_class).filter(Boolean))].sort();
         setClasses(uniqueClasses as string[]);
 
         // Get current term for term-specific calculations
