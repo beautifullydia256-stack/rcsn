@@ -555,11 +555,20 @@ function RecordPaymentModal({
       // Auto-generate transaction reference for cash payments
       let finalTransactionRef = transactionRef;
       if (paymentMethod === 'cash' && !transactionRef) {
-        // Generate cash transaction ref: CASH-YYYY-NNNN
+        // Generate cash transaction ref: CASH-YYYYMMDD-[ADMISSION]-NN
         const today = new Date();
-        const year = today.getFullYear();
-        const timestamp = Date.now().toString().slice(-6); // Last 6 digits of timestamp
-        finalTransactionRef = `CASH-${year}-${timestamp}`;
+        const dateStr = today.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
+        
+        // Get student admission number or use last 4 chars of student_id
+        const studentObj = students.find(s => s.student_id === selectedStudent);
+        const studentRef = studentObj?.admission_number 
+          ? studentObj.admission_number.replace(/[^a-zA-Z0-9]/g, '').slice(0, 6).toUpperCase()
+          : ('STU' + studentObj?.student_id.slice(-4).toUpperCase());
+        
+        // Add random 2-digit number to avoid duplicates
+        const randomNum = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+        
+        finalTransactionRef = `CASH-${dateStr}-${studentRef}-${randomNum}`;
       }
       
       const { error: insertError } = await supabase
@@ -737,7 +746,7 @@ function RecordPaymentModal({
               </label>
               {paymentMethod === 'cash' ? (
                 <div className="w-full rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-emerald-300 text-sm">
-                  ✓ Will be auto-generated (e.g., CASH-2025-123456)
+                  ✓ Will be auto-generated (e.g., CASH-20251009-STU001-01)
                 </div>
               ) : (
                 <input
