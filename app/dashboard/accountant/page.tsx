@@ -75,42 +75,73 @@ export default function AccountantDashboardPage() {
         const uniqueClasses = [...new Set((students || []).map(s => s.current_class).filter(Boolean))].sort();
         setClasses(uniqueClasses as string[]);
 
-        // Initial payments list (latest 50)
-        const { data: pay } = await supabase
-          .from("student_fees")
-          .select("*, students(name, current_class, admission_number)")
-          .eq("school_id", userRow.school_id)
-          .order("created_at", { ascending: false })
-          .limit(50);
-        setPayments(pay || []);
-
-        // TODO: Replace with term-aware queries
-        // KPIs placeholders (computed on client for now)
+        // Get current term for term-specific calculations
         const today = new Date();
         const todayISO = today.toISOString().slice(0, 10);
-        const collectedToday = (pay || [])
-          .filter(p => (p.created_at || "").slice(0,10) === todayISO)
-          .reduce((sum, p) => sum + (p.amount_paid || 0), 0);
+        const { data: allTerms } = await supabase
+          .from('school_terms')
+          .select('start_date, end_date')
+          .eq('school_id', userRow.school_id)
+          .order('year', { ascending: false })
+          .order('term', { ascending: false });
+        
+        const currentTerm = (allTerms || []).find((t: any) => 
+          t.start_date && t.end_date &&
+          t.start_date <= todayISO && t.end_date >= todayISO
+        ) || null;
+
+        // Fetch all payments for this school
+        const { data: allPayments } = await supabase
+          .from("payments")
+          .select("*, students(name, current_class, admission_number)")
+          .eq("school_id", userRow.school_id)
+          .order("created_at", { ascending: false });
+
+        // Initial payments list (latest 50 for display)
+        setPayments((allPayments || []).slice(0, 50));
+
+        // KPI: Collected Today
+        const collectedToday = (allPayments || [])
+          .filter(p => (p.created_at || "").slice(0, 10) === todayISO)
+          .reduce((sum, p) => sum + Number(p.amount || 0), 0);
         setKpiCollectedToday(collectedToday);
 
-        const collectedThisTerm = (pay || []).reduce((sum, p) => sum + (p.amount_paid || 0), 0);
+        // KPI: Collected This Term
+        let collectedThisTerm = 0;
+        if (currentTerm && currentTerm.start_date && currentTerm.end_date) {
+          collectedThisTerm = (allPayments || [])
+            .filter(p => {
+              const pDate = (p.created_at || "").slice(0, 10);
+              return pDate >= currentTerm.start_date && pDate <= currentTerm.end_date;
+            })
+            .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        } else {
+          // If no current term, use all payments
+          collectedThisTerm = (allPayments || []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+        }
         setKpiCollectedThisTerm(collectedThisTerm);
 
-        // Outstanding: expected - paid (simple placeholder; refine later)
-        const { data: expectedFees } = await supabase
-          .from("school_fees_expected")
-          .select("student_id, expected_amount")
+        // Outstanding: expected - paid per active student
+        const { data: students } = await supabase
+          .from("students")
+          .select("student_id, expected_fee_amount, status")
           .eq("school_id", userRow.school_id);
+        
         const byStudentPaid = new Map<string, number>();
-        for (const p of pay || []) {
+        for (const p of allPayments || []) {
           const key = p.student_id;
-          byStudentPaid.set(key, (byStudentPaid.get(key) || 0) + (p.amount_paid || 0));
+          byStudentPaid.set(key, (byStudentPaid.get(key) || 0) + Number(p.amount || 0));
         }
+        
         let outstanding = 0;
         let debtors = 0;
-        for (const row of expectedFees || []) {
-          const paid = byStudentPaid.get(row.student_id) || 0;
-          const bal = Math.max((row.expected_amount || 0) - paid, 0);
+        for (const student of students || []) {
+          // Only count active students
+          if ((student.status || 'active') !== 'active') continue;
+          
+          const expected = Number(student.expected_fee_amount || 0);
+          const paid = byStudentPaid.get(student.student_id) || 0;
+          const bal = Math.max(expected - paid, 0);
           outstanding += bal;
           if (bal > 0) debtors += 1;
         }
@@ -332,11 +363,11 @@ export default function AccountantDashboardPage() {
               {filteredPayments.map((p, idx) => {
                 const s = p.students || {};
                 return (
-                  <tr key={p.id || idx} className="border-t border-white/10">
+                  <tr key={p.payment_id || idx} className="border-t border-white/10">
                     <Td>{s.name}</Td>
                     <Td>{s.current_class}</Td>
                     <Td>{s.admission_number}</Td>
-                    <Td>{formatCurrency(p.amount_paid)}</Td>
+                    <Td>{formatCurrency(p.amount)}</Td>
                     <Td>{p.payment_method || "-"}</Td>
                     <Td>{new Date(p.created_at).toLocaleString()}</Td>
                   </tr>
