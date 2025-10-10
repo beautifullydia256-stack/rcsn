@@ -56,6 +56,26 @@ interface Student {
   };
 }
 
+interface Expense {
+  expense_id: string;
+  category_name: string;
+  description: string;
+  amount: number;
+  payment_method: string;
+  expense_date: string;
+  reference_number: string;
+  status: string;
+  recorded_by: string;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+interface ExpenseCategory {
+  category_id: string;
+  category_name: string;
+  description: string;
+}
+
 export default function AccountantDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -70,6 +90,7 @@ export default function AccountantDashboardPage() {
   // Modals
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   // KPIs
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
@@ -82,6 +103,8 @@ export default function AccountantDashboardPage() {
   const [balances, setBalances] = useState<StudentBalance[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [currentTermId, setCurrentTermId] = useState<string | null>(null);
   
   // Filters
@@ -234,6 +257,24 @@ export default function AccountantDashboardPage() {
       
       setKpiOutstandingAllTime(outstandingAllTime);
 
+      // Load expense categories
+      const { data: categoriesData } = await supabase
+        .from("expense_categories")
+        .select("category_id, category_name, description")
+        .eq("school_id", userRow.school_id)
+        .eq("is_active", true)
+        .order("category_name");
+      setExpenseCategories(categoriesData as any || []);
+
+      // Load expenses
+      const { data: expensesData } = await supabase
+        .from("school_expenses")
+        .select("*")
+        .eq("school_id", userRow.school_id)
+        .eq("term_id", currentTerm?.id || "")
+        .order("expense_date", { ascending: false });
+      setExpenses(expensesData as any || []);
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -369,6 +410,12 @@ export default function AccountantDashboardPage() {
             className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg font-medium transition-colors"
           >
             🧾 Generate Receipt
+          </button>
+          <button 
+            onClick={() => setShowExpenseModal(true)}
+            className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-lg font-medium transition-colors"
+          >
+            💸 Record Expense
           </button>
         </motion.div>
 
@@ -509,6 +556,19 @@ export default function AccountantDashboardPage() {
         onClose={() => setShowReceiptModal(false)}
         payments={payments}
         balances={balances}
+      />
+
+      <RecordExpenseModal
+        isOpen={showExpenseModal}
+        onClose={() => setShowExpenseModal(false)}
+        expenseCategories={expenseCategories}
+        schoolId={schoolId}
+        termId={currentTermId}
+        userId={userId}
+        onSuccess={() => {
+          setShowExpenseModal(false);
+          loadData();
+        }}
       />
     </div>
   );
@@ -942,7 +1002,7 @@ Notes: ${payment.notes || "None"}
                   <input
                     type="text"
                     value={studentSearch}
-                    onChange={(e) => {
+                onChange={(e) => {
                       setStudentSearch(e.target.value);
                       setShowStudentDropdown(true);
                     }}
@@ -963,8 +1023,8 @@ Notes: ${payment.notes || "None"}
                               setSelectedStudent(balance.student_id);
                               setStudentSearch("");
                               setShowStudentDropdown(false);
-                              setSelectedPaymentId("");
-                            }}
+                  setSelectedPaymentId("");
+                }}
                             className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0"
                           >
                             <div className="font-medium text-white">{balance.students.name}</div>
@@ -1040,6 +1100,229 @@ Notes: ${payment.notes || "None"}
               </button>
             </div>
           </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// Record Expense Modal Component
+function RecordExpenseModal({ 
+  isOpen, 
+  onClose, 
+  expenseCategories, 
+  schoolId, 
+  termId, 
+  userId,
+  onSuccess 
+}: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  expenseCategories: ExpenseCategory[];
+  schoolId: string | null;
+  termId: string | null;
+  userId: string;
+  onSuccess: () => void;
+}) {
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [amount, setAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSubmitting(true);
+
+    try {
+      if (!category || !description || !amount || !paymentMethod || !schoolId || !termId) {
+        setError("Please fill all required fields");
+        return;
+      }
+
+      if (isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) {
+        setError("Please enter a valid amount");
+        return;
+      }
+
+      const response = await fetch('/api/accountant/record-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category_name: category,
+          description,
+          amount: parseFloat(amount),
+          payment_method: paymentMethod,
+          expense_date: expenseDate,
+          reference_number: referenceNumber || null,
+          term_id: termId
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to record expense');
+      }
+
+      // Reset form
+      setCategory("");
+      setDescription("");
+      setAmount("");
+      setPaymentMethod("cash");
+      setExpenseDate(new Date().toISOString().split('T')[0]);
+      setReferenceNumber("");
+      
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to record expense");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="bg-slate-900 rounded-xl border border-white/20 p-6 max-w-md w-full shadow-2xl max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-semibold text-white">Record Expense</h3>
+            <button
+              onClick={onClose}
+              className="text-white/60 hover:text-white transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-400/30 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Category *</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                required
+              >
+                <option value="" className="bg-slate-800">Select category</option>
+                {expenseCategories.map(cat => (
+                  <option key={cat.category_id} value={cat.category_name} className="bg-slate-800">
+                    {cat.category_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Description *</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                placeholder="Brief description of the expense..."
+                rows={3}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Amount (UGX) *</label>
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                placeholder="50000"
+                required
+                min="1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Payment Method *</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                required
+              >
+                <option value="cash" className="bg-slate-800">Cash</option>
+                <option value="bank" className="bg-slate-800">Bank Transfer</option>
+                <option value="mobile_money" className="bg-slate-800">Mobile Money</option>
+                <option value="cheque" className="bg-slate-800">Cheque</option>
+                <option value="other" className="bg-slate-800">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Date *</label>
+              <input
+                type="date"
+                value={expenseDate}
+                onChange={(e) => setExpenseDate(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-white/80 text-sm mb-2">Reference / Receipt Number</label>
+              <input
+                type="text"
+                value={referenceNumber}
+                onChange={(e) => setReferenceNumber(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                placeholder="Auto-generated if left empty"
+              />
+            </div>
+
+            <div className="bg-yellow-500/10 border border-yellow-400/30 rounded-lg p-3">
+              <p className="text-yellow-300 text-sm">
+                ⚠️ This expense will require approval from admin/head teacher before being finalized.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white transition-colors disabled:opacity-50"
+              >
+                {submitting ? "Recording..." : "Record Expense"}
+              </button>
+            </div>
+          </form>
         </motion.div>
       </motion.div>
     </AnimatePresence>
