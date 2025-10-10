@@ -5,6 +5,7 @@ import chromium from '@sparticuz/chromium';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
+// Updated: Using admission numbers instead of UUIDs
 
 export async function GET(request: NextRequest) {
   try {
