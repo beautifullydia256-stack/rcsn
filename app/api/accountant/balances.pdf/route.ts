@@ -46,9 +46,9 @@ export async function GET(request: NextRequest) {
 
     // Transform and filter data
     let rows = (balancesData || []).map((b: any) => ({
-      student_id: b.students.admission_number || 'N/A',
-      name: b.students.name,
-      current_class: b.classes.class_name,
+      student_id: b.students?.admission_number || 'N/A',
+      name: b.students?.name || 'Unknown',
+      current_class: b.classes?.class_name || 'N/A',
       expected_amount: b.total_fees,
       total_paid: b.total_paid,
       balance: b.balance
