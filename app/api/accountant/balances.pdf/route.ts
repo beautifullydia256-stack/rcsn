@@ -55,9 +55,6 @@ export async function GET(request: NextRequest) {
       balance: b.balance
     }));
 
-    // Debug logging
-    console.log('PDF Generation - First 2 rows:', rows.slice(0, 2));
-
     if (className) {
       rows = rows.filter((r: any) => r.current_class === className);
     }
