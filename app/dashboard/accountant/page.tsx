@@ -820,10 +820,22 @@ function GenerateReceiptModal({
   balances: StudentBalance[];
 }) {
   const [selectedStudent, setSelectedStudent] = useState("");
+  const [studentSearch, setStudentSearch] = useState("");
+  const [showStudentDropdown, setShowStudentDropdown] = useState(false);
   const [selectedPaymentId, setSelectedPaymentId] = useState("");
 
   const studentPayments = payments.filter(p => p.student_id === selectedStudent);
   const studentBalance = balances.find(b => b.student_id === selectedStudent);
+
+  // Filter balances based on search
+  const filteredBalances = balances.filter(b => 
+    b.students.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    (b.students.admission_number || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+    b.classes.class_name.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+  // Get selected student object
+  const selectedStudentObj = balances.find(b => b.student_id === selectedStudent);
 
   const handleGenerateReceipt = () => {
     const payment = payments.find(p => p.payment_id === selectedPaymentId);
@@ -900,23 +912,76 @@ Notes: ${payment.notes || "None"}
           </div>
 
           <div className="space-y-4">
-            <div>
+            <div className="relative">
               <label className="block text-white/80 text-sm mb-2">Select Student</label>
-              <select
-                value={selectedStudent}
-                onChange={(e) => {
-                  setSelectedStudent(e.target.value);
-                  setSelectedPaymentId("");
-                }}
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-              >
-                <option value="" className="bg-slate-800">Choose a student</option>
-                {balances.map(b => (
-                  <option key={b.student_id} value={b.student_id} className="bg-slate-800">
-                    {b.students.name} - {b.classes.class_name}
-                  </option>
-                ))}
-              </select>
+              
+              {/* Selected Student Display or Search Input */}
+              {selectedStudent ? (
+                <div className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">{selectedStudentObj?.students.name}</div>
+                    <div className="text-xs text-white/60">
+                      {selectedStudentObj?.classes.class_name} • {selectedStudentObj?.students.admission_number}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedStudent("");
+                      setStudentSearch("");
+                      setShowStudentDropdown(false);
+                      setSelectedPaymentId("");
+                    }}
+                    className="text-white/60 hover:text-white ml-2"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={studentSearch}
+                    onChange={(e) => {
+                      setStudentSearch(e.target.value);
+                      setShowStudentDropdown(true);
+                    }}
+                    onFocus={() => setShowStudentDropdown(true)}
+                    placeholder="Search by name, admission number, or class..."
+                    className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/50"
+                  />
+                  
+                  {/* Dropdown Results */}
+                  {showStudentDropdown && studentSearch && (
+                    <div className="absolute z-10 w-full mt-1 bg-slate-800 border border-white/20 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                      {filteredBalances.length > 0 ? (
+                        filteredBalances.map((balance) => (
+                          <button
+                            key={balance.student_id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedStudent(balance.student_id);
+                              setStudentSearch("");
+                              setShowStudentDropdown(false);
+                              setSelectedPaymentId("");
+                            }}
+                            className="w-full text-left px-4 py-3 hover:bg-white/10 transition-colors border-b border-white/5 last:border-b-0"
+                          >
+                            <div className="font-medium text-white">{balance.students.name}</div>
+                            <div className="text-xs text-white/60 mt-1">
+                              {balance.classes.class_name} • {balance.students.admission_number || "No admission #"}
+                            </div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-white/60 text-sm">
+                          No students found matching "{studentSearch}"
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
 
             {selectedStudent && (
