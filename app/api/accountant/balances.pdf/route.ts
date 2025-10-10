@@ -55,6 +55,9 @@ export async function GET(request: NextRequest) {
       balance: b.balance
     }));
 
+    // Debug logging
+    console.log('PDF Generation - First 2 rows:', rows.slice(0, 2));
+
     if (className) {
       rows = rows.filter((r: any) => r.current_class === className);
     }
@@ -133,7 +136,10 @@ export async function GET(request: NextRequest) {
     return new NextResponse(pdf as any, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="balances.pdf"'
+        'Content-Disposition': 'attachment; filename="balances.pdf"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       }
     });
   } catch (e) {
