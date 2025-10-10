@@ -85,7 +85,7 @@ export default function AccountantDashboardPage() {
   const [userName, setUserName] = useState<string>("");
   const [schoolName, setSchoolName] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"balances" | "payments">("balances");
+  const [activeTab, setActiveTab] = useState<"balances" | "payments" | "expenses">("balances");
 
   // Modals
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -112,6 +112,8 @@ export default function AccountantDashboardPage() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [classes, setClasses] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [expenseStatusFilter, setExpenseStatusFilter] = useState<string>("");
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>("");
 
   const loadData = async () => {
     try {
@@ -318,6 +320,19 @@ export default function AccountantDashboardPage() {
     });
   }, [payments, search, selectedClass]);
 
+  const filteredExpenses = useMemo(() => {
+    const q = search.toLowerCase();
+    return expenses.filter(e => {
+      const matchCategory = expenseCategoryFilter ? (e.category_name === expenseCategoryFilter) : true;
+      const matchStatus = expenseStatusFilter ? (e.status === expenseStatusFilter) : true;
+      const matchSearch = !q || 
+        e.description.toLowerCase().includes(q) || 
+        e.category_name.toLowerCase().includes(q) ||
+        (e.reference_number || "").toLowerCase().includes(q);
+      return matchCategory && matchStatus && matchSearch;
+    });
+  }, [expenses, search, expenseStatusFilter, expenseCategoryFilter]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/login');
@@ -487,6 +502,16 @@ export default function AccountantDashboardPage() {
           >
             Payment History
           </button>
+          <button
+            onClick={() => setActiveTab("expenses")}
+            className={`px-6 py-3 rounded-lg font-medium transition-all ${
+              activeTab === "expenses"
+                ? "bg-white text-indigo-900 shadow-lg"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
+          >
+            School Expenses
+          </button>
         </motion.div>
 
         {/* Filters */}
@@ -499,21 +524,23 @@ export default function AccountantDashboardPage() {
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="text"
-              placeholder="Search by name or admission number"
+              placeholder={activeTab === "expenses" ? "Search by description or reference" : "Search by name or admission number"}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full md:w-80 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
             />
-            <select
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-            >
-              <option value="" className="bg-slate-800">All Classes</option>
-              {classes.map(c => (
-                <option key={c} value={c} className="bg-slate-800">{c}</option>
-              ))}
-            </select>
+            {activeTab !== "expenses" && (
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              >
+                <option value="" className="bg-slate-800">All Classes</option>
+                {classes.map(c => (
+                  <option key={c} value={c} className="bg-slate-800">{c}</option>
+                ))}
+              </select>
+            )}
             {activeTab === "balances" && (
               <select
                 value={statusFilter}
@@ -526,14 +553,41 @@ export default function AccountantDashboardPage() {
                 <option value="not_paid" className="bg-slate-800">Not Paid</option>
               </select>
             )}
+            {activeTab === "expenses" && (
+              <>
+                <select
+                  value={expenseCategoryFilter}
+                  onChange={(e) => setExpenseCategoryFilter(e.target.value)}
+                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                >
+                  <option value="" className="bg-slate-800">All Categories</option>
+                  {expenseCategories.map(cat => (
+                    <option key={cat.category_id} value={cat.category_name} className="bg-slate-800">{cat.category_name}</option>
+                  ))}
+                </select>
+                <select
+                  value={expenseStatusFilter}
+                  onChange={(e) => setExpenseStatusFilter(e.target.value)}
+                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+                >
+                  <option value="" className="bg-slate-800">All Status</option>
+                  <option value="pending" className="bg-slate-800">Pending Approval</option>
+                  <option value="approved" className="bg-slate-800">Approved</option>
+                  <option value="rejected" className="bg-slate-800">Rejected</option>
+                  <option value="paid" className="bg-slate-800">Paid</option>
+                </select>
+              </>
+            )}
           </div>
         </motion.div>
 
         {/* Content */}
         {activeTab === "balances" ? (
           <BalancesTable balances={filteredBalances} />
-        ) : (
+        ) : activeTab === "payments" ? (
           <PaymentsTable payments={filteredPayments} />
+        ) : (
+          <ExpensesTable expenses={filteredExpenses} />
         )}
       </div>
 
@@ -1428,6 +1482,85 @@ function PaymentsTable({ payments }: { payments: Payment[] }) {
           </tbody>
         </table>
       </div>
+    </motion.div>
+  );
+}
+
+function ExpensesTable({ expenses }: { expenses: Expense[] }) {
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'approved': return 'text-emerald-400';
+      case 'pending': return 'text-yellow-400';
+      case 'rejected': return 'text-red-400';
+      case 'paid': return 'text-blue-400';
+      default: return 'text-white/60';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1);
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5 }}
+      className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-white/5 text-white/80">
+            <tr>
+              <Th>Date</Th>
+              <Th>Reference</Th>
+              <Th>Category</Th>
+              <Th>Description</Th>
+              <Th style={{textAlign: 'right'}}>Amount</Th>
+              <Th>Method</Th>
+              <Th>Status</Th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {expenses.map((e) => (
+              <tr key={e.expense_id} className="border-t border-white/10">
+                <Td>{new Date(e.expense_date).toLocaleDateString()}</Td>
+                <Td className="text-xs text-white/60">{e.reference_number || "-"}</Td>
+                <Td>{e.category_name}</Td>
+                <Td className="max-w-xs truncate">{e.description}</Td>
+                <Td className="text-red-400 font-semibold" style={{textAlign: 'right'}}>{formatCurrency(e.amount)}</Td>
+                <Td>{e.payment_method || "-"}</Td>
+                <Td className={getStatusColor(e.status)}>
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs">
+                    {getStatusLabel(e.status)}
+                  </span>
+                </Td>
+              </tr>
+            ))}
+            {expenses.length === 0 && (
+              <tr>
+                <td colSpan={7} className="text-center text-white/60 py-10">No expense records found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {expenses.length > 0 && (
+        <div className="bg-white/5 px-4 py-3 border-t border-white/10">
+          <div className="flex justify-between items-center">
+            <span className="text-white/70 text-sm">Total Expenses</span>
+            <span className="text-red-400 font-semibold text-lg">
+              {formatCurrency(expenses.filter(e => e.status === 'approved' || e.status === 'paid').reduce((sum, e) => sum + e.amount, 0))}
+            </span>
+          </div>
+          <div className="flex justify-between items-center mt-2">
+            <span className="text-yellow-400/70 text-xs">Pending Approval</span>
+            <span className="text-yellow-400 font-medium text-sm">
+              {formatCurrency(expenses.filter(e => e.status === 'pending').reduce((sum, e) => sum + e.amount, 0))}
+            </span>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
