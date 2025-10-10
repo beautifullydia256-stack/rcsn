@@ -98,6 +98,8 @@ export default function AccountantDashboardPage() {
   const [kpiOutstanding, setKpiOutstanding] = useState<number>(0);
   const [kpiOutstandingAllTime, setKpiOutstandingAllTime] = useState<number>(0);
   const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
+  const [kpiExpensesThisTerm, setKpiExpensesThisTerm] = useState<number>(0);
+  const [kpiNetBalance, setKpiNetBalance] = useState<number>(0);
 
   // Data
   const [balances, setBalances] = useState<StudentBalance[]>([]);
@@ -277,6 +279,16 @@ export default function AccountantDashboardPage() {
         .order("expense_date", { ascending: false });
       setExpenses(expensesData as any || []);
 
+      // Calculate expense KPIs
+      const approvedExpenses = (expensesData || [])
+        .filter((e: any) => e.status === 'approved' || e.status === 'paid')
+        .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
+      setKpiExpensesThisTerm(approvedExpenses);
+
+      // Calculate net balance (income - expenses)
+      const netBalance = collectedThisTerm - approvedExpenses;
+      setKpiNetBalance(netBalance);
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -398,10 +410,21 @@ export default function AccountantDashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
         >
           <KpiCard title="Collected Today" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
           <KpiCard title="Collected This Term" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
+          <KpiCard title="Expenses This Term" value={formatCurrency(kpiExpensesThisTerm)} accent="bg-red-500" />
+          <KpiCard title="Net Balance (Income - Expenses)" value={formatCurrency(kpiNetBalance)} accent={kpiNetBalance >= 0 ? "bg-emerald-500" : "bg-red-500"} />
+        </motion.div>
+
+        {/* Secondary KPIs */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
+        >
           <KpiCard title="Outstanding This Term" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
           <KpiCard title="Outstanding All Time" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
           <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
