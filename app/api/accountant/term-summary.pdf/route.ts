@@ -29,14 +29,50 @@ export async function GET(request: NextRequest) {
     const school_id = u?.school_id as string | undefined;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    let query = supabase.from('v_accountant_term_summary').select('*').eq('school_id', school_id);
-    if (start) query = query.gte('date', start);
-    if (end) query = query.lte('date', end);
-    if (className) query = query.eq('current_class', className);
-    const { data, error } = await query.order('date', { ascending: true });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Query student_balances with real-time data
+    const { data: balancesData, error: balError } = await supabase
+      .from('student_balances')
+      .select(`
+        total_fees,
+        total_paid,
+        balance,
+        last_payment_date,
+        classes(class_name)
+      `)
+      .eq('school_id', school_id);
+    
+    if (balError) return NextResponse.json({ error: balError.message }, { status: 500 });
 
-    const rows = data || [];
+    // Aggregate data by date and class
+    const aggregated: any = {};
+    (balancesData || []).forEach((b: any) => {
+      const currentClass = b.classes?.class_name || 'Unassigned';
+      
+      // Filter by class if specified
+      if (className && currentClass !== className) return;
+      
+      const date = b.last_payment_date || 'No Payment';
+      
+      // Apply date filters
+      if (start && date < start) return;
+      if (end && date > end) return;
+      
+      const key = `${date}_${currentClass}`;
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          date: date,
+          current_class: currentClass,
+          expected_total: 0,
+          collected_total: 0,
+          outstanding_total: 0
+        };
+      }
+      aggregated[key].expected_total += Number(b.total_fees || 0);
+      aggregated[key].collected_total += Number(b.total_paid || 0);
+      aggregated[key].outstanding_total += Number(b.balance || 0);
+    });
+
+    const rows = Object.values(aggregated);
     const title = 'Term Summary Report';
     const subtitle = [start ? `From ${start}` : '', end ? `To ${end}` : '', className ? `Class: ${className}` : ''].filter(Boolean).join(' • ');
     const tableRows = rows.map((r:any) => `

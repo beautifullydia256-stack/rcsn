@@ -30,15 +30,47 @@ export async function GET(request: NextRequest) {
     const school_id = u?.school_id as string | undefined;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    let query = supabase.from('v_accountant_collections').select('*').eq('school_id', school_id);
-    if (start) query = query.gte('date', start);
-    if (end) query = query.lte('date', end);
-    if (className) query = query.eq('current_class', className);
+    // Query student_payments with real-time data
+    let query = supabase
+      .from('student_payments')
+      .select(`
+        payment_date,
+        amount_paid,
+        payment_method,
+        classes(class_name)
+      `)
+      .eq('school_id', school_id);
+    
+    if (start) query = query.gte('payment_date', start);
+    if (end) query = query.lte('payment_date', end);
     if (method) query = query.eq('payment_method', method);
-    const { data, error } = await query.order('date', { ascending: true });
+    
+    const { data: paymentsData, error } = await query.order('payment_date', { ascending: true });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const rows = data || [];
+    // Aggregate data by date, class, and method
+    const aggregated: any = {};
+    (paymentsData || []).forEach((p: any) => {
+      const currentClass = p.classes?.class_name || 'Unassigned';
+      
+      // Filter by class if specified
+      if (className && currentClass !== className) return;
+      
+      const key = `${p.payment_date}_${currentClass}_${p.payment_method}`;
+      if (!aggregated[key]) {
+        aggregated[key] = {
+          date: p.payment_date,
+          current_class: currentClass,
+          payment_method: p.payment_method,
+          total_amount: 0,
+          receipts: 0
+        };
+      }
+      aggregated[key].total_amount += Number(p.amount_paid || 0);
+      aggregated[key].receipts += 1;
+    });
+
+    const rows = Object.values(aggregated);
     const title = 'Fees Collections Report';
     const subtitle = [start ? `From ${start}` : '', end ? `To ${end}` : '', className ? `Class: ${className}` : '', method ? `Method: ${method}` : ''].filter(Boolean).join(' • ');
     const tableRows = rows.map((r:any) => `

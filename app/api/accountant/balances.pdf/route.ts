@@ -28,12 +28,37 @@ export async function GET(request: NextRequest) {
     const school_id = u?.school_id as string | undefined;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    let query = supabase.from('v_accountant_balances').select('*').eq('school_id', school_id);
-    if (className) query = query.eq('current_class', className);
-    const { data, error } = await query;
+    // Query student_balances with real-time data
+    const { data: balancesData, error } = await supabase
+      .from('student_balances')
+      .select(`
+        balance_id,
+        student_id,
+        total_fees,
+        total_paid,
+        balance,
+        students!inner(name, admission_number),
+        classes!inner(class_name)
+      `)
+      .eq('school_id', school_id);
+    
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const rows = (data || []).filter((r: any) => (Number(r.balance) || 0) >= (minBalance || 0));
+    // Transform and filter data
+    let rows = (balancesData || []).map((b: any) => ({
+      student_id: b.students.admission_number || 'N/A',
+      name: b.students.name,
+      current_class: b.classes.class_name,
+      expected_amount: b.total_fees,
+      total_paid: b.total_paid,
+      balance: b.balance
+    }));
+
+    if (className) {
+      rows = rows.filter((r: any) => r.current_class === className);
+    }
+    
+    rows = rows.filter((r: any) => (Number(r.balance) || 0) >= (minBalance || 0));
     const title = 'Balances & Arrears Report';
     const subtitle = [className ? `Class: ${className}` : '', minBalance ? `Min Balance: ${minBalance}` : ''].filter(Boolean).join(' • ');
     const tableRows = rows.map((r:any) => `
@@ -71,7 +96,7 @@ export async function GET(request: NextRequest) {
     <table>
       <thead>
         <tr>
-          <th>Student ID</th>
+          <th>Admission Number</th>
           <th>Name</th>
           <th>Class</th>
           <th style="text-align:right">Expected</th>
