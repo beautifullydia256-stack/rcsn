@@ -507,6 +507,7 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
   const [mode, setMode] = useState<'current' | 'next'>('current');
   const [currentTerm, setCurrentTerm] = useState<{year:number; term:number; start_date:string; end_date:string} | null>(null);
   const [suggested, setSuggested] = useState<{year:number; term:number}>({ year: new Date().getFullYear(), term: 1 });
+  const [showTermInfo, setShowTermInfo] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -678,6 +679,44 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
   return (
     <div>
       <SectionHeader title="Term Settings" desc="Configure the current school term. Three terms per year (1, 2, 3)." />
+      
+      {/* Uganda Term Structure Info */}
+      <div className="mb-4 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+        <div className="flex items-center justify-between mb-2">
+          <h4 className="text-blue-300 font-medium text-sm">📅 Uganda Academic Calendar</h4>
+          <button 
+            onClick={() => setShowTermInfo(!showTermInfo)}
+            className="text-blue-300 text-xs hover:text-blue-200"
+          >
+            {showTermInfo ? 'Hide' : 'Show'} Details
+          </button>
+        </div>
+        {showTermInfo && (
+          <div className="text-white/70 text-xs space-y-2 mt-3">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white/5 p-2 rounded">
+                <div className="font-medium text-white mb-1">Term I</div>
+                <div>February - May</div>
+                <div className="text-white/50">Duration: ~3 months</div>
+                <div className="text-white/50">Break: 3-4 weeks (May)</div>
+              </div>
+              <div className="bg-white/5 p-2 rounded">
+                <div className="font-medium text-white mb-1">Term II</div>
+                <div>June - August</div>
+                <div className="text-white/50">Duration: ~2.5 months</div>
+                <div className="text-white/50">Break: 3-4 weeks (August)</div>
+              </div>
+              <div className="bg-white/5 p-2 rounded">
+                <div className="font-medium text-white mb-1">Term III</div>
+                <div>September - December</div>
+                <div className="text-white/50">Duration: ~3 months</div>
+                <div className="text-white/50">Break: ~2 months (Dec-Jan)</div>
+              </div>
+            </div>
+            <p className="text-white/50 italic mt-2">ℹ️ These are standard Uganda term dates. You can customize dates for your school below.</p>
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-3 mb-3">
         <label className="flex items-center gap-2 text-white/80 text-sm">
           <input type="radio" className="accent-blue-500" checked={mode==='current'} onChange={()=>setMode('current')} /> Edit Current Term
