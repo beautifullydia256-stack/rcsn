@@ -496,6 +496,18 @@ export default function AccountantDashboardPage() {
           >
             📥 Term Summary (PDF)
           </button>
+
+          <button
+            onClick={() => {
+              const q = new URLSearchParams();
+              if (expenseCategoryFilter) q.set('category', expenseCategoryFilter);
+              if (expenseStatusFilter) q.set('status', expenseStatusFilter);
+              window.open(`/api/accountant/expenses.pdf?${q.toString()}`, '_blank');
+            }}
+            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
+          >
+            💸 Expenses (PDF)
+          </button>
         </motion.div>
 
         {/* Tabs */}
