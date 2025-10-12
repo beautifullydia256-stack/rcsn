@@ -440,30 +440,35 @@ export default function TeacherExamResultsClassPage() {
         return 'bg-green-600/20 text-green-300';
       case 'division 2':
         return 'bg-blue-600/20 text-blue-300';
-      case 'class 3':
+      case 'credit 3':
+        return 'bg-cyan-600/20 text-cyan-300';
+      case 'credit 4':
         return 'bg-yellow-600/20 text-yellow-300';
-      case 'class 4':
-        return 'bg-orange-600/20 text-orange-300';
-      case 'class 5':
-        return 'bg-purple-600/20 text-purple-300';
-      case 'class 6 (fail)':
+      case 'credit 5':
+        return 'bg-orange-500/20 text-orange-300';
+      case 'credit 6':
+        return 'bg-orange-700/20 text-orange-400';
+      case 'pass 7':
+        return 'bg-red-500/20 text-red-300';
+      case 'pass 8':
+        return 'bg-red-600/20 text-red-400';
       case 'f9':
-        return 'bg-red-600/20 text-red-300';
+        return 'bg-red-900/20 text-red-500';
       default:
         return 'text-white/60';
     }
   };
 
-  // Primary grading (Divisions) per provided policy
-  // Div 1: 81-100, Div 2: 72-80.99, Class 3: 68-71.99, Class 4: 61-67.99,
-  // Class 5: 53-60.99, Class 6 (Fail): 36-52.99, F9: 0-35.99
+  // Primary grading (Percentage-based) - Subject grading scale
+  // Division 1: 81-100, Division 2: 72-80.99, Credit 3: 68-71.99, Credit 4: 61-67.99,
+  // Credit 5: 53-60.99, Credit 6: 36-52.99, Pass 7: TBD, Pass 8: TBD, F9: 0-35.99
   const getDefaultGrades = () => [
     { min: 81, max: 100, grade: 'Division 1' },
     { min: 72, max: 80.99, grade: 'Division 2' },
-    { min: 68, max: 71.99, grade: 'Class 3' },
-    { min: 61, max: 67.99, grade: 'Class 4' },
-    { min: 53, max: 60.99, grade: 'Class 5' },
-    { min: 36, max: 52.99, grade: 'Class 6 (Fail)' },
+    { min: 68, max: 71.99, grade: 'Credit 3' },
+    { min: 61, max: 67.99, grade: 'Credit 4' },
+    { min: 53, max: 60.99, grade: 'Credit 5' },
+    { min: 36, max: 52.99, grade: 'Credit 6' },
     { min: 0, max: 35.99, grade: 'F9' },
   ];
 
