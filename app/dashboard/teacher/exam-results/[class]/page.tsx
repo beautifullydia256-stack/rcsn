@@ -461,7 +461,7 @@ export default function TeacherExamResultsClassPage() {
 
   // Primary grading (Percentage-based) - Subject grading scale
   // Division 1: 81-100, Division 2: 72-80.99, Credit 3: 68-71.99, Credit 4: 61-67.99,
-  // Credit 5: 53-60.99, Credit 6: 36-52.99, Pass 7: TBD, Pass 8: TBD, F9: 0-35.99
+  // Credit 5: 53-60.99, Credit 6: 36-52.99, Pass 7: 26-35.99, Pass 8: 16-25.99, F9: 0-15.99
   const getDefaultGrades = () => [
     { min: 81, max: 100, grade: 'Division 1' },
     { min: 72, max: 80.99, grade: 'Division 2' },
@@ -469,7 +469,9 @@ export default function TeacherExamResultsClassPage() {
     { min: 61, max: 67.99, grade: 'Credit 4' },
     { min: 53, max: 60.99, grade: 'Credit 5' },
     { min: 36, max: 52.99, grade: 'Credit 6' },
-    { min: 0, max: 35.99, grade: 'F9' },
+    { min: 26, max: 35.99, grade: 'Pass 7' },
+    { min: 16, max: 25.99, grade: 'Pass 8' },
+    { min: 0, max: 15.99, grade: 'F9' },
   ];
 
   // Given an aggregate points value, compute primary Division label
