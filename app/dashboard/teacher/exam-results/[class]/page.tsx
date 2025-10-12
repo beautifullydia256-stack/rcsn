@@ -5,11 +5,14 @@ import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
+import { getSectionForClass } from "@/src/templates/primary";
 
 export default function TeacherExamResultsClassPage() {
   const router = useRouter();
   const params = useParams();
   const className = decodeURIComponent(params.class as string);
+  
+  // Detect if this is a Secondary school class
   const isSecondary = useMemo(() => {
     const trimmed = className?.trim() || "";
     // O-Level classes: Senior 1 - Senior 4 (S1-S4)
@@ -21,6 +24,12 @@ export default function TeacherExamResultsClassPage() {
     const trimmed = className?.trim() || "";
     return /^(senior\s*[5-6]|s\s*[5-6])/i.test(trimmed);
   }, [className]);
+  
+  // Detect Primary school section (Baby Class, Nursery, Lower, Upper)
+  const primarySection = useMemo(() => {
+    if (isSecondary || isALevel) return null;
+    return getSectionForClass(className);
+  }, [className, isSecondary, isALevel]);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -871,8 +880,13 @@ export default function TeacherExamResultsClassPage() {
                   ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' 
                   : 'bg-green-600/20 text-green-300 border border-green-500/30'
               }`}>
-                {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : 'Primary Format')}
+                {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : primarySection ? `${primarySection} Section Format` : 'Primary Format')}
               </div>
+              {primarySection && (
+                <div className="text-xs text-white/60 italic">
+                  ✓ Section-specific format
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3">
