@@ -460,18 +460,18 @@ export default function TeacherExamResultsClassPage() {
   };
 
   // Primary grading (Percentage-based) - Subject grading scale
-  // Division 1: 81-100, Division 2: 72-80.99, Credit 3: 68-71.99, Credit 4: 61-67.99,
-  // Credit 5: 53-60.99, Credit 6: 36-52.99, Pass 7: 26-35.99, Pass 8: 16-25.99, F9: 0-15.99
+  // Division 1: 75-100, Division 2: 70-74, Credit 3: 65-69, Credit 4: 60-64,
+  // Credit 5: 55-59, Credit 6: 50-54, Pass 7: 45-49, Pass 8: 40-44, F9: 0-39
   const getDefaultGrades = () => [
-    { min: 81, max: 100, grade: 'Division 1' },
-    { min: 72, max: 80.99, grade: 'Division 2' },
-    { min: 68, max: 71.99, grade: 'Credit 3' },
-    { min: 61, max: 67.99, grade: 'Credit 4' },
-    { min: 53, max: 60.99, grade: 'Credit 5' },
-    { min: 36, max: 52.99, grade: 'Credit 6' },
-    { min: 26, max: 35.99, grade: 'Pass 7' },
-    { min: 16, max: 25.99, grade: 'Pass 8' },
-    { min: 0, max: 15.99, grade: 'F9' },
+    { min: 75, max: 100, grade: 'Division 1' },
+    { min: 70, max: 74, grade: 'Division 2' },
+    { min: 65, max: 69, grade: 'Credit 3' },
+    { min: 60, max: 64, grade: 'Credit 4' },
+    { min: 55, max: 59, grade: 'Credit 5' },
+    { min: 50, max: 54, grade: 'Credit 6' },
+    { min: 45, max: 49, grade: 'Pass 7' },
+    { min: 40, max: 44, grade: 'Pass 8' },
+    { min: 0, max: 39, grade: 'F9' },
   ];
 
   // Given an aggregate points value, compute primary Division label
