@@ -48,7 +48,7 @@ import {
 } from "@/src/lib/reportUtils";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
-import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions } from "@/src/templates/primary";
+import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions, getTemplateForClass, getSectionForClass } from "@/src/templates/primary";
 
 // Primary/Nursery School Report Generator
 export function PrimaryReportGenerator() {
@@ -258,18 +258,31 @@ export function PrimaryReportGenerator() {
     init();
   }, []);
 
-  // Auto-select template based on class-specific settings
+  // Auto-select template based on class
   useEffect(() => {
-    if (selectedClass && classTemplateSettings.length > 0) {
-      const classSetting = classTemplateSettings.find(s => s.class_name === selectedClass);
-      if (classSetting) {
-        // Check if it's a custom template or default template
-        if (classSetting.template_id.startsWith('template')) {
-          setSelectedTemplate(classSetting.template_id);
-        } else {
-          setSelectedTemplate(`custom_${classSetting.template_id}`);
+    if (selectedClass) {
+      // First check if there's a custom class-specific setting (saved override)
+      if (classTemplateSettings.length > 0) {
+        const classSetting = classTemplateSettings.find(s => s.class_name === selectedClass);
+        if (classSetting) {
+          // Check if it's a custom template or default template
+          if (classSetting.template_id.startsWith('template')) {
+            setSelectedTemplate(classSetting.template_id);
+            return; // Exit early - custom setting takes precedence
+          } else {
+            setSelectedTemplate(`custom_${classSetting.template_id}`);
+            return; // Exit early - custom setting takes precedence
+          }
         }
       }
+      
+      // If no custom setting, use automatic section-based template selection
+      const autoTemplate = getTemplateForClass(selectedClass);
+      setSelectedTemplate(autoTemplate);
+      
+      // Log the auto-selection for debugging
+      const section = getSectionForClass(selectedClass);
+      console.log(`Auto-selected ${autoTemplate} (${PRIMARY_TEMPLATES[autoTemplate as keyof typeof PRIMARY_TEMPLATES]?.name}) for class "${selectedClass}" (${section} Section)`);
     }
   }, [selectedClass, classTemplateSettings]);
 

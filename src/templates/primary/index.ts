@@ -49,3 +49,90 @@ export const getTemplateBySection = (section: 'Baby Class' | 'Nursery' | 'Lower'
   return Object.entries(PRIMARY_TEMPLATES).find(([_, template]) => template.section === section)?.[0];
 };
 
+// Class-to-Template Mapping for Primary Schools
+// This determines which template is automatically selected for each class
+export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
+  // Baby Class Section
+  'Baby Class': 'template1',
+  'baby class': 'template1',
+  'BABY CLASS': 'template1',
+  
+  // Nursery Section (Template 2)
+  'Middle Class': 'template2',
+  'middle class': 'template2',
+  'MIDDLE CLASS': 'template2',
+  'Top Class': 'template2',
+  'top class': 'template2',
+  'TOP CLASS': 'template2',
+  'Nursery': 'template2',
+  'nursery': 'template2',
+  'NURSERY': 'template2',
+  
+  // Lower Section (Template 3) - P.1 to P.3
+  'Primary 1': 'template3',
+  'primary 1': 'template3',
+  'PRIMARY 1': 'template3',
+  'P.1': 'template3',
+  'P1': 'template3',
+  'Primary 2': 'template3',
+  'primary 2': 'template3',
+  'PRIMARY 2': 'template3',
+  'P.2': 'template3',
+  'P2': 'template3',
+  'Primary 3': 'template3',
+  'primary 3': 'template3',
+  'PRIMARY 3': 'template3',
+  'P.3': 'template3',
+  'P3': 'template3',
+  
+  // Upper Section (Template 4) - P.4 to P.7
+  'Primary 4': 'template4',
+  'primary 4': 'template4',
+  'PRIMARY 4': 'template4',
+  'P.4': 'template4',
+  'P4': 'template4',
+  'Primary 5': 'template4',
+  'primary 5': 'template4',
+  'PRIMARY 5': 'template4',
+  'P.5': 'template4',
+  'P5': 'template4',
+  'Primary 6': 'template4',
+  'primary 6': 'template4',
+  'PRIMARY 6': 'template4',
+  'P.6': 'template4',
+  'P6': 'template4',
+  'Primary 7': 'template4',
+  'primary 7': 'template4',
+  'PRIMARY 7': 'template4',
+  'P.7': 'template4',
+  'P7': 'template4',
+};
+
+// Helper function to get recommended template for a class
+export const getTemplateForClass = (className: string): string => {
+  // Try exact match first
+  if (PRIMARY_CLASS_TEMPLATE_MAPPING[className]) {
+    return PRIMARY_CLASS_TEMPLATE_MAPPING[className];
+  }
+  
+  // Try case-insensitive match
+  const lowerClassName = className.toLowerCase();
+  const matchedKey = Object.keys(PRIMARY_CLASS_TEMPLATE_MAPPING).find(
+    key => key.toLowerCase() === lowerClassName
+  );
+  
+  if (matchedKey) {
+    return PRIMARY_CLASS_TEMPLATE_MAPPING[matchedKey];
+  }
+  
+  // Default to template1 if no match
+  return 'template1';
+};
+
+// Get section name for a class
+export const getSectionForClass = (className: string): string => {
+  const template = getTemplateForClass(className);
+  const templateData = PRIMARY_TEMPLATES[template as keyof typeof PRIMARY_TEMPLATES];
+  return templateData?.section || 'Unknown';
+};
+
