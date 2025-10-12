@@ -28,9 +28,9 @@ export default function GenerateReportsPage() {
 
         if (!userRow?.school_id) {
           console.error('No school_id found for user');
-          setLoading(false);
-          return;
-        }
+        setLoading(false);
+      return;
+    }
 
         const { data: schoolData } = await supabase
           .from('schools')
@@ -43,7 +43,7 @@ export default function GenerateReportsPage() {
         }
       } catch (error) {
         console.error('Error detecting school type:', error);
-      } finally {
+    } finally {
         setLoading(false);
       }
     };
@@ -63,13 +63,13 @@ export default function GenerateReportsPage() {
   }
 
   if (!schoolType) {
-    return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+  return (
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
         <div className="relative flex items-center justify-center min-h-screen">
           <div className="text-white text-lg">Unable to determine school type</div>
-        </div>
-      </div>
+                    </div>
+                  </div>
     );
   }
 

@@ -97,7 +97,7 @@ export function PrimaryReportGenerator() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
-  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | string>('template1');
+  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | 'template4' | string>('template1');
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   const [classTemplateSettings, setClassTemplateSettings] = useState<any[]>([]);
   const [showClassTemplateSettings, setShowClassTemplateSettings] = useState(false);
@@ -1048,6 +1048,7 @@ export function PrimaryReportGenerator() {
                           <option value="template1">{PRIMARY_TEMPLATES.template1.name}</option>
                           <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
                           <option value="template3">{PRIMARY_TEMPLATES.template3.name}</option>
+                          <option value="template4">{PRIMARY_TEMPLATES.template4.name}</option>
                         </optgroup>
                         {customTemplates.length > 0 && (
                           <optgroup label="Custom Templates">
@@ -1142,6 +1143,7 @@ export function PrimaryReportGenerator() {
                   <option className="text-black" value="template1">{PRIMARY_TEMPLATES.template1.name}</option>
                   <option className="text-black" value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
                   <option className="text-black" value="template3">{PRIMARY_TEMPLATES.template3.name}</option>
+                  <option className="text-black" value="template4">{PRIMARY_TEMPLATES.template4.name}</option>
                   </optgroup>
                   {customTemplates.length > 0 && (
                     <optgroup label="Custom Templates" className="text-black">
@@ -1402,6 +1404,7 @@ export function PrimaryReportGenerator() {
                 Template: {selectedTemplate === 'template1' ? PRIMARY_TEMPLATES.template1.name : 
                           selectedTemplate === 'template2' ? PRIMARY_TEMPLATES.template2.name : 
                           selectedTemplate === 'template3' ? PRIMARY_TEMPLATES.template3.name : 
+                          selectedTemplate === 'template4' ? PRIMARY_TEMPLATES.template4.name : 
                           selectedTemplate.startsWith('custom_') ? 
                             customTemplates.find(t => t.id === selectedTemplate.replace('custom_', ''))?.name || 'Custom Template' :
                             'Default'}
@@ -1458,6 +1461,8 @@ function ReportPreview({ student, examSet, school, template }: { student: any; e
         return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
       case 'template3':
         return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+      case 'template4':
+        return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
       default:
         return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
     }
@@ -2193,6 +2198,167 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
             <div className="text-[7pt]">P.O. BOX 11 KYOTERA</div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Template 4 - Report for Upper Section (P.5 - P.7)
+function Template4UpperSectionReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const avg = student.summary.average ?? '';
+  const avgGrade = student.summary.division ?? '';
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // O-Level calculation functions (matching exam results page logic)
+  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
+    if (activityScore < 1) return "Missed";
+    if (activityScore < 2.5) return "Moderate";
+    return "Outstanding";
+  };
+
+  const calculateGrade = (percent: number): string => {
+    if (percent >= 80) return 'D1';
+    if (percent >= 70) return 'D2';
+    if (percent >= 60) return 'C3';
+    if (percent >= 55) return 'C4';
+    if (percent >= 50) return 'C5';
+    if (percent >= 45) return 'C6';
+    if (percent >= 40) return 'P7';
+    if (percent >= 35) return 'P8';
+    return 'F9';
+  };
+
+  return (
+    <div className="p-8 bg-white text-black" style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}>
+      {/* HEADER */}
+      <div className="flex items-start justify-between mb-6">
+        {school?.logo_url ? (
+          <div className="w-24 h-24 flex-shrink-0">
+            <img src={school.logo_url} alt="School Logo" className="w-full h-full object-contain" />
+          </div>
+        ) : (
+          <div className="w-24 h-24 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
+            <span className="text-xs text-gray-400">School Logo</span>
+          </div>
+        )}
+        
+        <div className="flex-1 text-center px-4">
+          <h1 className="text-2xl font-bold uppercase mb-1">{school?.name || 'School Name'}</h1>
+          <div className="text-sm mb-1">{school?.location || 'Location'}</div>
+          <div className="text-sm mb-1">{school?.contact_email || 'Email'} | {school?.contact_phone || 'Phone'}</div>
+          <div className="text-sm italic">&quot;{school?.motto || 'School Motto'}&quot;</div>
+          <div className="mt-2 text-base font-bold uppercase">END OF TERM REPORT - UPPER SECTION</div>
+          <div className="text-sm">{examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}</div>
+        </div>
+
+        {student?.profile_photo ? (
+          <div className="w-24 h-24 flex-shrink-0">
+            <img src={student.profile_photo} alt="Student Photo" className="w-full h-full object-cover rounded border-2 border-gray-300" />
+          </div>
+        ) : (
+          <div className="w-24 h-24 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
+            <span className="text-xs text-gray-400">Student Photo</span>
+          </div>
+        )}
+      </div>
+
+      {/* STUDENT INFO */}
+      <div className="grid grid-cols-2 gap-x-8 mb-4 text-[10pt]">
+        <div><strong>Name:</strong> {student?.name || 'Student Name'}</div>
+        <div><strong>Class:</strong> {student?.current_class || 'Class'}</div>
+        <div><strong>Admission No:</strong> {student?.admission_number || 'N/A'}</div>
+        <div><strong>Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
+      </div>
+
+      {/* SUBJECTS TABLE */}
+      <table className="w-full border-collapse mb-4 text-[10pt]">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border border-gray-400 px-2 py-1 text-left">Subject</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">BOT</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">MOT</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">EOT</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">Total</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
+            <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(student?.subjects || []).map((subj: any, idx: number) => {
+            const bot = subj.bot_marks ?? '';
+            const mot = subj.mot_marks ?? '';
+            const eot = subj.eot_marks ?? '';
+            const total = subj.total_marks ?? '';
+            const grade = total ? calculateGrade(total) : '';
+            
+            return (
+              <tr key={idx}>
+                <td className="border border-gray-400 px-2 py-1">{subj.subject_name || ''}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center">{bot}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center">{mot}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center font-bold">{total}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center font-bold">{grade}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* SUMMARY */}
+      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
+        <div className="border border-gray-400 p-2">
+          <div><strong>Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
+          <div><strong>Average:</strong> {avg}</div>
+          <div><strong>Division:</strong> {avgGrade}</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
+          <div><strong>Out of:</strong> {student?.summary?.totalStudents || 'N/A'} students</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Attendance:</strong></div>
+          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+        </div>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <div className="mb-2">
+          <strong>Class Teacher's Comment:</strong>
+          <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
+            {student?.class_teacher_comment || 'No comment provided'}
+          </div>
+        </div>
+        <div>
+          <strong>Head Teacher's Comment:</strong>
+          <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
+            {student?.head_teacher_comment || 'No comment provided'}
+          </div>
+        </div>
+      </div>
+
+      {/* NEXT TERM AND SIGNATURES */}
+      <div className="flex justify-between items-end text-[10pt]">
+        <div>
+          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || 'TBA'}</div>
+          <div><strong>Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
+        </div>
+        <div className="text-right">
+          <div className="mb-8">
+            <div className="border-t border-gray-400 w-48 inline-block"></div>
+            <div className="text-xs">Head Teacher's Signature</div>
+          </div>
+        </div>
+      </div>
+
+      {/* FOOTER */}
+      <div className="text-center text-[8pt] mt-4 pt-2 border-t border-gray-300 text-gray-600">
+        Generated by PwezaCore School Management System
       </div>
     </div>
   );
