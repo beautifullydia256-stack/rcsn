@@ -1141,83 +1141,89 @@ export default function TeacherExamResultsClassPage() {
                     <p className="text-white/60 text-xs mt-3">These are based on aggregate points across subjects and will be auto-assigned on reports.</p>
                   </div>
                 )}
-                {/* Level Selector */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Subject Level</h3>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-white/90 text-sm">
-                      <input
-                        type="radio"
-                        name="level"
-                        checked={selectedLevel === 'olevel'}
-                        onChange={() => setSelectedLevel('olevel')}
-                      />
-                      O-Level (Senior 1-4)
-                    </label>
-                    <label className="flex items-center gap-2 text-white/90 text-sm">
-                      <input
-                        type="radio"
-                        name="level"
-                        checked={selectedLevel === 'alevel'}
-                        onChange={() => setSelectedLevel('alevel')}
-                      />
-                      A-Level (Senior 5-6)
-                    </label>
-                  </div>
-                </div>
-
-                {/* Auto Remark - Available for all levels */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Auto Remark</h3>
-                  <label className="flex items-center gap-2 text-white/90 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={autoRemarkEnabled}
-                      onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
-                    />
-                    Automatically set remark based on grade
-                  </label>
-                </div>
-
-                {/* Grade Remarks - Available for all levels */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Grade Remarks ({selectedLevel === 'olevel' ? 'O-Level' : 'A-Level'})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(['A','B','C','D','E','F'] as const).map(g => (
-                      <div key={g} className="flex flex-col gap-2">
-                        <label className="text-white/80 text-sm">Remark for Grade {g}</label>
-                        <textarea
-                          value={selectedLevel === 'olevel' ? (gradeRemarksOLevel[g] || '') : (gradeRemarksALevel[g] || '')}
-                          onChange={(e) => {
-                            if (selectedLevel === 'olevel') {
-                              setGradeRemarksOLevel(prev => ({ ...prev, [g]: e.target.value }));
-                            } else {
-                              setGradeRemarksALevel(prev => ({ ...prev, [g]: e.target.value }));
-                            }
-                          }}
-                          className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
-                        />
+                
+                {/* Secondary School Settings - Only show for Secondary schools */}
+                {(isSecondary || isALevel) && (
+                  <>
+                    {/* Level Selector */}
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Subject Level</h3>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 text-white/90 text-sm">
+                          <input
+                            type="radio"
+                            name="level"
+                            checked={selectedLevel === 'olevel'}
+                            onChange={() => setSelectedLevel('olevel')}
+                          />
+                          O-Level (Senior 1-4)
+                        </label>
+                        <label className="flex items-center gap-2 text-white/90 text-sm">
+                          <input
+                            type="radio"
+                            name="level"
+                            checked={selectedLevel === 'alevel'}
+                            onChange={() => setSelectedLevel('alevel')}
+                          />
+                          A-Level (Senior 5-6)
+                        </label>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* O-Level Specific Settings */}
-                {selectedLevel === 'olevel' && (
-                  <div className="border border-white/10 rounded-lg p-4">
-                    <h3 className="text-white font-medium mb-3">O-Level Settings</h3>
-                    <div className="flex items-center gap-3">
-                      <label className="text-white/80 text-sm">Formative Max</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={oLevelFormativeMax}
-                        onChange={(e) => setOLevelFormativeMax(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                        className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
-                      />
                     </div>
-                  </div>
+
+                    {/* Auto Remark - Available for all levels */}
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Auto Remark</h3>
+                      <label className="flex items-center gap-2 text-white/90 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoRemarkEnabled}
+                          onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
+                        />
+                        Automatically set remark based on grade
+                      </label>
+                    </div>
+
+                    {/* Grade Remarks - Available for all levels */}
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Grade Remarks ({selectedLevel === 'olevel' ? 'O-Level' : 'A-Level'})</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(['A','B','C','D','E','F'] as const).map(g => (
+                          <div key={g} className="flex flex-col gap-2">
+                            <label className="text-white/80 text-sm">Remark for Grade {g}</label>
+                            <textarea
+                              value={selectedLevel === 'olevel' ? (gradeRemarksOLevel[g] || '') : (gradeRemarksALevel[g] || '')}
+                              onChange={(e) => {
+                                if (selectedLevel === 'olevel') {
+                                  setGradeRemarksOLevel(prev => ({ ...prev, [g]: e.target.value }));
+                                } else {
+                                  setGradeRemarksALevel(prev => ({ ...prev, [g]: e.target.value }));
+                                }
+                              }}
+                              className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* O-Level Specific Settings */}
+                    {selectedLevel === 'olevel' && (
+                      <div className="border border-white/10 rounded-lg p-4">
+                        <h3 className="text-white font-medium mb-3">O-Level Settings</h3>
+                        <div className="flex items-center gap-3">
+                          <label className="text-white/80 text-sm">Formative Max</label>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={oLevelFormativeMax}
+                            onChange={(e) => setOLevelFormativeMax(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+                            className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
                 {teacherSubjects.map(subject => (
                   <div key={subject} className="border border-white/10 rounded-lg p-4">
