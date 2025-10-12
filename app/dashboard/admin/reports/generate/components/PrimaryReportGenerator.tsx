@@ -258,33 +258,18 @@ export function PrimaryReportGenerator() {
     init();
   }, []);
 
-  // Auto-select template based on class
+  // Auto-select template based on class (NO MANUAL OVERRIDE ALLOWED)
   useEffect(() => {
     if (selectedClass) {
-      // First check if there's a custom class-specific setting (saved override)
-      if (classTemplateSettings.length > 0) {
-        const classSetting = classTemplateSettings.find(s => s.class_name === selectedClass);
-        if (classSetting) {
-          // Check if it's a custom template or default template
-          if (classSetting.template_id.startsWith('template')) {
-            setSelectedTemplate(classSetting.template_id);
-            return; // Exit early - custom setting takes precedence
-          } else {
-            setSelectedTemplate(`custom_${classSetting.template_id}`);
-            return; // Exit early - custom setting takes precedence
-          }
-        }
-      }
-      
-      // If no custom setting, use automatic section-based template selection
+      // Use automatic section-based template selection (enforced - no overrides)
       const autoTemplate = getTemplateForClass(selectedClass);
       setSelectedTemplate(autoTemplate);
       
       // Log the auto-selection for debugging
       const section = getSectionForClass(selectedClass);
-      console.log(`Auto-selected ${autoTemplate} (${PRIMARY_TEMPLATES[autoTemplate as keyof typeof PRIMARY_TEMPLATES]?.name}) for class "${selectedClass}" (${section} Section)`);
+      console.log(`✓ Auto-selected ${autoTemplate} (${PRIMARY_TEMPLATES[autoTemplate as keyof typeof PRIMARY_TEMPLATES]?.name}) for class "${selectedClass}" (${section} Section) - No manual override allowed`);
     }
-  }, [selectedClass, classTemplateSettings]);
+  }, [selectedClass]);
 
   const filteredStudents = selectedClass 
     ? students.filter(s => s.current_class === selectedClass)
@@ -845,12 +830,8 @@ export function PrimaryReportGenerator() {
               {showHeaderCustomization ? 'Hide' : 'Customize'} Header
             </button>
             {/* Customize Report Card button removed */}
-            <button
-              onClick={() => setShowClassTemplateSettings(!showClassTemplateSettings)}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
-            >
-              {showClassTemplateSettings ? 'Hide' : 'Class Template'} Settings
-            </button>
+            {/* Class Template Settings Button - Removed (Auto-selection enforced) */}
+            {/* Templates are automatically selected based on class section */}
             <button
               onClick={() => router.push('/dashboard/admin/reports')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
@@ -1140,17 +1121,17 @@ export function PrimaryReportGenerator() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Template Selection - Only show for O-Level classes (Senior 1-4) */}
-            {isOLevelClass(selectedClass) && (
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Report Template
-                </label>
+            {/* Template Display - Auto-Selected (Read-Only) */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">
+                Report Template
+                <span className="ml-2 text-xs text-emerald-400 font-normal">✓ Auto-Selected</span>
+              </label>
+              <div className="relative">
                 <select
                   value={selectedTemplate}
-                  onChange={(e) => {
-                    setSelectedTemplate(e.target.value);
-                  }}
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  disabled
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/90 cursor-not-allowed opacity-75"
                 >
                   <optgroup label="Primary School Templates" className="text-black">
                   <option className="text-black" value="template1">{PRIMARY_TEMPLATES.template1.name}</option>
@@ -1168,8 +1149,16 @@ export function PrimaryReportGenerator() {
                     </optgroup>
                   )}
                 </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                  <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                  </svg>
+                </div>
               </div>
-            )}
+              <p className="mt-1 text-xs text-white/50">
+                Template automatically selected based on class section. This ensures consistent formatting for all students.
+              </p>
+            </div>
             
 
             {/* Report Type */}
