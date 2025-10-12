@@ -85,6 +85,8 @@ export default function TeacherExamResultsClassPage() {
     div3_max: 29,
     div4_min: 30,
     div4_max: 34,
+    u_min: 35,
+    u_max: 36,
   });
   const [selectedLevel, setSelectedLevel] = useState<'olevel' | 'alevel'>('olevel');
   const [gradeRemarksOLevel, setGradeRemarksOLevel] = useState<Record<string, string>>({
@@ -452,6 +454,8 @@ export default function TeacherExamResultsClassPage() {
         return 'bg-red-500/20 text-red-300';
       case 'pass 8':
         return 'bg-red-600/20 text-red-400';
+      case 'u (ungraded)':
+        return 'bg-gray-600/20 text-gray-300';
       case 'f9':
         return 'bg-red-900/20 text-red-500';
       default:
@@ -475,12 +479,20 @@ export default function TeacherExamResultsClassPage() {
   ];
 
   // Given an aggregate points value, compute primary Division label
-  const getPrimaryDivisionFromAggregate = (aggregatePoints: number): string => {
+  const getPrimaryDivisionFromAggregate = (aggregatePoints: number, hasIncompleteResults: boolean = false): string => {
+    // If student has incomplete/missing subject results, return U (Ungraded)
+    if (hasIncompleteResults) return 'U (Ungraded)';
+    
     const s = primaryDivisionSettings;
-    if (aggregatePoints >= s.div1_min && aggregatePoints <= s.div1_max) return 'Division 1 (Grade 1)';
-    if (aggregatePoints >= s.div2_min && aggregatePoints <= s.div2_max) return 'Division 2 (Grade 2)';
-    if (aggregatePoints >= s.div3_min && aggregatePoints <= s.div3_max) return 'Division 3 (Grade 3)';
-    if (aggregatePoints >= s.div4_min && aggregatePoints <= s.div4_max) return 'Division 4 (Grade 4)';
+    if (aggregatePoints >= s.div1_min && aggregatePoints <= s.div1_max) return 'Division 1';
+    if (aggregatePoints >= s.div2_min && aggregatePoints <= s.div2_max) return 'Division 2';
+    if (aggregatePoints >= s.div3_min && aggregatePoints <= s.div3_max) return 'Division 3';
+    if (aggregatePoints >= s.div4_min && aggregatePoints <= s.div4_max) return 'Division 4';
+    if (aggregatePoints >= s.u_min && aggregatePoints <= s.u_max) return 'U (Ungraded)';
+    
+    // For any aggregate above 36 or other edge cases
+    if (aggregatePoints > 36) return 'U (Ungraded)';
+    
     return '';
   };
 
@@ -1144,8 +1156,17 @@ export default function TeacherExamResultsClassPage() {
                         to
                         <input type="number" value={primaryDivisionSettings.div4_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, div4_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
                       </label>
+                      <label className="flex items-center gap-2 text-orange-300">
+                        U (Ungraded):
+                        <input type="number" value={primaryDivisionSettings.u_min} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, u_min: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                        to
+                        <input type="number" value={primaryDivisionSettings.u_max} onChange={(e) => setPrimaryDivisionSettings(s => ({ ...s, u_max: parseInt(e.target.value)||0 }))} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                      </label>
                     </div>
-                    <p className="text-white/60 text-xs mt-3">These are based on aggregate points across subjects and will be auto-assigned on reports.</p>
+                    <p className="text-white/60 text-xs mt-3">
+                      These are based on aggregate points across subjects and will be auto-assigned on reports. 
+                      <span className="block mt-1">U (Ungraded) is also assigned to students with missing/incomplete subject results.</span>
+                    </p>
                   </div>
                 )}
                 
