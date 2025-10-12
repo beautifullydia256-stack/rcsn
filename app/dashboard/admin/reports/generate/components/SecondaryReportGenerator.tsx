@@ -48,6 +48,7 @@ import {
 } from "@/src/lib/reportUtils";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
+import { SECONDARY_TEMPLATES, getSecondaryTemplateOptions } from "@/src/templates/secondary";
 
 // Secondary School Report Generator
 export function SecondaryReportGenerator() {
@@ -1043,10 +1044,10 @@ export function SecondaryReportGenerator() {
                         className="px-3 py-1 rounded bg-white/10 border border-white/20 text-white text-sm"
                       >
                         <option value="">Select Template</option>
-                        <optgroup label="Default Templates">
-                          <option value="template1">Template 1 - O-Level Format</option>
-                          <option value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                          <option value="template3">Template 3 - Kyotera Parents Format</option>
+                        <optgroup label="Secondary School Templates">
+                          <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                          <option value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
+                          <option value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                         </optgroup>
                         {customTemplates.length > 0 && (
                           <optgroup label="Custom Templates">
@@ -1137,10 +1138,10 @@ export function SecondaryReportGenerator() {
                   }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <optgroup label="Default Templates" className="text-black">
-                  <option className="text-black" value="template1">Template 1 - O-Level Format</option>
-                  <option className="text-black" value="template2">Template 2 - St. Adrian Kasozi Format</option>
-                  <option className="text-black" value="template3">Template 3 - Kyotera Parents Format</option>
+                  <optgroup label="Secondary School Templates" className="text-black">
+                  <option className="text-black" value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
+                  <option className="text-black" value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
+                  <option className="text-black" value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                   </optgroup>
                   {customTemplates.length > 0 && (
                     <optgroup label="Custom Templates" className="text-black">
@@ -1398,9 +1399,9 @@ export function SecondaryReportGenerator() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-white text-lg font-medium">Report Preview</h2>
               <div className="text-white/70 text-sm">
-                Template: {selectedTemplate === 'template1' ? 'O-Level Format' : 
-                          selectedTemplate === 'template2' ? 'St. Adrian Kasozi Format' : 
-                          selectedTemplate === 'template3' ? 'Kyotera Parents Format' : 
+                Template: {selectedTemplate === 'template1' ? SECONDARY_TEMPLATES.template1.name : 
+                          selectedTemplate === 'template2' ? SECONDARY_TEMPLATES.template2.name : 
+                          selectedTemplate === 'template3' ? SECONDARY_TEMPLATES.template3.name : 
                           selectedTemplate.startsWith('custom_') ? 
                             customTemplates.find(t => t.id === selectedTemplate.replace('custom_', ''))?.name || 'Custom Template' :
                             'Default'}
