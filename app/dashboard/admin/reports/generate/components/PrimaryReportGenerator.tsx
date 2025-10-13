@@ -2137,74 +2137,21 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         </table>
       </div>
 
-      {/* SUMMARY */}
-      <div className="mb-4 text-[11pt]">
-        <div className="flex items-center gap-4">
-          <div><strong>AVERAGE SCORE / PTS (OUT OF 20) / IDENTIFIER:</strong> 17</div>
+      {/* COMMENTS & FOOTER to match provided HTML */}
+      <div className="mt-4">
+        <div className="mb-4">
+          <div className="font-bold mb-1">Class Teacher's Comments:</div>
+          <div className="border border-dashed border-gray-700 p-3" style={{ minHeight: '60px' }}></div>
+          <div className="mt-2">Signature: ______________________</div>
         </div>
-        <div className="mt-2">
-          <div><strong>Overall Total Score:</strong> {avg}</div>
-          <div><strong>Overall Identifier:</strong> 2</div>
-          <div><strong>Overall Learner Achievement:</strong> Moderate (Corresponding to Identifier 2)</div>
+        <div className="mb-4">
+          <div className="font-bold mb-1">Headteacher's Comments:</div>
+          <div className="border border-dashed border-gray-700 p-3" style={{ minHeight: '60px' }}></div>
+          <div className="mt-2">Signature: ______________________</div>
         </div>
-      </div>
-
-      {/* KEY TERMS */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-bold mb-2">Key Terms Used / Descriptors:</h3>
-        <ul className="list-disc ml-6 space-y-1">
-          <li><strong>(Blank Identifier):</strong> No Learning outcomes achieved (Learner was absent)</li>
-          <li><strong>Identifier 1:</strong> Some LOs achieved but not sufficient for overall achievement (Basic)</li>
-          <li><strong>Identifier 2:</strong> Most LOs achieved, enough for overall learning achievement (Moderate)</li>
-          <li><strong>Identifier 3:</strong> All LOs achieved, achievement with ease (Accomplished)</li>
-          <li><strong>LO = Learning Outcomes</strong></li>
-          <li><strong>C1 = Chapter 1 Assessment, etc</strong></li>
-        </ul>
-      </div>
-
-      {/* GRADING SCALE */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-bold mb-2">Grading Scale:</h3>
-        <div className="flex gap-4">
-          <span><strong>A:</strong> 80+</span>
-          <span><strong>B:</strong> 70+</span>
-          <span><strong>C:</strong> 60+</span>
-          <span><strong>D:</strong> 50+</span>
-          <span><strong>E:</strong> 0-49</span>
-        </div>
-      </div>
-
-      {/* SIGNATURES */}
-      <div className="mb-4 text-[10pt]">
-        <div className="flex justify-between">
-          <div>
-            <p><strong>CLASS TEACHER:</strong> {student.comments?.class_teacher_signature || '__________'}</p>
-          </div>
-          <div>
-            <p><strong>HEAD TEACHER:</strong> {student.comments?.head_teacher_signature || '__________'}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* NEXT TERM AND FEES */}
-      <div className="mb-4 text-[10pt]">
-        <div className="flex justify-between">
-          <div><strong>NEXT TERM BEGINS ON:</strong> {student?.nextTermBegins || '26/05/2025'}</div>
-          <div><strong>Fees Balance:</strong> Ugx 0</div>
-        </div>
-      </div>
-
-      {/* SCHOOL STAMP */}
-      <div className="flex justify-end mt-4">
-        <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
-          <div className="text-center text-xs text-blue-700">
-            <div className="font-bold">HEADTEACHER</div>
-            <div className="font-bold">KYOTERA</div>
-            <div className="font-bold">PARENTS'</div>
-            <div className="font-bold">SCHOOL</div>
-            <div className="mt-1 text-[8pt]">02 MAY 2025</div>
-            <div className="text-[7pt]">P.O. BOX 11 KYOTERA</div>
-          </div>
+        <div className="flex justify-between text-[11pt] mt-4">
+          <div>Next term begins on: ____________________</div>
+          <div>End on: ____________________</div>
         </div>
       </div>
     </div>
