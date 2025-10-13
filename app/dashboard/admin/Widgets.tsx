@@ -24,7 +24,7 @@ export function AdminWidgets() {
       const today = new Date().toISOString().slice(0,10);
       const { data: allTerms } = await supabase
         .from('school_terms')
-        .select('start_date, end_date')
+        .select('start_date, end_date, year, term')
         .eq('school_id', u.school_id)
         .order('year', { ascending: false })
         .order('term', { ascending: false });

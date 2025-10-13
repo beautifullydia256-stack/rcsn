@@ -208,25 +208,29 @@ export function SecondaryReportGenerator() {
         setNextTermInfo({ year: nextYear, term: nextTerm });
 
         // Load exam sets for the current term
-        const { data: examSetsData } = await supabase
+        let examSetsQuery = supabase
           .from('exam_sets')
           .select('*')
           .eq('school_id', u.school_id)
-          .eq('is_active', true)
-          .eq('year', detectedCurrentYear)
-          .eq('term', detectedCurrentTerm)
-          .order('name', { ascending: true });
+          .eq('is_active', true);
+        if (detectedCurrentYear != null && detectedCurrentTerm != null) {
+          examSetsQuery = examSetsQuery
+            .eq('year', detectedCurrentYear)
+            .eq('term', detectedCurrentTerm);
+        }
+        const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
         
         setExamSets(examSetsData || []);
 
         // Load next term begins date from school_terms table
-        const { data: nextTermData } = await supabase
+        let nextTermQuery = supabase
           .from('school_terms')
           .select('start_date')
-          .eq('school_id', u.school_id)
-          .eq('year', nextYear)
-          .eq('term', nextTerm)
-          .maybeSingle();
+          .eq('school_id', u.school_id);
+        if (nextYear != null && nextTerm != null) {
+          nextTermQuery = nextTermQuery.eq('year', nextYear).eq('term', nextTerm);
+        }
+        const { data: nextTermData } = await nextTermQuery.maybeSingle();
         
         if (nextTermData?.start_date) {
           const iso = String(nextTermData.start_date);
