@@ -2062,7 +2062,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
             <div><strong>YEAR:</strong> {examSet?.year || '2025'}</div>
             <div><strong>STREAM:</strong> EAST</div>
             <div><strong>CLASS:</strong> {student.current_class}</div>
-            <div><strong>LIN:</strong> __________</div>
+            <div><strong>LIN:</strong> {student.admission_number || student.student_id}</div>
             <div><strong>Date:</strong> {examSet?.date || '26/05/2025'}</div>
           </div>
           
