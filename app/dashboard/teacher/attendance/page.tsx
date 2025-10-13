@@ -47,7 +47,12 @@ export default function TeacherAttendanceLanding() {
           .select('class_name')
           .eq('teacher_id', teacherId)
           .eq('school_id', schoolId);
-        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query result:', { tcsTry, tryErr });
+        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query result:', { 
+          tcsTry: tcsTry ? JSON.stringify(tcsTry) : 'null', 
+          tryErr: tryErr ? JSON.stringify(tryErr) : 'null',
+          teacherId: teacherId,
+          schoolId: schoolId
+        });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
         }
@@ -59,7 +64,11 @@ export default function TeacherAttendanceLanding() {
           .from('teacher_class_subjects')
           .select('class_name')
           .eq('school_id', schoolId);
-        console.log('🔍 ATTENDANCE PAGE DEBUG - RLS fallback result:', rlsData);
+        console.log('🔍 ATTENDANCE PAGE DEBUG - RLS fallback result:', {
+          rlsData: rlsData ? JSON.stringify(rlsData) : 'null',
+          length: rlsData ? rlsData.length : 0,
+          schoolId: schoolId
+        });
         if (rlsData && rlsData.length > 0) tcs = rlsData;
       }
 
