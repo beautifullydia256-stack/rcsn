@@ -639,9 +639,67 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 }
 
 function TimetableDesigner() {
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [classes, setClasses] = useState<string[]>([]);
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<string[]>([]);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedDay, setSelectedDay] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
+  const [selectedTeacher, setSelectedTeacher] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
+
+  useEffect(() => {
+    const loadData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
+      if (!userData?.school_id) return;
+      
+      setSchoolId(userData.school_id);
+
+      // Load classes
+      const { data: classData } = await supabase
+        .from('students')
+        .select('current_class')
+        .eq('school_id', userData.school_id)
+        .eq('status', 'active');
+      
+      if (classData) {
+        const uniqueClasses = [...new Set(classData.map((s: any) => s.current_class))].sort();
+        setClasses(uniqueClasses);
+      }
+
+      // Load teachers
+      const { data: teacherData } = await supabase
+        .from('teachers')
+        .select('teacher_id, name')
+        .eq('school_id', userData.school_id)
+        .order('name');
+      
+      setTeachers(teacherData || []);
+
+      // Load subjects for selected class
+      if (selectedClass) {
+        const { data: subjectData } = await supabase
+          .from('class_subjects')
+          .select('subject_name')
+          .eq('school_id', userData.school_id)
+          .eq('class_name', selectedClass);
+        
+        if (subjectData) {
+          setSubjects(subjectData.map((s: any) => s.subject_name));
+        }
+      }
+    };
+
+    loadData();
+  }, [selectedClass]);
+
   const handleDownloadPDF = () => {
     // TODO: Implement actual timetable PDF generation
-    // For now, show placeholder
     alert('Timetable PDF download will be implemented. This will generate a formatted PDF of the school timetable.');
   };
 
@@ -663,26 +721,64 @@ function TimetableDesigner() {
         </button>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-        <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2">
-          <option>Select Class</option>
+        <select 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+          value={selectedClass}
+          onChange={(e) => setSelectedClass(e.target.value)}
+        >
+          <option value="">Select Class</option>
+          {classes.map((cls) => (
+            <option key={cls} value={cls}>{cls}</option>
+          ))}
         </select>
-        <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2">
-          <option>Weekday</option>
-          <option>Monday</option>
-          <option>Tuesday</option>
-          <option>Wednesday</option>
-          <option>Thursday</option>
-          <option>Friday</option>
+        <select 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+          value={selectedDay}
+          onChange={(e) => setSelectedDay(e.target.value)}
+        >
+          <option value="">Weekday</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
         </select>
-        <input type="time" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2" />
-        <input type="time" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2" />
-        <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 md:col-span-2">
-          <option>Select Subject</option>
+        <input 
+          type="time" 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          placeholder="Start Time"
+        />
+        <input 
+          type="time" 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          placeholder="End Time"
+        />
+        <select 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 md:col-span-2"
+          value={selectedSubject}
+          onChange={(e) => setSelectedSubject(e.target.value)}
+          disabled={!selectedClass}
+        >
+          <option value="">Select Subject</option>
+          {subjects.map((subj) => (
+            <option key={subj} value={subj}>{subj}</option>
+          ))}
         </select>
-        <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 md:col-span-2">
-          <option>Select Teacher</option>
+        <select 
+          className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 md:col-span-2"
+          value={selectedTeacher}
+          onChange={(e) => setSelectedTeacher(e.target.value)}
+        >
+          <option value="">Select Teacher</option>
+          {teachers.map((teacher) => (
+            <option key={teacher.teacher_id} value={teacher.teacher_id}>{teacher.name}</option>
+          ))}
         </select>
-        <button className="rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-2">Add Period</button>
+        <button className="rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-2 text-white">Add Period</button>
       </div>
       <div className="mt-4 text-white/80 text-sm">A visual grid view of the timetable will appear here with edit/remove controls.</div>
       
