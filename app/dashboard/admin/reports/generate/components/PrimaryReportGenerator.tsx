@@ -1460,22 +1460,41 @@ function isOLevelClass(className: string): boolean {
 }
 
 // Report Preview Component
+function isLowerSectionPrimary(className: string): boolean {
+  if (!className) return false;
+  return /(primary\s*1|primary\s*2|primary\s*3|^p\.?\s*1$|^p\.?\s*2$|^p\.?\s*3$)/i.test(className.trim());
+}
+
 function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
-  if (isOLevelClass(student.current_class)) {
-    switch (template) {
-      case 'template1':
-        return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
-      case 'template2':
-        return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
-      case 'template3':
-        return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
-      case 'template4':
-        return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
-      default:
-        return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+  const cls = String(student.current_class || '');
+  const isOL = isOLevelClass(cls);
+  const isLower = isLowerSectionPrimary(cls);
+
+  // Primary/Nursery path (non O-Level)
+  if (!isOL) {
+    if (template === 'template3' || isLower) {
+      return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
     }
+    if (template === 'template4') {
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
+    }
+    // Default primary template (nursery/middle/top)
+    return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
   }
-  return <SecondaryReportPreview student={student} examSet={examSet} school={school} />;
+
+  // O-Level/Secondary path
+  switch (template) {
+    case 'template1':
+      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+    case 'template2':
+      return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+    case 'template3':
+      return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+    case 'template4':
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
+    default:
+      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+  }
 }
 
 
