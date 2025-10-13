@@ -1804,7 +1804,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* REPORT TITLE */}
       <div className="text-center mb-4">
-        <h1 className="text-[14pt] font-bold uppercase">O LEVEL TERMLY REPORT</h1>
+        <h1 className="text-[14pt] font-bold uppercase">MIDDLE & TOP CLASS - TERMLY REPORT</h1>
       </div>
 
       {/* STUDENT INFO */}
@@ -1835,51 +1835,39 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* SUBJECTS TABLE */}
       <div className="mb-4">
-        <h3 className="text-[12pt] font-bold mb-2">Learner's End of Year Summative Assessment Results {examSet?.year || '2022'}</h3>
-        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
+        <h3 className="text-[12pt] font-bold mb-2">End of Term Report - {examSet?.term || 'Term'} {examSet?.year || '2025'}</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
           <thead>
             <tr>
-              {['Subject', 'Formative Score (20%)', 'EOY Summative Assessment (80%)', 'Total (100%)', 'Grade', 'Level of Achievement/3', 'Descriptor', "TR's Initial"].map(h => (
-                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
+              {['SUBJECT', 'FULL MARKS', 'MID TERM', 'END OF TERM', "TEACHER'S REMARKS", 'INITIALS'].map(h => (
+                <th key={h} className="text-center font-bold uppercase" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '6px' }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {student.results.length > 0 ? (
               student.results.map((result: any, index: number) => {
-                // Correct Template 2 data mapping as specified
                 const subject = result.subject ?? '';
-                const formative = result.formative_score ?? ''; // Formative Score [20%]
-                const exam = result.exam_score ?? ''; // EOY Summative Assessment (80%)
-                const finalScore = result.final_score ?? ''; // Total (100%)
-                const grade = result.grade ?? '';
-                const levelOfAchievement = result.activity_score ?? ''; // Level of Achievement/3 (Activity Score [3])
-                // Provide fallback for descriptor if not available
-                const descriptor = result.descriptor ?? (() => {
-                  const activityNum = parseFloat(levelOfAchievement) || 0;
-                  if (activityNum >= 2.5) return 'Outstanding';
-                  if (activityNum >= 1.5) return 'Moderate';
-                  if (activityNum >= 0.9) return 'Basic';
-                  return '';
-                })();
-                const teacherInitials = result.teacher_initials ?? ''; // TR's Initial
+                const fullMarks = result.total_marks ?? '100';
+                const midTerm = result.formative_score ?? '';
+                const endOfTerm = result.exam_score ?? '';
+                const teacherRemarks = result.remarks || result.overall_remark || '';
+                const initials = result.teacher_initials ?? '';
                 
                 return (
                   <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{formative}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{exam}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalScore}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{grade}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{levelOfAchievement}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold' }}>{subject}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{fullMarks}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{midTerm}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{endOfTerm}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }}>{teacherRemarks}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
                   </tr>
                 );
               })
             ) : (
               <tr>
-                <td colSpan={8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+                <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
               </tr>
             )}
           </tbody>
