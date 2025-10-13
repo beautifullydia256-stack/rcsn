@@ -1531,14 +1531,292 @@ function ExamSets({ classOptions, schoolId, schoolType }: { classOptions: string
 }
 
 function SchoolBranding({ schoolId }: { schoolId: string | null }) {
+  const [logo, setLogo] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [schoolName, setSchoolName] = useState('');
+  const [motto, setMotto] = useState('');
+  const [website, setWebsite] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const loadBranding = async () => {
+      if (!schoolId) return;
+
+      const { data } = await supabase
+        .from('schools')
+        .select('name, logo_url, motto, website, contact_email, contact_phone')
+        .eq('school_id', schoolId)
+        .single();
+
+      if (data) {
+        setSchoolName(data.name || '');
+        setLogo(data.logo_url || null);
+        setMotto(data.motto || '');
+        setWebsite(data.website || '');
+        setContactEmail(data.contact_email || '');
+        setContactPhone(data.contact_phone || '');
+      }
+    };
+
+    loadBranding();
+  }, [schoolId]);
+
+  const handleBadgeUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !schoolId) return;
+
+    const file = e.target.files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file (PNG, JPG, etc.)');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image size must be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Create unique file name
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${schoolId}-badge-${Date.now()}.${fileExt}`;
+      const filePath = `school-badges/${fileName}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError, data } = await supabase.storage
+        .from('school-assets')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        alert('Failed to upload badge. Please try again.');
+        return;
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('school-assets')
+        .getPublicUrl(filePath);
+
+      // Update schools table with new logo URL
+      const { error: updateError } = await supabase
+        .from('schools')
+        .update({ logo_url: publicUrl })
+        .eq('school_id', schoolId);
+
+      if (updateError) {
+        console.error('Update error:', updateError);
+        alert('Failed to save badge URL. Please try again.');
+        return;
+      }
+
+      setLogo(publicUrl);
+      alert('School badge uploaded successfully!');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveBranding = async () => {
+    if (!schoolId) return;
+
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('schools')
+        .update({
+          motto,
+          website,
+          contact_email: contactEmail,
+          contact_phone: contactPhone
+        })
+        .eq('school_id', schoolId);
+
+      if (error) {
+        console.error('Save error:', error);
+        alert('Failed to save branding details.');
+        return;
+      }
+
+      alert('Branding details saved successfully!');
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <div>
+    <div className="space-y-6">
       <SectionHeader
         title="School Branding"
-        desc="Customize your school's visual identity: logo, colors, and branding elements."
+        desc="Upload your school badge and customize branding information."
       />
-      <div className="text-white/80 text-sm">
-        School branding customization will be available here. This feature is under development.
+
+      {/* School Badge Section */}
+      <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">School Badge / Logo</h3>
+        
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* Current Badge Preview */}
+          <div className="flex-shrink-0">
+            <div className="w-40 h-40 rounded-lg border-2 border-white/20 bg-white/5 flex items-center justify-center overflow-hidden">
+              {logo ? (
+                <img src={logo} alt="School Badge" className="w-full h-full object-contain p-2" />
+              ) : (
+                <div className="text-center text-white/40 text-sm p-4">
+                  <svg className="w-16 h-16 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  No badge uploaded
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-white/50 mt-2 text-center">Current Badge</p>
+          </div>
+
+          {/* Upload Controls */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-white/80 mb-2">
+              Upload New Badge
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleBadgeUpload}
+              disabled={uploading}
+              className="block w-full text-sm text-white/80
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-600 file:text-white
+                hover:file:bg-blue-500
+                file:cursor-pointer
+                disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <p className="text-xs text-white/50 mt-2">
+              Recommended: PNG or JPG, max 2MB, square ratio (e.g., 500x500px)
+            </p>
+            {uploading && (
+              <div className="mt-3 text-sm text-blue-400 flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Uploading badge...
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+          <h4 className="text-blue-300 font-medium text-sm mb-2">📌 Where Your Badge Appears</h4>
+          <ul className="text-white/60 text-xs space-y-1">
+            <li>• Student report cards (all templates)</li>
+            <li>• Headed paper and official documents</li>
+            <li>• Exam result sheets</li>
+            <li>• Fee receipts and invoices</li>
+            <li>• School timetables (when exported as PDF)</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* School Details Section */}
+      <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">School Information</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">School Name</label>
+            <input
+              type="text"
+              value={schoolName}
+              disabled
+              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white/50 cursor-not-allowed"
+            />
+            <p className="text-xs text-white/40 mt-1">Contact support to change school name</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">School Motto</label>
+            <input
+              type="text"
+              value={motto}
+              onChange={(e) => setMotto(e.target.value)}
+              placeholder="e.g., Excellence in Education"
+              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Website</label>
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://www.yourschool.com"
+              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Contact Email</label>
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="info@yourschool.com"
+                className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Contact Phone</label>
+              <input
+                type="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="+256 XXX XXX XXX"
+                className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={handleSaveBranding}
+              disabled={saving}
+              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                'Save Details'
+              )}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
