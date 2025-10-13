@@ -91,8 +91,8 @@ export default function HeadedPaperPage() {
 
     /* Header */
     .header{display:flex;align-items:center;gap:18px;padding:16px 24px;height:var(--header-height)}
-    .logo{width:84px;height:84px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:6px;flex:0 0 84px}
-    .logo img{max-width:100%;max-height:100%}
+    .logo{width:84px;height:84px;background:#eee;display:flex;align-items:center;justify-content:center;border-radius:6px;flex:0 0 84px;overflow:hidden}
+    .logo img{max-width:100%;max-height:100%;object-fit:contain}
     .head-right{flex:1;display:flex;flex-direction:column;align-items:flex-start}
     .school-name{font-size:22px;font-weight:700;color:#111}
     .school-tag{font-size:12px;color:#666;margin-top:4px}
