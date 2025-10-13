@@ -347,9 +347,20 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
           htmlContent = generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
       }
     } else {
-      console.log('Using Secondary template (non-O-Level class)');
-      // For non-O-Level classes, use the secondary template
-      htmlContent = generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      // Non O-Level classes → decide based on selected template and class (Primary)
+      const currentClass = (reportData.students?.[0]?.current_class || '').toString();
+      const isLowerSection = /(primary\s*1|primary\s*2|primary\s*3|p\.\s*1|p1|p\.\s*2|p2|p\.\s*3|p3)/i.test(currentClass);
+
+      if (template === 'template3' || isLowerSection) {
+        console.log('Using Primary Lower Section Template (template3)');
+        htmlContent = generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      } else if (template === 'template2') {
+        console.log('Using Primary Nursery/Middle/Top template2 HTML');
+        htmlContent = generateTemplate2KasoziHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      } else {
+        console.log('Using Secondary/Default template for non O-Level');
+        htmlContent = generateSecondaryReportHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      }
     }
   }
   console.log('=== END TEMPLATE SELECTION DEBUG ===');
