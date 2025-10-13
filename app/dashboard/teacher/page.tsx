@@ -59,12 +59,6 @@ export default function TeacherDashboard() {
     detectWifiSSID();
   }, []);
 
-  // Fetch student attendance count when classes are loaded
-  useEffect(() => {
-    if (classesAssigned.length > 0 && schoolId) {
-      fetchStudentAttendanceToday();
-    }
-  }, [classesAssigned, schoolId]);
 
   const fetchData = async () => {
     try {
@@ -311,34 +305,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  const fetchStudentAttendanceToday = async () => {
-    try {
-      if (!schoolId || classesAssigned.length === 0) return;
-
-      const today = new Date().toISOString().slice(0, 10);
-      
-      // Count students who attended today across all assigned classes
-      const { data: attendanceData, error } = await supabase
-        .from('student_attendance')
-        .select('student_id')
-        .eq('school_id', schoolId)
-        .eq('date', today)
-        .eq('present', true)
-        .in('class_name', classesAssigned);
-
-      if (error) {
-        console.error('Error fetching student attendance:', error);
-        return;
-      }
-
-      // Count unique students who attended
-      const uniqueStudents = new Set(attendanceData?.map(a => a.student_id) || []);
-      setStudentsAttendedToday(uniqueStudents.size);
-    } catch (error) {
-      console.error('Error fetching student attendance:', error);
-    }
-  };
-
   const checkWifiVerification = () => {
     if (schoolSSIDs.length > 0 && wifiSSID) {
       const isValidSSID = schoolSSIDs.some(ssid => 
@@ -551,9 +517,6 @@ export default function TeacherDashboard() {
     return attendance.filter(a => (a.timestamp || '').slice(0,10) === ymd).length;
   }, [attendance]);
 
-  // Count students who attended today across teacher's assigned classes
-  const [studentsAttendedToday, setStudentsAttendedToday] = useState<number>(0);
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -753,8 +716,8 @@ export default function TeacherDashboard() {
               </div>
               <div className="ml-4">
                 <button onClick={()=>router.push('/dashboard/teacher/attendance')} className="text-left">
-                  <p className="text-sm text-white/80 underline underline-offset-4">Students Attended Today</p>
-                  <p className="text-2xl font-semibold">{studentsAttendedToday}</p>
+                  <p className="text-sm text-white/80 underline underline-offset-4">Attendance Today</p>
+                  <p className="text-2xl font-semibold">{attendanceToday}</p>
                 </button>
               </div>
             </div>
