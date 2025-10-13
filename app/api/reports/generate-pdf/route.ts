@@ -1344,10 +1344,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
-  const totalFullMarks = (student.results || []).reduce((sum: number, r: any) => {
-    const full = typeof r.total_marks === 'number' ? r.total_marks : (r.total_marks ? Number(r.total_marks) : 100);
-    return sum + (isNaN(full) ? 0 : full);
-  }, 0);
+  const totalFullMarks = (student.results || []).reduce((sum: number) => sum + 100, 0);
 
   // Calculate identifier based on grade/score (Template 3 specific)
   const getIdentifier = (score: number) => {
@@ -1617,7 +1614,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         <tbody>
           ${ (student.results && student.results.length > 0) ? student.results.map((r: any) => {
               const subject = r.subject ?? '';
-              const full = typeof r.total_marks === 'number' ? r.total_marks : (r.total_marks ? Number(r.total_marks) : 100);
+              const full = 100;
               const mid = r.formative_score ?? '';
               const end = r.exam_score ?? '';
               const remarks = r.remarks || r.overall_remark || '';

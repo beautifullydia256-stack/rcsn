@@ -2106,7 +2106,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                 <>
                   {results.map((r: any, idx: number) => {
                     const subject = r.subject ?? '';
-                    const fullMarks = Number(r.total_marks ?? 100);
+                    const fullMarks = 100; // Always 100 for Lower Section
                     const mid = r.formative_score ?? '';
                     const end = r.exam_score ?? '';
                     const remarks = r.remarks || r.overall_remark || '';
