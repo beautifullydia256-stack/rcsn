@@ -454,6 +454,16 @@ export default function ParentDashboard() {
                           </div>
                         </div>
                       ))}
+                      {notifications.length > 3 && (
+                        <div className="mt-4 pt-3 border-t border-gray-200 text-center">
+                          <a 
+                            href="/dashboard/parent/notifications" 
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                          >
+                            + {notifications.length - 3} more notifications
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
