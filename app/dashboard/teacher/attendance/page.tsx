@@ -38,38 +38,50 @@ export default function TeacherAttendanceLanding() {
         schoolId: schoolId
       });
 
-      // Try to load assignments with the resolved teacher_id
+      // Use API endpoint like exam-results page does
       let tcs: any[] = [];
       
-      if (teacherId) {
+      try {
+        let apiRes = await fetch('/api/teacher/resolve-assignments', { 
+          credentials: 'include', 
+          cache: 'no-store' as any, 
+          headers: { 'Cache-Control': 'no-store' } 
+        });
+        if (!apiRes.ok) {
+          const origin = typeof window !== 'undefined' ? window.location.origin : '';
+          if (origin) {
+            apiRes = await fetch(`${origin}/api/teacher/resolve-assignments`, { 
+              credentials: 'include', 
+              cache: 'no-store' as any, 
+              headers: { 'Cache-Control': 'no-store' } 
+            });
+          }
+        }
+        if (apiRes.ok) {
+          const payload = await apiRes.json();
+          if (Array.isArray(payload?.assignments)) {
+            tcs = payload.assignments;
+            console.log('🔍 ATTENDANCE PAGE DEBUG - API result:', tcs);
+          }
+        }
+      } catch (err) {
+        console.log('🔍 ATTENDANCE PAGE DEBUG - API error:', err);
+      }
+
+      // Fallback: direct query if API fails
+      if (tcs.length === 0 && teacherId) {
         const { data: tcsTry, error: tryErr } = await supabase
           .from('teacher_class_subjects')
           .select('class_name')
           .eq('teacher_id', teacherId)
           .eq('school_id', schoolId);
-        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query result:', { 
+        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query fallback:', { 
           tcsTry: tcsTry ? JSON.stringify(tcsTry) : 'null', 
-          tryErr: tryErr ? JSON.stringify(tryErr) : 'null',
-          teacherId: teacherId,
-          schoolId: schoolId
+          tryErr: tryErr ? JSON.stringify(tryErr) : 'null'
         });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
         }
-      }
-      
-      // Fallback: rely on RLS with school scope only
-      if (tcs.length === 0) {
-        const { data: rlsData } = await supabase
-          .from('teacher_class_subjects')
-          .select('class_name')
-          .eq('school_id', schoolId);
-        console.log('🔍 ATTENDANCE PAGE DEBUG - RLS fallback result:', {
-          rlsData: rlsData ? JSON.stringify(rlsData) : 'null',
-          length: rlsData ? rlsData.length : 0,
-          schoolId: schoolId
-        });
-        if (rlsData && rlsData.length > 0) tcs = rlsData;
       }
 
 
