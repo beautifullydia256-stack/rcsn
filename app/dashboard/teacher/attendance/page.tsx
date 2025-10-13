@@ -31,7 +31,7 @@ export default function TeacherAttendanceLanding() {
         teacherId = t1?.teacher_id as string | undefined;
       }
       
-      console.log('Teacher resolution (exam-results logic):', { 
+      console.log('🔍 ATTENDANCE PAGE DEBUG - Teacher resolution (exam-results logic):', { 
         metaTeacherId: user.user_metadata?.teacher_id,
         resolvedTeacherId: teacherId,
         userEmail: user.email,
@@ -47,7 +47,7 @@ export default function TeacherAttendanceLanding() {
           .select('class_name')
           .eq('teacher_id', teacherId)
           .eq('school_id', schoolId);
-        console.log('Direct query result:', { tcsTry, tryErr });
+        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query result:', { tcsTry, tryErr });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
         }
@@ -59,13 +59,13 @@ export default function TeacherAttendanceLanding() {
           .from('teacher_class_subjects')
           .select('class_name')
           .eq('school_id', schoolId);
-        console.log('RLS fallback result:', rlsData);
+        console.log('🔍 ATTENDANCE PAGE DEBUG - RLS fallback result:', rlsData);
         if (rlsData && rlsData.length > 0) tcs = rlsData;
       }
 
 
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
-      console.log('Final classes found:', cls);
+      console.log('🔍 ATTENDANCE PAGE DEBUG - Final classes found:', cls);
       setClasses(cls as string[]);
     };
     load();
