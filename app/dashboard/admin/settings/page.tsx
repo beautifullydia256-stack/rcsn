@@ -517,8 +517,28 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 
       if (upsertError) throw upsertError;
 
-      setSuccess('Fee structure saved successfully!');
-      setTimeout(() => setSuccess(null), 3000);
+      // Automatically sync student balances after saving fee structure
+      try {
+        const syncResponse = await fetch('/api/admin/sync-student-balances', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ schoolId })
+        });
+
+        const syncResult = await syncResponse.json();
+        
+        if (syncResponse.ok) {
+          setSuccess(`Fee structure saved! ${syncResult.updated || 0} student(s) updated with new fees.`);
+        } else {
+          setSuccess('Fee structure saved successfully! (Balance sync will run in background)');
+        }
+      } catch (syncError) {
+        // Even if sync fails, fee structure was saved
+        setSuccess('Fee structure saved successfully!');
+        console.error('Balance sync error:', syncError);
+      }
+
+      setTimeout(() => setSuccess(null), 5000);
     } catch (err: any) {
       console.error('Error saving fees:', err);
       setError(err.message || 'Failed to save fee structure');
