@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 
-type TabKey = "subjects" | "assignments" | "reports" | "timetable" | "terms" | "exams" | "branding";
+type TabKey = "subjects" | "assignments" | "finance" | "timetable" | "terms" | "exams" | "branding";
 
 export default function AdminSystemSettingsPage() {
   const router = useRouter();
@@ -78,7 +78,7 @@ export default function AdminSystemSettingsPage() {
         <div className="flex flex-wrap gap-2">
           <TabButton k="subjects" label="Subjects per Class" />
           <TabButton k="assignments" label="Teacher ↔ Subject ↔ Class" />
-          <TabButton k="reports" label="Report Templates" />
+          <TabButton k="finance" label="Financial Settings" />
           <TabButton k="timetable" label="Timetable Designer" />
           <TabButton k="terms" label="Term Settings" />
           <TabButton k="exams" label="Exam Sets" />
@@ -93,7 +93,7 @@ export default function AdminSystemSettingsPage() {
         >
           {tab === "subjects" && <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />}
           {tab === "assignments" && <TeacherSubjectClass classOptions={classOptions} />}
-          {tab === "reports" && <ReportTemplates />}
+          {tab === "finance" && <FinancialSettings schoolId={schoolId} classes={classOptions} />}
           {tab === "timetable" && <TimetableDesigner />}
           {tab === "terms" && <TermSettings schoolId={schoolId} />}
           {tab === "exams" && <ExamSets classOptions={classOptions} schoolId={schoolId} schoolType={schoolType} />}
@@ -443,21 +443,195 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
   );
 }
 
-function ReportTemplates() {
+function FinancialSettings({ schoolId, classes }: { schoolId: string | null; classes: string[] }) {
+  const [feeStructure, setFeeStructure] = useState<Record<string, number>>({});
+  const [admissionFee, setAdmissionFee] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadFees = async () => {
+      if (!schoolId) return;
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('school_fee_structure')
+          .select('*')
+          .eq('school_id', schoolId);
+
+        if (fetchError) throw fetchError;
+
+        // Convert array to object for easier access
+        const feeMap: Record<string, number> = {};
+        let admFee = 0;
+
+        (data || []).forEach((fee: any) => {
+          if (fee.class_name === 'ADMISSION') {
+            admFee = Number(fee.tuition_amount || 0);
+          } else {
+            feeMap[fee.class_name] = Number(fee.tuition_amount || 0);
+          }
+        });
+
+        setFeeStructure(feeMap);
+        setAdmissionFee(admFee);
+      } catch (err) {
+        console.error('Error loading fees:', err);
+        setError('Failed to load fee structure');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFees();
+  }, [schoolId]);
+
+  const saveFeeStructure = async () => {
+    if (!schoolId) return;
+    setError(null);
+    setSuccess(null);
+    setSaving(true);
+
+    try {
+      // Prepare fee records
+      const feeRecords = classes.map(className => ({
+        school_id: schoolId,
+        class_name: className,
+        tuition_amount: feeStructure[className] || 0
+      }));
+
+      // Add admission fee as special record
+      feeRecords.push({
+        school_id: schoolId,
+        class_name: 'ADMISSION',
+        tuition_amount: admissionFee
+      });
+
+      // Upsert all records
+      const { error: upsertError } = await supabase
+        .from('school_fee_structure')
+        .upsert(feeRecords, { onConflict: 'school_id,class_name' });
+
+      if (upsertError) throw upsertError;
+
+      setSuccess('Fee structure saved successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error saving fees:', err);
+      setError(err.message || 'Failed to save fee structure');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateClassFee = (className: string, amount: number) => {
+    setFeeStructure(prev => ({ ...prev, [className]: amount }));
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <SectionHeader
+          title="Financial Settings"
+          desc="Configure tuition fees per class and admission/registration fees."
+        />
+        <div className="text-white/60">Loading fee structure...</div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <SectionHeader
-        title="Report Templates"
-        desc="Design report templates per class. Choose fields, order and grading formats."
+        title="Financial Settings"
+        desc="Configure tuition fees per class and admission/registration fees. These will auto-populate when adding students."
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2">
-          <option>Select Class</option>
-        </select>
-        <input placeholder="Template Name" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 placeholder:text-white/60" />
-        <button className="rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-2">Create Template</button>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-600/20 border border-red-500/30 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-3 rounded-lg bg-green-600/20 border border-green-500/30 text-green-300 text-sm">
+          {success}
+        </div>
+      )}
+
+      {/* Admission Fee */}
+      <div className="mb-6 p-4 rounded-lg bg-purple-600/10 border border-purple-500/30">
+        <h3 className="text-purple-300 font-medium mb-3">🎓 Admission/Registration Fee</h3>
+        <p className="text-white/60 text-sm mb-3">This one-time fee is charged when a new student is admitted to the school.</p>
+        <div className="flex items-center gap-3">
+          <label className="text-white/80 text-sm">Amount (UGX):</label>
+          <input
+            type="number"
+            min="0"
+            value={admissionFee}
+            onChange={(e) => setAdmissionFee(parseInt(e.target.value) || 0)}
+            className="w-48 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+            placeholder="e.g., 50000"
+          />
+        </div>
       </div>
-      <div className="mt-4 text-white/80 text-sm">Template editor placeholder. This is where drag-and-drop/report field designer will live.</div>
+
+      {/* Tuition Fees Per Class */}
+      <div className="mb-6">
+        <h3 className="text-white font-medium mb-3">💰 Tuition Fees Per Class</h3>
+        <p className="text-white/60 text-sm mb-4">
+          Set the tuition amount for each class. When adding a student, the fee will automatically populate based on their class.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {classes.map((className) => (
+            <div key={className} className="p-4 rounded-lg bg-white/5 border border-white/10">
+              <label className="block text-white/80 text-sm font-medium mb-2">
+                {className}
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-white/60 text-sm">UGX</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure[className] || 0}
+                  onChange={(e) => updateClassFee(className, parseInt(e.target.value) || 0)}
+                  className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+                  placeholder="e.g., 350000"
+                />
+              </div>
+              <p className="mt-1 text-xs text-white/50">
+                {feeStructure[className] ? `~UGX ${(feeStructure[className] / 3).toLocaleString()} per term` : 'Not set'}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={saveFeeStructure}
+          disabled={saving}
+          className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Saving...' : 'Save Fee Structure'}
+        </button>
+      </div>
+
+      {/* Info Box */}
+      <div className="mt-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+        <h4 className="text-blue-300 font-medium text-sm mb-2">ℹ️ How This Works</h4>
+        <ul className="text-white/60 text-xs space-y-1">
+          <li>• Set tuition fees for each class (annual amount)</li>
+          <li>• When adding a student, select their class</li>
+          <li>• The fee amount will automatically populate</li>
+          <li>• Admission fee is one-time (charged when student joins)</li>
+          <li>• You can still edit fees manually when adding individual students</li>
+        </ul>
+      </div>
     </div>
   );
 }
