@@ -444,8 +444,8 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
 }
 
 function FinancialSettings({ schoolId, classes }: { schoolId: string | null; classes: string[] }) {
-  const [feeStructure, setFeeStructure] = useState<Record<string, number>>({});
-  const [admissionFee, setAdmissionFee] = useState<number>(0);
+  const [feeStructure, setFeeStructure] = useState<Record<string, string>>({});
+  const [admissionFee, setAdmissionFee] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -464,14 +464,15 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
         if (fetchError) throw fetchError;
 
         // Convert array to object for easier access
-        const feeMap: Record<string, number> = {};
-        let admFee = 0;
+        const feeMap: Record<string, string> = {};
+        let admFee = '';
 
         (data || []).forEach((fee: any) => {
+          const amount = Number(fee.tuition_amount || 0);
           if (fee.class_name === 'ADMISSION') {
-            admFee = Number(fee.tuition_amount || 0);
+            admFee = amount > 0 ? amount.toString() : '';
           } else {
-            feeMap[fee.class_name] = Number(fee.tuition_amount || 0);
+            feeMap[fee.class_name] = amount > 0 ? amount.toString() : '';
           }
         });
 
@@ -499,14 +500,14 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
       const feeRecords = classes.map(className => ({
         school_id: schoolId,
         class_name: className,
-        tuition_amount: feeStructure[className] || 0
+        tuition_amount: parseInt(feeStructure[className]) || 0
       }));
 
       // Add admission fee as special record
       feeRecords.push({
         school_id: schoolId,
         class_name: 'ADMISSION',
-        tuition_amount: admissionFee
+        tuition_amount: parseInt(admissionFee) || 0
       });
 
       // Upsert all records
@@ -526,8 +527,8 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
     }
   };
 
-  const updateClassFee = (className: string, amount: number) => {
-    setFeeStructure(prev => ({ ...prev, [className]: amount }));
+  const updateClassFee = (className: string, value: string) => {
+    setFeeStructure(prev => ({ ...prev, [className]: value }));
   };
 
   if (loading) {
@@ -571,7 +572,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
             type="number"
             min="0"
             value={admissionFee || ''}
-            onChange={(e) => setAdmissionFee(parseInt(e.target.value) || 0)}
+            onChange={(e) => setAdmissionFee(e.target.value)}
             className="w-48 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
             placeholder="e.g., 50000"
           />
@@ -597,13 +598,13 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                   type="number"
                   min="0"
                   value={feeStructure[className] || ''}
-                  onChange={(e) => updateClassFee(className, parseInt(e.target.value) || 0)}
+                  onChange={(e) => updateClassFee(className, e.target.value)}
                   className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
                   placeholder="e.g., 100000"
                 />
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {feeStructure[className] && feeStructure[className] > 0 ? `~UGX ${(feeStructure[className] * 3).toLocaleString()} per Year` : 'Not set'}
+                {feeStructure[className] && parseInt(feeStructure[className]) > 0 ? `~UGX ${(parseInt(feeStructure[className]) * 3).toLocaleString()} per Year` : 'Not set'}
               </p>
             </div>
           ))}
