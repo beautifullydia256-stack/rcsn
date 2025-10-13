@@ -31,12 +31,6 @@ export default function TeacherAttendanceLanding() {
         teacherId = t1?.teacher_id as string | undefined;
       }
       
-      console.log('🔍 ATTENDANCE PAGE DEBUG - Teacher resolution (exam-results logic):', { 
-        metaTeacherId: user.user_metadata?.teacher_id,
-        resolvedTeacherId: teacherId,
-        userEmail: user.email,
-        schoolId: schoolId
-      });
 
       // Use API endpoint like exam-results page does
       let tcs: any[] = [];
@@ -61,11 +55,9 @@ export default function TeacherAttendanceLanding() {
           const payload = await apiRes.json();
           if (Array.isArray(payload?.assignments)) {
             tcs = payload.assignments;
-            console.log('🔍 ATTENDANCE PAGE DEBUG - API result:', tcs);
           }
         }
       } catch (err) {
-        console.log('🔍 ATTENDANCE PAGE DEBUG - API error:', err);
       }
 
       // Fallback: direct query if API fails
@@ -75,10 +67,6 @@ export default function TeacherAttendanceLanding() {
           .select('class_name')
           .eq('teacher_id', teacherId)
           .eq('school_id', schoolId);
-        console.log('🔍 ATTENDANCE PAGE DEBUG - Direct query fallback:', { 
-          tcsTry: tcsTry ? JSON.stringify(tcsTry) : 'null', 
-          tryErr: tryErr ? JSON.stringify(tryErr) : 'null'
-        });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
         }
@@ -86,14 +74,6 @@ export default function TeacherAttendanceLanding() {
 
 
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
-      console.log('🔍 ATTENDANCE PAGE DEBUG - Final classes found:', cls);
-      
-      // Force show the data with alert for debugging
-      if (cls.length === 0) {
-        alert(`DEBUG v2: No classes found. TeacherId: ${teacherId}, SchoolId: ${schoolId}, TCS length: ${tcs.length}`);
-      } else {
-        alert(`DEBUG v2: Classes found: ${cls.join(', ')}`);
-      }
       
       setClasses(cls as string[]);
     };
