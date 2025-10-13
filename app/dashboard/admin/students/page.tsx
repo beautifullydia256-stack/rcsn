@@ -84,6 +84,8 @@ export default function StudentsListPage() {
             <option value="">All Classes</option>
             {schoolType === 'Nursery/Primary' && (
               <>
+                <option value="Nursery /Baby Class">Nursery /Baby Class</option>
+                <option value="Baby Class">Baby Class</option>
                 <option value="Nursery">Nursery</option>
                 <option value="Middle Class">Middle Class</option>
                 <option value="Top Class">Top Class</option>
