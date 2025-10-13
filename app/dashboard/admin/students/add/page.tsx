@@ -48,6 +48,10 @@ export default function AddStudentPage() {
   const [paymentStatus, setPaymentStatus] = useState("Pending");
   const [expectedFee, setExpectedFee] = useState("");
   const [initialPayment, setInitialPayment] = useState("");
+  
+  // Fee Structure (from Financial Settings)
+  const [feeStructure, setFeeStructure] = useState<Record<string, number>>({});
+  const [admissionFeeAmount, setAdmissionFeeAmount] = useState<number>(0);
 
   // Medical
   const [medicalCondition, setMedicalCondition] = useState<string>("");
@@ -71,6 +75,60 @@ export default function AddStudentPage() {
     };
     run();
   }, [router]);
+
+  // Load fee structure from Financial Settings
+  useEffect(() => {
+    const loadFeeStructure = async () => {
+      if (!schoolId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('school_fee_structure')
+          .select('*')
+          .eq('school_id', schoolId);
+
+        if (error) {
+          console.error('Error loading fee structure:', error);
+          return;
+        }
+
+        // Convert to fee map
+        const feeMap: Record<string, number> = {};
+        let admFee = 0;
+
+        (data || []).forEach((fee: any) => {
+          if (fee.class_name === 'ADMISSION') {
+            admFee = Number(fee.tuition_amount || 0);
+          } else {
+            feeMap[fee.class_name] = Number(fee.tuition_amount || 0);
+          }
+        });
+
+        setFeeStructure(feeMap);
+        setAdmissionFeeAmount(admFee);
+        
+        // Auto-fill admission fee if not already set
+        if (admFee > 0 && !enrollmentFee) {
+          setEnrollmentFee(admFee.toString());
+        }
+      } catch (err) {
+        console.error('Error loading fees:', err);
+      }
+    };
+
+    loadFeeStructure();
+  }, [schoolId]);
+
+  // Auto-fill tuition fee when class is selected
+  useEffect(() => {
+    if (klass && feeStructure[klass]) {
+      const classFee = feeStructure[klass];
+      if (classFee > 0) {
+        setExpectedFee(classFee.toString());
+        console.log(`✓ Auto-filled tuition fee for ${klass}: UGX ${classFee.toLocaleString()}`);
+      }
+    }
+  }, [klass, feeStructure]);
 
   const save = async (): Promise<boolean> => {
     if (!schoolId || !firstName || !lastName || !klass || !admissionDate) return false;
@@ -344,13 +402,42 @@ export default function AddStudentPage() {
               onChange={(e)=>setMedicalCondition(e.target.value)}
             />
 
-            <div className="text-white/90 font-medium col-span-full mt-2">Fees & Finance</div>
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Enrollment / Registration Fee" value={enrollmentFee} onChange={(e)=>setEnrollmentFee(e.target.value)} />
+            <div className="text-white/90 font-medium col-span-full mt-2">
+              Fees & Finance
+              {admissionFeeAmount > 0 && (
+                <span className="ml-2 text-xs text-green-400 font-normal">✓ Auto-filled from Financial Settings</span>
+              )}
+            </div>
+            <div className="relative">
+              <input 
+                className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 w-full" 
+                placeholder="Enrollment / Registration Fee" 
+                value={enrollmentFee} 
+                onChange={(e)=>setEnrollmentFee(e.target.value)} 
+              />
+              {admissionFeeAmount > 0 && enrollmentFee === admissionFeeAmount.toString() && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-xs">
+                  ✓
+                </div>
+              )}
+            </div>
             <select className="rounded-lg border border-white/10 bg-white text-black px-3 py-2" value={paymentStatus} onChange={(e)=>setPaymentStatus(e.target.value)}>
               <option value="Paid">Admission Fee: Paid</option>
               <option value="Pending">Admission Fee: Pending</option>
             </select>
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Tuition/Fee Amount Due" value={expectedFee} onChange={(e)=>setExpectedFee(e.target.value)} />
+            <div className="relative">
+              <input 
+                className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 w-full" 
+                placeholder="Tuition/Fee Amount Due" 
+                value={expectedFee} 
+                onChange={(e)=>setExpectedFee(e.target.value)} 
+              />
+              {klass && feeStructure[klass] && expectedFee === feeStructure[klass].toString() && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-xs">
+                  ✓ Auto-filled
+                </div>
+              )}
+            </div>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Initial Payment (optional)" value={initialPayment} onChange={(e)=>setInitialPayment(e.target.value)} />
             {generatedAdmNo && (
               <input readOnly className="rounded-lg border border-emerald-300/30 bg-emerald-500/10 text-white px-3 py-2" value={generatedAdmNo} />
