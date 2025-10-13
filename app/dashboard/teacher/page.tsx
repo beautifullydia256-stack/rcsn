@@ -51,6 +51,7 @@ export default function TeacherDashboard() {
   const [teacherName, setTeacherName] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [teacherRowId, setTeacherRowId] = useState<string | null>(null);
+  const [studentsAttendedToday, setStudentsAttendedToday] = useState<number>(0);
 
   useEffect(() => {
     fetchData();
@@ -59,6 +60,32 @@ export default function TeacherDashboard() {
     detectWifiSSID();
   }, []);
 
+
+  const fetchStudentAttendanceToday = async () => {
+    try {
+      if (!schoolId || classesAssigned.length === 0) return;
+
+      const today = new Date().toISOString().slice(0, 10);
+      
+      const { data: attendanceData, error } = await supabase
+        .from('student_attendance')
+        .select('student_id')
+        .eq('school_id', schoolId)
+        .eq('date', today)
+        .eq('present', true)
+        .in('class_name', classesAssigned);
+
+      if (error) {
+        console.error('Error fetching student attendance:', error);
+        return;
+      }
+
+      const uniqueStudents = new Set(attendanceData?.map(a => a.student_id) || []);
+      setStudentsAttendedToday(uniqueStudents.size);
+    } catch (error) {
+      console.error('Error fetching student attendance:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -274,6 +301,9 @@ export default function TeacherDashboard() {
       setStudents(studentsResult.data || []);
       setAttendance(attendanceResult.data || []);
       setGrades(gradesResult.data || []);
+      
+      // Fetch student attendance count after assignments are loaded
+      setTimeout(() => fetchStudentAttendanceToday(), 100);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -716,8 +746,8 @@ export default function TeacherDashboard() {
               </div>
               <div className="ml-4">
                 <button onClick={()=>router.push('/dashboard/teacher/attendance')} className="text-left">
-                  <p className="text-sm text-white/80 underline underline-offset-4">Attendance Today</p>
-                  <p className="text-2xl font-semibold">{attendanceToday}</p>
+                  <p className="text-sm text-white/80 underline underline-offset-4">Students Attended Today</p>
+                  <p className="text-2xl font-semibold">{studentsAttendedToday}</p>
                 </button>
               </div>
             </div>
