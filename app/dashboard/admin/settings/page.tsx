@@ -570,7 +570,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
           <input
             type="number"
             min="0"
-            value={admissionFee}
+            value={admissionFee || ''}
             onChange={(e) => setAdmissionFee(parseInt(e.target.value) || 0)}
             className="w-48 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
             placeholder="e.g., 50000"
@@ -596,14 +596,14 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                 <input
                   type="number"
                   min="0"
-                  value={feeStructure[className] || 0}
+                  value={feeStructure[className] || ''}
                   onChange={(e) => updateClassFee(className, parseInt(e.target.value) || 0)}
                   className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
                   placeholder="e.g., 100000"
                 />
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {feeStructure[className] ? `~UGX ${(feeStructure[className] * 3).toLocaleString()} per Year` : 'Not set'}
+                {feeStructure[className] && feeStructure[className] > 0 ? `~UGX ${(feeStructure[className] * 3).toLocaleString()} per Year` : 'Not set'}
               </p>
             </div>
           ))}
