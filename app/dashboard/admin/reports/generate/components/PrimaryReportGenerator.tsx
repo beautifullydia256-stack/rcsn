@@ -2057,65 +2057,58 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         </div>
       </div>
 
-      {/* SUBJECTS TABLE */}
+      {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
       <div className="mb-4">
         <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
           <thead>
             <tr>
-              {(() => {
-                const hasC2 = student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '');
-                const headers = ['SUBJECT', 'AVG SCORE/20'];
-                if (hasC2) headers.push('C2');
-                headers.push('FINAL EXAM/80', 'TOTAL SCORE 100%', 'C1', 'IDENTIFIER', 'DESCRIPTOR', 'INIT');
-                return headers.map(h => (
-                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '4px' }}>{h}</th>
-                ));
-              })()}
+              {['SUBJECT','FULL MARKS','MID TERM','END OF TERM','TEACHER\'S REMARKS','INITIALS'].map(h => (
+                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '6px' }}>{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
-            {student.results.length > 0 ? (
-              student.results.map((result: any, index: number) => {
-                // Correct Template 3 data mapping as specified
-                const subject = result.subject ?? '';
-                const avgScore = result.formative_score ?? ''; // AVG SCORE/20 (Formative Score [20%])
-                const c2 = result.activity_score_2 ?? ''; // C2 (Activity Score [3] of second set of exam)
-                const finalExam = result.exam_score ?? ''; // FINAL EXAM/80 (Exam Score [80%])
-                const totalScore = result.final_score ?? ''; // TOTAL SCORE 100% (Final Score [100%])
-                const c1 = result.activity_score ?? ''; // C1 (Activity Score [3] of first set of exam)
-                const identifier = result.activity_score ?? ''; // IDENTIFIER (Activity Score [3])
-                // Provide fallback for descriptor if not available
-                const descriptor = result.descriptor ?? (() => {
-                  const activityNum = parseFloat(c1) || 0;
-                  if (activityNum >= 2.5) return 'Outstanding';
-                  if (activityNum >= 1.5) return 'Moderate';
-                  if (activityNum >= 0.9) return 'Basic';
-                  return '';
-                })();
-                const teacherInitials = result.teacher_initials ?? ''; // INIT (Subject Teacher)
-                
-                // Check if C2 data is available for this result
-                const hasC2 = c2 !== undefined && c2 !== null && c2 !== '';
-                
+            {(() => {
+              const results = student.results || [];
+              if (results.length === 0) {
                 return (
-                  <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '4px', fontWeight: 'bold' }}>{subject}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{avgScore}</td>
-                    {hasC2 && <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c2}</td>}
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{finalExam}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{totalScore}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{c1}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{identifier}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{descriptor}</td>
-                    <td style={{ border: '1px solid #000', padding: '4px', textAlign: 'center' }}>{teacherInitials}</td>
+                  <tr>
+                    <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
                   </tr>
                 );
-              })
-            ) : (
-              <tr>
-                <td colSpan={student.results.some((r: any) => r.activity_score_2 !== undefined && r.activity_score_2 !== null && r.activity_score_2 !== '') ? 9 : 8} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
-              </tr>
-            )}
+              }
+              let totalFullMarks = 0;
+              return (
+                <>
+                  {results.map((r: any, idx: number) => {
+                    const subject = r.subject ?? '';
+                    const fullMarks = Number(r.total_marks ?? 100);
+                    const mid = r.formative_score ?? '';
+                    const end = r.exam_score ?? '';
+                    const remarks = r.remarks || r.overall_remark || '';
+                    const initials = r.teacher_initials ?? '';
+                    totalFullMarks += fullMarks;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{subject}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{fullMarks}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{mid}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{end}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{remarks}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'left' }}>TOTAL</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'center' }}>{totalFullMarks}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }} colSpan={2}></td>
+                  </tr>
+                </>
+              );
+            })()}
           </tbody>
         </table>
       </div>

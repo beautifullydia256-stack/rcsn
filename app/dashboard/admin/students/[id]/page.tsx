@@ -34,6 +34,8 @@ export default function StudentDetailPage() {
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
+  const [expectedFeeFromStructure, setExpectedFeeFromStructure] = useState<number | null>(null);
+  const [syncingFees, setSyncingFees] = useState(false);
 
   useEffect(() => {
     const run = async () => {
@@ -60,6 +62,21 @@ export default function StudentDetailPage() {
 
       // Load current profile photo
       await loadCurrentPhoto(data?.student_id, data?.school_id);
+
+      // Load class fee from fee structure if available
+      if (data?.school_id && data?.current_class) {
+        try {
+          const { data: feeRow } = await supabase
+            .from('school_fee_structure')
+            .select('tuition_amount')
+            .eq('school_id', data.school_id)
+            .eq('class_name', data.current_class)
+            .single();
+          if (feeRow?.tuition_amount != null) {
+            setExpectedFeeFromStructure(Number(feeRow.tuition_amount));
+          }
+        } catch {}
+      }
     };
     run();
   }, [studentId]);
@@ -360,7 +377,56 @@ export default function StudentDetailPage() {
             <div className="text-white/90 font-medium col-span-full mt-2">Fees & Finance</div>
             {field('Enrollment / Registration Fee','enrollment_fee')}
             {field('Admission Fee Status','payment_status')}
-            {field('Tuition/Fee Amount Due','expected_fee_amount')}
+            {/* Tuition with auto-detect from fee structure */}
+            <div>
+              <label className="block text-sm text-white/80 mb-1">Tuition/Fee Amount Due</label>
+              <input
+                type="number"
+                readOnly={!editing}
+                className={`w-full rounded-lg border border-white/10 px-3 py-2 ${!editing ? 'bg-white/10 text-white' : 'bg-white text-black'}`}
+                value={form?.expected_fee_amount ?? ''}
+                onChange={(e) => setForm({ ...form, expected_fee_amount: e.target.value })}
+                placeholder={expectedFeeFromStructure != null ? `UGX ${expectedFeeFromStructure.toLocaleString()}` : ''}
+              />
+              {(!form?.expected_fee_amount || Number(form?.expected_fee_amount) === 0) && expectedFeeFromStructure != null && (
+                <div className="mt-2 text-xs text-white/70 flex items-center gap-2">
+                  <span>Detected class fee:</span>
+                  <span className="px-2 py-0.5 rounded bg-green-600/20 text-green-300">UGX {expectedFeeFromStructure.toLocaleString()}</span>
+                  <button
+                    disabled={syncingFees}
+                    onClick={async () => {
+                      if (!student) return;
+                      setSyncingFees(true);
+                      try {
+                        // Update student's expected fee
+                        await supabase
+                          .from('students')
+                          .update({ expected_fee_amount: expectedFeeFromStructure })
+                          .eq('student_id', student.student_id);
+
+                        setForm((prev: any) => ({ ...prev, expected_fee_amount: expectedFeeFromStructure }));
+
+                        // Trigger global sync to ensure balances are created/updated
+                        await fetch('/api/admin/sync-student-balances', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ schoolId: student.school_id })
+                        });
+
+                        alert('Tuition applied from fee structure and balances synced.');
+                      } catch (e) {
+                        alert('Failed to apply tuition.');
+                      } finally {
+                        setSyncingFees(false);
+                      }
+                    }}
+                    className="px-2 py-1 rounded bg-green-600 hover:bg-green-500 text-white"
+                  >
+                    {syncingFees ? 'Applying…' : 'Apply to Student'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </motion.div>
 
