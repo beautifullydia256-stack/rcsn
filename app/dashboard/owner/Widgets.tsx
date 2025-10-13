@@ -70,12 +70,22 @@ export function Widgets() {
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} whileHover={{ scale: 1.02 }} className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/20 to-rose-700/10 bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20">
-        <div className="text-sm font-medium mb-2 text-white">Notifications</div>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-medium text-white">Notifications</div>
+          {notes.length > 3 && (
+            <a 
+              href="/dashboard/owner/notifications" 
+              className="text-xs text-blue-300 hover:text-blue-200 underline"
+            >
+              View all ({notes.length})
+            </a>
+          )}
+        </div>
         <div className="space-y-2">
           {notes.length === 0 ? (
             <div className="text-sm text-white/80">No notifications.</div>
           ) : (
-            notes.map((n) => (
+            notes.slice(0, 3).map((n) => (
               <div key={n.id} className="text-sm">
                 <div className="font-medium text-white">{n.title}</div>
                 <div className="text-xs text-white/80">{n.message}</div>
@@ -83,6 +93,16 @@ export function Widgets() {
             ))
           )}
         </div>
+        {notes.length > 3 && (
+          <div className="mt-3 pt-3 border-t border-white/10 text-center">
+            <a 
+              href="/dashboard/owner/notifications" 
+              className="text-xs text-white/60 hover:text-white/80"
+            >
+              + {notes.length - 3} more notifications
+            </a>
+          </div>
+        )}
       </motion.div>
     </div>
   );

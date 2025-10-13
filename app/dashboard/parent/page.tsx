@@ -408,12 +408,22 @@ export default function ParentDashboard() {
 
                 {/* Recent Notifications */}
                 <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Notifications</h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Recent Notifications</h3>
+                    {notifications.length > 3 && (
+                      <a 
+                        href="/dashboard/parent/notifications" 
+                        className="text-sm text-blue-600 hover:text-blue-700 underline"
+                      >
+                        View all ({notifications.length})
+                      </a>
+                    )}
+                  </div>
                   {notifications.length === 0 ? (
                     <p className="text-gray-500 text-center py-4">No notifications</p>
                   ) : (
                     <div className="space-y-3">
-                      {notifications.slice(0, 5).map((notif) => (
+                      {notifications.slice(0, 3).map((notif) => (
                         <div
                           key={notif.notification_id}
                           className={`p-4 rounded-lg border ${notif.read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}
