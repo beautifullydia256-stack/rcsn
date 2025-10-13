@@ -18,97 +18,51 @@ export default function TeacherAttendanceLanding() {
       if (!u?.school_id) return router.push('/login');
       setSchoolId(u.school_id);
       
-      // Resolve teacher_id with multiple fallbacks (same as dashboard)
-      let teacherRow = null as any;
-      const metaTeacherId = (user as any)?.user_metadata?.teacher_id || (user as any)?.raw_user_meta_data?.teacher_id;
-      if (metaTeacherId) {
-        const { data: trow } = await supabase
-          .from('teachers')
+      // Use same logic as exam-results page
+      let teacherId = user.user_metadata?.teacher_id as string | undefined;
+      const schoolId = u.school_id;
+      
+      if (!teacherId && user.email && schoolId) {
+        const { data: t1 } = await supabase.from('teachers')
           .select('teacher_id')
-          .eq('school_id', u.school_id)
-          .eq('teacher_id', metaTeacherId)
+          .eq('school_id', schoolId)
+          .ilike('email', (user.email || '').trim())
           .maybeSingle();
-        if (trow) teacherRow = trow;
-      }
-      if (!teacherRow && user.email) {
-        const { data: trow2 } = await supabase
-          .from('teachers')
-          .select('teacher_id')
-          .eq('school_id', u.school_id)
-          .eq('email', user.email)
-          .maybeSingle();
-        if (trow2) teacherRow = trow2;
+        teacherId = t1?.teacher_id as string | undefined;
       }
       
-      console.log('Teacher resolution:', { 
-        teacherRow: teacherRow ? teacherRow.teacher_id : 'NULL', 
-        metaTeacherId, 
+      console.log('Teacher resolution (exam-results logic):', { 
+        metaTeacherId: user.user_metadata?.teacher_id,
+        resolvedTeacherId: teacherId,
         userEmail: user.email,
-        userId: user.id
+        schoolId: schoolId
       });
-      console.log('Debugging assignments for Nursery/Primary school:', { schoolId: u.school_id });
 
-      // Try to load assignments with multiple fallback strategies
+      // Try to load assignments with the resolved teacher_id
       let tcs: any[] = [];
       
-      // Build candidate teacher IDs to try
-      const candidateTeacherIds: string[] = [];
-      if (teacherRow?.teacher_id) candidateTeacherIds.push(teacherRow.teacher_id);
-      
-      // If teacherRow is null, try direct email lookup
-      if (!teacherRow && user.email) {
-        const { data: directTeacher } = await supabase
-          .from('teachers')
-          .select('teacher_id')
-          .eq('school_id', u.school_id)
-          .eq('email', user.email)
-          .single();
-        if (directTeacher) {
-          candidateTeacherIds.push(directTeacher.teacher_id);
-          console.log('Direct teacher lookup found:', directTeacher.teacher_id);
-        }
-      }
-      
-      candidateTeacherIds.push(user.id);
-
-      // Try each candidate teacher ID
-      console.log('Candidate teacher IDs:', candidateTeacherIds);
-      for (const candidate of candidateTeacherIds) {
-        console.log('Trying teacher_id:', candidate);
+      if (teacherId) {
         const { data: tcsTry, error: tryErr } = await supabase
           .from('teacher_class_subjects')
           .select('class_name')
-          .eq('teacher_id', candidate)
-          .eq('school_id', u.school_id);
-        console.log('Query result:', { tcsTry, tryErr });
+          .eq('teacher_id', teacherId)
+          .eq('school_id', schoolId);
+        console.log('Direct query result:', { tcsTry, tryErr });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
-          break;
         }
       }
-
-      // Fallback: email-based join
-      if ((!tcs || tcs.length === 0) && user.email) {
-        const { data: tcsJoin, error: joinErr } = await supabase
-          .from('teacher_class_subjects')
-          .select('class_name, teachers!inner(email)')
-          .eq('school_id', u.school_id)
-          .ilike('teachers.email', (user.email || '').trim());
-        if (!joinErr && tcsJoin && tcsJoin.length > 0) {
-          tcs = tcsJoin;
-        }
-      }
-
-      // Final fallback: RLS-only (relies on RLS policies to filter)
-      if (!tcs || tcs.length === 0) {
-        const { data: tcsRls } = await supabase
+      
+      // Fallback: rely on RLS with school scope only
+      if (tcs.length === 0) {
+        const { data: rlsData } = await supabase
           .from('teacher_class_subjects')
           .select('class_name')
-          .eq('school_id', u.school_id);
-        if (tcsRls && tcsRls.length > 0) {
-          tcs = tcsRls;
-        }
+          .eq('school_id', schoolId);
+        console.log('RLS fallback result:', rlsData);
+        if (rlsData && rlsData.length > 0) tcs = rlsData;
       }
+
 
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
       console.log('Final classes found:', cls);
