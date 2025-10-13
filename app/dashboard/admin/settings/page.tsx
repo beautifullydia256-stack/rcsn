@@ -40,7 +40,7 @@ export default function AdminSystemSettingsPage() {
   const classOptions = useMemo(() => {
     const opts: string[] = [];
     if (schoolType === 'Nursery/Primary') {
-      opts.push('Baby Class', 'Nursery', 'Middle Class', 'Top Class');
+      opts.push('Nursery /Baby Class', 'Middle Class', 'Top Class');
       for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
     } else if (schoolType === 'Secondary') {
       for (let i = 1; i <= 6; i++) opts.push(`Senior ${i}`);

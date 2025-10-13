@@ -5,9 +5,9 @@
 export const PRIMARY_TEMPLATES = {
   template1: {
     id: 'primary_template1',
-    name: 'Report For Baby Class / Nursery',
-    description: 'Report card designed for Baby Class and Nursery students (same level)',
-    section: 'Baby Class',
+    name: 'Report For Nursery /Baby Class',
+    description: 'Report card designed for Nursery /Baby Class students',
+    section: 'Nursery /Baby Class',
     schoolType: 'Nursery/Primary' as const
   },
   template2: {
@@ -45,14 +45,18 @@ export const getPrimaryTemplateOptions = () => {
 };
 
 // Helper to get template by section
-export const getTemplateBySection = (section: 'Baby Class' | 'Nursery' | 'Lower' | 'Upper') => {
+export const getTemplateBySection = (section: 'Nursery /Baby Class' | 'Baby Class' | 'Nursery' | 'Lower' | 'Upper') => {
   return Object.entries(PRIMARY_TEMPLATES).find(([_, template]) => template.section === section)?.[0];
 };
 
 // Class-to-Template Mapping for Primary Schools
 // This determines which template is automatically selected for each class
 export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
-  // Baby Class Section (Baby Class and Nursery are the same - use Template 1)
+  // Nursery /Baby Class Section (Template 1)
+  'Nursery /Baby Class': 'template1',
+  'nursery /baby class': 'template1',
+  'NURSERY /BABY CLASS': 'template1',
+  // Legacy support for old class names
   'Baby Class': 'template1',
   'baby class': 'template1',
   'BABY CLASS': 'template1',
@@ -60,7 +64,7 @@ export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
   'nursery': 'template1',
   'NURSERY': 'template1',
   
-  // Nursery Section - Middle Class and Top Class (Template 2)
+  // Middle & Top Class Section (Template 2)
   'Middle Class': 'template2',
   'middle class': 'template2',
   'MIDDLE CLASS': 'template2',
