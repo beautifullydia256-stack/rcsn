@@ -109,7 +109,8 @@ export default function HeadedPaperPage() {
       body{background:white}
       .sheet{box-shadow:none;margin:0}
       .sheet-wrap{padding:0}
-      .no-print{display:none}
+      .no-print{display:none !important}
+      .controls{display:none !important}
     }
 
     /* Small helper UI */
@@ -118,6 +119,7 @@ export default function HeadedPaperPage() {
     .controls .secondary{background:#444}
     .input-inline{display:flex;gap:8px;align-items:center}
     input[type=text]{padding:8px;border:1px solid #ddd;border-radius:6px}
+    input[type=color]{width:100%;cursor:pointer}
 
   </style>
 </head>
