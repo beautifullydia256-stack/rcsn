@@ -580,9 +580,9 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 
       {/* Tuition Fees Per Class */}
       <div className="mb-6">
-        <h3 className="text-white font-medium mb-3">💰 Tuition Fees Per Class</h3>
+        <h3 className="text-white font-medium mb-3">💰 Tuition Fees Per Class (Per Term)</h3>
         <p className="text-white/60 text-sm mb-4">
-          Set the tuition amount for each class. When adding a student, the fee will automatically populate based on their class.
+          Set the tuition amount <strong>per term</strong> for each class. The yearly total will be calculated automatically (3 terms). When adding a student, the fee will automatically populate based on their class.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -599,11 +599,11 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                   value={feeStructure[className] || 0}
                   onChange={(e) => updateClassFee(className, parseInt(e.target.value) || 0)}
                   className="flex-1 px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
-                  placeholder="e.g., 350000"
+                  placeholder="e.g., 100000"
                 />
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {feeStructure[className] ? `~UGX ${(feeStructure[className] / 3).toLocaleString()} per term` : 'Not set'}
+                {feeStructure[className] ? `~UGX ${(feeStructure[className] * 3).toLocaleString()} per Year` : 'Not set'}
               </p>
             </div>
           ))}
@@ -625,9 +625,10 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
       <div className="mt-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
         <h4 className="text-blue-300 font-medium text-sm mb-2">ℹ️ How This Works</h4>
         <ul className="text-white/60 text-xs space-y-1">
-          <li>• Set tuition fees for each class (annual amount)</li>
+          <li>• Set tuition fees for each class (<strong>per term amount</strong>)</li>
+          <li>• System calculates yearly total (term amount × 3 terms)</li>
           <li>• When adding a student, select their class</li>
-          <li>• The fee amount will automatically populate</li>
+          <li>• The per-term fee amount will automatically populate</li>
           <li>• Admission fee is one-time (charged when student joins)</li>
           <li>• You can still edit fees manually when adding individual students</li>
         </ul>
