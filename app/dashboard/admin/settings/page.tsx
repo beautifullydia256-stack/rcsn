@@ -634,6 +634,37 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
       {/* Save Button */}
       <div className="flex justify-end gap-3">
         <button
+          onClick={async () => {
+            if (!schoolId) return;
+            const confirmed = confirm('Manually sync balances for all students based on current fee structure?');
+            if (!confirmed) return;
+            
+            setSaving(true);
+            try {
+              const response = await fetch('/api/admin/sync-student-balances', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ schoolId })
+              });
+              const result = await response.json();
+              if (response.ok) {
+                setSuccess(`Synced ${result.updated || 0} student(s) with current fees!`);
+                setTimeout(() => setSuccess(null), 5000);
+              } else {
+                setError(result.error || 'Failed to sync balances');
+              }
+            } catch (err: any) {
+              setError(err.message || 'Failed to sync balances');
+            } finally {
+              setSaving(false);
+            }
+          }}
+          disabled={saving}
+          className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          🔄 Sync Student Balances
+        </button>
+        <button
           onClick={saveFeeStructure}
           disabled={saving}
           className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
@@ -653,6 +684,23 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
           <li>• Admission fee is one-time (charged when student joins)</li>
           <li>• You can still edit fees manually when adding individual students</li>
         </ul>
+      </div>
+
+      {/* Auto-Sync Info */}
+      <div className="mt-4 p-4 rounded-lg bg-green-600/10 border border-green-500/30">
+        <h4 className="text-green-300 font-medium text-sm mb-2">✨ Automatic Balance Updates</h4>
+        <p className="text-white/60 text-xs mb-2">
+          When you click <strong>"Save Fee Structure"</strong>, the system automatically:
+        </p>
+        <ul className="text-white/60 text-xs space-y-1">
+          <li>• Updates expected fees for ALL existing students</li>
+          <li>• Recalculates outstanding balances</li>
+          <li>• Works for students added before OR after fee setup</li>
+          <li>• Creates balance records for current term</li>
+        </ul>
+        <p className="text-white/50 text-xs mt-2 italic">
+          💡 Use the "🔄 Sync Student Balances" button to manually update balances anytime.
+        </p>
       </div>
     </div>
   );
