@@ -40,7 +40,12 @@ export default function TeacherAttendanceLanding() {
         if (trow2) teacherRow = trow2;
       }
       
-      console.log('Teacher resolution:', { teacherRow, metaTeacherId, userEmail: user.email });
+      console.log('Teacher resolution:', { 
+        teacherRow: teacherRow ? teacherRow.teacher_id : 'NULL', 
+        metaTeacherId, 
+        userEmail: user.email,
+        userId: user.id
+      });
       console.log('Debugging assignments for Nursery/Primary school:', { schoolId: u.school_id });
 
       // Try to load assignments with multiple fallback strategies
@@ -49,6 +54,21 @@ export default function TeacherAttendanceLanding() {
       // Build candidate teacher IDs to try
       const candidateTeacherIds: string[] = [];
       if (teacherRow?.teacher_id) candidateTeacherIds.push(teacherRow.teacher_id);
+      
+      // If teacherRow is null, try direct email lookup
+      if (!teacherRow && user.email) {
+        const { data: directTeacher } = await supabase
+          .from('teachers')
+          .select('teacher_id')
+          .eq('school_id', u.school_id)
+          .eq('email', user.email)
+          .single();
+        if (directTeacher) {
+          candidateTeacherIds.push(directTeacher.teacher_id);
+          console.log('Direct teacher lookup found:', directTeacher.teacher_id);
+        }
+      }
+      
       candidateTeacherIds.push(user.id);
 
       // Try each candidate teacher ID
