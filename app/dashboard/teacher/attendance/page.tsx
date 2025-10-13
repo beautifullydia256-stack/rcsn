@@ -39,6 +39,9 @@ export default function TeacherAttendanceLanding() {
           .maybeSingle();
         if (trow2) teacherRow = trow2;
       }
+      
+      console.log('Teacher resolution:', { teacherRow, metaTeacherId, userEmail: user.email });
+      console.log('Debugging assignments for Nursery/Primary school:', { schoolId: u.school_id });
 
       // Try to load assignments with multiple fallback strategies
       let tcs: any[] = [];
