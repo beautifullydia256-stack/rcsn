@@ -412,7 +412,8 @@ export function SecondaryReportGenerator() {
           phone: customHeader.phone || schoolInfo?.phone,
           email: customHeader.email || schoolInfo?.email,
           address: customHeader.address || schoolInfo?.address,
-          logo: customHeader.logoPreview
+          logo: customHeader.logoPreview || schoolInfo?.logo_url,
+          logo_url: customHeader.logoPreview || schoolInfo?.logo_url
         },
         examSet: (() => {
           if (!currentTermInfo) return null;

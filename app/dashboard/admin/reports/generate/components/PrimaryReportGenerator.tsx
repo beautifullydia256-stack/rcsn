@@ -410,7 +410,8 @@ export function PrimaryReportGenerator() {
           phone: customHeader.phone || schoolInfo?.phone,
           email: customHeader.email || schoolInfo?.email,
           address: customHeader.address || schoolInfo?.address,
-          logo: customHeader.logoPreview
+          logo: customHeader.logoPreview || schoolInfo?.logo_url,
+          logo_url: customHeader.logoPreview || schoolInfo?.logo_url
         },
         examSet: (() => {
           if (!currentTermInfo) return null;
@@ -2235,9 +2236,9 @@ function Template4UpperSectionReport({ student, examSet, school }: { student: an
     <div className="p-8 bg-white text-black" style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}>
       {/* HEADER */}
       <div className="flex items-start justify-between mb-6">
-        {school?.logo_url ? (
+        {(school?.logo_url || school?.logo) ? (
           <div className="w-24 h-24 flex-shrink-0">
-            <img src={school.logo_url} alt="School Logo" className="w-full h-full object-contain" />
+            <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-contain" />
           </div>
         ) : (
           <div className="w-24 h-24 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
