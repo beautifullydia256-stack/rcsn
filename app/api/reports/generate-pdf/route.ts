@@ -1237,7 +1237,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
 
       <!-- REPORT TITLE -->
       <div class="report-title">
-        O LEVEL TERMLY REPORT
+        MIDDLE & TOP CLASS - TERMLY REPORT
       </div>
 
       <!-- STUDENT INFO -->
@@ -1263,50 +1263,36 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         <thead>
           <tr>
             <th>SUBJECT</th>
-            <th>FORMATIVE SCORE [20%]</th>
-            <th>EOY SUMMATIVE ASSESSMENT (80%)</th>
-            <th>TOTAL (100%)</th>
-            <th>GRADE</th>
-            <th>LEVEL OF ACHIEVEMENT/3</th>
-            <th>DESCRIPTOR</th>
-            <th>TR'S INITIAL</th>
+            <th>FULL MARKS</th>
+            <th>MID TERM</th>
+            <th>END OF TERM</th>
+            <th>TEACHER'S REMARKS</th>
+            <th>INITIALS</th>
           </tr>
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
-              // Correct Template 2 data mapping as specified
               const subject = result.subject ?? '';
-              const formative = result.formative_score ?? ''; // Formative Score [20%]
-              const exam = result.exam_score ?? ''; // EOY Summative Assessment (80%)
-              const finalScore = result.final_score ?? ''; // Total (100%)
-              const grade = result.grade ?? '';
-              const levelOfAchievement = result.activity_score ?? ''; // Level of Achievement/3 (Activity Score [3])
-              // Provide fallback for descriptor if not available
-              const descriptor = result.descriptor ?? (() => {
-                const activityNum = parseFloat(levelOfAchievement) || 0;
-                if (activityNum >= 2.5) return 'Outstanding';
-                if (activityNum >= 1.5) return 'Moderate';
-                if (activityNum >= 0.9) return 'Basic';
-                return '';
-              })();
-              const teacherInitials = result.teacher_initials ?? ''; // TR's Initial
+              const fullMarks = result.total_marks ?? '100';
+              const midTerm = result.formative_score ?? '';
+              const endOfTerm = result.exam_score ?? '';
+              const teacherRemarks = result.remarks || result.overall_remark || '';
+              const initials = result.teacher_initials ?? '';
 
               return `
                 <tr>
-                  <td style="border: 1px solid #000; padding: 4px; font-weight: bold;">${subject}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${formative}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${exam}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${finalScore}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${grade}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${levelOfAchievement}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${descriptor}</td>
-                  <td style="border: 1px solid #000; padding: 4px; text-align: center;">${teacherInitials}</td>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${subject}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${fullMarks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${midTerm}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${endOfTerm}</td>
+                  <td style="border: 1px solid #000; padding: 6px;">${teacherRemarks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${initials}</td>
                 </tr>
               `;
             }).join('') : `
               <tr>
-                <td colspan="8" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">N/A - Student did not sit for this term</td>
+                <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">No results available</td>
               </tr>
             `
           }
