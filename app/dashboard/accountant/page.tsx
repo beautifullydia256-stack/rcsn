@@ -455,6 +455,12 @@ export default function AccountantDashboardPage() {
           >
             💸 Record Expense
           </button>
+          <button 
+            onClick={() => router.push('/dashboard/admin/students/add')}
+            className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white shadow-lg font-medium transition-colors"
+          >
+            ➕ Add Student
+          </button>
         </motion.div>
 
         {/* Export PDF Buttons */}
