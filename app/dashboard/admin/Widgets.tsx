@@ -105,33 +105,7 @@ export function AdminWidgets() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} whileHover={{ scale: 1.02 }} className="rounded-xl border border-white/10 bg-gradient-to-br from-amber-500/20 to-amber-700/10 bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20">
-        <div className="flex justify-center items-center mb-2">
-          <div className="flex flex-wrap items-center justify-center gap-4">
-            <span className="inline-flex items-center text-red-400 text-lg sm:text-xl md:text-2xl">
-              <span className="mr-2">Outstanding:</span>
-              <span className="font-semibold">{formatCurrency.format(totals.totalOutstanding)}</span>
-            </span>
-            <span className="inline-flex items-center text-emerald-400 text-lg sm:text-xl md:text-2xl">
-              <span className="mr-2">Total Paid:</span>
-              <span className="font-semibold">{formatCurrency.format(totals.totalPaid)}</span>
-            </span>
-          </div>
-        </div>
-        <div className="space-y-2">
-          {outstanding.map((p) => (
-            <div key={p.payment_id} className="flex items-center justify-between text-sm">
-              <div>
-                <div className="font-medium text-white">{p.student_name || p.student_id}</div>
-                <div className="text-xs text-white/80">Pending • {p.payment_method}</div>
-              </div>
-              <div className="text-xs text-white/80">{formatCurrency.format(p.amount)}</div>
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} whileHover={{ scale: 1.02 }} className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/20 to-rose-700/10 bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20">
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} whileHover={{ scale: 1.02 }} className="rounded-xl border border-white/10 bg-gradient-to-br from-rose-500/20 to-rose-700/10 bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20">
         <div className="text-sm font-medium mb-2 text-white">Notifications</div>
         <div className="space-y-2">
           {notes.length === 0 ? (
