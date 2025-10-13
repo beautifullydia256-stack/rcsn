@@ -1598,7 +1598,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        alert('Failed to upload badge. Please try again.');
+        alert(`Failed to upload badge: ${uploadError.message}\n\nPlease ensure the 'school-assets' storage bucket exists in Supabase.`);
         return;
       }
 
