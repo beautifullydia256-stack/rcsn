@@ -90,9 +90,9 @@ export default function TeacherAttendanceLanding() {
       
       // Force show the data with alert for debugging
       if (cls.length === 0) {
-        alert(`DEBUG: No classes found. TeacherId: ${teacherId}, SchoolId: ${schoolId}, TCS length: ${tcs.length}`);
+        alert(`DEBUG v2: No classes found. TeacherId: ${teacherId}, SchoolId: ${schoolId}, TCS length: ${tcs.length}`);
       } else {
-        alert(`DEBUG: Classes found: ${cls.join(', ')}`);
+        alert(`DEBUG v2: Classes found: ${cls.join(', ')}`);
       }
       
       setClasses(cls as string[]);
