@@ -24,14 +24,35 @@ export async function GET(request: NextRequest) {
     const school_id = u?.school_id as string | undefined;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    const { data, error } = await supabase
-      .from('teacher_comment_rules')
-      .select('*')
+    // Prefer new report_comment_rules: school-specific first
+    const { data: specific, error: specificErr } = await supabase
+      .from('report_comment_rules')
+      .select('min_percent, max_percent, comment_text')
       .eq('school_id', school_id)
       .eq('class_name', className)
-      .order('min_avg');
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ rules: data || [] });
+      .order('min_percent');
+    if (specificErr) return NextResponse.json({ error: specificErr.message }, { status: 500 });
+
+    let rows = specific && specific.length > 0 ? specific : null;
+    if (!rows) {
+      // Fallback to global defaults (school_id IS NULL)
+      const { data: global, error: globalErr } = await supabase
+        .from('report_comment_rules')
+        .select('min_percent, max_percent, comment_text')
+        .is('school_id', null)
+        .eq('class_name', className)
+        .order('min_percent');
+      if (globalErr) return NextResponse.json({ error: globalErr.message }, { status: 500 });
+      rows = global || [];
+    }
+
+    // Map to legacy shape expected by UI (min_avg/max_avg/comment)
+    const rules = (rows || []).map(r => ({
+      min_avg: r.min_percent,
+      max_avg: r.max_percent,
+      comment: r.comment_text,
+    }));
+    return NextResponse.json({ rules });
   } catch (e) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

@@ -2107,10 +2107,22 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                   {results.map((r: any, idx: number) => {
                     const subject = r.subject ?? '';
                     const fullMarks = 100; // Always 100 for Lower Section
-                    const mid = r.formative_score ?? '';
-                    const end = r.exam_score ?? '';
-                    const remarks = r.remarks || r.overall_remark || '';
-                    const initials = r.teacher_initials ?? '';
+                    // Derive MID TERM and END OF TERM from specific exam sets for this subject
+                    const subjectResults = (student.results || []).filter((rr: any) => String(rr.subject || '').toLowerCase() === String(subject).toLowerCase());
+                    const midRes = subjectResults.find((rr: any) => String(rr.exam_set_name || '').toLowerCase().includes('mid'));
+                    const endRes = subjectResults.find((rr: any) => String(rr.exam_set_name || '').toLowerCase().includes('end'));
+                    const mid = midRes?.exam_score ?? '';
+                    const end = endRes?.exam_score ?? '';
+                    const computeSimpleRemark = (score: number | string | undefined) => {
+                      const n = typeof score === 'number' ? score : Number(score);
+                      if (isNaN(n)) return '';
+                      if (n <= 40) return 'Needs more effort. Try harder next time.';
+                      if (n <= 60) return 'Fair work. You can do better.';
+                      if (n <= 80) return 'Good work. Keep it up!';
+                      return 'Excellent! Keep shining!';
+                    };
+                    const remarks = (endRes?.remarks || endRes?.overall_remark || r.remarks || r.overall_remark) ?? computeSimpleRemark(end);
+                    const initials = (endRes?.teacher_initials || r.teacher_initials) ?? '';
                     totalFullMarks += fullMarks;
                     return (
                       <tr key={idx}>
