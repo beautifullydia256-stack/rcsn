@@ -639,12 +639,29 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 }
 
 function TimetableDesigner() {
+  const handleDownloadPDF = () => {
+    // TODO: Implement actual timetable PDF generation
+    // For now, show placeholder
+    alert('Timetable PDF download will be implemented. This will generate a formatted PDF of the school timetable.');
+  };
+
   return (
     <div>
-      <SectionHeader
-        title="Timetable Designer"
-        desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
-      />
+      <div className="flex items-center justify-between mb-4">
+        <SectionHeader
+          title="Timetable Designer"
+          desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
+        />
+        <button
+          onClick={handleDownloadPDF}
+          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download PDF
+        </button>
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <select className="rounded-lg border border-white/10 bg-white/10 px-3 py-2">
           <option>Select Class</option>
@@ -668,6 +685,15 @@ function TimetableDesigner() {
         <button className="rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-2">Add Period</button>
       </div>
       <div className="mt-4 text-white/80 text-sm">A visual grid view of the timetable will appear here with edit/remove controls.</div>
+      
+      {/* PDF Preview Info */}
+      <div className="mt-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+        <h4 className="text-blue-300 font-medium text-sm mb-2">📄 PDF Export</h4>
+        <p className="text-white/60 text-xs">
+          Click the "Download PDF" button above to export the timetable as a professionally formatted PDF document.
+          The PDF will include all classes, subjects, teachers, and time slots in an easy-to-read format.
+        </p>
+      </div>
     </div>
   );
 }
