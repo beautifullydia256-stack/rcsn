@@ -49,12 +49,15 @@ export default function TeacherAttendanceLanding() {
       candidateTeacherIds.push(user.id);
 
       // Try each candidate teacher ID
+      console.log('Candidate teacher IDs:', candidateTeacherIds);
       for (const candidate of candidateTeacherIds) {
+        console.log('Trying teacher_id:', candidate);
         const { data: tcsTry, error: tryErr } = await supabase
           .from('teacher_class_subjects')
           .select('class_name')
           .eq('teacher_id', candidate)
           .eq('school_id', u.school_id);
+        console.log('Query result:', { tcsTry, tryErr });
         if (!tryErr && tcsTry && tcsTry.length > 0) {
           tcs = tcsTry;
           break;
@@ -85,6 +88,7 @@ export default function TeacherAttendanceLanding() {
       }
 
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
+      console.log('Final classes found:', cls);
       setClasses(cls as string[]);
     };
     load();
