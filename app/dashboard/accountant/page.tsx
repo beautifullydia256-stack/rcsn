@@ -1449,8 +1449,15 @@ function BalancesTable({ balances }: { balances: StudentBalance[] }) {
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-white/5">
             {balances.map((b) => {
-              const status = b.balance <= 0 ? "Fully Paid" : b.total_paid === 0 ? "Not Paid" : "Partial";
-              const statusColor = b.balance <= 0 ? "text-emerald-400" : b.total_paid === 0 ? "text-red-400" : "text-yellow-400";
+              // Fixed logic: Don't count students with 0 fees as "Fully Paid"
+              const status = b.total_fees === 0 ? "No Fees Set" : 
+                             b.balance <= 0 && b.total_fees > 0 ? "Fully Paid" : 
+                             b.total_paid === 0 ? "Not Paid" : 
+                             "Partial";
+              const statusColor = b.total_fees === 0 ? "text-gray-400" :
+                                  b.balance <= 0 && b.total_fees > 0 ? "text-emerald-400" : 
+                                  b.total_paid === 0 ? "text-red-400" : 
+                                  "text-yellow-400";
               
               return (
                 <tr key={b.balance_id} className="border-t border-white/10">
