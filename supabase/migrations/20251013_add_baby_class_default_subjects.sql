@@ -5,11 +5,11 @@
 -- ============================================================================
 
 -- Insert default Baby Class subjects for all Nursery/Primary schools
-INSERT INTO class_subjects (school_id, class_name, subject_name)
+INSERT INTO class_subjects (school_id, class_name, subject)
 SELECT 
   s.school_id,
   'Baby Class' as class_name,
-  subject.subject_name
+  subj.subject_name
 FROM schools s
 CROSS JOIN (
   VALUES 
@@ -36,9 +36,9 @@ CROSS JOIN (
     ('Playing'),
     ('Emotional'),
     ('Smartness')
-) AS subject(subject_name)
+) AS subj(subject_name)
 WHERE s.type = 'Nursery/Primary'
-ON CONFLICT (school_id, class_name, subject_name) DO NOTHING;
+ON CONFLICT (school_id, class_name, subject) DO NOTHING;
 
 -- Add comment
 COMMENT ON TABLE class_subjects IS 'Subjects per class for each school. Includes default subjects that can be customized.';
