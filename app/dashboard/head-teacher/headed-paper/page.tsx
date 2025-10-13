@@ -139,9 +139,11 @@ export default function HeadedPaperPage() {
 
       <header class="header">
         <div class="logo" id="logo">
-          <!-- placeholder for logo image -->
-          <img id="logoImg" src="${schoolInfo.logo_url || ''}" alt="logo" style="${schoolInfo.logo_url ? 'display:block' : 'display:none'}"/>
-          <div id="logoText" style="font-weight:700;color:var(--accent);${schoolInfo.logo_url ? 'display:none' : ''}">SCHOOL</div>
+          <!-- School badge from School Branding settings -->
+          ${schoolInfo.logo_url ? 
+            `<img id="logoImg" src="${schoolInfo.logo_url}" alt="School Badge" style="display:block"/>` : 
+            `<div id="logoText" style="font-weight:700;color:var(--accent);font-size:11px;text-align:center">NO BADGE<br/><span style="font-size:9px;font-weight:400">Upload in<br/>School Branding</span></div>`
+          }
         </div>
 
         <div class="head-right">
@@ -199,24 +201,8 @@ export default function HeadedPaperPage() {
       window.print();
     });
 
-    // Allow user to drop a logo image
-    const logoImg = document.getElementById('logoImg');
-    const logoText = document.getElementById('logoText');
-    document.getElementById('logo').addEventListener('click', ()=>{
-      const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*';
-      inp.onchange = ()=>{
-        const file = inp.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (ev)=>{
-          logoImg.src = ev.target.result;
-          logoImg.style.display = 'block';
-          logoText.style.display = 'none';
-        }
-        reader.readAsDataURL(file);
-      }
-      inp.click();
-    });
+    // Badge is now managed in School Branding settings
+    // No upload functionality here - badge automatically loads from database
   </script>
 </body>
 </html>`;
