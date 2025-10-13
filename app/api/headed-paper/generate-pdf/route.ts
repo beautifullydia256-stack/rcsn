@@ -29,9 +29,17 @@ export async function POST(request: NextRequest) {
     }
 
     const page = await browser.newPage();
-    // Ensure all assets are loaded
-    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    await new Promise(r => setTimeout(r, 500));
+    
+    // Ensure all assets including images are loaded
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
+    
+    // Additional wait to ensure images are rendered
+    await page.waitForSelector('img', { timeout: 5000 }).catch(() => {
+      console.log('No images found or timeout waiting for images');
+    });
+    
+    // Extra time for any remaining assets
+    await new Promise(r => setTimeout(r, 1000));
 
     const pdf = await page.pdf({
       format: 'A4',
