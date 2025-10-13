@@ -94,7 +94,7 @@ export default function AdminSystemSettingsPage() {
           {tab === "subjects" && <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />}
           {tab === "assignments" && <TeacherSubjectClass classOptions={classOptions} />}
           {tab === "finance" && <FinancialSettings schoolId={schoolId} classes={classOptions} />}
-          {tab === "timetable" && <TimetableDesigner />}
+          {tab === "timetable" && <TimetableDesigner classOptions={classOptions} schoolId={schoolId} />}
           {tab === "terms" && <TermSettings schoolId={schoolId} />}
           {tab === "exams" && <ExamSets classOptions={classOptions} schoolId={schoolId} schoolType={schoolType} />}
           {tab === "branding" && <SchoolBranding schoolId={schoolId} />}
@@ -638,9 +638,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
   );
 }
 
-function TimetableDesigner() {
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [classes, setClasses] = useState<string[]>([]);
+function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[]; schoolId: string | null }) {
   const [teachers, setTeachers] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [selectedClass, setSelectedClass] = useState('');
@@ -652,31 +650,13 @@ function TimetableDesigner() {
 
   useEffect(() => {
     const loadData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      
-      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!userData?.school_id) return;
-      
-      setSchoolId(userData.school_id);
-
-      // Load classes
-      const { data: classData } = await supabase
-        .from('students')
-        .select('current_class')
-        .eq('school_id', userData.school_id)
-        .eq('status', 'active');
-      
-      if (classData) {
-        const uniqueClasses = [...new Set(classData.map((s: any) => s.current_class))].sort();
-        setClasses(uniqueClasses);
-      }
+      if (!schoolId) return;
 
       // Load teachers
       const { data: teacherData } = await supabase
         .from('teachers')
         .select('teacher_id, name')
-        .eq('school_id', userData.school_id)
+        .eq('school_id', schoolId)
         .order('name');
       
       setTeachers(teacherData || []);
@@ -685,18 +665,18 @@ function TimetableDesigner() {
       if (selectedClass) {
         const { data: subjectData } = await supabase
           .from('class_subjects')
-          .select('subject_name')
-          .eq('school_id', userData.school_id)
+          .select('subject')
+          .eq('school_id', schoolId)
           .eq('class_name', selectedClass);
         
         if (subjectData) {
-          setSubjects(subjectData.map((s: any) => s.subject_name));
+          setSubjects(subjectData.map((s: any) => s.subject));
         }
       }
     };
 
     loadData();
-  }, [selectedClass]);
+  }, [schoolId, selectedClass]);
 
   const handleDownloadPDF = () => {
     // TODO: Implement actual timetable PDF generation
@@ -727,7 +707,7 @@ function TimetableDesigner() {
           onChange={(e) => setSelectedClass(e.target.value)}
         >
           <option value="">Select Class</option>
-          {classes.map((cls) => (
+          {classOptions.map((cls) => (
             <option key={cls} value={cls}>{cls}</option>
           ))}
         </select>
