@@ -75,6 +75,14 @@ export default function TeacherAttendanceLanding() {
 
       const cls = Array.from(new Set((tcs || []).map((r: any) => r.class_name)));
       console.log('🔍 ATTENDANCE PAGE DEBUG - Final classes found:', cls);
+      
+      // Force show the data with alert for debugging
+      if (cls.length === 0) {
+        alert(`DEBUG: No classes found. TeacherId: ${teacherId}, SchoolId: ${schoolId}, TCS length: ${tcs.length}`);
+      } else {
+        alert(`DEBUG: Classes found: ${cls.join(', ')}`);
+      }
+      
       setClasses(cls as string[]);
     };
     load();
