@@ -117,6 +117,7 @@ export default function ExamSetsPage() {
         .eq('school_id', schoolId) // Application-level school filtering
         .order('year', { ascending: false })
         .order('term', { ascending: true })
+        .order('sort_order', { ascending: true })
         .order('name');
       if (error) setError(error.message);
       setExamSets(data || []);
