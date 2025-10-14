@@ -671,11 +671,9 @@ export default function TeacherExamResultsClassPage() {
             p_marks_obtained: parseFloat(data.marks),
             p_total_marks: parseFloat(data.totalMarks || '100'),
             p_grade: computedGrade,
-            // optional extras if RPC supports them; ignored if not
-            p_overall_remark: computedRemark,
-            p_teacher_comment: teacherComment || null,
-            p_topic: topicFilter || null,
-            p_teacher_initials: teacherInitials || null
+            p_remarks: computedRemark,
+            p_teacher_id: teacherIdForSave,
+            p_teacher_comment: teacherComment || null
           });
           if (resp.error) {
             console.error('RPC primary save error:', {
@@ -727,21 +725,21 @@ export default function TeacherExamResultsClassPage() {
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
             const finalNum = formativeNum + examNum;
             const grade = calculateSecondaryGrade(finalNum);
-          const resp = await supabase.rpc('teacher_upsert_exam_result_olevel', {
+          const resp = await supabase.rpc('teacher_upsert_exam_result_secondary', {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
             p_student_id: studentId,
             p_class_name: className,
             p_subject: (selectedSubject || '').trim(),
             p_activity_score: activityNum,
+            p_descriptor: descriptor,
             p_formative_score: formativeNum,
             p_exam_score: examNum,
             p_final_score: finalNum,
-            p_grade: grade,
             p_overall_remark: (data.remark || '').trim(),
-            p_teacher_comment: autoTeacherComment(finalNum),
-            p_topic: (data.topic || topicFilter || '').trim(),
-            p_teacher_initials: data.initials || teacherInitials || ''
+            p_teacher_initials: data.initials || teacherInitials || '',
+            p_teacher_id: teacherIdForSave,
+            p_topic: (data.topic || topicFilter || '').trim()
           });
           if (resp.error) {
             console.error('RPC olevel save error:', {
