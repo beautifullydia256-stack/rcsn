@@ -70,14 +70,38 @@ export async function POST(request: NextRequest) {
       if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
       setting = data;
     } else {
-      // Create new record with default template
+      // Get a default template ID for this school
+      const { data: defaultTemplate, error: templateErr } = await supabase
+        .from('report_templates')
+        .select('id')
+        .eq('school_id', school_id)
+        .eq('is_default', true)
+        .maybeSingle();
+      
+      if (templateErr) return NextResponse.json({ error: templateErr.message }, { status: 500 });
+      
+      // If no default template exists, get the first available template
+      let templateId = defaultTemplate?.id;
+      if (!templateId) {
+        const { data: anyTemplate, error: anyTemplateErr } = await supabase
+          .from('report_templates')
+          .select('id')
+          .eq('school_id', school_id)
+          .limit(1)
+          .maybeSingle();
+        
+        if (anyTemplateErr) return NextResponse.json({ error: anyTemplateErr.message }, { status: 500 });
+        templateId = anyTemplate?.id;
+      }
+      
+      // Create new record with class teacher (template_id can be null if no templates exist)
       const { data, error: insErr } = await supabase
         .from('class_template_settings')
         .insert({ 
           school_id, 
           class_name, 
           class_teacher_id: teacher_id,
-          template_id: 'template1', // Default template
+          template_id: templateId || null,
           is_o_level: false
         })
         .select('*')
