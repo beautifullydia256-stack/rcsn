@@ -11,6 +11,7 @@ export default function AddStudentPage() {
   const router = useRouter();
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolType, setSchoolType] = useState<'Nursery/Primary' | 'Secondary' | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Student Personal Information
   const [firstName, setFirstName] = useState("");
@@ -61,13 +62,28 @@ export default function AddStudentPage() {
   const [compressionResult, setCompressionResult] = useState<CompressionResult | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  // Helper function to get the correct dashboard URL based on user role
+  const getDashboardUrl = () => {
+    switch (userRole) {
+      case 'accountant':
+        return '/dashboard/accountant';
+      case 'admin':
+        return '/dashboard/admin';
+      case 'owner':
+        return '/dashboard/owner';
+      default:
+        return '/dashboard/admin'; // fallback
+    }
+  };
+
   useEffect(() => {
     const run = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return router.push("/login");
-      const { data } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
+      const { data } = await supabase.from("users").select("school_id, role").eq("user_id", user.id).single();
       if (!data?.school_id) return router.push("/login");
       setSchoolId(data.school_id);
+      setUserRole(data.role);
       const { data: sch } = await supabase.from("schools").select("type").eq("school_id", data.school_id).single();
       setSchoolType((sch?.type as any) || null);
       // default admission date to today
@@ -306,7 +322,7 @@ export default function AddStudentPage() {
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-white text-xl font-semibold">Add Student</h1>
-          <button className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={() => router.push('/dashboard/admin')}>Back to Dashboard</button>
+          <button className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={() => router.push(getDashboardUrl())}>Back to Dashboard</button>
         </div>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -456,7 +472,7 @@ export default function AddStudentPage() {
               disabled={saving}
               onClick={async ()=>{ 
                 const ok = await save(); 
-                if (ok) router.push('/dashboard/admin'); 
+                if (ok) router.push(getDashboardUrl()); 
               }}
             >
               {saving ? "Saving..." : "Save & Return"}
