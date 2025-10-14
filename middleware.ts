@@ -104,7 +104,7 @@ export async function middleware(req: NextRequest) {
     }
 
     // Enforce role-specific dashboard prefixes
-    if (pathname.startsWith('/dashboard/admin') && lower !== 'admin' && lower !== 'owner') {
+    if (pathname.startsWith('/dashboard/admin') && lower !== 'admin' && lower !== 'owner' && lower !== 'accountant') {
       return NextResponse.redirect(new URL(roleToDashboard(role), req.url));
     }
     if (pathname.startsWith('/dashboard/teacher') && lower !== 'teacher' && lower !== 'owner' && lower !== 'admin') {
