@@ -134,11 +134,33 @@ export default function SchoolLocationSettings() {
   };
 
   const testLocationVerification = async () => {
+    setTesting(true);
     try {
+      // Get current GPS location first
+      let currentLocation = null;
+      if (navigator.geolocation) {
+        currentLocation = await new Promise<{latitude: number, longitude: number} | null>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+          );
+        });
+      }
+
       const response = await fetch('/api/location/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schoolId })
+        body: JSON.stringify({ 
+          schoolId,
+          latitude: currentLocation?.latitude,
+          longitude: currentLocation?.longitude
+        })
       });
       
       if (response.ok) {
@@ -148,9 +170,15 @@ export default function SchoolLocationSettings() {
         } else {
           setError(`❌ Location verification test failed. You are ${result.distance ? Math.round(result.distance) + 'm' : 'unknown distance'} away from the school location.`);
         }
+      } else {
+        const error = await response.json();
+        setError(`❌ Location verification test failed: ${error.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error testing location verification:', error);
+      setError('❌ Location verification test failed: Unable to get location or verify.');
+    } finally {
+      setTesting(false);
     }
   };
 
