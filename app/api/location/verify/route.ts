@@ -10,6 +10,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
     }
 
+    console.log('Location verification request for school_id:', schoolId);
+
     // Get school location data - use maybeSingle to handle RLS issues
     const { data: schoolData, error: schoolError } = await supabase
       .from('schools')
@@ -26,6 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (!schoolData) {
+      console.log('School not found for school_id:', schoolId);
       return NextResponse.json({ 
         error: 'School not found',
         schoolId 
