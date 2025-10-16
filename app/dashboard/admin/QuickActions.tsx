@@ -8,9 +8,13 @@ import { useRouter } from "next/navigation";
 export function AdminQuickActions() {
   const [busy, setBusy] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [schoolLocation, setSchoolLocation] = useState<{
+    name: string;
+    latitude: number;
+    longitude: number;
+    radius: number;
+  } | null>(null);
   const router = useRouter();
-  const [wifiSSIDs, setWifiSSIDs] = useState<string[]>([]);
-  const [newSSID, setNewSSID] = useState("");
 
   useEffect(() => {
     const run = async () => {
@@ -19,72 +23,35 @@ export function AdminQuickActions() {
       const { data } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
       setSchoolId(data?.school_id || null);
       
-      // Load existing WiFi SSIDs
+      // Load school location if school_id exists
       if (data?.school_id) {
-        loadWifiSSIDs(data.school_id);
+        loadSchoolLocation(data.school_id);
       }
     };
     run();
   }, []);
 
-  const loadWifiSSIDs = async (schoolId: string) => {
+  const loadSchoolLocation = async (schoolId: string) => {
     try {
       const { data: schoolData } = await supabase
         .from("schools")
-        .select("wifi_ssids")
+        .select("location_name, location_latitude, location_longitude, location_radius")
         .eq("school_id", schoolId)
         .single();
       
-      setWifiSSIDs(schoolData?.wifi_ssids || []);
+      if (schoolData) {
+        setSchoolLocation({
+          name: schoolData.location_name || "School Location",
+          latitude: schoolData.location_latitude || 0,
+          longitude: schoolData.location_longitude || 0,
+          radius: schoolData.location_radius || 100
+        });
+      }
     } catch (error) {
-      console.error("Error loading WiFi SSIDs:", error);
+      console.error("Error loading school location:", error);
     }
   };
 
-  const addWifiSSID = async () => {
-    if (!schoolId || !newSSID.trim()) return;
-    setBusy("wifi");
-    try {
-      const updatedSSIDs = [...wifiSSIDs, newSSID.trim()];
-      const { error } = await supabase
-        .from("schools")
-        .update({ wifi_ssids: updatedSSIDs })
-        .eq("school_id", schoolId);
-      
-      if (error) throw error;
-      
-      setWifiSSIDs(updatedSSIDs);
-      setNewSSID("");
-      alert("WiFi SSID added successfully");
-    } catch (error) {
-      console.error("Error adding WiFi SSID:", error);
-      alert("Error adding WiFi SSID");
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const removeWifiSSID = async (ssidToRemove: string) => {
-    if (!schoolId) return;
-    setBusy("wifi");
-    try {
-      const updatedSSIDs = wifiSSIDs.filter(ssid => ssid !== ssidToRemove);
-      const { error } = await supabase
-        .from("schools")
-        .update({ wifi_ssids: updatedSSIDs })
-        .eq("school_id", schoolId);
-      
-      if (error) throw error;
-      
-      setWifiSSIDs(updatedSSIDs);
-      alert("WiFi SSID removed successfully");
-    } catch (error) {
-      console.error("Error removing WiFi SSID:", error);
-      alert("Error removing WiFi SSID");
-    } finally {
-      setBusy(null);
-    }
-  };
 
   return (
     <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
@@ -104,52 +71,35 @@ export function AdminQuickActions() {
         <button className="px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 transition-transform hover:scale-105 text-white text-sm" onClick={() => router.push('/dashboard/admin/head-teacher/appoint')}>Appoint Head Teacher</button>
       </div>
 
-      {/* WiFi SSID Management */}
+      {/* School Location Management */}
       <div className="mt-4 pt-3 border-t border-white/10">
-        <div className="text-sm font-medium mb-2 text-white">WiFi SSID for Teacher Attendance</div>
+        <div className="text-sm font-medium mb-2 text-white">School Location Settings</div>
         
-        {/* Current WiFi SSIDs */}
-        {wifiSSIDs.length > 0 && (
-          <div className="mb-3">
-            <div className="text-xs text-white/70 mb-2">Current WiFi Networks:</div>
-            <div className="flex flex-wrap gap-2">
-              {wifiSSIDs.map((ssid, index) => (
-                <div key={index} className="flex items-center gap-1 px-2 py-1 rounded bg-green-500/20 border border-green-500/30">
-                  <span className="text-green-300 text-xs">{ssid}</span>
-                  <button
-                    onClick={() => removeWifiSSID(ssid)}
-                    disabled={busy === "wifi"}
-                    className="text-red-400 hover:text-red-300 text-xs disabled:opacity-50"
-                    title="Remove SSID"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
+        {/* Current School Location */}
+        <div className="mb-3">
+          <div className="text-xs text-white/70 mb-2">Current Location:</div>
+          <div className="p-3 rounded-lg bg-blue-500/20 border border-blue-500/30">
+            <div className="text-blue-300 text-sm font-medium">
+              {schoolLocation?.name || "GPS Location Verification"}
             </div>
+            {schoolLocation && (
+              <div className="text-blue-200 text-xs mt-1 space-y-1">
+                <div>📍 {schoolLocation.latitude.toFixed(6)}, {schoolLocation.longitude.toFixed(6)}</div>
+                <div>📏 Radius: {schoolLocation.radius}m</div>
+                <div>✅ Teachers must be within this radius to punch in/out</div>
+              </div>
+            )}
+            <button
+              onClick={() => router.push('/dashboard/admin/settings/location')}
+              className="mt-2 px-3 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700 transition-colors"
+            >
+              {schoolLocation ? "Update Location" : "Configure Location"}
+            </button>
           </div>
-        )}
+        </div>
         
-        {/* Add new WiFi SSID */}
-        <div className="flex items-center gap-2">
-          <input 
-            className="flex-1 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 text-sm" 
-            placeholder="Enter WiFi network name (e.g., School-WiFi)" 
-            value={newSSID} 
-            onChange={(e) => setNewSSID(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addWifiSSID()}
-          />
-          <button 
-            className="px-3 py-2 rounded-lg bg-teal-500 hover:bg-teal-400 transition-transform hover:scale-105 text-white text-sm disabled:opacity-50" 
-            disabled={busy === "wifi" || !newSSID.trim()} 
-            onClick={addWifiSSID}
-          >
-            {busy === "wifi" ? "Adding..." : "Add"}
-          </button>
-      </div>
-
-        <div className="text-xs text-white/60 mt-2">
-          Teachers can only punch in/out when connected to these WiFi networks
+        <div className="text-xs text-white/60">
+          Set GPS coordinates and radius for teacher attendance verification
         </div>
       </div>
 
