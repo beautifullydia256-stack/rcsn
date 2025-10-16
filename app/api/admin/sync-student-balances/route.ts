@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    const termId = currentTerm?.term_id;
+    // Some schemas use id, others use term_id; support both
+    const termId = (currentTerm as any)?.id || (currentTerm as any)?.term_id;
 
     // Create a map of class to tuition
     const feeMap = new Map();
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       if (termId && student.class_id) {
         // Get total paid for this student in this term
         const { data: payments } = await supabase
-          .from('student_fees')
+          .from('student_payments')
           .select('amount_paid')
           .eq('student_id', student.student_id)
           .eq('term_id', termId);

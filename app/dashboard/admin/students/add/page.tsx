@@ -472,6 +472,24 @@ export default function AddStudentPage() {
               disabled={saving}
               onClick={async ()=>{ 
                 const ok = await save(); 
+                try {
+                  // Best-effort sync of balances so accountant KPI updates immediately
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (ok && user) {
+                    const { data: userRow } = await supabase
+                      .from('users')
+                      .select('school_id')
+                      .eq('user_id', user.id)
+                      .single();
+                    if (userRow?.school_id) {
+                      await fetch('/api/admin/sync-student-balances', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ schoolId: userRow.school_id })
+                      });
+                    }
+                  }
+                } catch {}
                 if (ok) router.push(getDashboardUrl()); 
               }}
             >
