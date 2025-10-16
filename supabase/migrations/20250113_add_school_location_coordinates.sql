@@ -24,5 +24,5 @@ SET
   location_latitude = 0.3476, -- Kampala latitude
   location_longitude = 32.5825, -- Kampala longitude
   location_radius = 200, -- 200m radius
-  location_name = COALESCE(name, 'School Location') -- Use school name as default location name
+  location_name = 'School Location'
 WHERE location_latitude IS NULL OR location_longitude IS NULL;

@@ -43,10 +43,10 @@ export default function SchoolLocationSettings() {
         
         setSchoolId(userData.school_id);
         
-        // Load current school location and name
+        // Load current school location
         const { data: schoolData } = await supabase
           .from('schools')
-          .select('location_latitude, location_longitude, location_radius, location_name, name')
+          .select('location_latitude, location_longitude, location_radius, location_name')
           .eq('school_id', userData.school_id)
           .single();
         
@@ -55,7 +55,7 @@ export default function SchoolLocationSettings() {
             latitude: schoolData.location_latitude || 0.3476,
             longitude: schoolData.location_longitude || 32.5825,
             radius: schoolData.location_radius || 200,
-            name: schoolData.location_name || schoolData.name || "School Location"
+            name: schoolData.location_name || "School Location"
           });
         }
         
@@ -219,9 +219,6 @@ export default function SchoolLocationSettings() {
                   className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="e.g., Main Campus, School Building"
                 />
-                <p className="text-xs text-white/60 mt-1">
-                  Auto-filled with school name. You can customize this if needed.
-                </p>
               </div>
 
               <div>
