@@ -72,8 +72,8 @@ export function AdminCharts() {
             .select('teacher_id,timestamp')
             .eq('school_id', u.school_id)
             .eq('type', 'punch_in')
-            .gte('timestamp', `${chartData.todayStr} 00:00:00`)
-            .lte('timestamp', `${chartData.todayStr} 23:59:59'),
+            .gte('timestamp', chartData.todayStr + ' 00:00:00')
+            .lte('timestamp', chartData.todayStr + ' 23:59:59'),
           
           // Students count for today's attendance
           supabase.from('students')
@@ -253,6 +253,3 @@ export function AdminCharts() {
     </div>
   );
 }
-
-
-
