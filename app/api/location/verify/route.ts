@@ -1,76 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
-import { verifyLocationAtSchool, type SchoolLocation } from '@/src/lib/locationVerification';
+import { haversineDistance, getIpGeolocation } from '@/src/lib/locationVerification';
 
 export async function POST(req: NextRequest) {
   try {
     const { schoolId, latitude, longitude } = await req.json();
-    
+
     if (!schoolId) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
     }
 
-    // Get school location from database
+    // Get school location data
     const { data: schoolData, error: schoolError } = await supabase
       .from('schools')
-      .select('location_latitude, location_longitude, location_radius, location_name, name')
+      .select('location_latitude, location_longitude, location_radius, location_name')
       .eq('school_id', schoolId)
       .single();
 
     if (schoolError || !schoolData) {
-      return NextResponse.json({ error: 'School not found' }, { status: 404 });
+      return NextResponse.json({ error: 'School location not configured' }, { status: 404 });
     }
 
-    if (!schoolData.location_latitude || !schoolData.location_longitude) {
-      return NextResponse.json({ 
-        error: 'School location not configured. Please set GPS coordinates in admin settings.',
-        isAtSchool: false 
-      }, { status: 400 });
-    }
+    const schoolLat = schoolData.location_latitude;
+    const schoolLon = schoolData.location_longitude;
+    const schoolRadius = schoolData.location_radius || 100;
 
-    const schoolLocation: SchoolLocation = {
-      latitude: schoolData.location_latitude,
-      longitude: schoolData.location_longitude,
-      radius: schoolData.location_radius || 200,
-      name: schoolData.location_name || schoolData.name
-    };
+    let isAtSchool = false;
+    let distance = null;
+    let method = 'none';
+    let verificationError = null;
 
-    // If coordinates are provided, use them directly
     if (latitude && longitude) {
-      const distance = Math.sqrt(
-        Math.pow(latitude - schoolLocation.latitude, 2) + 
-        Math.pow(longitude - schoolLocation.longitude, 2)
-      ) * 111000; // Rough conversion to meters
-
-      const isAtSchool = distance <= schoolLocation.radius;
-      
-      return NextResponse.json({
-        isAtSchool,
-        method: 'gps',
-        distance: Math.round(distance),
-        schoolLocation,
-        message: isAtSchool 
-          ? `✅ You are at ${schoolLocation.name}` 
-          : `❌ You are ${Math.round(distance)}m away from ${schoolLocation.name}`
-      });
+      // Use GPS coordinates if provided
+      distance = haversineDistance(schoolLat, schoolLon, latitude, longitude);
+      isAtSchool = distance <= schoolRadius;
+      method = 'gps';
+    } else {
+      // Fallback to IP geolocation
+      const ipGeo = await getIpGeolocation();
+      if (ipGeo && ipGeo.latitude && ipGeo.longitude) {
+        distance = haversineDistance(schoolLat, schoolLon, ipGeo.latitude, ipGeo.longitude);
+        isAtSchool = distance <= schoolRadius;
+        method = 'ip';
+      } else {
+        verificationError = ipGeo?.error || 'Unable to get location from IP';
+      }
     }
 
-    // Otherwise, use the location verification system
-    const result = await verifyLocationAtSchool(schoolLocation);
-    
     return NextResponse.json({
-      ...result,
-      schoolLocation,
-      message: result.isAtSchool 
-        ? `✅ You are at ${schoolLocation.name}` 
-        : `❌ You are ${result.distance ? Math.round(result.distance) + 'm' : 'unknown distance'} away from ${schoolLocation.name}`
+      isAtSchool,
+      distance,
+      method,
+      error: verificationError
     });
 
-  } catch (error) {
-    console.error('Location verification error:', error);
-    return NextResponse.json({ 
-      error: 'Location verification failed',
-      isAtSchool: false 
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Location verification API error:', error);
+    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
   }
 }
