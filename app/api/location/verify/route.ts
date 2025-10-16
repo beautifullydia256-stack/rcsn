@@ -10,12 +10,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
     }
 
-    // Get school location data
+    // Get school location data - use maybeSingle to handle RLS issues
     const { data: schoolData, error: schoolError } = await supabase
       .from('schools')
       .select('location_latitude, location_longitude, location_radius, location_name')
       .eq('school_id', schoolId)
-      .single();
+      .maybeSingle();
 
     if (schoolError) {
       console.error('School location query error:', schoolError);

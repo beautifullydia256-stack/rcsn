@@ -1,6 +1,10 @@
 -- Allow teachers to read their school's location data for attendance verification
 -- This is needed for the location verification system to work for teachers
 
+-- Drop existing policies first to avoid conflicts
+DROP POLICY IF EXISTS "teachers can read school location" ON schools;
+DROP POLICY IF EXISTS "school staff can read school location" ON schools;
+
 -- Add policy for teachers to read their school's location data
 CREATE POLICY "teachers can read school location" ON schools
 FOR SELECT TO authenticated
