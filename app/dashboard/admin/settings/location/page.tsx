@@ -79,20 +79,48 @@ export default function SchoolLocationSettings() {
       return;
     }
 
+    setError(null);
+    setSuccess('Getting your current location...');
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCurrentLocation({
+        const newLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude
-        });
+        };
+        
+        setCurrentLocation(newLocation);
+        
+        // Automatically fill the latitude and longitude fields
+        setLocation(prev => ({
+          ...prev,
+          latitude: newLocation.lat,
+          longitude: newLocation.lng
+        }));
+        
+        setSuccess(`✅ Current location detected: ${newLocation.lat.toFixed(6)}, ${newLocation.lng.toFixed(6)}`);
       },
       (error) => {
         console.warn('Geolocation error:', error.message);
-        setError('Unable to get current location. Please enter coordinates manually.');
+        let errorMessage = 'Unable to get current location. Please enter coordinates manually.';
+        
+        switch(error.code) {
+          case error.PERMISSION_DENIED:
+            errorMessage = 'Location access denied. Please allow location access and try again.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            errorMessage = 'Location information unavailable. Please check your GPS settings.';
+            break;
+          case error.TIMEOUT:
+            errorMessage = 'Location request timed out. Please try again.';
+            break;
+        }
+        
+        setError(errorMessage);
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 300000
       }
     );
