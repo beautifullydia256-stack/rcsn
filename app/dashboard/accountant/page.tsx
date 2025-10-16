@@ -166,8 +166,6 @@ export default function AccountantDashboardPage() {
         console.error('Error loading terms:', termsError);
       }
       
-      console.log('All terms for school:', allTerms);
-      
       // Try to find current term by date range first, then fallback to most recent
       let currentTerm = (allTerms || []).find((t: any) => 
         t.start_date && t.end_date &&
@@ -177,10 +175,7 @@ export default function AccountantDashboardPage() {
       // If no current term by date, use the most recent term
       if (!currentTerm && allTerms && allTerms.length > 0) {
         currentTerm = allTerms[0];
-        console.log('No current term by date, using most recent term:', currentTerm);
       }
-
-      console.log('Current term selected:', currentTerm);
 
       if (currentTerm) {
         setCurrentTermId(currentTerm.id);
@@ -221,7 +216,7 @@ export default function AccountantDashboardPage() {
           balance,
           last_payment_date,
           students!inner(name, admission_number),
-          classes!inner(class_name),
+          classes(class_name),
           school_terms!inner(year, term, academic_year)
         `)
         .eq("school_id", userRow.school_id);
@@ -237,7 +232,6 @@ export default function AccountantDashboardPage() {
       if (balancesError) {
         console.error('Error loading balances:', balancesError);
       }
-      console.log('Balances data:', balancesData);
       setBalances(balancesData as any || []);
 
       // Fetch payments
@@ -267,7 +261,6 @@ export default function AccountantDashboardPage() {
       if (paymentsError) {
         console.error('Error loading payments:', paymentsError);
       }
-      console.log('Payments data:', paymentsData);
       setPayments(paymentsData as any || []);
 
       // Calculate KPIs
@@ -329,7 +322,6 @@ export default function AccountantDashboardPage() {
       if (expensesError) {
         console.error('Error loading expenses:', expensesError);
       }
-      console.log('Expenses data:', expensesData);
       setExpenses(expensesData as any || []);
 
       // Calculate expense KPIs
