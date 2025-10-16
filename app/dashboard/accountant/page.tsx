@@ -19,9 +19,9 @@ interface StudentBalance {
     name: string;
     admission_number: string;
   };
-  classes: {
+  classes?: {
     class_name: string;
-  };
+  } | null;
   school_terms: {
     year: number;
     term: number;
@@ -41,9 +41,9 @@ interface Payment {
     name: string;
     admission_number: string;
   };
-  classes: {
+  classes?: {
     class_name: string;
-  };
+  } | null;
 }
 
 interface Student {
@@ -51,9 +51,9 @@ interface Student {
   name: string;
   admission_number: string;
   class_id: string;
-  classes: {
+  classes?: {
     class_name: string;
-  };
+  } | null;
 }
 
 interface Expense {
@@ -373,7 +373,7 @@ export default function AccountantDashboardPage() {
   const filteredBalances = useMemo(() => {
     const q = search.toLowerCase();
     return balances.filter(b => {
-      const matchClass = selectedClass ? (b.classes.class_name === selectedClass) : true;
+      const matchClass = selectedClass ? (b.classes?.class_name === selectedClass) : true;
       const matchSearch = !q || 
         b.students.name.toLowerCase().includes(q) || 
         (b.students.admission_number || "").toLowerCase().includes(q);
@@ -1533,7 +1533,7 @@ function BalancesTable({ balances }: { balances: StudentBalance[] }) {
                 <tr key={b.balance_id} className="border-t border-white/10">
                   <Td>{b.students.name}</Td>
                   <Td>{b.students.admission_number || "-"}</Td>
-                  <Td>{b.classes.class_name}</Td>
+                  <Td>{b.classes?.class_name || "-"}</Td>
                   <Td>T{b.school_terms.term} {b.school_terms.year}</Td>
                   <Td>{formatCurrency(b.total_fees)}</Td>
                   <Td>{formatCurrency(b.total_paid)}</Td>
