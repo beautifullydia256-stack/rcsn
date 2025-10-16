@@ -1,89 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 
 export function AdminWidgets() {
   const formatCurrency = new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 });
   const [payments, setPayments] = useState<any[]>([]);
-  const [outstanding, setOutstanding] = useState<any[]>([]);
-  const [totals, setTotals] = useState<{ totalPaid: number; totalOutstanding: number }>({ totalPaid: 0, totalOutstanding: 0 });
-  const [teacherAttendance, setTeacherAttendance] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Memoize current term detection
+  const currentTerm = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return { today };
+  }, []);
 
   useEffect(() => {
-    const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
-      if (!u?.school_id) return;
+    const loadData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
+        if (!u?.school_id) return;
 
-      // Get current term date range - fetch all and filter in JS to handle NULL dates
-      const today = new Date().toISOString().slice(0,10);
-      const { data: allTerms } = await supabase
-        .from('school_terms')
-        .select('start_date, end_date, year, term')
-        .eq('school_id', u.school_id)
-        .order('year', { ascending: false })
-        .order('term', { ascending: false });
-      
-      const currentTerm = (allTerms || []).find((t: any) => 
-        t.start_date ? 
-          (t.start_date <= today && t.end_date >= today) : 
-          (t.end_date >= today)
-      ) || null;
+        // Get current term - optimized query
+        const { data: allTerms } = await supabase
+          .from('school_terms')
+          .select('start_date, end_date, year, term')
+          .eq('school_id', u.school_id)
+          .order('year', { ascending: false })
+          .order('term', { ascending: false });
+        
+        const currentTermData = (allTerms || []).find((t: any) => 
+          t.start_date ? 
+            (t.start_date <= currentTerm.today && t.end_date >= currentTerm.today) : 
+            (t.end_date >= currentTerm.today)
+        ) || (allTerms && allTerms[0]) || null;
 
-      // Build queries conditionally to avoid NULL date filters
-      let paymentsQuery = supabase.from("payments").select("*, student_id").eq("school_id", u.school_id);
-      let reportsQuery = supabase.from("reports").select("*");
-      
-      if (currentTerm) {
-        if (currentTerm.start_date) {
-          paymentsQuery = paymentsQuery.gte('created_at', currentTerm.start_date);
-          reportsQuery = reportsQuery.gte('created_at', currentTerm.start_date);
-        }
-        if (currentTerm.end_date) {
-          paymentsQuery = paymentsQuery.lte('created_at', currentTerm.end_date);
-          reportsQuery = reportsQuery.lte('created_at', currentTerm.end_date);
-        }
+        // Execute all queries in parallel for maximum performance
+        const [
+          paymentsResult,
+          reportsResult,
+          notificationsResult
+        ] = await Promise.all([
+          // Recent payments - use student_payments table for consistency
+          currentTermData ? 
+            supabase.from("student_payments")
+              .select(`
+                payment_id,
+                amount_paid,
+                payment_date,
+                payment_method,
+                student_id,
+                students!inner(name)
+              `)
+              .eq("school_id", u.school_id)
+              .gte('payment_date', currentTermData.start_date || '1900-01-01')
+              .lte('payment_date', currentTermData.end_date || '2100-12-31')
+              .order("payment_date", { ascending: false })
+              .limit(10) :
+            supabase.from("student_payments")
+              .select(`
+                payment_id,
+                amount_paid,
+                payment_date,
+                payment_method,
+                student_id,
+                students!inner(name)
+              `)
+              .eq("school_id", u.school_id)
+              .order("payment_date", { ascending: false })
+              .limit(10),
+          
+          // Recent reports
+          currentTermData ? 
+            supabase.from("reports")
+              .select("*")
+              .eq("school_id", u.school_id)
+              .gte('created_at', currentTermData.start_date || '1900-01-01')
+              .lte('created_at', currentTermData.end_date || '2100-12-31')
+              .order("created_at", { ascending: false })
+              .limit(10) :
+            supabase.from("reports")
+              .select("*")
+              .eq("school_id", u.school_id)
+              .order("created_at", { ascending: false })
+              .limit(10),
+          
+          // Recent notifications
+          supabase.from("notifications")
+            .select("*")
+            .eq("school_id", u.school_id)
+            .order("created_at", { ascending: false })
+            .limit(10)
+        ]);
+
+        setPayments(paymentsResult.data || []);
+        setReports(reportsResult.data || []);
+        setNotes(notificationsResult.data || []);
+      } catch (error) {
+        console.error('Error loading admin widgets:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      paymentsQuery = paymentsQuery.order("created_at", { ascending: false }).limit(10);
-      reportsQuery = reportsQuery.order("created_at", { ascending: false }).limit(10);
-
-      const [p, r, n] = await Promise.all([
-        paymentsQuery,
-        reportsQuery,
-        supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(10),
-      ]);
-      setPayments(p.data || []);
-      setReports(r.data || []);
-      setNotes(n.data || []);
-
-      const { data: studs } = await supabase.from("students").select("student_id,name,expected_fee_amount,status").eq("school_id", u.school_id);
-      const studentMap = new Map((studs || []).map((s: any) => [s.student_id, s.name]));
-      const pending = (p.data || []).filter((row: any) => (row.status || "Pending") === "Pending");
-      setOutstanding(pending.map((row: any) => ({ ...row, student_name: studentMap.get(row.student_id) })));
-
-      // Compute totals: sum of approved payments and total outstanding across active students
-      const totalPaid = (p.data || [])
-        .filter((row: any) => (row.status || "Pending") === "Approved")
-        .reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
-
-      const totalExpected = (studs || [])
-        .filter((s: any) => (s.status || 'active') === 'active')
-        .reduce((sum: number, s: any) => sum + Number(s.expected_fee_amount || 0), 0);
-
-      const totalOutstanding = Math.max(0, totalExpected - totalPaid);
-      setTotals({ totalPaid, totalOutstanding });
-
-      const { data: att } = await supabase.from("attendance").select("teacher_id,timestamp,type").eq("school_id", u.school_id).gte("timestamp", new Date(new Date().toDateString()).toISOString());
-      setTeacherAttendance(att || []);
     };
-    run();
-  }, []);
+    
+    loadData();
+  }, [currentTerm.today]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -93,15 +119,21 @@ export function AdminWidgets() {
           <a href="/dashboard/admin/payments/recent" className="text-xs text-white/80 hover:text-white underline-offset-4 hover:underline">View all</a>
         </div>
         <div className="space-y-2">
-          {payments.slice(0,2).map((p) => (
-            <a href={`/dashboard/admin/payments/recent#${p.payment_id}`} key={p.payment_id} className="flex items-center justify-between text-sm hover:underline underline-offset-4">
-              <div>
-                <div className="font-medium text-white">{p.student_name || p.student_id}</div>
-                <div className="text-xs text-white/80">{p.payment_method} • {new Date(p.created_at).toLocaleString()}</div>
-              </div>
-              <div className="text-xs text-white/80">{formatCurrency.format(p.amount)}</div>
-            </a>
-          ))}
+          {loading ? (
+            <div className="text-sm text-white/80">Loading...</div>
+          ) : payments.length === 0 ? (
+            <div className="text-sm text-white/80">No recent payments.</div>
+          ) : (
+            payments.slice(0, 2).map((p) => (
+              <a href={`/dashboard/admin/payments/recent#${p.payment_id}`} key={p.payment_id} className="flex items-center justify-between text-sm hover:underline underline-offset-4">
+                <div>
+                  <div className="font-medium text-white">{p.students?.name || p.student_id}</div>
+                  <div className="text-xs text-white/80">{p.payment_method} • {new Date(p.payment_date).toLocaleString()}</div>
+                </div>
+                <div className="text-xs text-white/80">{formatCurrency.format(p.amount_paid)}</div>
+              </a>
+            ))
+          )}
         </div>
       </motion.div>
 
@@ -118,7 +150,9 @@ export function AdminWidgets() {
           )}
         </div>
         <div className="space-y-2">
-          {notes.length === 0 ? (
+          {loading ? (
+            <div className="text-sm text-white/80">Loading...</div>
+          ) : notes.length === 0 ? (
             <div className="text-sm text-white/80">No notifications.</div>
           ) : (
             notes.slice(0, 3).map((n) => (

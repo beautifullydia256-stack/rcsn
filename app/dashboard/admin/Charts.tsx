@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart, Pie, Cell, LabelList } from "recharts";
@@ -14,149 +14,176 @@ export function AdminCharts() {
   const [feesStatus, setFeesStatus] = useState<any[]>([]);
   const [teacherAtt, setTeacherAtt] = useState<{ name: string; present: number; absent: number } | null>(null);
   const [studentAtt, setStudentAtt] = useState<{ name: string; present: number; absent: number } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Memoize current year and month keys
+  const chartData = useMemo(() => {
+    const now = new Date();
+    const yearStr = now.getFullYear().toString();
+    const monthKeys = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const todayStr = new Date().toISOString().slice(0,10);
+    return { yearStr, monthKeys, todayStr };
+  }, []);
 
   useEffect(() => {
-    const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
-      if (!u?.school_id) return;
+    const loadData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
+        if (!u?.school_id) return;
 
-      const now = new Date();
-      const yearStr = now.getFullYear().toString();
-      const monthKeys = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+        // Execute all queries in parallel for maximum performance
+        const [
+          paymentsResult,
+          studentsResult,
+          attendanceResult,
+          teachersCountResult,
+          teacherPunchesResult,
+          studentsCountResult,
+          studentAttendanceResult,
+          activeStudentsResult,
+          approvedPaymentsResult
+        ] = await Promise.all([
+          // Payments for fee trends
+          supabase.from("student_payments")
+            .select("amount_paid, payment_date")
+            .eq("school_id", u.school_id),
+          
+          // Students for enrollment and expected fees
+          supabase.from('students')
+            .select('expected_fee_amount, admission_date, student_id')
+            .eq('school_id', u.school_id)
+            .eq('status','active'),
+          
+          // General attendance data
+          supabase.from("attendance")
+            .select("type")
+            .eq("school_id", u.school_id),
+          
+          // Teachers count for today's attendance
+          supabase.from('teachers')
+            .select('teacher_id', { count: 'exact', head: true })
+            .eq('school_id', u.school_id),
+          
+          // Teacher punches today
+          supabase.from('attendance')
+            .select('teacher_id,timestamp')
+            .eq('school_id', u.school_id)
+            .eq('type', 'punch_in')
+            .gte('timestamp', `${chartData.todayStr} 00:00:00`)
+            .lte('timestamp', `${chartData.todayStr} 23:59:59'),
+          
+          // Students count for today's attendance
+          supabase.from('students')
+            .select('student_id', { count: 'exact', head: true })
+            .eq('school_id', u.school_id)
+            .eq('status', 'active'),
+          
+          // Student attendance today
+          supabase.from('student_attendance')
+            .select('student_id')
+            .eq('school_id', u.school_id)
+            .eq('date', chartData.todayStr)
+            .eq('present', true),
+          
+          // Active students for fee status
+          supabase.from("students")
+            .select("student_id, expected_fee_amount")
+            .eq("school_id", u.school_id)
+            .eq("status", "active"),
+          
+          // Approved payments for fee status
+          supabase.from("student_payments")
+            .select("student_id, amount_paid")
+            .eq("school_id", u.school_id)
+        ]);
 
-      // Paid in month (Approved payments)
-      const { data: pay } = await supabase
-        .from("payments")
-        .select("amount, created_at, status")
-        .eq("school_id", u.school_id)
-        .eq('status','Approved');
-      const paidByMonth: Record<string, number> = Object.fromEntries(monthKeys.map(m=>[`${yearStr}-${m}`,0]));
-      (pay || []).forEach((p: any) => {
-        const ym = new Date(p.created_at).toISOString().slice(0,7);
-        if (ym.startsWith(yearStr)) paidByMonth[ym] = (paidByMonth[ym] || 0) + Number(p.amount || 0);
-      });
+        // Process fee collection trends
+        const paidByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        (paymentsResult.data || []).forEach((p: any) => {
+          const ym = new Date(p.payment_date).toISOString().slice(0,7);
+          if (ym.startsWith(chartData.yearStr)) paidByMonth[ym] = (paidByMonth[ym] || 0) + Number(p.amount_paid || 0);
+        });
 
-      // Expected in month (sum expected_fee_amount for students admitted that month)
-      const { data: studsForExpected } = await supabase
-        .from('students')
-        .select('expected_fee_amount, admission_date')
-        .eq('school_id', u.school_id)
-        .eq('status','active');
-      const expectedByMonth: Record<string, number> = Object.fromEntries(monthKeys.map(m=>[`${yearStr}-${m}`,0]));
-      (studsForExpected || []).forEach((s: any) => {
-        if (!s.admission_date) return;
-        const ym = new Date(s.admission_date).toISOString().slice(0,7);
-        if (ym.startsWith(yearStr)) expectedByMonth[ym] = (expectedByMonth[ym] || 0) + Number(s.expected_fee_amount || 0);
-      });
+        const expectedByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        (studentsResult.data || []).forEach((s: any) => {
+          if (!s.admission_date) return;
+          const ym = new Date(s.admission_date).toISOString().slice(0,7);
+          if (ym.startsWith(chartData.yearStr)) expectedByMonth[ym] = (expectedByMonth[ym] || 0) + Number(s.expected_fee_amount || 0);
+        });
 
-      const feesRows = monthKeys.map((m, idx) => {
-        const key = `${yearStr}-${m}`;
-        const paid = paidByMonth[key] || 0;
-        const expected = expectedByMonth[key] || 0;
-        const pending = Math.max(0, expected - paid);
-        const monthLabel = new Date(parseInt(yearStr), idx, 1).toLocaleString(undefined, { month: 'short' });
-        return { month: monthLabel, paid, pending };
-      });
-      setFees(feesRows);
+        const feesRows = chartData.monthKeys.map((m, idx) => {
+          const key = `${chartData.yearStr}-${m}`;
+          const paid = paidByMonth[key] || 0;
+          const expected = expectedByMonth[key] || 0;
+          const pending = Math.max(0, expected - paid);
+          const monthLabel = new Date(parseInt(chartData.yearStr), idx, 1).toLocaleString(undefined, { month: 'short' });
+          return { month: monthLabel, paid, pending };
+        });
+        setFees(feesRows);
 
-      // Enrollment Growth: number of students admitted per month (current year), using admission_date
-      const { data: studs } = await supabase
-        .from("students")
-        .select("admission_date")
-        .eq("school_id", u.school_id)
-        .eq('status','active');
-      const enrollByMonth: Record<string, number> = Object.fromEntries(monthKeys.map(m=>[`${yearStr}-${m}`,0]));
-      (studs || []).forEach((s: any) => {
-        if (!s.admission_date) return;
-        const ym = new Date(s.admission_date).toISOString().slice(0,7);
-        if (ym.startsWith(yearStr)) enrollByMonth[ym] = (enrollByMonth[ym] || 0) + 1;
-      });
-      const enrollRows = monthKeys.map((m, idx) => ({
-        month: new Date(parseInt(yearStr), idx, 1).toLocaleString(undefined, { month: 'short' }),
-        count: enrollByMonth[`${yearStr}-${m}`] || 0
-      }));
-      setEnroll(enrollRows);
+        // Process enrollment growth
+        const enrollByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        (studentsResult.data || []).forEach((s: any) => {
+          if (!s.admission_date) return;
+          const ym = new Date(s.admission_date).toISOString().slice(0,7);
+          if (ym.startsWith(chartData.yearStr)) enrollByMonth[ym] = (enrollByMonth[ym] || 0) + 1;
+        });
+        const enrollRows = chartData.monthKeys.map((m, idx) => ({
+          month: new Date(parseInt(chartData.yearStr), idx, 1).toLocaleString(undefined, { month: 'short' }),
+          count: enrollByMonth[`${chartData.yearStr}-${m}`] || 0
+        }));
+        setEnroll(enrollRows);
 
-      const { data: att } = await supabase.from("attendance").select("type").eq("school_id", u.school_id);
-      const byType: Record<string, number> = {};
-      (att || []).forEach((a: any) => {
-        byType[a.type] = (byType[a.type] || 0) + 1;
-      });
-      setAttendance(Object.entries(byType).map(([name, value]) => ({ name, value })));
+        // Process attendance by type
+        const byType: Record<string, number> = {};
+        (attendanceResult.data || []).forEach((a: any) => {
+          byType[a.type] = (byType[a.type] || 0) + 1;
+        });
+        setAttendance(Object.entries(byType).map(([name, value]) => ({ name, value })));
 
-      // Attendance breakdown for today (Teachers vs Students)
-      const todayStr = new Date().toISOString().slice(0,10);
-      // Teachers: total vs present today (punch_in today)
-      const { count: totalTeachers } = await supabase
-        .from('teachers')
-        .select('teacher_id', { count: 'exact', head: true })
-        .eq('school_id', u.school_id);
-      const { data: teacherPunches } = await supabase
-        .from('attendance')
-        .select('teacher_id,timestamp')
-        .eq('school_id', u.school_id)
-        .eq('type', 'punch_in')
-        .gte('timestamp', `${todayStr} 00:00:00`)
-        .lte('timestamp', `${todayStr} 23:59:59`);
-      const presentTeachers = new Set((teacherPunches || []).map((p: any) => p.teacher_id)).size;
-      const absentTeachers = Math.max(0, (totalTeachers || 0) - presentTeachers);
-      setTeacherAtt({ name: 'Teachers', present: presentTeachers, absent: absentTeachers });
+        // Process today's attendance
+        const presentTeachers = new Set((teacherPunchesResult.data || []).map((p: any) => p.teacher_id)).size;
+        const absentTeachers = Math.max(0, (teachersCountResult.count || 0) - presentTeachers);
+        setTeacherAtt({ name: 'Teachers', present: presentTeachers, absent: absentTeachers });
 
-      // Students: total active vs present today in student_attendance
-      const { count: totalStudents } = await supabase
-        .from('students')
-        .select('student_id', { count: 'exact', head: true })
-        .eq('school_id', u.school_id)
-        .eq('status', 'active');
-      const { data: stAtt } = await supabase
-        .from('student_attendance')
-        .select('student_id')
-        .eq('school_id', u.school_id)
-        .eq('date', todayStr)
-        .eq('present', true);
-      const presentStudents = new Set((stAtt || []).map((s: any) => s.student_id)).size;
-      const absentStudents = Math.max(0, (totalStudents || 0) - presentStudents);
-      setStudentAtt({ name: 'Students', present: presentStudents, absent: absentStudents });
+        const presentStudents = new Set((studentAttendanceResult.data || []).map((s: any) => s.student_id)).size;
+        const absentStudents = Math.max(0, (studentsCountResult.count || 0) - presentStudents);
+        setStudentAtt({ name: 'Students', present: presentStudents, absent: absentStudents });
 
-      // Fully Paid vs Pending among ACTIVE students using expected vs approved payments
-      const { data: activeStudents } = await supabase
-        .from("students")
-        .select("student_id, expected_fee_amount")
-        .eq("school_id", u.school_id)
-        .eq("status", "active");
+        // Process fee status
+        const studentIds: string[] = (activeStudentsResult.data || []).map((s: any) => s.student_id);
+        const expectedById = new Map((activeStudentsResult.data || []).map((s: any) => [s.student_id, Number(s.expected_fee_amount || 0)]));
 
-      const studentIds: string[] = (activeStudents || []).map((s: any) => s.student_id);
-      const expectedById = new Map((activeStudents || []).map((s: any) => [s.student_id, Number(s.expected_fee_amount || 0)]));
+        const paidApproved: Record<string, number> = {};
+        (approvedPaymentsResult.data || []).forEach((p: any) => {
+          if (!studentIds.includes(p.student_id)) return;
+          paidApproved[p.student_id] = (paidApproved[p.student_id] || 0) + Number(p.amount_paid || 0);
+        });
 
-      const { data: approvedPays } = await supabase
-        .from("payments")
-        .select("student_id, amount, status")
-        .eq("school_id", u.school_id)
-        .eq("status", "Approved");
+        let pendingCount = 0;
+        let fullyPaidCount = 0;
+        studentIds.forEach((id) => {
+          const expected = expectedById.get(id) || 0;
+          const paid = paidApproved[id] || 0;
+          if (expected > 0 && paid < expected) pendingCount += 1; else fullyPaidCount += 1;
+        });
 
-      const paidApproved: Record<string, number> = {};
-      (approvedPays || []).forEach((p: any) => {
-        if (!studentIds.includes(p.student_id)) return;
-        paidApproved[p.student_id] = (paidApproved[p.student_id] || 0) + Number(p.amount || 0);
-      });
-
-      let pendingCount = 0;
-      let fullyPaidCount = 0;
-      studentIds.forEach((id) => {
-        const expected = expectedById.get(id) || 0;
-        const paid = paidApproved[id] || 0;
-        if (expected > 0 && paid < expected) pendingCount += 1; else fullyPaidCount += 1;
-      });
-
-      setFeesStatus([
-        { name: "Fully Paid", value: fullyPaidCount },
-        { name: "Pending Fees", value: pendingCount },
-      ]);
+        setFeesStatus([
+          { name: "Fully Paid", value: fullyPaidCount },
+          { name: "Pending Fees", value: pendingCount },
+        ]);
+      } catch (error) {
+        console.error('Error loading admin charts:', error);
+      } finally {
+        setLoading(false);
+      }
     };
-    run();
-  }, []);
+    
+    loadData();
+  }, [chartData.yearStr, chartData.monthKeys, chartData.todayStr]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

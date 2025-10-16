@@ -1,96 +1,113 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 export function AdminKpis() {
   const [k, setK] = useState({ students: 0, teachers: 0, outstanding: 0, receipts: 0, attendance: 0 });
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  useEffect(() => {
-    const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
-      if (!u?.school_id) return;
-
-      // Get current term date range
-      const today = new Date().toISOString().slice(0,10);
-      // Query all terms and filter in JavaScript to handle NULL start_dates
-      const { data: allTerms } = await supabase
-        .from('school_terms')
-        .select('start_date, end_date')
-        .eq('school_id', u.school_id)
-        .order('year', { ascending: false })
-        .order('term', { ascending: false });
-      
-      const currentTerm = (allTerms || []).find((t: any) => 
-        t.start_date ? 
-          (t.start_date <= today && t.end_date >= today) : 
-          (t.end_date >= today) // If no start date, consider it current if end date is in future
-      ) || null;
-
-      // Build receipts query conditionally to avoid NULL date filters
-      let receiptsQuery = supabase.from("receipts").select("receipt_id,created_at").eq("school_id", u.school_id);
-      if (currentTerm) {
-        if (currentTerm.start_date) {
-          receiptsQuery = receiptsQuery.gte('created_at', currentTerm.start_date);
-        }
-        if (currentTerm.end_date) {
-          receiptsQuery = receiptsQuery.lte('created_at', currentTerm.end_date);
-        }
-      }
-
-      const [students, teachers, receipts] = await Promise.all([
-        supabase.from("students").select("*", { count: "exact", head: true }).eq("school_id", u.school_id).eq('status','active'),
-        supabase.from("teachers").select("*", { count: "exact", head: true }).eq("school_id", u.school_id),
-        receiptsQuery,
-      ]);
-      // Attendance today (students present) based on student_attendance
-      const { data: stAtt } = await supabase
-        .from('student_attendance')
-        .select('student_id')
-        .eq('school_id', u.school_id)
-        .eq('date', today)
-        .eq('present', true);
-
-      // Outstanding = Sum all balances from student_balances for current term
-      // This uses the same calculation as accountant dashboard
-      let balancesQuery = supabase
-        .from('student_balances')
-        .select('balance')
-        .eq('school_id', u.school_id);
-      
-      // Filter by current term if available
-      if (currentTerm) {
-        const { data: currentTermData } = await supabase
-          .from('school_terms')
-          .select('id')
-          .eq('school_id', u.school_id)
-          .eq('year', (currentTerm as any).year)
-          .eq('term', (currentTerm as any).term)
-          .single();
-        
-        if (currentTermData?.id) {
-          balancesQuery = balancesQuery.eq('term_id', currentTermData.id);
-        }
-      }
-      
-      const { data: balancesData } = await balancesQuery;
-      const outstanding = Math.max(0, (balancesData || [])
-        .reduce((sum: number, b: any) => sum + Number(b.balance || 0), 0));
-      setK({
-        students: students.count || 0,
-        teachers: teachers.count || 0,
-        outstanding,
-        receipts: (receipts.data || []).length,
-        attendance: new Set((stAtt || []).map((x: any) => x.student_id)).size,
-      });
-    };
-    run();
+  // Memoize current term detection to avoid repeated queries
+  const currentTerm = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return { today };
   }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        
+        const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
+        if (!u?.school_id) return;
+
+        // Get current term - optimized query
+        const { data: allTerms } = await supabase
+          .from('school_terms')
+          .select('id, start_date, end_date, year, term')
+          .eq('school_id', u.school_id)
+          .order('year', { ascending: false })
+          .order('term', { ascending: false });
+        
+        const currentTermData = (allTerms || []).find((t: any) => 
+          t.start_date ? 
+            (t.start_date <= currentTerm.today && t.end_date >= currentTerm.today) : 
+            (t.end_date >= currentTerm.today)
+        ) || (allTerms && allTerms[0]) || null;
+
+        // Execute all queries in parallel for maximum performance
+        const [
+          studentsResult,
+          teachersResult,
+          attendanceResult,
+          balancesResult,
+          receiptsResult
+        ] = await Promise.all([
+          // Students count
+          supabase.from("students")
+            .select("*", { count: "exact", head: true })
+            .eq("school_id", u.school_id)
+            .eq('status', 'active'),
+          
+          // Teachers count
+          supabase.from("teachers")
+            .select("*", { count: "exact", head: true })
+            .eq("school_id", u.school_id),
+          
+          // Today's attendance
+          supabase.from('student_attendance')
+            .select('student_id')
+            .eq('school_id', u.school_id)
+            .eq('date', currentTerm.today)
+            .eq('present', true),
+          
+          // Outstanding balances - use current term if available
+          currentTermData ? 
+            supabase.from('student_balances')
+              .select('balance')
+              .eq('school_id', u.school_id)
+              .eq('term_id', currentTermData.id) :
+            supabase.from('student_balances')
+              .select('balance')
+              .eq('school_id', u.school_id),
+          
+          // Receipts count - use current term if available
+          currentTermData ? 
+            supabase.from("receipts")
+              .select("receipt_id", { count: "exact", head: true })
+              .eq("school_id", u.school_id)
+              .gte('created_at', currentTermData.start_date || '1900-01-01')
+              .lte('created_at', currentTermData.end_date || '2100-12-31') :
+            supabase.from("receipts")
+              .select("receipt_id", { count: "exact", head: true })
+              .eq("school_id", u.school_id)
+        ]);
+
+        // Calculate outstanding (only positive balances)
+        const outstanding = Math.max(0, (balancesResult.data || [])
+          .filter((b: any) => Number(b.balance || 0) > 0)
+          .reduce((sum: number, b: any) => sum + Number(b.balance || 0), 0));
+
+        setK({
+          students: studentsResult.count || 0,
+          teachers: teachersResult.count || 0,
+          outstanding,
+          receipts: receiptsResult.count || 0,
+          attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
+        });
+      } catch (error) {
+        console.error('Error loading admin KPIs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [currentTerm.today]);
 
   const cards = [
     { label: "Total Students", value: k.students, accent: "from-blue-500/30 to-blue-700/20", href: "/dashboard/admin/students" },
@@ -114,7 +131,13 @@ export function AdminKpis() {
           className={`text-left rounded-xl border border-white/10 bg-gradient-to-br ${c.accent} bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20 transition-transform ${c.href ? 'hover:ring-1 hover:ring-white/20 cursor-pointer' : ''}`}
         >
           <div className="text-xs text-white/80">{c.label}</div>
-          <div className="text-2xl font-semibold mt-1 text-white">{c.value}</div>
+          <div className="text-2xl font-semibold mt-1 text-white">
+            {loading ? (
+              <div className="animate-pulse bg-white/20 rounded h-6 w-16"></div>
+            ) : (
+              c.value
+            )}
+          </div>
         </motion.button>
       ))}
     </div>
