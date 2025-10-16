@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/src/lib/supabase';
+import { supabase, supabaseAdmin } from '@/src/lib/supabase';
 import { haversineDistance, getIpGeolocation } from '@/src/lib/locationVerification';
 
 export async function POST(req: NextRequest) {
@@ -12,12 +12,12 @@ export async function POST(req: NextRequest) {
 
     console.log('Location verification request for school_id:', schoolId);
 
-    // Get school location data - use maybeSingle to handle RLS issues
-    const { data: schoolData, error: schoolError } = await supabase
+    // Get school location data - use admin client to bypass RLS
+    const { data: schoolData, error: schoolError } = await supabaseAdmin
       .from('schools')
       .select('location_latitude, location_longitude, location_radius, location_name')
       .eq('school_id', schoolId)
-      .maybeSingle();
+      .single();
 
     if (schoolError) {
       console.error('School location query error:', schoolError);
