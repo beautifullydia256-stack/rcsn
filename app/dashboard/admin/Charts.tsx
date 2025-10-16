@@ -101,13 +101,13 @@ export function AdminCharts() {
         ]);
 
         // Process fee collection trends
-        const paidByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        const paidByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[chartData.yearStr + '-' + m,0]));
         (paymentsResult.data || []).forEach((p: any) => {
           const ym = new Date(p.payment_date).toISOString().slice(0,7);
           if (ym.startsWith(chartData.yearStr)) paidByMonth[ym] = (paidByMonth[ym] || 0) + Number(p.amount_paid || 0);
         });
 
-        const expectedByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        const expectedByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[chartData.yearStr + '-' + m,0]));
         (studentsResult.data || []).forEach((s: any) => {
           if (!s.admission_date) return;
           const ym = new Date(s.admission_date).toISOString().slice(0,7);
@@ -115,7 +115,7 @@ export function AdminCharts() {
         });
 
         const feesRows = chartData.monthKeys.map((m, idx) => {
-          const key = `${chartData.yearStr}-${m}`;
+          const key = chartData.yearStr + '-' + m;
           const paid = paidByMonth[key] || 0;
           const expected = expectedByMonth[key] || 0;
           const pending = Math.max(0, expected - paid);
@@ -125,7 +125,7 @@ export function AdminCharts() {
         setFees(feesRows);
 
         // Process enrollment growth
-        const enrollByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[`${chartData.yearStr}-${m}`,0]));
+        const enrollByMonth: Record<string, number> = Object.fromEntries(chartData.monthKeys.map(m=>[chartData.yearStr + '-' + m,0]));
         (studentsResult.data || []).forEach((s: any) => {
           if (!s.admission_date) return;
           const ym = new Date(s.admission_date).toISOString().slice(0,7);
@@ -133,7 +133,7 @@ export function AdminCharts() {
         });
         const enrollRows = chartData.monthKeys.map((m, idx) => ({
           month: new Date(parseInt(chartData.yearStr), idx, 1).toLocaleString(undefined, { month: 'short' }),
-          count: enrollByMonth[`${chartData.yearStr}-${m}`] || 0
+          count: enrollByMonth[chartData.yearStr + '-' + m] || 0
         }));
         setEnroll(enrollRows);
 
