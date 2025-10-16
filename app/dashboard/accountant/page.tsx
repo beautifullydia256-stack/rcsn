@@ -287,11 +287,11 @@ export default function AccountantDashboardPage() {
       // Fetch ALL TIME balances (across all terms)
       const { data: allTimeBalancesData } = await supabase
         .from("student_balances")
-        .select("balance")
+        .select("total_fees, balance")
         .eq("school_id", userRow.school_id);
       
       const outstandingAllTime = (allTimeBalancesData || [])
-        .filter((b: any) => Number((b as any).total_fees || 0) > 0 && Number((b as any).balance || 0) > 0)
+        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
         .reduce((sum, b: any) => sum + Math.max(0, Number(b.balance || 0)), 0);
       
       setKpiOutstandingAllTime(outstandingAllTime);
