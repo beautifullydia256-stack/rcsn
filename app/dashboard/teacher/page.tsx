@@ -333,8 +333,6 @@ export default function TeacherDashboard() {
 
       if (!userData?.school_id) return;
 
-      console.log('Teacher location verification - school_id:', userData.school_id);
-
       // Try to get current GPS location first
       let currentLocation = null;
       if (navigator.geolocation) {
@@ -374,6 +372,7 @@ export default function TeacherDashboard() {
         });
       } else {
         const error = await response.json();
+        console.error('Location verification API error:', error);
         setLocationVerification({
           isAtSchool: false,
           method: 'none',

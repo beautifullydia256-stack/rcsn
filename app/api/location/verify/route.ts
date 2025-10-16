@@ -10,8 +10,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'School ID is required' }, { status: 400 });
     }
 
-    console.log('Location verification request:', { schoolId, latitude, longitude });
-
     // Get school location data
     const { data: schoolData, error: schoolError } = await supabase
       .from('schools')
@@ -19,10 +17,27 @@ export async function POST(req: NextRequest) {
       .eq('school_id', schoolId)
       .single();
 
-    console.log('School data query result:', { schoolData, schoolError });
+    if (schoolError) {
+      console.error('School location query error:', schoolError);
+      return NextResponse.json({ 
+        error: `Database error: ${schoolError.message}`,
+        details: schoolError 
+      }, { status: 500 });
+    }
 
-    if (schoolError || !schoolData) {
-      return NextResponse.json({ error: 'School location not configured' }, { status: 404 });
+    if (!schoolData) {
+      return NextResponse.json({ 
+        error: 'School not found',
+        schoolId 
+      }, { status: 404 });
+    }
+
+    if (!schoolData.location_latitude || !schoolData.location_longitude) {
+      return NextResponse.json({ 
+        error: 'School location not configured',
+        schoolId,
+        schoolData 
+      }, { status: 404 });
     }
 
     const schoolLat = schoolData.location_latitude;
