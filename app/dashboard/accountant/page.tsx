@@ -242,10 +242,12 @@ export default function AccountantDashboardPage() {
         .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
       setKpiCollectedThisTerm(collectedThisTerm);
 
+      // Current Term Outstanding: only positive balances where fees were set
       const outstanding = (balancesData || [])
+        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
         .reduce((sum, b: any) => sum + Number(b.balance || 0), 0);
       const debtors = (balancesData || [])
-        .filter((b: any) => Number(b.balance || 0) > 0).length;
+        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0).length;
       
       setKpiOutstanding(outstanding);
       setKpiDebtorsCount(debtors);
@@ -257,6 +259,7 @@ export default function AccountantDashboardPage() {
         .eq("school_id", userRow.school_id);
       
       const outstandingAllTime = (allTimeBalancesData || [])
+        .filter((b: any) => Number((b as any).total_fees || 0) > 0 && Number((b as any).balance || 0) > 0)
         .reduce((sum, b: any) => sum + Math.max(0, Number(b.balance || 0)), 0);
       
       setKpiOutstandingAllTime(outstandingAllTime);
