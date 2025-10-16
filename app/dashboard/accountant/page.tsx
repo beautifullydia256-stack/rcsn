@@ -303,6 +303,31 @@ export default function AccountantDashboardPage() {
     loadData();
   }, [router]);
 
+  // Real-time sync across accountants for the same school
+  useEffect(() => {
+    if (!schoolId) return;
+    let reloadTimer: any = null;
+    const scheduleReload = () => {
+      if (reloadTimer) return;
+      reloadTimer = setTimeout(() => {
+        reloadTimer = null;
+        loadData();
+      }, 500);
+    };
+
+    const channel = (supabase as any)
+      .channel(`accountant-sync-${schoolId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${schoolId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${schoolId}` }, scheduleReload)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${schoolId}` }, scheduleReload)
+      .subscribe();
+
+    return () => {
+      try { (supabase as any).removeChannel(channel); } catch {}
+      if (reloadTimer) { clearTimeout(reloadTimer); reloadTimer = null; }
+    };
+  }, [schoolId]);
+
   const filteredBalances = useMemo(() => {
     const q = search.toLowerCase();
     return balances.filter(b => {
