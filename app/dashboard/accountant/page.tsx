@@ -155,20 +155,39 @@ export default function AccountantDashboardPage() {
 
       // Get current term
       const today = new Date().toISOString().slice(0, 10);
-      const { data: allTerms } = await supabase
+      const { data: allTerms, error: termsError } = await supabase
         .from('school_terms')
         .select('id, start_date, end_date, year, term')
         .eq('school_id', userRow.school_id)
         .order('year', { ascending: false })
         .order('term', { ascending: false });
       
-      const currentTerm = (allTerms || []).find((t: any) => 
+      if (termsError) {
+        console.error('Error loading terms:', termsError);
+      }
+      
+      console.log('All terms for school:', allTerms);
+      
+      // Try to find current term by date range first, then fallback to most recent
+      let currentTerm = (allTerms || []).find((t: any) => 
         t.start_date && t.end_date &&
         t.start_date <= today && t.end_date >= today
-      ) || (allTerms && allTerms[0]) || null;
+      );
+      
+      // If no current term by date, use the most recent term
+      if (!currentTerm && allTerms && allTerms.length > 0) {
+        currentTerm = allTerms[0];
+        console.log('No current term by date, using most recent term:', currentTerm);
+      }
+
+      console.log('Current term selected:', currentTerm);
 
       if (currentTerm) {
         setCurrentTermId(currentTerm.id);
+      } else {
+        console.warn('No terms found for school:', userRow.school_id);
+        // Still set a placeholder so queries don't fail
+        setCurrentTermId("");
       }
 
       // Load students
@@ -190,7 +209,7 @@ export default function AccountantDashboardPage() {
       setClasses(uniqueClasses);
 
       // Fetch student balances
-      const { data: balancesData } = await supabase
+      let balancesQuery = supabase
         .from("student_balances")
         .select(`
           balance_id,
@@ -205,14 +224,24 @@ export default function AccountantDashboardPage() {
           classes!inner(class_name),
           school_terms!inner(year, term, academic_year)
         `)
-        .eq("school_id", userRow.school_id)
-        .eq("term_id", currentTerm?.id || "")
+        .eq("school_id", userRow.school_id);
+      
+      // Only filter by term if we have a current term
+      if (currentTerm?.id) {
+        balancesQuery = balancesQuery.eq("term_id", currentTerm.id);
+      }
+      
+      const { data: balancesData, error: balancesError } = await balancesQuery
         .order("balance", { ascending: false });
 
+      if (balancesError) {
+        console.error('Error loading balances:', balancesError);
+      }
+      console.log('Balances data:', balancesData);
       setBalances(balancesData as any || []);
 
       // Fetch payments
-      const { data: paymentsData } = await supabase
+      let paymentsQuery = supabase
         .from("student_payments")
         .select(`
           payment_id,
@@ -225,10 +254,20 @@ export default function AccountantDashboardPage() {
           students!inner(name, admission_number),
           classes(class_name)
         `)
-        .eq("school_id", userRow.school_id)
-        .eq("term_id", currentTerm?.id || "")
+        .eq("school_id", userRow.school_id);
+      
+      // Only filter by term if we have a current term
+      if (currentTerm?.id) {
+        paymentsQuery = paymentsQuery.eq("term_id", currentTerm.id);
+      }
+      
+      const { data: paymentsData, error: paymentsError } = await paymentsQuery
         .order("payment_date", { ascending: false });
 
+      if (paymentsError) {
+        console.error('Error loading payments:', paymentsError);
+      }
+      console.log('Payments data:', paymentsData);
       setPayments(paymentsData as any || []);
 
       // Calculate KPIs
@@ -274,12 +313,23 @@ export default function AccountantDashboardPage() {
       setExpenseCategories(categoriesData as any || []);
 
       // Load expenses
-      const { data: expensesData } = await supabase
+      let expensesQuery = supabase
         .from("school_expenses")
         .select("*")
-        .eq("school_id", userRow.school_id)
-        .eq("term_id", currentTerm?.id || "")
+        .eq("school_id", userRow.school_id);
+      
+      // Only filter by term if we have a current term
+      if (currentTerm?.id) {
+        expensesQuery = expensesQuery.eq("term_id", currentTerm.id);
+      }
+      
+      const { data: expensesData, error: expensesError } = await expensesQuery
         .order("expense_date", { ascending: false });
+      
+      if (expensesError) {
+        console.error('Error loading expenses:', expensesError);
+      }
+      console.log('Expenses data:', expensesData);
       setExpenses(expensesData as any || []);
 
       // Calculate expense KPIs
