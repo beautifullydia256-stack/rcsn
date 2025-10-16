@@ -115,12 +115,20 @@ export function PrimaryExamResults() {
       <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-white text-2xl font-semibold">Insert Exam Results</h1>
-          <button
-            onClick={() => router.push('/dashboard/teacher')}
-            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => router.push('/dashboard/teacher/exam-results/class-teachers-comments')}
+              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+            >
+              Class Teachers Comments
+            </button>
+            <button
+              onClick={() => router.push('/dashboard/teacher')}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+            >
+              Back to Dashboard
+            </button>
+          </div>
         </div>
 
         {error && (

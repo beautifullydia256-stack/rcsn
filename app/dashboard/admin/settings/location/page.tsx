@@ -119,9 +119,9 @@ export default function SchoolLocationSettings() {
         setError(errorMessage);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 300000
+        enableHighAccuracy: false, // Use less accurate but faster location
+        timeout: 30000, // 30 seconds timeout for mobile
+        maximumAge: 60000 // Accept location up to 1 minute old
       }
     );
   };
