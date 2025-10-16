@@ -34,8 +34,17 @@ export default function TeacherDashboard() {
   const [gradeForm, setGradeForm] = useState({ student_id: '', subject: '', grade: '', term: 'Term 1' });
   const [lastPunch, setLastPunch] = useState<'punch_in' | 'punch_out' | null>(null);
   const [punching, setPunching] = useState<'punch_in' | 'punch_out' | null>(null);
-  const [wifiSSID, setWifiSSID] = useState<string | null>(null);
-  const [schoolSSIDs, setSchoolSSIDs] = useState<string[]>([]);
+  const [locationVerification, setLocationVerification] = useState<{
+    isAtSchool: boolean;
+    method: 'gps' | 'ip' | 'none';
+    distance?: number;
+    error?: string;
+    loading: boolean;
+  }>({
+    isAtSchool: false,
+    method: 'none',
+    loading: true
+  });
   const [attendanceStatus, setAttendanceStatus] = useState<{
     punchedIn: boolean;
     punchedOut: boolean;
@@ -47,7 +56,6 @@ export default function TeacherDashboard() {
     punchInTime: null,
     punchOutTime: null
   });
-  const [wifiVerificationFailed, setWifiVerificationFailed] = useState(false);
   const [teacherName, setTeacherName] = useState<string>('');
   const [search, setSearch] = useState<string>('');
   const [teacherRowId, setTeacherRowId] = useState<string | null>(null);
@@ -56,8 +64,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     fetchData();
     checkAttendanceStatus();
-    loadSchoolSSIDs();
-    detectWifiSSID();
+    verifyLocation();
   }, []);
 
 
@@ -311,43 +318,9 @@ export default function TeacherDashboard() {
     }
   };
 
-  const detectWifiSSID = async () => {
-    try {
-      // Try to detect WiFi SSID using Web API (limited browser support)
-      if ('connection' in navigator && (navigator as any).connection) {
-        const connection = (navigator as any).connection;
-        if (connection.effectiveType) {
-          // This is a fallback - real WiFi SSID detection requires native app
-          setWifiSSID('School WiFi (Detected)');
-        }
-      }
-      
-      // For demo purposes, we'll simulate WiFi detection
-      // In a real app, you'd use a native plugin or WebRTC
-      setWifiSSID('School WiFi');
-      
-      // Check WiFi verification status
-      checkWifiVerification();
-    } catch (error) {
-      console.error('Error detecting WiFi SSID:', error);
-      setWifiSSID('Unknown WiFi');
-      setWifiVerificationFailed(true);
-    }
-  };
-
-  const checkWifiVerification = () => {
-    if (schoolSSIDs.length > 0 && wifiSSID) {
-      const isValidSSID = schoolSSIDs.some(ssid => 
-        wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
-        ssid.toLowerCase().includes(wifiSSID.toLowerCase())
-      );
-      setWifiVerificationFailed(!isValidSSID);
-    } else {
-      setWifiVerificationFailed(false);
-    }
-  };
-
-  const loadSchoolSSIDs = async () => {
+  const verifyLocation = async () => {
+    setLocationVerification(prev => ({ ...prev, loading: true }));
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -360,18 +333,60 @@ export default function TeacherDashboard() {
 
       if (!userData?.school_id) return;
 
-      const { data: schoolData } = await supabase
-        .from('schools')
-        .select('wifi_ssids')
-        .eq('school_id', userData.school_id)
-        .single();
+      // Try to get current GPS location first
+      let currentLocation = null;
+      if (navigator.geolocation) {
+        currentLocation = await new Promise<{latitude: number, longitude: number} | null>((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              resolve({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              });
+            },
+            () => resolve(null),
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+          );
+        });
+      }
 
-      setSchoolSSIDs(schoolData?.wifi_ssids || []);
-      
-      // Re-check WiFi verification after loading school SSIDs
-      setTimeout(() => checkWifiVerification(), 100);
+      // Call location verification API
+      const response = await fetch('/api/location/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schoolId: userData.school_id,
+          latitude: currentLocation?.latitude,
+          longitude: currentLocation?.longitude
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setLocationVerification({
+          isAtSchool: result.isAtSchool,
+          method: result.method || 'gps',
+          distance: result.distance,
+          error: result.error,
+          loading: false
+        });
+      } else {
+        const error = await response.json();
+        setLocationVerification({
+          isAtSchool: false,
+          method: 'none',
+          error: error.error || 'Location verification failed',
+          loading: false
+        });
+      }
     } catch (error) {
-      console.error('Error loading school SSIDs:', error);
+      console.error('Error verifying location:', error);
+      setLocationVerification({
+        isAtSchool: false,
+        method: 'none',
+        error: 'Unable to verify location',
+        loading: false
+      });
     }
   };
 
@@ -435,20 +450,12 @@ export default function TeacherDashboard() {
         return;
       }
 
-      // Check WiFi SSID verification
-      if (schoolSSIDs.length > 0 && wifiSSID) {
-        const isValidSSID = schoolSSIDs.some(ssid => 
-          wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
-          ssid.toLowerCase().includes(wifiSSID.toLowerCase())
-        );
-        
-        if (!isValidSSID) {
-          setWifiVerificationFailed(true);
-          alert(`WiFi verification failed. Please connect to school WiFi.\nConnected to: ${wifiSSID}\nExpected: ${schoolSSIDs.join(', ')}`);
-          return;
-        } else {
-          setWifiVerificationFailed(false);
-        }
+      // Check location verification
+      if (!locationVerification.isAtSchool) {
+        const errorMsg = locationVerification.error || 'Location verification failed';
+        const distance = locationVerification.distance ? ` (${Math.round(locationVerification.distance)}m away)` : '';
+        alert(`Location verification failed. Please ensure you are at the school location.\n${errorMsg}${distance}`);
+        return;
       }
 
       const today = new Date().toISOString().split('T')[0];
@@ -465,7 +472,9 @@ export default function TeacherDashboard() {
         const { error } = await supabase.from('teacher_attendance_logs').insert({
         teacher_id: user.id,
         school_id: userData.school_id,
-          ssid_name: wifiSSID || 'Unknown',
+          location_verified: true,
+          location_method: locationVerification.method,
+          location_distance: locationVerification.distance,
           punch_in: now,
           date: today
       });
@@ -579,37 +588,47 @@ export default function TeacherDashboard() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-8 text-white">
           <h2 className="text-xl font-semibold mb-4">Teacher Attendance</h2>
           
-          {/* WiFi Status */}
+          {/* Location Status */}
           <div className="mb-4 p-3 rounded-lg bg-white/5 border border-white/10">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-white/70">WiFi Connection:</span>
+              <span className="text-sm text-white/70">Location Verification:</span>
               <span className={`text-sm font-medium ${
-                wifiVerificationFailed 
-                  ? 'text-red-400' 
-                  : schoolSSIDs.length > 0 && wifiSSID && schoolSSIDs.some(ssid => 
-                      wifiSSID.toLowerCase().includes(ssid.toLowerCase()) || 
-                      ssid.toLowerCase().includes(wifiSSID.toLowerCase())
-                    ) ? 'text-green-400' : 'text-yellow-400'
+                locationVerification.loading 
+                  ? 'text-yellow-400' 
+                  : locationVerification.isAtSchool 
+                    ? 'text-green-400' 
+                    : 'text-red-400'
               }`}>
-                {wifiVerificationFailed 
-                  ? 'Failed to Connect' 
-                  : wifiSSID || 'Detecting...'
+                {locationVerification.loading 
+                  ? 'Verifying...' 
+                  : locationVerification.isAtSchool 
+                    ? 'At School' 
+                    : 'Not at School'
                 }
               </span>
             </div>
-            {schoolSSIDs.length > 0 && (
+            {locationVerification.distance && (
               <div className="text-xs text-white/60 mt-1">
-                Expected: {schoolSSIDs.join(', ')}
+                Distance: {Math.round(locationVerification.distance)}m ({locationVerification.method.toUpperCase()})
               </div>
             )}
-            {wifiVerificationFailed && (
+            {!locationVerification.isAtSchool && !locationVerification.loading && (
               <div className="text-xs text-red-400 mt-1 flex items-center">
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
-                Please connect to school WiFi to punch in/out
+                {locationVerification.error || 'Please ensure you are at the school location to punch in/out'}
               </div>
             )}
+            <div className="mt-2">
+              <button
+                onClick={verifyLocation}
+                disabled={locationVerification.loading}
+                className="text-xs text-blue-400 hover:text-blue-300 underline disabled:opacity-50"
+              >
+                {locationVerification.loading ? 'Verifying...' : 'Refresh Location'}
+              </button>
+            </div>
           </div>
 
           {/* Attendance Status */}
@@ -645,9 +664,9 @@ export default function TeacherDashboard() {
               whileHover={{ scale: punching ? 1 : 1.05 }}
               whileTap={{ scale: punching ? 1 : 0.95 }}
               onClick={() => handlePunch('punch_in')}
-              disabled={attendanceStatus.punchedIn || punching !== null || wifiVerificationFailed}
+              disabled={attendanceStatus.punchedIn || punching !== null || !locationVerification.isAtSchool}
               className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                attendanceStatus.punchedIn || punching !== null || wifiVerificationFailed
+                attendanceStatus.punchedIn || punching !== null || !locationVerification.isAtSchool
                   ? 'bg-white/10 text-white/50 cursor-not-allowed border border-white/10'
                   : 'bg-green-600 text-white hover:bg-green-700'
               }`}
@@ -668,8 +687,8 @@ export default function TeacherDashboard() {
                 )}
                 {punching === 'punch_in' 
                   ? 'Processing...' 
-                  : wifiVerificationFailed 
-                    ? 'Failed to Connect' 
+                  : !locationVerification.isAtSchool 
+                    ? 'Location Failed' 
                     : attendanceStatus.punchedIn 
                       ? 'Punched In' 
                       : 'Punch In'
@@ -681,9 +700,9 @@ export default function TeacherDashboard() {
               whileHover={{ scale: punching ? 1 : 1.05 }}
               whileTap={{ scale: punching ? 1 : 0.95 }}
               onClick={() => handlePunch('punch_out')}
-              disabled={!attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || wifiVerificationFailed}
+              disabled={!attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || !locationVerification.isAtSchool}
               className={`flex-1 py-3 px-6 rounded-lg font-medium transition-colors ${
-                !attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || wifiVerificationFailed
+                !attendanceStatus.punchedIn || attendanceStatus.punchedOut || punching !== null || !locationVerification.isAtSchool
                   ? 'bg-white/10 text-white/50 cursor-not-allowed border border-white/10'
                   : 'bg-red-600 text-white hover:bg-red-700'
               }`}
@@ -704,8 +723,8 @@ export default function TeacherDashboard() {
                 )}
                 {punching === 'punch_out' 
                   ? 'Processing...' 
-                  : wifiVerificationFailed 
-                    ? 'Failed to Connect' 
+                  : !locationVerification.isAtSchool 
+                    ? 'Location Failed' 
                     : attendanceStatus.punchedOut 
                       ? 'Punched Out' 
                       : 'Punch Out'
