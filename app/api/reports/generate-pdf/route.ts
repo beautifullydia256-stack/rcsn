@@ -235,7 +235,9 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateSingleReportPDF(reportData: any, template: string = 'template1') {
+  console.log('=== PDF GENERATION STARTED ===');
   console.log('Starting PDF generation for student:', reportData.students[0]?.name, 'using template:', template);
+  console.log('Report data structure:', JSON.stringify(reportData, null, 2));
   const { school, examSet, students } = reportData;
   const student = students[0];
 
