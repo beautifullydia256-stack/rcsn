@@ -1881,49 +1881,57 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
               let totalFullMarks = 0;
               return (
                 <>
-                  {results.map((r: any, idx: number) => {
-                    const subject = r.subject ?? '';
-                    const fullMarks = 100; // Always 100 for Lower Section
-                    // Derive MID TERM and END OF TERM from specific exam sets for this subject
-                    const subjectResults = (student.results || []).filter((rr: any) => String(rr.subject || '').toLowerCase() === String(subject).toLowerCase());
-                    
-                    // Debug logging
-                    console.log('=== PREVIEW DEBUG ===');
-                    console.log('Subject:', subject);
-                    console.log('Subject results:', subjectResults);
-                    console.log('All exam set names:', subjectResults.map(rr => rr.exam_sets?.name || rr.exam_set_name || 'NO_NAME'));
-                    
-                    const midRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('mid'));
-                    const endRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('end'));
-                    const mid = midRes?.marks_obtained ?? '';
-                    const end = endRes?.marks_obtained ?? '';
-                    
-                    console.log('Mid result:', midRes);
-                    console.log('End result:', endRes);
-                    console.log('Mid value:', mid);
-                    console.log('End value:', end);
-                    const computeSimpleRemark = (score: number | string | undefined) => {
-                      const n = typeof score === 'number' ? score : Number(score);
-                      if (isNaN(n)) return '';
-                      if (n <= 40) return 'Needs more effort. Try harder next time.';
-                      if (n <= 60) return 'Fair work. You can do better.';
-                      if (n <= 80) return 'Good work. Keep it up!';
-                      return 'Excellent! Keep shining!';
+                  {(() => {
+                    // Use the exact same logic as the PDF generation
+                    const all = Array.isArray(student.results) ? student.results : [];
+                    const isMid = (name: any) => {
+                      const n = String(name || '').trim().toLowerCase();
+                      return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
                     };
-                    const remarks = (endRes?.remarks || endRes?.overall_remark || r.remarks || r.overall_remark) ?? computeSimpleRemark(end);
-                    const initials = (endRes?.teacher_initials || r.teacher_initials) ?? '';
-                    totalFullMarks += fullMarks;
-                    return (
-                      <tr key={idx}>
-                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{subject}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{fullMarks}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{mid}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{end}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{remarks}</td>
-                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
-                      </tr>
-                    );
-                  })}
+                    const isEnd = (name: any) => {
+                      const n = String(name || '').trim().toLowerCase();
+                      return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+                    };
+                    
+                    // Group results by subject
+                    const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
+                    
+                    all.forEach((r: any) => {
+                      const subject = r.subject ?? '';
+                      const examSetName = r.exam_sets?.name || '';
+                      
+                      if (!subjectGroups[subject]) {
+                        subjectGroups[subject] = {
+                          subject,
+                          total_marks: r.total_marks ?? 100,
+                          remarks: r.remarks || r.overall_remark || '',
+                          initials: r.teacher_initials ?? ''
+                        };
+                      }
+                      
+                      if (isMid(examSetName)) {
+                        subjectGroups[subject].mid = r.marks_obtained ?? '';
+                      } else if (isEnd(examSetName)) {
+                        subjectGroups[subject].end = r.marks_obtained ?? '';
+                      }
+                    });
+                    
+                    const subjects = Object.values(subjectGroups);
+                    
+                    return subjects.map((group, idx) => {
+                      totalFullMarks += group.total_marks;
+                      return (
+                        <tr key={idx}>
+                          <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{group.subject}</td>
+                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.total_marks}</td>
+                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.mid ?? ''}</td>
+                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.end ?? ''}</td>
+                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{group.remarks}</td>
+                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.initials}</td>
+                        </tr>
+                      );
+                    });
+                  })()}
                   <tr>
                     <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'left' }}>TOTAL</td>
                     <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'center' }}>{totalFullMarks}</td>
