@@ -2149,8 +2149,8 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                         subjectGroups[subject] = {
                           subject,
                           total_marks: r.total_marks ?? 100,
-                          remarks: r.remarks || r.overall_remark || '',
-                          initials: r.teacher_initials ?? ''
+                          remarks: '',
+                          initials: ''
                         };
                       }
                       
@@ -2158,6 +2158,20 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                         subjectGroups[subject].mid = r.marks_obtained ?? '';
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = r.marks_obtained ?? '';
+                        // Prioritize remarks from End of Term exam set
+                        subjectGroups[subject].remarks = r.remarks || r.overall_remark || '';
+                        subjectGroups[subject].initials = r.teacher_initials ?? '';
+                      }
+                    });
+                    
+                    // If no End of Term remarks found, use any available remarks
+                    Object.values(subjectGroups).forEach((group: any) => {
+                      if (!group.remarks) {
+                        const anyResult = all.find((r: any) => r.subject === group.subject);
+                        if (anyResult) {
+                          group.remarks = anyResult.remarks || anyResult.overall_remark || '';
+                          group.initials = anyResult.teacher_initials ?? '';
+                        }
                       }
                     });
                     
