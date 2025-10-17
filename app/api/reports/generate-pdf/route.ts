@@ -1285,25 +1285,66 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         </thead>
         <tbody>
           ${student.results.length > 0 ? 
-            student.results.map((result: any) => {
-              const subject = result.subject ?? '';
-              const fullMarks = result.total_marks ?? '100';
-              const midTerm = result.formative_score ?? '';
-              const endOfTerm = result.exam_score ?? '';
-              const teacherRemarks = result.remarks || result.overall_remark || '';
-              const initials = result.teacher_initials ?? '';
-
-              return `
+            (() => {
+              // Group results by subject for processed data
+              const all = Array.isArray(student.results) ? student.results : [];
+              const isMid = (name: any) => {
+                const n = String(name || '').trim().toLowerCase();
+                return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+              };
+              const isEnd = (name: any) => {
+                const n = String(name || '').trim().toLowerCase();
+                return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+              };
+              
+              const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
+              
+              all.forEach((r: any) => {
+                const subject = r.subject ?? '';
+                const examSetName = r.exam_set_name || '';
+                
+                if (!subjectGroups[subject]) {
+                  subjectGroups[subject] = {
+                    subject,
+                    total_marks: r.total_marks ?? 100,
+                    remarks: '',
+                    initials: ''
+                  };
+                }
+                
+                if (isMid(examSetName)) {
+                  subjectGroups[subject].mid = r.marks_obtained ?? '';
+                } else if (isEnd(examSetName)) {
+                  subjectGroups[subject].end = r.marks_obtained ?? '';
+                  subjectGroups[subject].remarks = r.teacher_remark || '';
+                  subjectGroups[subject].initials = r.teacher_initials ?? '';
+                }
+              });
+              
+              // If no End of Term remarks found, use any available remarks
+              Object.values(subjectGroups).forEach((group: any) => {
+                if (!group.remarks) {
+                  const anyResult = all.find((r: any) => r.subject === group.subject);
+                  if (anyResult) {
+                    group.remarks = anyResult.teacher_remark || '';
+                    group.initials = anyResult.teacher_initials ?? '';
+                  }
+                }
+              });
+              
+              const subjects = Object.values(subjectGroups);
+              
+              return subjects.map((group, idx) => `
                 <tr>
-                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${subject}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${fullMarks}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${midTerm}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${endOfTerm}</td>
-                  <td style="border: 1px solid #000; padding: 6px;">${teacherRemarks}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${initials}</td>
+                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold;">${group.subject}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.total_marks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.mid ?? ''}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.end ?? ''}</td>
+                  <td style="border: 1px solid #000; padding: 6px;">${group.remarks}</td>
+                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.initials}</td>
                 </tr>
-              `;
-            }).join('') : `
+              `).join('');
+            })() : `
               <tr>
                 <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">No results available</td>
               </tr>

@@ -309,13 +309,10 @@ export function PrimaryReportGenerator() {
         return;
       }
 
-      // Fetch exam results for either all sets in the term or a specific selected set
+      // Fetch processed exam results for either all sets in the term or a specific selected set
       let examResultsQuery = supabase
-        .from('exam_results')
-        .select(`
-          *,
-          exam_sets!inner(*)
-        `)
+        .from('processed_primary_exam_results')
+        .select('*')
         .eq('school_id', schoolId)
         .in('student_id', targetStudents.map(s => s.student_id));
 
@@ -1992,46 +1989,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
   
-  // State for teacher remarks settings
-  const [teacherRemarksSettings, setTeacherRemarksSettings] = useState<Record<string, Array<{ min_percent: number; max_percent: number; comment_text: string }>>>({});
-  
-  // Fetch teacher remarks settings for all subjects
-  useEffect(() => {
-    const fetchTeacherRemarksSettings = async () => {
-      if (!student.results || !Array.isArray(student.results)) return;
-      
-      const subjects = [...new Set(student.results.map((r: any) => r.subject).filter(Boolean))];
-      const settings: Record<string, Array<{ min_percent: number; max_percent: number; comment_text: string }>> = {};
-      
-      for (const subject of subjects) {
-        try {
-          const response = await fetch(`/api/teacher-remarks-settings?subject=${encodeURIComponent(subject)}`);
-          if (response.ok) {
-            const data = await response.json();
-            settings[subject] = data.ranges || [];
-          }
-        } catch (error) {
-          console.error(`Failed to fetch teacher remarks settings for ${subject}:`, error);
-        }
-      }
-      
-      setTeacherRemarksSettings(settings);
-    };
-    
-    fetchTeacherRemarksSettings();
-  }, [student.results]);
-  
-  // Helper function to get teacher remark based on percentage
-  const getTeacherRemark = (subject: string, marks: number, totalMarks: number) => {
-    const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
-    const settings = teacherRemarksSettings[subject] || [];
-    
-    const matchingRange = settings.find(range => 
-      percentage >= range.min_percent && percentage <= range.max_percent
-    );
-    
-    return matchingRange?.comment_text || '';
-  };
+  // Teacher remarks are now pre-processed and stored in the processed_primary_exam_results table
 
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
@@ -2168,7 +2126,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
               return (
                 <>
                   {(() => {
-                    // Use the exact same logic as the PDF generation
+                    // Use processed data structure - each row is already a subject with exam set info
                     const all = Array.isArray(student.results) ? student.results : [];
                     const isMid = (name: any) => {
                       const n = String(name || '').trim().toLowerCase();
@@ -2184,7 +2142,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                     
                     all.forEach((r: any) => {
                       const subject = r.subject ?? '';
-                      const examSetName = r.exam_sets?.name || '';
+                      const examSetName = r.exam_set_name || '';
                       
                       if (!subjectGroups[subject]) {
                         subjectGroups[subject] = {
@@ -2199,24 +2157,18 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                         subjectGroups[subject].mid = r.marks_obtained ?? '';
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = r.marks_obtained ?? '';
-                        // Use teacher remarks settings instead of raw remarks
-                        const marks = r.marks_obtained ?? 0;
-                        const totalMarks = r.total_marks ?? 100;
-                        const teacherRemark = getTeacherRemark(subject, marks, totalMarks);
-                        subjectGroups[subject].remarks = teacherRemark || r.remarks || r.overall_remark || '';
+                        // Use pre-processed teacher remarks from the processed table
+                        subjectGroups[subject].remarks = r.teacher_remark || '';
                         subjectGroups[subject].initials = r.teacher_initials ?? '';
                       }
                     });
                     
-                    // If no End of Term remarks found, use any available remarks with teacher remarks settings
+                    // If no End of Term remarks found, use any available remarks
                     Object.values(subjectGroups).forEach((group: any) => {
                       if (!group.remarks) {
                         const anyResult = all.find((r: any) => r.subject === group.subject);
                         if (anyResult) {
-                          const marks = anyResult.marks_obtained ?? 0;
-                          const totalMarks = anyResult.total_marks ?? 100;
-                          const teacherRemark = getTeacherRemark(group.subject, marks, totalMarks);
-                          group.remarks = teacherRemark || anyResult.remarks || anyResult.overall_remark || '';
+                          group.remarks = anyResult.teacher_remark || '';
                           group.initials = anyResult.teacher_initials ?? '';
                         }
                       }
