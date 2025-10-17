@@ -1367,8 +1367,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
 
       <!-- COMMENTS -->
       <div class="comments">
-        <h3>Class Teacher's Comment</h3>
-        <p>${student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}</p>
+        <h3>Class Teacher's Comment: ${student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}</h3>
         <p>Name: ${student.comments?.class_teacher_name || '__________'} | Signature: ${student.comments?.class_teacher_signature || '__________'} | Date: ${student.comments?.class_teacher_date || '17 September, 2025'}</p>
 
         <h3>Head Teacher's Comment</h3>

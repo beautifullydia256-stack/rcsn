@@ -2212,10 +2212,10 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       {/* COMMENTS & FOOTER to match provided HTML */}
       <div className="mt-4">
         <div className="mb-4">
-          <div className="font-bold mb-1">Class Teacher's Comments:</div>
-          <div className="border border-dashed border-gray-700 p-3" style={{ minHeight: '60px' }}>
-            {student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}
+          <div className="font-bold mb-1">
+            Class Teacher's Comments: {student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}
           </div>
+          <div className="border border-dashed border-gray-700 p-3" style={{ minHeight: '60px' }}></div>
           <div className="mt-2">Signature: ______________________</div>
         </div>
         <div className="mb-4">
