@@ -1292,10 +1292,10 @@ export default function TeacherExamResultsClassPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-white text-xl font-semibold">Comment Rules for {className}</h2>
+                <h2 className="text-white text-xl font-semibold">Class Teacher's Comments for {className}</h2>
                 <button onClick={() => setShowCommentRules(false)} className="text-white/60 hover:text-white">✕</button>
               </div>
-              <p className="text-white/70 text-sm mb-4">Comments will auto-apply based on a student's average performance.</p>
+              <p className="text-white/70 text-sm mb-4">Class Teacher's Comments will auto-apply based on a student's average performance.</p>
               <div className="space-y-3">
                 {commentRules.map((r, idx) => (
                   <div key={idx} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
