@@ -1506,14 +1506,27 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           font-weight: bold;
         }
         
-        .key-terms {
+        .comments {
           margin-bottom: 20px;
           font-size: 10pt;
         }
         
-        .key-terms h3 {
+        .comments h3 {
           font-size: 11pt;
           font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .comments p {
+          margin-bottom: 5px;
+        }
+        
+        .next-term {
+          margin-bottom: 20px;
+          font-size: 11pt;
+        }
+        
+        .next-term p {
           margin-bottom: 5px;
         }
         
@@ -1675,25 +1688,21 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         </tbody>
       </table>
 
-      <!-- SUMMARY -->
-      <div class="summary">
-        <div style="display: flex; align-items: center; gap: 20px;">
-          <div><strong>AVERAGE SCORE / PTS (OUT OF 20) / IDENTIFIER:</strong> 17</div>
-        </div>
-        <div style="margin-top: 10px;">
-          <div><strong>Overall Total Score:</strong> ${avg}</div>
-          <div><strong>Overall Identifier:</strong> 2</div>
-          <div><strong>Overall Learner Achievement:</strong> Moderate (Corresponding to Identifier 2)</div>
-        </div>
+      <!-- COMMENTS -->
+      <div class="comments">
+        <h3>Class Teacher's Comments:</h3>
+        <p>${student.comments?.class_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
+
+        <h3>Headteacher's Comments:</h3>
+        <p>${student.comments?.head_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
       </div>
 
-      <!-- KEY TERMS -->
-      <div class="key-terms">
-        <h3>KEY TERMS</h3>
-        <p><strong>3:</strong> Accomplished (80% and above)</p>
-        <p><strong>2:</strong> Moderate (60% - 79%)</p>
-        <p><strong>1:</strong> Basic (50% - 59%)</p>
-        <p><strong>Blank:</strong> Below Basic (Below 50%)</p>
+      <!-- NEXT TERM -->
+      <div class="next-term">
+        <p><strong>Next term begins on:</strong> ____________________</p>
+        <p><strong>End on:</strong> ____________________</p>
       </div>
 
       <!-- FOOTER -->
