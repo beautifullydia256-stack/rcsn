@@ -938,6 +938,12 @@ export default function TeacherExamResultsClassPage() {
             Comment Rules
             </button>
             <button
+              onClick={() => router.push('/dashboard/teacher/exam-results/class-teachers-comments')}
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
+            >
+              Class Teachers Comments
+            </button>
+            <button
               onClick={() => router.push('/dashboard/teacher/exam-results')}
               className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
             >
