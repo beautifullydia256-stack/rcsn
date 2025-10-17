@@ -2617,13 +2617,11 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
       <div class="section-title">Subject Performance</div>
       ${(() => {
         const all = Array.isArray(student.results) ? student.results : [];
-        // Debug: log the structure of results to understand the data format
-        console.log('Student results structure:', JSON.stringify(all.slice(0, 1), null, 2));
         
         const isMid = (name: any) => String(name || '').trim().toLowerCase() === 'mid term';
         const isEnd = (name: any) => String(name || '').trim().toLowerCase() === 'end of term';
-        const mid = all.filter((r:any) => isMid(r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
-        const end = all.filter((r:any) => isEnd(r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
+        const mid = all.filter((r:any) => isMid(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
+        const end = all.filter((r:any) => isEnd(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
         
         // If no results are found in either category, show all results in both sections
         const hasMidResults = mid.length > 0;
