@@ -324,6 +324,9 @@ export function PrimaryReportGenerator() {
 
       const { data: examResults } = await examResultsQuery;
 
+      // Get all subjects that ANY student has results for in this class/exam set
+      const allSubjects = [...new Set(examResults?.map(er => er.subject).filter(Boolean) || [])];
+
       // Fetch attendance data for the entire class (to get first attendance date for the class)
       const { data: attendanceData } = await supabase
         .from('student_attendance')
@@ -426,6 +429,25 @@ export function PrimaryReportGenerator() {
         nextTermBegins: nextTermBegins,
         students: targetStudents.map(student => {
           const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
+          
+          // Add "MISSED" entries for subjects this student doesn't have results for
+          const studentSubjects = studentResults.map(r => r.subject);
+          const missingSubjects = allSubjects.filter(subject => !studentSubjects.includes(subject));
+          
+          // Create MISSED entries for missing subjects
+          const missedResults = missingSubjects.map(subject => ({
+            subject,
+            marks_obtained: 0,
+            total_marks: 100,
+            grade: 'MISSED',
+            teacher_remark: 'MISSED',
+            teacher_initials: 'MISSED',
+            exam_set_name: studentResults[0]?.exam_set_name || 'MISSED',
+            class_teacher_comment: studentResults[0]?.class_teacher_comment || 'MISSED'
+          }));
+          
+          // Combine actual results with missed results
+          const allStudentResults = [...studentResults, ...missedResults];
           const studentAttendance = attendanceData?.filter(a => a.student_id === student.student_id) || [];
           const studentFees = feesData?.filter(f => f.student_id === student.student_id) || [];
           const studentProjects = projectsData.filter(p => p.student_id === student.student_id);
@@ -435,10 +457,12 @@ export function PrimaryReportGenerator() {
           const studentPhoto = studentPhotos?.find(p => p.student_id === student.student_id);
           
           // Calculate summary with enhanced grading (handle missing data)
-          const totalMarks = studentResults.length > 0 ? studentResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
-          const totalPossibleMarks = studentResults.length > 0 ? studentResults.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
+          // Only count actual results (not MISSED) for calculations
+          const actualResults = studentResults.filter(r => r.grade !== 'MISSED');
+          const totalMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
+          const totalPossibleMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
-          const aggregate = studentResults.length > 0 ? calculateAggregate(studentResults) : null;
+          const aggregate = actualResults.length > 0 ? calculateAggregate(actualResults) : null;
           const division = average !== null ? calculateDivision(average) : 'N/A';
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
@@ -453,7 +477,7 @@ export function PrimaryReportGenerator() {
 
           return {
             ...student,
-            results: studentResults,
+            results: allStudentResults,
             attendance: studentAttendance,
             fees: studentFees,
             projects: studentProjects,
@@ -2154,14 +2178,14 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                       }
                       
                       if (isMid(examSetName)) {
-                        subjectGroups[subject].mid = r.marks_obtained ?? '';
+                        subjectGroups[subject].mid = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
                         // Use Mid Term results for remarks and initials if End of Term not available
                         if (!subjectGroups[subject].remarks) {
                           subjectGroups[subject].remarks = r.teacher_remark || '';
                           subjectGroups[subject].initials = r.teacher_initials ?? '';
                         }
                       } else if (isEnd(examSetName)) {
-                        subjectGroups[subject].end = r.marks_obtained ?? '';
+                        subjectGroups[subject].end = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
                         // Use pre-processed teacher remarks from the processed table
                         subjectGroups[subject].remarks = r.teacher_remark || '';
                         subjectGroups[subject].initials = r.teacher_initials ?? '';
