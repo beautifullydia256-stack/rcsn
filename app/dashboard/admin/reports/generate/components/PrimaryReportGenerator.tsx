@@ -1991,6 +1991,47 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
+  
+  // State for teacher remarks settings
+  const [teacherRemarksSettings, setTeacherRemarksSettings] = useState<Record<string, Array<{ min_percent: number; max_percent: number; comment_text: string }>>>({});
+  
+  // Fetch teacher remarks settings for all subjects
+  useEffect(() => {
+    const fetchTeacherRemarksSettings = async () => {
+      if (!student.results || !Array.isArray(student.results)) return;
+      
+      const subjects = [...new Set(student.results.map((r: any) => r.subject).filter(Boolean))];
+      const settings: Record<string, Array<{ min_percent: number; max_percent: number; comment_text: string }>> = {};
+      
+      for (const subject of subjects) {
+        try {
+          const response = await fetch(`/api/teacher-remarks-settings?subject=${encodeURIComponent(subject)}`);
+          if (response.ok) {
+            const data = await response.json();
+            settings[subject] = data.ranges || [];
+          }
+        } catch (error) {
+          console.error(`Failed to fetch teacher remarks settings for ${subject}:`, error);
+        }
+      }
+      
+      setTeacherRemarksSettings(settings);
+    };
+    
+    fetchTeacherRemarksSettings();
+  }, [student.results]);
+  
+  // Helper function to get teacher remark based on percentage
+  const getTeacherRemark = (subject: string, marks: number, totalMarks: number) => {
+    const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
+    const settings = teacherRemarksSettings[subject] || [];
+    
+    const matchingRange = settings.find(range => 
+      percentage >= range.min_percent && percentage <= range.max_percent
+    );
+    
+    return matchingRange?.comment_text || '';
+  };
 
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
@@ -2158,18 +2199,24 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                         subjectGroups[subject].mid = r.marks_obtained ?? '';
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = r.marks_obtained ?? '';
-                        // Prioritize remarks from End of Term exam set
-                        subjectGroups[subject].remarks = r.remarks || r.overall_remark || '';
+                        // Use teacher remarks settings instead of raw remarks
+                        const marks = r.marks_obtained ?? 0;
+                        const totalMarks = r.total_marks ?? 100;
+                        const teacherRemark = getTeacherRemark(subject, marks, totalMarks);
+                        subjectGroups[subject].remarks = teacherRemark || r.remarks || r.overall_remark || '';
                         subjectGroups[subject].initials = r.teacher_initials ?? '';
                       }
                     });
                     
-                    // If no End of Term remarks found, use any available remarks
+                    // If no End of Term remarks found, use any available remarks with teacher remarks settings
                     Object.values(subjectGroups).forEach((group: any) => {
                       if (!group.remarks) {
                         const anyResult = all.find((r: any) => r.subject === group.subject);
                         if (anyResult) {
-                          group.remarks = anyResult.remarks || anyResult.overall_remark || '';
+                          const marks = anyResult.marks_obtained ?? 0;
+                          const totalMarks = anyResult.total_marks ?? 100;
+                          const teacherRemark = getTeacherRemark(group.subject, marks, totalMarks);
+                          group.remarks = teacherRemark || anyResult.remarks || anyResult.overall_remark || '';
                           group.initials = anyResult.teacher_initials ?? '';
                         }
                       }
