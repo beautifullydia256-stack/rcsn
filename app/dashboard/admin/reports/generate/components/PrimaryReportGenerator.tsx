@@ -1869,76 +1869,78 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             </tr>
           </thead>
           <tbody>
-            {student.results.length > 0 ? (
-              student.results.map((result: any, index: number) => {
-                const subject = result.subject ?? '';
-                const fullMarks = result.total_marks ?? '100';
-                const midTerm = result.formative_score ?? '';
-                const endOfTerm = result.exam_score ?? '';
-                const teacherRemarks = result.remarks || result.overall_remark || '';
-                const initials = result.teacher_initials ?? '';
-                
+            {(() => {
+              const results = student.results || [];
+              if (results.length === 0) {
                 return (
-                  <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold' }}>{subject}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{fullMarks}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{midTerm}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{endOfTerm}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }}>{teacherRemarks}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
+                  <tr>
+                    <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
                   </tr>
                 );
-              })
-            ) : (
-              <tr>
-                <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
-              </tr>
-            )}
+              }
+              let totalFullMarks = 0;
+              return (
+                <>
+                  {results.map((r: any, idx: number) => {
+                    const subject = r.subject ?? '';
+                    const fullMarks = 100; // Always 100 for Lower Section
+                    // Derive MID TERM and END OF TERM from specific exam sets for this subject
+                    const subjectResults = (student.results || []).filter((rr: any) => String(rr.subject || '').toLowerCase() === String(subject).toLowerCase());
+                    const midRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('mid'));
+                    const endRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('end'));
+                    const mid = midRes?.marks_obtained ?? '';
+                    const end = endRes?.marks_obtained ?? '';
+                    const computeSimpleRemark = (score: number | string | undefined) => {
+                      const n = typeof score === 'number' ? score : Number(score);
+                      if (isNaN(n)) return '';
+                      if (n <= 40) return 'Needs more effort. Try harder next time.';
+                      if (n <= 60) return 'Fair work. You can do better.';
+                      if (n <= 80) return 'Good work. Keep it up!';
+                      return 'Excellent! Keep shining!';
+                    };
+                    const remarks = (endRes?.remarks || endRes?.overall_remark || r.remarks || r.overall_remark) ?? computeSimpleRemark(end);
+                    const initials = (endRes?.teacher_initials || r.teacher_initials) ?? '';
+                    totalFullMarks += fullMarks;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{subject}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{fullMarks}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{mid}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{end}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{remarks}</td>
+                        <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{initials}</td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'left' }}>TOTAL</td>
+                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'center' }}>{totalFullMarks}</td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
+                    <td style={{ border: '1px solid #000', padding: '6px' }} colSpan={2}></td>
+                  </tr>
+                </>
+              );
+            })()}
           </tbody>
         </table>
       </div>
 
-      {/* OVERALL SUMMARY */}
-      <div className="mb-4 text-[11pt]">
-        <div className="flex items-center gap-4">
-          <div><strong>Overall Average:</strong> {avg}</div>
-          <div><strong>Level of Achievement:</strong> 2</div>
-          <div><strong>Descriptor:</strong> Moderate</div>
-          <div className="text-[10pt] italic">Overall Learner's achievements for the subjects attended</div>
-        </div>
-      </div>
-
-      {/* KEY TO TERMS */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-bold mb-2">Key to Terms Used:</h3>
-        <ul className="list-disc ml-6 space-y-1">
-          <li><strong>Blank/Absent:</strong> Learner does not do the subject/was absent.</li>
-          <li><strong>0.9-1.49 (Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement.</li>
-          <li><strong>1.5-2.48 (Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement.</li>
-          <li><strong>2.5-3.00 (Outstanding):</strong> Most or all learning outcomes achieved.</li>
-        </ul>
-      </div>
-
       {/* COMMENTS */}
       <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-1">Teacher's Comments</h3>
-        <div className="mb-3">
-          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || 'Can do even better.'}</p>
-          <p className="mt-1">Signature: {student.comments?.class_teacher_signature || '__________'}</p>
-        </div>
-        
-        <div className="mb-3">
-          <p><strong>Head Teacher's Comment:</strong> {student.comments?.head_teacher_text || 'More concentration needed'}</p>
-          <p className="mt-1">Signature: {student.comments?.head_teacher_signature || '__________'}</p>
-        </div>
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
+        <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
+
+        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
+        <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
       </div>
 
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
-        <div className="flex gap-4">
-          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || '6TH FEBRUARY 2023'}</div>
-          <div><strong>Ends On:</strong> __________</div>
-        </div>
+        <p><strong>Next term begins on:</strong> ____________________</p>
+        <p><strong>End on:</strong> ____________________</p>
       </div>
 
       {/* DISCLAIMER */}
