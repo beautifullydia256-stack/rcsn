@@ -107,19 +107,30 @@ export default function ClassTeachersCommentsPage() {
 
         if (defaultsError) throw defaultsError;
 
-        const mapped = (defaults || []).map((d) => ({
+        const mapped = (defaults || [])
+          .filter((d:any) => d && d.min_percent != null && d.max_percent != null)
+          .map((d:any) => ({
           school_id: schoolId,
           class_name: selectedClass,
-          min_percent: d.min_percent as number,
-          max_percent: d.max_percent as number,
-          comment_text: d.comment_text as string,
+          min_percent: Number(d.min_percent) || 0,
+          max_percent: Number(d.max_percent) || 0,
+          comment_text: String(d.comment_text ?? ''),
         } as CommentRule));
 
         setCommentRules(mapped);
         return;
       }
 
-      setCommentRules(data || []);
+      // sanitize specific rules
+      const sanitized = (data || [])
+        .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
+        .map((r:any) => ({
+          ...r,
+          min_percent: Number(r.min_percent) || 0,
+          max_percent: Number(r.max_percent) || 0,
+          comment_text: String(r.comment_text ?? ''),
+        }));
+      setCommentRules(sanitized);
     } catch (error) {
       console.error('Error loading comment rules:', error);
     }
@@ -343,7 +354,7 @@ export default function ClassTeachersCommentsPage() {
             ) : (
               commentRules.map((rule) => (
                 <motion.div
-                  key={rule.id}
+                  key={`${rule.class_name}-${rule.min_percent}-${rule.max_percent}-${rule.id ?? 'default'}`}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="p-4 bg-white/5 rounded-lg border border-white/10"
@@ -386,7 +397,7 @@ export default function ClassTeachersCommentsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                       <div>
                         <span className="text-white/60 text-sm">Range:</span>
-                        <span className="text-white font-medium ml-2">{rule.min_percent}% - {rule.max_percent}%</span>
+                        <span className="text-white font-medium ml-2">{Number.isFinite(rule.min_percent as any) ? rule.min_percent : 0}% - {Number.isFinite(rule.max_percent as any) ? rule.max_percent : 0}%</span>
                       </div>
                       <div>
                         <span className="text-white/60 text-sm">Comment:</span>
