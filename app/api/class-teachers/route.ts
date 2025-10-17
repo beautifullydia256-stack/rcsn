@@ -64,7 +64,12 @@ export async function POST(request: NextRequest) {
       if (!templateId) {
         const { data: created, error: createErr } = await supabase
           .from('report_templates')
-          .insert({ school_id, name: 'Default Template', is_default: true })
+          .insert({ 
+            school_id, 
+            name: 'Default Template', 
+            is_default: true,
+            html_content: '<div class="report-template"><h1>Default Report Template</h1><p>This is a default template created automatically.</p></div>'
+          })
           .select('id')
           .single();
         if (createErr) return NextResponse.json({ error: createErr.message }, { status: 500 });
