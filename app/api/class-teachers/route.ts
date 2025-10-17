@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('school_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     if (uerr || !urow?.school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     const school_id = urow.school_id as string;
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       .select('teacher_id')
       .eq('teacher_id', teacher_id)
       .eq('school_id', school_id)
-      .single();
+      .maybeSingle();
     if (terr || !trow) return NextResponse.json({ error: 'Teacher not found in this school' }, { status: 400 });
 
     // Ensure report template exists (avoid template_id null violation later)
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
       }
       // If still none, create a minimal default template row
       if (!templateId) {
-        const { data: created, error: createErr } = await supabase
+      const { data: created, error: createErr } = await supabase
           .from('report_templates')
           .insert({ 
             school_id, 
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
             css_content: '.report-template { font-family: Arial, sans-serif; margin: 20px; } .report-template h1 { color: #333; } .report-template p { color: #666; }'
           })
           .select('id')
-          .single();
+          .maybeSingle();
         if (createErr) return NextResponse.json({ error: createErr.message }, { status: 500 });
         templateId = (created as any)?.id || null;
       }
@@ -97,16 +97,15 @@ export async function POST(request: NextRequest) {
           .eq('class_name', class_name);
         if (upTplErr) return NextResponse.json({ error: upTplErr.message }, { status: 500 });
       }
-      // No longer enforce single class teacher via this table; we record in class_teachers table below
-      const { data, error: upErr } = await supabase
+      // Re-read a single record for return (avoid .single errors if duplicates exist)
+      const { data: reread } = await supabase
         .from('class_template_settings')
-        .update({})
+        .select('*')
         .eq('school_id', school_id)
         .eq('class_name', class_name)
-        .select('*')
-        .single();
-      if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
-      setting = data;
+        .limit(1)
+        .maybeSingle();
+      setting = reread || existing;
     } else {
       // Create new record with guaranteed template
       const { data, error: insErr } = await supabase
@@ -118,7 +117,7 @@ export async function POST(request: NextRequest) {
           is_o_level: false
         })
         .select('*')
-        .single();
+        .maybeSingle();
       if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
       setting = data;
     }
@@ -159,7 +158,7 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('school_id')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
     const school_id = urow?.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
