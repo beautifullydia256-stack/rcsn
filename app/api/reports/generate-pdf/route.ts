@@ -2618,8 +2618,17 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
       ${(() => {
         const all = Array.isArray(student.results) ? student.results : [];
         
-        const isMid = (name: any) => String(name || '').trim().toLowerCase() === 'mid term';
-        const isEnd = (name: any) => String(name || '').trim().toLowerCase() === 'end of term';
+        // Debug: log all exam set names to see what we're working with
+        console.log('All exam set names found:', all.map(r => r.exam_sets?.name || 'NO_NAME').join(', '));
+        
+        const isMid = (name: any) => {
+          const n = String(name || '').trim().toLowerCase();
+          return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+        };
+        const isEnd = (name: any) => {
+          const n = String(name || '').trim().toLowerCase();
+          return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+        };
         const mid = all.filter((r:any) => isMid(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
         const end = all.filter((r:any) => isEnd(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
         
