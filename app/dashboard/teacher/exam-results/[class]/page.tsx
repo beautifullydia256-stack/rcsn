@@ -399,7 +399,23 @@ export default function TeacherExamResultsClassPage() {
           } catch {}
         }
 
-        // Load Class Teacher’s ranges for this class
+        // Check if current teacher is class teacher for this class
+        try {
+          const { data: classTeacherData } = await supabase
+            .from('class_template_settings')
+            .select('class_teacher_id')
+            .eq('school_id', schoolId)
+            .eq('class_name', className)
+            .maybeSingle();
+          
+          const currentTeacherId = teacherId || user.id;
+          setIsClassTeacher(classTeacherData?.class_teacher_id === currentTeacherId);
+        } catch (err) {
+          console.error('Error checking class teacher status:', err);
+          setIsClassTeacher(false);
+        }
+
+        // Load Class Teacher's ranges for this class
         try {
           const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
           if (resCT.ok) {
@@ -528,6 +544,7 @@ export default function TeacherExamResultsClassPage() {
     { min_percent: 61, max_percent: 80, comment_text: 'A good performance with steady progress. Continued effort and focus will lead to even better achievement.' },
     { min_percent: 81, max_percent: 100, comment_text: 'An excellent performance showing discipline and hard work. Keep up this spirit and continue striving for excellence.' },
   ]);
+  const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
 
   // Given an aggregate points value, compute primary Division label
   const getPrimaryDivisionFromAggregate = (aggregatePoints: number, hasIncompleteResults: boolean = false): string => {
@@ -967,12 +984,14 @@ export default function TeacherExamResultsClassPage() {
             >
               Teacher’s Remarks Settings
             </button>
-            <button
-              onClick={() => setShowClassTeacherComments(true)}
-              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
-            >
-              Class Teacher’s Comments Settings
-            </button>
+            {isClassTeacher && (
+              <button
+                onClick={() => setShowClassTeacherComments(true)}
+                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
+              >
+                Class Teacher's Comments Settings
+              </button>
+            )}
             {/* Comments buttons removed per request */}
             <button
               onClick={() => router.push('/dashboard/teacher/exam-results')}
