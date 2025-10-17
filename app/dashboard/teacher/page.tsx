@@ -60,6 +60,7 @@ export default function TeacherDashboard() {
   const [search, setSearch] = useState<string>('');
   const [teacherRowId, setTeacherRowId] = useState<string | null>(null);
   const [studentsAttendedToday, setStudentsAttendedToday] = useState<number>(0);
+  const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
 
   useEffect(() => {
     fetchData();
@@ -198,6 +199,20 @@ export default function TeacherDashboard() {
           if (Array.isArray(payload?.assignments)) {
             tcs = payload.assignments;
           }
+        }
+      } catch {}
+
+      // Determine class teacher badge
+      try {
+        if (userData?.school_id && (teacherRow?.teacher_id || user.id)) {
+          const teacherIdToCheck = teacherRow?.teacher_id || user.id;
+          const { data: ct } = await supabase
+            .from('class_teachers')
+            .select('id')
+            .eq('school_id', userData.school_id)
+            .eq('teacher_id', teacherIdToCheck)
+            .limit(1);
+          setIsClassTeacher(!!(ct && ct.length > 0));
         }
       } catch {}
 
@@ -575,7 +590,14 @@ export default function TeacherDashboard() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xl">👨‍🏫</div>
             <div>
-              <div className="text-white text-xl font-semibold">Welcome, {teacherName}</div>
+              <div className="text-white text-xl font-semibold flex items-center gap-2">
+                <span>Welcome, {teacherName}</span>
+                {isClassTeacher && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-600/20 text-purple-200 border border-purple-600/40 text-xs">
+                    ⭐ Class Teacher
+                  </span>
+                )}
+              </div>
               <div className="text-white/70 text-sm">{subjectsAssigned.length} subjects • {classesAssigned.length} classes</div>
             </div>
           </div>

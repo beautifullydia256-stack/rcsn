@@ -399,17 +399,17 @@ export default function TeacherExamResultsClassPage() {
           } catch {}
         }
 
-        // Check if current teacher is class teacher for this class
+        // Check if current teacher is class teacher for this class (supports multiple via class_teachers)
         try {
-          const { data: classTeacherData } = await supabase
-            .from('class_template_settings')
-            .select('class_teacher_id')
+          const currentTeacherId = teacherId || user.id;
+          const { data: ctRows } = await supabase
+            .from('class_teachers')
+            .select('id')
             .eq('school_id', schoolId)
             .eq('class_name', className)
-            .maybeSingle();
-          
-          const currentTeacherId = teacherId || user.id;
-          setIsClassTeacher(classTeacherData?.class_teacher_id === currentTeacherId);
+            .eq('teacher_id', currentTeacherId)
+            .limit(1);
+          setIsClassTeacher(!!(ctRows && ctRows.length > 0));
         } catch (err) {
           console.error('Error checking class teacher status:', err);
           setIsClassTeacher(false);

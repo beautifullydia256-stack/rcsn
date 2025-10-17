@@ -41,13 +41,36 @@ export async function POST(request: NextRequest) {
       .single();
     if (terr || !trow) return NextResponse.json({ error: 'Teacher not found in this school' }, { status: 400 });
 
-    // Clear any existing class_teacher_id for this class (enforce uniqueness)
-    const { error: clearErr } = await supabase
-      .from('class_template_settings')
-      .update({ class_teacher_id: null })
-      .eq('school_id', school_id)
-      .eq('class_name', class_name);
-    if (clearErr) return NextResponse.json({ error: clearErr.message }, { status: 500 });
+    // Ensure report template exists (avoid template_id null violation later)
+    let templateId: string | null = null;
+    {
+      const { data: defaultTemplate } = await supabase
+        .from('report_templates')
+        .select('id')
+        .eq('school_id', school_id)
+        .eq('is_default', true)
+        .maybeSingle();
+      templateId = (defaultTemplate as any)?.id || null;
+      if (!templateId) {
+        const { data: anyTemplate } = await supabase
+          .from('report_templates')
+          .select('id')
+          .eq('school_id', school_id)
+          .limit(1)
+          .maybeSingle();
+        templateId = (anyTemplate as any)?.id || null;
+      }
+      // If still none, create a minimal default template row
+      if (!templateId) {
+        const { data: created, error: createErr } = await supabase
+          .from('report_templates')
+          .insert({ school_id, name: 'Default Template', is_default: true })
+          .select('id')
+          .single();
+        if (createErr) return NextResponse.json({ error: createErr.message }, { status: 500 });
+        templateId = (created as any)?.id || null;
+      }
+    }
 
     // Check if class template setting exists
     const { data: existing } = await supabase
@@ -59,10 +82,19 @@ export async function POST(request: NextRequest) {
 
     let setting;
     if (existing) {
-      // Update existing record with class teacher
+      // Ensure non-null template
+      if (!existing.template_id) {
+        const { error: upTplErr } = await supabase
+          .from('class_template_settings')
+          .update({ template_id: templateId })
+          .eq('school_id', school_id)
+          .eq('class_name', class_name);
+        if (upTplErr) return NextResponse.json({ error: upTplErr.message }, { status: 500 });
+      }
+      // No longer enforce single class teacher via this table; we record in class_teachers table below
       const { data, error: upErr } = await supabase
         .from('class_template_settings')
-        .update({ class_teacher_id: teacher_id })
+        .update({})
         .eq('school_id', school_id)
         .eq('class_name', class_name)
         .select('*')
@@ -70,44 +102,29 @@ export async function POST(request: NextRequest) {
       if (upErr) return NextResponse.json({ error: upErr.message }, { status: 500 });
       setting = data;
     } else {
-      // Get a default template ID for this school
-      const { data: defaultTemplate, error: templateErr } = await supabase
-        .from('report_templates')
-        .select('id')
-        .eq('school_id', school_id)
-        .eq('is_default', true)
-        .maybeSingle();
-      
-      if (templateErr) return NextResponse.json({ error: templateErr.message }, { status: 500 });
-      
-      // If no default template exists, get the first available template
-      let templateId = defaultTemplate?.id;
-      if (!templateId) {
-        const { data: anyTemplate, error: anyTemplateErr } = await supabase
-          .from('report_templates')
-          .select('id')
-          .eq('school_id', school_id)
-          .limit(1)
-          .maybeSingle();
-        
-        if (anyTemplateErr) return NextResponse.json({ error: anyTemplateErr.message }, { status: 500 });
-        templateId = anyTemplate?.id;
-      }
-      
-      // Create new record with class teacher (template_id can be null if no templates exist)
+      // Create new record with guaranteed template
       const { data, error: insErr } = await supabase
         .from('class_template_settings')
         .insert({ 
           school_id, 
           class_name, 
-          class_teacher_id: teacher_id,
-          template_id: templateId || null,
+          template_id: templateId,
           is_o_level: false
         })
         .select('*')
         .single();
       if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 });
       setting = data;
+    }
+
+    // Record appointment in class_teachers table (allows multiple)
+    const { error: linkErr } = await supabase
+      .from('class_teachers')
+      .insert({ school_id, class_name, teacher_id })
+      .select('id')
+      .maybeSingle();
+    if (linkErr && !/duplicate key|unique/.test(linkErr.message)) {
+      return NextResponse.json({ error: linkErr.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, setting });
@@ -140,9 +157,10 @@ export async function GET(request: NextRequest) {
     const school_id = urow?.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
+    // Return classes with their class teachers (multiple)
     const { data, error } = await supabase
-      .from('class_template_settings')
-      .select('class_name, class_teacher_id')
+      .from('class_teachers')
+      .select('class_name, teacher_id')
       .eq('school_id', school_id)
       .order('class_name');
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
