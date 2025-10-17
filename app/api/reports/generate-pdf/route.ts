@@ -2619,7 +2619,10 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
         const all = Array.isArray(student.results) ? student.results : [];
         
         // Debug: log all exam set names to see what we're working with
+        console.log('=== REPORT DEBUG ===');
+        console.log('Total results found:', all.length);
         console.log('All exam set names found:', all.map(r => r.exam_sets?.name || 'NO_NAME').join(', '));
+        console.log('First result structure:', JSON.stringify(all[0], null, 2));
         
         const isMid = (name: any) => {
           const n = String(name || '').trim().toLowerCase();
@@ -2636,6 +2639,10 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
         const hasMidResults = mid.length > 0;
         const hasEndResults = end.length > 0;
         const showAllInBoth = !hasMidResults && !hasEndResults && all.length > 0;
+        
+        console.log('Mid results count:', mid.length);
+        console.log('End results count:', end.length);
+        console.log('Show all in both:', showAllInBoth);
 
         const renderRows = (rows: any[]) => rows.length > 0 ? rows.map((result: any) => {
           const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
