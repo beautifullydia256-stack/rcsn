@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
             school_id, 
             name: 'Default Template', 
             is_default: true,
-            html_content: '<div class="report-template"><h1>Default Report Template</h1><p>This is a default template created automatically.</p></div>'
+            html_content: '<div class="report-template"><h1>Default Report Template</h1><p>This is a default template created automatically.</p></div>',
+            css_content: '.report-template { font-family: Arial, sans-serif; margin: 20px; } .report-template h1 { color: #333; } .report-template p { color: #666; }'
           })
           .select('id')
           .single();
