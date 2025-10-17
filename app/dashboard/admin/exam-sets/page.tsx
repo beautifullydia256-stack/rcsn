@@ -14,6 +14,7 @@ export default function ExamSetsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentTerm, setCurrentTerm] = useState<{year: number; term: number} | null>(null);
+  const [processingResults, setProcessingResults] = useState<Record<string, boolean>>({});
   
   // Form state
   const [name, setName] = useState("");
@@ -233,6 +234,51 @@ export default function ExamSetsPage() {
     }
 
     setExamSets(prev => prev.filter(es => es.id !== id));
+  };
+
+  const processResults = async (examSetId: string, examSetName: string) => {
+    if (!schoolId) return;
+
+    setProcessingResults(prev => ({ ...prev, [examSetId]: true }));
+    setError(null);
+
+    try {
+      // Get all classes for this exam set
+      const examSet = examSets.find(es => es.id === examSetId);
+      if (!examSet) {
+        throw new Error('Exam set not found');
+      }
+
+      const classes = examSet.target_classes.length > 0 ? examSet.target_classes : classOptions;
+      
+      // Process results for each class
+      for (const className of classes) {
+        const response = await fetch('/api/processed-exam-results', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            exam_set_id: examSetId,
+            class_name: className
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`Failed to process results for ${className}: ${errorData.error}`);
+        }
+
+        const result = await response.json();
+        console.log(`Processed ${result.processed_count} results for ${className}`);
+      }
+
+      alert(`Successfully processed results for ${examSetName} across ${classes.length} class(es)`);
+    } catch (error: any) {
+      setError(error.message);
+    } finally {
+      setProcessingResults(prev => ({ ...prev, [examSetId]: false }));
+    }
   };
 
   const toggleActive = async (id: string, currentActive: boolean) => {
@@ -529,12 +575,21 @@ export default function ExamSetsPage() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => deleteExamSet(es.id)}
-                        className="px-3 py-1 text-xs rounded bg-red-500 hover:bg-red-400 transition-transform hover:scale-105 text-white"
-                      >
-                        Delete
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => processResults(es.id, es.name)}
+                          disabled={processingResults[es.id]}
+                          className="px-3 py-1 text-xs rounded bg-blue-500 hover:bg-blue-400 disabled:opacity-50 transition-transform hover:scale-105 text-white"
+                        >
+                          {processingResults[es.id] ? 'Processing...' : 'Process Results'}
+                        </button>
+                        <button
+                          onClick={() => deleteExamSet(es.id)}
+                          className="px-3 py-1 text-xs rounded bg-red-500 hover:bg-red-400 transition-transform hover:scale-105 text-white"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
