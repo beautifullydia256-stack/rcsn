@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
 
     let rows = specific && specific.length > 0 ? specific : null;
     if (!rows) {
-      // Fallback to global defaults (school_id IS NULL)
+      // Fallback to global defaults table
       const { data: global, error: globalErr } = await supabase
-        .from('report_comment_rules')
-        .select('min_percent, max_percent, comment_text')
-        .is('school_id', null)
-        .eq('class_name', className)
+        .from('report_comment_rules_defaults')
+        .select('min_percent, max_percent, comment_text, class_name, active')
+        .eq('active', true)
+        .or(`class_name.is.null,class_name.eq.${className}`)
         .order('min_percent');
       if (globalErr) return NextResponse.json({ error: globalErr.message }, { status: 500 });
       rows = global || [];
