@@ -69,6 +69,21 @@ export default function TeacherExamResultsClassPage() {
     { min_percent: 61, max_percent: 80, comment_text: 'Good work. Keep it up!' },
     { min_percent: 81, max_percent: 100, comment_text: 'Excellent! Keep shining!' },
   ]);
+
+  // Helper: load teacher remarks ranges for current subject
+  const loadTeacherRemarksRanges = async (subjectName: string) => {
+    try {
+      const resTRS = await fetch(`/api/teacher-remarks-settings?subject=${encodeURIComponent(subjectName)}`, { cache: 'no-store' as any });
+      if (resTRS.ok) {
+        const j = await resTRS.json();
+        const ranges = Array.isArray(j.ranges) ? j.ranges : [];
+        const sanitized = ranges
+          .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
+          .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
+        if (sanitized.length > 0) setTeacherRemarksRanges(sanitized);
+      }
+    } catch {}
+  };
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
   // Comments functionality removed per request
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
@@ -946,8 +961,27 @@ export default function TeacherExamResultsClassPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-xl font-semibold">Teacher’s Remarks Settings {selectedSubject ? `- ${selectedSubject}` : ''}</h2>
+              <h2 className="text-white text-xl font-semibold">Teacher’s Remarks Settings</h2>
               <button onClick={() => setShowTeacherRemarks(false)} className="text-white/60 hover:text-white">✕</button>
+            </div>
+            {/* Subject selector (teacher assigned subjects only) */}
+            <div className="mb-4">
+              <label className="block text-white/80 text-sm mb-2">Subject</label>
+              <select
+                value={selectedSubject}
+                onChange={async (e)=>{
+                  const subj = e.target.value;
+                  setSelectedSubject(subj);
+                  if (subj) await loadTeacherRemarksRanges(subj);
+                }}
+                className="w-full max-w-xs rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2"
+              >
+                <option className="bg-slate-800" value="">Select Subject</option>
+                {teacherSubjects.map(s => (
+                  <option key={s} value={s} className="bg-slate-800">{s}</option>
+                ))}
+              </select>
+              <p className="text-xs text-white/50 mt-1">Only subjects assigned to you for {className} are listed.</p>
             </div>
             <div className="space-y-3">
               {teacherRemarksRanges.map((r, idx) => (
@@ -987,14 +1021,20 @@ export default function TeacherExamResultsClassPage() {
                 <button onClick={()=> setShowTeacherRemarks(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
                 <button onClick={async ()=>{
                   try {
-                    if (!selectedSubject) {
-                      alert('Select a subject first');
-                      return;
+                    // ensure a subject is selected; auto pick first if none
+                    let subj = selectedSubject;
+                    if (!subj) {
+                      if (teacherSubjects.length === 0) {
+                        alert('No assigned subjects found for this class.');
+                        return;
+                      }
+                      subj = teacherSubjects[0];
+                      setSelectedSubject(subj);
                     }
                     const payload = teacherRemarksRanges
                       .filter(r => r.min_percent < r.max_percent)
                       .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
-                    const resp = await fetch('/api/teacher-remarks-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: selectedSubject, ranges: payload }) });
+                    const resp = await fetch('/api/teacher-remarks-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject: subj, ranges: payload }) });
                     if (!resp.ok) {
                       const j = await resp.json().catch(()=>({}));
                       throw new Error(j.error || 'Failed to save');
