@@ -368,7 +368,15 @@ export default function TeacherExamResultsClassPage() {
           const res = await fetch(`/api/teacher-comment-rules?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
           if (res.ok) {
             const j = await res.json();
-            setCommentRules(j.rules || []);
+            const rules = Array.isArray(j.rules) ? j.rules : [];
+            const sanitized = rules
+              .filter((r:any) => r && r.min_avg != null && r.max_avg != null)
+              .map((r:any) => ({
+                min_avg: Number(r.min_avg) || 0,
+                max_avg: Number(r.max_avg) || 0,
+                comment: String(r.comment ?? '')
+              }));
+            setCommentRules(sanitized);
           }
         } catch {}
 
