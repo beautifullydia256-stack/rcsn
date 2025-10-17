@@ -96,6 +96,29 @@ export default function ClassTeachersCommentsPage() {
         .order('min_percent', { ascending: true });
 
       if (error) throw error;
+
+      // If no school-specific rules, fall back to global defaults (read-only)
+      if (!data || data.length === 0) {
+        const { data: defaults, error: defaultsError } = await supabase
+          .from('report_comment_rules_defaults')
+          .select('min_percent, max_percent, comment_text, class_name, active')
+          .eq('active', true)
+          .order('min_percent', { ascending: true });
+
+        if (defaultsError) throw defaultsError;
+
+        const mapped = (defaults || []).map((d) => ({
+          school_id: schoolId,
+          class_name: selectedClass,
+          min_percent: d.min_percent as number,
+          max_percent: d.max_percent as number,
+          comment_text: d.comment_text as string,
+        } as CommentRule));
+
+        setCommentRules(mapped);
+        return;
+      }
+
       setCommentRules(data || []);
     } catch (error) {
       console.error('Error loading comment rules:', error);
