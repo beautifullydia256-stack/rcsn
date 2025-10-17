@@ -1614,28 +1614,57 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           </tr>
         </thead>
         <tbody>
-          ${ (student.results && student.results.length > 0) ? student.results.map((r: any) => {
+          ${ (() => {
+            const all = Array.isArray(student.results) ? student.results : [];
+            const isMid = (name: any) => {
+              const n = String(name || '').trim().toLowerCase();
+              return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+            };
+            const isEnd = (name: any) => {
+              const n = String(name || '').trim().toLowerCase();
+              return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+            };
+            
+            // Group results by subject
+            const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
+            
+            all.forEach((r: any) => {
               const subject = r.subject ?? '';
-              const full = 100;
-              const mid = r.formative_score ?? '';
-              const end = r.exam_score ?? '';
-              const remarks = r.remarks || r.overall_remark || '';
-              const initials = r.teacher_initials ?? '';
-              return `
-                <tr>
-                  <td style="border: 1px solid #000; padding: 6px; font-weight: bold; text-align: left;">${subject}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${full}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${mid}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${end}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: left;">${remarks}</td>
-                  <td style="border: 1px solid #000; padding: 6px; text-align: center;">${initials}</td>
-                </tr>
-              `;
-            }).join('') : `
+              const examSetName = r.exam_sets?.name || '';
+              
+              if (!subjectGroups[subject]) {
+                subjectGroups[subject] = {
+                  subject,
+                  total_marks: r.total_marks ?? 100,
+                  remarks: r.remarks || r.overall_remark || '',
+                  initials: r.teacher_initials ?? ''
+                };
+              }
+              
+              if (isMid(examSetName)) {
+                subjectGroups[subject].mid = r.marks_obtained ?? '';
+              } else if (isEnd(examSetName)) {
+                subjectGroups[subject].end = r.marks_obtained ?? '';
+              }
+            });
+            
+            const subjects = Object.values(subjectGroups);
+            
+            return subjects.length > 0 ? subjects.map((group) => `
+              <tr>
+                <td style="border: 1px solid #000; padding: 6px; font-weight: bold; text-align: left;">${group.subject}</td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.total_marks}</td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.mid ?? ''}</td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.end ?? ''}</td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: left;">${group.remarks}</td>
+                <td style="border: 1px solid #000; padding: 6px; text-align: center;">${group.initials}</td>
+              </tr>
+            `).join('') : `
               <tr>
                 <td colspan="6" style="border: 1px solid #000; padding: 8px; text-align: center; color: #555;">No results available</td>
               </tr>
-            ` }
+            `;
+          })()}
           <tr>
             <td style="border: 1px solid #000; padding: 6px; font-weight: bold; text-align: left;">TOTAL</td>
             <td style="border: 1px solid #000; padding: 6px; font-weight: bold; text-align: center;">${totalFullMarks}</td>
