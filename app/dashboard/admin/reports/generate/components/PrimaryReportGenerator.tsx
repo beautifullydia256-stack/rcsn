@@ -1886,10 +1886,22 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                     const fullMarks = 100; // Always 100 for Lower Section
                     // Derive MID TERM and END OF TERM from specific exam sets for this subject
                     const subjectResults = (student.results || []).filter((rr: any) => String(rr.subject || '').toLowerCase() === String(subject).toLowerCase());
+                    
+                    // Debug logging
+                    console.log('=== PREVIEW DEBUG ===');
+                    console.log('Subject:', subject);
+                    console.log('Subject results:', subjectResults);
+                    console.log('All exam set names:', subjectResults.map(rr => rr.exam_sets?.name || rr.exam_set_name || 'NO_NAME'));
+                    
                     const midRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('mid'));
                     const endRes = subjectResults.find((rr: any) => String(rr.exam_sets?.name || rr.exam_set_name || '').toLowerCase().includes('end'));
                     const mid = midRes?.marks_obtained ?? '';
                     const end = endRes?.marks_obtained ?? '';
+                    
+                    console.log('Mid result:', midRes);
+                    console.log('End result:', endRes);
+                    console.log('Mid value:', mid);
+                    console.log('End value:', end);
                     const computeSimpleRemark = (score: number | string | undefined) => {
                       const n = typeof score === 'number' ? score : Number(score);
                       if (isNaN(n)) return '';
