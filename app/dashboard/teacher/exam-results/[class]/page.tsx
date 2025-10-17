@@ -63,6 +63,7 @@ export default function TeacherExamResultsClassPage() {
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
   const [showTeacherRemarks, setShowTeacherRemarks] = useState(false);
+  const [showClassTeacherComments, setShowClassTeacherComments] = useState(false);
   const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>>([
     { min_percent: 0, max_percent: 40, comment_text: 'Needs more effort. Try harder next time.' },
     { min_percent: 41, max_percent: 60, comment_text: 'Fair work. You can do better.' },
@@ -398,6 +399,19 @@ export default function TeacherExamResultsClassPage() {
           } catch {}
         }
 
+        // Load Class Teacher’s ranges for this class
+        try {
+          const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
+          if (resCT.ok) {
+            const j = await resCT.json();
+            const ranges = Array.isArray(j.ranges) ? j.ranges : [];
+            const sanitized = ranges
+              .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
+              .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
+            if (sanitized.length > 0) setClassTeacherRanges(sanitized);
+          }
+        } catch {}
+
         // Comments removed per request
 
         // (Removed) Loading Teacher's Remarks default per class per request
@@ -508,6 +522,12 @@ export default function TeacherExamResultsClassPage() {
     { min: 40, max: 44, grade: 'Pass 8' },
     { min: 0, max: 39, grade: 'F9' },
   ];
+  const [classTeacherRanges, setClassTeacherRanges] = useState<Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>>([
+    { min_percent: 0, max_percent: 40, comment_text: 'The student needs to work much harder. With better focus and effort, there is room for great improvement next term.' },
+    { min_percent: 41, max_percent: 60, comment_text: 'A fair performance, showing some understanding. More consistency and commitment are needed to reach higher results.' },
+    { min_percent: 61, max_percent: 80, comment_text: 'A good performance with steady progress. Continued effort and focus will lead to even better achievement.' },
+    { min_percent: 81, max_percent: 100, comment_text: 'An excellent performance showing discipline and hard work. Keep up this spirit and continue striving for excellence.' },
+  ]);
 
   // Given an aggregate points value, compute primary Division label
   const getPrimaryDivisionFromAggregate = (aggregatePoints: number, hasIncompleteResults: boolean = false): string => {
@@ -947,6 +967,12 @@ export default function TeacherExamResultsClassPage() {
             >
               Teacher’s Remarks Settings
             </button>
+            <button
+              onClick={() => setShowClassTeacherComments(true)}
+              className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
+            >
+              Class Teacher’s Comments Settings
+            </button>
             {/* Comments buttons removed per request */}
             <button
               onClick={() => router.push('/dashboard/teacher/exam-results')}
@@ -1051,6 +1077,71 @@ export default function TeacherExamResultsClassPage() {
         </div>
       )}
 
+      {/* Class Teacher’s Comments Settings Modal */}
+      {showClassTeacherComments && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-white text-xl font-semibold">Class Teacher’s Comments Settings - {className}</h2>
+              <button onClick={() => setShowClassTeacherComments(false)} className="text-white/60 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-3">
+              {classTeacherRanges.map((r, idx) => (
+                <div key={`${r.id || 'new'}-${idx}`} className="grid grid-cols-1 md:grid-cols-6 gap-2 items-center border border-white/10 rounded-lg p-3">
+                  <label className="text-white/70 text-sm">Min %
+                    <input type="number" min={0} max={100} value={r.min_percent}
+                      onChange={e=>{
+                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                        setClassTeacherRanges(prev => prev.map((x,i)=> i===idx ? { ...x, min_percent: v } : x));
+                      }}
+                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                  </label>
+                  <label className="text-white/70 text-sm">Max %
+                    <input type="number" min={0} max={100} value={r.max_percent}
+                      onChange={e=>{
+                        const v = Math.max(0, Math.min(100, parseInt(e.target.value)||0));
+                        setClassTeacherRanges(prev => prev.map((x,i)=> i===idx ? { ...x, max_percent: v } : x));
+                      }}
+                      className="w-full mt-1 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                  </label>
+                  <div className="md:col-span-3">
+                    <label className="text-white/70 text-sm">Comment</label>
+                    <textarea value={r.comment_text}
+                      onChange={e=> setClassTeacherRanges(prev => prev.map((x,i)=> i===idx ? { ...x, comment_text: e.target.value } : x))}
+                      rows={2}
+                      className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                  </div>
+                  <div className="flex items-end">
+                    <button onClick={()=> setClassTeacherRanges(prev => prev.filter((_,i)=>i!==idx))} className="px-3 py-2 rounded bg-red-500 hover:bg-red-400 text-white text-sm">Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-4">
+              <button onClick={()=> setClassTeacherRanges(prev => [...prev, { min_percent: 0, max_percent: 100, comment_text: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
+              <div className="flex gap-2">
+                <button onClick={()=> setShowClassTeacherComments(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
+                <button onClick={async ()=>{
+                  try {
+                    const payload = classTeacherRanges
+                      .filter(r => r.min_percent < r.max_percent)
+                      .map(r => ({ min_percent: r.min_percent, max_percent: r.max_percent, comment_text: r.comment_text }));
+                    const resp = await fetch('/api/class-teacher-comments-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: className, ranges: payload }) });
+                    if (!resp.ok) {
+                      const j = await resp.json().catch(()=>({}));
+                      throw new Error(j.error || 'Failed to save');
+                    }
+                    alert('Class Teacher’s comments settings saved');
+                    setShowClassTeacherComments(false);
+                  } catch (e:any) {
+                    alert(e.message);
+                  }
+                }} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
         {error && (
           <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-4 py-3">
             {error}
