@@ -2615,37 +2615,64 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
 
       <!-- Subject Performance -->
       <div class="section-title">Subject Performance</div>
-      <table>
-        <thead>
+      ${(() => {
+        const all = Array.isArray(student.results) ? student.results : [];
+        const isMid = (name: any) => String(name || '').trim().toLowerCase() === 'mid term';
+        const isEnd = (name: any) => String(name || '').trim().toLowerCase() === 'end of term';
+        const mid = all.filter((r:any) => isMid(r.exam_set_name || r.exam_set || r.set_name));
+        const end = all.filter((r:any) => isEnd(r.exam_set_name || r.exam_set || r.set_name));
+
+        const renderRows = (rows: any[]) => rows.length > 0 ? rows.map((result: any) => {
+          const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
+          return `
+            <tr>
+              <td>${result.subject || ''}</td>
+              <td class="center">${result.marks_obtained ?? ''}/${result.total_marks ?? ''}</td>
+              <td class="center">${gradeInfo.grade}</td>
+              <td class="center">${gradeInfo.remark}</td>
+              <td class="center">${result.teacher_initials || '-'}</td>
+            </tr>
+          `;
+        }).join('') : `
           <tr>
-            <th>Subject</th>
-            <th>Marks</th>
-            <th>Grade</th>
-            <th>Remarks</th>
-            <th>Teacher Initials</th>
+            <td colspan="5" class="center" style="color: #555;">N/A</td>
           </tr>
-        </thead>
-        <tbody>
-          ${student.results.length > 0 ? 
-            student.results.map((result: any) => {
-              const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-              return `
-                <tr>
-                  <td>${result.subject}</td>
-                  <td class="center">${result.marks_obtained}/${result.total_marks}</td>
-                  <td class="center">${gradeInfo.grade}</td>
-                  <td class="center">${gradeInfo.remark}</td>
-                  <td class="center">-</td>
-                </tr>
-              `;
-            }).join('') : `
+        `;
+
+        return `
+          <div style="margin-bottom: 8px; font-weight: bold;">MID TERM</div>
+          <table>
+            <thead>
               <tr>
-                <td colspan="5" class="center" style="color: #555;">N/A - Student did not sit for this exam set</td>
+                <th>Subject</th>
+                <th>Marks</th>
+                <th>Grade</th>
+                <th>Remarks</th>
+                <th>Teacher Initials</th>
               </tr>
-            `
-          }
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              ${renderRows(mid)}
+            </tbody>
+          </table>
+
+          <div style="margin: 16px 0 8px; font-weight: bold;">END OF TERM</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Marks</th>
+                <th>Grade</th>
+                <th>Remarks</th>
+                <th>Teacher Initials</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${renderRows(end)}
+            </tbody>
+          </table>
+        `;
+      })()}
 
       <!-- Summary -->
       <div class="section-title">Summary</div>
