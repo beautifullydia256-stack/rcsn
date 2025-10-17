@@ -2155,6 +2155,11 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                       
                       if (isMid(examSetName)) {
                         subjectGroups[subject].mid = r.marks_obtained ?? '';
+                        // Use Mid Term results for remarks and initials if End of Term not available
+                        if (!subjectGroups[subject].remarks) {
+                          subjectGroups[subject].remarks = r.teacher_remark || '';
+                          subjectGroups[subject].initials = r.teacher_initials ?? '';
+                        }
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = r.marks_obtained ?? '';
                         // Use pre-processed teacher remarks from the processed table
@@ -2163,7 +2168,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
                       }
                     });
                     
-                    // If no End of Term remarks found, use any available remarks
+                    // If no remarks found from any exam set, use any available remarks
                     Object.values(subjectGroups).forEach((group: any) => {
                       if (!group.remarks) {
                         const anyResult = all.find((r: any) => r.subject === group.subject);
