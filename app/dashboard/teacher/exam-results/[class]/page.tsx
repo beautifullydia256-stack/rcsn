@@ -65,6 +65,7 @@ export default function TeacherExamResultsClassPage() {
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
   const [commentRules, setCommentRules] = useState<Array<{ min_avg: number; max_avg: number; comment: string }>>([]);
   const [showCommentRules, setShowCommentRules] = useState(false);
+  const [teacherRemarksDefault, setTeacherRemarksDefault] = useState<string>("");
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
     A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
     B: 'Outstanding! Strive for excellence to reach the next level.',
@@ -368,6 +369,15 @@ export default function TeacherExamResultsClassPage() {
           if (res.ok) {
             const j = await res.json();
             setCommentRules(j.rules || []);
+          }
+        } catch {}
+
+        // Load Teacher's Remarks default for this class
+        try {
+          const res2 = await fetch(`/api/teacher-remarks?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
+          if (res2.ok) {
+            const j2 = await res2.json();
+            setTeacherRemarksDefault(j2.default_remark || "");
           }
         } catch {}
 
@@ -1328,6 +1338,18 @@ export default function TeacherExamResultsClassPage() {
                   </div>
                 ))}
               </div>
+              {/* Teacher's Remarks (free text default per class) */}
+              <div className="mt-6 border-t border-white/10 pt-4">
+                <h3 className="text-white text-lg font-semibold mb-2">TEACHER'S REMARKS (Default)</h3>
+                <p className="text-white/60 text-sm mb-2">This is a default free-text remark for this class; teachers can personalize per student on the report card.</p>
+                <textarea
+                  value={teacherRemarksDefault}
+                  onChange={(e)=> setTeacherRemarksDefault(e.target.value)}
+                  rows={3}
+                  className="w-full mt-1 px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                  placeholder="Enter default Teacher's Remark for this class (optional)"
+                />
+              </div>
               <div className="flex justify-between mt-4">
                 <button onClick={()=> setCommentRules(prev => [...prev, { min_avg: 0, max_avg: 100, comment: '' }])} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Add Range</button>
                 <div className="flex gap-2">
@@ -1338,6 +1360,12 @@ export default function TeacherExamResultsClassPage() {
                       if (!resp.ok) {
                         const j = await resp.json().catch(()=>({}));
                         throw new Error(j.error || 'Failed to save rules');
+                      }
+                      // Save Teacher's Remarks default
+                      const resp2 = await fetch('/api/teacher-remarks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ class_name: className, default_remark: teacherRemarksDefault }) });
+                      if (!resp2.ok) {
+                        const j2 = await resp2.json().catch(()=>({}));
+                        throw new Error(j2.error || 'Failed to save teacher remarks');
                       }
                       alert('Comment rules saved');
                       setShowCommentRules(false);
