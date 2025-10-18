@@ -86,8 +86,6 @@ export function PrimaryReportGenerator() {
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [nextTermInfo, setNextTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
-  const [nextTermBegins, setNextTermBegins] = useState<string | null>(null);
-  const [nextTermBeginsRaw, setNextTermBeginsRaw] = useState<string | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -441,7 +439,6 @@ export function PrimaryReportGenerator() {
           }
           return { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' };
         })(),
-        nextTermBegins: nextTermBegins,
         students: targetStudents.map(student => {
           const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
           
@@ -502,7 +499,6 @@ export function PrimaryReportGenerator() {
               class_teacher_text: teacherComment || (studentComments?.class_teacher_text || ''),
             },
             profile_photo: studentPhoto?.photo_url || null,
-            nextTermBegins: nextTermBegins,
             summary: {
               totalMarks,
               totalPossibleMarks,
@@ -575,40 +571,6 @@ export function PrimaryReportGenerator() {
     }
   };
 
-  // Save "Next Term Begins" for the next term
-  const saveNextTermBegins = async () => {
-    if (!schoolId || !nextTermInfo) return;
-    if (!nextTermBeginsRaw) {
-      setError('Please pick a date for Next Term Begins');
-      return;
-    }
-
-    try {
-      // Save as the start_date for the next term in school_terms table
-      const { error } = await supabase
-        .from('school_terms')
-        .upsert({
-          school_id: schoolId,
-          year: nextTermInfo.year,
-          term: nextTermInfo.term,
-          start_date: nextTermBeginsRaw,
-          // Set a default end date (4 months later) if not already set
-          end_date: nextTermBeginsRaw // This will be updated later in Term Settings
-        }, {
-          onConflict: 'school_id,year,term'
-        });
-
-      if (error) {
-        setError(`Failed to save Next Term Begins: ${error.message}`);
-        return;
-      }
-
-      setNextTermBegins(new Date(nextTermBeginsRaw).toLocaleDateString());
-      alert(`Next Term (Term ${nextTermInfo.term}, ${nextTermInfo.year}) start date saved successfully! This will appear on all reports and sync with Term Settings.`);
-    } catch (e) {
-      setError(`Failed to save Next Term Begins: ${e instanceof Error ? e.message : 'Unknown error'}`);
-    }
-  };
 
   const downloadSingleReportPDF = async () => {
     if (!reportData || reportData.students.length === 0) return;
@@ -1246,35 +1208,6 @@ export function PrimaryReportGenerator() {
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3 mb-4">
                 <div className="text-white/80 text-sm">
                   <strong>Current Term:</strong> Term {currentTermInfo.term}, {currentTermInfo.year}
-                </div>
-              </div>
-            )}
-            {/* Next Term Begins (set on report generation page) */}
-            {nextTermInfo && (
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Next Term Begins (Term {nextTermInfo.term}, {nextTermInfo.year})
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="date"
-                    value={nextTermBeginsRaw || ''}
-                    onChange={(e) => setNextTermBeginsRaw(e.target.value || null)}
-                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  <button
-                    type="button"
-                    onClick={saveNextTermBegins}
-                    className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white"
-                  >
-                    Save
-                  </button>
-                </div>
-                {nextTermBegins && (
-                  <div className="mt-1 text-white/70 text-xs">Saved: {nextTermBegins}</div>
-                )}
-                <div className="mt-1 text-white/60 text-xs">
-                  This date will be shown on all student reports and syncs with Term Settings
                 </div>
               </div>
             )}
