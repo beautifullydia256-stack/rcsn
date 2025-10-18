@@ -15,13 +15,31 @@ export function AdminHeader({ onSearch, onFilter }: { onSearch: (q: string) => v
 
   useEffect(() => {
     const run = async () => {
-      const { data: auth } = await supabase.auth.getUser();
-      if (auth.user?.id) {
-        const { data } = await supabase.from("users").select("name,email").eq("user_id", auth.user.id).single();
-        if (data) {
-          setAdminName(data.name || "Admin");
-          setAdminEmail(data.email || "");
+      try {
+        const { data: auth, error: authError } = await supabase.auth.getUser();
+        console.log('Auth data:', auth);
+        console.log('Auth error:', authError);
+        
+        if (auth.user?.id) {
+          console.log('User ID:', auth.user.id);
+          const { data, error } = await supabase.from("users").select("name,email").eq("user_id", auth.user.id).single();
+          console.log('User data:', data);
+          console.log('User error:', error);
+          
+          if (data) {
+            setAdminName(data.name || "Admin");
+            setAdminEmail(data.email || "");
+          } else {
+            console.log('No user data found, setting default name');
+            setAdminName("Admin");
+          }
+        } else {
+          console.log('No authenticated user found');
+          setAdminName("Admin");
         }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        setAdminName("Admin");
       }
     };
     run();
