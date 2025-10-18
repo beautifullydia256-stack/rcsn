@@ -1746,7 +1746,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
       <!-- NEXT TERM -->
       <div class="next-term">
-        <p><strong>Next term begins on:</strong> ${school?.next_term_begins_date ? new Date(school.next_term_begins_date).toLocaleDateString() : '____________________'}</p>
+        <p><strong>Next term begins on:</strong> ${student?.nextTermBegins || '____________________'}</p>
       </div>
 
       <!-- FOOTER -->
