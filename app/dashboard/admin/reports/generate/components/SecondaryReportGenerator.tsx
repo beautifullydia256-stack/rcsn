@@ -1961,7 +1961,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           Tel: {school?.phone || '0701861636 / 0700338061'} | 
           E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
         </div>
-        <div className="text-[12pt] font-bold mt-2 uppercase">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
+        <div className="text-[12pt] font-bold mt-2 uppercase">STUDENT'S PROGRESSIVE REPORT OF {currentTermInfo ? `TERM ${currentTermInfo.term}` : 'TERM'}</div>
         <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
         </div>
       </div>
