@@ -91,6 +91,26 @@ export function PrimaryReportGenerator() {
   const [classes, setClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Generate report title based on settings
+  const getReportTitle = () => {
+    try {
+      if (!reportTitleSettings) {
+        return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+      }
+      
+      let title = reportTitleSettings.title_template || 'STUDENT\'S PROGRESSIVE REPORT OF TERM {term}';
+      
+      if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
+        title = title.replace('{term}', currentTermInfo.term.toString());
+      }
+      
+      return title.toUpperCase();
+    } catch (error) {
+      console.warn('Error generating report title:', error);
+      return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+    }
+  };
   
   // Form state (exam set selection removed; we aggregate all sets in current term)
   const [selectedClass, setSelectedClass] = useState<string>("");
@@ -305,27 +325,6 @@ export function PrimaryReportGenerator() {
       .single();
     setSchoolInfo(school);
   };
-
-  // Generate report title based on settings
-  const getReportTitle = () => {
-    try {
-      if (!reportTitleSettings) {
-        return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
-      }
-      
-      let title = reportTitleSettings.title_template || 'STUDENT\'S PROGRESSIVE REPORT OF TERM {term}';
-      
-      if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
-        title = title.replace('{term}', currentTermInfo.term.toString());
-      }
-      
-      return title.toUpperCase();
-    } catch (error) {
-      console.warn('Error generating report title:', error);
-      return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
-    }
-  };
-
 
   const generateReport = async (studentId?: string) => {
     if (reportType === 'single' && !studentId && !selectedStudent) {
