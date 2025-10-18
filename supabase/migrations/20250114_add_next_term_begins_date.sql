@@ -9,3 +9,5 @@ COMMENT ON COLUMN public.schools.next_term_begins_date IS 'Date when the next te
 UPDATE public.schools 
 SET next_term_begins_date = CURRENT_DATE + INTERVAL '30 days'
 WHERE next_term_begins_date IS NULL;
+
+

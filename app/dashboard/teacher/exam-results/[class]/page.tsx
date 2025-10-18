@@ -194,7 +194,7 @@ export default function TeacherExamResultsClassPage() {
             .from('users')
           .select('school_id,name,email,user_metadata')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
           
           if (userError) {
             console.error('Error fetching user data:', userError);
@@ -322,7 +322,7 @@ export default function TeacherExamResultsClassPage() {
             .select('subjects')
             .eq('school_id', schoolId)
             .eq('teacher_id', teacherId)
-            .single();
+            .maybeSingle();
             
           if (teacherError) {
             console.error('Fallback also failed:', teacherError);

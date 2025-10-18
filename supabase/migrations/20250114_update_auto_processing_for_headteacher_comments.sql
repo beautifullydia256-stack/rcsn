@@ -128,6 +128,33 @@ BEGIN
       END
     );
     
+    -- Get next term begins date
+    DECLARE
+      next_term_begins_date DATE;
+    BEGIN
+      -- Calculate next term year and term
+      DECLARE
+        next_term_year INTEGER;
+        next_term_number INTEGER;
+      BEGIN
+        IF exam_set_record.term = 3 THEN
+          next_term_year := exam_set_record.year + 1;
+          next_term_number := 1;
+        ELSE
+          next_term_year := exam_set_record.year;
+          next_term_number := exam_set_record.term + 1;
+        END IF;
+        
+        -- Get next term begins date from school_terms
+        SELECT start_date INTO next_term_begins_date
+        FROM school_terms
+        WHERE school_id = p_school_id
+          AND year = next_term_year
+          AND term = next_term_number
+        LIMIT 1;
+      END;
+    END;
+
     -- Insert or update processed result
     INSERT INTO processed_primary_exam_results (
       school_id,
@@ -146,7 +173,8 @@ BEGIN
       teacher_remark,
       teacher_initials,
       class_teacher_comment,
-      headteacher_comment
+      headteacher_comment,
+      next_term_begins_date
     ) VALUES (
       p_school_id,
       p_student_id,
@@ -164,7 +192,8 @@ BEGIN
       teacher_remark,
       subject_result.teacher_initials,
       class_teacher_comment,
-      headteacher_comment
+      headteacher_comment,
+      next_term_begins_date
     )
     ON CONFLICT (school_id, student_id, exam_set_id, subject)
     DO UPDATE SET

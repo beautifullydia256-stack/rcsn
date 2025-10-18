@@ -26,3 +26,5 @@ SET next_term_begins_date = (
   LIMIT 1
 )
 WHERE next_term_begins_date IS NULL;
+
+
