@@ -1370,9 +1370,8 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         <h3><strong>Class Teacher's Comment:</strong> ${student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}</h3>
         <p>Signature: ______________________</p>
 
-        <h3>Head Teacher's Comment</h3>
-        <p>${student.comments?.head_teacher_text || 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</p>
-        <p>Name: ${student.comments?.head_teacher_name || 'NAKIYINGI MARIAM'} | Signature: ${student.comments?.head_teacher_signature || '__________'} | Date: ${student.comments?.head_teacher_date || '17 September, 2025'}</p>
+        <h3><strong>Head Teacher's Comment:</strong> ${student.results && student.results.length > 0 ? student.results[0].headteacher_comment || 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.' : 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</h3>
+        <p>Signature: ______________________</p>
       </div>
 
       <!-- FOOTER -->

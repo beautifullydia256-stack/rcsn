@@ -2242,8 +2242,9 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           <div className="mt-2">Signature: ______________________</div>
         </div>
         <div className="mb-4">
-          <div className="font-bold mb-1">Headteacher's Comments:</div>
-          <div className="border border-dashed border-gray-700 p-3" style={{ minHeight: '60px' }}></div>
+          <div className="mb-1">
+            <span className="font-bold">Headteacher's Comments:</span> {student.results && student.results.length > 0 ? student.results[0].headteacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}
+          </div>
           <div className="mt-2">Signature: ______________________</div>
         </div>
         <div className="flex justify-between text-[11pt] mt-4">
