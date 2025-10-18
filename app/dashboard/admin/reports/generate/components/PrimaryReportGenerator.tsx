@@ -289,6 +289,17 @@ export function PrimaryReportGenerator() {
     );
   }) : filteredStudents);
 
+  const refreshSchoolData = async () => {
+    if (!schoolId) return;
+    
+    const { data: school } = await supabase
+      .from('schools')
+      .select('*')
+      .eq('school_id', schoolId)
+      .single();
+    setSchoolInfo(school);
+  };
+
   const generateReport = async (studentId?: string) => {
     if (reportType === 'single' && !studentId && !selectedStudent) {
       setError('Please select a student');
@@ -297,6 +308,9 @@ export function PrimaryReportGenerator() {
 
     setGenerating(true);
     setError(null);
+    
+    // Refresh school data to get latest next_term_begins_date
+    await refreshSchoolData();
 
     try {
       const targetStudentId = studentId || selectedStudent;
