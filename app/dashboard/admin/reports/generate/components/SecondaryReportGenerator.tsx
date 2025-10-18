@@ -160,12 +160,17 @@ export function SecondaryReportGenerator() {
         await loadClassTemplateSettings();
         
         // Load report title settings
-        const { data: titleSettings } = await supabase
-          .from('report_title_settings')
-          .select('title_template, use_dynamic_term')
-          .eq('school_id', u.school_id)
-          .maybeSingle();
-        setReportTitleSettings(titleSettings);
+        try {
+          const { data: titleSettings } = await supabase
+            .from('report_title_settings')
+            .select('title_template, use_dynamic_term')
+            .eq('school_id', u.school_id)
+            .maybeSingle();
+          setReportTitleSettings(titleSettings);
+        } catch (error) {
+          console.warn('Could not load report title settings:', error);
+          setReportTitleSettings(null);
+        }
 
         // Initialize custom header with saved customizations or school defaults
         setCustomHeader({
@@ -293,17 +298,22 @@ export function SecondaryReportGenerator() {
 
   // Generate report title based on settings
   const getReportTitle = () => {
-    if (!reportTitleSettings) {
+    try {
+      if (!reportTitleSettings) {
+        return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+      }
+      
+      let title = reportTitleSettings.title_template || 'STUDENT\'S PROGRESSIVE REPORT OF TERM {term}';
+      
+      if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
+        title = title.replace('{term}', currentTermInfo.term.toString());
+      }
+      
+      return title.toUpperCase();
+    } catch (error) {
+      console.warn('Error generating report title:', error);
       return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
     }
-    
-    let title = reportTitleSettings.title_template;
-    
-    if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
-      title = title.replace('{term}', currentTermInfo.term.toString());
-    }
-    
-    return title.toUpperCase();
   };
 
   const generateReport = async (studentId?: string) => {
