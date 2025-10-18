@@ -86,6 +86,7 @@ export function SecondaryReportGenerator() {
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [nextTermInfo, setNextTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
+  const [reportTitleSettings, setReportTitleSettings] = useState<{ title_template: string; use_dynamic_term: boolean } | null>(null);
   const [students, setStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -157,6 +158,14 @@ export function SecondaryReportGenerator() {
         // Load custom templates and class template settings
         await loadCustomTemplates();
         await loadClassTemplateSettings();
+        
+        // Load report title settings
+        const { data: titleSettings } = await supabase
+          .from('report_title_settings')
+          .select('title_template, use_dynamic_term')
+          .eq('school_id', u.school_id)
+          .maybeSingle();
+        setReportTitleSettings(titleSettings);
 
         // Initialize custom header with saved customizations or school defaults
         setCustomHeader({
@@ -281,6 +290,21 @@ export function SecondaryReportGenerator() {
       (s.student_id || "").toLowerCase().includes(q)
     );
   }) : filteredStudents);
+
+  // Generate report title based on settings
+  const getReportTitle = () => {
+    if (!reportTitleSettings) {
+      return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+    }
+    
+    let title = reportTitleSettings.title_template;
+    
+    if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
+      title = title.replace('{term}', currentTermInfo.term.toString());
+    }
+    
+    return title.toUpperCase();
+  };
 
   const generateReport = async (studentId?: string) => {
     if (reportType === 'single' && !studentId && !selectedStudent) {
@@ -1961,7 +1985,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           Tel: {school?.phone || '0701861636 / 0700338061'} | 
           E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
         </div>
-        <div className="text-[12pt] font-bold mt-2 uppercase">STUDENT'S PROGRESSIVE REPORT OF {currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}</div>
+        <div className="text-[12pt] font-bold mt-2 uppercase">{getReportTitle()}</div>
         <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
         </div>
       </div>
