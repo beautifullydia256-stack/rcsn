@@ -230,13 +230,7 @@ export function SecondaryReportGenerator() {
         }
         const { data: nextTermData } = await nextTermQuery.maybeSingle();
         
-        if (nextTermData?.start_date) {
-          const iso = String(nextTermData.start_date);
-          setNextTermBegins(new Date(iso).toLocaleDateString());
-          setNextTermBeginsRaw(iso.substring(0, 10));
-        } else {
-          setNextTermBeginsRaw(null);
-        }
+        // Next term data is now handled automatically via database trigger
         
         // Load students
         const { data: studentsData } = await supabase
@@ -1854,7 +1848,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
         <div className="flex gap-4">
-          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || '6TH FEBRUARY 2023'}</div>
+          <div><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '6TH FEBRUARY 2023'}</div>
           <div><strong>Ends On:</strong> __________</div>
         </div>
       </div>
@@ -2114,7 +2108,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
       {/* NEXT TERM AND FEES */}
       <div className="mb-4 text-[10pt]">
         <div className="flex justify-between">
-          <div><strong>NEXT TERM BEGINS ON:</strong> {student?.nextTermBegins || '26/05/2025'}</div>
+          <div><strong>NEXT TERM BEGINS ON:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '26/05/2025'}</div>
           <div><strong>Fees Balance:</strong> Ugx 0</div>
         </div>
       </div>
@@ -2288,7 +2282,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </p>
       </div>
 
-      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.nextTermBegins || '______________________'}</p>
+      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '______________________'}</p>
 
       {/* Grading system & descriptions */}
       <div className="mt-3">

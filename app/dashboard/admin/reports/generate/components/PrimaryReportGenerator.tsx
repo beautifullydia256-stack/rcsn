@@ -231,13 +231,7 @@ export function PrimaryReportGenerator() {
         }
         const { data: nextTermData } = await nextTermQuery.maybeSingle();
         
-        if (nextTermData?.start_date) {
-          const iso = String(nextTermData.start_date);
-          setNextTermBegins(new Date(iso).toLocaleDateString());
-          setNextTermBeginsRaw(iso.substring(0, 10));
-        } else {
-          setNextTermBeginsRaw(null);
-        }
+        // Next term data is now handled automatically via database trigger
         
         // Load students
         const { data: studentsData } = await supabase
@@ -2345,7 +2339,7 @@ function Template4UpperSectionReport({ student, examSet, school }: { student: an
       {/* NEXT TERM AND SIGNATURES */}
       <div className="flex justify-between items-end text-[10pt]">
         <div>
-          <div><strong>Next Term Begins:</strong> {student?.nextTermBegins || 'TBA'}</div>
+          <div><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
           <div><strong>Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
         </div>
         <div className="text-right">
@@ -2516,7 +2510,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </p>
       </div>
 
-      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.nextTermBegins || '______________________'}</p>
+      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '______________________'}</p>
 
       {/* Grading system & descriptions */}
       <div className="mt-3">
