@@ -300,6 +300,18 @@ export function PrimaryReportGenerator() {
     setSchoolInfo(school);
   };
 
+  // Refresh school data when component becomes visible (e.g., when user navigates back from settings)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && schoolId) {
+        refreshSchoolData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [schoolId]);
+
   const generateReport = async (studentId?: string) => {
     if (reportType === 'single' && !studentId && !selectedStudent) {
       setError('Please select a student');
@@ -1371,6 +1383,14 @@ export function PrimaryReportGenerator() {
               {generating ? 'Generating...' : 'Preview Report'}
             </button>
             
+            <button
+              onClick={refreshSchoolData}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white font-medium text-sm"
+              title="Refresh school data (e.g., after updating next term begins date)"
+            >
+              🔄 Refresh Data
+            </button>
+            
             {showPreview && reportData && (
               <>
                 <div className="flex flex-wrap gap-3">
@@ -1994,7 +2014,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
-        <p><strong>Next term begins on:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '____________________'}</p>
+        <p><strong>Next term begins on:</strong> {schoolInfo?.next_term_begins_date ? new Date(schoolInfo.next_term_begins_date).toLocaleDateString() : '____________________'}</p>
       </div>
 
       {/* DISCLAIMER */}
@@ -2261,7 +2281,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           <div className="mt-2">Signature: ______________________</div>
         </div>
         <div className="flex justify-between text-[11pt] mt-4">
-          <div>Next term begins on: {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '____________________'}</div>
+          <div>Next term begins on: {schoolInfo?.next_term_begins_date ? new Date(schoolInfo.next_term_begins_date).toLocaleDateString() : '____________________'}</div>
         </div>
       </div>
     </div>
