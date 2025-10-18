@@ -1980,7 +1980,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
-        <p><strong>Next term begins on:</strong> ____________________</p>
+        <p><strong>Next term begins on:</strong> {school?.next_term_begins_date ? new Date(school.next_term_begins_date).toLocaleDateString() : '____________________'}</p>
       </div>
 
       {/* DISCLAIMER */}
@@ -2247,7 +2247,7 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
           <div className="mt-2">Signature: ______________________</div>
         </div>
         <div className="flex justify-between text-[11pt] mt-4">
-          <div>Next term begins on: ____________________</div>
+          <div>Next term begins on: {school?.next_term_begins_date ? new Date(school.next_term_begins_date).toLocaleDateString() : '____________________'}</div>
         </div>
       </div>
     </div>
