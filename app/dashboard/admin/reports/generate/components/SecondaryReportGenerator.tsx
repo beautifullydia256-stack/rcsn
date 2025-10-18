@@ -152,7 +152,7 @@ export function SecondaryReportGenerator() {
           .from('school_report_customizations')
           .select('*')
           .eq('school_id', u.school_id)
-          .single();
+          .maybeSingle();
 
         // Load custom templates and class template settings
         await loadCustomTemplates();
