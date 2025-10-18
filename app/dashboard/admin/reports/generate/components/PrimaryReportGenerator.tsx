@@ -1981,7 +1981,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
         <p><strong>Next term begins on:</strong> ____________________</p>
-        <p><strong>End on:</strong> ____________________</p>
       </div>
 
       {/* DISCLAIMER */}
@@ -2249,7 +2248,6 @@ function Template3KyoteraReport({ student, examSet, school }: { student: any; ex
         </div>
         <div className="flex justify-between text-[11pt] mt-4">
           <div>Next term begins on: ____________________</div>
-          <div>End on: ____________________</div>
         </div>
       </div>
     </div>
