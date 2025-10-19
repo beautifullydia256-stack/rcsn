@@ -22,7 +22,6 @@ export default function AddTeacherPage() {
   const [subjects, setSubjects] = useState<string[]>([]); // Stored as labeled subjects per class, e.g., "Mathematics 1", "Mathematics N"
   const [classesAssigned, setClassesAssigned] = useState<string[]>([]);
   const [subjectsByClass, setSubjectsByClass] = useState<Record<string, string[]>>({});
-  const [salary, setSalary] = useState<string>("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -108,7 +107,7 @@ export default function AddTeacherPage() {
   const resetForm = () => {
     setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob(""); setNationalId("");
     setPhone(""); setAddress("");
-    setSubjects([]); setClassesAssigned([]); setSubjectsByClass({}); setSalary("");
+    setSubjects([]); setClassesAssigned([]); setSubjectsByClass({});
     setError(null); setSuccess(null);
   };
 
@@ -134,7 +133,6 @@ export default function AddTeacherPage() {
       gender: gender || null,
       dob: dob || null,
       national_id: nationalId || null,
-      salary: salary ? Number(salary) : null,
       subjects: subjects.length ? subjects : null,
       classes: filteredClasses.length ? filteredClasses : null,
       // employee_id and date_of_hire default via DB
@@ -242,10 +240,6 @@ export default function AddTeacherPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="lg:col-span-2 rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
             <div className="text-white font-medium mb-3">Professional Information</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <div className="text-white/80 text-sm mb-1">Salary (per month)</div>
-                <input type="number" min="0" step="0.01" className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="e.g., 500.00" value={salary} onChange={(e)=>setSalary(e.target.value)} />
-              </div>
               <div>
                 <div className="text-white/80 text-sm mb-1">Classes Assigned</div>
                 <div className="max-h-40 overflow-y-auto rounded-lg border border-white/10 p-2">
