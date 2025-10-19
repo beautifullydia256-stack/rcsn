@@ -104,31 +104,28 @@ export default function TeacherDashboard() {
         return;
       }
 
-      // Get user's school_id and school type
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id,name')
-        .eq('user_id', user.id)
-        .single();
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      const teacherName = userMetadata.name || userMetadata.teacher_name || 'Teacher';
 
-      // Get school info to check type
-      let schoolType = 'Unknown';
-      if (userData?.school_id) {
-        const { data: schoolData } = await supabase
-          .from('schools')
-          .select('type')
-          .eq('school_id', userData.school_id)
-          .single();
-        schoolType = schoolData?.type || 'Unknown';
-      }
-
-      if (!userData?.school_id) {
+      if (!schoolId) {
         const returnUrl = encodeURIComponent('/dashboard/teacher');
         router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
-      setSchoolId(userData.school_id);
-      setTeacherName(userData.name || 'Teacher');
+
+      setSchoolId(schoolId);
+      setTeacherName(teacherName);
+
+      // Get school info to check type
+      let schoolType = 'Unknown';
+      const { data: schoolData } = await supabase
+        .from('schools')
+        .select('type')
+        .eq('school_id', schoolId)
+        .single();
+      schoolType = schoolData?.type || 'Unknown';
 
       // Resolve teacher row id: prefer auth metadata; fallback to email match
 		let teacherRow = null as any;
