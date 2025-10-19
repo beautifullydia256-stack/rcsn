@@ -65,15 +65,11 @@ export function AdminKpis() {
             .eq('date', currentTerm.today)
             .eq('present', true),
           
-          // Outstanding balances - use current term if available
-          currentTermData ? 
-            supabase.from('student_balances')
-              .select('balance')
-              .eq('school_id', u.school_id)
-              .eq('term_id', currentTermData.id) :
-            supabase.from('student_balances')
-              .select('balance')
-              .eq('school_id', u.school_id),
+          // Outstanding balances - calculate from students and payments
+          supabase.from('students')
+            .select('student_id, expected_fee_amount')
+            .eq('school_id', u.school_id)
+            .eq('status', 'active'),
           
           // Receipts count - use current term if available
           currentTermData ? 
@@ -87,10 +83,25 @@ export function AdminKpis() {
               .eq("school_id", u.school_id)
         ]);
 
-        // Calculate outstanding (only positive balances)
-        const outstanding = Math.max(0, (balancesResult.data || [])
-          .filter((b: any) => Number(b.balance || 0) > 0)
-          .reduce((sum: number, b: any) => sum + Number(b.balance || 0), 0));
+        // Calculate outstanding balances from students and payments
+        const studentIds = (balancesResult.data || []).map((s: any) => s.student_id);
+        const { data: payments } = await supabase
+          .from('student_payments')
+          .select('student_id, amount_paid')
+          .in('student_id', studentIds)
+          .eq('school_id', u.school_id);
+        
+        const paidByStudent: Record<string, number> = {};
+        (payments || []).forEach((p: any) => {
+          if (studentIds.includes(p.student_id)) {
+            const amt = Number(p.amount_paid || 0);
+            paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
+          }
+        });
+        
+        const outstanding = (balancesResult.data || [])
+          .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
+          .reduce((sum: number, balance: number) => sum + balance, 0);
 
         setK({
           students: studentsResult.count || 0,
