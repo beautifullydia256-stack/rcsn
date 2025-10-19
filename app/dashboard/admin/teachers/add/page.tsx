@@ -186,7 +186,7 @@ export default function AddTeacherPage() {
       console.warn('Failed to create teacher assignments:', e?.message || e);
     }
 
-    setSuccess("Teacher added successfully! Email auto-generated. You can add more information in the teacher profile. 🎉");
+    setSuccess(`Teacher added successfully! Employee ID: ${data?.employee_id || 'Generated'}, Email auto-generated. You can add more information in the teacher profile. 🎉`);
     if (data?.teacher_id) {
       setTimeout(() => router.push(`/dashboard/admin/teachers/${data.teacher_id}`), 600);
     }
@@ -270,7 +270,11 @@ export default function AddTeacherPage() {
                 )}
               </div>
             </div>
-            <div className="text-white/70 text-xs mt-2">Employee ID and Date of Hire will be set automatically.</div>
+            <div className="text-white/70 text-xs mt-2">
+              <div>📋 Employee ID will be auto-generated in format: SchoolCode-Year-SerialNumber</div>
+              <div>📅 Date of Hire will be set automatically to today's date</div>
+              <div>📧 Email will be auto-generated as: firstname+lastname@schoolcode.sch</div>
+            </div>
           </motion.div>
         </div>
 
