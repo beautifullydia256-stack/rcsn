@@ -551,9 +551,13 @@ export default function TeacherExamResultsClassPage() {
 
   // Function to refresh class teacher status
   const refreshClassTeacherStatus = async () => {
-    if (!resolvedSchoolId || !resolvedTeacherId) return;
+    if (!resolvedSchoolId || !resolvedTeacherId) {
+      console.log('Cannot refresh class teacher status - missing schoolId or teacherId:', { resolvedSchoolId, resolvedTeacherId });
+      return;
+    }
     
     try {
+      console.log('Checking class teacher status for:', { resolvedSchoolId, className, resolvedTeacherId });
       const { data: ctRows } = await supabase
         .from('class_teachers')
         .select('id')
@@ -561,7 +565,10 @@ export default function TeacherExamResultsClassPage() {
         .eq('class_name', className)
         .eq('teacher_id', resolvedTeacherId)
         .limit(1);
-      setIsClassTeacher(!!(ctRows && ctRows.length > 0));
+      
+      const isClassTeacher = !!(ctRows && ctRows.length > 0);
+      console.log('Class teacher status result:', { ctRows, isClassTeacher });
+      setIsClassTeacher(isClassTeacher);
     } catch (err) {
       console.error('Error checking class teacher status:', err);
       setIsClassTeacher(false);
