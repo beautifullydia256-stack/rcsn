@@ -10,7 +10,7 @@ interface Row {
   student_name: string;
   current_class: string;
   parent_name?: string;
-  parent_phone?: string;
+  parent_email?: string;
   amount_paid: number;
   balance: number;
   has_pending: boolean;
@@ -49,10 +49,10 @@ export default function OutstandingBalancesPage() {
       // Parents map
       const { data: parents } = await supabase
         .from("parents")
-        .select("student_id,name,phone")
+        .select("student_id,name,email")
         .eq("school_id", data.school_id);
 
-      const parentByStudent = new Map((parents || []).map((p: any) => [p.student_id, { name: p.name, phone: p.phone }]));
+      const parentByStudent = new Map((parents || []).map((p: any) => [p.student_id, { name: p.name, email: p.email }]));
 
       const paidByStudent: Record<string, number> = {};
       const pendingByStudent: Record<string, number> = {};
@@ -69,7 +69,7 @@ export default function OutstandingBalancesPage() {
           student_name: s.name,
           current_class: s.current_class,
           parent_name: (parent as any).name,
-          parent_phone: (parent as any).phone,
+          parent_email: (parent as any).email,
           amount_paid: paidByStudent[s.student_id] || 0,
           balance: Math.max(0, (Number(s.expected_fee_amount || 0)) - (paidByStudent[s.student_id] || 0)),
           has_pending: (Number(s.expected_fee_amount || 0)) > (paidByStudent[s.student_id] || 0),
@@ -89,7 +89,7 @@ export default function OutstandingBalancesPage() {
       r.student_name.toLowerCase().includes(t) ||
       r.current_class.toLowerCase().includes(t) ||
       (r.parent_name || "").toLowerCase().includes(t) ||
-      (r.parent_phone || "").toLowerCase().includes(t)
+      (r.parent_email || "").toLowerCase().includes(t)
     );
   }, [q, rows]);
 
@@ -115,7 +115,7 @@ export default function OutstandingBalancesPage() {
                 <th className="px-4 py-2 text-white/80">Amount Paid</th>
                 <th className="px-4 py-2 text-white/80">Balance</th>
                 <th className="px-4 py-2 text-white/80">Parent Name</th>
-                <th className="px-4 py-2 text-white/80">Parent Phone</th>
+                <th className="px-4 py-2 text-white/80">Parent Email</th>
                 <th className="px-4 py-2 text-white/80">Status</th>
               </tr>
             </thead>
@@ -135,7 +135,7 @@ export default function OutstandingBalancesPage() {
                     <td className="px-4 py-2 text-white">{new Intl.NumberFormat().format(r.amount_paid)}</td>
                     <td className="px-4 py-2 text-white">{new Intl.NumberFormat().format(r.balance)}</td>
                     <td className="px-4 py-2 text-white/90">{r.parent_name || '-'}</td>
-                    <td className="px-4 py-2 text-white/90">{r.parent_phone || '-'}</td>
+                    <td className="px-4 py-2 text-white/90">{r.parent_email || '-'}</td>
                     <td className="px-4 py-2"><span className="px-2 py-1 text-xs rounded bg-amber-500/30 border border-amber-300/30 text-white">{pct}% paid</span></td>
                   </tr>
                 );
