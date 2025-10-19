@@ -31,14 +31,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get user info
-    const { data: userRow, error: userErr } = await supabase
-      .from('users')
-      .select('school_id,email,name')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-
-    if (userErr || !userRow?.school_id) {
+    // Get user info from metadata
+    const userMetadata = (session.user as any).user_metadata || (session.user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
+    const userEmail = session.user.email;
+    const userName = userMetadata.name || userMetadata.teacher_name;
+    
+    if (!school_id) {
       return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
     }
 
@@ -52,7 +51,7 @@ export async function GET(req: NextRequest) {
       const { data: tMeta } = await supabase
         .from('teachers')
         .select('teacher_id')
-        .eq('school_id', userRow.school_id)
+        .eq('school_id', school_id)
         .eq('teacher_id', metaTeacherId)
         .maybeSingle();
       if (tMeta) {
@@ -61,12 +60,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Try 2: By email match
-    if (!resolvedTeacherId && userRow.email) {
+    if (!resolvedTeacherId && userEmail) {
       const { data: tEmail } = await supabase
         .from('teachers')
         .select('teacher_id')
-        .eq('school_id', userRow.school_id)
-        .ilike('email', userRow.email.trim())
+        .eq('school_id', school_id)
+        .ilike('email', userEmail.trim())
         .maybeSingle();
       if (tEmail) {
         resolvedTeacherId = tEmail.teacher_id;
@@ -74,12 +73,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Try 3: By name match
-    if (!resolvedTeacherId && userRow.name) {
+    if (!resolvedTeacherId && userName) {
       const { data: tName } = await supabase
         .from('teachers')
         .select('teacher_id')
-        .eq('school_id', userRow.school_id)
-        .ilike('name', userRow.name.trim())
+        .eq('school_id', school_id)
+        .ilike('name', userName.trim())
         .maybeSingle();
       if (tName) {
         resolvedTeacherId = tName.teacher_id;
@@ -91,12 +90,12 @@ export async function GET(req: NextRequest) {
       const { data: allTeachers } = await supabase
         .from('teachers')
         .select('teacher_id, email, name')
-        .eq('school_id', userRow.school_id);
+        .eq('school_id', school_id);
       
       // Try to match by email or name
       const matchingTeacher = allTeachers?.find(t => 
-        t.email?.toLowerCase() === userRow.email?.toLowerCase() ||
-        t.name?.toLowerCase() === userRow.name?.toLowerCase()
+        t.email?.toLowerCase() === userEmail?.toLowerCase() ||
+        t.name?.toLowerCase() === userName?.toLowerCase()
       );
       
       if (matchingTeacher) {
@@ -121,11 +120,11 @@ export async function GET(req: NextRequest) {
       const { data: serviceTeachers } = await supabaseService
         .from('teachers')
         .select('teacher_id, email, name')
-        .eq('school_id', userRow.school_id);
+        .eq('school_id', school_id);
       
       const matchingServiceTeacher = serviceTeachers?.find(t => 
-        t.email?.toLowerCase() === userRow.email?.toLowerCase() ||
-        t.name?.toLowerCase() === userRow.name?.toLowerCase()
+        t.email?.toLowerCase() === userEmail?.toLowerCase() ||
+        t.name?.toLowerCase() === userName?.toLowerCase()
       );
       
       if (matchingServiceTeacher) {
@@ -158,7 +157,7 @@ export async function GET(req: NextRequest) {
       const result = await supabaseService
         .from('teacher_class_subjects')
         .select('class_name, subject')
-        .eq('school_id', userRow.school_id)
+        .eq('school_id', school_id)
         .eq('teacher_id', resolvedTeacherId);
       
       assignments = result.data;
@@ -170,7 +169,7 @@ export async function GET(req: NextRequest) {
       const result = await supabase
       .from('teacher_class_subjects')
       .select('class_name, subject')
-      .eq('school_id', userRow.school_id)
+      .eq('school_id', school_id)
       .eq('teacher_id', resolvedTeacherId);
       
       assignments = result.data;
@@ -186,9 +185,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       assignments: assignments || [],
       resolved_teacher_id: resolvedTeacherId,
-      school_id: userRow.school_id,
-      user_email: userRow.email,
-      user_name: userRow.name
+      school_id: school_id,
+      user_email: userEmail,
+      user_name: userName
     });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Internal error' }, { status: 500 });
