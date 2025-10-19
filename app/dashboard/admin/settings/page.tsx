@@ -2318,11 +2318,12 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
             <label className="block text-white/80 text-sm mb-1">Boarding Type *</label>
             <select
               value={boardingType}
-              onChange={(e) => setBoardingType(e.target.value as "Day Scholar" | "Boarding")}
+              onChange={(e) => setBoardingType(e.target.value as "Day Scholar" | "Boarding" | "Both")}
               className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white text-black"
             >
               <option value="Day Scholar">Day Scholar</option>
               <option value="Boarding">Boarding</option>
+              <option value="Both">Both</option>
             </select>
           </div>
           
