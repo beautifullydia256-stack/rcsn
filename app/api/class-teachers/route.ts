@@ -149,30 +149,13 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Get school_id from user metadata instead of users table to avoid 406 errors
-    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
-    let school_id = userMetadata.school_id;
-    
-    // Debug logging to see what's in user metadata
-    console.log('User metadata:', userMetadata);
-    console.log('School ID from metadata:', school_id);
-    
-    if (!school_id) {
-      // Fallback: try to get school_id from users table if metadata doesn't have it
-      const { data: urow } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      const fallbackSchoolId = urow?.school_id;
-      
-      if (!fallbackSchoolId) {
-        return NextResponse.json({ error: 'School not found in metadata or users table' }, { status: 400 });
-      }
-      
-      // Use fallback school_id
-      school_id = fallbackSchoolId;
-    }
+    const { data: urow } = await supabase
+      .from('users')
+      .select('school_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const school_id = urow?.school_id;
+    if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     // Return classes with their class teachers (multiple)
     const { data, error } = await supabase
