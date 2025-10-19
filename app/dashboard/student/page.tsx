@@ -309,7 +309,7 @@ export default function StudentDashboard() {
             .gte('created_at', currentTerm.start_date)
             .lte('created_at', currentTerm.end_date) :
         supabase.from('reports').select('*').eq('student_id', studentId),
-        supabase.from('payments').select('*').eq('student_id', studentId).order('created_at', { ascending: false }),
+        supabase.from('student_payments').select('*').eq('student_id', studentId).order('payment_date', { ascending: false }),
         currentTerm ?
           supabase.from('attendance').select('*').eq('student_id', studentId)
             .gte('date', currentTerm.start_date)
@@ -417,8 +417,7 @@ export default function StudentDashboard() {
 
   const outstandingFees = (() => {
     const approved = payments
-      .filter(p => (p.status || '').toLowerCase() === 'approved')
-      .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
     const due = Math.max(0, Number(expectedFee || 0) - approved);
     return due;
   })();

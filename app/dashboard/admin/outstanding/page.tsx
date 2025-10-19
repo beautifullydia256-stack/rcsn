@@ -42,10 +42,9 @@ export default function OutstandingBalancesPage() {
 
       // Aggregate payments by student (approved only for tuition)
       const { data: pays } = await supabase
-        .from("payments")
-        .select("student_id, amount, status, created_at, payment_method")
-        .eq("school_id", data.school_id)
-        .eq('status','Approved');
+        .from("student_payments")
+        .select("student_id, amount_paid, payment_date, payment_method")
+        .eq("school_id", data.school_id);
 
       // Parents map
       const { data: parents } = await supabase
@@ -59,7 +58,7 @@ export default function OutstandingBalancesPage() {
       const pendingByStudent: Record<string, number> = {};
       (pays || []).forEach((p: any) => {
         if (!studentIds.includes(p.student_id)) return;
-        const amt = Number(p.amount || 0);
+        const amt = Number(p.amount_paid || 0);
         paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
       });
 

@@ -39,7 +39,7 @@ export default function StudentFeesPage() {
       if (!sid) return router.push('/login');
       setStudentId(sid);
       const [pay, exp] = await Promise.all([
-        supabase.from('payments').select('*').eq('student_id', sid).order('created_at', { ascending: false }),
+        supabase.from('student_payments').select('*').eq('student_id', sid).order('payment_date', { ascending: false }),
         supabase.from('students').select('expected_fee_amount').eq('student_id', sid).single()
       ]);
       setRows((pay.data as any[]) || []);
@@ -56,12 +56,12 @@ export default function StudentFeesPage() {
       out = out.filter(r => (r.payment_method || '').toLowerCase().includes(term));
     }
     if (status) out = out.filter(r => (r.status || '').toLowerCase() === status.toLowerCase());
-    if (from) out = out.filter(r => new Date(r.created_at) >= new Date(from));
-    if (to) out = out.filter(r => new Date(r.created_at) <= new Date(to));
+    if (from) out = out.filter(r => new Date(r.payment_date) >= new Date(from));
+    if (to) out = out.filter(r => new Date(r.payment_date) <= new Date(to));
     return out;
   }, [rows, q, status, from, to]);
 
-  const approvedSum = filtered.filter(r => (r.status || '').toLowerCase() === 'approved').reduce((s, r) => s + Number(r.amount || 0), 0);
+  const approvedSum = filtered.reduce((s, r) => s + Number(r.amount_paid || 0), 0);
   const outstanding = Math.max(0, expected - approvedSum);
 
   return (
@@ -115,8 +115,8 @@ export default function StudentFeesPage() {
               <tbody className="[&>tr:nth-child(even)]:bg-white/5">
                 {filtered.map(r => (
                   <tr key={r.payment_id} className="border-t border-white/10">
-                    <td className="px-4 py-2 text-white/90">{new Date(r.created_at).toLocaleString()}</td>
-                    <td className="px-4 py-2 text-white">{new Intl.NumberFormat('en-UG',{ style:'currency', currency:'UGX', minimumFractionDigits:0 }).format(Number(r.amount||0))}</td>
+                    <td className="px-4 py-2 text-white/90">{new Date(r.payment_date).toLocaleString()}</td>
+                    <td className="px-4 py-2 text-white">{new Intl.NumberFormat('en-UG',{ style:'currency', currency:'UGX', minimumFractionDigits:0 }).format(Number(r.amount_paid||0))}</td>
                     <td className="px-4 py-2 text-white/90">{r.payment_method}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-1 rounded text-xs ${
