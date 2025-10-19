@@ -549,6 +549,25 @@ export default function TeacherExamResultsClassPage() {
   ]);
   const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
 
+  // Function to refresh class teacher status
+  const refreshClassTeacherStatus = async () => {
+    if (!resolvedSchoolId || !resolvedTeacherId) return;
+    
+    try {
+      const { data: ctRows } = await supabase
+        .from('class_teachers')
+        .select('id')
+        .eq('school_id', resolvedSchoolId)
+        .eq('class_name', className)
+        .eq('teacher_id', resolvedTeacherId)
+        .limit(1);
+      setIsClassTeacher(!!(ctRows && ctRows.length > 0));
+    } catch (err) {
+      console.error('Error checking class teacher status:', err);
+      setIsClassTeacher(false);
+    }
+  };
+
   // Given an aggregate points value, compute primary Division label
   const getPrimaryDivisionFromAggregate = (aggregatePoints: number, hasIncompleteResults: boolean = false): string => {
     // If student has incomplete/missing subject results, return U (Ungraded)
@@ -959,6 +978,12 @@ export default function TeacherExamResultsClassPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExamSet, selectedSubject]);
 
+  // Refresh class teacher status when teacher ID changes
+  useEffect(() => {
+    if (resolvedTeacherId && resolvedSchoolId) {
+      refreshClassTeacherStatus();
+    }
+  }, [resolvedTeacherId, resolvedSchoolId, className]);
 
   if (loading) {
     return (
@@ -1268,14 +1293,24 @@ export default function TeacherExamResultsClassPage() {
                       : 'Enter marks out of 100.'}
                   </p>
                 </div>
-                <button
-                  onClick={async () => {
-                    await reloadSavedResults();
-                  }}
-                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                >
-                  🔄 Refresh Saved
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      await reloadSavedResults();
+                    }}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                  >
+                    🔄 Refresh Saved
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await refreshClassTeacherStatus();
+                    }}
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
+                  >
+                    🔄 Refresh Status
+                  </button>
+                </div>
               </div>
             </div>
             <div className="overflow-x-auto">
