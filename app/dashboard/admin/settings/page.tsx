@@ -2048,8 +2048,9 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"name" | "cost" | "status" | "created_at">("name");
+  const [sortBy, setSortBy] = useState<"name" | "cost" | "status" | "boarding_type" | "class_name" | "created_at">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [classOptions, setClassOptions] = useState<string[]>([]);
   
   // Form state for adding/editing
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -2057,10 +2058,29 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
   const [description, setDescription] = useState("");
   const [cost, setCost] = useState("");
   const [status, setStatus] = useState<"Active" | "Inactive">("Active");
+  const [boardingType, setBoardingType] = useState<"Day Scholar" | "Boarding">("Day Scholar");
+  const [className, setClassName] = useState("");
 
   useEffect(() => {
     loadRequirements();
+    loadClasses();
   }, [schoolId]);
+
+  const loadClasses = async () => {
+    if (!schoolId) return;
+    try {
+      const { data, error } = await supabase
+        .from('classes')
+        .select('class_name')
+        .eq('school_id', schoolId)
+        .order('class_name');
+      
+      if (error) throw error;
+      setClassOptions((data || []).map(c => c.class_name));
+    } catch (err) {
+      console.error('Error loading classes:', err);
+    }
+  };
 
   const loadRequirements = async () => {
     if (!schoolId) return;
@@ -2098,7 +2118,9 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
         requirement_name: requirementName.trim(),
         description: description.trim() || null,
         cost: parseFloat(cost) || 0,
-        status: status
+        status: status,
+        boarding_type: boardingType,
+        class_name: className || null
       };
 
       if (editingId) {
@@ -2126,6 +2148,8 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
       setDescription("");
       setCost("");
       setStatus("Active");
+      setBoardingType("Day Scholar");
+      setClassName("");
       
       // Reload requirements
       await loadRequirements();
@@ -2145,6 +2169,8 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
     setDescription(requirement.description || "");
     setCost(requirement.cost.toString());
     setStatus(requirement.status);
+    setBoardingType(requirement.boarding_type || "Day Scholar");
+    setClassName(requirement.class_name || "");
   };
 
   const handleDelete = async (id: string) => {
@@ -2173,12 +2199,16 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
     setDescription("");
     setCost("");
     setStatus("Active");
+    setBoardingType("Day Scholar");
+    setClassName("");
   };
 
   const filteredAndSortedRequirements = useMemo(() => {
     let filtered = requirements.filter(req => 
       req.requirement_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (req.description && req.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      (req.description && req.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.boarding_type && req.boarding_type.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.class_name && req.class_name.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
     filtered.sort((a, b) => {
@@ -2195,6 +2225,14 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
         case "status":
           aVal = a.status;
           bVal = b.status;
+          break;
+        case "boarding_type":
+          aVal = (a.boarding_type || 'Day Scholar').toLowerCase();
+          bVal = (b.boarding_type || 'Day Scholar').toLowerCase();
+          break;
+        case "class_name":
+          aVal = (a.class_name || 'All Classes').toLowerCase();
+          bVal = (b.class_name || 'All Classes').toLowerCase();
           break;
         case "created_at":
           aVal = new Date(a.created_at).getTime();
@@ -2251,7 +2289,7 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
           {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
         </h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-white/80 text-sm mb-1">Requirement Name *</label>
             <input
@@ -2277,14 +2315,29 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
           </div>
           
           <div>
-            <label className="block text-white/80 text-sm mb-1">Description (Optional)</label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
-              placeholder="Brief description of the requirement"
-            />
+            <label className="block text-white/80 text-sm mb-1">Boarding Type *</label>
+            <select
+              value={boardingType}
+              onChange={(e) => setBoardingType(e.target.value as "Day Scholar" | "Boarding")}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white text-black"
+            >
+              <option value="Day Scholar">Day Scholar</option>
+              <option value="Boarding">Boarding</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Class (Optional)</label>
+            <select
+              value={className}
+              onChange={(e) => setClassName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white text-black"
+            >
+              <option value="">All Classes</option>
+              {classOptions.map((cls) => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
           </div>
           
           <div>
@@ -2297,6 +2350,17 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
+          </div>
+          
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Description (Optional)</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+              placeholder="Brief description of the requirement"
+            />
           </div>
         </div>
         
@@ -2340,6 +2404,8 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
           >
             <option value="name">Sort by Name</option>
             <option value="cost">Sort by Cost</option>
+            <option value="boarding_type">Sort by Boarding Type</option>
+            <option value="class_name">Sort by Class</option>
             <option value="status">Sort by Status</option>
             <option value="created_at">Sort by Date</option>
           </select>
@@ -2359,6 +2425,8 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
           <thead className="bg-white/5">
             <tr className="text-left">
               <th className="px-4 py-3 text-white/80">Requirement Name</th>
+              <th className="px-4 py-3 text-white/80">Boarding Type</th>
+              <th className="px-4 py-3 text-white/80">Class</th>
               <th className="px-4 py-3 text-white/80">Description</th>
               <th className="px-4 py-3 text-white/80">Cost (UGX)</th>
               <th className="px-4 py-3 text-white/80">Status</th>
@@ -2368,7 +2436,7 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
           <tbody className="[&>tr:nth-child(even)]:bg-white/5">
             {filteredAndSortedRequirements.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-white/70">
+                <td colSpan={7} className="px-4 py-6 text-center text-white/70">
                   {searchTerm ? 'No requirements found matching your search.' : 'No requirements added yet.'}
                 </td>
               </tr>
@@ -2376,6 +2444,16 @@ function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
               filteredAndSortedRequirements.map((req) => (
                 <tr key={req.id} className="border-t border-white/10">
                   <td className="px-4 py-3 text-white font-medium">{req.requirement_name}</td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      req.boarding_type === 'Boarding' 
+                        ? 'bg-blue-500/20 text-blue-300' 
+                        : 'bg-green-500/20 text-green-300'
+                    }`}>
+                      {req.boarding_type || 'Day Scholar'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-white/80">{req.class_name || 'All Classes'}</td>
                   <td className="px-4 py-3 text-white/80">{req.description || '-'}</td>
                   <td className="px-4 py-3 text-white">
                     {new Intl.NumberFormat('en-UG', { 
