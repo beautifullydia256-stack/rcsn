@@ -766,6 +766,10 @@ export default function TeacherExamResultsClassPage() {
             });
             throw resp.error;
           }
+          
+          // Log the response to see what the RPC function returned
+          console.log('RPC response:', resp);
+          console.log('RPC data:', resp.data);
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
