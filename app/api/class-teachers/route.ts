@@ -22,15 +22,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'class_name and teacher_id are required' }, { status: 400 });
     }
 
-    // Resolve school_id of caller
-    const { data: urow, error: uerr } = await supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (uerr || !urow?.school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
-
-    const school_id = urow.school_id as string;
+    // Resolve school_id of caller from user metadata
+    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
+    if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     // Ensure the teacher belongs to same school
     const { data: trow, error: terr } = await supabase

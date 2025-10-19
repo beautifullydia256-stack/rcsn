@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-    const school_id = u?.school_id as string | undefined;
+    // Get school_id from user metadata instead of users table to avoid 406 errors
+    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     const query = supabase
@@ -57,8 +58,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'subject and ranges[] are required' }, { status: 400 });
     }
 
-    const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-    const school_id = u?.school_id as string | undefined;
+    // Get school_id from user metadata instead of users table to avoid 406 errors
+    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     // Replace existing ranges for this subject
@@ -98,8 +100,9 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 });
 
-    const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-    const school_id = u?.school_id as string | undefined;
+    // Get school_id from user metadata instead of users table to avoid 406 errors
+    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
     const { error } = await supabase.from('teacher_remarks_settings').delete().eq('id', id).eq('school_id', school_id);
