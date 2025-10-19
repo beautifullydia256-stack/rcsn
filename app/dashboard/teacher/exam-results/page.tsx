@@ -20,14 +20,12 @@ export default function TeacherExamResultsPage() {
           return;
         }
 
-        const { data: userRow } = await supabase
-          .from('users')
-          .select('school_id')
-          .eq('user_id', user.id)
-          .single();
-
-        if (!userRow?.school_id) {
-          console.error('No school_id found for user');
+        // Get school_id from user metadata instead of users table to avoid 406 errors
+        const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+        const schoolId = userMetadata.school_id;
+        
+        if (!schoolId) {
+          console.error('No school_id found in user metadata');
           setLoading(false);
           return;
         }
@@ -35,7 +33,7 @@ export default function TeacherExamResultsPage() {
         const { data: schoolData } = await supabase
           .from('schools')
           .select('type')
-          .eq('school_id', userRow.school_id)
+          .eq('school_id', schoolId)
           .single();
 
         if (schoolData) {

@@ -190,21 +190,24 @@ export default function TeacherExamResultsClassPage() {
         // Fallback: try direct query if API fails
         if (!userData) {
           try {
-            const { data, error: userError } = await supabase
-            .from('users')
-          .select('school_id,name,email,user_metadata')
-            .eq('user_id', user.id)
-            .maybeSingle();
-          
-          if (userError) {
-            console.error('Error fetching user data:', userError);
-            } else {
-              userData = data;
+            // Get school_id from user metadata instead of users table to avoid 406 errors
+            const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+            const schoolId = userMetadata.school_id;
+            const teacherName = userMetadata.name || userMetadata.teacher_name;
+            const userEmail = user.email;
+            
+            if (schoolId) {
+              userData = {
+                school_id: schoolId,
+                name: teacherName,
+                email: userEmail,
+                user_metadata: userMetadata
+              };
             }
           } catch (err) {
             console.error('Exception fetching user data directly:', err);
           }
-          }
+        }
 
         schoolId = schoolId || (userData?.school_id as string | undefined);
 

@@ -24,10 +24,12 @@ export default function ClassAttendancePage() {
       if (!user) return router.push('/login');
       const metaTeacherId = (user as any)?.user_metadata?.teacher_id || (user as any)?.raw_user_meta_data?.teacher_id;
       setTeacherId(metaTeacherId || user.id);
-      const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!u?.school_id) return router.push('/login');
-      setSchoolId(u.school_id);
-      const { data: studs } = await supabase.from('students').select('student_id,name,current_class').eq('school_id', u.school_id).eq('current_class', className).order('name');
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) return router.push('/login');
+      setSchoolId(schoolId);
+      const { data: studs } = await supabase.from('students').select('student_id,name,current_class').eq('school_id', schoolId).eq('current_class', className).order('name');
       setStudents(studs || []);
       // load existing marks for today
       const today = new Date().toISOString().slice(0,10);

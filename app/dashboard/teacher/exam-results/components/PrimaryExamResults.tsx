@@ -23,22 +23,26 @@ export function PrimaryExamResults() {
         }
 
         // Resolve teacher_id within this school (metadata -> teachers by email -> teachers by name)
-        const { data: userRow } = await supabase.from('users').select('school_id,name,email').eq('user_id', user.id).single();
-        let teacherId = user.user_metadata?.teacher_id as string | undefined;
-        const schoolId = userRow?.school_id as string | undefined;
-        if (!teacherId && userRow?.email && schoolId) {
+        // Get school_id from user metadata instead of users table to avoid 406 errors
+        const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+        const schoolId = userMetadata.school_id;
+        const teacherName = userMetadata.name || userMetadata.teacher_name;
+        const userEmail = user.email;
+        
+        let teacherId = userMetadata.teacher_id as string | undefined;
+        if (!teacherId && userEmail && schoolId) {
           const { data: t1 } = await supabase.from('teachers')
             .select('teacher_id')
             .eq('school_id', schoolId)
-            .ilike('email', (userRow.email || '').trim())
+            .ilike('email', (userEmail || '').trim())
             .maybeSingle();
           teacherId = t1?.teacher_id as string | undefined;
         }
-        if (!teacherId && (userRow?.name || '').trim() && schoolId) {
+        if (!teacherId && (teacherName || '').trim() && schoolId) {
           const { data: t2 } = await supabase.from('teachers')
             .select('teacher_id')
             .eq('school_id', schoolId)
-            .ilike('name', (userRow?.name || '').trim())
+            .ilike('name', (teacherName || '').trim())
             .maybeSingle();
           teacherId = t2?.teacher_id as string | undefined;
         }

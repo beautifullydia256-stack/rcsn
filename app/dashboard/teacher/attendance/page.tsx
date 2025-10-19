@@ -14,13 +14,15 @@ export default function TeacherAttendanceLanding() {
     const load = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return router.push('/login');
-      const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!u?.school_id) return router.push('/login');
-      setSchoolId(u.school_id);
+      
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) return router.push('/login');
+      setSchoolId(schoolId);
       
       // Use same logic as exam-results page
-      let teacherId = user.user_metadata?.teacher_id as string | undefined;
-      const schoolId = u.school_id;
+      let teacherId = userMetadata.teacher_id as string | undefined;
       
       if (!teacherId && user.email && schoolId) {
         const { data: t1 } = await supabase.from('teachers')
