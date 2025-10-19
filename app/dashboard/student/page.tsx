@@ -193,28 +193,32 @@ export default function StudentDashboard() {
         setStudent(studentFromMetadata);
         console.log('Student data set from metadata:', studentFromMetadata);
         
-        // Fetch related data if we have a valid student_id
+        // Always try to load fee data directly since fetchRelatedData might not be called
+        console.log('Loading fee data for student_id:', studentFromMetadata.student_id);
+        try {
+          const { data: feeData, error: feeError } = await supabase
+            .from('students')
+            .select('expected_fee_amount')
+            .eq('student_id', studentFromMetadata.student_id)
+            .single();
+          
+          if (feeError) {
+            console.error('Error loading fee data:', feeError);
+          } else if (feeData) {
+            const feeAmount = Number(feeData.expected_fee_amount || 0);
+            console.log('Loaded fee data directly:', feeAmount);
+            setExpectedFee(feeAmount);
+          } else {
+            console.log('No fee data found for student');
+          }
+        } catch (error) {
+          console.error('Failed to load fee data directly:', error);
+        }
+        
+        // Also try fetchRelatedData if we have a valid student_id
         const sid = effectiveStudentId || studentFromMetadata.student_id;
         if (sid && sid !== 'temp') {
           await fetchRelatedData(sid, studentFromMetadata.admission_number);
-        } else {
-          // If no valid student_id, try to load fee data directly
-          console.log('No valid student_id, trying to load fee data directly...');
-          try {
-            const { data: feeData } = await supabase
-              .from('students')
-              .select('expected_fee_amount')
-              .eq('student_id', studentFromMetadata.student_id)
-              .single();
-            
-            if (feeData) {
-              const feeAmount = Number(feeData.expected_fee_amount || 0);
-              console.log('Loaded fee data directly:', feeAmount);
-              setExpectedFee(feeAmount);
-            }
-          } catch (error) {
-            console.error('Failed to load fee data directly:', error);
-          }
         }
       } else {
         // Fallback: Try to get student from database (for existing logins)
