@@ -190,8 +190,15 @@ export default function StudentDetailPage() {
             const base64String = e.target?.result as string;
             
             if (base64String) {
-              // Update or insert photo record with base64 data
-              const { error: photoRecordError } = await supabase.from('student_photos').upsert({
+              // First delete any existing photo for this student
+              await supabase
+                .from('student_photos')
+                .delete()
+                .eq('student_id', student.student_id)
+                .eq('is_primary', true);
+              
+              // Then insert the new photo record
+              const { error: photoRecordError } = await supabase.from('student_photos').insert({
                 student_id: student.student_id,
                 school_id: student.school_id,
                 photo_url: base64String,
