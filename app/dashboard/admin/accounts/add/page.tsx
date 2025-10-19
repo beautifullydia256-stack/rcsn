@@ -184,6 +184,11 @@ export default function AddAccountsManagerPage() {
                     value={email} 
                     onChange={(e) => setEmail(e.target.value)} 
                   />
+                  {role !== 'admin' && role !== 'owner' && (
+                    <p className="text-xs text-blue-300 mt-1">
+                      💡 Email will be auto-generated as: firstname+lastname@schoolcode.sch
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Phone Number *</label>

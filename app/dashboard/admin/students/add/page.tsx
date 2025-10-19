@@ -109,20 +109,25 @@ export default function AddStudentPage() {
           return;
         }
 
-        // Convert to fee map
-        const feeMap: Record<string, number> = {};
+        // Convert to fee map with both day and boarding fees
+        const dayFeeMap: Record<string, number> = {};
+        const boardingFeeMap: Record<string, number> = {};
         let admFee = 0;
 
         (data || []).forEach((fee: any) => {
           if (fee.class_name === 'ADMISSION') {
             admFee = Number(fee.tuition_amount || 0);
           } else {
-            feeMap[fee.class_name] = Number(fee.tuition_amount || 0);
+            dayFeeMap[fee.class_name] = Number(fee.tuition_amount || 0);
+            boardingFeeMap[fee.class_name] = Number(fee.boarding_tuition_amount || 0);
           }
         });
 
-        setFeeStructure(feeMap);
+        setFeeStructure(dayFeeMap);
         setAdmissionFeeAmount(admFee);
+        
+        // Store boarding fees separately for later use
+        (window as any).boardingFeeStructure = boardingFeeMap;
         
         // Auto-fill admission fee if not already set
         if (admFee > 0 && !enrollmentFee) {
@@ -136,16 +141,33 @@ export default function AddStudentPage() {
     loadFeeStructure();
   }, [schoolId]);
 
-  // Auto-fill tuition fee when class is selected
+  // Auto-fill tuition fee when class or boarding type is selected
   useEffect(() => {
-    if (klass && feeStructure[klass]) {
-      const classFee = feeStructure[klass];
+    if (klass) {
+      let classFee = 0;
+      
+      if (boardingType === 'Boarding') {
+        // Use boarding fees
+        const boardingFees = (window as any).boardingFeeStructure;
+        if (boardingFees && boardingFees[klass]) {
+          classFee = boardingFees[klass];
+        }
+      } else {
+        // Use day scholar fees
+        if (feeStructure[klass]) {
+          classFee = feeStructure[klass];
+        }
+      }
+      
       if (classFee > 0) {
         setExpectedFee(classFee.toString());
-        console.log(`✓ Auto-filled tuition fee for ${klass}: UGX ${classFee.toLocaleString()}`);
+        console.log(`✓ Auto-filled ${boardingType} tuition fee for ${klass}: UGX ${classFee.toLocaleString()}`);
+      } else {
+        setExpectedFee('');
+        console.log(`⚠ No fee configured for ${boardingType} students in ${klass}`);
       }
     }
-  }, [klass, feeStructure]);
+  }, [klass, boardingType, feeStructure]);
 
   const save = async (): Promise<boolean> => {
     if (!schoolId || !firstName || !lastName || !klass || !admissionDate) return false;
@@ -450,11 +472,11 @@ export default function AddStudentPage() {
             <div className="relative">
               <input 
                 className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 w-full" 
-                placeholder="Tuition/Fee Amount Due" 
+                placeholder={`${boardingType} Tuition/Fee Amount Due`} 
                 value={expectedFee} 
                 onChange={(e)=>setExpectedFee(e.target.value)} 
               />
-              {klass && feeStructure[klass] && expectedFee === feeStructure[klass].toString() && (
+              {klass && expectedFee && (
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-green-400 text-xs">
                   ✓ Auto-filled
                 </div>

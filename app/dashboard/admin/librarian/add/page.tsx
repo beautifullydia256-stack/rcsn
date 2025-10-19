@@ -229,6 +229,9 @@ export default function AddLibrarianPage() {
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)} 
                 />
+                <p className="text-xs text-blue-300 mt-1">
+                  💡 Email will be auto-generated as: firstname+lastname@schoolcode.sch
+                </p>
               </div>
 
               <div>
