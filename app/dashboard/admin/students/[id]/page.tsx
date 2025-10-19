@@ -57,6 +57,53 @@ export default function StudentDetailPage() {
         }));
       }
 
+      // Auto-generate school-branded email for student if not already set
+      if (data && !data.student_email && data.school_id) {
+        try {
+          const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
+            p_first_name: data.first_name || data.name?.split(' ')[0] || 'Student',
+            p_last_name: data.last_name || data.name?.split(' ')[1] || 'User',
+            p_school_id: data.school_id
+          });
+          
+          if (generatedEmail) {
+            // Update the form with generated email
+            setForm(prev => ({ ...prev, student_email: generatedEmail }));
+            // Also update the student record in database
+            await supabase
+              .from('students')
+              .update({ student_email: generatedEmail })
+              .eq('student_id', data.student_id);
+          }
+        } catch (error) {
+          console.warn('Could not generate student email:', error);
+        }
+      }
+
+      // Auto-generate school-branded email for guardian if not already set
+      if (data && !data.guardian_email && data.guardian_name && data.school_id) {
+        try {
+          const guardianNameParts = data.guardian_name.split(' ');
+          const { data: generatedGuardianEmail } = await supabase.rpc('generate_unique_school_email', {
+            p_first_name: guardianNameParts[0] || 'Guardian',
+            p_last_name: guardianNameParts[1] || guardianNameParts[0] || 'User',
+            p_school_id: data.school_id
+          });
+          
+          if (generatedGuardianEmail) {
+            // Update the form with generated email
+            setForm(prev => ({ ...prev, guardian_email: generatedGuardianEmail }));
+            // Also update the student record in database
+            await supabase
+              .from('students')
+              .update({ guardian_email: generatedGuardianEmail })
+              .eq('student_id', data.student_id);
+          }
+        } catch (error) {
+          console.warn('Could not generate guardian email:', error);
+        }
+      }
+
       // Check if student already has a login
       await checkExistingLogin(data?.student_id, data?.admission_number);
 
