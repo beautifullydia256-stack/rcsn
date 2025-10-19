@@ -336,11 +336,11 @@ export default function StudentDashboard() {
         supabase.from('reports').select('*').eq('student_id', studentId),
         supabase.from('student_payments').select('*').eq('student_id', studentId).order('payment_date', { ascending: false }),
         currentTerm ?
-          supabase.from('attendance').select('*').eq('student_id', studentId)
+          supabase.from('student_attendance').select('*').eq('student_id', studentId)
             .gte('date', currentTerm.start_date)
             .lte('date', currentTerm.end_date)
             .order('date', { ascending: false }) :
-          supabase.from('attendance').select('*').eq('student_id', studentId).order('date', { ascending: false }),
+          supabase.from('student_attendance').select('*').eq('student_id', studentId).order('date', { ascending: false }),
         supabase.from('students').select('expected_fee_amount').eq('student_id', studentId).single()
       ]);
 
