@@ -759,7 +759,13 @@ export default function TeacherExamResultsClassPage() {
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
+        
+        // Force reload saved results after successful save
+        console.log('Primary saving completed, reloading saved results...');
+        // Small delay to ensure database is updated
+        await new Promise(resolve => setTimeout(resolve, 500));
         await reloadSavedResults();
+        console.log('Primary reload completed');
       } else {
         // Secondary
         // Guard: subject selected
@@ -822,7 +828,13 @@ export default function TeacherExamResultsClassPage() {
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
+        
+        // Force reload saved results after successful save
+        console.log('Secondary saving completed, reloading saved results...');
+        // Small delay to ensure database is updated
+        await new Promise(resolve => setTimeout(resolve, 500));
         await reloadSavedResults();
+        console.log('Secondary reload completed');
       }
       
     } catch (err) {
@@ -1246,12 +1258,25 @@ export default function TeacherExamResultsClassPage() {
             className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md overflow-hidden"
           >
             <div className="p-6 border-b border-white/10">
-              <h3 className="text-white font-medium">Enter {isSecondary ? 'Scores' : 'Marks'} for {selectedSubject}</h3>
-              <p className="text-white/80 text-sm mt-1">
-                {isSecondary
-                  ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
-                  : 'Enter marks out of 100.'}
-              </p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-white font-medium">Enter {isSecondary ? 'Scores' : 'Marks'} for {selectedSubject}</h3>
+                  <p className="text-white/80 text-sm mt-1">
+                    {isSecondary
+                      ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
+                      : 'Enter marks out of 100.'}
+                  </p>
+                </div>
+                <button
+                  onClick={async () => {
+                    console.log('Manual refresh clicked');
+                    await reloadSavedResults();
+                  }}
+                  className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  🔄 Refresh Saved
+                </button>
+              </div>
             </div>
             <div className="overflow-x-auto">
               {!isSecondary ? (
