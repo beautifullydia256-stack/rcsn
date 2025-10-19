@@ -184,43 +184,33 @@ export default function StudentDetailPage() {
       // Upload new profile photo if provided
       if (profilePhoto && student.student_id) {
         try {
-          const filePath = `${student.school_id}/${student.student_id}/profile.jpg`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, profilePhoto, {
-              contentType: 'image/jpeg',
-              upsert: true
-            });
+          // Convert photo to base64 for storage
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64String = e.target?.result as string;
+            
+            if (base64String) {
+              // Update or insert photo record with base64 data
+              const { error: photoRecordError } = await supabase.from('student_photos').upsert({
+                student_id: student.student_id,
+                school_id: student.school_id,
+                photo_url: base64String,
+                photo_filename: profilePhoto.name,
+                photo_size: profilePhoto.size,
+                photo_type: profilePhoto.type,
+                is_primary: true
+              });
 
-          if (uploadError) {
-            console.error('Photo upload error:', uploadError);
-            // Don't fail the entire operation for photo upload
-            alert(`Photo upload failed: ${uploadError.message}. Student data was saved successfully.`);
-          } else {
-            // Get the public URL
-            const { data: urlData } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(filePath);
-
-            // Update or insert photo record
-            const { error: photoRecordError } = await supabase.from('student_photos').upsert({
-              student_id: student.student_id,
-              school_id: student.school_id,
-              photo_url: urlData.publicUrl,
-              photo_filename: profilePhoto.name,
-              photo_size: profilePhoto.size,
-              photo_type: profilePhoto.type,
-              is_primary: true
-            });
-
-            if (photoRecordError) {
-              console.error('Photo record error:', photoRecordError);
-              alert(`Photo uploaded but database record failed: ${photoRecordError.message}`);
-            } else {
-              setCurrentPhotoUrl(urlData.publicUrl);
+              if (photoRecordError) {
+                console.error('Photo record error:', photoRecordError);
+                alert(`Photo upload failed: ${photoRecordError.message}. Student data was saved successfully.`);
+              } else {
+                setCurrentPhotoUrl(base64String);
+                alert('Photo uploaded successfully!');
+              }
             }
-          }
+          };
+          reader.readAsDataURL(profilePhoto);
         } catch (photoError) {
           console.error('Photo processing error:', photoError);
           alert(`Photo processing failed: ${photoError instanceof Error ? photoError.message : 'Unknown error'}. Student data was saved successfully.`);
