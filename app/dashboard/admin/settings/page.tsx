@@ -450,12 +450,14 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [feeStatus, setFeeStatus] = useState<any>(null);
 
   useEffect(() => {
     const loadFees = async () => {
       if (!schoolId) return;
       setLoading(true);
       try {
+        // Load fee structure data
         const { data, error: fetchError } = await supabase
           .from('school_fee_structure')
           .select('*')
@@ -478,6 +480,16 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 
         setFeeStructure(feeMap);
         setAdmissionFee(admFee);
+
+        // Load fee structure status
+        const { data: statusData, error: statusError } = await supabase
+          .rpc('get_fee_structure_status', { p_school_id: schoolId });
+
+        if (statusError) {
+          console.warn('Could not load fee status:', statusError);
+        } else {
+          setFeeStatus(statusData);
+        }
       } catch (err) {
         console.error('Error loading fees:', err);
         setError('Failed to load fee structure');
@@ -516,6 +528,15 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
         .upsert(feeRecords, { onConflict: 'school_id,class_name' });
 
       if (upsertError) throw upsertError;
+
+      // Refresh fee status after saving
+      try {
+        const { data: statusData } = await supabase
+          .rpc('get_fee_structure_status', { p_school_id: schoolId });
+        setFeeStatus(statusData);
+      } catch (statusError) {
+        console.warn('Could not refresh fee status:', statusError);
+      }
 
       // Automatically sync student balances after saving fee structure
       try {
@@ -582,6 +603,35 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
         </div>
       )}
 
+      {/* Fee Structure Status */}
+      {feeStatus && (
+        <div className={`mb-4 p-4 rounded-lg border ${
+          feeStatus.status === 'fully_configured' ? 'bg-green-600/10 border-green-500/30' :
+          feeStatus.status === 'partially_configured' ? 'bg-yellow-600/10 border-yellow-500/30' :
+          feeStatus.status === 'not_configured' ? 'bg-orange-600/10 border-orange-500/30' :
+          'bg-red-600/10 border-red-500/30'
+        }`}>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className={`font-medium text-sm ${
+              feeStatus.status === 'fully_configured' ? 'text-green-300' :
+              feeStatus.status === 'partially_configured' ? 'text-yellow-300' :
+              feeStatus.status === 'not_configured' ? 'text-orange-300' :
+              'text-red-300'
+            }`}>
+              {feeStatus.status === 'fully_configured' ? '✅' : 
+               feeStatus.status === 'partially_configured' ? '⚠️' :
+               feeStatus.status === 'not_configured' ? '🔧' : '❌'} 
+              {feeStatus.message}
+            </h3>
+          </div>
+          <p className="text-white/70 text-sm mb-2">{feeStatus.description}</p>
+          <div className="flex items-center justify-between text-xs text-white/60">
+            <span>Classes: {feeStatus.configured_classes || 0}/{feeStatus.total_classes || 0} configured</span>
+            <span className="text-white/50">{feeStatus.action}</span>
+          </div>
+        </div>
+      )}
+
       {/* Admission Fee */}
       <div className="mb-6 p-4 rounded-lg bg-purple-600/10 border border-purple-500/30">
         <h3 className="text-purple-300 font-medium mb-3">🎓 Admission/Registration Fee</h3>
@@ -624,7 +674,10 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                 />
               </div>
               <p className="mt-1 text-xs text-white/50">
-                {feeStructure[className] && parseInt(feeStructure[className]) > 0 ? `~UGX ${(parseInt(feeStructure[className]) * 3).toLocaleString()} per Year` : 'Not set'}
+                {feeStructure[className] && parseInt(feeStructure[className]) > 0 ? 
+                  `~UGX ${(parseInt(feeStructure[className]) * 3).toLocaleString()} per Year` : 
+                  'Fee not configured - students cannot be registered for this class until fee is set'
+                }
               </p>
             </div>
           ))}
