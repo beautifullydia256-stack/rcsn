@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 
-type TabKey = "subjects" | "assignments" | "finance" | "timetable" | "terms" | "exams" | "branding";
+type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
 export default function AdminSystemSettingsPage() {
   const router = useRouter();
@@ -79,6 +79,7 @@ export default function AdminSystemSettingsPage() {
           <TabButton k="subjects" label="Subjects per Class" />
           <TabButton k="assignments" label="Teacher ↔ Subject ↔ Class" />
           <TabButton k="finance" label="Financial Settings" />
+          <TabButton k="requirements" label="School Requirements" />
           <TabButton k="timetable" label="Timetable Designer" />
           <TabButton k="terms" label="Term Settings" />
           <TabButton k="exams" label="Exam Sets" />
@@ -94,6 +95,7 @@ export default function AdminSystemSettingsPage() {
           {tab === "subjects" && <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />}
           {tab === "assignments" && <TeacherSubjectClass classOptions={classOptions} />}
           {tab === "finance" && <FinancialSettings schoolId={schoolId} classes={classOptions} />}
+          {tab === "requirements" && <SchoolRequirements schoolId={schoolId} />}
           {tab === "timetable" && <TimetableDesigner classOptions={classOptions} schoolId={schoolId} />}
           {tab === "terms" && <TermSettings schoolId={schoolId} />}
           {tab === "exams" && <ExamSets classOptions={classOptions} schoolId={schoolId} schoolType={schoolType} />}
@@ -477,8 +479,6 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
             feeMap[fee.class_name] = amount > 0 ? amount.toString() : '';
             // Load boarding fees
             feeMap[`${fee.class_name}_boarding_tuition`] = Number(fee.boarding_tuition_amount || 0) > 0 ? fee.boarding_tuition_amount.toString() : '';
-            feeMap[`${fee.class_name}_accommodation`] = Number(fee.boarding_accommodation_fee || 0) > 0 ? fee.boarding_accommodation_fee.toString() : '';
-            feeMap[`${fee.class_name}_meals`] = Number(fee.boarding_meals_fee || 0) > 0 ? fee.boarding_meals_fee.toString() : '';
           }
         });
 
@@ -517,9 +517,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
         school_id: schoolId,
         class_name: className,
         tuition_amount: parseInt(feeStructure[className]) || 0,
-        boarding_tuition_amount: parseInt(feeStructure[`${className}_boarding_tuition`]) || 0,
-        boarding_accommodation_fee: parseInt(feeStructure[`${className}_accommodation`]) || 0,
-        boarding_meals_fee: parseInt(feeStructure[`${className}_meals`]) || 0
+        boarding_tuition_amount: parseInt(feeStructure[`${className}_boarding_tuition`]) || 0
       }));
 
       // Add admission fee as special record
@@ -706,7 +704,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
               </label>
               
               {/* Boarding Tuition */}
-              <div className="mb-3">
+              <div className="mb-2">
                 <label className="block text-white/70 text-xs mb-1">Boarding Tuition (UGX)</label>
                 <input
                   type="number"
@@ -718,42 +716,13 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                 />
               </div>
 
-              {/* Accommodation Fee */}
-              <div className="mb-3">
-                <label className="block text-white/70 text-xs mb-1">Accommodation (UGX)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure[`${className}_accommodation`] || ''}
-                  onChange={(e) => updateClassFee(`${className}_accommodation`, e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm"
-                  placeholder="e.g., 80000"
-                />
-              </div>
-
-              {/* Meals Fee */}
-              <div className="mb-2">
-                <label className="block text-white/70 text-xs mb-1">Meals (UGX)</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={feeStructure[`${className}_meals`] || ''}
-                  onChange={(e) => updateClassFee(`${className}_meals`, e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm"
-                  placeholder="e.g., 120000"
-                />
-              </div>
-
               {/* Total Display */}
               <div className="mt-2 p-2 rounded bg-white/5">
                 <p className="text-xs text-white/60">
                   {(() => {
                     const tuition = parseInt(feeStructure[`${className}_boarding_tuition`] || '0');
-                    const accommodation = parseInt(feeStructure[`${className}_accommodation`] || '0');
-                    const meals = parseInt(feeStructure[`${className}_meals`] || '0');
-                    const total = tuition + accommodation + meals;
-                    return total > 0 ? 
-                      `Total: UGX ${total.toLocaleString()}/term (~UGX ${(total * 3).toLocaleString()}/year)` : 
+                    return tuition > 0 ? 
+                      `Total: UGX ${tuition.toLocaleString()}/term (~UGX ${(tuition * 3).toLocaleString()}/year)` : 
                       'Boarding fees not configured';
                   })()}
                 </p>
@@ -2068,6 +2037,399 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SchoolRequirements({ schoolId }: { schoolId: string | null }) {
+  const [requirements, setRequirements] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<"name" | "cost" | "status" | "created_at">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  
+  // Form state for adding/editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [requirementName, setRequirementName] = useState("");
+  const [description, setDescription] = useState("");
+  const [cost, setCost] = useState("");
+  const [status, setStatus] = useState<"Active" | "Inactive">("Active");
+
+  useEffect(() => {
+    loadRequirements();
+  }, [schoolId]);
+
+  const loadRequirements = async () => {
+    if (!schoolId) return;
+    setLoading(true);
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('school_requirements')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('requirement_name');
+
+      if (fetchError) throw fetchError;
+      setRequirements(data || []);
+    } catch (err) {
+      console.error('Error loading requirements:', err);
+      setError('Failed to load school requirements');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!schoolId || !requirementName.trim()) {
+      setError('Requirement name is required');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const requirementData = {
+        school_id: schoolId,
+        requirement_name: requirementName.trim(),
+        description: description.trim() || null,
+        cost: parseFloat(cost) || 0,
+        status: status
+      };
+
+      if (editingId) {
+        // Update existing requirement
+        const { error: updateError } = await supabase
+          .from('school_requirements')
+          .update(requirementData)
+          .eq('id', editingId);
+
+        if (updateError) throw updateError;
+        setSuccess('Requirement updated successfully!');
+      } else {
+        // Add new requirement
+        const { error: insertError } = await supabase
+          .from('school_requirements')
+          .insert(requirementData);
+
+        if (insertError) throw insertError;
+        setSuccess('Requirement added successfully!');
+      }
+
+      // Reset form
+      setEditingId(null);
+      setRequirementName("");
+      setDescription("");
+      setCost("");
+      setStatus("Active");
+      
+      // Reload requirements
+      await loadRequirements();
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error saving requirement:', err);
+      setError(err.message || 'Failed to save requirement');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEdit = (requirement: any) => {
+    setEditingId(requirement.id);
+    setRequirementName(requirement.requirement_name);
+    setDescription(requirement.description || "");
+    setCost(requirement.cost.toString());
+    setStatus(requirement.status);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this requirement?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('school_requirements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setSuccess('Requirement deleted successfully!');
+      await loadRequirements();
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      console.error('Error deleting requirement:', err);
+      setError(err.message || 'Failed to delete requirement');
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingId(null);
+    setRequirementName("");
+    setDescription("");
+    setCost("");
+    setStatus("Active");
+  };
+
+  const filteredAndSortedRequirements = useMemo(() => {
+    let filtered = requirements.filter(req => 
+      req.requirement_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (req.description && req.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+    filtered.sort((a, b) => {
+      let aVal, bVal;
+      switch (sortBy) {
+        case "name":
+          aVal = a.requirement_name.toLowerCase();
+          bVal = b.requirement_name.toLowerCase();
+          break;
+        case "cost":
+          aVal = parseFloat(a.cost);
+          bVal = parseFloat(b.cost);
+          break;
+        case "status":
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        case "created_at":
+          aVal = new Date(a.created_at).getTime();
+          bVal = new Date(b.created_at).getTime();
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortOrder === "asc") {
+        return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+      } else {
+        return aVal > bVal ? -1 : aVal < bVal ? 1 : 0;
+      }
+    });
+
+    return filtered;
+  }, [requirements, searchTerm, sortBy, sortOrder]);
+
+  if (loading) {
+    return (
+      <div>
+        <SectionHeader
+          title="School Requirements"
+          desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
+        />
+        <div className="text-white/60">Loading requirements...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader
+        title="School Requirements"
+        desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
+      />
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-red-600/20 border border-red-500/30 text-red-300 text-sm">
+          {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="mb-4 p-3 rounded-lg bg-green-600/20 border border-green-500/30 text-green-300 text-sm">
+          {success}
+        </div>
+      )}
+
+      {/* Add/Edit Form */}
+      <div className="mb-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+        <h3 className="text-blue-300 font-medium mb-3">
+          {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Requirement Name *</label>
+            <input
+              type="text"
+              value={requirementName}
+              onChange={(e) => setRequirementName(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+              placeholder="e.g., School Uniform, Exercise Books"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Cost (UGX) *</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={cost}
+              onChange={(e) => setCost(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+              placeholder="e.g., 50000"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Description (Optional)</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white"
+              placeholder="Brief description of the requirement"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-white/80 text-sm mb-1">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as "Active" | "Inactive")}
+              className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white text-black"
+            >
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="flex gap-3 mt-4">
+          <button
+            onClick={handleSave}
+            disabled={saving || !requirementName.trim()}
+            className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : (editingId ? 'Update' : 'Add')}
+          </button>
+          
+          {editingId && (
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 rounded-lg bg-gray-600 hover:bg-gray-500 text-white"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Search and Sort Controls */}
+      <div className="mb-4 flex flex-col sm:flex-row gap-3">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Search requirements..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/50"
+          />
+        </div>
+        
+        <div className="flex gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as any)}
+            className="px-3 py-2 rounded-lg border border-white/20 bg-white text-black"
+          >
+            <option value="name">Sort by Name</option>
+            <option value="cost">Sort by Cost</option>
+            <option value="status">Sort by Status</option>
+            <option value="created_at">Sort by Date</option>
+          </select>
+          
+          <button
+            onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+            className="px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white hover:bg-white/15"
+          >
+            {sortOrder === "asc" ? "↑" : "↓"}
+          </button>
+        </div>
+      </div>
+
+      {/* Requirements Table */}
+      <div className="overflow-x-auto rounded-xl border border-white/10">
+        <table className="min-w-full text-sm">
+          <thead className="bg-white/5">
+            <tr className="text-left">
+              <th className="px-4 py-3 text-white/80">Requirement Name</th>
+              <th className="px-4 py-3 text-white/80">Description</th>
+              <th className="px-4 py-3 text-white/80">Cost (UGX)</th>
+              <th className="px-4 py-3 text-white/80">Status</th>
+              <th className="px-4 py-3 text-white/80">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {filteredAndSortedRequirements.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-6 text-center text-white/70">
+                  {searchTerm ? 'No requirements found matching your search.' : 'No requirements added yet.'}
+                </td>
+              </tr>
+            ) : (
+              filteredAndSortedRequirements.map((req) => (
+                <tr key={req.id} className="border-t border-white/10">
+                  <td className="px-4 py-3 text-white font-medium">{req.requirement_name}</td>
+                  <td className="px-4 py-3 text-white/80">{req.description || '-'}</td>
+                  <td className="px-4 py-3 text-white">
+                    {new Intl.NumberFormat('en-UG', { 
+                      style: 'currency', 
+                      currency: 'UGX',
+                      minimumFractionDigits: 0 
+                    }).format(req.cost)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      req.status === 'Active' 
+                        ? 'bg-green-500/20 text-green-300' 
+                        : 'bg-red-500/20 text-red-300'
+                    }`}>
+                      {req.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEdit(req)}
+                        className="px-2 py-1 text-xs rounded bg-blue-500 hover:bg-blue-400 text-white"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(req.id)}
+                        className="px-2 py-1 text-xs rounded bg-red-500 hover:bg-red-400 text-white"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Summary */}
+      {requirements.length > 0 && (
+        <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10">
+          <div className="text-white/80 text-sm">
+            <strong>Total Requirements:</strong> {requirements.length} | 
+            <strong> Active:</strong> {requirements.filter(r => r.status === 'Active').length} | 
+            <strong> Total Value:</strong> {new Intl.NumberFormat('en-UG', { 
+              style: 'currency', 
+              currency: 'UGX',
+              minimumFractionDigits: 0 
+            }).format(requirements.reduce((sum, req) => sum + parseFloat(req.cost), 0))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
