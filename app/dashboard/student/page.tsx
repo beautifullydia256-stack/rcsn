@@ -295,15 +295,18 @@ export default function StudentDashboard() {
       // Get current term date range for scoping data
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
-      if (!u?.school_id) return;
+      
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) return;
 
       const today = new Date().toISOString().slice(0,10);
       // Fetch all terms and filter in JavaScript to handle NULL dates
       const { data: allTerms } = await supabase
         .from('school_terms')
         .select('start_date, end_date')
-        .eq('school_id', u.school_id)
+        .eq('school_id', schoolId)
         .order('year', { ascending: false })
         .order('term', { ascending: false });
       
@@ -406,14 +409,16 @@ export default function StudentDashboard() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-        const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-        if (!u?.school_id) return;
+        // Get school_id from user metadata instead of users table to avoid 406 errors
+        const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+        const schoolId = userMetadata.school_id;
+        if (!schoolId) return;
         // Find current term (today within start/end) or latest - fetch all and filter in JS
         const today = new Date().toISOString().slice(0,10);
         const { data: terms } = await supabase
           .from('school_terms')
           .select('*')
-          .eq('school_id', u.school_id)
+          .eq('school_id', schoolId)
           .order('year', { ascending: false })
           .order('term', { ascending: false });
         
@@ -430,7 +435,7 @@ export default function StudentDashboard() {
         const { data: st } = await supabase
           .from('student_attendance')
           .select('date,present')
-          .eq('school_id', u.school_id)
+          .eq('school_id', schoolId)
           .eq('student_id', (student || {}).student_id || 'temp')
           .eq('present', true)
           .gte('date', term.start_date)
