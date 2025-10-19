@@ -734,6 +734,16 @@ export default function TeacherExamResultsClassPage() {
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
           const avgPercent = Math.max(0, Math.min(100, parseFloat(data.marks)));
           const teacherComment = autoTeacherComment(avgPercent);
+          
+          console.log('Saving exam result with these parameters:');
+          console.log('- p_school_id:', schoolId);
+          console.log('- p_exam_set_id:', selectedExamSet);
+          console.log('- p_student_id:', studentId);
+          console.log('- p_class_name:', className);
+          console.log('- p_subject:', (selectedSubject || '').trim());
+          console.log('- p_marks_obtained:', parseFloat(data.marks));
+          console.log('- p_teacher_id:', teacherIdForSave);
+          
           const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
@@ -907,6 +917,13 @@ export default function TeacherExamResultsClassPage() {
     }
     
     try {
+      console.log('Querying exam_results with these exact parameters:');
+      console.log('- school_id:', resolvedSchoolId);
+      console.log('- class_name:', className);
+      console.log('- exam_set_id:', selectedExamSet);
+      console.log('- subject:', selectedSubject);
+      console.log('- teacher_id:', resolvedTeacherId);
+      
       const { data, error } = await supabase
         .from('exam_results')
         .select('*')
