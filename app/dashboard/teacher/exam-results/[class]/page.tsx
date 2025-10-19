@@ -890,8 +890,13 @@ export default function TeacherExamResultsClassPage() {
         .eq('exam_set_id', selectedExamSet)
         .eq('subject', selectedSubject)
         .eq('teacher_id', resolvedTeacherId);
-      if (error) return;
+      if (error) {
+        console.error('Error loading saved results:', error);
+        return;
+      }
       const rows = data || [];
+      console.log('Loaded saved results:', rows.length, 'records');
+      
       if (!isSecondary) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
@@ -901,6 +906,7 @@ export default function TeacherExamResultsClassPage() {
             grade: r.grade || ''
           };
         });
+        console.log('Setting primary exam results:', map);
         setExamResults(map);
       } else {
         const map: Record<string, any> = {};
@@ -919,9 +925,12 @@ export default function TeacherExamResultsClassPage() {
             initials: r.teacher_initials || ''
           };
         });
+        console.log('Setting secondary exam results:', map);
         setExamResultsSecondary(map);
       }
-    } catch {}
+    } catch (err) {
+      console.error('Exception in reloadSavedResults:', err);
+    }
   };
 
   // When switching Exam Set or Subject, clear current UI state and load saved rows for the new selection
