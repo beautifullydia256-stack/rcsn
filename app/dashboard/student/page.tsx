@@ -104,6 +104,19 @@ export default function StudentDashboard() {
     fetchData();
   }, []);
 
+  // Add a refresh mechanism to ensure latest fee data
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh fee data when user returns to the tab
+        fetchData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
   const fetchData = async () => {
     try {
       // Refresh session to ensure latest user_metadata after recent account changes
@@ -510,6 +523,17 @@ export default function StudentDashboard() {
                   className="pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+              
+              {/* Refresh Button */}
+              <button
+                onClick={() => {
+                  setLoading(true);
+                  fetchData();
+                }}
+                className="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-colors"
+              >
+                Refresh Data
+              </button>
               
             <button
               onClick={handleLogout}
