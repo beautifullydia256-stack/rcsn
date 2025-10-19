@@ -27,13 +27,11 @@ export default function AddStudentPage() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [studentPhone, setStudentPhone] = useState("");
-  const [studentEmail, setStudentEmail] = useState("");
 
   // Parent/Guardian
   const [guardianName, setGuardianName] = useState("");
   const [guardianRelationship, setGuardianRelationship] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
-  const [guardianEmail, setGuardianEmail] = useState("");
   const [guardianOccupation, setGuardianOccupation] = useState("");
   const [guardianAddress, setGuardianAddress] = useState("");
 
@@ -250,11 +248,9 @@ export default function AddStudentPage() {
         city,
         country,
         student_phone: studentPhone || null,
-        student_email: studentEmail || null,
         guardian_name: guardianName,
         guardian_relationship: guardianRelationship,
         guardian_phone: guardianPhone,
-        guardian_email: guardianEmail || null,
         guardian_occupation: guardianOccupation || null,
         guardian_address: guardianAddress || null,
         medical_condition: medicalCondition || null,
@@ -325,8 +321,8 @@ export default function AddStudentPage() {
       // reset minimal fields for add-another flow
       setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob("");
       setNationality(""); setReligion("");
-      setAddress(""); setCity(""); setCountry(""); setStudentPhone(""); setStudentEmail("");
-      setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianEmail(""); setGuardianOccupation(""); setGuardianAddress("");
+      setAddress(""); setCity(""); setCountry(""); setStudentPhone("");
+      setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianOccupation(""); setGuardianAddress("");
       setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate(""); setBoardingType("Day Scholar");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
       setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
@@ -393,7 +389,6 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="City / District / Village" value={city} onChange={(e)=>setCity(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Country" value={country} onChange={(e)=>setCountry(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student Phone (optional)" value={studentPhone} onChange={(e)=>setStudentPhone(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student Email (optional)" value={studentEmail} onChange={(e)=>setStudentEmail(e.target.value)} />
 
             <div className="text-white/90 font-medium col-span-full mt-2">Parent / Guardian Information</div>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Full Name" value={guardianName} onChange={(e)=>setGuardianName(e.target.value)} />
@@ -404,7 +399,6 @@ export default function AddStudentPage() {
               <option value="Guardian">Guardian</option>
             </select>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone Number" value={guardianPhone} onChange={(e)=>setGuardianPhone(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Email (optional)" value={guardianEmail} onChange={(e)=>setGuardianEmail(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Occupation (optional)" value={guardianOccupation} onChange={(e)=>setGuardianOccupation(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Address (if different)" value={guardianAddress} onChange={(e)=>setGuardianAddress(e.target.value)} />
 
