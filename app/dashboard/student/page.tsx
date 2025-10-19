@@ -197,6 +197,24 @@ export default function StudentDashboard() {
         const sid = effectiveStudentId || studentFromMetadata.student_id;
         if (sid && sid !== 'temp') {
           await fetchRelatedData(sid, studentFromMetadata.admission_number);
+        } else {
+          // If no valid student_id, try to load fee data directly
+          console.log('No valid student_id, trying to load fee data directly...');
+          try {
+            const { data: feeData } = await supabase
+              .from('students')
+              .select('expected_fee_amount')
+              .eq('student_id', studentFromMetadata.student_id)
+              .single();
+            
+            if (feeData) {
+              const feeAmount = Number(feeData.expected_fee_amount || 0);
+              console.log('Loaded fee data directly:', feeAmount);
+              setExpectedFee(feeAmount);
+            }
+          } catch (error) {
+            console.error('Failed to load fee data directly:', error);
+          }
         }
       } else {
         // Fallback: Try to get student from database (for existing logins)
