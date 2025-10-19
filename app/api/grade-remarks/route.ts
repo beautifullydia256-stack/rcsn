@@ -30,13 +30,10 @@ export async function GET(req: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Resolve user's school
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-    if (!userRow?.school_id) return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
+    // Resolve user's school from metadata
+    const userMetadata = (session.user as any).user_metadata || (session.user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
+    if (!school_id) return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
 
     const { data, error } = await supabase
       .from('grade_remarks')
@@ -63,17 +60,14 @@ export async function POST(req: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    // Resolve user's school
-    const { data: userRow } = await supabase
-      .from('users')
-      .select('school_id')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-    if (!userRow?.school_id) return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
+    // Resolve user's school from metadata
+    const userMetadata = (session.user as any).user_metadata || (session.user as any).raw_user_meta_data || {};
+    const school_id = userMetadata.school_id;
+    if (!school_id) return NextResponse.json({ error: 'User not linked to a school' }, { status: 400 });
 
     // Upsert per-school remarks
     const payload = items.map(it => ({
-      school_id: userRow.school_id,
+      school_id: school_id,
       level,
       grade: (it.grade || '').toUpperCase(),
       remark: String(it.remark || ''),
