@@ -892,7 +892,20 @@ export default function TeacherExamResultsClassPage() {
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
-    if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) return;
+    console.log('reloadSavedResults called with:', {
+      resolvedSchoolId,
+      resolvedTeacherId,
+      selectedExamSet,
+      selectedSubject,
+      className,
+      isSecondary
+    });
+    
+    if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) {
+      console.log('Missing required parameters for reloadSavedResults');
+      return;
+    }
+    
     try {
       const { data, error } = await supabase
         .from('exam_results')
@@ -902,24 +915,38 @@ export default function TeacherExamResultsClassPage() {
         .eq('exam_set_id', selectedExamSet)
         .eq('subject', selectedSubject)
         .eq('teacher_id', resolvedTeacherId);
+        
       if (error) {
         console.error('Error loading saved results:', error);
         return;
       }
+      
       const rows = data || [];
       console.log('Loaded saved results:', rows.length, 'records');
+      console.log('Raw saved results data:', rows);
       
       if (!isSecondary) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
+          console.log('Processing primary result for student:', r.student_id, {
+            marks_obtained: r.marks_obtained,
+            total_marks: r.total_marks,
+            grade: r.grade
+          });
           map[r.student_id] = {
             marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
             totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
             grade: r.grade || ''
           };
         });
-        console.log('Setting primary exam results:', map);
+        console.log('Setting primary exam results map:', map);
         setExamResults(map);
+        console.log('Primary exam results state updated');
+        
+        // Also log the current state after a brief delay to see if it was actually set
+        setTimeout(() => {
+          console.log('Current examResults state after setExamResults:', examResults);
+        }, 100);
       } else {
         const map: Record<string, any> = {};
         rows.forEach(r => {
@@ -937,8 +964,9 @@ export default function TeacherExamResultsClassPage() {
             initials: r.teacher_initials || ''
           };
         });
-        console.log('Setting secondary exam results:', map);
+        console.log('Setting secondary exam results map:', map);
         setExamResultsSecondary(map);
+        console.log('Secondary exam results state updated');
       }
     } catch (err) {
       console.error('Exception in reloadSavedResults:', err);
