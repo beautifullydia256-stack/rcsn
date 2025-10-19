@@ -735,14 +735,6 @@ export default function TeacherExamResultsClassPage() {
           const avgPercent = Math.max(0, Math.min(100, parseFloat(data.marks)));
           const teacherComment = autoTeacherComment(avgPercent);
           
-          console.log('Saving exam result with these parameters:');
-          console.log('- p_school_id:', schoolId);
-          console.log('- p_exam_set_id:', selectedExamSet);
-          console.log('- p_student_id:', studentId);
-          console.log('- p_class_name:', className);
-          console.log('- p_subject:', (selectedSubject || '').trim());
-          console.log('- p_marks_obtained:', parseFloat(data.marks));
-          console.log('- p_teacher_id:', teacherIdForSave);
           
           const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
             p_school_id: schoolId,
@@ -767,19 +759,14 @@ export default function TeacherExamResultsClassPage() {
             throw resp.error;
           }
           
-          // Log the response to see what the RPC function returned
-          console.log('RPC response:', resp);
-          console.log('RPC data:', resp.data);
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
         
         // Force reload saved results after successful save
-        console.log('Primary saving completed, reloading saved results...');
         // Small delay to ensure database is updated
         await new Promise(resolve => setTimeout(resolve, 500));
         await reloadSavedResults();
-        console.log('Primary reload completed');
       } else {
         // Secondary
         // Guard: subject selected
@@ -844,11 +831,9 @@ export default function TeacherExamResultsClassPage() {
         setSuccess(`Successfully saved ${entries.length} exam results`);
         
         // Force reload saved results after successful save
-        console.log('Secondary saving completed, reloading saved results...');
         // Small delay to ensure database is updated
         await new Promise(resolve => setTimeout(resolve, 500));
         await reloadSavedResults();
-        console.log('Secondary reload completed');
       }
       
     } catch (err) {
@@ -906,28 +891,11 @@ export default function TeacherExamResultsClassPage() {
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
-    console.log('reloadSavedResults called with:', {
-      resolvedSchoolId,
-      resolvedTeacherId,
-      selectedExamSet,
-      selectedSubject,
-      className,
-      isSecondary
-    });
-    
     if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) {
-      console.log('Missing required parameters for reloadSavedResults');
       return;
     }
     
     try {
-      console.log('Querying exam_results with these exact parameters:');
-      console.log('- school_id:', resolvedSchoolId);
-      console.log('- class_name:', className);
-      console.log('- exam_set_id:', selectedExamSet);
-      console.log('- subject:', selectedSubject);
-      console.log('- teacher_id:', resolvedTeacherId);
-      
       const { data, error } = await supabase
         .from('exam_results')
         .select('*')
@@ -943,31 +911,17 @@ export default function TeacherExamResultsClassPage() {
       }
       
       const rows = data || [];
-      console.log('Loaded saved results:', rows.length, 'records');
-      console.log('Raw saved results data:', rows);
       
       if (!isSecondary) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
-          console.log('Processing primary result for student:', r.student_id, {
-            marks_obtained: r.marks_obtained,
-            total_marks: r.total_marks,
-            grade: r.grade
-          });
           map[r.student_id] = {
             marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
             totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
             grade: r.grade || ''
           };
         });
-        console.log('Setting primary exam results map:', map);
         setExamResults(map);
-        console.log('Primary exam results state updated');
-        
-        // Also log the current state after a brief delay to see if it was actually set
-        setTimeout(() => {
-          console.log('Current examResults state after setExamResults:', examResults);
-        }, 100);
       } else {
         const map: Record<string, any> = {};
         rows.forEach(r => {
@@ -985,9 +939,7 @@ export default function TeacherExamResultsClassPage() {
             initials: r.teacher_initials || ''
           };
         });
-        console.log('Setting secondary exam results map:', map);
         setExamResultsSecondary(map);
-        console.log('Secondary exam results state updated');
       }
     } catch (err) {
       console.error('Exception in reloadSavedResults:', err);
@@ -1318,7 +1270,6 @@ export default function TeacherExamResultsClassPage() {
                 </div>
                 <button
                   onClick={async () => {
-                    console.log('Manual refresh clicked');
                     await reloadSavedResults();
                   }}
                   className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
