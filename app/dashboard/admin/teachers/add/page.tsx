@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { isValidEmailFormat } from "@/src/lib/emailValidator";
 
 export default function AddTeacherPage() {
   const router = useRouter();
@@ -18,7 +17,6 @@ export default function AddTeacherPage() {
   const [nationalId, setNationalId] = useState("");
   // Contact
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   // Professional
   const [subjects, setSubjects] = useState<string[]>([]); // Stored as labeled subjects per class, e.g., "Mathematics 1", "Mathematics N"
@@ -109,7 +107,7 @@ export default function AddTeacherPage() {
 
   const resetForm = () => {
     setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob(""); setNationalId("");
-    setPhone(""); setEmail(""); setAddress("");
+    setPhone(""); setAddress("");
     setSubjects([]); setClassesAssigned([]); setSubjectsByClass({}); setSalary("");
     setError(null); setSuccess(null);
   };
@@ -118,10 +116,10 @@ export default function AddTeacherPage() {
     setError(null); setSuccess(null);
     if (!schoolId) { setError("Missing school context"); return; }
     if (!firstName || !lastName) { setError("Please enter first and last name"); return; }
-    if (!gender) { setError("Please select gender"); return; }
-    if (!dob) { setError("Please select date of birth"); return; }
-    if (!validatePhone(phone)) { setError("Enter a valid phone with country code"); return; }
-    if (!isValidEmailFormat(email)) { setError("Enter a valid email address"); return; }
+    
+    // Optional validation for phone if provided
+    if (phone && !validatePhone(phone)) { setError("Enter a valid phone with country code"); return; }
+    
     // Ensure classes align with school type
     const allowed = new Set(classOptions);
     const filteredClasses = classesAssigned.filter(c => allowed.has(c));
@@ -130,9 +128,9 @@ export default function AddTeacherPage() {
     const { data, error: insertError } = await supabase.from("teachers").insert({
       school_id: schoolId,
       name: fullName,
-      email,
-      phone,
-      address,
+      email: null, // Will be auto-generated later
+      phone: phone || null,
+      address: address || null,
       gender: gender || null,
       dob: dob || null,
       national_id: nationalId || null,
@@ -144,6 +142,27 @@ export default function AddTeacherPage() {
 
     setSaving(false);
     if (insertError) { setError(insertError.message); return; }
+    
+    // Auto-generate email for the teacher
+    try {
+      if (data?.teacher_id && schoolId) {
+        const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
+          p_first_name: firstName,
+          p_last_name: lastName,
+          p_school_id: schoolId
+        });
+        
+        if (generatedEmail) {
+          await supabase
+            .from('teachers')
+            .update({ email: generatedEmail })
+            .eq('teacher_id', data.teacher_id);
+        }
+      }
+    } catch (emailError) {
+      console.warn('Could not generate teacher email:', emailError);
+    }
+    
     // Also persist class/subject assignments into teacher_class_subjects
     try {
       if (data?.teacher_id && filteredClasses.length > 0) {
@@ -169,7 +188,7 @@ export default function AddTeacherPage() {
       console.warn('Failed to create teacher assignments:', e?.message || e);
     }
 
-    setSuccess("Teacher added successfully 🎉");
+    setSuccess("Teacher added successfully! Email auto-generated. You can add more information in the teacher profile. 🎉");
     if (data?.teacher_id) {
       setTimeout(() => router.push(`/dashboard/admin/teachers/${data.teacher_id}`), 600);
     }
@@ -210,9 +229,13 @@ export default function AddTeacherPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
             <div className="text-white font-medium mb-3">Contact Information</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone (+256..., +1...)" value={phone} onChange={(e)=>setPhone(e.target.value)} />
-              <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
-              <input className="sm:col-span-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Residential Address" value={address} onChange={(e)=>setAddress(e.target.value)} />
+              <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone (+256..., +1...) - Optional" value={phone} onChange={(e)=>setPhone(e.target.value)} />
+              <input className="sm:col-span-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Residential Address - Optional" value={address} onChange={(e)=>setAddress(e.target.value)} />
+              <div className="sm:col-span-2">
+                <p className="text-xs text-blue-300 mt-1">
+                  💡 Email will be auto-generated as: firstname+lastname@schoolcode.sch
+                </p>
+              </div>
           </div>
         </motion.div>
 
