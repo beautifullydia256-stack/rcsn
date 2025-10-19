@@ -323,7 +323,13 @@ export default function StudentDashboard() {
       if (reportsResult.data) setReports(reportsResult.data);
       if (paymentsResult.data) setPayments(paymentsResult.data);
       if (attendanceResult.data) setAttendance(attendanceResult.data);
-      if (expectedResult.data) setExpectedFee(Number((expectedResult.data as any).expected_fee_amount || 0));
+      if (expectedResult.data) {
+        const feeAmount = Number((expectedResult.data as any).expected_fee_amount || 0);
+        console.log('Student Dashboard - Expected Fee Amount:', feeAmount);
+        setExpectedFee(feeAmount);
+      } else {
+        console.log('Student Dashboard - No expected fee data found');
+      }
 
       // Mock data for classes and library books (since these tables might not exist yet)
       setClasses([
@@ -419,6 +425,12 @@ export default function StudentDashboard() {
     const approved = payments
       .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
     const due = Math.max(0, Number(expectedFee || 0) - approved);
+    console.log('Student Dashboard - Outstanding Fees Calculation:', {
+      expectedFee,
+      approved,
+      due,
+      paymentsCount: payments.length
+    });
     return due;
   })();
 
