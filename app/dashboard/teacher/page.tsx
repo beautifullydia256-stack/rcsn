@@ -134,7 +134,7 @@ export default function TeacherDashboard() {
         const { data: trow } = await supabase
           .from('teachers')
           .select('teacher_id')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .eq('teacher_id', metaTeacherId)
           .maybeSingle();
         if (trow) teacherRow = trow;
@@ -143,18 +143,18 @@ export default function TeacherDashboard() {
         const { data: trow2 } = await supabase
           .from('teachers')
           .select('teacher_id')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .eq('email', user.email)
           .maybeSingle();
         if (trow2) teacherRow = trow2;
       }
 		// Fallback: match by name within the same school if email differs
-		if (!teacherRow && (userData?.name || '').trim()) {
+		if (!teacherRow && (teacherName || '').trim()) {
 			const { data: trow3 } = await supabase
 				.from('teachers')
 				.select('teacher_id')
-				.eq('school_id', userData.school_id)
-				.ilike('name', userData.name.trim())
+				.eq('school_id', schoolId)
+				.ilike('name', teacherName.trim())
 				.maybeSingle();
 			if (trow3) teacherRow = trow3;
 		}
@@ -165,7 +165,7 @@ export default function TeacherDashboard() {
         teacherRow,
         userEmail: user.email,
         resolvedTeacherId: teacherRow?.teacher_id,
-        schoolId: userData.school_id,
+        schoolId: schoolId,
         userMetadata: user.user_metadata
       });
 
@@ -173,7 +173,7 @@ export default function TeacherDashboard() {
       const { data: termRows } = await supabase
         .from('school_terms')
         .select('*')
-        .eq('school_id', userData.school_id)
+        .eq('school_id', schoolId)
         .lte('start_date', new Date().toISOString().slice(0,10))
         .gte('end_date', new Date().toISOString().slice(0,10))
         .order('year', { ascending: false })
@@ -201,12 +201,12 @@ export default function TeacherDashboard() {
 
       // Determine class teacher badge
       try {
-        if (userData?.school_id && (teacherRow?.teacher_id || user.id)) {
+        if (schoolId && (teacherRow?.teacher_id || user.id)) {
           const teacherIdToCheck = teacherRow?.teacher_id || user.id;
           const { data: ct } = await supabase
             .from('class_teachers')
             .select('id')
-            .eq('school_id', userData.school_id)
+            .eq('school_id', schoolId)
             .eq('teacher_id', teacherIdToCheck)
             .limit(1);
           setIsClassTeacher(!!(ct && ct.length > 0));
@@ -224,7 +224,7 @@ export default function TeacherDashboard() {
             .from('teacher_class_subjects')
             .select('class_name, subject')
             .eq('teacher_id', candidate)
-            .eq('school_id', userData.school_id);
+            .eq('school_id', schoolId);
           if (!tryErr && tcsTry && tcsTry.length > 0) {
             tcs = tcsTry;
             console.log('Found assignments using candidate teacher_id', candidate, tcsTry);
@@ -238,7 +238,7 @@ export default function TeacherDashboard() {
         const { data: tcsJoin, error: joinErr } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject, teachers!inner(email)')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .ilike('teachers.email', (user.email || '').trim());
         if (!joinErr && tcsJoin && tcsJoin.length > 0) {
           tcs = tcsJoin.map((r: any) => ({ class_name: r.class_name, subject: r.subject }));
@@ -251,7 +251,7 @@ export default function TeacherDashboard() {
         const { data: tcsRls } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject')
-          .eq('school_id', userData.school_id);
+          .eq('school_id', schoolId);
         if (tcsRls && tcsRls.length > 0) {
           tcs = tcsRls;
           console.log('Found assignments via RLS-only school scope');
@@ -263,7 +263,7 @@ export default function TeacherDashboard() {
         const { data: tcsDirect } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .eq('teacher_id', '518a33af-1e67-46e8-a1fc-6d488b2f9101');
         if (tcsDirect && tcsDirect.length > 0) {
           tcs = tcsDirect;
@@ -276,7 +276,7 @@ export default function TeacherDashboard() {
         const { data: tcsDirect } = await supabase
           .from('teacher_class_subjects')
           .select('class_name, subject')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .eq('teacher_id', 'fdb2b67f-3757-4e54-92d7-40fad4e2a5f2');
         if (tcsDirect && tcsDirect.length > 0) {
           tcs = tcsDirect;
@@ -286,11 +286,11 @@ export default function TeacherDashboard() {
 
       // Debug: Show all teacher_class_subjects for this school
       console.log(`Debugging assignments for ${schoolType} school:`, {
-        schoolId: userData.school_id,
+        schoolId: schoolId,
         allAssignmentsInSchool: await supabase
           .from('teacher_class_subjects')
           .select('*')
-          .eq('school_id', userData.school_id)
+          .eq('school_id', schoolId)
           .then(r => r.data)
       });
 
@@ -300,7 +300,7 @@ export default function TeacherDashboard() {
 
       const [studentsResult, attendanceResult, gradesResult] = await Promise.all([
         classes.length > 0
-          ? supabase.from('students').select('*').eq('school_id', userData.school_id).in('current_class', classes)
+          ? supabase.from('students').select('*').eq('school_id', schoolId).in('current_class', classes)
           : Promise.resolve({ data: [] as any[], error: null } as any),
         supabase.from('attendance').select('*').eq('teacher_id', user.id).order('timestamp', { ascending: false }),
         currentTermWindow
@@ -337,15 +337,12 @@ export default function TeacherDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) return;
 
-      if (!userData?.school_id) return;
-
-      console.log('Teacher location verification - school_id:', userData.school_id);
+      console.log('Teacher location verification - school_id:', schoolId);
 
       // Try to get current GPS location first
       let currentLocation = null;
@@ -369,7 +366,7 @@ export default function TeacherDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          schoolId: userData.school_id,
+          schoolId: schoolId,
           latitude: currentLocation?.latitude,
           longitude: currentLocation?.longitude
         })
@@ -410,13 +407,10 @@ export default function TeacherDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userData?.school_id) return;
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) return;
 
       const today = new Date().toISOString().split('T')[0];
       
@@ -454,13 +448,10 @@ export default function TeacherDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userData?.school_id) {
+      // Get school_id from user metadata instead of users table to avoid 406 errors
+      const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
+      if (!schoolId) {
         alert('Error: School not found');
         return;
       }
@@ -486,7 +477,7 @@ export default function TeacherDashboard() {
         // Create new attendance record
         const { error } = await supabase.from('teacher_attendance_logs').insert({
         teacher_id: user.id,
-        school_id: userData.school_id,
+        school_id: schoolId,
           location_verified: true,
           location_method: locationVerification.method,
           location_distance: locationVerification.distance,
