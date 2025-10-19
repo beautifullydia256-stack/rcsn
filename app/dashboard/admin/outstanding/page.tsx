@@ -34,7 +34,7 @@ export default function OutstandingBalancesPage() {
       // Fetch active students
       const { data: studs } = await supabase
         .from("students")
-        .select("student_id,name,current_class,status")
+        .select("student_id,name,current_class,status,expected_fee_amount")
         .eq("school_id", data.school_id)
         .eq("status", "active");
 
