@@ -187,7 +187,7 @@ export default function StudentDetailPage() {
           const filePath = `${student.school_id}/${student.student_id}/profile.jpg`;
           
           const { error: uploadError } = await supabase.storage
-            .from('student-photos')
+            .from('avatars')
             .upload(filePath, profilePhoto, {
               contentType: 'image/jpeg',
               upsert: true
@@ -200,7 +200,7 @@ export default function StudentDetailPage() {
           } else {
             // Get the public URL
             const { data: urlData } = supabase.storage
-              .from('student-photos')
+              .from('avatars')
               .getPublicUrl(filePath);
 
             // Update or insert photo record
