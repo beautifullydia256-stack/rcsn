@@ -191,4 +191,60 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
+    const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+    const supabase = createServerClient(supabaseUrl, supabaseAnon, {
+      cookies: {
+        get(name: string) { return request.cookies.get(name)?.value; },
+        set() {},
+        remove() {},
+      },
+    });
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+    const body = await request.json();
+    const { class_name, teacher_id } = body || {};
+    if (!class_name || !teacher_id) {
+      return NextResponse.json({ error: 'class_name and teacher_id are required' }, { status: 400 });
+    }
+
+    // Resolve school_id of caller from user metadata
+    const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+    let school_id = userMetadata.school_id;
+    
+    // If school_id not found in metadata, try users table as fallback
+    if (!school_id) {
+      const { data: urow } = await supabase
+        .from('users')
+        .select('school_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      school_id = urow?.school_id;
+    }
+    
+    if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
+
+    // Remove the teacher from class_teachers table
+    const { error: deleteError } = await supabase
+      .from('class_teachers')
+      .delete()
+      .eq('school_id', school_id)
+      .eq('class_name', class_name)
+      .eq('teacher_id', teacher_id);
+
+    if (deleteError) {
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Teacher unappointed successfully' });
+  } catch (error) {
+    console.error('Unappoint class teacher error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 
