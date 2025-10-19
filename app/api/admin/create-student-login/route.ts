@@ -180,12 +180,29 @@ export async function POST(request: NextRequest) {
         });
 
       if (userInsertError) {
-        console.warn('Failed to create user record:', userInsertError.message);
-        // Don't fail the entire operation, just log the warning
+        console.error('Failed to create user record:', userInsertError.message);
+        // This is critical - if we can't create the user record, the student won't be able to login
+        // Delete the auth user we just created to avoid orphaned accounts
+        await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+        return NextResponse.json(
+          { error: `Failed to create user record: ${userInsertError.message}` },
+          { status: 500 }
+        );
       }
+      
+      console.log('Successfully created user record for student:', {
+        user_id: data.user.id,
+        email: studentEmail,
+        student_id: canonicalStudentId
+      });
     } catch (userErr) {
-      console.warn('Error creating user record:', userErr);
-      // Don't fail the entire operation
+      console.error('Error creating user record:', userErr);
+      // Delete the auth user we just created to avoid orphaned accounts
+      await supabaseAdmin.auth.admin.deleteUser(data.user.id);
+      return NextResponse.json(
+        { error: `Failed to create user record: ${userErr}` },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({

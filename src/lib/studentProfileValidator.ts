@@ -60,6 +60,18 @@ export async function validateStudentProfile(userId: string, userMetadata: any):
       .single();
 
     if (userError || !userData) {
+      // If user record is missing but we have valid student data, allow access
+      // This handles cases where student logins were created before the user record system
+      if (studentData) {
+        console.warn('User record not found in users table, but student data exists. Allowing access.');
+        return {
+          isValid: true,
+          shouldLogout: false,
+          studentData: studentData,
+          reason: 'User record missing but student profile valid'
+        };
+      }
+      
       return {
         isValid: false,
         shouldLogout: true,
