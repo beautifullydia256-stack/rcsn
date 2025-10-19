@@ -656,7 +656,7 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
 
       {/* Tuition Fees Per Class */}
       <div className="mb-6">
-        <h3 className="text-white font-medium mb-3">💰 Tuition Fees Per Class (Per Term)</h3>
+        <h3 className="text-white font-medium mb-3">💰 Day Tuition Fees Per Class (Per Term)</h3>
         <p className="text-white/60 text-sm mb-4">
           Set the tuition amount <strong>per term</strong> for each class. The yearly total will be calculated automatically (3 terms). When adding a student, the fee will automatically populate based on their class.
         </p>
