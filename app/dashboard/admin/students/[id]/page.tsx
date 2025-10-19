@@ -206,7 +206,7 @@ export default function StudentDetailPage() {
                 alert(`Photo upload failed: ${photoRecordError.message}. Student data was saved successfully.`);
               } else {
                 setCurrentPhotoUrl(base64String);
-                alert('Photo uploaded successfully!');
+                // Photo uploaded successfully - no need for extra notification
               }
             }
           };
