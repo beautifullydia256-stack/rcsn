@@ -475,6 +475,10 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
             admFee = amount > 0 ? amount.toString() : '';
           } else {
             feeMap[fee.class_name] = amount > 0 ? amount.toString() : '';
+            // Load boarding fees
+            feeMap[`${fee.class_name}_boarding_tuition`] = Number(fee.boarding_tuition_amount || 0) > 0 ? fee.boarding_tuition_amount.toString() : '';
+            feeMap[`${fee.class_name}_accommodation`] = Number(fee.boarding_accommodation_fee || 0) > 0 ? fee.boarding_accommodation_fee.toString() : '';
+            feeMap[`${fee.class_name}_meals`] = Number(fee.boarding_meals_fee || 0) > 0 ? fee.boarding_meals_fee.toString() : '';
           }
         });
 
@@ -512,7 +516,10 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
       const feeRecords = classes.map(className => ({
         school_id: schoolId,
         class_name: className,
-        tuition_amount: parseInt(feeStructure[className]) || 0
+        tuition_amount: parseInt(feeStructure[className]) || 0,
+        boarding_tuition_amount: parseInt(feeStructure[`${className}_boarding_tuition`]) || 0,
+        boarding_accommodation_fee: parseInt(feeStructure[`${className}_accommodation`]) || 0,
+        boarding_meals_fee: parseInt(feeStructure[`${className}_meals`]) || 0
       }));
 
       // Add admission fee as special record
@@ -679,6 +686,78 @@ function FinancialSettings({ schoolId, classes }: { schoolId: string | null; cla
                   'Fee not configured - students cannot be registered for this class until fee is set'
                 }
               </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Boarding Fees Per Class */}
+      <div className="mb-6">
+        <h3 className="text-white font-medium mb-3">🏠 Boarding Fees Per Class (Per Term)</h3>
+        <p className="text-white/60 text-sm mb-4">
+          Set the boarding fees <strong>per term</strong> for each class. This includes accommodation, meals, and additional boarding tuition. The yearly total will be calculated automatically (3 terms).
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {classes.map((className) => (
+            <div key={className} className="p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+              <label className="block text-blue-300 text-sm font-medium mb-3">
+                {className} - Boarding
+              </label>
+              
+              {/* Boarding Tuition */}
+              <div className="mb-3">
+                <label className="block text-white/70 text-xs mb-1">Boarding Tuition (UGX)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure[`${className}_boarding_tuition`] || ''}
+                  onChange={(e) => updateClassFee(`${className}_boarding_tuition`, e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm"
+                  placeholder="e.g., 150000"
+                />
+              </div>
+
+              {/* Accommodation Fee */}
+              <div className="mb-3">
+                <label className="block text-white/70 text-xs mb-1">Accommodation (UGX)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure[`${className}_accommodation`] || ''}
+                  onChange={(e) => updateClassFee(`${className}_accommodation`, e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm"
+                  placeholder="e.g., 80000"
+                />
+              </div>
+
+              {/* Meals Fee */}
+              <div className="mb-2">
+                <label className="block text-white/70 text-xs mb-1">Meals (UGX)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={feeStructure[`${className}_meals`] || ''}
+                  onChange={(e) => updateClassFee(`${className}_meals`, e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-white/20 bg-white/10 text-white text-sm"
+                  placeholder="e.g., 120000"
+                />
+              </div>
+
+              {/* Total Display */}
+              <div className="mt-2 p-2 rounded bg-white/5">
+                <p className="text-xs text-white/60">
+                  {(() => {
+                    const tuition = parseInt(feeStructure[`${className}_boarding_tuition`] || '0');
+                    const accommodation = parseInt(feeStructure[`${className}_accommodation`] || '0');
+                    const meals = parseInt(feeStructure[`${className}_meals`] || '0');
+                    const total = tuition + accommodation + meals;
+                    return total > 0 ? 
+                      `Total: UGX ${total.toLocaleString()}/term (~UGX ${(total * 3).toLocaleString()}/year)` : 
+                      'Boarding fees not configured';
+                  })()}
+                </p>
+              </div>
             </div>
           ))}
         </div>

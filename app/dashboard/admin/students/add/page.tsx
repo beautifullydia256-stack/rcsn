@@ -43,6 +43,7 @@ export default function AddStudentPage() {
   const [previousSchool, setPreviousSchool] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
   const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
+  const [boardingType, setBoardingType] = useState("Day Scholar");
 
   // Fees & Finance
   const [enrollmentFee, setEnrollmentFee] = useState("");
@@ -239,6 +240,7 @@ export default function AddStudentPage() {
         stream: stream || null,
         previous_school: previousSchool || null,
         admission_date: admissionDate,
+        boarding_type: boardingType,
         enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
         payment_status: paymentStatus,
         expected_fee_amount: expectedFee ? Number(expectedFee) : null,
@@ -303,7 +305,7 @@ export default function AddStudentPage() {
       setNationality(""); setReligion("");
       setAddress(""); setCity(""); setCountry(""); setStudentPhone(""); setStudentEmail("");
       setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianEmail(""); setGuardianOccupation(""); setGuardianAddress("");
-      setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate("");
+      setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate(""); setBoardingType("Day Scholar");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
       setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
     } catch (e: any) {
@@ -404,6 +406,10 @@ export default function AddStudentPage() {
                   ))}
                 </>
               )}
+            </select>
+            <select className="rounded-lg border border-white/10 bg-white text-black px-3 py-2" value={boardingType} onChange={(e)=>setBoardingType(e.target.value)}>
+              <option value="Day Scholar">Day Scholar</option>
+              <option value="Boarding">Boarding</option>
             </select>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Stream / Section (optional)" value={stream} onChange={(e)=>setStream(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Previous School (if transfer)" value={previousSchool} onChange={(e)=>setPreviousSchool(e.target.value)} />
