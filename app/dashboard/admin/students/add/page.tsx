@@ -281,29 +281,35 @@ export default function AddStudentPage() {
       if (profilePhoto && insertedStudent?.student_id) {
         try {
           // Convert photo to base64 for storage (same approach as student detail page)
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const base64String = e.target?.result as string;
-            
-            if (base64String) {
-              // Save photo record to database
-              const { error: photoRecordError } = await supabase.from('student_photos').insert({
-                student_id: insertedStudent.student_id,
-                school_id: schoolId,
-                photo_url: base64String,
-                photo_filename: profilePhoto.name,
-                photo_size: profilePhoto.size,
-                photo_type: profilePhoto.type,
-                is_primary: true
-              });
-
-              if (photoRecordError) {
-                console.error('Photo record error:', photoRecordError);
-                // Don't fail the entire operation for photo upload
+          const base64String = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string;
+              if (result) {
+                resolve(result);
+              } else {
+                reject(new Error('Failed to convert file to base64'));
               }
-            }
-          };
-          reader.readAsDataURL(profilePhoto);
+            };
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsDataURL(profilePhoto);
+          });
+
+          // Save photo record to database
+          const { error: photoRecordError } = await supabase.from('student_photos').insert({
+            student_id: insertedStudent.student_id,
+            school_id: schoolId,
+            photo_url: base64String,
+            photo_filename: profilePhoto.name,
+            photo_size: profilePhoto.size,
+            photo_type: profilePhoto.type,
+            is_primary: true
+          });
+
+          if (photoRecordError) {
+            console.error('Photo record error:', photoRecordError);
+            // Don't fail the entire operation for photo upload
+          }
         } catch (photoError) {
           console.error('Photo processing error:', photoError);
           // Don't fail the entire operation for photo upload
