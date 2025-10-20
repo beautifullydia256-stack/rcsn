@@ -64,8 +64,7 @@ export async function POST(request: NextRequest) {
     const school_id = userMetadata.school_id;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    // Replace existing ranges for this class
-    await supabase.from('class_teacher_comments_settings').delete().eq('school_id', school_id).eq('class_name', class_name);
+    // Use UPSERT to handle existing ranges
     const payload = ranges.map((r: any) => ({
       school_id,
       class_name,
@@ -74,7 +73,12 @@ export async function POST(request: NextRequest) {
       comment_text: String(r.comment_text || ''),
       created_by: user.id
     }));
-    const { error } = await supabase.from('class_teacher_comments_settings').insert(payload);
+    const { error } = await supabase
+      .from('class_teacher_comments_settings')
+      .upsert(payload, { 
+        onConflict: 'school_id,class_name,min_percent,max_percent',
+        ignoreDuplicates: false 
+      });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });
   } catch (e) {

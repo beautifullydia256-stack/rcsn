@@ -312,16 +312,16 @@ export default function AddStudentPage() {
             reader.readAsDataURL(profilePhoto);
           });
 
-          // Save photo record to database
+            // Save photo record to database
           const { error: photoRecordError } = await supabase.from('student_photos').insert({
-            student_id: insertedStudent.student_id,
-            school_id: schoolId,
+              student_id: insertedStudent.student_id,
+              school_id: schoolId,
             photo_url: base64String,
-            photo_filename: profilePhoto.name,
-            photo_size: profilePhoto.size,
-            photo_type: profilePhoto.type,
-            is_primary: true
-          });
+              photo_filename: profilePhoto.name,
+              photo_size: profilePhoto.size,
+              photo_type: profilePhoto.type,
+              is_primary: true
+            });
 
           if (photoRecordError) {
             console.error('Photo record error:', photoRecordError);

@@ -253,21 +253,21 @@ export function SecondaryReportGenerator() {
         
         if (examSetIdsWithResults.length > 0) {
           // Load exam sets that have results
-          let examSetsQuery = supabase
-            .from('exam_sets')
-            .select('*')
-            .eq('school_id', u.school_id)
+        let examSetsQuery = supabase
+          .from('exam_sets')
+          .select('*')
+          .eq('school_id', u.school_id)
             .eq('is_active', true)
             .in('id', examSetIdsWithResults);
           
-          if (detectedCurrentYear != null && detectedCurrentTerm != null) {
-            examSetsQuery = examSetsQuery
-              .eq('year', detectedCurrentYear)
-              .eq('term', detectedCurrentTerm);
-          }
-          const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
-          
-          setExamSets(examSetsData || []);
+        if (detectedCurrentYear != null && detectedCurrentTerm != null) {
+          examSetsQuery = examSetsQuery
+            .eq('year', detectedCurrentYear)
+            .eq('term', detectedCurrentTerm);
+        }
+        const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
+        
+        setExamSets(examSetsData || []);
         } else {
           // No exam sets have results yet
           setExamSets([]);
