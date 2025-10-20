@@ -1443,6 +1443,8 @@ export function PrimaryReportGenerator() {
                   examSet={reportData.examSet} 
                   school={reportData.school}
                   template={selectedTemplate}
+                  reportTitleSettings={reportTitleSettings}
+                  currentTermInfo={currentTermInfo}
                 />
               </div>
             ))}
@@ -1480,7 +1482,7 @@ function isLowerSectionPrimary(className: string): boolean {
   return /(primary\s*1|primary\s*2|primary\s*3|^p\.?\s*1$|^p\.?\s*2$|^p\.?\s*3$)/i.test(className.trim());
 }
 
-function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any }) {
   const cls = String(student.current_class || '');
   const isOL = isOLevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);

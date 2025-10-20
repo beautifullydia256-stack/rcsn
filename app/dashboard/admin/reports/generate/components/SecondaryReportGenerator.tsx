@@ -1402,6 +1402,8 @@ export function SecondaryReportGenerator() {
                   examSet={reportData.examSet} 
                   school={reportData.school}
                   template={selectedTemplate}
+                  reportTitleSettings={reportTitleSettings}
+                  currentTermInfo={currentTermInfo}
                 />
               </div>
             ))}
@@ -1434,7 +1436,7 @@ function isOLevelClass(className: string): boolean {
 }
 
 // Report Preview Component
-function ReportPreview({ student, examSet, school, template }: { student: any; examSet: any; school: any; template: string }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any }) {
   if (isOLevelClass(student.current_class)) {
     switch (template) {
       case 'template1':
