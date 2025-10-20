@@ -63,7 +63,6 @@ export default function ClassAttendancePage() {
       school_id: schoolId,
       class_name: className,
       student_id: s.student_id,
-      teacher_id: teacherId,
       date: today,
       present: !!presentMap[s.student_id]
     }));
