@@ -1300,24 +1300,7 @@ export default function TeacherExamResultsClassPage() {
                       : 'Enter marks out of 100.'}
                   </p>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => {
-                      await reloadSavedResults();
-                    }}
-                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                  >
-                    🔄 Refresh Saved
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await refreshClassTeacherStatus();
-                    }}
-                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition-colors"
-                  >
-                    🔄 Refresh Status
-                  </button>
-                </div>
+                {/* Manual refresh buttons removed to streamline UI */}
               </div>
             </div>
             <div className="overflow-x-auto">
