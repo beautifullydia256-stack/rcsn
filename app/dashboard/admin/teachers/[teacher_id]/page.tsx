@@ -231,16 +231,18 @@ export default function TeacherProfilePage() {
     
     setAppointing(true);
     try {
-      // Remove class teacher assignment by setting class_teacher_id to null
-      const { error } = await supabase
-        .from('class_template_settings')
-        .update({ class_teacher_id: null })
-        .eq('school_id', schoolId)
-        .eq('class_name', classTeacherOf)
-        .eq('class_teacher_id', row.teacher_id);
-      
-      if (error) throw error;
-      
+      // Call API to remove class teacher assignment from class_teachers table
+      const res = await fetch('/api/class-teachers', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ class_name: classTeacherOf, teacher_id: row.teacher_id })
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = body?.message || body?.error || 'Failed to un-appoint class teacher';
+        throw new Error(msg);
+      }
+
       const previousClass = classTeacherOf;
       setClassTeacherOf(null);
       setAvailableClasses(prev => [...prev, previousClass].sort());
