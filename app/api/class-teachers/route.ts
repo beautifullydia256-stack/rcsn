@@ -228,19 +228,27 @@ export async function DELETE(request: NextRequest) {
     
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    // Remove the teacher from class_teachers table
-    const { error: deleteError } = await supabase
+    // Remove the teacher from class_teachers table and verify an actual row was deleted
+    const { data: deletedRows, error: deleteError } = await supabase
       .from('class_teachers')
       .delete()
       .eq('school_id', school_id)
       .eq('class_name', class_name)
-      .eq('teacher_id', teacher_id);
+      .eq('teacher_id', teacher_id)
+      .select('class_name, teacher_id, year, term');
 
     if (deleteError) {
       return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, message: 'Teacher unappointed successfully' });
+    if (!deletedRows || deletedRows.length === 0) {
+      return NextResponse.json({
+        success: false,
+        message: 'No matching class teacher assignment found to unappoint',
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, deleted: deletedRows });
   } catch (error) {
     console.error('Unappoint class teacher error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
