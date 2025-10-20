@@ -2093,17 +2093,15 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             />
           ) : (
             <div className="text-center text-xs">
-              <div className="font-bold">KYOTERA</div>
-              <div className="font-bold">PARENTS'</div>
-              <div className="font-bold">SECONDARY</div>
               <div className="font-bold">SCHOOL</div>
+              <div className="font-bold">LOGO</div>
             </div>
           )}
         </div>
         
         {/* School Info */}
         <div className="text-right flex-1">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
+        <div className="font-bold text-[18pt] uppercase">{school?.name || ''}</div>
           <div className="font-bold text-[13pt] mt-1">
           {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
           Tel: {school?.phone || '0701861636 / 0700338061'} | 
