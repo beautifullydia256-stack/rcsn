@@ -1442,7 +1442,7 @@ function ReportPreview({ student, examSet, school, template }: { student: any; e
       case 'template2':
         return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
       case 'template3':
-        return <Template3KyoteraReport student={student} examSet={examSet} school={school} />;
+        return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
       default:
         return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
     }
@@ -1929,11 +1929,31 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 }
 
 // Template 3 - Kyotera Parents' Secondary School Format
-function Template3KyoteraReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
+  
+  // Generate report title based on settings
+  const getReportTitle = () => {
+    try {
+      if (!reportTitleSettings) {
+        return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+      }
+      
+      let title = reportTitleSettings.title_template || 'STUDENT\'S PROGRESSIVE REPORT OF TERM {term}';
+      
+      if (reportTitleSettings.use_dynamic_term && currentTermInfo?.term) {
+        title = title.replace('{term}', currentTermInfo.term.toString());
+      }
+      
+      return title.toUpperCase();
+    } catch (error) {
+      console.warn('Error generating report title:', error);
+      return `STUDENT'S PROGRESSIVE REPORT OF ${currentTermInfo?.term ? `TERM ${currentTermInfo.term}` : 'TERM'}`;
+    }
+  };
 
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
