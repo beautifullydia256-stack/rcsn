@@ -5,6 +5,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import ImageUpload from "@/src/components/ImageUpload";
+import { createMissedExamRecordsForNewStudent } from "@/src/lib/examResultsUtils";
 import { CompressionResult } from "@/src/lib/imageCompression";
 
 export default function AddStudentPage() {
@@ -275,6 +276,22 @@ export default function AddStudentPage() {
           description: 'Initial tuition payment',
           status: 'Approved'
         });
+      }
+
+      // Create "missed exam" records for new student if class already has exam results
+      if (insertedStudent?.student_id) {
+        const result = await createMissedExamRecordsForNewStudent(
+          schoolId,
+          insertedStudent.student_id,
+          klass
+        );
+
+        if (result.success && result.recordsCreated > 0) {
+          console.log(`✓ Created ${result.recordsCreated} missed exam records for new student in ${klass}`);
+        } else if (result.error) {
+          console.error('Failed to create missed exam records:', result.error);
+          // Don't fail the entire operation for exam records
+        }
       }
 
       // Upload profile photo if provided
