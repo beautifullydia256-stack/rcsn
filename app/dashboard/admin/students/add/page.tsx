@@ -280,35 +280,30 @@ export default function AddStudentPage() {
       // Upload profile photo if provided
       if (profilePhoto && insertedStudent?.student_id) {
         try {
-          const filePath = `${schoolId}/${insertedStudent.student_id}/profile.jpg`;
-          
-          const { error: uploadError } = await supabase.storage
-            .from('student-photos')
-            .upload(filePath, profilePhoto, {
-              contentType: 'image/jpeg',
-              upsert: true
-            });
+          // Convert photo to base64 for storage (same approach as student detail page)
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64String = e.target?.result as string;
+            
+            if (base64String) {
+              // Save photo record to database
+              const { error: photoRecordError } = await supabase.from('student_photos').insert({
+                student_id: insertedStudent.student_id,
+                school_id: schoolId,
+                photo_url: base64String,
+                photo_filename: profilePhoto.name,
+                photo_size: profilePhoto.size,
+                photo_type: profilePhoto.type,
+                is_primary: true
+              });
 
-          if (uploadError) {
-            console.error('Photo upload error:', uploadError);
-            // Don't fail the entire operation for photo upload
-          } else {
-            // Get the public URL
-            const { data: urlData } = supabase.storage
-              .from('student-photos')
-              .getPublicUrl(filePath);
-
-            // Save photo record to database
-            await supabase.from('student_photos').insert({
-              student_id: insertedStudent.student_id,
-              school_id: schoolId,
-              photo_url: urlData.publicUrl,
-              photo_filename: profilePhoto.name,
-              photo_size: profilePhoto.size,
-              photo_type: profilePhoto.type,
-              is_primary: true
-            });
-          }
+              if (photoRecordError) {
+                console.error('Photo record error:', photoRecordError);
+                // Don't fail the entire operation for photo upload
+              }
+            }
+          };
+          reader.readAsDataURL(profilePhoto);
         } catch (photoError) {
           console.error('Photo processing error:', photoError);
           // Don't fail the entire operation for photo upload
