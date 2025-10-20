@@ -84,14 +84,19 @@ export default function TeacherProfilePage() {
           .order('class_name');
         setAssignedLinks((tsub || []) as any);
 
-        // Load class where this teacher is class teacher
-        const { data: cls } = await supabase
-          .from('class_template_settings')
+        // Load class where this teacher is class teacher (from class_teachers table)
+        const currentYear = new Date().getFullYear();
+        const currentTerm = 3; // current term
+        const { data: ctForTeacher } = await supabase
+          .from('class_teachers')
           .select('class_name')
           .eq('school_id', teacher.school_id)
-          .eq('class_teacher_id', teacher.teacher_id)
+          .eq('teacher_id', teacher.teacher_id)
+          .eq('year', currentYear)
+          .eq('term', currentTerm)
+          .limit(1)
           .maybeSingle();
-        setClassTeacherOf(cls?.class_name || null);
+        setClassTeacherOf(ctForTeacher?.class_name || null);
 
         // Load all classes from students table
         const { data: students } = await supabase
@@ -102,13 +107,13 @@ export default function TeacherProfilePage() {
         const uniqueClasses = Array.from(new Set((students || []).map(s => s.current_class).filter(Boolean))).sort();
         setAllClasses(uniqueClasses);
 
-        // Load all class teachers to find available classes
+        // Load all class teachers to find available classes (from class_teachers table)
         const { data: classTeachers } = await supabase
-          .from('class_template_settings')
-          .select('class_name, class_teacher_id')
+          .from('class_teachers')
+          .select('class_name')
           .eq('school_id', teacher.school_id)
-          .not('class_teacher_id', 'is', null);
-        
+          .eq('year', currentYear)
+          .eq('term', currentTerm);
         const classesWithTeachers = new Set((classTeachers || []).map(ct => ct.class_name));
         const available = uniqueClasses.filter(c => !classesWithTeachers.has(c));
         setAvailableClasses(available);
