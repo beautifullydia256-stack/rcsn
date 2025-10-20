@@ -1,13 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/src/lib/supabase';
+import { supabaseAdmin } from '@/src/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
+    if (!supabaseAdmin) {
+      return NextResponse.json({ 
+        error: 'Admin client not available', 
+        message: 'SUPABASE_SERVICE_ROLE_KEY not configured'
+      }, { status: 500 });
+    }
+
     const schoolId = '406bf29b-d7fd-457c-aa56-e29b9ef1a16d';
     const results = [];
 
-    // Get exam results directly (bypassing any potential RLS issues)
-    const { data: examResults, error: examResultsError } = await supabase
+    // Get exam results directly using admin client (bypassing RLS issues)
+    const { data: examResults, error: examResultsError } = await supabaseAdmin
       .from('exam_results')
       .select(`
         *,
@@ -55,8 +62,8 @@ export async function POST(request: NextRequest) {
       processed_at: new Date().toISOString()
     }));
 
-    // Insert processed results
-    const { data: insertedResults, error: insertError } = await supabase
+    // Insert processed results using admin client
+    const { data: insertedResults, error: insertError } = await supabaseAdmin
       .from('processed_primary_exam_results')
       .upsert(processedResults, { 
         onConflict: 'school_id,student_id,exam_set_id,subject',
