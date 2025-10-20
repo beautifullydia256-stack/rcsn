@@ -239,21 +239,39 @@ export function PrimaryReportGenerator() {
         }
         setNextTermInfo({ year: nextYear, term: nextTerm });
 
-        // Load exam sets for the current term
-        // Load active exam sets; only filter by year/term if both are known
-        let examSetsQuery = supabase
-          .from('exam_sets')
-          .select('*')
-          .eq('school_id', u.school_id)
-          .eq('is_active', true);
-        if (detectedCurrentYear != null && detectedCurrentTerm != null) {
-          examSetsQuery = examSetsQuery
-            .eq('year', detectedCurrentYear)
-            .eq('term', detectedCurrentTerm);
-        }
-        const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
+        // Load exam sets for the current term that have results
+        // First, get exam sets that have results in the database
+        let examSetsWithResultsQuery = supabase
+          .from('exam_results')
+          .select('exam_set_id')
+          .eq('school_id', u.school_id);
         
-        setExamSets(examSetsData || []);
+        const { data: examResultsData } = await examSetsWithResultsQuery;
+        
+        // Get unique exam set IDs that have results
+        const examSetIdsWithResults = [...new Set((examResultsData || []).map(r => r.exam_set_id))];
+        
+        if (examSetIdsWithResults.length > 0) {
+          // Load exam sets that have results
+          let examSetsQuery = supabase
+            .from('exam_sets')
+            .select('*')
+            .eq('school_id', u.school_id)
+            .eq('is_active', true)
+            .in('id', examSetIdsWithResults);
+          
+          if (detectedCurrentYear != null && detectedCurrentTerm != null) {
+            examSetsQuery = examSetsQuery
+              .eq('year', detectedCurrentYear)
+              .eq('term', detectedCurrentTerm);
+          }
+          const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
+          
+          setExamSets(examSetsData || []);
+        } else {
+          // No exam sets have results yet
+          setExamSets([]);
+        }
 
         // Load next term begins date from school_terms table
         let nextTermQuery = supabase
