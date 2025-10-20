@@ -29,11 +29,21 @@ export default function ClassAttendancePage() {
       const schoolId = userMetadata.school_id;
       if (!schoolId) return router.push('/login');
       setSchoolId(schoolId);
-      const { data: studs } = await supabase.from('students').select('student_id,name,current_class').eq('school_id', schoolId).eq('current_class', className).order('name');
+      const { data: studs } = await supabase
+        .from('students')
+        .select('student_id,name,current_class')
+        .eq('school_id', schoolId)
+        .eq('current_class', className)
+        .order('name');
       setStudents(studs || []);
       // load existing marks for today
       const today = new Date().toISOString().slice(0,10);
-      const { data: att } = await supabase.from('student_attendance').select('student_id,present').eq('class_name', className).eq('date', today);
+      const { data: att } = await supabase
+        .from('student_attendance')
+        .select('student_id,present')
+        .eq('school_id', schoolId)
+        .eq('class_name', className)
+        .eq('date', today);
       const map: Record<string, boolean> = {};
       (att || []).forEach(a => { map[a.student_id] = !!a.present; });
       setPresentMap(map);
@@ -49,7 +59,6 @@ export default function ClassAttendancePage() {
     if (!schoolId || !teacherId) return;
     setSaving(true);
     const today = new Date().toISOString().slice(0,10);
-    // Upsert each student attendance for today
     const rows = students.map(s => ({
       school_id: schoolId,
       class_name: className,
@@ -58,9 +67,26 @@ export default function ClassAttendancePage() {
       date: today,
       present: !!presentMap[s.student_id]
     }));
-    // Use upsert on unique (student_id, date)
-    await supabase.from('student_attendance').upsert(rows, { onConflict: 'student_id,date' });
+    // Reliable save: remove existing for this class/date/school, then insert fresh
+    const { error: delErr } = await supabase
+      .from('student_attendance')
+      .delete()
+      .eq('school_id', schoolId)
+      .eq('class_name', className)
+      .eq('date', today);
+    if (delErr) {
+      setSaving(false);
+      alert(`Failed to save attendance (delete step): ${delErr.message}`);
+      return;
+    }
+    const { error: insErr } = await supabase
+      .from('student_attendance')
+      .insert(rows);
     setSaving(false);
+    if (insErr) {
+      alert(`Failed to save attendance: ${insErr.message}`);
+      return;
+    }
     alert('Attendance saved');
   };
 
