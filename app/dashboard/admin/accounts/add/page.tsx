@@ -76,7 +76,7 @@ export default function AddAccountsManagerPage() {
   }, [schoolCode, firstName, lastName]);
 
   // Generate email from first name, last name and school code
-  const generateEmail = (first: string, last: string) => {
+  const generateEmail = (first: string, last: string, suffix: string = "") => {
     if (!first.trim() || !last.trim()) {
       console.log('Email generation failed: Missing names', { first, last });
       return "";
@@ -89,10 +89,35 @@ export default function AddAccountsManagerPage() {
     
     const firstLower = first.trim().toLowerCase();
     const lastLower = last.trim().toLowerCase();
-    const generatedEmail = `${firstLower}${lastLower}@${schoolCode}.sch`;
+    const generatedEmail = `${firstLower}${lastLower}${suffix}@${schoolCode}.sch`;
     
     console.log('Generated email:', generatedEmail);
     return generatedEmail;
+  };
+
+  // Check if email exists and suggest alternatives
+  const checkEmailAvailability = async (emailToCheck: string) => {
+    try {
+      const { data: existingUser, error } = await supabase
+        .from("users")
+        .select("email")
+        .eq("email", emailToCheck)
+        .single();
+      
+      if (existingUser) {
+        return false; // Email exists
+      }
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking email:', error);
+        return null; // Error occurred
+      }
+      
+      return true; // Email is available
+    } catch (e) {
+      console.error('Error checking email:', e);
+      return null; // Error occurred
+    }
   };
 
   // Handle name changes and auto-generate email
@@ -108,7 +133,7 @@ export default function AddAccountsManagerPage() {
     setEmail(generatedEmail);
   };
 
-  const validateForm = () => {
+  const validateForm = async () => {
     // Generate email if not already generated
     if (!email && firstName && lastName && schoolCode) {
       const generatedEmail = generateEmail(firstName, lastName);
@@ -122,6 +147,34 @@ export default function AddAccountsManagerPage() {
     
     if (!email.includes("@")) {
       setError("Please enter a valid email address");
+      return false;
+    }
+    
+    // Check if email already exists in database
+    const emailAvailable = await checkEmailAvailability(email);
+    
+    if (emailAvailable === false) {
+      // Email exists, try to find an alternative
+      let alternativeEmail = "";
+      for (let i = 1; i <= 99; i++) {
+        const testEmail = generateEmail(firstName, lastName, i.toString());
+        const isAvailable = await checkEmailAvailability(testEmail);
+        if (isAvailable === true) {
+          alternativeEmail = testEmail;
+          break;
+        }
+      }
+      
+      if (alternativeEmail) {
+        setError(`This email address is already in use. Suggested alternative: ${alternativeEmail}`);
+      } else {
+        setError("This email address is already in use. Please try a different name combination.");
+      }
+      return false;
+    }
+    
+    if (emailAvailable === null) {
+      setError("Failed to verify email availability. Please try again.");
       return false;
     }
     
@@ -149,7 +202,7 @@ export default function AddAccountsManagerPage() {
     
     console.log('Form data before validation:', { firstName, lastName, email, phone, schoolCode });
     
-    if (!validateForm()) return;
+    if (!(await validateForm())) return;
     
     setSaving(true);
     try {
