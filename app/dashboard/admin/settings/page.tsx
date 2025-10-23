@@ -1840,6 +1840,17 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
 
       setLogo(publicUrl);
       alert('School badge uploaded successfully!');
+      
+      // Reload branding data to ensure UI is updated
+      const { data: updatedData } = await supabase
+        .from('schools')
+        .select('name, logo_url, motto, website, contact_email, contact_phone')
+        .eq('school_id', schoolId)
+        .single();
+      
+      if (updatedData) {
+        setLogo(updatedData.logo_url || null);
+      }
     } catch (error) {
       console.error('Error:', error);
       alert('An error occurred. Please try again.');
