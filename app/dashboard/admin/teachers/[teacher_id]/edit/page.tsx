@@ -20,7 +20,6 @@ export default function EditTeacherPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [subject, setSubject] = useState("");
   const [qualification, setQualification] = useState("");
   const [experience, setExperience] = useState("");
   const [address, setAddress] = useState("");
@@ -52,7 +51,6 @@ export default function EditTeacherPage() {
         setName(teacherData.name || '');
         setEmail(teacherData.email || '');
         setPhone(teacherData.phone || '');
-        setSubject(teacherData.subject || '');
         setQualification(teacherData.qualification || '');
         setExperience(teacherData.experience || '');
         setAddress(teacherData.address || '');
@@ -83,7 +81,6 @@ export default function EditTeacherPage() {
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
-          subject: subject.trim(),
           qualification: qualification.trim(),
           experience: experience.trim(),
           address: address.trim(),
@@ -234,16 +231,6 @@ export default function EditTeacherPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">Subject</label>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Mathematics, English, etc."
-                />
-              </div>
             </div>
 
             {/* Professional Information */}
