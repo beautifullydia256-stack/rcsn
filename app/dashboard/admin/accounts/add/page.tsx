@@ -207,7 +207,7 @@ export default function AddAccountsManagerPage() {
                     readOnly
                   />
                   <p className="text-xs text-blue-300 mt-1">
-                    💡 Email will be auto-generated as: firstname+lastname@{schoolCode}.sch
+                    💡 Email will be auto-generated as: {email || `firstname+lastname@${schoolCode}.sch`}
                   </p>
                 </div>
                 <div>
