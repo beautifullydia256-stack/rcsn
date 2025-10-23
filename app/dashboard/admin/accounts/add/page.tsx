@@ -9,6 +9,7 @@ export default function AddAccountsManagerPage() {
   const router = useRouter();
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
+  const [schoolCode, setSchoolCode] = useState<string>("");
   
   // User details
   const [email, setEmail] = useState("");
@@ -39,13 +40,34 @@ export default function AddAccountsManagerPage() {
       // Load school info
       const { data: schoolData } = await supabase
         .from("schools")
-        .select("name, address, phone")
+        .select("name, address, phone, school_code")
         .eq("school_id", data.school_id)
         .single();
       setSchoolInfo(schoolData);
+      setSchoolCode(schoolData?.school_code || "");
     };
     run();
   }, [router]);
+
+  // Generate email from name and school code
+  const generateEmail = (fullName: string) => {
+    if (!fullName.trim() || !schoolCode) return "";
+    
+    const nameParts = fullName.trim().toLowerCase().split(" ");
+    if (nameParts.length < 2) return "";
+    
+    const firstName = nameParts[0];
+    const lastName = nameParts[nameParts.length - 1];
+    
+    return `${firstName}${lastName}@${schoolCode}.sch`;
+  };
+
+  // Handle name change and auto-generate email
+  const handleNameChange = (newName: string) => {
+    setName(newName);
+    const generatedEmail = generateEmail(newName);
+    setEmail(generatedEmail);
+  };
 
   const validateForm = () => {
     if (!email || !name || !phone) {
@@ -172,23 +194,21 @@ export default function AddAccountsManagerPage() {
                     className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
                     placeholder="Enter full name" 
                     value={name} 
-                    onChange={(e) => setName(e.target.value)} 
+                    onChange={(e) => handleNameChange(e.target.value)} 
                   />
                 </div>
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Email Address *</label>
                   <input 
                     type="email"
-                    className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
-                    placeholder="Enter email address" 
+                    className="w-full rounded-lg border border-white/10 bg-white/5 text-white/70 px-3 py-2 cursor-not-allowed" 
+                    placeholder="Email will be auto-generated" 
                     value={email} 
-                    onChange={(e) => setEmail(e.target.value)} 
+                    readOnly
                   />
-                  {role !== 'admin' && role !== 'owner' && (
-                    <p className="text-xs text-blue-300 mt-1">
-                      💡 Email will be auto-generated as: firstname+lastname@schoolcode.sch
-                    </p>
-                  )}
+                  <p className="text-xs text-blue-300 mt-1">
+                    💡 Email will be auto-generated as: firstname+lastname@{schoolCode}.sch
+                  </p>
                 </div>
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Phone Number *</label>
