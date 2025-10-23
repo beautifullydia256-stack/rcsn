@@ -816,6 +816,9 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [timetablePeriods, setTimetablePeriods] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -846,6 +849,72 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
 
     loadData();
   }, [schoolId, selectedClass]);
+
+  const handleAddPeriod = async () => {
+    if (!schoolId || !selectedClass || !selectedDay || !selectedSubject || !selectedTeacher || !startTime || !endTime) {
+      setError('Please fill in all fields before adding a period.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      // Check for time conflicts
+      const hasConflict = timetablePeriods.some(period => 
+        period.class_name === selectedClass &&
+        period.day_of_week === selectedDay &&
+        ((startTime >= period.start_time && startTime < period.end_time) ||
+         (endTime > period.start_time && endTime <= period.end_time) ||
+         (startTime <= period.start_time && endTime >= period.end_time))
+      );
+
+      if (hasConflict) {
+        setError('Time conflict detected. Please choose a different time slot.');
+        setSaving(false);
+        return;
+      }
+
+      // Add period to local state
+      const newPeriod = {
+        id: Date.now(), // temporary ID
+        school_id: schoolId,
+        class_name: selectedClass,
+        day_of_week: selectedDay,
+        subject: selectedSubject,
+        teacher_id: selectedTeacher,
+        start_time: startTime,
+        end_time: endTime,
+        teacher_name: teachers.find(t => t.teacher_id === selectedTeacher)?.name || 'Unknown'
+      };
+
+      setTimetablePeriods(prev => [...prev, newPeriod]);
+
+      // Clear form
+      setSelectedDay('');
+      setSelectedSubject('');
+      setSelectedTeacher('');
+      setStartTime('');
+      setEndTime('');
+
+      // TODO: Save to database
+      // const { error } = await supabase
+      //   .from('timetable_periods')
+      //   .insert(newPeriod);
+      
+      // if (error) throw error;
+
+    } catch (err) {
+      console.error('Error adding period:', err);
+      setError('Failed to add period. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemovePeriod = (periodId: number) => {
+    setTimetablePeriods(prev => prev.filter(p => p.id !== periodId));
+  };
 
   const handleDownloadPDF = () => {
     // TODO: Implement actual timetable PDF generation
@@ -927,9 +996,55 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
             <option key={teacher.teacher_id} value={teacher.teacher_id}>{teacher.name}</option>
           ))}
         </select>
-        <button className="rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-2 text-white">Add Period</button>
+        <button 
+          onClick={handleAddPeriod}
+          disabled={saving}
+          className="rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-3 py-2 text-white"
+        >
+          {saving ? 'Adding...' : 'Add Period'}
+        </button>
       </div>
-      <div className="mt-4 text-white/80 text-sm">A visual grid view of the timetable will appear here with edit/remove controls.</div>
+      
+      {/* Error Display */}
+      {error && (
+        <div className="mt-4 p-3 rounded-lg bg-red-600/10 border border-red-500/30 text-red-200 text-sm">
+          {error}
+        </div>
+      )}
+
+      {/* Timetable Grid */}
+      {timetablePeriods.length > 0 && (
+        <div className="mt-6">
+          <h3 className="text-white font-medium mb-4">Current Timetable Periods</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {timetablePeriods.map((period) => (
+              <div key={period.id} className="p-4 rounded-lg bg-white/5 border border-white/10">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-white font-medium">{period.class_name}</h4>
+                  <button
+                    onClick={() => handleRemovePeriod(period.id)}
+                    className="text-red-400 hover:text-red-300 text-sm"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="space-y-1 text-sm text-white/80">
+                  <div><strong>Day:</strong> {period.day_of_week}</div>
+                  <div><strong>Time:</strong> {period.start_time} - {period.end_time}</div>
+                  <div><strong>Subject:</strong> {period.subject}</div>
+                  <div><strong>Teacher:</strong> {period.teacher_name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {timetablePeriods.length === 0 && (
+        <div className="mt-4 text-white/60 text-sm text-center py-8">
+          No periods added yet. Fill in the form above and click "Add Period" to create your timetable.
+        </div>
+      )}
       
       {/* PDF Preview Info */}
       <div className="mt-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
