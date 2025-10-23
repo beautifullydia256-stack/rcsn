@@ -41,13 +41,20 @@ export default function AddAccountsManagerPage() {
       setSchoolId(data.school_id);
       
       // Load school info
-      const { data: schoolData } = await supabase
+      const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
         .select("name, address, phone, school_code")
         .eq("school_id", data.school_id)
         .single();
+      
+      if (schoolError) {
+        console.error('School data error:', schoolError);
+        setError(`Failed to load school data: ${schoolError.message}`);
+        return;
+      }
       setSchoolInfo(schoolData);
-      setSchoolCode(schoolData?.school_code || "");
+      setSchoolCode(schoolData?.school_code || "demo");
+      console.log('School data loaded:', schoolData);
     };
     run();
   }, [router]);
@@ -62,8 +69,13 @@ export default function AddAccountsManagerPage() {
 
   // Generate email from first name, last name and school code
   const generateEmail = (first: string, last: string) => {
-    if (!first.trim() || !last.trim() || !schoolCode) {
-      console.log('Email generation failed:', { first, last, schoolCode });
+    if (!first.trim() || !last.trim()) {
+      console.log('Email generation failed: Missing names', { first, last });
+      return "";
+    }
+    
+    if (!schoolCode) {
+      console.log('Email generation failed: Missing school code', { schoolCode });
       return "";
     }
     
@@ -89,6 +101,12 @@ export default function AddAccountsManagerPage() {
   };
 
   const validateForm = () => {
+    // Generate email if not already generated
+    if (!email && firstName && lastName && schoolCode) {
+      const generatedEmail = generateEmail(firstName, lastName);
+      setEmail(generatedEmail);
+    }
+    
     if (!email || !firstName || !lastName || !phone) {
       setError("Please fill in all required fields");
       return false;
@@ -120,6 +138,8 @@ export default function AddAccountsManagerPage() {
   const save = async () => {
     setError(null);
     setSuccess(null);
+    
+    console.log('Form data before validation:', { firstName, lastName, email, phone, schoolCode });
     
     if (!validateForm()) return;
     
@@ -232,7 +252,7 @@ export default function AddAccountsManagerPage() {
                   <input 
                     type="email"
                     className="w-full rounded-lg border border-white/10 bg-white/5 text-white px-3 py-2 cursor-not-allowed" 
-                    placeholder="Email will be auto-generated" 
+                    placeholder={email || "Email will be auto-generated"} 
                     value={email} 
                     readOnly
                   />
