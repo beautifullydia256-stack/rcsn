@@ -845,6 +845,37 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
           setSubjects(subjectData.map((s: any) => s.subject));
         }
       }
+
+      // Load existing timetable periods
+      const { data: periodsData } = await supabase
+        .from('timetable_periods')
+        .select(`
+          id,
+          class_name,
+          day_of_week,
+          subject,
+          teacher_id,
+          start_time,
+          end_time,
+          teachers!inner(name)
+        `)
+        .eq('school_id', schoolId)
+        .order('class_name, day_of_week, start_time');
+      
+      if (periodsData) {
+        const formattedPeriods = periodsData.map((period: any) => ({
+          id: period.id,
+          school_id: schoolId,
+          class_name: period.class_name,
+          day_of_week: period.day_of_week,
+          subject: period.subject,
+          teacher_id: period.teacher_id,
+          start_time: period.start_time,
+          end_time: period.end_time,
+          teacher_name: period.teachers?.name || 'Unknown'
+        }));
+        setTimetablePeriods(formattedPeriods);
+      }
     };
 
     loadData();
@@ -875,17 +906,43 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
         return;
       }
 
-      // Add period to local state
+      // Save to database first
+      const { data: insertedPeriod, error: insertError } = await supabase
+        .from('timetable_periods')
+        .insert({
+          school_id: schoolId,
+          class_name: selectedClass,
+          day_of_week: selectedDay,
+          subject: selectedSubject,
+          teacher_id: selectedTeacher,
+          start_time: startTime,
+          end_time: endTime
+        })
+        .select(`
+          id,
+          class_name,
+          day_of_week,
+          subject,
+          teacher_id,
+          start_time,
+          end_time,
+          teachers!inner(name)
+        `)
+        .single();
+      
+      if (insertError) throw insertError;
+
+      // Add period to local state with database ID
       const newPeriod = {
-        id: Date.now(), // temporary ID
+        id: insertedPeriod.id,
         school_id: schoolId,
-        class_name: selectedClass,
-        day_of_week: selectedDay,
-        subject: selectedSubject,
-        teacher_id: selectedTeacher,
-        start_time: startTime,
-        end_time: endTime,
-        teacher_name: teachers.find(t => t.teacher_id === selectedTeacher)?.name || 'Unknown'
+        class_name: insertedPeriod.class_name,
+        day_of_week: insertedPeriod.day_of_week,
+        subject: insertedPeriod.subject,
+        teacher_id: insertedPeriod.teacher_id,
+        start_time: insertedPeriod.start_time,
+        end_time: insertedPeriod.end_time,
+        teacher_name: insertedPeriod.teachers?.name || 'Unknown'
       };
 
       setTimetablePeriods(prev => [...prev, newPeriod]);
@@ -897,13 +954,6 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
       setStartTime('');
       setEndTime('');
 
-      // TODO: Save to database
-      // const { error } = await supabase
-      //   .from('timetable_periods')
-      //   .insert(newPeriod);
-      
-      // if (error) throw error;
-
     } catch (err) {
       console.error('Error adding period:', err);
       setError('Failed to add period. Please try again.');
@@ -912,8 +962,22 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
     }
   };
 
-  const handleRemovePeriod = (periodId: number) => {
-    setTimetablePeriods(prev => prev.filter(p => p.id !== periodId));
+  const handleRemovePeriod = async (periodId: number) => {
+    try {
+      // Remove from database
+      const { error } = await supabase
+        .from('timetable_periods')
+        .delete()
+        .eq('id', periodId);
+      
+      if (error) throw error;
+
+      // Remove from local state
+      setTimetablePeriods(prev => prev.filter(p => p.id !== periodId));
+    } catch (err) {
+      console.error('Error removing period:', err);
+      setError('Failed to remove period. Please try again.');
+    }
   };
 
   const handleDownloadPDF = () => {
