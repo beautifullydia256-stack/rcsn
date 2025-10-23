@@ -43,7 +43,7 @@ export default function AddAccountsManagerPage() {
       // Load school info
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
-        .select("name, school_code")
+        .select("name")
         .eq("school_id", data.school_id)
         .single();
       
@@ -54,18 +54,15 @@ export default function AddAccountsManagerPage() {
       }
       setSchoolInfo(schoolData);
       
-      // Generate school code from name if school_code column doesn't exist
-      let schoolCode = schoolData?.school_code;
-      if (!schoolCode && schoolData?.name) {
+      // Generate school code from school name
+      let schoolCode = "demo";
+      if (schoolData?.name) {
         schoolCode = schoolData.name.toLowerCase().replace(/\s+/g, '').substring(0, 8);
-      }
-      if (!schoolCode) {
-        schoolCode = "demo";
       }
       
       setSchoolCode(schoolCode);
       console.log('School data loaded:', schoolData);
-      console.log('School code set to:', schoolCode);
+      console.log('School code generated from name:', schoolCode);
     };
     run();
   }, [router]);
