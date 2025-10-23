@@ -50,14 +50,27 @@ export default function AddAccountsManagerPage() {
     run();
   }, [router]);
 
+  // Generate email when school code is loaded and names are available
+  useEffect(() => {
+    if (schoolCode && firstName && lastName) {
+      const generatedEmail = generateEmail(firstName, lastName);
+      setEmail(generatedEmail);
+    }
+  }, [schoolCode, firstName, lastName]);
+
   // Generate email from first name, last name and school code
   const generateEmail = (first: string, last: string) => {
-    if (!first.trim() || !last.trim() || !schoolCode) return "";
+    if (!first.trim() || !last.trim() || !schoolCode) {
+      console.log('Email generation failed:', { first, last, schoolCode });
+      return "";
+    }
     
     const firstLower = first.trim().toLowerCase();
     const lastLower = last.trim().toLowerCase();
+    const generatedEmail = `${firstLower}${lastLower}@${schoolCode}.sch`;
     
-    return `${firstLower}${lastLower}@${schoolCode}.sch`;
+    console.log('Generated email:', generatedEmail);
+    return generatedEmail;
   };
 
   // Handle name changes and auto-generate email
@@ -216,7 +229,7 @@ export default function AddAccountsManagerPage() {
                   <label className="block text-white/70 text-sm mb-2">Email Address *</label>
                   <input 
                     type="email"
-                    className="w-full rounded-lg border border-white/10 bg-white/5 text-white/70 px-3 py-2 cursor-not-allowed" 
+                    className="w-full rounded-lg border border-white/10 bg-white/5 text-white px-3 py-2 cursor-not-allowed" 
                     placeholder="Email will be auto-generated" 
                     value={email} 
                     readOnly
