@@ -54,10 +54,26 @@ export default function AddAccountsManagerPage() {
       }
       setSchoolInfo(schoolData);
       
-      // Generate school code from school name
-      let schoolCode = "demo";
+      // Generate school code from school name (first letter of first 3 words)
+      // This matches the admission number generation logic: SCHOOL_CODE-YEAR-MONTH-NUMBER
+      let schoolCode = "SCH";
       if (schoolData?.name) {
-        schoolCode = schoolData.name.toLowerCase().replace(/\s+/g, '').substring(0, 8);
+        // Take first letter of first 3 words
+        // "Rakai Infant Primary School" -> "RIP" (R-I-P)
+        // "Kampala Primary School" -> "KPS" (K-P-S)
+        const words = schoolData.name.trim().split(/\s+/);
+        if (words.length >= 3) {
+          schoolCode = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+        } else if (words.length === 2) {
+          schoolCode = (words[0][0] + words[1][0] + words[1][1]).toUpperCase();
+        } else if (words.length === 1) {
+          schoolCode = words[0].substring(0, 3).toUpperCase();
+        }
+        
+        // TODO: Check if school code already exists and handle duplicates
+        // If duplicate exists, either:
+        // 1. Add number: RIP1, RIP2, etc.
+        // 2. Take 4 letters: RIPI, RIPK, etc.
       }
       
       setSchoolCode(schoolCode);
