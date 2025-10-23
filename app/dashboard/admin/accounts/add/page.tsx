@@ -43,7 +43,7 @@ export default function AddAccountsManagerPage() {
       // Load school info
       const { data: schoolData, error: schoolError } = await supabase
         .from("schools")
-        .select("name, phone, school_code")
+        .select("name, school_code")
         .eq("school_id", data.school_id)
         .single();
       
