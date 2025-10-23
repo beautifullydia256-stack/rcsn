@@ -13,7 +13,8 @@ export default function AddAccountsManagerPage() {
   
   // User details
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("admin");
   const [department, setDepartment] = useState("");
@@ -49,28 +50,31 @@ export default function AddAccountsManagerPage() {
     run();
   }, [router]);
 
-  // Generate email from name and school code
-  const generateEmail = (fullName: string) => {
-    if (!fullName.trim() || !schoolCode) return "";
+  // Generate email from first name, last name and school code
+  const generateEmail = (first: string, last: string) => {
+    if (!first.trim() || !last.trim() || !schoolCode) return "";
     
-    const nameParts = fullName.trim().toLowerCase().split(" ");
-    if (nameParts.length < 2) return "";
+    const firstLower = first.trim().toLowerCase();
+    const lastLower = last.trim().toLowerCase();
     
-    const firstName = nameParts[0];
-    const lastName = nameParts[nameParts.length - 1];
-    
-    return `${firstName}${lastName}@${schoolCode}.sch`;
+    return `${firstLower}${lastLower}@${schoolCode}.sch`;
   };
 
-  // Handle name change and auto-generate email
-  const handleNameChange = (newName: string) => {
-    setName(newName);
-    const generatedEmail = generateEmail(newName);
+  // Handle name changes and auto-generate email
+  const handleFirstNameChange = (newFirstName: string) => {
+    setFirstName(newFirstName);
+    const generatedEmail = generateEmail(newFirstName, lastName);
+    setEmail(generatedEmail);
+  };
+
+  const handleLastNameChange = (newLastName: string) => {
+    setLastName(newLastName);
+    const generatedEmail = generateEmail(firstName, newLastName);
     setEmail(generatedEmail);
   };
 
   const validateForm = () => {
-    if (!email || !name || !phone) {
+    if (!email || !firstName || !lastName || !phone) {
       setError("Please fill in all required fields");
       return false;
     }
@@ -112,7 +116,8 @@ export default function AddAccountsManagerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          name,
+          firstName,
+          lastName,
           role,
           phone,
           password,
@@ -132,7 +137,8 @@ export default function AddAccountsManagerPage() {
       
       // Reset form
       setEmail("");
-      setName("");
+      setFirstName("");
+      setLastName("");
       setPhone("");
       setDepartment("");
       setPosition("");
@@ -189,12 +195,21 @@ export default function AddAccountsManagerPage() {
               <h3 className="text-white text-lg font-medium mb-4">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-white/70 text-sm mb-2">Full Name *</label>
+                  <label className="block text-white/70 text-sm mb-2">First Name *</label>
                   <input 
                     className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
-                    placeholder="Enter full name" 
-                    value={name} 
-                    onChange={(e) => handleNameChange(e.target.value)} 
+                    placeholder="Enter first name" 
+                    value={firstName} 
+                    onChange={(e) => handleFirstNameChange(e.target.value)} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-white/70 text-sm mb-2">Last Name *</label>
+                  <input 
+                    className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
+                    placeholder="Enter last name" 
+                    value={lastName} 
+                    onChange={(e) => handleLastNameChange(e.target.value)} 
                   />
                 </div>
                 <div>
