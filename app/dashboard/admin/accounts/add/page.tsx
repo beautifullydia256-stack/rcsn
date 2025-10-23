@@ -208,11 +208,8 @@ export default function AddAccountsManagerPage() {
                     onChange={(e) => setRole(e.target.value)}
                   >
                     <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
                     <option value="librarian">Librarian</option>
                     <option value="accountant">Accountant</option>
-                    <option value="parent">Parent</option>
-                    <option value="student">Student</option>
                   </select>
                 </div>
                 <div>
