@@ -24,6 +24,8 @@ export default function AddAccountsManagerPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [sendEmailInvite, setSendEmailInvite] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   // Status
   const [saving, setSaving] = useState(false);
@@ -302,23 +304,65 @@ export default function AddAccountsManagerPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-white/70 text-sm mb-2">Password *</label>
-                      <input 
-                        type="password"
-                        className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
-                        placeholder="Enter password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                      />
+                      <div className="relative">
+                        <input 
+                          type={showPassword ? "text" : "password"}
+                          className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none" 
+                          placeholder="Enter password" 
+                          value={password} 
+                          onChange={(e) => setPassword(e.target.value)} 
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input 
+                          type="checkbox" 
+                          id="showPassword"
+                          checked={showPassword}
+                          onChange={(e) => setShowPassword(e.target.checked)}
+                          className="rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
+                        />
+                        <label htmlFor="showPassword" className="text-white/70 text-xs">
+                          Show password
+                        </label>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-white/70 text-sm mb-2">Confirm Password *</label>
-                      <input 
-                        type="password"
-                        className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
-                        placeholder="Confirm password" 
-                        value={confirmPassword} 
-                        onChange={(e) => setConfirmPassword(e.target.value)} 
-                      />
+                      <div className="relative">
+                        <input 
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none" 
+                          placeholder="Confirm password" 
+                          value={confirmPassword} 
+                          onChange={(e) => setConfirmPassword(e.target.value)} 
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? "👁️‍🗨️" : "👁️"}
+                        </button>
+                      </div>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <input 
+                          type="checkbox" 
+                          id="showConfirmPassword"
+                          checked={showConfirmPassword}
+                          onChange={(e) => setShowConfirmPassword(e.target.checked)}
+                          className="rounded border-white/20 bg-white/10 text-blue-500 focus:ring-blue-500"
+                        />
+                        <label htmlFor="showConfirmPassword" className="text-white/70 text-xs">
+                          Show password
+                        </label>
+                      </div>
                     </div>
                   </div>
                 )}
