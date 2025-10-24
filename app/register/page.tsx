@@ -170,23 +170,7 @@ export default function Register() {
         }
       } catch (_) {}
 
-      // Create user record in public.users table
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          user_id: authData.user.id,
-          email: formData.email,
-          name: formData.adminName,
-          role: 'admin',
-          phone: formData.phone
-        });
-
-      if (userError) {
-        console.error('Error creating user record:', userError);
-        // Continue anyway as auth user was created
-      }
-
-      // Try enhanced function first, fallback to original function
+      // Call registration function FIRST to create school and user
       let registrationResult, registrationError;
       
       try {
@@ -228,11 +212,15 @@ export default function Register() {
 
       if (registrationError) {
         console.error('Registration function error:', registrationError);
+        // Delete the user from Supabase Auth since registration failed
+        await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(`Registration failed: ${registrationError.message}`);
       }
 
       if (registrationResult && !registrationResult.success) {
         console.error('RPC returned failure:', registrationResult);
+        // Delete the user from Supabase Auth since registration failed
+        await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(`Registration failed: ${registrationResult.error || 'Unknown error'}`);
       }
 
