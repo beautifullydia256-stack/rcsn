@@ -1040,8 +1040,8 @@ export default function TeacherExamResultsClassPage() {
         });
         setExamResults(map);
         // Set the paper field from the first result (all should have the same paper)
-        if (rows.length > 0 && rows[0].overall_remark) {
-          setTopicFilter(rows[0].overall_remark);
+        if (rows.length > 0 && rows[0].teacher_comment) {
+          setTopicFilter(rows[0].teacher_comment);
         }
       } else {
         const map: Record<string, any> = {};
