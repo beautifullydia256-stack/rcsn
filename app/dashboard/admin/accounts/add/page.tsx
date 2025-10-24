@@ -105,7 +105,8 @@ export default function AddAccountsManagerPage() {
     
     const firstLower = first.trim().toLowerCase();
     const lastLower = last.trim().toLowerCase();
-    const generatedEmail = `${firstLower}${lastLower}${suffix}@${schoolCode}.sch`;
+    const schoolCodeLower = schoolCode.toLowerCase();
+    const generatedEmail = `${firstLower}${lastLower}${suffix}@${schoolCodeLower}.sch`;
     
     console.log('Generated email:', generatedEmail);
     return generatedEmail;

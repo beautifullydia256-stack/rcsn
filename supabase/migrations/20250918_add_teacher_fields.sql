@@ -20,7 +20,9 @@ ALTER TABLE teachers
   ),
   ADD COLUMN IF NOT EXISTS date_of_hire DATE DEFAULT CURRENT_DATE,
   ADD COLUMN IF NOT EXISTS subjects TEXT[] DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS classes TEXT[] DEFAULT '{}';
+  ADD COLUMN IF NOT EXISTS classes TEXT[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS experience TEXT,
+  ADD COLUMN IF NOT EXISTS qualification TEXT;
 
 -- Helpful index
 CREATE INDEX IF NOT EXISTS idx_teachers_employee_id ON teachers(employee_id);
