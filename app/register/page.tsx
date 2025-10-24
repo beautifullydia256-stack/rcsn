@@ -190,7 +190,7 @@ export default function Register() {
         registrationError = finalResult.error;
       } catch (err) {
         // Fallback to any of the other function names (they all point to the same function now)
-        console.log('Final function not found, trying fallback functions...');
+        // Trying fallback functions
         try {
           const fallbackResult = await supabase
             .rpc('register_school_admin', {
@@ -211,20 +211,16 @@ export default function Register() {
       }
 
       if (registrationError) {
-        console.error('Registration function error:', registrationError);
         // Delete the user from Supabase Auth since registration failed
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(`Registration failed: ${registrationError.message}`);
       }
 
       if (registrationResult && !registrationResult.success) {
-        console.error('RPC returned failure:', registrationResult);
         // Delete the user from Supabase Auth since registration failed
         await supabase.auth.admin.deleteUser(authData.user.id);
         throw new Error(`Registration failed: ${registrationResult.error || 'Unknown error'}`);
       }
-
-      console.log('Registration process completed successfully:', registrationResult);
 
       // Update school with school code if provided
       if (formData.schoolCode && registrationResult?.school_id) {
@@ -235,10 +231,10 @@ export default function Register() {
             .eq('school_id', registrationResult.school_id);
           
           if (updateError) {
-            console.warn('Could not update school code:', updateError);
+            // Could not update school code
           }
         } catch (err) {
-          console.warn('Error updating school code:', err);
+          // Error updating school code
         }
       }
 
@@ -462,7 +458,7 @@ export default function Register() {
                 <Turnstile
                   siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY}
                   onSuccess={(token) => {
-                    console.log('Turnstile token received');
+                    // Turnstile token received
                     setCaptchaToken(token);
                   }}
                   onError={(error) => {
@@ -470,7 +466,7 @@ export default function Register() {
                     setError('CAPTCHA verification failed. Please refresh and try again.');
                   }}
                   onExpire={() => {
-                    console.log('Turnstile token expired');
+                    // Turnstile token expired
                     setCaptchaToken(undefined);
                     setError('CAPTCHA expired. Please verify again.');
                   }}

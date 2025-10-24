@@ -46,7 +46,7 @@ export default function SetupSchool() {
 
         setUser(user);
       } catch (err) {
-        console.error('Error getting user:', err);
+        // Error getting user
         router.push('/login');
       } finally {
         setUserLoading(false);
@@ -134,7 +134,7 @@ export default function SetupSchool() {
         .eq('school_id', registrationResult.school_id);
 
       if (updateError) {
-        console.error('Error updating school details:', updateError);
+        // Error updating school details
         // Don't throw here, school was created successfully
       }
 
@@ -142,7 +142,7 @@ export default function SetupSchool() {
       router.push('/dashboard/admin');
 
     } catch (err: any) {
-      console.error('Setup error:', err);
+      // Setup error
       setError(err.message || 'Failed to set up school');
     } finally {
       setLoading(false);

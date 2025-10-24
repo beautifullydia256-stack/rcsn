@@ -77,8 +77,7 @@ export default function AddAccountsManagerPage() {
       }
       
       setSchoolCode(schoolCode);
-      console.log('School data loaded:', schoolData);
-      console.log('School code generated from name:', schoolCode);
+      // School data loaded and school code generated
     };
     run();
   }, [router]);
@@ -94,12 +93,12 @@ export default function AddAccountsManagerPage() {
   // Generate email from first name, last name and school code
   const generateEmail = (first: string, last: string, suffix: string = "") => {
     if (!first.trim() || !last.trim()) {
-      console.log('Email generation failed: Missing names', { first, last });
+      // Email generation failed: Missing names
       return "";
     }
     
     if (!schoolCode) {
-      console.log('Email generation failed: Missing school code', { schoolCode });
+      // Email generation failed: Missing school code
       return "";
     }
     
@@ -108,7 +107,7 @@ export default function AddAccountsManagerPage() {
     const schoolCodeLower = schoolCode.toLowerCase();
     const generatedEmail = `${firstLower}${lastLower}${suffix}@${schoolCodeLower}.sch`;
     
-    console.log('Generated email:', generatedEmail);
+    // Generated email
     return generatedEmail;
   };
 
@@ -217,7 +216,7 @@ export default function AddAccountsManagerPage() {
     setError(null);
     setSuccess(null);
     
-    console.log('Form data before validation:', { firstName, lastName, email, phone, schoolCode });
+    // Form data before validation
     
     if (!(await validateForm())) return;
     

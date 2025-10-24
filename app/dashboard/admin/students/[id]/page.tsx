@@ -50,8 +50,6 @@ export default function StudentDetailPage() {
       
       // Set default login form values
       if (data?.admission_number) {
-        console.log('Student data:', data);
-        console.log('Student email:', data.student_email);
         setLoginForm(prev => ({
           ...prev,
           username: data.admission_number,

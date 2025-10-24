@@ -161,10 +161,10 @@ export default function AddStudentPage() {
       
       if (classFee > 0) {
         setExpectedFee(classFee.toString());
-        console.log(`✓ Auto-filled ${boardingType} tuition fee for ${klass}: UGX ${classFee.toLocaleString()}`);
+        // Auto-filled tuition fee
       } else {
         setExpectedFee('');
-        console.log(`⚠ No fee configured for ${boardingType} students in ${klass}`);
+        // No fee configured
       }
     }
   }, [klass, boardingType, feeStructure]);
@@ -299,10 +299,9 @@ export default function AddStudentPage() {
         );
 
         if (result.success && result.recordsCreated > 0) {
-          console.log(`✓ Created ${result.recordsCreated} missed exam records for new student in ${klass}`);
+          // Created missed exam records
         } else if (result.error) {
-          console.error('Failed to create missed exam records:', result.error);
-          // Don't fail the entire operation for exam records
+          // Failed to create missed exam records - don't fail the entire operation
         }
       }
 
