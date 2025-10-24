@@ -628,7 +628,7 @@ export default function TeacherExamResultsClassPage() {
   };
 
   // Primary change handler (existing)
-  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks', value: string) => {
+  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks' | 'paper', value: string) => {
     const newMarks = field === 'marks' ? value : (examResults[studentId]?.marks || '');
     const newTotalMarks = '100'; // Always 100
     const marksNum = parseFloat(newMarks) || 0;
@@ -642,7 +642,13 @@ export default function TeacherExamResultsClassPage() {
     const autoRemark = autoRemarkEnabled ? autoRemarkFromRanges : (examResults[studentId]?.remark || '');
     setExamResults(prev => ({
       ...prev,
-      [studentId]: { marks: newMarks, totalMarks: newTotalMarks, grade, remark: autoRemark }
+      [studentId]: { 
+        marks: newMarks, 
+        totalMarks: newTotalMarks, 
+        grade, 
+        remark: autoRemark,
+        paper: field === 'paper' ? value : (prev[studentId]?.paper || '')
+      }
     }));
   };
 
@@ -825,7 +831,7 @@ export default function TeacherExamResultsClassPage() {
             p_grade: computedGrade,
             p_remarks: computedRemark,
             p_teacher_id: teacherIdForSave,
-            p_teacher_comment: null
+            p_teacher_comment: data.paper || null
           });
           if (resp.error) {
             console.error('RPC alevel save error:', {
@@ -1025,12 +1031,13 @@ export default function TeacherExamResultsClassPage() {
         });
         setExamResults(map);
       } else if (isALevel) {
-        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+        const map: Record<string, { marks: string; totalMarks: string; grade: string; paper: string } > = {};
         rows.forEach(r => {
           map[r.student_id] = {
             marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
             totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || ''
+            grade: r.grade || '',
+            paper: r.overall_remark || '' // Using overall_remark to store paper info
           };
         });
         setExamResults(map);
@@ -1396,7 +1403,9 @@ export default function TeacherExamResultsClassPage() {
                   <thead className="bg-white/5">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
-                      {/* Primary has no Paper column */}
+                      {isALevel && (
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Paper</th>
+                      )}
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
@@ -1416,8 +1425,8 @@ export default function TeacherExamResultsClassPage() {
                             <td className="px-6 py-4 whitespace-nowrap">
                               <input
                                 type="text"
-                                value={topicFilter}
-                                onChange={(e) => setTopicFilter(e.target.value)}
+                                value={examResults[student.student_id]?.paper || ''}
+                                onChange={(e) => handleMarksChange(student.student_id, 'paper', e.target.value)}
                                 className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm"
                                 placeholder="Paper"
                               />
