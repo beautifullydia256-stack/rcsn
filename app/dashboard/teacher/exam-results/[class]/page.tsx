@@ -752,7 +752,7 @@ export default function TeacherExamResultsClassPage() {
         return;
       }
 
-      if (!isSecondary && !isALevel) {
+      if (!isSecondary) {
         const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
         if (entries.length === 0) {
           setError('Please enter marks for at least one student');
@@ -801,8 +801,50 @@ export default function TeacherExamResultsClassPage() {
         // Small delay to ensure database is updated
         await new Promise(resolve => setTimeout(resolve, 500));
         await reloadSavedResults();
+      } else if (isALevel) {
+        // A-Level format - simple marks only
+        const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+        if (entries.length === 0) {
+          setError('Please enter marks for at least one student');
+          return;
+        }
+
+        const saves = entries.map(async ([studentId, data]) => {
+          const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
+          const currentGradeRemarks = gradeRemarksALevel;
+          const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+          
+          const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+            p_school_id: schoolId,
+            p_exam_set_id: selectedExamSet,
+            p_student_id: studentId,
+            p_class_name: className,
+            p_subject: (selectedSubject || '').trim(),
+            p_marks_obtained: parseFloat(data.marks),
+            p_total_marks: parseFloat(data.totalMarks || '100'),
+            p_grade: computedGrade,
+            p_remarks: computedRemark,
+            p_teacher_id: teacherIdForSave,
+            p_teacher_comment: null
+          });
+          if (resp.error) {
+            console.error('RPC alevel save error:', {
+              code: resp.error.code,
+              message: resp.error.message,
+              details: resp.error.details,
+              hint: resp.error.hint,
+            });
+            throw resp.error;
+          }
+        });
+        await Promise.all(saves);
+        setSuccess(`Successfully saved ${entries.length} exam results`);
+        
+        // Force reload saved results after successful save
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await reloadSavedResults();
       } else {
-        // Secondary
+        // Secondary (O-Level)
         // Guard: subject selected
         if (!selectedSubject || !(selectedSubject || '').trim()) {
           setError('Please select a subject');
@@ -973,6 +1015,16 @@ export default function TeacherExamResultsClassPage() {
       console.log('reloadSavedResults: Found', rows.length, 'saved results');
       
       if (!isSecondary && !isALevel) {
+        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+        rows.forEach(r => {
+          map[r.student_id] = {
+            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
+            grade: r.grade || ''
+          };
+        });
+        setExamResults(map);
+      } else if (isALevel) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
           map[r.student_id] = {
