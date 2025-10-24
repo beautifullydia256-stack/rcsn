@@ -23,6 +23,7 @@ export default function EditTeacherPage() {
   const [qualification, setQualification] = useState("");
   const [experience, setExperience] = useState("");
   const [address, setAddress] = useState("");
+  const [salary, setSalary] = useState("");
 
   useEffect(() => {
     const loadTeacher = async () => {
@@ -54,6 +55,7 @@ export default function EditTeacherPage() {
         setQualification(teacherData.qualification || '');
         setExperience(teacherData.experience || '');
         setAddress(teacherData.address || '');
+        setSalary(teacherData.salary ? teacherData.salary.toString() : '');
       } catch (err) {
         console.error('Error:', err);
         setError('Failed to load teacher data');
@@ -84,6 +86,7 @@ export default function EditTeacherPage() {
           qualification: qualification.trim(),
           experience: experience.trim(),
           address: address.trim(),
+          salary: salary ? parseFloat(salary) : null,
           updated_at: new Date().toISOString()
         })
         .eq('teacher_id', teacherId);
@@ -267,6 +270,17 @@ export default function EditTeacherPage() {
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                   placeholder="Teacher's residential address"
+                />
+              </div>
+
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Monthly Salary (UGX)</label>
+                <input
+                  type="number"
+                  value={salary}
+                  onChange={(e) => setSalary(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., 800000"
                 />
               </div>
             </div>

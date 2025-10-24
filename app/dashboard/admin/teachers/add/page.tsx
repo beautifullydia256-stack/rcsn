@@ -22,6 +22,7 @@ export default function AddTeacherPage() {
   const [subjects, setSubjects] = useState<string[]>([]); // Stored as labeled subjects per class, e.g., "Mathematics 1", "Mathematics N"
   const [classesAssigned, setClassesAssigned] = useState<string[]>([]);
   const [subjectsByClass, setSubjectsByClass] = useState<Record<string, string[]>>({});
+  const [salary, setSalary] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -108,6 +109,7 @@ export default function AddTeacherPage() {
     setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob(""); setNationalId("");
     setPhone(""); setAddress("");
     setSubjects([]); setClassesAssigned([]); setSubjectsByClass({});
+    setSalary("");
     setError(null); setSuccess(null);
   };
 
@@ -135,6 +137,7 @@ export default function AddTeacherPage() {
       national_id: nationalId || null,
       subjects: subjects.length ? subjects : null,
       classes: filteredClasses.length ? filteredClasses : null,
+      salary: salary ? parseFloat(salary) : null,
       // employee_id and date_of_hire default via DB
     }).select("teacher_id, employee_id").single();
 
@@ -268,6 +271,18 @@ export default function AddTeacherPage() {
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              <div>
+                <div className="text-white/80 text-sm mb-1">Monthly Salary (UGX)</div>
+                <input 
+                  type="number" 
+                  className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" 
+                  placeholder="e.g., 800000" 
+                  value={salary} 
+                  onChange={(e) => setSalary(e.target.value)} 
+                />
               </div>
             </div>
             <div className="text-white/70 text-xs mt-2">
