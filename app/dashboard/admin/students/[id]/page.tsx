@@ -42,7 +42,7 @@ export default function StudentDetailPage() {
       if (!studentId) return;
       const { data } = await supabase
         .from("students")
-        .select("*, school_id")
+        .select("*, school_id, student_email, guardian_email")
         .eq("student_id", studentId)
         .single();
       setStudent(data);
@@ -50,6 +50,8 @@ export default function StudentDetailPage() {
       
       // Set default login form values
       if (data?.admission_number) {
+        console.log('Student data:', data);
+        console.log('Student email:', data.student_email);
         setLoginForm(prev => ({
           ...prev,
           username: data.admission_number,
@@ -69,6 +71,8 @@ export default function StudentDetailPage() {
           if (generatedEmail) {
             // Update the form with generated email
             setForm(prev => ({ ...prev, student_email: generatedEmail }));
+            // Update the login form with generated email
+            setLoginForm(prev => ({ ...prev, email: generatedEmail }));
             // Also update the student record in database
             await supabase
               .from('students')
