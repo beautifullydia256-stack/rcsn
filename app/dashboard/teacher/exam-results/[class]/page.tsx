@@ -858,8 +858,13 @@ export default function TeacherExamResultsClassPage() {
         
         // Force reload saved results after successful save
         // Small delay to ensure database is updated
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await reloadSavedResults();
+        
+        // Additional reload attempt after a longer delay to ensure data is available
+        setTimeout(async () => {
+          await reloadSavedResults();
+        }, 2000);
       }
       
     } catch (err) {
@@ -918,10 +923,21 @@ export default function TeacherExamResultsClassPage() {
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
     if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) {
+      console.log('reloadSavedResults: Missing required parameters', {
+        resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject
+      });
       return;
     }
     
     try {
+      console.log('reloadSavedResults: Loading saved results for', {
+        schoolId: resolvedSchoolId,
+        className,
+        examSetId: selectedExamSet,
+        subject: selectedSubject,
+        teacherId: resolvedTeacherId
+      });
+      
       const { data, error } = await supabase
         .from('exam_results')
         .select('*')
@@ -937,6 +953,7 @@ export default function TeacherExamResultsClassPage() {
       }
       
       const rows = data || [];
+      console.log('reloadSavedResults: Found', rows.length, 'saved results');
       
       if (!isSecondary) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
@@ -966,6 +983,7 @@ export default function TeacherExamResultsClassPage() {
           };
         });
         setExamResultsSecondary(map);
+        console.log('reloadSavedResults: Updated examResultsSecondary with', Object.keys(map).length, 'entries');
       }
     } catch (err) {
       console.error('Exception in reloadSavedResults:', err);
