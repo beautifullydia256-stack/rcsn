@@ -1,6 +1,9 @@
 -- Create RPC function for teachers to upsert exam results (secondary schools)
 -- This function handles the secure insertion/update of exam results for secondary schools
 
+-- Drop the function if it exists to avoid conflicts
+DROP FUNCTION IF EXISTS teacher_upsert_exam_result_secondary(UUID, UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT, UUID, TEXT);
+
 CREATE OR REPLACE FUNCTION teacher_upsert_exam_result_secondary(
     p_school_id UUID,
     p_exam_set_id UUID,

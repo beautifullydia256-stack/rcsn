@@ -334,9 +334,9 @@ export default function AddAccountsManagerPage() {
                     value={email} 
                     readOnly
                   />
-                  <p className="text-xs text-blue-300 mt-1">
+                    <p className="text-xs text-blue-300 mt-1">
                     💡 Email will be auto-generated as: {email || `firstname+lastname@${schoolCode}.sch`}
-                  </p>
+                    </p>
                 </div>
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Phone Number *</label>
@@ -403,13 +403,13 @@ export default function AddAccountsManagerPage() {
                     <div>
                       <label className="block text-white/70 text-sm mb-2">Password *</label>
                       <div className="relative">
-                        <input 
+                      <input 
                           type={showPassword ? "text" : "password"}
                           className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none" 
-                          placeholder="Enter password" 
-                          value={password} 
-                          onChange={(e) => setPassword(e.target.value)} 
-                        />
+                        placeholder="Enter password" 
+                        value={password} 
+                        onChange={(e) => setPassword(e.target.value)} 
+                      />
                         <button
                           type="button"
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"
@@ -434,13 +434,13 @@ export default function AddAccountsManagerPage() {
                     <div>
                       <label className="block text-white/70 text-sm mb-2">Confirm Password *</label>
                       <div className="relative">
-                        <input 
+                      <input 
                           type={showConfirmPassword ? "text" : "password"}
                           className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 pr-10 focus:border-blue-500 focus:outline-none" 
-                          placeholder="Confirm password" 
-                          value={confirmPassword} 
-                          onChange={(e) => setConfirmPassword(e.target.value)} 
-                        />
+                        placeholder="Confirm password" 
+                        value={confirmPassword} 
+                        onChange={(e) => setConfirmPassword(e.target.value)} 
+                      />
                         <button
                           type="button"
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white/70"

@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 export default function SetupSchool() {
   const [formData, setFormData] = useState({
     schoolName: '',
+    schoolCode: '',
     location: '',
     type: 'Nursery/Primary' as 'Nursery/Primary' | 'Secondary',
     phone: '',
@@ -56,7 +57,28 @@ export default function SetupSchool() {
   }, [router]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    
+    // Auto-generate school code when school name changes
+    if (name === 'schoolName' && value.trim()) {
+      generateSchoolCode(value.trim());
+    }
+  };
+
+  const generateSchoolCode = async (schoolName: string) => {
+    try {
+      const { data: generatedCode, error } = await supabase.rpc('generate_unique_school_code', {
+        p_school_name: schoolName,
+        p_branch_name: null
+      });
+      
+      if (!error && generatedCode) {
+        setFormData(prev => ({ ...prev, schoolCode: generatedCode }));
+      }
+    } catch (err) {
+      console.warn('Could not generate school code:', err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -100,13 +122,14 @@ export default function SetupSchool() {
         throw new Error(registrationError?.message || 'Failed to create school');
       }
 
-      // Update school with additional details
+      // Update school with additional details including school code
       const { error: updateError } = await supabase
         .from('schools')
         .update({
           motto: formData.motto,
           address: formData.address,
-          phone: formData.phone
+          phone: formData.phone,
+          school_code: formData.schoolCode
         })
         .eq('school_id', registrationResult.school_id);
 
@@ -204,6 +227,31 @@ export default function SetupSchool() {
                 placeholder="Your School Name"
                 required
               />
+            </motion.div>
+
+            <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.21 }}>
+              <label className="block mb-1 text-sm font-medium text-white">School Code *</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="schoolCode"
+                  value={formData.schoolCode}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                  placeholder="Auto-generated (e.g., KHS)"
+                  required
+                />
+                {formData.schoolCode && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <span className="text-xs text-green-400 bg-green-500/20 px-2 py-1 rounded">
+                      ✓ Unique
+                    </span>
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-white/60">
+                💡 School code is auto-generated from your school name. You can edit it if needed.
+              </p>
             </motion.div>
 
             <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.22 }}>
