@@ -752,7 +752,7 @@ export default function TeacherExamResultsClassPage() {
         return;
       }
 
-      if (!isSecondary) {
+      if (!isSecondary && !isALevel) {
         const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
         if (entries.length === 0) {
           setError('Please enter marks for at least one student');
@@ -972,7 +972,7 @@ export default function TeacherExamResultsClassPage() {
       const rows = data || [];
       console.log('reloadSavedResults: Found', rows.length, 'saved results');
       
-      if (!isSecondary) {
+      if (!isSecondary && !isALevel) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
           map[r.student_id] = {
