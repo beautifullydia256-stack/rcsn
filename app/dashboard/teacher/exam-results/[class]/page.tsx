@@ -628,7 +628,7 @@ export default function TeacherExamResultsClassPage() {
   };
 
   // Primary change handler (existing)
-  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks' | 'paper', value: string) => {
+  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks', value: string) => {
     const newMarks = field === 'marks' ? value : (examResults[studentId]?.marks || '');
     const newTotalMarks = '100'; // Always 100
     const marksNum = parseFloat(newMarks) || 0;
@@ -646,8 +646,7 @@ export default function TeacherExamResultsClassPage() {
         marks: newMarks, 
         totalMarks: newTotalMarks, 
         grade, 
-        remark: autoRemark,
-        paper: field === 'paper' ? value : (prev[studentId]?.paper || '')
+        remark: autoRemark
       }
     }));
   };
@@ -831,7 +830,7 @@ export default function TeacherExamResultsClassPage() {
             p_grade: computedGrade,
             p_remarks: computedRemark,
             p_teacher_id: teacherIdForSave,
-            p_teacher_comment: data.paper || null
+            p_teacher_comment: topicFilter || null
           });
           if (resp.error) {
             console.error('RPC alevel save error:', {
@@ -1031,16 +1030,19 @@ export default function TeacherExamResultsClassPage() {
         });
         setExamResults(map);
       } else if (isALevel) {
-        const map: Record<string, { marks: string; totalMarks: string; grade: string; paper: string } > = {};
+        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
           map[r.student_id] = {
             marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
             totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || '',
-            paper: r.overall_remark || '' // Using overall_remark to store paper info
+            grade: r.grade || ''
           };
         });
         setExamResults(map);
+        // Set the paper field from the first result (all should have the same paper)
+        if (rows.length > 0 && rows[0].overall_remark) {
+          setTopicFilter(rows[0].overall_remark);
+        }
       } else {
         const map: Record<string, any> = {};
         rows.forEach(r => {
@@ -1362,14 +1364,14 @@ export default function TeacherExamResultsClassPage() {
                 ))}
               </select>
             </div>
-            {isSecondary && (
+            {(isSecondary || isALevel) && (
               <div>
                 <label className="block text_white/80 text-sm mb-2">Paper</label>
                 <input
                   type="text"
                   value={topicFilter}
                   onChange={(e) => setTopicFilter(e.target.value)}
-                  placeholder="e.g., 1 Classification"
+                  placeholder={isALevel ? "e.g., Paper 1" : "e.g., 1 Classification"}
                   className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
                 />
               </div>
@@ -1403,9 +1405,6 @@ export default function TeacherExamResultsClassPage() {
                   <thead className="bg-white/5">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
-                      {isALevel && (
-                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Paper</th>
-                      )}
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
@@ -1421,17 +1420,6 @@ export default function TeacherExamResultsClassPage() {
                       return (
                         <tr key={student.student_id} className="hover:bg-white/5">
                           <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
-                          {isALevel && (
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <input
-                                type="text"
-                                value={examResults[student.student_id]?.paper || ''}
-                                onChange={(e) => handleMarksChange(student.student_id, 'paper', e.target.value)}
-                                className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm"
-                                placeholder="Paper"
-                              />
-                            </td>
-                          )}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
                           </td>
