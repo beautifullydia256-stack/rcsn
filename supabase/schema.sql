@@ -77,6 +77,32 @@ CREATE TABLE teachers (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Exam Results table
+CREATE TABLE exam_results (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  school_id UUID NOT NULL REFERENCES schools(school_id) ON DELETE CASCADE,
+  exam_set_id UUID NOT NULL,
+  student_id UUID NOT NULL REFERENCES students(student_id) ON DELETE CASCADE,
+  class_name TEXT NOT NULL,
+  subject TEXT NOT NULL,
+  marks_obtained NUMERIC NOT NULL DEFAULT 0,
+  total_marks NUMERIC NOT NULL DEFAULT 100,
+  grade TEXT,
+  remarks TEXT,
+  -- Secondary school specific columns
+  activity_score NUMERIC(3,1),
+  descriptor TEXT,
+  formative_score NUMERIC(4,1),
+  exam_score NUMERIC(4,1),
+  final_score NUMERIC(4,1),
+  overall_remark TEXT,
+  teacher_initials TEXT,
+  topic TEXT,
+  teacher_id UUID REFERENCES teachers(teacher_id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Parents table
 CREATE TABLE parents (
   parent_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
