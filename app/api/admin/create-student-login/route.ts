@@ -176,7 +176,8 @@ export async function POST(request: NextRequest) {
           role: 'student',
           name: studentData?.name || canonicalAdmission || 'Student User',
           school_id: studentData?.school_id || null,
-          student_id: canonicalStudentId
+          student_id: canonicalStudentId,
+          password_hash: '$2a$10$example_hash_here' // Placeholder hash since Supabase Auth handles the real password
         });
 
       if (userInsertError) {
