@@ -841,12 +841,13 @@ export default function TeacherExamResultsClassPage() {
             p_overall_remark: (data.remark || '').trim(),
             p_teacher_initials: data.initials || teacherInitials || '',
             p_teacher_id: teacherIdForSave,
-            p_topic: (data.topic || topicFilter || '').trim()
+            p_topic: (data.topic || topicFilter || '').trim(),
+            p_grade: grade
           };
           
           console.log('Saving secondary exam result with params:', rpcParams);
           
-          const resp = await supabase.rpc('save_secondary_exam_result', rpcParams);
+          const resp = await supabase.rpc('teacher_upsert_exam_result_secondary', rpcParams);
           
           console.log('RPC response:', resp);
           
