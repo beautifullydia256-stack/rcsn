@@ -61,6 +61,19 @@ CREATE TABLE teachers (
   name TEXT NOT NULL,
   email TEXT UNIQUE,
   school_id UUID REFERENCES schools(school_id) NOT NULL,
+  phone TEXT,
+  address TEXT,
+  gender TEXT CHECK (gender IN ('Male','Female','Other')),
+  dob DATE,
+  national_id TEXT,
+  employee_id TEXT UNIQUE,
+  date_of_hire DATE DEFAULT CURRENT_DATE,
+  subjects TEXT[] DEFAULT '{}',
+  classes TEXT[] DEFAULT '{}',
+  experience TEXT,
+  qualification TEXT,
+  salary NUMERIC,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   created_at TIMESTAMP DEFAULT NOW()
 );
 
