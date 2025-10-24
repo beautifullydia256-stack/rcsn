@@ -81,9 +81,17 @@ export default function TeacherExamResultsClassPage() {
         const sanitized = ranges
           .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
           .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
-        if (sanitized.length > 0) setTeacherRemarksRanges(sanitized);
+        // Always set the ranges, even if empty - this ensures we clear old data
+        setTeacherRemarksRanges(sanitized);
+      } else {
+        // If API call fails, clear the ranges
+        setTeacherRemarksRanges([]);
       }
-    } catch {}
+    } catch (error) {
+      // If there's an error, clear the ranges
+      console.error('Error loading teacher remarks ranges:', error);
+      setTeacherRemarksRanges([]);
+    }
   };
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
   // Comments functionality removed per request
