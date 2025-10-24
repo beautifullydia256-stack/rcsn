@@ -42,6 +42,7 @@ export default function AddStudentPage() {
   const [previousSchool, setPreviousSchool] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
   const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
+  const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
   const [boardingType, setBoardingType] = useState("Day Scholar");
 
   // Fees & Finance
@@ -229,6 +230,16 @@ export default function AddStudentPage() {
       const admission_number = admData as string;
       setGeneratedAdmNo(admission_number);
 
+      // Generate student email via RPC
+      const { data: emailData, error: emailErr } = await supabase.rpc('generate_unique_school_email', {
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_school_id: schoolId
+      });
+      if (emailErr) throw emailErr;
+      const student_email = emailData as string;
+      setGeneratedEmail(student_email);
+
       // Compose full name for legacy name column
       const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
 
@@ -249,6 +260,7 @@ export default function AddStudentPage() {
         city,
         country,
         student_phone: studentPhone || null,
+        student_email: student_email,
         guardian_name: guardianName,
         guardian_relationship: guardianRelationship,
         guardian_phone: guardianPhone,
@@ -344,6 +356,7 @@ export default function AddStudentPage() {
       setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate(""); setBoardingType("Day Scholar");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
       setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
+      setGeneratedAdmNo(null); setGeneratedEmail(null);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to add student: ${e?.message || e}`);
@@ -497,6 +510,9 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Initial Payment (optional)" value={initialPayment} onChange={(e)=>setInitialPayment(e.target.value)} />
             {generatedAdmNo && (
               <input readOnly className="rounded-lg border border-emerald-300/30 bg-emerald-500/10 text-white px-3 py-2" value={generatedAdmNo} />
+            )}
+            {generatedEmail && (
+              <input readOnly className="rounded-lg border border-blue-300/30 bg-blue-500/10 text-white px-3 py-2" value={generatedEmail} />
             )}
           </div>
           <div className="flex gap-2 mt-4">
