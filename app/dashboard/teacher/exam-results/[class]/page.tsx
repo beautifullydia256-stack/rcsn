@@ -830,7 +830,8 @@ export default function TeacherExamResultsClassPage() {
             p_grade: computedGrade,
             p_remarks: computedRemark,
             p_teacher_id: teacherIdForSave,
-            p_teacher_comment: topicFilter || null
+            p_teacher_comment: computedRemark,
+            p_paper_number: topicFilter || null
           });
           if (resp.error) {
             console.error('RPC alevel save error:', {
@@ -1040,8 +1041,8 @@ export default function TeacherExamResultsClassPage() {
         });
         setExamResults(map);
         // Set the paper field from the first result (all should have the same paper)
-        if (rows.length > 0 && rows[0].teacher_comment) {
-          setTopicFilter(rows[0].teacher_comment);
+        if (rows.length > 0 && rows[0].paper_number) {
+          setTopicFilter(rows[0].paper_number);
         }
       } else {
         const map: Record<string, any> = {};
