@@ -826,7 +826,8 @@ export default function TeacherExamResultsClassPage() {
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
             const finalNum = formativeNum + examNum;
             const grade = calculateSecondaryGrade(finalNum);
-          const resp = await supabase.rpc('teacher_upsert_exam_result_secondary', {
+          
+          const rpcParams = {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
             p_student_id: studentId,
@@ -841,7 +842,14 @@ export default function TeacherExamResultsClassPage() {
             p_teacher_initials: data.initials || teacherInitials || '',
             p_teacher_id: teacherIdForSave,
             p_topic: (data.topic || topicFilter || '').trim()
-          });
+          };
+          
+          console.log('Saving secondary exam result with params:', rpcParams);
+          
+          const resp = await supabase.rpc('teacher_upsert_exam_result_secondary', rpcParams);
+          
+          console.log('RPC response:', resp);
+          
           if (resp.error) {
             console.error('RPC olevel save error:', {
               code: resp.error.code,
