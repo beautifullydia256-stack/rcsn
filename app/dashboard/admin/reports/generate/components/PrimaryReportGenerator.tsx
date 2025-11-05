@@ -705,14 +705,23 @@ export function PrimaryReportGenerator() {
 
       // Calculate positions after all students are processed
       // Students with missing exam results (null average) will be treated as 0 and rank last
-      reportData.students = reportData.students.map((student: any) => ({
-        ...student,
-        summary: {
-          ...student.summary,
-          classPosition: getClassPosition(reportData.students, student),
-          streamPosition: getStreamPosition(reportData.students, student)
-        }
-      }));
+      // Class Position: Ranks students based on their average/total marks for the selected exam period
+      // Position 1 = best performance (highest average), higher numbers = lower performance
+      reportData.students = reportData.students.map((student: any) => {
+        // Count total students in the same class for "Out of X students"
+        const classStudents = reportData.students.filter((s: any) => s.current_class === student.current_class);
+        const totalStudentsInClass = classStudents.length;
+        
+        return {
+          ...student,
+          summary: {
+            ...student.summary,
+            classPosition: getClassPosition(reportData.students, student),
+            streamPosition: getStreamPosition(reportData.students, student),
+            totalStudents: totalStudentsInClass
+          }
+        };
+      });
 
       setReportData(reportData);
       setShowPreview(true);

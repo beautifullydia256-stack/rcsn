@@ -221,16 +221,26 @@ export function getPerformanceRemark(average: number): string {
   return 'Poor performance. Immediate attention and support needed.';
 }
 
+/**
+ * Calculate class position based on overall performance (average percentage)
+ * Position 1 = best performance (highest average), higher numbers = lower performance
+ * Example: If there are 30 students in the class:
+ * - Position 1 = performed better than all 29 others
+ * - Position 30 = lowest performance in the class
+ */
 export function getClassPosition(students: any[], currentStudent: any): number {
-  const sortedStudents = students
-    .filter(s => s.current_class === currentStudent.current_class)
-    .sort((a, b) => {
-      // Treat null averages as 0 so students with missing exam results rank last
-      const avgA = a.summary.average !== null ? a.summary.average : 0;
-      const avgB = b.summary.average !== null ? b.summary.average : 0;
-      return avgB - avgA;
-    });
+  // Filter to only students in the same class
+  const classStudents = students.filter(s => s.current_class === currentStudent.current_class);
   
+  // Sort by average (descending - highest average first)
+  // Students with null averages (missing exam results) are treated as 0 and rank last
+  const sortedStudents = classStudents.sort((a, b) => {
+    const avgA = a.summary.average !== null ? a.summary.average : 0;
+    const avgB = b.summary.average !== null ? b.summary.average : 0;
+    return avgB - avgA; // Descending order: highest average = position 1
+  });
+  
+  // Return position (1-based index: 1st, 2nd, 3rd, etc.)
   return sortedStudents.findIndex(s => s.student_id === currentStudent.student_id) + 1;
 }
 
