@@ -1372,25 +1372,36 @@ export function PrimaryReportGenerator() {
             </div>
 
             {/* Exam Set Selection */}
-            {examSets && examSets.length > 0 && (
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Exam Set
-                </label>
-                <select
-                  value={selectedExamSetId}
-                  onChange={(e) => setSelectedExamSetId(e.target.value)}
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option className="text-black" value="all">All Exam Sets (Current Term)</option>
-                  {examSets.map((es) => (
-                    <option className="text-black" key={es.id} value={es.id}>
-                      {es.name || `Set - Term ${es.term}, ${es.year}`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {examSets && examSets.length > 0 && (() => {
+              // Helper function to detect if exam set is Mid Term
+              const isMidTerm = (name: string) => {
+                const n = String(name || '').trim().toLowerCase();
+                return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+              };
+              
+              // Filter to only show Mid Term exam sets
+              const midTermExamSets = examSets.filter((es: any) => isMidTerm(es.name || ''));
+              
+              return (
+                <div>
+                  <label className="block text-white/80 text-sm font-medium mb-2">
+                    Exam Set
+                  </label>
+                  <select
+                    value={selectedExamSetId}
+                    onChange={(e) => setSelectedExamSetId(e.target.value)}
+                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option className="text-black" value="all">All Exam Sets (Current Term)</option>
+                    {midTermExamSets.map((es) => (
+                      <option className="text-black" key={es.id} value={es.id}>
+                        {es.name || `Set - Term ${es.term}, ${es.year}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })()}
             {/* Current Term Info */}
             {currentTermInfo && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3 mb-4">
