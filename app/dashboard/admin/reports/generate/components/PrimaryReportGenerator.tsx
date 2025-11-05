@@ -532,9 +532,107 @@ export function PrimaryReportGenerator() {
             return rule?.comment || '';
           })();
 
+          // Helper functions to detect exam set types by name
+          const isBeginning = (name: any) => {
+            const n = String(name || '').trim().toLowerCase();
+            return n === 'beginning of term' || n === 'beginning of term' || n.includes('beginning') || n.includes('bot');
+          };
+          const isMid = (name: any) => {
+            const n = String(name || '').trim().toLowerCase();
+            return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+          };
+          const isEnd = (name: any) => {
+            const n = String(name || '').trim().toLowerCase();
+            return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+          };
+
+          // For Template4 (Upper Section P.5-P.7), create subjects array with bot_marks, mot_marks, eot_marks
+          // Check if this class uses Template4 (Upper Section: P.5, P.6, P.7, Primary 5, Primary 6, Primary 7)
+          const className = student.current_class || '';
+          const isUpperSection = /(primary\s*[5-7]|p\.?\s*[5-7]|upper)/i.test(className.trim());
+          const usesTemplate4 = isUpperSection || selectedTemplate === 'template4';
+          
+          let subjects: any[] = [];
+          if (usesTemplate4 && studentResults.length > 0) {
+            // Group results by subject and aggregate by exam set type
+            const subjectGroups: { [key: string]: { 
+              subject_name: string; 
+              bot_marks?: number | string; 
+              mot_marks?: number | string; 
+              eot_marks?: number | string; 
+              total_marks: number;
+              teacher_comment: string;
+            } } = {};
+            
+            // Get exam set names from results
+            const examSetMap = new Map();
+            studentResults.forEach(r => {
+              if (r.exam_set_id && !examSetMap.has(r.exam_set_id)) {
+                const examSet = examSets.find(es => es.id === r.exam_set_id);
+                if (examSet) {
+                  examSetMap.set(r.exam_set_id, examSet.name);
+                }
+              }
+            });
+
+            studentResults.forEach((r: any) => {
+              const subject = r.subject ?? '';
+              if (!subject) return;
+              
+              const examSetName = r.exam_set_name || examSetMap.get(r.exam_set_id) || '';
+              
+              if (!subjectGroups[subject]) {
+                subjectGroups[subject] = {
+                  subject_name: subject,
+                  total_marks: r.total_marks ?? 100,
+                  teacher_comment: r.teacher_remark || r.overall_remark || ''
+                };
+              }
+              
+              // Assign marks based on exam set type
+              if (isBeginning(examSetName) && r.grade !== 'MISSED') {
+                subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
+              } else if (isMid(examSetName) && r.grade !== 'MISSED') {
+                subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
+              } else if (isEnd(examSetName) && r.grade !== 'MISSED') {
+                subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
+                // Use End of Term remarks if available
+                if (r.teacher_remark || r.overall_remark) {
+                  subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+                }
+              }
+            });
+            
+            // Convert to array and calculate totals
+            subjects = Object.values(subjectGroups).map((group: any) => {
+              const bot = typeof group.bot_marks === 'number' ? group.bot_marks : (group.bot_marks || '');
+              const mot = typeof group.mot_marks === 'number' ? group.mot_marks : (group.mot_marks || '');
+              const eot = typeof group.eot_marks === 'number' ? group.eot_marks : (group.eot_marks || '');
+              
+              // Calculate total (sum of bot + mot + eot if all are numbers)
+              let total = '';
+              const botNum = typeof bot === 'number' ? bot : (typeof bot === 'string' && bot.trim() ? parseFloat(bot) : null);
+              const motNum = typeof mot === 'number' ? mot : (typeof mot === 'string' && mot.trim() ? parseFloat(mot) : null);
+              const eotNum = typeof eot === 'number' ? eot : (typeof eot === 'string' && eot.trim() ? parseFloat(eot) : null);
+              
+              if (botNum !== null || motNum !== null || eotNum !== null) {
+                total = ((botNum || 0) + (motNum || 0) + (eotNum || 0)).toString();
+              }
+              
+              return {
+                ...group,
+                bot_marks: bot,
+                mot_marks: mot,
+                eot_marks: eot,
+                total_marks: total || group.total_marks
+              };
+            });
+          }
+
           return {
             ...student,
             results: allStudentResults,
+            subjects: subjects.length > 0 ? subjects : undefined, // Only add if Template4
             attendance: studentAttendance,
             fees: studentFees,
             projects: studentProjects,
@@ -1445,6 +1543,7 @@ export function PrimaryReportGenerator() {
                   template={selectedTemplate}
                   reportTitleSettings={reportTitleSettings}
                   currentTermInfo={currentTermInfo}
+                  examSets={examSets}
                 />
               </div>
             ))}
@@ -1482,7 +1581,7 @@ function isLowerSectionPrimary(className: string): boolean {
   return /(primary\s*1|primary\s*2|primary\s*3|^p\.?\s*1$|^p\.?\s*2$|^p\.?\s*3$)/i.test(className.trim());
 }
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[] }) {
   const cls = String(student.current_class || '');
   const isOL = isOLevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -1493,7 +1592,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     }
     if (template === 'template4') {
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} />;
     }
     // Default primary template (nursery/middle/top)
     return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
@@ -1508,7 +1607,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     case 'template3':
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     case 'template4':
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} />;
     default:
       return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
   }
@@ -2269,11 +2368,20 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 }
 
 // Template 4 - Report for Upper Section (P.5 - P.7)
-function Template4UpperSectionReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+function Template4UpperSectionReport({ student, examSet, school, examSets }: { student: any; examSet: any; school: any; examSets?: any[] }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Helper function to detect if exam set is Beginning of Term
+  const isBeginning = (name: any) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'beginning of term' || n.includes('beginning') || n.includes('bot');
+  };
+
+  // Check if BOT exam sets exist for this term
+  const hasBOTExamSets = examSets && examSets.some((es: any) => isBeginning(es.name));
 
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
@@ -2341,9 +2449,11 @@ function Template4UpperSectionReport({ student, examSet, school }: { student: an
         <thead>
           <tr className="bg-gray-100">
             <th className="border border-gray-400 px-2 py-1 text-left">Subject</th>
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">BOT</th>
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">MOT</th>
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">EOT</th>
+            {hasBOTExamSets && (
+              <th className="border border-gray-400 px-2 py-1 text-center w-16">BOT</th>
+            )}
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">MID</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Total</th>
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
             <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
@@ -2355,12 +2465,14 @@ function Template4UpperSectionReport({ student, examSet, school }: { student: an
             const mot = subj.mot_marks ?? '';
             const eot = subj.eot_marks ?? '';
             const total = subj.total_marks ?? '';
-            const grade = total ? calculateGrade(total) : '';
+            const grade = total ? calculateGrade(parseFloat(total) || 0) : '';
             
             return (
               <tr key={idx}>
                 <td className="border border-gray-400 px-2 py-1">{subj.subject_name || ''}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center">{bot}</td>
+                {hasBOTExamSets && (
+                  <td className="border border-gray-400 px-2 py-1 text-center">{bot}</td>
+                )}
                 <td className="border border-gray-400 px-2 py-1 text-center">{mot}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center font-bold">{total}</td>
