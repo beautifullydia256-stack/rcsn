@@ -575,6 +575,13 @@ export function PrimaryReportGenerator() {
               }
             });
 
+            // Determine which exam set is selected
+            let selectedExamSetForDisplay: any = null;
+            if (selectedExamSetId && selectedExamSetId !== 'all') {
+              selectedExamSetForDisplay = examSets.find(es => es.id === selectedExamSetId);
+            }
+            const isAllExamSetsSelected = !selectedExamSetForDisplay;
+
             studentResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
@@ -589,25 +596,39 @@ export function PrimaryReportGenerator() {
                 };
               }
               
-              // Assign marks based on exam set type
-              if (isBeginning(examSetName) && r.grade !== 'MISSED') {
-                subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
-              } else if (isMid(examSetName) && r.grade !== 'MISSED') {
-                subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
-              } else if (isEnd(examSetName) && r.grade !== 'MISSED') {
-                subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
-                // Use End of Term remarks if available
-                if (r.teacher_remark || r.overall_remark) {
-                  subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+              // Only assign marks if:
+              // 1. "All exam sets" is selected (show all columns), OR
+              // 2. The current result matches the selected exam set type
+              if (isAllExamSetsSelected) {
+                // Show all exam sets - populate all columns
+                if (isBeginning(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
+                } else if (isMid(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
+                } else if (isEnd(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
+                  // Use End of Term remarks if available
+                  if (r.teacher_remark || r.overall_remark) {
+                    subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+                  }
+                }
+              } else {
+                // Specific exam set selected - only populate the matching column
+                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
+                
+                if (isBeginning(selectedExamSetName) && isBeginning(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
+                } else if (isMid(selectedExamSetName) && isMid(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
+                } else if (isEnd(selectedExamSetName) && isEnd(examSetName) && r.grade !== 'MISSED') {
+                  subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
+                  // Use End of Term remarks if available
+                  if (r.teacher_remark || r.overall_remark) {
+                    subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+                  }
                 }
               }
             });
-            
-            // Determine which exam set is selected for total calculation
-            let selectedExamSetForTotal: any = null;
-            if (selectedExamSetId && selectedExamSetId !== 'all') {
-              selectedExamSetForTotal = examSets.find(es => es.id === selectedExamSetId);
-            }
             
             // Convert to array and calculate totals
             subjects = Object.values(subjectGroups).map((group: any) => {
@@ -620,9 +641,9 @@ export function PrimaryReportGenerator() {
               // - If "all exam sets" selected: use only End of Term marks (last exam set)
               let total = '';
               
-              if (selectedExamSetForTotal) {
+              if (selectedExamSetForDisplay) {
                 // Specific exam set selected - use only that exam set's marks
-                const selectedExamSetName = (selectedExamSetForTotal.name || '').toLowerCase();
+                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
                 let selectedMarks: number | string = '';
                 
                 if (isBeginning(selectedExamSetName)) {
