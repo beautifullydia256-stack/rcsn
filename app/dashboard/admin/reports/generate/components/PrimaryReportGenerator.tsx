@@ -706,24 +706,21 @@ export function PrimaryReportGenerator() {
       // Get class positions from processed_primary_exam_results (stored in database)
       // Class Position: Ranks students based on their average/total marks for the selected exam period
       // Position 1 = best performance (highest average), higher numbers = lower performance
-      reportData.students = reportData.students.map((student: any) => {
+      reportData.students = await Promise.all(reportData.students.map(async (student: any) => {
         // Get the student's exam results to find their class_position
         const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
         
         // Determine which exam set's position to use
         let classPosition: number | null = null;
         let totalStudentsInClass: number = 0;
+        let examSetIdForCount: string | null = null;
         
         if (selectedExamSetId && selectedExamSetId !== 'all') {
           // Specific exam set selected - use position from that exam set
           const resultForSelectedSet = studentResults.find(r => r.exam_set_id === selectedExamSetId);
           if (resultForSelectedSet?.class_position) {
             classPosition = resultForSelectedSet.class_position;
-            // Count total students in same class and exam set
-            const studentsInSameClassAndExamSet = examResults?.filter(
-              er => er.class_name === student.current_class && er.exam_set_id === selectedExamSetId
-            ) || [];
-            totalStudentsInClass = new Set(studentsInSameClassAndExamSet.map(er => er.student_id)).size;
+            examSetIdForCount = selectedExamSetId;
           }
         } else {
           // "All exam sets" selected - use End of Term position (last exam set)
@@ -738,12 +735,24 @@ export function PrimaryReportGenerator() {
             const eotResult = endOfTermResults.find(r => r.class_position) || endOfTermResults[0];
             if (eotResult?.class_position) {
               classPosition = eotResult.class_position;
-              // Count total students in same class and exam set (End of Term)
-              const studentsInSameClassAndExamSet = examResults?.filter(
-                er => er.class_name === student.current_class && er.exam_set_id === eotResult.exam_set_id
-              ) || [];
-              totalStudentsInClass = new Set(studentsInSameClassAndExamSet.map(er => er.student_id)).size;
+              examSetIdForCount = eotResult.exam_set_id;
             }
+          }
+        }
+        
+        // Query database to get total count of ALL students in the same class and exam set
+        if (examSetIdForCount && classPosition !== null) {
+          const { data: allStudentsInClass } = await supabase
+            .from('processed_primary_exam_results')
+            .select('student_id')
+            .eq('school_id', schoolId)
+            .eq('class_name', student.current_class)
+            .eq('exam_set_id', examSetIdForCount)
+            .not('class_position', 'is', null);
+          
+          // Count distinct student_ids
+          if (allStudentsInClass) {
+            totalStudentsInClass = new Set(allStudentsInClass.map(r => r.student_id)).size;
           }
         }
         
@@ -763,7 +772,7 @@ export function PrimaryReportGenerator() {
             totalStudents: totalStudentsInClass
           }
         };
-      });
+      }));
 
       setReportData(reportData);
       setShowPreview(true);
