@@ -703,20 +703,62 @@ export function PrimaryReportGenerator() {
         })
       };
 
-      // Calculate positions after all students are processed
-      // Students with missing exam results (null average) will be treated as 0 and rank last
+      // Get class positions from processed_primary_exam_results (stored in database)
       // Class Position: Ranks students based on their average/total marks for the selected exam period
       // Position 1 = best performance (highest average), higher numbers = lower performance
       reportData.students = reportData.students.map((student: any) => {
-        // Count total students in the same class for "Out of X students"
-        const classStudents = reportData.students.filter((s: any) => s.current_class === student.current_class);
-        const totalStudentsInClass = classStudents.length;
+        // Get the student's exam results to find their class_position
+        const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
+        
+        // Determine which exam set's position to use
+        let classPosition: number | null = null;
+        let totalStudentsInClass: number = 0;
+        
+        if (selectedExamSetId && selectedExamSetId !== 'all') {
+          // Specific exam set selected - use position from that exam set
+          const resultForSelectedSet = studentResults.find(r => r.exam_set_id === selectedExamSetId);
+          if (resultForSelectedSet?.class_position) {
+            classPosition = resultForSelectedSet.class_position;
+            // Count total students in same class and exam set
+            const studentsInSameClassAndExamSet = examResults?.filter(
+              er => er.class_name === student.current_class && er.exam_set_id === selectedExamSetId
+            ) || [];
+            totalStudentsInClass = new Set(studentsInSameClassAndExamSet.map(er => er.student_id)).size;
+          }
+        } else {
+          // "All exam sets" selected - use End of Term position (last exam set)
+          // Find End of Term exam set
+          const endOfTermResults = studentResults.filter(r => {
+            const examSetName = (r.exam_set_name || '').toLowerCase();
+            return examSetName.includes('end') || examSetName.includes('final') || examSetName.includes('eot');
+          });
+          
+          if (endOfTermResults.length > 0) {
+            // Use the End of Term result with class_position
+            const eotResult = endOfTermResults.find(r => r.class_position) || endOfTermResults[0];
+            if (eotResult?.class_position) {
+              classPosition = eotResult.class_position;
+              // Count total students in same class and exam set (End of Term)
+              const studentsInSameClassAndExamSet = examResults?.filter(
+                er => er.class_name === student.current_class && er.exam_set_id === eotResult.exam_set_id
+              ) || [];
+              totalStudentsInClass = new Set(studentsInSameClassAndExamSet.map(er => er.student_id)).size;
+            }
+          }
+        }
+        
+        // Fallback: if no position found, calculate it (for backward compatibility)
+        if (classPosition === null) {
+          const classStudents = reportData.students.filter((s: any) => s.current_class === student.current_class);
+          totalStudentsInClass = classStudents.length;
+          classPosition = getClassPosition(reportData.students, student);
+        }
         
         return {
           ...student,
           summary: {
             ...student.summary,
-            classPosition: getClassPosition(reportData.students, student),
+            classPosition: classPosition,
             streamPosition: getStreamPosition(reportData.students, student),
             totalStudents: totalStudentsInClass
           }
