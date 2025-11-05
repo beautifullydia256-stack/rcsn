@@ -2435,9 +2435,20 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
     const n = String(name || '').trim().toLowerCase();
     return n === 'beginning of term' || n.includes('beginning') || n.includes('bot');
   };
+  
+  // Helper function to detect if exam set is Mid Term
+  const isMidTerm = (name: any) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+  };
 
   // Check if BOT exam sets exist for this term
   const hasBOTExamSets = examSets && examSets.some((es: any) => isBeginning(es.name));
+  
+  // Check if a specific exam set is selected (not "All Exam Sets")
+  const isSpecificExamSetSelected = examSet && examSet.name !== 'All Exam Sets';
+  const isMidTermSelected = isSpecificExamSetSelected && isMidTerm(examSet.name);
+  const showENDColumn = !isMidTermSelected; // Hide END column when Mid Term is selected
 
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
@@ -2505,11 +2516,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
         <thead>
           <tr className="bg-gray-100">
             <th className="border border-gray-400 px-2 py-1 text-left">Subject</th>
-            {hasBOTExamSets && (
+            {hasBOTExamSets && !isMidTermSelected && (
               <th className="border border-gray-400 px-2 py-1 text-center w-16">BOT</th>
             )}
             <th className="border border-gray-400 px-2 py-1 text-center w-16">MID</th>
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
+            {showENDColumn && (
+              <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
+            )}
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Total</th>
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
             <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
@@ -2526,11 +2539,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
             return (
               <tr key={idx}>
                 <td className="border border-gray-400 px-2 py-1">{subj.subject_name || ''}</td>
-                {hasBOTExamSets && (
+                {hasBOTExamSets && !isMidTermSelected && (
                   <td className="border border-gray-400 px-2 py-1 text-center">{bot}</td>
                 )}
                 <td className="border border-gray-400 px-2 py-1 text-center">{mot}</td>
-                <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
+                {showENDColumn && (
+                  <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
+                )}
                 <td className="border border-gray-400 px-2 py-1 text-center font-bold">{total}</td>
                 <td className="border border-gray-400 px-2 py-1 text-center font-bold">{grade}</td>
                 <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
