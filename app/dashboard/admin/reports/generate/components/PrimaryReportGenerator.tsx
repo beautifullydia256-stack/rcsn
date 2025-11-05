@@ -603,20 +603,44 @@ export function PrimaryReportGenerator() {
               }
             });
             
+            // Determine which exam set is selected for total calculation
+            let selectedExamSetForTotal: any = null;
+            if (selectedExamSetId && selectedExamSetId !== 'all') {
+              selectedExamSetForTotal = examSets.find(es => es.id === selectedExamSetId);
+            }
+            
             // Convert to array and calculate totals
             subjects = Object.values(subjectGroups).map((group: any) => {
               const bot = typeof group.bot_marks === 'number' ? group.bot_marks : (group.bot_marks || '');
               const mot = typeof group.mot_marks === 'number' ? group.mot_marks : (group.mot_marks || '');
               const eot = typeof group.eot_marks === 'number' ? group.eot_marks : (group.eot_marks || '');
               
-              // Calculate total (sum of bot + mot + eot if all are numbers)
+              // Calculate total based on selection:
+              // - If specific exam set selected: use only that exam set's marks
+              // - If "all exam sets" selected: use only End of Term marks (last exam set)
               let total = '';
-              const botNum = typeof bot === 'number' ? bot : (typeof bot === 'string' && bot.trim() ? parseFloat(bot) : null);
-              const motNum = typeof mot === 'number' ? mot : (typeof mot === 'string' && mot.trim() ? parseFloat(mot) : null);
-              const eotNum = typeof eot === 'number' ? eot : (typeof eot === 'string' && eot.trim() ? parseFloat(eot) : null);
               
-              if (botNum !== null || motNum !== null || eotNum !== null) {
-                total = ((botNum || 0) + (motNum || 0) + (eotNum || 0)).toString();
+              if (selectedExamSetForTotal) {
+                // Specific exam set selected - use only that exam set's marks
+                const selectedExamSetName = (selectedExamSetForTotal.name || '').toLowerCase();
+                let selectedMarks: number | string = '';
+                
+                if (isBeginning(selectedExamSetName)) {
+                  selectedMarks = bot;
+                } else if (isMid(selectedExamSetName)) {
+                  selectedMarks = mot;
+                } else if (isEnd(selectedExamSetName)) {
+                  selectedMarks = eot;
+                }
+                
+                if (selectedMarks !== '') {
+                  total = typeof selectedMarks === 'number' ? selectedMarks.toString() : selectedMarks;
+                }
+              } else {
+                // "All exam sets" selected - use only End of Term marks (last exam set)
+                if (eot !== '') {
+                  total = typeof eot === 'number' ? eot.toString() : eot;
+                }
               }
               
               return {
