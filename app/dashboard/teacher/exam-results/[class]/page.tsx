@@ -628,7 +628,19 @@ export default function TeacherExamResultsClassPage() {
   };
 
   // Primary change handler (existing)
-  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks', value: string) => {
+  const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks' | 'remark', value: string) => {
+    if (field === 'remark') {
+      // Handle remark field separately
+      setExamResults(prev => ({
+        ...prev,
+        [studentId]: { 
+          ...prev[studentId],
+          remark: value
+        }
+      }));
+      return;
+    }
+    
     const newMarks = field === 'marks' ? value : (examResults[studentId]?.marks || '');
     const newTotalMarks = '100'; // Always 100
     const marksNum = parseFloat(newMarks) || 0;
@@ -819,7 +831,7 @@ export default function TeacherExamResultsClassPage() {
           const currentGradeRemarks = gradeRemarksALevel;
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
           
-          const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+          const resp = await supabase.rpc('teacher_upsert_exam_result_alevel', {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
             p_student_id: studentId,
@@ -834,7 +846,7 @@ export default function TeacherExamResultsClassPage() {
             p_paper_number: topicFilter || null
           });
           if (resp.error) {
-            console.error('RPC alevel save error:', {
+            console.error('RPC A-Level save error:', {
               code: resp.error.code,
               message: resp.error.message,
               details: resp.error.details,
@@ -1401,7 +1413,7 @@ export default function TeacherExamResultsClassPage() {
               </div>
             </div>
             <div className="overflow-x-auto">
-              {!isSecondary ? (
+              {!isSecondary && !isALevel ? (
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -1431,6 +1443,43 @@ export default function TeacherExamResultsClassPage() {
                             <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
                           </td>
                           {/* Primary has no per-row remark/initials */}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : isALevel ? (
+                <table className="min-w-full">
+                  <thead className="bg-white/5">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {students.map((student) => {
+                      const marks = examResults[student.student_id]?.marks || '';
+                      const totalMarks = examResults[student.student_id]?.totalMarks || '100';
+                      const grade = examResults[student.student_id]?.grade || '';
+                      const remark = examResults[student.student_id]?.remark || '';
+                      return (
+                        <tr key={student.student_id} className="hover:bg-white/5">
+                          <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input type="text" value={remark} onChange={(e) => handleMarksChange(student.student_id, 'remark', e.target.value)} placeholder="Remark" className="w-48 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
+                          </td>
                         </tr>
                       );
                     })}

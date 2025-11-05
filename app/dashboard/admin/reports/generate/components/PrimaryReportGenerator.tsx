@@ -485,13 +485,15 @@ export function PrimaryReportGenerator() {
           return { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' };
         })(),
         students: targetStudents.map(student => {
+          // Get all results for this student (including MISSED entries from database)
           const studentResults = examResults?.filter(er => er.student_id === student.student_id) || [];
           
-          // Add "MISSED" entries for subjects this student doesn't have results for
+          // MISSED entries are now created by database trigger, so they should already be in studentResults
+          // If any are missing, create them in memory as fallback (but they should be in DB)
           const studentSubjects = studentResults.map(r => r.subject);
           const missingSubjects = allSubjects.filter(subject => !studentSubjects.includes(subject));
           
-          // Create MISSED entries for missing subjects
+          // Only create MISSED entries in memory if they're not in the database (fallback)
           const missedResults = missingSubjects.map(subject => ({
             subject,
             marks_obtained: 0,
@@ -500,10 +502,14 @@ export function PrimaryReportGenerator() {
             teacher_remark: 'MISSED',
             teacher_initials: 'MISSED',
             exam_set_name: studentResults[0]?.exam_set_name || 'MISSED',
-            class_teacher_comment: studentResults[0]?.class_teacher_comment || 'MISSED'
+            class_teacher_comment: studentResults[0]?.class_teacher_comment || 'MISSED',
+            student_id: student.student_id,
+            school_id: schoolId,
+            exam_set_id: studentResults[0]?.exam_set_id || (selectedExamSetId !== 'all' ? selectedExamSetId : null)
           }));
           
-          // Combine actual results with missed results
+          // Use all results from database (including MISSED entries created by trigger)
+          // Add any missing ones as fallback
           const allStudentResults = [...studentResults, ...missedResults];
           const studentAttendance = attendanceData?.filter(a => a.student_id === student.student_id) || [];
           const studentFees = feesData?.filter(f => f.student_id === student.student_id) || [];
