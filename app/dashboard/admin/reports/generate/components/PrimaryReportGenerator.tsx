@@ -692,6 +692,12 @@ export function PrimaryReportGenerator() {
                 // Actual results come after MISSED entries
                 if (!aIsMissed && bIsMissed) return 1;  // a comes after b
                 if (aIsMissed && !bIsMissed) return -1; // b comes after a
+                // If both are actual results, prioritize by marks (higher marks come later)
+                if (!aIsMissed && !bIsMissed) {
+                  const aMarks = a.marks_obtained || 0;
+                  const bMarks = b.marks_obtained || 0;
+                  return aMarks - bMarks; // Higher marks come later
+                }
               }
               return 0;
             });
