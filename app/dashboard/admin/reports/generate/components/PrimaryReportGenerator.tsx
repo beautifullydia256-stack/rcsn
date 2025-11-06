@@ -517,7 +517,8 @@ export function PrimaryReportGenerator() {
           // Filter results based on selected exam set:
           // - If specific exam set selected: use only that exam set's results
           // - If "all exam sets" selected: use only End of Term results
-          let resultsForCalculation = allStudentResults.filter(r => r.teacher_remark !== 'MISSED');
+          // Include ALL results (including MISSED entries) - MISSED entries count as 0 marks
+          let resultsForCalculation = allStudentResults;
           
           if (selectedExamSetId && selectedExamSetId !== 'all') {
             // Specific exam set selected - use only that exam set's results
@@ -530,10 +531,13 @@ export function PrimaryReportGenerator() {
             });
           }
           
+          // Calculate total marks including MISSED entries (which have marks_obtained = 0)
           const totalMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
           const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
-          const aggregate = resultsForCalculation.length > 0 ? calculateAggregate(resultsForCalculation) : null;
+          // For aggregate calculation, exclude MISSED entries (only count actual results)
+          const actualResultsForAggregate = resultsForCalculation.filter(r => r.teacher_remark !== 'MISSED');
+          const aggregate = actualResultsForAggregate.length > 0 ? calculateAggregate(actualResultsForAggregate) : null;
           const division = average !== null ? calculateDivision(average) : 'N/A';
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
