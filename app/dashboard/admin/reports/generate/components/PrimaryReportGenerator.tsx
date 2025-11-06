@@ -574,15 +574,26 @@ export function PrimaryReportGenerator() {
           // Get aggregate and division from the correct exam set:
           // - If specific exam set selected: use that exam set's aggregate and division
           // - If "All Exam Sets" selected: use End of Term's aggregate and division
+          // Note: Aggregate and division are the same for all subjects in a student/exam_set combination
+          // So we can get it from any subject record for that student/exam_set
           if (allStudentResults.length > 0) {
             let targetResult: any = null;
             
             if (selectedExamSetId && selectedExamSetId !== 'all') {
               // Specific exam set selected - find result from that exam set
-              targetResult = allStudentResults.find(r => r.exam_set_id === selectedExamSetId);
+              // Get the first result that has aggregate and division populated
+              targetResult = allStudentResults.find(r => 
+                r.exam_set_id === selectedExamSetId && 
+                r.aggregate !== null && 
+                r.aggregate !== undefined
+              ) || allStudentResults.find(r => r.exam_set_id === selectedExamSetId);
             } else {
               // "All Exam Sets" selected - use End of Term results
+              // Get the first End of Term result that has aggregate and division populated
               targetResult = allStudentResults.find(r => {
+                const examSetName = (r.exam_set_name || '').toLowerCase();
+                return isEnd(examSetName) && r.aggregate !== null && r.aggregate !== undefined;
+              }) || allStudentResults.find(r => {
                 const examSetName = (r.exam_set_name || '').toLowerCase();
                 return isEnd(examSetName);
               });
@@ -600,7 +611,8 @@ export function PrimaryReportGenerator() {
                   exam_set_name: targetResult.exam_set_name,
                   aggregate: targetResult.aggregate,
                   division: targetResult.division,
-                  grade: targetResult.grade
+                  grade: targetResult.grade,
+                  subject: targetResult.subject
                 });
               }
             } else {
@@ -609,7 +621,9 @@ export function PrimaryReportGenerator() {
                 console.warn('No target result found for aggregate/division:', {
                   student_id: student.student_id,
                   selectedExamSetId,
-                  availableExamSets: [...new Set(allStudentResults.map((r: any) => r.exam_set_name))]
+                  availableExamSets: [...new Set(allStudentResults.map((r: any) => r.exam_set_name))],
+                  resultsWithAggregate: allStudentResults.filter((r: any) => r.aggregate !== null).length,
+                  totalResults: allStudentResults.length
                 });
               }
             }
