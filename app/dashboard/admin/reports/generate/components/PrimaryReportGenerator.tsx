@@ -724,74 +724,110 @@ export function PrimaryReportGenerator() {
               }
             }
             
+            // Group results by subject first, then sort End of Term results within each subject
+            // This ensures that for each subject, actual End of Term results come after MISSED entries
+            const resultsBySubject = new Map<string, any[]>();
+            
             sortedResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
               
-              const examSetName = r.exam_set_name || examSetMap.get(r.exam_set_id) || '';
-              
-              if (!subjectGroups[subject]) {
-                // Get teacher name for this subject
-                const teacherName = subjectTeacherMap.get(subject) || '';
-                subjectGroups[subject] = {
-                  subject_name: subject,
-                  total_marks: r.total_marks ?? 100,
-                  teacher_comment: r.teacher_remark || r.overall_remark || '',
-                  teacher_name: teacherName
-                };
+              if (!resultsBySubject.has(subject)) {
+                resultsBySubject.set(subject, []);
               }
-              
-              // Only assign marks if:
-              // 1. "All exam sets" is selected (show all columns), OR
-              // 2. The current result matches the selected exam set type
-              // For MISSED entries (marks_obtained = 0 AND teacher_remark = 'MISSED'), show "MISSED" text
-              // Grade comes from database (r.grade), not calculated
-              const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
-              const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
-              const displayGrade = r.grade ?? ''; // Grade from database
-              
-              // Always use teacher_remark from database (processed_primary_exam_results.teacher_remark)
-              // This is the remark calculated at Supabase based on percentage
-              if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
-                subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
-              }
-              
-              // Always populate grades for all exam sets when we have the data
-              // This ensures grades are available for display regardless of selection
-              if (isBeginning(examSetName)) {
-                subjectGroups[subject].bot_marks = displayMarks;
-                subjectGroups[subject].bot_grade = displayGrade; // Grade from database
-              } else if (isMid(examSetName)) {
-                subjectGroups[subject].mot_marks = displayMarks;
-                subjectGroups[subject].mot_grade = displayGrade; // Grade from database
-              } else if (isEnd(examSetName)) {
-                // For End of Term, always update marks
-                subjectGroups[subject].eot_marks = displayMarks;
-                // Always update grade - since we sorted, actual results come after MISSED entries
-                // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
-                // Use same logic as Mid Term - always set the grade if it exists
-                // IMPORTANT: Always set the grade, even if empty, so the last processed result wins
-                // Since we sorted to put actual results last, the last one will have the grade
-                subjectGroups[subject].eot_grade = displayGrade || '';
+              resultsBySubject.get(subject)!.push(r);
+            });
+            
+            // Process each subject's results
+            resultsBySubject.forEach((subjectResults, subject) => {
+              // Sort End of Term results within this subject to ensure actual results come last
+              const sortedSubjectResults = [...subjectResults].sort((a: any, b: any) => {
+                const aName = (a.exam_set_name || '').toLowerCase();
+                const bName = (b.exam_set_name || '').toLowerCase();
+                const aIsEnd = isEnd(aName);
+                const bIsEnd = isEnd(bName);
                 
-                // Debug: Log when we're setting End of Term grade
-                if (process.env.NODE_ENV === 'development') {
-                  console.log('Setting End of Term grade:', {
-                    subject,
-                    examSetName,
-                    marks: displayMarks,
-                    grade: displayGrade,
-                    isMissed: isMissedEntry,
-                    exam_set_id: r.exam_set_id,
-                    final_grade: subjectGroups[subject].eot_grade
-                  });
+                // If both are End of Term for this subject, process actual results last
+                if (aIsEnd && bIsEnd && a.subject === b.subject) {
+                  const aIsMissed = (a.marks_obtained === 0 || a.marks_obtained === null) && a.teacher_remark === 'MISSED';
+                  const bIsMissed = (b.marks_obtained === 0 || b.marks_obtained === null) && b.teacher_remark === 'MISSED';
+                  // Actual results come after MISSED entries
+                  if (!aIsMissed && bIsMissed) return 1;  // a comes after b
+                  if (aIsMissed && !bIsMissed) return -1; // b comes after a
+                  // If both are actual results, prioritize by marks (higher marks come later)
+                  if (!aIsMissed && !bIsMissed) {
+                    const aMarks = parseFloat(a.marks_obtained) || 0;
+                    const bMarks = parseFloat(b.marks_obtained) || 0;
+                    return aMarks - bMarks; // Higher marks come later
+                  }
+                }
+                return 0;
+              });
+              
+              // Process sorted results for this subject
+              sortedSubjectResults.forEach((r: any) => {
+                const examSetName = r.exam_set_name || examSetMap.get(r.exam_set_id) || '';
+                
+                if (!subjectGroups[subject]) {
+                  // Get teacher name for this subject
+                  const teacherName = subjectTeacherMap.get(subject) || '';
+                  subjectGroups[subject] = {
+                    subject_name: subject,
+                    total_marks: r.total_marks ?? 100,
+                    teacher_comment: r.teacher_remark || r.overall_remark || '',
+                    teacher_name: teacherName
+                  };
                 }
                 
-                // Use End of Term remarks if available (but not for MISSED entries)
+                // Only assign marks if:
+                // 1. "All exam sets" is selected (show all columns), OR
+                // 2. The current result matches the selected exam set type
+                // For MISSED entries (marks_obtained = 0 AND teacher_remark = 'MISSED'), show "MISSED" text
+                // Grade comes from database (r.grade), not calculated
+                const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
+                const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
+                const displayGrade = r.grade ?? ''; // Grade from database
+                
+                // Always use teacher_remark from database (processed_primary_exam_results.teacher_remark)
+                // This is the remark calculated at Supabase based on percentage
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
                 }
-              }
+                
+                // Always populate grades for all exam sets when we have the data
+                // This ensures grades are available for display regardless of selection
+                if (isBeginning(examSetName)) {
+                  subjectGroups[subject].bot_marks = displayMarks;
+                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
+                } else if (isMid(examSetName)) {
+                  subjectGroups[subject].mot_marks = displayMarks;
+                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
+                } else if (isEnd(examSetName)) {
+                  // For End of Term, always update marks
+                  subjectGroups[subject].eot_marks = displayMarks;
+                  // Always update grade - since we sorted by subject, actual results come after MISSED entries
+                  // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
+                  subjectGroups[subject].eot_grade = displayGrade || '';
+                  
+                  // Debug: Log when we're setting End of Term grade
+                  if (process.env.NODE_ENV === 'development') {
+                    console.log('Setting End of Term grade:', {
+                      subject,
+                      examSetName,
+                      marks: displayMarks,
+                      grade: displayGrade,
+                      isMissed: isMissedEntry,
+                      exam_set_id: r.exam_set_id,
+                      final_grade: subjectGroups[subject].eot_grade
+                    });
+                  }
+                  
+                  // Use End of Term remarks if available (but not for MISSED entries)
+                  if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
+                    subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+                  }
+                }
+              });
             });
             
             // Convert to array and calculate totals
