@@ -618,6 +618,19 @@ export function PrimaryReportGenerator() {
           const isUpperSection = /(primary\s*[5-7]|p\.?\s*[5-7]|upper)/i.test(className.trim());
           const usesTemplate4 = isUpperSection || selectedTemplate === 'template4';
           
+          // Grade calculation function for primary school (matches template logic)
+          const calculateGradeFromPercent = (percent: number): string => {
+            if (percent >= 80) return 'D1';
+            if (percent >= 70) return 'D2';
+            if (percent >= 60) return 'C3';
+            if (percent >= 55) return 'C4';
+            if (percent >= 50) return 'C5';
+            if (percent >= 45) return 'C6';
+            if (percent >= 40) return 'P7';
+            if (percent >= 35) return 'P8';
+            return 'F9';
+          };
+          
           let subjects: any[] = [];
           if (usesTemplate4 && allStudentResults.length > 0) {
             // Group results by subject and aggregate by exam set type
