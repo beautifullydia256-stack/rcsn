@@ -2857,6 +2857,16 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
                   mot_grade: subj.mot_grade
                 });
               }
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Grade decision (All Exam Sets):', {
+                  subject: subj.subject_name,
+                  chosen_grade: displayGrade,
+                  eot_grade: subj.eot_grade,
+                  eot_marks: subj.eot_marks,
+                  bot_grade: subj.bot_grade,
+                  mot_grade: subj.mot_grade
+                });
+              }
             }
             
             return (
