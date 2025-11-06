@@ -809,18 +809,18 @@ export function PrimaryReportGenerator() {
                   // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
                   subjectGroups[subject].eot_grade = displayGrade || '';
                   
-                  // Debug: Log when we're setting End of Term grade
-                  if (process.env.NODE_ENV === 'development') {
-                    console.log('Setting End of Term grade:', {
-                      subject,
-                      examSetName,
-                      marks: displayMarks,
-                      grade: displayGrade,
-                      isMissed: isMissedEntry,
-                      exam_set_id: r.exam_set_id,
-                      final_grade: subjectGroups[subject].eot_grade
-                    });
-                  }
+                  // Debug: Log when we're setting End of Term grade (ALWAYS log, not just in dev)
+                  console.log('🔵 Setting End of Term grade:', {
+                    subject,
+                    examSetName,
+                    marks: displayMarks,
+                    grade: displayGrade,
+                    isMissed: isMissedEntry,
+                    exam_set_id: r.exam_set_id,
+                    final_grade: subjectGroups[subject].eot_grade,
+                    student_id: student.student_id,
+                    student_name: student.name
+                  });
                   
                   // Use End of Term remarks if available (but not for MISSED entries)
                   if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
@@ -831,6 +831,14 @@ export function PrimaryReportGenerator() {
             });
             
             // Convert to array and calculate totals
+            console.log('🟢 Final subjectGroups before mapping:', Object.keys(subjectGroups).map(subj => ({
+              subject: subj,
+              eot_marks: subjectGroups[subj].eot_marks,
+              eot_grade: subjectGroups[subj].eot_grade,
+              mot_grade: subjectGroups[subj].mot_grade,
+              bot_grade: subjectGroups[subj].bot_grade
+            })));
+            
             subjects = Object.values(subjectGroups).map((group: any) => {
               const bot = typeof group.bot_marks === 'number' ? group.bot_marks : (group.bot_marks || '');
               const mot = typeof group.mot_marks === 'number' ? group.mot_marks : (group.mot_marks || '');
@@ -838,6 +846,14 @@ export function PrimaryReportGenerator() {
               const botGrade = group.bot_grade || '';
               const motGrade = group.mot_grade || '';
               const eotGrade = group.eot_grade || '';
+              
+              console.log('🟡 Processing subject for array:', {
+                subject: group.subject_name,
+                eot_marks: eot,
+                eot_grade: eotGrade,
+                mot_grade: motGrade,
+                bot_grade: botGrade
+              });
               
               // Calculate total based on selection:
               // - If specific exam set selected: use only that exam set's marks
@@ -2826,6 +2842,15 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
         </thead>
         <tbody>
           {(student?.subjects || []).map((subj: any, idx: number) => {
+            console.log('🔴 Template4 rendering subject:', {
+              subject: subj.subject_name,
+              eot_grade: subj.eot_grade,
+              eot_marks: subj.eot_marks,
+              mot_grade: subj.mot_grade,
+              bot_grade: subj.bot_grade,
+              full_subject: subj
+            });
+            
             const bot = subj.bot_marks ?? '';
             const mot = subj.mot_marks ?? '';
             const eot = subj.eot_marks ?? '';
@@ -2847,24 +2872,25 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
               // "All exam sets" selected - use End of Term grade
               displayGrade = subj.eot_grade || '';
               
-              // Debug: log if grade is empty
-              if (!displayGrade && process.env.NODE_ENV === 'development') {
-                console.warn('Empty End of Term grade for subject:', {
+              // Debug: ALWAYS log (not just in dev mode)
+              console.log('🟠 Grade decision (All Exam Sets):', {
+                subject: subj.subject_name,
+                chosen_grade: displayGrade,
+                eot_grade: subj.eot_grade,
+                eot_marks: subj.eot_marks,
+                bot_grade: subj.bot_grade,
+                mot_grade: subj.mot_grade,
+                full_subject_object: subj
+              });
+              
+              if (!displayGrade) {
+                console.warn('⚠️ Empty End of Term grade for subject:', {
                   subject: subj.subject_name,
                   eot_grade: subj.eot_grade,
                   eot_marks: subj.eot_marks,
                   bot_grade: subj.bot_grade,
-                  mot_grade: subj.mot_grade
-                });
-              }
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Grade decision (All Exam Sets):', {
-                  subject: subj.subject_name,
-                  chosen_grade: displayGrade,
-                  eot_grade: subj.eot_grade,
-                  eot_marks: subj.eot_marks,
-                  bot_grade: subj.bot_grade,
-                  mot_grade: subj.mot_grade
+                  mot_grade: subj.mot_grade,
+                  full_subject_object: subj
                 });
               }
             }
