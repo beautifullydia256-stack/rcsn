@@ -509,24 +509,35 @@ export default function TeacherExamResultsClassPage() {
   };
 
   const getPrimaryBadgeClass = (grade: string): string => {
-    switch ((grade || '').toLowerCase()) {
+    const gradeLower = (grade || '').toLowerCase();
+    // Support both old format (Credit 5, Division 1) and new format (C5, D1)
+    switch (gradeLower) {
       case 'division 1':
+      case 'd1':
         return 'bg-green-600/20 text-green-300';
       case 'division 2':
+      case 'd2':
         return 'bg-blue-600/20 text-blue-300';
       case 'credit 3':
+      case 'c3':
         return 'bg-cyan-600/20 text-cyan-300';
       case 'credit 4':
+      case 'c4':
         return 'bg-yellow-600/20 text-yellow-300';
       case 'credit 5':
+      case 'c5':
         return 'bg-orange-500/20 text-orange-300';
       case 'credit 6':
+      case 'c6':
         return 'bg-orange-700/20 text-orange-400';
       case 'pass 7':
+      case 'p7':
         return 'bg-red-500/20 text-red-300';
       case 'pass 8':
+      case 'p8':
         return 'bg-red-600/20 text-red-400';
       case 'u (ungraded)':
+      case 'u':
         return 'bg-gray-600/20 text-gray-300';
       case 'f9':
         return 'bg-red-900/20 text-red-500';
@@ -538,14 +549,15 @@ export default function TeacherExamResultsClassPage() {
   // Primary grading (Percentage-based) - Subject grading scale
   // Division 1: 75-100, Division 2: 70-74, Credit 3: 65-69, Credit 4: 60-64,
   // Credit 5: 55-59, Credit 6: 50-54, Pass 7: 45-49, Pass 8: 40-44, F9: 0-39
+  // Using short format: D1, D2, C3, C4, C5, C6, P7, P8, F9
   const getDefaultGrades = () => [
-    { min: 75, max: 100, grade: 'Division 1' },
-    { min: 70, max: 74, grade: 'Division 2' },
-    { min: 65, max: 69, grade: 'Credit 3' },
-    { min: 60, max: 64, grade: 'Credit 4' },
-    { min: 55, max: 59, grade: 'Credit 5' },
-    { min: 50, max: 54, grade: 'Credit 6' },
-    { min: 45, max: 49, grade: 'Pass 7' },
+    { min: 75, max: 100, grade: 'D1' },
+    { min: 70, max: 74, grade: 'D2' },
+    { min: 65, max: 69, grade: 'C3' },
+    { min: 60, max: 64, grade: 'C4' },
+    { min: 55, max: 59, grade: 'C5' },
+    { min: 50, max: 54, grade: 'C6' },
+    { min: 45, max: 49, grade: 'P7' },
     { min: 40, max: 44, grade: 'Pass 8' },
     { min: 0, max: 39, grade: 'F9' },
   ];
