@@ -565,45 +565,34 @@ export function PrimaryReportGenerator() {
           const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
           
-          // Calculate aggregate will be done after subject groups are created
-          // We'll calculate it from the final subject groups to ensure we count each subject only once
+          // Get aggregate and division directly from database (processed_primary_exam_results)
+          // These are calculated and stored at Supabase level
+          // Aggregate and division are the same for all subjects for a given student/exam_set
           let aggregate: number | null = null;
+          let division: string | null = null;
           
-          // Calculate division from aggregate points (Primary Divisions logic)
-          // Division is calculated from aggregate, which is calculated from database grades
-          // All values ultimately come from processed_primary_exam_results table
-          // Default division ranges (same as in teacher exam results page)
-          const primaryDivisionSettings = {
-            div1_min: 4,
-            div1_max: 12,
-            div2_min: 13,
-            div2_max: 23,
-            div3_min: 24,
-            div3_max: 29,
-            div4_min: 30,
-            div4_max: 34,
-            u_min: 35,
-            u_max: 36,
-          };
-          
-          const calculateDivisionFromAggregate = (aggregatePoints: number | null): string => {
-            if (aggregatePoints === null || aggregatePoints === undefined) return 'N/A';
+          // Get aggregate and division from the correct exam set:
+          // - If specific exam set selected: use that exam set's aggregate and division
+          // - If "All Exam Sets" selected: use End of Term's aggregate and division
+          if (allStudentResults.length > 0) {
+            let targetResult: any = null;
             
-            const s = primaryDivisionSettings;
-            if (aggregatePoints >= s.div1_min && aggregatePoints <= s.div1_max) return 'Division 1';
-            if (aggregatePoints >= s.div2_min && aggregatePoints <= s.div2_max) return 'Division 2';
-            if (aggregatePoints >= s.div3_min && aggregatePoints <= s.div3_max) return 'Division 3';
-            if (aggregatePoints >= s.div4_min && aggregatePoints <= s.div4_max) return 'Division 4';
-            if (aggregatePoints >= s.u_min && aggregatePoints <= s.u_max) return 'U (Ungraded)';
+            if (selectedExamSetId && selectedExamSetId !== 'all') {
+              // Specific exam set selected - find result from that exam set
+              targetResult = allStudentResults.find(r => r.exam_set_id === selectedExamSetId);
+            } else {
+              // "All Exam Sets" selected - use End of Term results
+              targetResult = allStudentResults.find(r => {
+                const examSetName = (r.exam_set_name || '').toLowerCase();
+                return isEnd(examSetName);
+              });
+            }
             
-            // For any aggregate above 36 or other edge cases
-            if (aggregatePoints > 36) return 'U (Ungraded)';
-            
-            return 'N/A';
-          };
-          
-          // Division calculated from aggregate (which comes from database grades)
-          const division = calculateDivisionFromAggregate(aggregate);
+            if (targetResult) {
+              aggregate = targetResult.aggregate !== null && targetResult.aggregate !== undefined ? targetResult.aggregate : null;
+              division = targetResult.division || null;
+            }
+          }
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
@@ -750,23 +739,6 @@ export function PrimaryReportGenerator() {
                 }
               }
               
-              // Use grade directly from database (already calculated at Supabase)
-              // Determine which grade to use based on selected exam set or End of Term if "All Exam Sets"
-              let gradeForAggregate = '';
-              if (selectedExamSetForDisplay) {
-                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
-                if (isBeginning(selectedExamSetName)) {
-                  gradeForAggregate = botGrade;
-                } else if (isMid(selectedExamSetName)) {
-                  gradeForAggregate = motGrade;
-                } else if (isEnd(selectedExamSetName)) {
-                  gradeForAggregate = eotGrade;
-                }
-              } else {
-                // "All exam sets" selected - use End of Term grade
-                gradeForAggregate = eotGrade;
-              }
-              
               return {
                 ...group,
                 bot_marks: bot,
@@ -775,53 +747,13 @@ export function PrimaryReportGenerator() {
                 bot_grade: botGrade,
                 mot_grade: motGrade,
                 eot_grade: eotGrade,
-                total_marks: total || group.total_marks,
-                grade_for_aggregate: gradeForAggregate // Grade from database for aggregate calculation
+                total_marks: total || group.total_marks
               };
             });
             
-            // Calculate aggregate from subject groups (sum of grade points)
-            // All grades are queried directly from processed_primary_exam_results.grade (calculated at Supabase)
-            // Aggregate is calculated from database grades - no frontend grade calculation
-            // Include ALL subjects (including MISSED entries, which have F9 = 9 points)
-            const aggregateSum = subjects.reduce((sum, subj: any) => {
-              const grade = (subj.grade_for_aggregate || '').trim();
-              if (!grade) return sum; // Skip if no grade from database
-              
-              // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
-              // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
-              // Grade format comes from database (processed_primary_exam_results.grade)
-              const match = grade.match(/(\d+)/);
-              if (match) {
-                const points = parseInt(match[1], 10);
-                return sum + points;
-              }
-              // If no number found in grade, log for debugging
-              console.warn(`Could not extract points from grade: "${grade}" for subject: ${subj.subject_name}`);
-              return sum;
-            }, 0);
-            
-            aggregate = subjects.length > 0 && aggregateSum > 0 ? aggregateSum : null;
-            
-            // Debug logging
-            if (process.env.NODE_ENV === 'development') {
-              console.log('Aggregate calculation:', {
-                subjectsCount: subjects.length,
-                subjects: subjects.map((s: any) => ({
-                  subject: s.subject_name,
-                  total_marks: s.total_marks,
-                  grade_for_aggregate: s.grade_for_aggregate,
-                  bot_marks: s.bot_marks,
-                  mot_marks: s.mot_marks,
-                  eot_marks: s.eot_marks,
-                  bot_grade: s.bot_grade,
-                  mot_grade: s.mot_grade,
-                  eot_grade: s.eot_grade
-                })),
-                aggregateSum,
-                aggregate
-              });
-            }
+            // Aggregate and division are now queried directly from database
+            // They are calculated and stored at Supabase level in processed_primary_exam_results table
+            // No frontend calculation needed - just use the values from the database
           }
 
           return {
