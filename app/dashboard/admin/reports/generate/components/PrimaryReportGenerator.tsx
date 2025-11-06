@@ -591,6 +591,27 @@ export function PrimaryReportGenerator() {
             if (targetResult) {
               aggregate = targetResult.aggregate !== null && targetResult.aggregate !== undefined ? targetResult.aggregate : null;
               division = targetResult.division || null;
+              
+              // Debug logging
+              if (process.env.NODE_ENV === 'development') {
+                console.log('Aggregate and Division from database:', {
+                  student_id: student.student_id,
+                  exam_set_id: targetResult.exam_set_id,
+                  exam_set_name: targetResult.exam_set_name,
+                  aggregate: targetResult.aggregate,
+                  division: targetResult.division,
+                  grade: targetResult.grade
+                });
+              }
+            } else {
+              // Debug: log if no target result found
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('No target result found for aggregate/division:', {
+                  student_id: student.student_id,
+                  selectedExamSetId,
+                  availableExamSets: [...new Set(allStudentResults.map((r: any) => r.exam_set_name))]
+                });
+              }
             }
           }
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
@@ -673,31 +694,20 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
               }
               
-              if (isAllExamSetsSelected) {
-                // Show all exam sets - populate all columns
-                if (isBeginning(examSetName)) {
-                  subjectGroups[subject].bot_marks = displayMarks;
-                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
-                } else if (isMid(examSetName)) {
-                  subjectGroups[subject].mot_marks = displayMarks;
-                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
-                } else if (isEnd(examSetName)) {
-                  subjectGroups[subject].eot_marks = displayMarks;
-                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
-                }
-              } else {
-                // Specific exam set selected - only populate the matching column
-                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
-                
-                if (isBeginning(selectedExamSetName) && isBeginning(examSetName)) {
-                  subjectGroups[subject].bot_marks = displayMarks;
-                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
-                } else if (isMid(selectedExamSetName) && isMid(examSetName)) {
-                  subjectGroups[subject].mot_marks = displayMarks;
-                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
-                } else if (isEnd(selectedExamSetName) && isEnd(examSetName)) {
-                  subjectGroups[subject].eot_marks = displayMarks;
-                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+              // Always populate grades for all exam sets when we have the data
+              // This ensures grades are available for display regardless of selection
+              if (isBeginning(examSetName)) {
+                subjectGroups[subject].bot_marks = displayMarks;
+                subjectGroups[subject].bot_grade = displayGrade; // Grade from database
+              } else if (isMid(examSetName)) {
+                subjectGroups[subject].mot_marks = displayMarks;
+                subjectGroups[subject].mot_grade = displayGrade; // Grade from database
+              } else if (isEnd(examSetName)) {
+                subjectGroups[subject].eot_marks = displayMarks;
+                subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+                // Use End of Term remarks if available (but not for MISSED entries)
+                if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
+                  subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
                 }
               }
             });
