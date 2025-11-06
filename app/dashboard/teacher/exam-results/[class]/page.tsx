@@ -558,7 +558,7 @@ export default function TeacherExamResultsClassPage() {
     { min: 55, max: 59, grade: 'C5' },
     { min: 50, max: 54, grade: 'C6' },
     { min: 45, max: 49, grade: 'P7' },
-    { min: 40, max: 44, grade: 'Pass 8' },
+    { min: 40, max: 44, grade: 'P8' },
     { min: 0, max: 39, grade: 'F9' },
   ];
   const [classTeacherRanges, setClassTeacherRanges] = useState<Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>>([
