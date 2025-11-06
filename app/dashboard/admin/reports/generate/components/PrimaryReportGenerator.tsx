@@ -384,16 +384,16 @@ export function PrimaryReportGenerator() {
 
       // Get all subjects that ANY student has results for in this class/exam set
       // Query from both processed_primary_exam_results AND exam_results to get complete subject list
-      // This ensures we get all subjects even if MISSED entries don't exist in processed table yet
+      // Also get exam_set_id for each subject so we know which exam sets have that subject
       let allSubjectsQuery1 = supabase
         .from('processed_primary_exam_results')
-        .select('subject')
+        .select('subject, exam_set_id, exam_set_name')
         .eq('school_id', schoolId)
         .eq('class_name', targetStudents[0].current_class);
 
       let allSubjectsQuery2 = supabase
         .from('exam_results')
-        .select('subject')
+        .select('subject, exam_set_id')
         .eq('school_id', schoolId)
         .eq('class_name', targetStudents[0].current_class);
 
@@ -411,9 +411,38 @@ export function PrimaryReportGenerator() {
       ]);
 
       // Combine subjects from both tables and get unique list
+      // Also create a map of subject -> exam sets that have that subject
       const allSubjectsSet = new Set<string>();
-      allSubjectsData1.data?.forEach(er => { if (er.subject) allSubjectsSet.add(er.subject); });
-      allSubjectsData2.data?.forEach(er => { if (er.subject) allSubjectsSet.add(er.subject); });
+      const subjectExamSetsMap = new Map<string, Set<{ exam_set_id: string; exam_set_name?: string }>>();
+      
+      allSubjectsData1.data?.forEach(er => { 
+        if (er.subject) {
+          allSubjectsSet.add(er.subject);
+          if (!subjectExamSetsMap.has(er.subject)) {
+            subjectExamSetsMap.set(er.subject, new Set());
+          }
+          subjectExamSetsMap.get(er.subject)!.add({ 
+            exam_set_id: er.exam_set_id, 
+            exam_set_name: er.exam_set_name 
+          });
+        }
+      });
+      
+      allSubjectsData2.data?.forEach(er => { 
+        if (er.subject) {
+          allSubjectsSet.add(er.subject);
+          if (!subjectExamSetsMap.has(er.subject)) {
+            subjectExamSetsMap.set(er.subject, new Set());
+          }
+          // Get exam_set_name from examSets if available
+          const examSet = (examSets || []).find(es => es.id === er.exam_set_id);
+          subjectExamSetsMap.get(er.subject)!.add({ 
+            exam_set_id: er.exam_set_id, 
+            exam_set_name: examSet?.name 
+          });
+        }
+      });
+      
       const allSubjects = Array.from(allSubjectsSet);
 
       // Fetch attendance data for the entire class (to get first attendance date for the class)
@@ -521,76 +550,54 @@ export function PrimaryReportGenerator() {
           
           // MISSED entries are now created by database trigger, so they should already be in studentResults
           // If any are missing, create them in memory as fallback (but they should be in DB)
-          const studentSubjects = studentResults.map(r => r.subject);
-          const missingSubjects = allSubjects.filter(subject => !studentSubjects.includes(subject));
-          
-          // Only create MISSED entries in memory if they're not in the database (fallback)
-          // Format: marks_obtained = 0, grade = 'F9', teacher_remark = 'MISSED'
+          // Check for each subject + exam set combination, not just subject
           const missedResults: any[] = [];
           
-          missingSubjects.forEach(subject => {
-            // Get all exam sets that have this subject (from other students' results)
-            const examSetsForSubject = examResults?.filter(er => 
-              er.subject === subject && 
-              er.student_id !== student.student_id
-            ) || [];
+          // For each subject that ANY student has results for
+          allSubjects.forEach(subject => {
+            // Get all exam sets that have this subject
+            const examSetsForSubject = subjectExamSetsMap.get(subject);
             
-            // If "all exam sets" is selected, create MISSED entry for each exam set that has this subject
-            // Otherwise, create MISSED entry only for the selected exam set
-            if (selectedExamSetId === 'all') {
-              // Create MISSED entry for each unique exam set that has this subject
-              const uniqueExamSets = new Map();
-              examSetsForSubject.forEach(er => {
-                if (!uniqueExamSets.has(er.exam_set_id)) {
-                  uniqueExamSets.set(er.exam_set_id, er);
-                }
-              });
-              
-              uniqueExamSets.forEach((examSetData, examSetId) => {
-                missedResults.push({
-                  subject,
-                  marks_obtained: 0,
-                  total_marks: 100,
-                  grade: 'F9', // Grade for 0 marks (from database calculation)
-                  teacher_remark: 'MISSED', // Identifier for MISSED entries
-                  teacher_initials: '',
-                  exam_set_name: examSetData.exam_set_name || '',
-                  exam_set_id: examSetId,
-                  class_teacher_comment: studentResults[0]?.class_teacher_comment || null,
-                  student_id: student.student_id,
-                  school_id: schoolId,
-                  year: examSetData.year,
-                  term: examSetData.term,
-                  class_name: student.current_class,
-                  student_name: student.name,
-                  admission_number: student.admission_number
-                });
-              });
-            } else {
-              // Create MISSED entry for the selected exam set only
-              const examSetForSubject = examSetsForSubject.find(er => er.exam_set_id === selectedExamSetId) || examSetsForSubject[0];
-              
-              if (examSetForSubject || selectedExamSetId) {
-                missedResults.push({
-                  subject,
-                  marks_obtained: 0,
-                  total_marks: 100,
-                  grade: 'F9', // Grade for 0 marks (from database calculation)
-                  teacher_remark: 'MISSED', // Identifier for MISSED entries
-                  teacher_initials: '',
-                  exam_set_name: examSetForSubject?.exam_set_name || (examSets || []).find(es => es.id === selectedExamSetId)?.name || '',
-                  exam_set_id: examSetForSubject?.exam_set_id || selectedExamSetId,
-                  class_teacher_comment: studentResults[0]?.class_teacher_comment || null,
-                  student_id: student.student_id,
-                  school_id: schoolId,
-                  year: examSetForSubject?.year || (examSets || []).find(es => es.id === selectedExamSetId)?.year,
-                  term: examSetForSubject?.term || (examSets || []).find(es => es.id === selectedExamSetId)?.term,
-                  class_name: student.current_class,
-                  student_name: student.name,
-                  admission_number: student.admission_number
-                });
-              }
+            if (!examSetsForSubject || examSetsForSubject.size === 0) {
+              return;
             }
+            
+            // For each exam set that has this subject, check if student has a result
+            examSetsForSubject.forEach((examSetInfo) => {
+              // Check if student already has a result for this subject + exam set combination
+              const hasResult = studentResults.some(r => 
+                r.subject === subject && 
+                r.exam_set_id === examSetInfo.exam_set_id
+              );
+              
+              // If student doesn't have a result for this subject + exam set, create MISSED entry
+              if (!hasResult) {
+                const examSet = (examSets || []).find(es => es.id === examSetInfo.exam_set_id);
+                
+                // If "all exam sets" is selected, create MISSED entry for all exam sets
+                // If specific exam set is selected, only create if it matches
+                if (selectedExamSetId === 'all' || examSetInfo.exam_set_id === selectedExamSetId) {
+                  missedResults.push({
+                    subject,
+                    marks_obtained: 0,
+                    total_marks: 100,
+                    grade: 'F9', // Grade for 0 marks (from database calculation)
+                    teacher_remark: 'MISSED', // Identifier for MISSED entries
+                    teacher_initials: '',
+                    exam_set_name: examSetInfo.exam_set_name || examSet?.name || '',
+                    exam_set_id: examSetInfo.exam_set_id,
+                    class_teacher_comment: studentResults[0]?.class_teacher_comment || null,
+                    student_id: student.student_id,
+                    school_id: schoolId,
+                    year: examSet?.year,
+                    term: examSet?.term,
+                    class_name: student.current_class,
+                    student_name: student.name,
+                    admission_number: student.admission_number
+                  });
+                }
+              }
+            });
           });
           
           // Use all results from database (including MISSED entries created by trigger)
@@ -2234,23 +2241,32 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                     
                     all.forEach((r: any) => {
                       const subject = r.subject ?? '';
-                      const examSetName = r.exam_sets?.name || '';
+                      const examSetName = r.exam_set_name || r.exam_sets?.name || '';
                       
                       if (!subjectGroups[subject]) {
                         subjectGroups[subject] = {
                           subject,
                           total_marks: r.total_marks ?? 100,
-                          remarks: r.remarks || r.overall_remark || '',
+                          remarks: r.remarks || r.overall_remark || r.teacher_remark || '',
                           initials: r.teacher_initials ?? ''
                         };
                       }
                       
+                      // Check if this is a MISSED entry (marks_obtained = 0 AND teacher_remark = 'MISSED')
+                      const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
+                      const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
+                      
                       if (isMid(examSetName)) {
-                        subjectGroups[subject].mid = r.marks_obtained ?? '';
+                        subjectGroups[subject].mid = displayMarks;
                       } else if (isEnd(examSetName)) {
-                        subjectGroups[subject].end = r.marks_obtained ?? '';
+                        subjectGroups[subject].end = displayMarks;
                       }
                     });
+                    
+                    // After processing all results, check if any subjects are missing Mid Term or End of Term results
+                    // If the subject exists in allSubjects but student doesn't have result for that exam set, set it to 'MISSED'
+                    // Note: We need to check if other students have results, but we don't have that data here
+                    // So we'll rely on the fallback code to create MISSED entries in student.results
                     
                     const subjects = Object.values(subjectGroups);
                     
@@ -2533,6 +2549,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                         }
                       }
                     });
+                    
+                    // Note: MISSED entries should already be in student.results from the fallback code
+                    // If they're still missing here, it means the fallback didn't create them
+                    // This could happen if the subject isn't in allSubjects or exam set matching failed
                     
                     // If no remarks found from any exam set, use any available remarks
                     Object.values(subjectGroups).forEach((group: any) => {
