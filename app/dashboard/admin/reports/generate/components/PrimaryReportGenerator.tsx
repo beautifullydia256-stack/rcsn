@@ -732,11 +732,16 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].mot_marks = displayMarks;
                 subjectGroups[subject].mot_grade = displayGrade; // Grade from database
               } else if (isEnd(examSetName)) {
-                // For End of Term, always update marks and grade
-                // Since we sorted results, End of Term comes last, so it will overwrite if there are multiple
+                // For End of Term, always update marks
                 subjectGroups[subject].eot_marks = displayMarks;
-                // Always update grade for End of Term (even if empty, to ensure we have the latest)
-                subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+                // Only update grade if we have a valid grade (not empty)
+                // This ensures we don't overwrite a valid grade with an empty one
+                if (displayGrade && displayGrade !== '') {
+                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+                } else if (!subjectGroups[subject].eot_grade) {
+                  // Only set to empty if we don't already have a grade
+                  subjectGroups[subject].eot_grade = '';
+                }
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
@@ -2745,13 +2750,18 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
               }
             } else {
               // "All exam sets" selected - use End of Term grade
-              // Try eot_grade first, if empty, try to get from the most recent End of Term result
               displayGrade = subj.eot_grade || '';
               
-              // If still empty, this means no End of Term grade was found
-              // This could happen if there are no End of Term results for this subject
-              // In that case, we could fall back to Mid Term grade, but for now we'll leave it empty
-              // The grade should be populated when End of Term results exist
+              // Debug: log if grade is empty
+              if (!displayGrade && process.env.NODE_ENV === 'development') {
+                console.warn('Empty End of Term grade for subject:', {
+                  subject: subj.subject_name,
+                  eot_grade: subj.eot_grade,
+                  eot_marks: subj.eot_marks,
+                  bot_grade: subj.bot_grade,
+                  mot_grade: subj.mot_grade
+                });
+              }
             }
             
             return (
