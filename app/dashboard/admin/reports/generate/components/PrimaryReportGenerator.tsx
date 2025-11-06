@@ -570,6 +570,8 @@ export function PrimaryReportGenerator() {
           let aggregate: number | null = null;
           
           // Calculate division from aggregate points (Primary Divisions logic)
+          // Division is calculated from aggregate, which is calculated from database grades
+          // All values ultimately come from processed_primary_exam_results table
           // Default division ranges (same as in teacher exam results page)
           const primaryDivisionSettings = {
             div1_min: 4,
@@ -600,6 +602,7 @@ export function PrimaryReportGenerator() {
             return 'N/A';
           };
           
+          // Division calculated from aggregate (which comes from database grades)
           const division = calculateDivisionFromAggregate(aggregate);
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
@@ -675,6 +678,12 @@ export function PrimaryReportGenerator() {
               const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
               const displayGrade = r.grade ?? ''; // Grade from database
               
+              // Always use teacher_remark from database (processed_primary_exam_results.teacher_remark)
+              // This is the remark calculated at Supabase based on percentage
+              if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
+                subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+              }
+              
               if (isAllExamSetsSelected) {
                 // Show all exam sets - populate all columns
                 if (isBeginning(examSetName)) {
@@ -686,10 +695,6 @@ export function PrimaryReportGenerator() {
                 } else if (isEnd(examSetName)) {
                   subjectGroups[subject].eot_marks = displayMarks;
                   subjectGroups[subject].eot_grade = displayGrade; // Grade from database
-                  // Use End of Term remarks if available (but not for MISSED entries)
-                  if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
-                    subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
-                  }
                 }
               } else {
                 // Specific exam set selected - only populate the matching column
@@ -704,10 +709,6 @@ export function PrimaryReportGenerator() {
                 } else if (isEnd(selectedExamSetName) && isEnd(examSetName)) {
                   subjectGroups[subject].eot_marks = displayMarks;
                   subjectGroups[subject].eot_grade = displayGrade; // Grade from database
-                  // Use End of Term remarks if available (but not for MISSED entries)
-                  if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
-                    subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
-                  }
                 }
               }
             });
@@ -780,7 +781,8 @@ export function PrimaryReportGenerator() {
             });
             
             // Calculate aggregate from subject groups (sum of grade points)
-            // Use grade directly from database (already calculated at Supabase)
+            // All grades are queried directly from processed_primary_exam_results.grade (calculated at Supabase)
+            // Aggregate is calculated from database grades - no frontend grade calculation
             // Include ALL subjects (including MISSED entries, which have F9 = 9 points)
             const aggregateSum = subjects.reduce((sum, subj: any) => {
               const grade = (subj.grade_for_aggregate || '').trim();
@@ -788,6 +790,7 @@ export function PrimaryReportGenerator() {
               
               // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
               // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
+              // Grade format comes from database (processed_primary_exam_results.grade)
               const match = grade.match(/(\d+)/);
               if (match) {
                 const points = parseInt(match[1], 10);
