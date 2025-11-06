@@ -521,7 +521,8 @@ export function PrimaryReportGenerator() {
           
           // Calculate summary with enhanced grading (handle missing data)
           // Only count actual results (not MISSED) for calculations
-          const actualResults = studentResults.filter(r => r.grade !== 'MISSED');
+          // MISSED entries are identified by teacher_remark = 'MISSED' (not by grade)
+          const actualResults = studentResults.filter(r => r.teacher_remark !== 'MISSED');
           const totalMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
           const totalPossibleMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
@@ -605,16 +606,25 @@ export function PrimaryReportGenerator() {
               // Only assign marks if:
               // 1. "All exam sets" is selected (show all columns), OR
               // 2. The current result matches the selected exam set type
+              // For MISSED entries (marks_obtained = 0 AND teacher_remark = 'MISSED'), show "MISSED" text
+              // Grade comes from database (r.grade), not calculated
+              const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
+              const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
+              const displayGrade = r.grade ?? ''; // Grade from database
+              
               if (isAllExamSetsSelected) {
                 // Show all exam sets - populate all columns
-                if (isBeginning(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
-                } else if (isMid(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
-                } else if (isEnd(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
-                  // Use End of Term remarks if available
-                  if (r.teacher_remark || r.overall_remark) {
+                if (isBeginning(examSetName)) {
+                  subjectGroups[subject].bot_marks = displayMarks;
+                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
+                } else if (isMid(examSetName)) {
+                  subjectGroups[subject].mot_marks = displayMarks;
+                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
+                } else if (isEnd(examSetName)) {
+                  subjectGroups[subject].eot_marks = displayMarks;
+                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+                  // Use End of Term remarks if available (but not for MISSED entries)
+                  if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                     subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
                   }
                 }
@@ -622,14 +632,17 @@ export function PrimaryReportGenerator() {
                 // Specific exam set selected - only populate the matching column
                 const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
                 
-                if (isBeginning(selectedExamSetName) && isBeginning(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].bot_marks = r.marks_obtained ?? '';
-                } else if (isMid(selectedExamSetName) && isMid(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].mot_marks = r.marks_obtained ?? '';
-                } else if (isEnd(selectedExamSetName) && isEnd(examSetName) && r.grade !== 'MISSED') {
-                  subjectGroups[subject].eot_marks = r.marks_obtained ?? '';
-                  // Use End of Term remarks if available
-                  if (r.teacher_remark || r.overall_remark) {
+                if (isBeginning(selectedExamSetName) && isBeginning(examSetName)) {
+                  subjectGroups[subject].bot_marks = displayMarks;
+                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
+                } else if (isMid(selectedExamSetName) && isMid(examSetName)) {
+                  subjectGroups[subject].mot_marks = displayMarks;
+                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
+                } else if (isEnd(selectedExamSetName) && isEnd(examSetName)) {
+                  subjectGroups[subject].eot_marks = displayMarks;
+                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
+                  // Use End of Term remarks if available (but not for MISSED entries)
+                  if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                     subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
                   }
                 }
@@ -2396,7 +2409,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     };
                     
                     // Group results by subject
-                    const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
+                    const subjectGroups: { [key: string]: { mid?: any; end?: any; mid_grade?: string; end_grade?: string; subject: string; total_marks: number; remarks: string; initials: string } } = {};
                     
                     all.forEach((r: any) => {
                       const subject = r.subject ?? '';
@@ -2411,18 +2424,28 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                         };
                       }
                       
+                      // Check if this is a MISSED entry (marks_obtained = 0 AND teacher_remark = 'MISSED')
+                      // All data comes from database: marks, grades, remarks, etc.
+                      const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
+                      const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
+                      const displayGrade = r.grade ?? ''; // Grade from database
+                      
                       if (isMid(examSetName)) {
-                        subjectGroups[subject].mid = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
-                        // Use Mid Term results for remarks and initials if End of Term not available
-                        if (!subjectGroups[subject].remarks) {
+                        subjectGroups[subject].mid = displayMarks;
+                        subjectGroups[subject].mid_grade = displayGrade; // Grade from database
+                        // Use Mid Term results for remarks and initials if End of Term not available (but not for MISSED entries)
+                        if (!subjectGroups[subject].remarks && !isMissedEntry) {
                           subjectGroups[subject].remarks = r.teacher_remark || '';
                           subjectGroups[subject].initials = r.teacher_initials ?? '';
                         }
                       } else if (isEnd(examSetName)) {
-                        subjectGroups[subject].end = r.grade === 'MISSED' ? 'MISSED' : (r.marks_obtained ?? '');
-                        // Use pre-processed teacher remarks from the processed table
-                        subjectGroups[subject].remarks = r.teacher_remark || '';
-                        subjectGroups[subject].initials = r.teacher_initials ?? '';
+                        subjectGroups[subject].end = displayMarks;
+                        subjectGroups[subject].end_grade = displayGrade; // Grade from database
+                        // Use pre-processed teacher remarks from the processed table (but not for MISSED entries)
+                        if (!isMissedEntry) {
+                          subjectGroups[subject].remarks = r.teacher_remark || '';
+                          subjectGroups[subject].initials = r.teacher_initials ?? '';
+                        }
                       }
                     });
                     
