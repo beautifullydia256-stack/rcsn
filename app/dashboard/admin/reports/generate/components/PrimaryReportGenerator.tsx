@@ -676,51 +676,9 @@ export function PrimaryReportGenerator() {
             }
             const isAllExamSetsSelected = !selectedExamSetForDisplay;
 
-            // Sort results to process End of Term last (so it overwrites if there are multiple)
-            // This ensures End of Term grades are used when "All Exam Sets" is selected
-            // When there are multiple End of Term exam sets, prioritize:
-            // 1. Results with actual marks (not MISSED entries with 0 marks)
-            // 2. Results with higher marks
-            // 3. Results with grades
-            const sortedResults = [...allStudentResults].sort((a: any, b: any) => {
-              const aName = (a.exam_set_name || '').toLowerCase();
-              const bName = (b.exam_set_name || '').toLowerCase();
-              const aIsEnd = isEnd(aName);
-              const bIsEnd = isEnd(bName);
-              
-              // End of Term results should come last
-              if (aIsEnd && !bIsEnd) return 1;
-              if (!aIsEnd && bIsEnd) return -1;
-              
-              // If both are End of Term, prioritize actual results over MISSED entries
-              if (aIsEnd && bIsEnd) {
-                const aIsMissed = (a.marks_obtained === 0 || a.marks_obtained === null) && a.teacher_remark === 'MISSED';
-                const bIsMissed = (b.marks_obtained === 0 || b.marks_obtained === null) && b.teacher_remark === 'MISSED';
-                
-                // Actual results (not MISSED) come after MISSED entries
-                if (!aIsMissed && bIsMissed) return 1;  // a comes after b (actual result)
-                if (aIsMissed && !bIsMissed) return -1; // b comes after a (actual result)
-                
-                // If both are actual results or both are MISSED, prioritize by marks (higher marks come later)
-                if (!aIsMissed && !bIsMissed) {
-                  const aMarks = a.marks_obtained || 0;
-                  const bMarks = b.marks_obtained || 0;
-                  if (aMarks !== bMarks) {
-                    return aMarks - bMarks; // Higher marks come later
-                  }
-                }
-                
-                // If marks are equal, prioritize ones with grades
-                const aHasGrade = a.grade && a.grade !== '';
-                const bHasGrade = b.grade && b.grade !== '';
-                if (aHasGrade && !bHasGrade) return 1;  // a comes after b (has grade)
-                if (!aHasGrade && bHasGrade) return -1; // b comes after a (has grade)
-              }
-              
-              return 0;
-            });
-            
-            sortedResults.forEach((r: any) => {
+            // Process results - use same logic for all exam sets (BOT, MID, END)
+            // Just like Mid Term works, End of Term will work the same way
+            allStudentResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
               
@@ -762,21 +720,9 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].mot_marks = displayMarks;
                 subjectGroups[subject].mot_grade = displayGrade; // Grade from database
               } else if (isEnd(examSetName)) {
-                // For End of Term, always update marks
+                // For End of Term, use same logic as Mid Term - just populate the grade directly
                 subjectGroups[subject].eot_marks = displayMarks;
-                // Always update grade for End of Term - prioritize results with grades
-                // Since we sorted results, End of Term with grades comes after End of Term without grades
-                // So the last End of Term result (with grade) will overwrite any empty ones
-                if (displayGrade && displayGrade !== '') {
-                  // We have a valid grade - always use it
-                  subjectGroups[subject].eot_grade = displayGrade;
-                } else {
-                  // No grade in this result - only set to empty if we don't already have a grade
-                  // This prevents overwriting a valid grade with an empty one
-                  if (!subjectGroups[subject].eot_grade) {
-                    subjectGroups[subject].eot_grade = '';
-                  }
-                }
+                subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
