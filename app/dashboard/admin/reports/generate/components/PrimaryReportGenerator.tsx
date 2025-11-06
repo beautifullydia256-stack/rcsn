@@ -618,19 +618,6 @@ export function PrimaryReportGenerator() {
           const isUpperSection = /(primary\s*[5-7]|p\.?\s*[5-7]|upper)/i.test(className.trim());
           const usesTemplate4 = isUpperSection || selectedTemplate === 'template4';
           
-          // Grade calculation function for primary school (matches template logic)
-          const calculateGradeFromPercent = (percent: number): string => {
-            if (percent >= 80) return 'D1';
-            if (percent >= 70) return 'D2';
-            if (percent >= 60) return 'C3';
-            if (percent >= 55) return 'C4';
-            if (percent >= 50) return 'C5';
-            if (percent >= 45) return 'C6';
-            if (percent >= 40) return 'P7';
-            if (percent >= 35) return 'P8';
-            return 'F9';
-          };
-          
           let subjects: any[] = [];
           if (usesTemplate4 && allStudentResults.length > 0) {
             // Group results by subject and aggregate by exam set type
@@ -762,22 +749,21 @@ export function PrimaryReportGenerator() {
                 }
               }
               
-              // Calculate grade from total marks (same as display logic in template)
-              // The template uses: calculateGrade(parseFloat(total) || 0)
-              // where total is the marks obtained (which equals percentage if out of 100)
-              // This ensures aggregate uses the exact same grade calculation as what's displayed
-              // For MISSED entries, use 0 marks which equals F9
-              let calculatedGrade = '';
-              if (total === 'MISSED') {
-                // MISSED entries = 0 marks = F9
-                calculatedGrade = 'F9';
-              } else if (total && total !== '') {
-                const totalNum = typeof total === 'number' ? total : parseFloat(total.toString());
-                if (!isNaN(totalNum) && totalNum >= 0) {
-                  // Marks are out of 100, so marks = percentage
-                  // This matches the template logic: calculateGrade(parseFloat(total) || 0)
-                  calculatedGrade = calculateGradeFromPercent(totalNum);
+              // Use grade directly from database (already calculated at Supabase)
+              // Determine which grade to use based on selected exam set or End of Term if "All Exam Sets"
+              let gradeForAggregate = '';
+              if (selectedExamSetForDisplay) {
+                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
+                if (isBeginning(selectedExamSetName)) {
+                  gradeForAggregate = botGrade;
+                } else if (isMid(selectedExamSetName)) {
+                  gradeForAggregate = motGrade;
+                } else if (isEnd(selectedExamSetName)) {
+                  gradeForAggregate = eotGrade;
                 }
+              } else {
+                // "All exam sets" selected - use End of Term grade
+                gradeForAggregate = eotGrade;
               }
               
               return {
@@ -785,17 +771,20 @@ export function PrimaryReportGenerator() {
                 bot_marks: bot,
                 mot_marks: mot,
                 eot_marks: eot,
+                bot_grade: botGrade,
+                mot_grade: motGrade,
+                eot_grade: eotGrade,
                 total_marks: total || group.total_marks,
-                calculated_grade: calculatedGrade // Store calculated grade for aggregate
+                grade_for_aggregate: gradeForAggregate // Grade from database for aggregate calculation
               };
             });
             
             // Calculate aggregate from subject groups (sum of grade points)
-            // Use the calculated grade (same as what's displayed in the table)
+            // Use grade directly from database (already calculated at Supabase)
             // Include ALL subjects (including MISSED entries, which have F9 = 9 points)
             const aggregateSum = subjects.reduce((sum, subj: any) => {
-              const grade = (subj.calculated_grade || '').trim();
-              if (!grade) return sum; // Skip if no grade calculated
+              const grade = (subj.grade_for_aggregate || '').trim();
+              if (!grade) return sum; // Skip if no grade from database
               
               // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
               // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
@@ -818,10 +807,13 @@ export function PrimaryReportGenerator() {
                 subjects: subjects.map((s: any) => ({
                   subject: s.subject_name,
                   total_marks: s.total_marks,
-                  calculated_grade: s.calculated_grade,
+                  grade_for_aggregate: s.grade_for_aggregate,
                   bot_marks: s.bot_marks,
                   mot_marks: s.mot_marks,
-                  eot_marks: s.eot_marks
+                  eot_marks: s.eot_marks,
+                  bot_grade: s.bot_grade,
+                  mot_grade: s.mot_grade,
+                  eot_grade: s.eot_grade
                 })),
                 aggregateSum,
                 aggregate
@@ -2675,37 +2667,26 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
   };
   
   // Helper function to detect if exam set is Mid Term
-  const isMidTerm = (name: any) => {
+  const isMid = (name: any) => {
     const n = String(name || '').trim().toLowerCase();
     return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
   };
+  
+  // Helper function to detect if exam set is End of Term
+  const isEnd = (name: any) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'end of term' || n.includes('end') || n.includes('eot');
+  };
+  
+  // Determine selected exam set from examSet prop or from examSets
+  // If examSet is provided and has a name, use it; otherwise, assume "All Exam Sets" (use End of Term)
+  const selectedExamSetForDisplay = examSet && examSet.name ? examSet : null;
+  const isMidTermSelected = selectedExamSetForDisplay && isMid(selectedExamSetForDisplay.name);
 
   // Check if BOT exam sets exist for this term
   const hasBOTExamSets = examSets && examSets.some((es: any) => isBeginning(es.name));
   
-  // Check if a specific exam set is selected (not "All Exam Sets")
-  const isSpecificExamSetSelected = examSet && examSet.name !== 'All Exam Sets';
-  const isMidTermSelected = isSpecificExamSetSelected && isMidTerm(examSet.name);
   const showENDColumn = !isMidTermSelected; // Hide END column when Mid Term is selected
-
-  // O-Level calculation functions (matching exam results page logic)
-  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
-    if (activityScore < 1) return "Missed";
-    if (activityScore < 2.5) return "Moderate";
-    return "Outstanding";
-  };
-
-  const calculateGrade = (percent: number): string => {
-    if (percent >= 80) return 'D1';
-    if (percent >= 70) return 'D2';
-    if (percent >= 60) return 'C3';
-    if (percent >= 55) return 'C4';
-    if (percent >= 50) return 'C5';
-    if (percent >= 45) return 'C6';
-    if (percent >= 40) return 'P7';
-    if (percent >= 35) return 'P8';
-    return 'F9';
-  };
 
   return (
     <div className="p-8 bg-white text-black" style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}>
@@ -2772,7 +2753,23 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
             const mot = subj.mot_marks ?? '';
             const eot = subj.eot_marks ?? '';
             const total = subj.total_marks ?? '';
-            const grade = total ? calculateGrade(parseFloat(total) || 0) : '';
+            
+            // Use grade directly from database (already calculated at Supabase)
+            // Determine which grade to display based on selected exam set or End of Term if "All Exam Sets"
+            let displayGrade = '';
+            if (selectedExamSetForDisplay) {
+              const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
+              if (isBeginning(selectedExamSetName)) {
+                displayGrade = subj.bot_grade || '';
+              } else if (isMid(selectedExamSetName)) {
+                displayGrade = subj.mot_grade || '';
+              } else if (isEnd(selectedExamSetName)) {
+                displayGrade = subj.eot_grade || '';
+              }
+            } else {
+              // "All exam sets" selected - use End of Term grade
+              displayGrade = subj.eot_grade || '';
+            }
             
             return (
               <tr key={idx}>
@@ -2784,7 +2781,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
                 {showENDColumn && (
                   <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
                 )}
-                <td className="border border-gray-400 px-2 py-1 text-center font-bold">{grade}</td>
+                <td className="border border-gray-400 px-2 py-1 text-center font-bold">{displayGrade}</td>
                 <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
                 <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_name || ''}</td>
               </tr>
