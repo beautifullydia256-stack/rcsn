@@ -678,6 +678,7 @@ export function PrimaryReportGenerator() {
 
             // Sort results to process End of Term last (so it overwrites if there are multiple)
             // This ensures End of Term grades are used when "All Exam Sets" is selected
+            // Also prioritize results with grades over empty grades within End of Term
             const sortedResults = [...allStudentResults].sort((a: any, b: any) => {
               const aName = (a.exam_set_name || '').toLowerCase();
               const bName = (b.exam_set_name || '').toLowerCase();
@@ -687,6 +688,15 @@ export function PrimaryReportGenerator() {
               // End of Term results should come last
               if (aIsEnd && !bIsEnd) return 1;
               if (!aIsEnd && bIsEnd) return -1;
+              
+              // If both are End of Term, prioritize ones with grades (they come later in sort)
+              if (aIsEnd && bIsEnd) {
+                const aHasGrade = a.grade && a.grade !== '';
+                const bHasGrade = b.grade && b.grade !== '';
+                if (aHasGrade && !bHasGrade) return 1;  // a comes after b (has grade)
+                if (!aHasGrade && bHasGrade) return -1; // b comes after a (has grade)
+              }
+              
               return 0;
             });
             
@@ -734,13 +744,18 @@ export function PrimaryReportGenerator() {
               } else if (isEnd(examSetName)) {
                 // For End of Term, always update marks
                 subjectGroups[subject].eot_marks = displayMarks;
-                // Only update grade if we have a valid grade (not empty)
-                // This ensures we don't overwrite a valid grade with an empty one
+                // Always update grade for End of Term - prioritize results with grades
+                // Since we sorted results, End of Term with grades comes after End of Term without grades
+                // So the last End of Term result (with grade) will overwrite any empty ones
                 if (displayGrade && displayGrade !== '') {
-                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database
-                } else if (!subjectGroups[subject].eot_grade) {
-                  // Only set to empty if we don't already have a grade
-                  subjectGroups[subject].eot_grade = '';
+                  // We have a valid grade - always use it
+                  subjectGroups[subject].eot_grade = displayGrade;
+                } else {
+                  // No grade in this result - only set to empty if we don't already have a grade
+                  // This prevents overwriting a valid grade with an empty one
+                  if (!subjectGroups[subject].eot_grade) {
+                    subjectGroups[subject].eot_grade = '';
+                  }
                 }
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
