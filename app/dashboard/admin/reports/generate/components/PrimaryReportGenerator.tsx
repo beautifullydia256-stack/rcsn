@@ -565,21 +565,9 @@ export function PrimaryReportGenerator() {
           const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
           
-          // Calculate aggregate (sum of grade points) from actual grades in database
-          // Exclude MISSED entries (only count actual results with grades)
-          const actualResultsForAggregate = resultsForCalculation.filter(r => r.teacher_remark !== 'MISSED' && r.grade);
-          const aggregateSum = actualResultsForAggregate.reduce((sum, result) => {
-            // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
-            const grade = (result.grade || '').trim();
-            // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
-            const match = grade.match(/(\d+)/);
-            if (match) {
-              const points = parseInt(match[1], 10);
-              return sum + points;
-            }
-            return sum;
-          }, 0);
-          const aggregate = actualResultsForAggregate.length > 0 ? aggregateSum : null;
+          // Calculate aggregate will be done after subject groups are created
+          // We'll calculate it from the final subject groups to ensure we count each subject only once
+          let aggregate: number | null = null;
           
           // Calculate division from aggregate points (Primary Divisions logic)
           // Default division ranges (same as in teacher exam results page)
@@ -729,6 +717,9 @@ export function PrimaryReportGenerator() {
               const bot = typeof group.bot_marks === 'number' ? group.bot_marks : (group.bot_marks || '');
               const mot = typeof group.mot_marks === 'number' ? group.mot_marks : (group.mot_marks || '');
               const eot = typeof group.eot_marks === 'number' ? group.eot_marks : (group.eot_marks || '');
+              const botGrade = group.bot_grade || '';
+              const motGrade = group.mot_grade || '';
+              const eotGrade = group.eot_grade || '';
               
               // Calculate total based on selection:
               // - If specific exam set selected: use only that exam set's marks
@@ -758,14 +749,50 @@ export function PrimaryReportGenerator() {
                 }
               }
               
+              // Determine which grade to use for aggregate calculation
+              // Use the same logic as total_marks: selected exam set or End of Term if "All Exam Sets"
+              let gradeForAggregate = '';
+              if (selectedExamSetForDisplay) {
+                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
+                if (isBeginning(selectedExamSetName)) {
+                  gradeForAggregate = botGrade;
+                } else if (isMid(selectedExamSetName)) {
+                  gradeForAggregate = motGrade;
+                } else if (isEnd(selectedExamSetName)) {
+                  gradeForAggregate = eotGrade;
+                }
+              } else {
+                // "All exam sets" selected - use End of Term grade
+                gradeForAggregate = eotGrade;
+              }
+              
               return {
                 ...group,
                 bot_marks: bot,
                 mot_marks: mot,
                 eot_marks: eot,
-                total_marks: total || group.total_marks
+                total_marks: total || group.total_marks,
+                grade_for_aggregate: gradeForAggregate // Store grade for aggregate calculation
               };
             });
+            
+            // Calculate aggregate from subject groups (sum of grade points)
+            // Only count subjects that have a grade (exclude MISSED entries)
+            const aggregateSum = subjects.reduce((sum, subj: any) => {
+              const grade = (subj.grade_for_aggregate || '').trim();
+              if (!grade || grade === 'MISSED') return sum;
+              
+              // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
+              // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
+              const match = grade.match(/(\d+)/);
+              if (match) {
+                const points = parseInt(match[1], 10);
+                return sum + points;
+              }
+              return sum;
+            }, 0);
+            
+            aggregate = subjects.length > 0 && aggregateSum > 0 ? aggregateSum : null;
           }
 
           return {
@@ -2701,8 +2728,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
               <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
             )}
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
-            <th className="border border-gray-400 px-2 py-1 text-left">Teacher</th>
             <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
+            <th className="border border-gray-400 px-2 py-1 text-left">Teacher</th>
           </tr>
         </thead>
         <tbody>
@@ -2724,8 +2751,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
                   <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
                 )}
                 <td className="border border-gray-400 px-2 py-1 text-center font-bold">{grade}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_name || ''}</td>
                 <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_name || ''}</td>
               </tr>
             );
           })}
@@ -2737,8 +2764,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
         <div className="border border-gray-400 p-2">
           <div><strong>Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
           <div><strong>Average:</strong> {avg}</div>
-          <div><strong>Division:</strong> {avgGrade}</div>
           <div><strong>Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
+          <div><strong>Division:</strong> {avgGrade}</div>
         </div>
         <div className="border border-gray-400 p-2">
           <div><strong>Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
