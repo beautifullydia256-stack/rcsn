@@ -722,13 +722,14 @@ export function PrimaryReportGenerator() {
               } else if (isEnd(examSetName)) {
                 // For End of Term, use same logic as Mid Term
                 subjectGroups[subject].eot_marks = displayMarks;
-                // Only set grade if we have a valid grade (not empty) OR if we don't have a grade yet
-                // This ensures actual results (with grades) are used, not MISSED entries
-                if (displayGrade && displayGrade !== '') {
-                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
-                } else if (!subjectGroups[subject].eot_grade) {
-                  // Only set to empty if we don't already have a grade (don't overwrite valid grade with empty)
-                  subjectGroups[subject].eot_grade = '';
+                // For grades: Skip MISSED entries - only use actual results
+                // This ensures we don't overwrite actual grades (like P8, C4, D1) with F9 from MISSED entries
+                if (!isMissedEntry && displayGrade && displayGrade !== '') {
+                  // This is an actual result with a grade - use it
+                  subjectGroups[subject].eot_grade = displayGrade;
+                } else if (isMissedEntry && !subjectGroups[subject].eot_grade) {
+                  // Only use MISSED entry grade (F9) if we don't have an actual result yet
+                  subjectGroups[subject].eot_grade = displayGrade || '';
                 }
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
