@@ -793,6 +793,20 @@ export function PrimaryReportGenerator() {
                 }
               }
               
+              // Debug: Log final subject data to verify eot_grade is set
+              if (process.env.NODE_ENV === 'development' && !selectedExamSetForDisplay) {
+                // Only log when "All Exam Sets" is selected
+                if (eot !== '' && !eotGrade) {
+                  console.warn('End of Term marks exist but grade is missing:', {
+                    subject: group.subject_name,
+                    eot_marks: eot,
+                    eot_grade: eotGrade,
+                    bot_grade: botGrade,
+                    mot_grade: motGrade
+                  });
+                }
+              }
+              
               return {
                 ...group,
                 bot_marks: bot,
