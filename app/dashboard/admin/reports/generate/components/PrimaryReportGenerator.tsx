@@ -770,13 +770,23 @@ export function PrimaryReportGenerator() {
                 // Always update grade - since we sorted, actual results come after MISSED entries
                 // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
                 // Use same logic as Mid Term - always set the grade if it exists
-                if (displayGrade && displayGrade !== '') {
-                  // We have a grade - use it (this will overwrite any previous grade)
-                  subjectGroups[subject].eot_grade = displayGrade;
-                } else if (!subjectGroups[subject].eot_grade) {
-                  // No grade in this result, and we don't have one yet - set to empty
-                  subjectGroups[subject].eot_grade = '';
+                // IMPORTANT: Always set the grade, even if empty, so the last processed result wins
+                // Since we sorted to put actual results last, the last one will have the grade
+                subjectGroups[subject].eot_grade = displayGrade || '';
+                
+                // Debug: Log when we're setting End of Term grade
+                if (process.env.NODE_ENV === 'development') {
+                  console.log('Setting End of Term grade:', {
+                    subject,
+                    examSetName,
+                    marks: displayMarks,
+                    grade: displayGrade,
+                    isMissed: isMissedEntry,
+                    exam_set_id: r.exam_set_id,
+                    final_grade: subjectGroups[subject].eot_grade
+                  });
                 }
+                
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
