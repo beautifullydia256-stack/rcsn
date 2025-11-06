@@ -499,7 +499,7 @@ export function PrimaryReportGenerator() {
           // Calculate summary with enhanced grading (handle missing data)
           // Only count actual results (not MISSED) for calculations
           // MISSED entries are identified by teacher_remark = 'MISSED' (not by grade)
-          const actualResults = studentResults.filter(r => r.teacher_remark !== 'MISSED');
+          const actualResults = allStudentResults.filter(r => r.teacher_remark !== 'MISSED');
           const totalMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
           const totalPossibleMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
@@ -537,7 +537,7 @@ export function PrimaryReportGenerator() {
           const usesTemplate4 = isUpperSection || selectedTemplate === 'template4';
           
           let subjects: any[] = [];
-          if (usesTemplate4 && studentResults.length > 0) {
+          if (usesTemplate4 && allStudentResults.length > 0) {
             // Group results by subject and aggregate by exam set type
             const subjectGroups: { [key: string]: { 
               subject_name: string; 
@@ -550,7 +550,7 @@ export function PrimaryReportGenerator() {
             
             // Get exam set names from results
             const examSetMap = new Map();
-            studentResults.forEach(r => {
+            allStudentResults.forEach(r => {
               if (r.exam_set_id && !examSetMap.has(r.exam_set_id)) {
                 const examSet = examSets.find(es => es.id === r.exam_set_id);
                 if (examSet) {
@@ -566,7 +566,7 @@ export function PrimaryReportGenerator() {
             }
             const isAllExamSetsSelected = !selectedExamSetForDisplay;
 
-            studentResults.forEach((r: any) => {
+            allStudentResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
               
