@@ -677,8 +677,26 @@ export function PrimaryReportGenerator() {
             const isAllExamSetsSelected = !selectedExamSetForDisplay;
 
             // Process results - use same logic for all exam sets (BOT, MID, END)
-            // Just like Mid Term works, End of Term will work the same way
-            allStudentResults.forEach((r: any) => {
+            // For End of Term, we need to process actual results AFTER MISSED entries
+            // so actual grades (P8, C4, D1) overwrite MISSED grades (F9)
+            const sortedResults = [...allStudentResults].sort((a: any, b: any) => {
+              const aName = (a.exam_set_name || '').toLowerCase();
+              const bName = (b.exam_set_name || '').toLowerCase();
+              const aIsEnd = isEnd(aName);
+              const bIsEnd = isEnd(bName);
+              
+              // If both are End of Term, process actual results (not MISSED) last
+              if (aIsEnd && bIsEnd) {
+                const aIsMissed = (a.marks_obtained === 0 || a.marks_obtained === null) && a.teacher_remark === 'MISSED';
+                const bIsMissed = (b.marks_obtained === 0 || b.marks_obtained === null) && b.teacher_remark === 'MISSED';
+                // Actual results come after MISSED entries
+                if (!aIsMissed && bIsMissed) return 1;  // a comes after b
+                if (aIsMissed && !bIsMissed) return -1; // b comes after a
+              }
+              return 0;
+            });
+            
+            sortedResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
               
@@ -712,7 +730,6 @@ export function PrimaryReportGenerator() {
               
               // Always populate grades for all exam sets when we have the data
               // This ensures grades are available for display regardless of selection
-              // For End of Term, we want to ensure we get the grade even if there are multiple End of Term exam sets
               if (isBeginning(examSetName)) {
                 subjectGroups[subject].bot_marks = displayMarks;
                 subjectGroups[subject].bot_grade = displayGrade; // Grade from database
@@ -720,17 +737,10 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].mot_marks = displayMarks;
                 subjectGroups[subject].mot_grade = displayGrade; // Grade from database
               } else if (isEnd(examSetName)) {
-                // For End of Term, use same logic as Mid Term
+                // For End of Term, use same logic as Mid Term - just set the grade directly
+                // Since we sorted results, actual results come after MISSED entries, so they overwrite
                 subjectGroups[subject].eot_marks = displayMarks;
-                // For grades: Skip MISSED entries - only use actual results
-                // This ensures we don't overwrite actual grades (like P8, C4, D1) with F9 from MISSED entries
-                if (!isMissedEntry && displayGrade && displayGrade !== '') {
-                  // This is an actual result with a grade - use it
-                  subjectGroups[subject].eot_grade = displayGrade;
-                } else if (isMissedEntry && !subjectGroups[subject].eot_grade) {
-                  // Only use MISSED entry grade (F9) if we don't have an actual result yet
-                  subjectGroups[subject].eot_grade = displayGrade || '';
-                }
+                subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
