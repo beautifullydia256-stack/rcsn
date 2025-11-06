@@ -741,10 +741,28 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].eot_marks = displayMarks;
                 // Always update grade - since we sorted, actual results come after MISSED entries
                 // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
-                subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
+                // Only set grade if we have one (don't overwrite valid grade with empty)
+                if (displayGrade && displayGrade !== '') {
+                  subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
+                } else if (!subjectGroups[subject].eot_grade) {
+                  // Only set to empty if we don't already have a grade
+                  subjectGroups[subject].eot_grade = '';
+                }
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
                   subjectGroups[subject].teacher_comment = r.teacher_remark || r.overall_remark || '';
+                }
+                
+                // Debug logging for End of Term grades
+                if (process.env.NODE_ENV === 'development' && displayGrade && displayGrade !== '') {
+                  console.log('End of Term grade set:', {
+                    subject,
+                    marks: displayMarks,
+                    grade: displayGrade,
+                    isMissed: isMissedEntry,
+                    exam_set_id: r.exam_set_id,
+                    exam_set_name: examSetName
+                  });
                 }
               }
             });
