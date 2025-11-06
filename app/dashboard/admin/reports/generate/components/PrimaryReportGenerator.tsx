@@ -435,6 +435,35 @@ export function PrimaryReportGenerator() {
         .eq('is_primary', true)
         .in('student_id', targetStudents.map(s => s.student_id));
 
+      // Fetch teacher assignments for the class to get teacher names for each subject
+      const { data: teacherAssignments } = await supabase
+        .from('teacher_class_subjects')
+        .select('subject, teacher_id, teachers(name)')
+        .eq('school_id', schoolId)
+        .eq('class_name', targetStudents[0].current_class);
+
+      // Create a map of subject -> teacher name (formatted)
+      const subjectTeacherMap = new Map<string, string>();
+      if (teacherAssignments) {
+        teacherAssignments.forEach((assignment: any) => {
+          const subject = assignment.subject;
+          const teacher = assignment.teachers;
+          if (subject && teacher?.name) {
+            // Format name: "FirstName FirstLetterOfSecondName" (e.g., "John Smith" -> "John S")
+            const nameParts = teacher.name.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+              const firstName = nameParts[0];
+              const secondNameFirstLetter = nameParts[1].charAt(0).toUpperCase();
+              const formattedName = `${firstName} ${secondNameFirstLetter}`;
+              subjectTeacherMap.set(subject, formattedName);
+            } else if (nameParts.length === 1) {
+              // If only one name, just use it
+              subjectTeacherMap.set(subject, nameParts[0]);
+            }
+          }
+        });
+      }
+
       const referenceExamSet = (selectedExamSetId && selectedExamSetId !== 'all')
         ? (examSets || []).find(es => es.id === selectedExamSetId)
         : [...(examSets || [])]
@@ -535,10 +564,55 @@ export function PrimaryReportGenerator() {
           const totalMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
           const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
           const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
-          // For aggregate calculation, exclude MISSED entries (only count actual results)
-          const actualResultsForAggregate = resultsForCalculation.filter(r => r.teacher_remark !== 'MISSED');
-          const aggregate = actualResultsForAggregate.length > 0 ? calculateAggregate(actualResultsForAggregate) : null;
-          const division = average !== null ? calculateDivision(average) : 'N/A';
+          
+          // Calculate aggregate (sum of grade points) from actual grades in database
+          // Exclude MISSED entries (only count actual results with grades)
+          const actualResultsForAggregate = resultsForCalculation.filter(r => r.teacher_remark !== 'MISSED' && r.grade);
+          const aggregateSum = actualResultsForAggregate.reduce((sum, result) => {
+            // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
+            const grade = (result.grade || '').trim();
+            // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
+            const match = grade.match(/(\d+)/);
+            if (match) {
+              const points = parseInt(match[1], 10);
+              return sum + points;
+            }
+            return sum;
+          }, 0);
+          const aggregate = actualResultsForAggregate.length > 0 ? aggregateSum : null;
+          
+          // Calculate division from aggregate points (Primary Divisions logic)
+          // Default division ranges (same as in teacher exam results page)
+          const primaryDivisionSettings = {
+            div1_min: 4,
+            div1_max: 12,
+            div2_min: 13,
+            div2_max: 23,
+            div3_min: 24,
+            div3_max: 29,
+            div4_min: 30,
+            div4_max: 34,
+            u_min: 35,
+            u_max: 36,
+          };
+          
+          const calculateDivisionFromAggregate = (aggregatePoints: number | null): string => {
+            if (aggregatePoints === null || aggregatePoints === undefined) return 'N/A';
+            
+            const s = primaryDivisionSettings;
+            if (aggregatePoints >= s.div1_min && aggregatePoints <= s.div1_max) return 'Division 1';
+            if (aggregatePoints >= s.div2_min && aggregatePoints <= s.div2_max) return 'Division 2';
+            if (aggregatePoints >= s.div3_min && aggregatePoints <= s.div3_max) return 'Division 3';
+            if (aggregatePoints >= s.div4_min && aggregatePoints <= s.div4_max) return 'Division 4';
+            if (aggregatePoints >= s.u_min && aggregatePoints <= s.u_max) return 'U (Ungraded)';
+            
+            // For any aggregate above 36 or other edge cases
+            if (aggregatePoints > 36) return 'U (Ungraded)';
+            
+            return 'N/A';
+          };
+          
+          const division = calculateDivisionFromAggregate(aggregate);
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
@@ -566,6 +640,7 @@ export function PrimaryReportGenerator() {
               eot_marks?: number | string; 
               total_marks: number;
               teacher_comment: string;
+              teacher_name?: string;
             } } = {};
             
             // Get exam set names from results
@@ -593,10 +668,13 @@ export function PrimaryReportGenerator() {
               const examSetName = r.exam_set_name || examSetMap.get(r.exam_set_id) || '';
               
               if (!subjectGroups[subject]) {
+                // Get teacher name for this subject
+                const teacherName = subjectTeacherMap.get(subject) || '';
                 subjectGroups[subject] = {
                   subject_name: subject,
                   total_marks: r.total_marks ?? 100,
-                  teacher_comment: r.teacher_remark || r.overall_remark || ''
+                  teacher_comment: r.teacher_remark || r.overall_remark || '',
+                  teacher_name: teacherName
                 };
               }
               
@@ -707,7 +785,7 @@ export function PrimaryReportGenerator() {
               totalMarks,
               totalPossibleMarks,
               average: average !== null ? Math.round(average * 100) / 100 : null,
-              aggregate: aggregate !== null ? Math.round(aggregate * 100) / 100 : null,
+              aggregate: aggregate !== null ? aggregate : null,
               division,
               attendancePercentage,
               attendanceDetails,
@@ -2623,6 +2701,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
               <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
             )}
             <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
+            <th className="border border-gray-400 px-2 py-1 text-left">Teacher</th>
             <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
           </tr>
         </thead>
@@ -2645,6 +2724,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
                   <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
                 )}
                 <td className="border border-gray-400 px-2 py-1 text-center font-bold">{grade}</td>
+                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_name || ''}</td>
                 <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
               </tr>
             );
@@ -2658,6 +2738,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
           <div><strong>Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
           <div><strong>Average:</strong> {avg}</div>
           <div><strong>Division:</strong> {avgGrade}</div>
+          <div><strong>Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
         </div>
         <div className="border border-gray-400 p-2">
           <div><strong>Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
