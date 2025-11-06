@@ -737,9 +737,10 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].mot_marks = displayMarks;
                 subjectGroups[subject].mot_grade = displayGrade; // Grade from database
               } else if (isEnd(examSetName)) {
-                // For End of Term, use same logic as Mid Term - just set the grade directly
-                // Since we sorted results, actual results come after MISSED entries, so they overwrite
+                // For End of Term, always update marks
                 subjectGroups[subject].eot_marks = displayMarks;
+                // Always update grade - since we sorted, actual results come after MISSED entries
+                // This ensures actual grades (P8, C4, D1) overwrite MISSED grades (F9)
                 subjectGroups[subject].eot_grade = displayGrade; // Grade from database - same as Mid Term
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
