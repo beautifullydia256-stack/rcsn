@@ -499,23 +499,7 @@ export function PrimaryReportGenerator() {
           // Calculate summary with enhanced grading (handle missing data)
           // Only count actual results (not MISSED) for calculations
           // MISSED entries are identified by teacher_remark = 'MISSED' (not by grade)
-          const actualResults = allStudentResults.filter(r => r.teacher_remark !== 'MISSED');
-          const totalMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
-          const totalPossibleMarks = actualResults.length > 0 ? actualResults.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
-          const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
-          const aggregate = actualResults.length > 0 ? calculateAggregate(actualResults) : null;
-          const division = average !== null ? calculateDivision(average) : 'N/A';
-          const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
-          const attendancePercentage = attendanceDetails.percentage;
-
-          // Teacher comment from rules
-          const teacherComment = (() => {
-            const avg = average != null ? Math.max(0, Math.min(100, average)) : null;
-            if (avg == null || commentRules.length === 0) return '';
-            const rule = commentRules.find(r => avg >= Number(r.min_avg) && avg <= Number(r.max_avg));
-            return rule?.comment || '';
-          })();
-
+          
           // Helper functions to detect exam set types by name
           const isBeginning = (name: any) => {
             const n = String(name || '').trim().toLowerCase();
@@ -529,6 +513,38 @@ export function PrimaryReportGenerator() {
             const n = String(name || '').trim().toLowerCase();
             return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
           };
+          
+          // Filter results based on selected exam set:
+          // - If specific exam set selected: use only that exam set's results
+          // - If "all exam sets" selected: use only End of Term results
+          let resultsForCalculation = allStudentResults.filter(r => r.teacher_remark !== 'MISSED');
+          
+          if (selectedExamSetId && selectedExamSetId !== 'all') {
+            // Specific exam set selected - use only that exam set's results
+            resultsForCalculation = resultsForCalculation.filter(r => r.exam_set_id === selectedExamSetId);
+          } else {
+            // "All exam sets" selected - use only End of Term results
+            resultsForCalculation = resultsForCalculation.filter(r => {
+              const examSetName = (r.exam_set_name || '').toLowerCase();
+              return isEnd(examSetName);
+            });
+          }
+          
+          const totalMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.marks_obtained || 0), 0) : null;
+          const totalPossibleMarks = resultsForCalculation.length > 0 ? resultsForCalculation.reduce((sum, result) => sum + (result.total_marks || 100), 0) : null;
+          const average = totalPossibleMarks && totalPossibleMarks > 0 ? (totalMarks! / totalPossibleMarks) * 100 : null;
+          const aggregate = resultsForCalculation.length > 0 ? calculateAggregate(resultsForCalculation) : null;
+          const division = average !== null ? calculateDivision(average) : 'N/A';
+          const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
+          const attendancePercentage = attendanceDetails.percentage;
+
+          // Teacher comment from rules
+          const teacherComment = (() => {
+            const avg = average != null ? Math.max(0, Math.min(100, average)) : null;
+            if (avg == null || commentRules.length === 0) return '';
+            const rule = commentRules.find(r => avg >= Number(r.min_avg) && avg <= Number(r.max_avg));
+            return rule?.comment || '';
+          })();
 
           // For Template4 (Upper Section P.5-P.7), create subjects array with bot_marks, mot_marks, eot_marks
           // Check if this class uses Template4 (Upper Section: P.5, P.6, P.7, Primary 5, Primary 6, Primary 7)
