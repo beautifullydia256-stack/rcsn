@@ -749,21 +749,22 @@ export function PrimaryReportGenerator() {
                 }
               }
               
-              // Determine which grade to use for aggregate calculation
-              // Use the same logic as total_marks: selected exam set or End of Term if "All Exam Sets"
-              let gradeForAggregate = '';
-              if (selectedExamSetForDisplay) {
-                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
-                if (isBeginning(selectedExamSetName)) {
-                  gradeForAggregate = botGrade;
-                } else if (isMid(selectedExamSetName)) {
-                  gradeForAggregate = motGrade;
-                } else if (isEnd(selectedExamSetName)) {
-                  gradeForAggregate = eotGrade;
+              // Calculate grade from total marks (same as display logic in template)
+              // The template uses: calculateGrade(parseFloat(total) || 0)
+              // where total is the marks obtained (which equals percentage if out of 100)
+              // This ensures aggregate uses the exact same grade calculation as what's displayed
+              // For MISSED entries, use 0 marks which equals F9
+              let calculatedGrade = '';
+              if (total === 'MISSED') {
+                // MISSED entries = 0 marks = F9
+                calculatedGrade = 'F9';
+              } else if (total && total !== '') {
+                const totalNum = typeof total === 'number' ? total : parseFloat(total.toString());
+                if (!isNaN(totalNum) && totalNum >= 0) {
+                  // Marks are out of 100, so marks = percentage
+                  // This matches the template logic: calculateGrade(parseFloat(total) || 0)
+                  calculatedGrade = calculateGradeFromPercent(totalNum);
                 }
-              } else {
-                // "All exam sets" selected - use End of Term grade
-                gradeForAggregate = eotGrade;
               }
               
               return {
@@ -772,15 +773,16 @@ export function PrimaryReportGenerator() {
                 mot_marks: mot,
                 eot_marks: eot,
                 total_marks: total || group.total_marks,
-                grade_for_aggregate: gradeForAggregate // Store grade for aggregate calculation
+                calculated_grade: calculatedGrade // Store calculated grade for aggregate
               };
             });
             
             // Calculate aggregate from subject groups (sum of grade points)
-            // Only count subjects that have a grade (exclude MISSED entries)
+            // Use the calculated grade (same as what's displayed in the table)
+            // Include ALL subjects (including MISSED entries, which have F9 = 9 points)
             const aggregateSum = subjects.reduce((sum, subj: any) => {
-              const grade = (subj.grade_for_aggregate || '').trim();
-              if (!grade || grade === 'MISSED') return sum;
+              const grade = (subj.calculated_grade || '').trim();
+              if (!grade) return sum; // Skip if no grade calculated
               
               // Extract number from grade string (e.g., "C5" -> 5, "D1" -> 1, "F9" -> 9)
               // Match pattern: letter(s) followed by number (e.g., "C5", "D1", "F9", "Credit 5", "Division 1")
@@ -789,10 +791,29 @@ export function PrimaryReportGenerator() {
                 const points = parseInt(match[1], 10);
                 return sum + points;
               }
+              // If no number found in grade, log for debugging
+              console.warn(`Could not extract points from grade: "${grade}" for subject: ${subj.subject_name}`);
               return sum;
             }, 0);
             
             aggregate = subjects.length > 0 && aggregateSum > 0 ? aggregateSum : null;
+            
+            // Debug logging
+            if (process.env.NODE_ENV === 'development') {
+              console.log('Aggregate calculation:', {
+                subjectsCount: subjects.length,
+                subjects: subjects.map((s: any) => ({
+                  subject: s.subject_name,
+                  total_marks: s.total_marks,
+                  calculated_grade: s.calculated_grade,
+                  bot_marks: s.bot_marks,
+                  mot_marks: s.mot_marks,
+                  eot_marks: s.eot_marks
+                })),
+                aggregateSum,
+                aggregate
+              });
+            }
           }
 
           return {
