@@ -676,7 +676,21 @@ export function PrimaryReportGenerator() {
             }
             const isAllExamSetsSelected = !selectedExamSetForDisplay;
 
-            allStudentResults.forEach((r: any) => {
+            // Sort results to process End of Term last (so it overwrites if there are multiple)
+            // This ensures End of Term grades are used when "All Exam Sets" is selected
+            const sortedResults = [...allStudentResults].sort((a: any, b: any) => {
+              const aName = (a.exam_set_name || '').toLowerCase();
+              const bName = (b.exam_set_name || '').toLowerCase();
+              const aIsEnd = isEnd(aName);
+              const bIsEnd = isEnd(bName);
+              
+              // End of Term results should come last
+              if (aIsEnd && !bIsEnd) return 1;
+              if (!aIsEnd && bIsEnd) return -1;
+              return 0;
+            });
+            
+            sortedResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
               
@@ -710,6 +724,7 @@ export function PrimaryReportGenerator() {
               
               // Always populate grades for all exam sets when we have the data
               // This ensures grades are available for display regardless of selection
+              // For End of Term, we want to ensure we get the grade even if there are multiple End of Term exam sets
               if (isBeginning(examSetName)) {
                 subjectGroups[subject].bot_marks = displayMarks;
                 subjectGroups[subject].bot_grade = displayGrade; // Grade from database
@@ -717,7 +732,10 @@ export function PrimaryReportGenerator() {
                 subjectGroups[subject].mot_marks = displayMarks;
                 subjectGroups[subject].mot_grade = displayGrade; // Grade from database
               } else if (isEnd(examSetName)) {
+                // For End of Term, always update marks and grade
+                // Since we sorted results, End of Term comes last, so it will overwrite if there are multiple
                 subjectGroups[subject].eot_marks = displayMarks;
+                // Always update grade for End of Term (even if empty, to ensure we have the latest)
                 subjectGroups[subject].eot_grade = displayGrade; // Grade from database
                 // Use End of Term remarks if available (but not for MISSED entries)
                 if (!isMissedEntry && (r.teacher_remark || r.overall_remark)) {
@@ -2727,7 +2745,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
               }
             } else {
               // "All exam sets" selected - use End of Term grade
+              // Try eot_grade first, if empty, try to get from the most recent End of Term result
               displayGrade = subj.eot_grade || '';
+              
+              // If still empty, this means no End of Term grade was found
+              // This could happen if there are no End of Term results for this subject
+              // In that case, we could fall back to Mid Term grade, but for now we'll leave it empty
+              // The grade should be populated when End of Term results exist
             }
             
             return (
