@@ -696,6 +696,28 @@ export function PrimaryReportGenerator() {
               return 0;
             });
             
+            // Debug: Log all End of Term results to see what we have
+            if (process.env.NODE_ENV === 'development') {
+              const endOfTermResults = sortedResults.filter((r: any) => {
+                const examSetName = (r.exam_set_name || '').toLowerCase();
+                return isEnd(examSetName);
+              });
+              if (endOfTermResults.length > 0) {
+                console.log('End of Term results for student:', {
+                  student_id: student.student_id,
+                  student_name: student.name,
+                  endOfTermResults: endOfTermResults.map((r: any) => ({
+                    subject: r.subject,
+                    marks: r.marks_obtained,
+                    grade: r.grade,
+                    isMissed: (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED',
+                    exam_set_id: r.exam_set_id,
+                    exam_set_name: r.exam_set_name
+                  }))
+                });
+              }
+            }
+            
             sortedResults.forEach((r: any) => {
               const subject = r.subject ?? '';
               if (!subject) return;
