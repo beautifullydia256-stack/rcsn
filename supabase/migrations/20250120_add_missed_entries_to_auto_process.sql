@@ -47,9 +47,10 @@ BEGIN
     affected_exam_set_id
   );
   
-  -- After processing, ensure all students in the class have all subjects
+  -- After processing, ensure all students in the class have all subjects for THIS exam set
   -- This creates MISSED entries for students who don't have results for subjects that other students have
-  IF affected_class_name IS NOT NULL THEN
+  -- The function gets subjects from exam_results (source table) and creates MISSED entries for missing ones
+  IF affected_class_name IS NOT NULL AND affected_exam_set_id IS NOT NULL THEN
     BEGIN
       PERFORM ensure_all_students_have_all_subjects(
         affected_school_id,
@@ -58,8 +59,8 @@ BEGIN
       );
     EXCEPTION WHEN OTHERS THEN
       -- Log error but don't fail the transaction
-      RAISE WARNING 'Error ensuring all students have all subjects for class %: %', 
-        affected_class_name, SQLERRM;
+      RAISE WARNING 'Error ensuring all students have all subjects for class % exam_set %: %', 
+        affected_class_name, affected_exam_set_id, SQLERRM;
     END;
   END IF;
   
