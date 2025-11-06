@@ -678,7 +678,10 @@ export function PrimaryReportGenerator() {
 
             // Sort results to process End of Term last (so it overwrites if there are multiple)
             // This ensures End of Term grades are used when "All Exam Sets" is selected
-            // Also prioritize results with grades over empty grades within End of Term
+            // When there are multiple End of Term exam sets, prioritize:
+            // 1. Results with actual marks (not MISSED entries with 0 marks)
+            // 2. Results with higher marks
+            // 3. Results with grades
             const sortedResults = [...allStudentResults].sort((a: any, b: any) => {
               const aName = (a.exam_set_name || '').toLowerCase();
               const bName = (b.exam_set_name || '').toLowerCase();
@@ -689,8 +692,25 @@ export function PrimaryReportGenerator() {
               if (aIsEnd && !bIsEnd) return 1;
               if (!aIsEnd && bIsEnd) return -1;
               
-              // If both are End of Term, prioritize ones with grades (they come later in sort)
+              // If both are End of Term, prioritize actual results over MISSED entries
               if (aIsEnd && bIsEnd) {
+                const aIsMissed = (a.marks_obtained === 0 || a.marks_obtained === null) && a.teacher_remark === 'MISSED';
+                const bIsMissed = (b.marks_obtained === 0 || b.marks_obtained === null) && b.teacher_remark === 'MISSED';
+                
+                // Actual results (not MISSED) come after MISSED entries
+                if (!aIsMissed && bIsMissed) return 1;  // a comes after b (actual result)
+                if (aIsMissed && !bIsMissed) return -1; // b comes after a (actual result)
+                
+                // If both are actual results or both are MISSED, prioritize by marks (higher marks come later)
+                if (!aIsMissed && !bIsMissed) {
+                  const aMarks = a.marks_obtained || 0;
+                  const bMarks = b.marks_obtained || 0;
+                  if (aMarks !== bMarks) {
+                    return aMarks - bMarks; // Higher marks come later
+                  }
+                }
+                
+                // If marks are equal, prioritize ones with grades
                 const aHasGrade = a.grade && a.grade !== '';
                 const bHasGrade = b.grade && b.grade !== '';
                 if (aHasGrade && !bHasGrade) return 1;  // a comes after b (has grade)
