@@ -998,6 +998,8 @@ export function PrimaryReportGenerator() {
               head_teacher_text: resolvedHeadTeacherComment || studentComments?.head_teacher_text || '',
               head_teacher_comment: resolvedHeadTeacherComment || studentComments?.head_teacher_comment || '',
             },
+            class_teacher_comment: resolvedClassTeacherComment,
+            head_teacher_comment: resolvedHeadTeacherComment || studentComments?.head_teacher_text || studentComments?.head_teacher_comment || '',
             profile_photo: studentPhoto?.photo_url || null,
             summary: {
               totalMarks,
@@ -2840,11 +2842,23 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
     return trimmed;
   })();
   const overallPerf = student.summary.performanceRemark ?? '';
-  const classTeacherComment = student?.comments?.class_teacher_text
+  const endOfTermResult = (() => {
+    const results = student?.results || [];
+    const endResults = results.filter((r: any) => {
+      const name = String(r.exam_set_name || r.exam_set || '').toLowerCase();
+      return name.includes('end') || name.includes('final') || name.includes('eot');
+    });
+    return endResults.find((r: any) => r.headteacher_comment || r.class_teacher_comment) || endResults[0] || results[0] || null;
+  })();
+
+  const classTeacherComment = endOfTermResult?.class_teacher_comment
+    || student?.comments?.class_teacher_text
     || student?.comments?.class_teacher_comment
     || student?.class_teacher_comment
     || '..............................................................';
-  const headTeacherComment = student?.comments?.head_teacher_text
+
+  const headTeacherComment = endOfTermResult?.headteacher_comment
+    || student?.comments?.head_teacher_text
     || student?.comments?.head_teacher_comment
     || student?.head_teacher_comment
     || '..............................................................';
