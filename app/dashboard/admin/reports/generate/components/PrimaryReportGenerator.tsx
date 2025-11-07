@@ -2520,6 +2520,24 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         <p>Signature: ______________________</p>
       </div>
 
+      {/* SUMMARY SECTION (mirrors upper section layout) */}
+      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
+        <div className="border border-gray-400 p-2">
+          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
+          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
+          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Attendance:</strong></div>
+          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+        </div>
+      </div>
+
       {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
         <p><strong>Next term begins on:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '____________________'}</p>
