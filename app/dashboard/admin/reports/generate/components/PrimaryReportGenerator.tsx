@@ -494,6 +494,27 @@ export function PrimaryReportGenerator() {
         commentRules = rules || [];
       } catch {}
 
+      let classTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> = [];
+      try {
+        const { data: classComments } = await supabase
+          .from('class_teacher_comments_settings')
+          .select('min_percent,max_percent,comment_text')
+          .eq('school_id', schoolId)
+          .eq('class_name', targetStudents[0].current_class)
+          .order('min_percent');
+        classTeacherCommentSettings = classComments || [];
+      } catch {}
+
+      let headTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> = [];
+      try {
+        const { data: headComments } = await supabase
+          .from('headteacher_comments_settings')
+          .select('min_percent,max_percent,comment_text')
+          .eq('school_id', schoolId)
+          .order('min_percent');
+        headTeacherCommentSettings = headComments || [];
+      } catch {}
+
       const reportData = {
         school: {
           ...schoolInfo,
@@ -631,12 +652,60 @@ export function PrimaryReportGenerator() {
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
-          // Teacher comment from rules
-          const teacherComment = (() => {
-            const avg = average != null ? Math.max(0, Math.min(100, average)) : null;
-            if (avg == null || commentRules.length === 0) return '';
-            const rule = commentRules.find(r => avg >= Number(r.min_avg) && avg <= Number(r.max_avg));
+          const boundedAverage = average != null ? Math.max(0, Math.min(100, average)) : null;
+
+          const ruleBasedClassComment = (() => {
+            if (boundedAverage == null || commentRules.length === 0) return '';
+            const rule = commentRules.find(r => boundedAverage >= Number(r.min_avg) && boundedAverage <= Number(r.max_avg));
             return rule?.comment || '';
+          })();
+
+          const resolvedClassTeacherComment = (() => {
+            if (boundedAverage != null && classTeacherCommentSettings.length > 0) {
+              const match = classTeacherCommentSettings.find(setting =>
+                boundedAverage >= Number(setting.min_percent) &&
+                boundedAverage <= Number(setting.max_percent)
+              );
+              if (match?.comment_text) {
+                return match.comment_text;
+              }
+            }
+
+            if (studentComments?.class_teacher_text && String(studentComments.class_teacher_text).trim() !== '') {
+              return studentComments.class_teacher_text;
+            }
+
+            if (studentComments?.class_teacher_comment && String(studentComments.class_teacher_comment).trim() !== '') {
+              return studentComments.class_teacher_comment;
+            }
+
+            if (ruleBasedClassComment && ruleBasedClassComment.trim() !== '') {
+              return ruleBasedClassComment;
+            }
+
+            return '';
+          })();
+
+          const resolvedHeadTeacherComment = (() => {
+            if (boundedAverage != null && headTeacherCommentSettings.length > 0) {
+              const match = headTeacherCommentSettings.find(setting =>
+                boundedAverage >= Number(setting.min_percent) &&
+                boundedAverage <= Number(setting.max_percent)
+              );
+              if (match?.comment_text) {
+                return match.comment_text;
+              }
+            }
+
+            if (studentComments?.head_teacher_text && String(studentComments.head_teacher_text).trim() !== '') {
+              return studentComments.head_teacher_text;
+            }
+
+            if (studentComments?.head_teacher_comment && String(studentComments.head_teacher_comment).trim() !== '') {
+              return studentComments.head_teacher_comment;
+            }
+
+            return '';
           })();
 
           // For Template4 (Upper Section P.5-P.7), create subjects array with bot_marks, mot_marks, eot_marks
@@ -924,7 +993,10 @@ export function PrimaryReportGenerator() {
             comments: {
               ...studentComments,
               class_teacher_name: classTeacherName || (studentComments?.class_teacher_name || ''),
-              class_teacher_text: teacherComment || (studentComments?.class_teacher_text || ''),
+              class_teacher_text: resolvedClassTeacherComment,
+              class_teacher_comment: resolvedClassTeacherComment,
+              head_teacher_text: resolvedHeadTeacherComment || studentComments?.head_teacher_text || '',
+              head_teacher_comment: resolvedHeadTeacherComment || studentComments?.head_teacher_comment || '',
             },
             profile_photo: studentPhoto?.photo_url || null,
             summary: {
