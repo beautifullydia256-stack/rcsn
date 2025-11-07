@@ -2824,6 +2824,24 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </table>
       </div>
 
+      {/* SUMMARY SECTION (mirrors upper section layout) */}
+      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
+        <div className="border border-gray-400 p-2">
+          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
+          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
+          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Attendance:</strong></div>
+          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+        </div>
+      </div>
+
       {/* COMMENTS & FOOTER to match provided HTML */}
       <div className="mt-4">
         <div className="mb-4">
