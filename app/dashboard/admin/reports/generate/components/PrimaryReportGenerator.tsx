@@ -2769,9 +2769,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
   })();
   const overallPerf = student.summary.performanceRemark ?? '';
   const classTeacherComment = student?.comments?.class_teacher_text
+    || student?.comments?.class_teacher_comment
     || student?.class_teacher_comment
     || '..............................................................';
   const headTeacherComment = student?.comments?.head_teacher_text
+    || student?.comments?.head_teacher_comment
     || student?.head_teacher_comment
     || '..............................................................';
 
