@@ -2509,17 +2509,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </table>
       </div>
 
-      {/* COMMENTS */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
-        <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
-        <p>Signature: ______________________</p>
-
-        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
-        <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
-        <p>Signature: ______________________</p>
-      </div>
-
       {/* SUMMARY SECTION (mirrors upper section layout) */}
       <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
         <div className="border border-gray-400 p-2">
@@ -2536,6 +2525,17 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
           <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
         </div>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
+        <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
+
+        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
+        <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
+        <p>Signature: ______________________</p>
       </div>
 
       {/* NEXT TERM INFO */}
