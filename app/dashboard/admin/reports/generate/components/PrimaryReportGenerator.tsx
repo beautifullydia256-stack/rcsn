@@ -2773,7 +2773,16 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
   
   // Determine selected exam set from examSet prop or from examSets
   // If examSet is provided and has a name, use it; otherwise, assume "All Exam Sets" (use End of Term)
-  const selectedExamSetForDisplay = examSet && examSet.name ? examSet : null;
+  let selectedExamSetForDisplay = examSet && examSet.name ? examSet : null;
+
+  // Treat "All Exam Sets" like no specific selection so End of Term values are shown
+  if (selectedExamSetForDisplay && typeof selectedExamSetForDisplay.name === 'string') {
+    const nameLower = selectedExamSetForDisplay.name.toLowerCase();
+    if (nameLower.includes('all exam sets') || nameLower.includes('all sets')) {
+      selectedExamSetForDisplay = null;
+    }
+  }
+
   const isMidTermSelected = selectedExamSetForDisplay && isMid(selectedExamSetForDisplay.name);
 
   // Check if BOT exam sets exist for this term
