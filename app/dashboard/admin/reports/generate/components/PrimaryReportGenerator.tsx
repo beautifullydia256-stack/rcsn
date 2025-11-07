@@ -515,6 +515,79 @@ export function PrimaryReportGenerator() {
         headTeacherCommentSettings = headComments || [];
       } catch {}
 
+      const defaultPrimaryGradeScale = [
+        { min: 75, max: 100, grade: 'D1' },
+        { min: 70, max: 74, grade: 'D2' },
+        { min: 65, max: 69, grade: 'C3' },
+        { min: 60, max: 64, grade: 'C4' },
+        { min: 55, max: 59, grade: 'C5' },
+        { min: 50, max: 54, grade: 'C6' },
+        { min: 45, max: 49, grade: 'P7' },
+        { min: 40, max: 44, grade: 'P8' },
+        { min: 0, max: 39, grade: 'F9' }
+      ];
+
+      const defaultPrimaryDivisionScale = [
+        { min: 4, max: 12, division: 'Division 1' },
+        { min: 13, max: 23, division: 'Division 2' },
+        { min: 24, max: 29, division: 'Division 3' },
+        { min: 30, max: 34, division: 'Division 4' },
+        { min: 35, max: 60, division: 'U (Ungraded)' }
+      ];
+
+      let primaryGradeScale = [...defaultPrimaryGradeScale];
+      let primaryDivisionScale = [...defaultPrimaryDivisionScale];
+
+      try {
+        const { data: gradeScaleData, error: gradeScaleError } = await supabase
+          .from('primary_grade_settings')
+          .select('min_percent,max_percent,grade')
+          .eq('school_id', schoolId)
+          .order('min_percent');
+
+        if (!gradeScaleError && Array.isArray(gradeScaleData) && gradeScaleData.length > 0) {
+          const mapped = gradeScaleData
+            .filter((row: any) => row && row.min_percent !== undefined && row.max_percent !== undefined && row.grade)
+            .map((row: any) => ({
+              min: Number(row.min_percent),
+              max: Number(row.max_percent),
+              grade: String(row.grade || '').toUpperCase()
+            }))
+            .sort((a, b) => b.min - a.min);
+
+          if (mapped.length > 0) {
+            primaryGradeScale = mapped;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load primary grade settings – using defaults', err);
+      }
+
+      try {
+        const { data: divisionScaleData, error: divisionScaleError } = await supabase
+          .from('primary_division_settings')
+          .select('division,min_points,max_points')
+          .eq('school_id', schoolId)
+          .order('min_points');
+
+        if (!divisionScaleError && Array.isArray(divisionScaleData) && divisionScaleData.length > 0) {
+          const mapped = divisionScaleData
+            .filter((row: any) => row && row.min_points !== undefined && row.max_points !== undefined && row.division)
+            .map((row: any) => ({
+              min: Number(row.min_points),
+              max: Number(row.max_points),
+              division: String(row.division || '')
+            }))
+            .sort((a, b) => a.min - b.min);
+
+          if (mapped.length > 0) {
+            primaryDivisionScale = mapped;
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load primary division settings – using defaults', err);
+      }
+
       const reportData = {
         school: {
           ...schoolInfo,
@@ -534,6 +607,10 @@ export function PrimaryReportGenerator() {
           }
           return { year: currentTermInfo.year, term: currentTermInfo.term, name: 'All Exam Sets' };
         })(),
+        gradeSystem: {
+          grades: primaryGradeScale,
+          divisions: primaryDivisionScale
+        },
         students: targetStudents.map(student => {
           // Get all results for this student (including MISSED entries from database)
           // MISSED entries are created automatically at database level, so just query and use
@@ -2022,7 +2099,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     }
     if (template === 'template4') {
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={reportData?.gradeSystem} />;
     }
     // Default primary template (nursery/middle/top)
     return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
@@ -2037,7 +2114,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     case 'template3':
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     case 'template4':
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={reportData?.gradeSystem} />;
     default:
       return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
   }
@@ -2865,7 +2942,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 }
 
 // Template 4 - Report for Upper Section (P.5 - P.7)
-function Template4UpperSectionReport({ student, examSet, school, examSets }: { student: any; examSet: any; school: any; examSets?: any[] }) {
+function Template4UpperSectionReport({ student, examSet, school, examSets, gradeSystem }: { student: any; examSet: any; school: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
@@ -2878,6 +2955,41 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
     return trimmed;
   })();
   const overallPerf = student.summary.performanceRemark ?? '';
+  const defaultGradeScale = [
+    { min: 75, max: 100, grade: 'D1' },
+    { min: 70, max: 74, grade: 'D2' },
+    { min: 65, max: 69, grade: 'C3' },
+    { min: 60, max: 64, grade: 'C4' },
+    { min: 55, max: 59, grade: 'C5' },
+    { min: 50, max: 54, grade: 'C6' },
+    { min: 45, max: 49, grade: 'P7' },
+    { min: 40, max: 44, grade: 'P8' },
+    { min: 0, max: 39, grade: 'F9' }
+  ];
+
+  const defaultDivisionScale = [
+    { min: 4, max: 12, division: 'Division 1' },
+    { min: 13, max: 23, division: 'Division 2' },
+    { min: 24, max: 29, division: 'Division 3' },
+    { min: 30, max: 34, division: 'Division 4' },
+    { min: 35, max: 60, division: 'U (Ungraded)' }
+  ];
+
+  const gradeScale = (gradeSystem?.grades && gradeSystem.grades.length > 0 ? gradeSystem.grades : defaultGradeScale)
+    .map(range => ({
+      min: Number(range.min),
+      max: Number(range.max),
+      grade: String(range.grade || '').toUpperCase()
+    }))
+    .sort((a, b) => b.min - a.min);
+
+  const divisionScale = (gradeSystem?.divisions && gradeSystem.divisions.length > 0 ? gradeSystem.divisions : defaultDivisionScale)
+    .map(range => ({
+      min: Number(range.min),
+      max: Number(range.max),
+      division: String(range.division || '')
+    }))
+    .sort((a, b) => a.min - b.min);
   const endOfTermResult = (() => {
     const results = student?.results || [];
     const endResults = results.filter((r: any) => {
@@ -3086,6 +3198,51 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
           <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
           <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
           <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+        </div>
+      </div>
+
+      {/* GRADING SYSTEM */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-2">Grading System</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border border-gray-400">
+            <div className="bg-gray-100 border-b border-gray-400 px-2 py-1 font-semibold text-center">Subject Grade Boundaries</div>
+            <table className="w-full text-[9pt]">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="border border-gray-400 px-2 py-1 text-left">Percentage Range</th>
+                  <th className="border border-gray-400 px-2 py-1 text-center">Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gradeScale.map((range, idx) => (
+                  <tr key={`${range.grade}-${idx}`}>
+                    <td className="border border-gray-400 px-2 py-1">{`${range.min} - ${range.max}`}</td>
+                    <td className="border border-gray-400 px-2 py-1 text-center font-semibold">{range.grade}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border border-gray-400">
+            <div className="bg-gray-100 border-b border-gray-400 px-2 py-1 font-semibold text-center">Division by Aggregate Points</div>
+            <table className="w-full text-[9pt]">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="border border-gray-400 px-2 py-1 text-left">Aggregate Range</th>
+                  <th className="border border-gray-400 px-2 py-1 text-center">Division</th>
+                </tr>
+              </thead>
+              <tbody>
+                {divisionScale.map((range, idx) => (
+                  <tr key={`${range.division}-${idx}`}>
+                    <td className="border border-gray-400 px-2 py-1">{`${range.min} - ${range.max}`}</td>
+                    <td className="border border-gray-400 px-2 py-1 text-center font-semibold">{range.division}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
