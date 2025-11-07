@@ -2774,8 +2774,6 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
   const headTeacherComment = student?.comments?.head_teacher_text
     || student?.head_teacher_comment
     || '..............................................................';
-  const classTeacherName = student?.comments?.class_teacher_name || student?.class_teacher_name || '';
-  const headTeacherName = student?.comments?.head_teacher_name || student?.head_teacher_name || '';
 
   // Helper function to detect if exam set is Beginning of Term
   const isBeginning = (name: any) => {
@@ -2969,24 +2967,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
 
       {/* COMMENTS */}
       <div className="mb-4 text-[10pt]">
-        <div className="mb-2">
-          <strong>Class Teacher's Comment:</strong>
-          <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
-            {classTeacherComment}
-          </div>
-          {classTeacherName && (
-            <div className="mt-1 text-xs text-gray-600">— {classTeacherName}</div>
-          )}
-        </div>
-        <div>
-          <strong>Head Teacher's Comment:</strong>
-          <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
-            {headTeacherComment}
-          </div>
-          {headTeacherName && (
-            <div className="mt-1 text-xs text-gray-600">— {headTeacherName}</div>
-          )}
-        </div>
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
+        <p>{classTeacherComment}</p>
+        <p className="mt-2">Signature: ______________________</p>
+
+        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
+        <p>{headTeacherComment}</p>
+        <p className="mt-2">Signature: ______________________</p>
       </div>
 
       {/* NEXT TERM AND SIGNATURES */}
