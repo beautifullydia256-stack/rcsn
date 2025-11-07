@@ -1978,6 +1978,14 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
   const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
+  const displayDivision = (() => {
+    if (typeof avgGrade !== 'string') return avgGrade;
+    const trimmed = avgGrade.trim();
+    if (trimmed.toLowerCase().startsWith('division')) {
+      return trimmed.replace(/division\s*/i, '').trim();
+    }
+    return trimmed;
+  })();
   const overallPerf = student.summary.performanceRemark ?? '';
 
   // O-Level calculation functions (matching exam results page logic)
@@ -2929,7 +2937,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
           <div><strong>Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
           <div><strong>Average:</strong> {avg}</div>
           <div><strong>Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
-          <div><strong>Division:</strong> {avgGrade}</div>
+          <div><strong>Division:</strong> {displayDivision || 'N/A'}</div>
         </div>
         <div className="border border-gray-400 p-2">
           <div><strong>Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
