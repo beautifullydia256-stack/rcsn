@@ -2051,6 +2051,7 @@ export function PrimaryReportGenerator() {
                   reportTitleSettings={reportTitleSettings}
                   currentTermInfo={currentTermInfo}
                   examSets={examSets}
+                  gradeSystem={reportData.gradeSystem}
                 />
               </div>
             ))}
@@ -2088,7 +2089,7 @@ function isLowerSectionPrimary(className: string): boolean {
   return /(primary\s*1|primary\s*2|primary\s*3|^p\.?\s*1$|^p\.?\s*2$|^p\.?\s*3$)/i.test(className.trim());
 }
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[] }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const cls = String(student.current_class || '');
   const isOL = isOLevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -2099,7 +2100,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     }
     if (template === 'template4') {
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={reportData?.gradeSystem} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
     }
     // Default primary template (nursery/middle/top)
     return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
@@ -2114,7 +2115,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     case 'template3':
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
     case 'template4':
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={reportData?.gradeSystem} />;
+      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
     default:
       return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
   }
