@@ -2759,6 +2759,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
+  const displayDivision = (() => {
+    if (typeof avgGrade !== 'string') return avgGrade;
+    const trimmed = avgGrade.trim();
+    if (trimmed.toLowerCase().startsWith('division')) {
+      return trimmed.replace(/division\s*/i, '').trim();
+    }
+    return trimmed;
+  })();
   const overallPerf = student.summary.performanceRemark ?? '';
 
   // Helper function to detect if exam set is Beginning of Term
