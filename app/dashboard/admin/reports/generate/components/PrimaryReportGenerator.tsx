@@ -2768,6 +2768,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
     return trimmed;
   })();
   const overallPerf = student.summary.performanceRemark ?? '';
+  const classTeacherComment = student?.comments?.class_teacher_text
+    || student?.class_teacher_comment
+    || '..............................................................';
+  const headTeacherComment = student?.comments?.head_teacher_text
+    || student?.head_teacher_comment
+    || '..............................................................';
+  const classTeacherName = student?.comments?.class_teacher_name || student?.class_teacher_name || '';
+  const headTeacherName = student?.comments?.head_teacher_name || student?.head_teacher_name || '';
 
   // Helper function to detect if exam set is Beginning of Term
   const isBeginning = (name: any) => {
@@ -2964,14 +2972,20 @@ function Template4UpperSectionReport({ student, examSet, school, examSets }: { s
         <div className="mb-2">
           <strong>Class Teacher's Comment:</strong>
           <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
-            {student?.class_teacher_comment || 'No comment provided'}
+            {classTeacherComment}
           </div>
+          {classTeacherName && (
+            <div className="mt-1 text-xs text-gray-600">— {classTeacherName}</div>
+          )}
         </div>
         <div>
           <strong>Head Teacher's Comment:</strong>
           <div className="border border-gray-400 p-2 min-h-[60px] mt-1">
-            {student?.head_teacher_comment || 'No comment provided'}
+            {headTeacherComment}
           </div>
+          {headTeacherName && (
+            <div className="mt-1 text-xs text-gray-600">— {headTeacherName}</div>
+          )}
         </div>
       </div>
 
