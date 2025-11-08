@@ -3278,17 +3278,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <p className="mt-2 text-slate-600">Signature: ______________________</p>
       </div>
 
-      {/* NEXT TERM AND SIGNATURES */}
-      <div className="flex justify-between items-end text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
+      {/* NEXT TERM */}
+      <div className="text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
           <div>
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
-          </div>
-          <div className="text-right text-slate-700">
-            <div className="mb-8">
-              <div className="border-t-2 border-blue-200 w-48 inline-block"></div>
-              <div className="text-xs uppercase tracking-wide text-blue-900">Head Teacher's Signature</div>
-            </div>
           </div>
       </div>
 
