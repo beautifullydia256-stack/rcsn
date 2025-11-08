@@ -3307,7 +3307,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       <div className="text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
           <div>
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
-            <div><strong className="text-blue-900">Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
+            <div><strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}</div>
           </div>
       </div>
 
