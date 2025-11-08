@@ -2003,21 +2003,42 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
     const loadBranding = async () => {
       if (!schoolId) return;
 
-      const { data } = await supabase
-        .from('schools')
-        .select('name, logo_url, motto, subtitle, address, location, website, contact_email, contact_phone')
-        .eq('school_id', schoolId)
-        .single();
+      try {
+        // First try with all columns including subtitle and address
+        let { data, error } = await supabase
+          .from('schools')
+          .select('name, logo_url, motto, subtitle, address, location, website, contact_email, contact_phone')
+          .eq('school_id', schoolId)
+          .single();
 
-      if (data) {
-        setSchoolName(data.name || '');
-        setLogo(data.logo_url || null);
-        setMotto(data.motto || '');
-        setSubtitle(data.subtitle || '');
-        setAddress(data.address || data.location || '');
-        setWebsite(data.website || '');
-        setContactEmail(data.contact_email || '');
-        setContactPhone(data.contact_phone || '');
+        // If error occurs (e.g., column doesn't exist), try without subtitle/address
+        if (error) {
+          console.warn('Error loading with new columns, trying fallback:', error);
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('schools')
+            .select('name, logo_url, motto, location, website, contact_email, contact_phone')
+            .eq('school_id', schoolId)
+            .single();
+          
+          if (fallbackError) {
+            console.error('Error loading branding data:', fallbackError);
+            return;
+          }
+          data = fallbackData;
+        }
+
+        if (data) {
+          setSchoolName(data.name || '');
+          setLogo(data.logo_url || null);
+          setMotto(data.motto || '');
+          setSubtitle(data.subtitle || '');
+          setAddress(data.address || data.location || '');
+          setWebsite(data.website || '');
+          setContactEmail(data.contact_email || '');
+          setContactPhone(data.contact_phone || '');
+        }
+      } catch (err) {
+        console.error('Error loading branding:', err);
       }
     };
 
@@ -2086,12 +2107,18 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
       // Reload branding data to ensure UI is updated
       const { data: updatedData } = await supabase
         .from('schools')
-        .select('name, logo_url, motto, website, contact_email, contact_phone')
+        .select('name, logo_url, motto, subtitle, address, location, website, contact_email, contact_phone')
         .eq('school_id', schoolId)
         .single();
       
       if (updatedData) {
         setLogo(updatedData.logo_url || null);
+        setMotto(updatedData.motto || '');
+        setSubtitle(updatedData.subtitle || '');
+        setAddress(updatedData.address || updatedData.location || '');
+        setWebsite(updatedData.website || '');
+        setContactEmail(updatedData.contact_email || '');
+        setContactPhone(updatedData.contact_phone || '');
       }
     } catch (error) {
       console.error('Error:', error);
@@ -2107,28 +2134,58 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
     setSaving(true);
 
     try {
+      // Build update object - only include fields that have values or are being cleared
+      const updateData: any = {
+        motto,
+        website,
+        contact_email: contactEmail,
+        contact_phone: contactPhone
+      };
+
+      // Only include subtitle and address if they exist (to avoid errors if columns don't exist yet)
+      // We'll try to update them, but if they fail, we'll continue with other fields
+      try {
+        updateData.subtitle = subtitle;
+        updateData.address = address;
+      } catch (e) {
+        // Columns might not exist yet - that's okay, we'll update them later
+        console.warn('Subtitle/address columns may not exist yet:', e);
+      }
+
       const { error } = await supabase
         .from('schools')
-        .update({
-          motto,
-          subtitle,
-          address,
-          website,
-          contact_email: contactEmail,
-          contact_phone: contactPhone
-        })
+        .update(updateData)
         .eq('school_id', schoolId);
 
       if (error) {
         console.error('Save error:', error);
-        alert('Failed to save branding details.');
+        // If error is about missing columns, try without them
+        if (error.message.includes('column') && (error.message.includes('subtitle') || error.message.includes('address'))) {
+          const { error: retryError } = await supabase
+            .from('schools')
+            .update({
+              motto,
+              website,
+              contact_email: contactEmail,
+              contact_phone: contactPhone
+            })
+            .eq('school_id', schoolId);
+          
+          if (retryError) {
+            alert(`Failed to save branding details: ${retryError.message}`);
+            return;
+          }
+          alert('Branding details saved successfully! (Note: Subtitle/Address columns need to be added to database)');
+        } else {
+          alert(`Failed to save branding details: ${error.message}`);
+        }
         return;
       }
 
       alert('Branding details saved successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error:', error);
-      alert('An error occurred. Please try again.');
+      alert(`An error occurred: ${error.message || 'Please try again.'}`);
     } finally {
       setSaving(false);
     }
