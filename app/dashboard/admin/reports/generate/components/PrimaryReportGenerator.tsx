@@ -385,81 +385,150 @@ export function PrimaryReportGenerator() {
       // All MISSED entries are now created at database level
       // Just query and display - no need for complex fallback logic
 
-      // Fetch attendance data for the entire class (to get first attendance date for the class)
-      const { data: attendanceData } = await supabase
-        .from('student_attendance')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('class_name', targetStudents[0].current_class); // Get attendance for the entire class
+      const studentIds = targetStudents.map(s => s.student_id);
+      const className = targetStudents[0].current_class;
 
-      // Fetch fees data (for backward compatibility)
-      const { data: feesData } = await supabase
-        .from('student_fees')
-        .select('*')
-        .eq('school_id', schoolId)
-        .in('student_id', targetStudents.map(s => s.student_id));
+      const safeArray = <T>(promise: Promise<{ data: T[] | null; error: any }>) =>
+        promise
+          .then(({ data }) => (Array.isArray(data) ? data : []))
+          .catch(() => []);
 
-      // Fetch student payments to calculate balance (same method as outstanding balance page)
-      const { data: paymentsData } = await supabase
-        .from('student_payments')
-        .select('student_id, amount_paid')
-        .eq('school_id', schoolId)
-        .in('student_id', targetStudents.map(s => s.student_id));
+      const safeMaybeSingle = <T>(promise: Promise<{ data: T | null; error: any }>) =>
+        promise
+          .then(({ data }) => data ?? null)
+          .catch(() => null);
 
-      // Calculate total paid per student
+      const classSetting = classTemplateSettings.find((s: any) => s.class_name === (selectedClass || className));
+
+      const [
+        attendanceData,
+        feesData,
+        paymentsData,
+        projectsData,
+        commentsData,
+        studentPhotos,
+        teacherAssignments,
+        commentRulesData,
+        classTeacherCommentSettingsData,
+        headTeacherCommentSettingsData,
+        gradeScaleResult,
+        divisionScaleResult,
+        classTeacherNameResult,
+      ] = await Promise.all([
+        safeArray(
+          supabase
+            .from('student_attendance')
+            .select('*')
+            .eq('school_id', schoolId)
+            .eq('class_name', className)
+        ),
+        safeArray(
+          supabase
+            .from('student_fees')
+            .select('*')
+            .eq('school_id', schoolId)
+            .in('student_id', studentIds)
+        ),
+        safeArray(
+          supabase
+            .from('student_payments')
+            .select('student_id, amount_paid')
+            .eq('school_id', schoolId)
+            .in('student_id', studentIds)
+        ),
+        currentTermInfo
+          ? safeArray(
+              supabase
+                .from('termly_projects')
+                .select('*')
+                .eq('school_id', schoolId)
+                .eq('class_name', className)
+                .eq('year', currentTermInfo.year)
+                .eq('term', currentTermInfo.term)
+                .in('student_id', studentIds)
+            )
+          : Promise.resolve([]),
+        currentTermInfo
+          ? safeArray(
+              supabase
+                .from('report_comments')
+                .select('*')
+                .eq('school_id', schoolId)
+                .eq('class_name', className)
+                .eq('year', currentTermInfo.year)
+                .eq('term', currentTermInfo.term)
+                .in('student_id', studentIds)
+            )
+          : Promise.resolve([]),
+        safeArray(
+          supabase
+            .from('student_photos')
+            .select('*')
+            .eq('school_id', schoolId)
+            .eq('is_primary', true)
+            .in('student_id', studentIds)
+        ),
+        safeArray(
+          supabase
+            .from('teacher_class_subjects')
+            .select('subject, teacher_id, teachers(name)')
+            .eq('school_id', schoolId)
+            .eq('class_name', className)
+        ),
+        safeArray(
+          supabase
+            .from('teacher_comment_rules')
+            .select('min_avg,max_avg,comment')
+            .eq('school_id', schoolId)
+            .eq('class_name', className)
+            .order('min_avg')
+        ),
+        safeArray(
+          supabase
+            .from('class_teacher_comments_settings')
+            .select('min_percent,max_percent,comment_text')
+            .eq('school_id', schoolId)
+            .eq('class_name', className)
+            .order('min_percent')
+        ),
+        safeArray(
+          supabase
+            .from('headteacher_comments_settings')
+            .select('min_percent,max_percent,comment_text')
+            .eq('school_id', schoolId)
+            .order('min_percent')
+        ),
+        supabase
+          .from('primary_grade_settings')
+          .select('min_percent,max_percent,grade')
+          .eq('school_id', schoolId)
+          .order('min_percent'),
+        supabase
+          .from('primary_division_settings')
+          .select('division,min_points,max_points')
+          .eq('school_id', schoolId)
+          .order('min_points'),
+        classSetting?.class_teacher_id
+          ? safeMaybeSingle(
+              supabase
+                .from('teachers')
+                .select('name')
+                .eq('teacher_id', classSetting.class_teacher_id)
+                .maybeSingle()
+            )
+          : Promise.resolve(null),
+      ]);
+
       const paidByStudent: Record<string, number> = {};
-      (paymentsData || []).forEach((p: any) => {
-        const amt = Number(p.amount_paid || 0);
+      paymentsData.forEach((p: any) => {
+        const amt = Number(p?.amount_paid || 0);
+        if (!p?.student_id) return;
         paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
       });
 
-      // Fetch termly projects (secondary feature)
-      let projectsData: any[] = [];
-      if (currentTermInfo) {
-        const { data: pd } = await supabase
-          .from('termly_projects')
-          .select('*')
-          .eq('school_id', schoolId)
-          .eq('class_name', targetStudents[0].current_class)
-          .eq('year', currentTermInfo.year)
-          .eq('term', currentTermInfo.term)
-          .in('student_id', targetStudents.map(s => s.student_id));
-        projectsData = pd || [];
-      }
-
-      // Fetch report comments (secondary feature)
-      let commentsData: any[] = [];
-      if (currentTermInfo) {
-        const { data: cd } = await supabase
-          .from('report_comments')
-          .select('*')
-          .eq('school_id', schoolId)
-          .eq('class_name', targetStudents[0].current_class)
-          .eq('year', currentTermInfo.year)
-          .eq('term', currentTermInfo.term)
-          .in('student_id', targetStudents.map(s => s.student_id));
-        commentsData = cd || [];
-      }
-
-      // Fetch student profile photos
-      const { data: studentPhotos } = await supabase
-        .from('student_photos')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('is_primary', true)
-        .in('student_id', targetStudents.map(s => s.student_id));
-
-      // Fetch teacher assignments for the class to get teacher names for each subject
-      const { data: teacherAssignments } = await supabase
-        .from('teacher_class_subjects')
-        .select('subject, teacher_id, teachers(name)')
-        .eq('school_id', schoolId)
-        .eq('class_name', targetStudents[0].current_class);
-
       // Create a map of subject -> teacher name (formatted)
       const subjectTeacherMap = new Map<string, string>();
-      if (teacherAssignments) {
-        teacherAssignments.forEach((assignment: any) => {
+      teacherAssignments.forEach((assignment: any) => {
           const subject = assignment.subject;
           const teacher = assignment.teachers;
           if (subject && teacher?.name) {
@@ -484,50 +553,15 @@ export function PrimaryReportGenerator() {
         .sort((a, b) => new Date(b.created_at || b.updated_at).getTime() - new Date(a.created_at || a.updated_at).getTime())[0];
 
       // Load class teacher name and comment rules for selected class
-      let classTeacherName: string | null = null;
-      try {
-        const classSetting = classTemplateSettings.find((s:any) => s.class_name === (selectedClass || targetStudents[0].current_class));
-        if (classSetting?.class_teacher_id) {
-          const { data: tname } = await supabase
-            .from('teachers')
-            .select('name')
-            .eq('teacher_id', classSetting.class_teacher_id)
-            .maybeSingle();
-          classTeacherName = tname?.name || null;
-        }
-      } catch {}
+      const classTeacherName = classTeacherNameResult?.name || null;
 
-      let commentRules: Array<{ min_avg: number; max_avg: number; comment: string }> = [];
-      try {
-        const { data: rules } = await supabase
-          .from('teacher_comment_rules')
-          .select('min_avg,max_avg,comment')
-          .eq('school_id', schoolId)
-          .eq('class_name', targetStudents[0].current_class)
-          .order('min_avg');
-        commentRules = rules || [];
-      } catch {}
+      const commentRules: Array<{ min_avg: number; max_avg: number; comment: string }> = commentRulesData;
 
-      let classTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> = [];
-      try {
-        const { data: classComments } = await supabase
-          .from('class_teacher_comments_settings')
-          .select('min_percent,max_percent,comment_text')
-          .eq('school_id', schoolId)
-          .eq('class_name', targetStudents[0].current_class)
-          .order('min_percent');
-        classTeacherCommentSettings = classComments || [];
-      } catch {}
+      const classTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> =
+        classTeacherCommentSettingsData;
 
-      let headTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> = [];
-      try {
-        const { data: headComments } = await supabase
-          .from('headteacher_comments_settings')
-          .select('min_percent,max_percent,comment_text')
-          .eq('school_id', schoolId)
-          .order('min_percent');
-        headTeacherCommentSettings = headComments || [];
-      } catch {}
+      const headTeacherCommentSettings: Array<{ min_percent: number; max_percent: number; comment_text: string }> =
+        headTeacherCommentSettingsData;
 
       const defaultPrimaryGradeScale = [
         { min: 75, max: 100, grade: 'D1' },
@@ -552,54 +586,38 @@ export function PrimaryReportGenerator() {
       let primaryGradeScale = [...defaultPrimaryGradeScale];
       let primaryDivisionScale = [...defaultPrimaryDivisionScale];
 
-      try {
-        const { data: gradeScaleData, error: gradeScaleError } = await supabase
-          .from('primary_grade_settings')
-          .select('min_percent,max_percent,grade')
-          .eq('school_id', schoolId)
-          .order('min_percent');
+      if (!gradeScaleResult.error && Array.isArray(gradeScaleResult.data) && gradeScaleResult.data.length > 0) {
+        const mapped = gradeScaleResult.data
+          .filter((row: any) => row && row.min_percent !== undefined && row.max_percent !== undefined && row.grade)
+          .map((row: any) => ({
+            min: Number(row.min_percent),
+            max: Number(row.max_percent),
+            grade: String(row.grade || '').toUpperCase(),
+          }))
+          .sort((a, b) => b.min - a.min);
 
-        if (!gradeScaleError && Array.isArray(gradeScaleData) && gradeScaleData.length > 0) {
-          const mapped = gradeScaleData
-            .filter((row: any) => row && row.min_percent !== undefined && row.max_percent !== undefined && row.grade)
-            .map((row: any) => ({
-              min: Number(row.min_percent),
-              max: Number(row.max_percent),
-              grade: String(row.grade || '').toUpperCase()
-            }))
-            .sort((a, b) => b.min - a.min);
-
-          if (mapped.length > 0) {
-            primaryGradeScale = mapped;
-          }
+        if (mapped.length > 0) {
+          primaryGradeScale = mapped;
         }
-      } catch (err) {
-        console.warn('Failed to load primary grade settings – using defaults', err);
+      } else if (gradeScaleResult.error) {
+        console.warn('Failed to load primary grade settings – using defaults', gradeScaleResult.error);
       }
 
-      try {
-        const { data: divisionScaleData, error: divisionScaleError } = await supabase
-          .from('primary_division_settings')
-          .select('division,min_points,max_points')
-          .eq('school_id', schoolId)
-          .order('min_points');
+      if (!divisionScaleResult.error && Array.isArray(divisionScaleResult.data) && divisionScaleResult.data.length > 0) {
+        const mapped = divisionScaleResult.data
+          .filter((row: any) => row && row.min_points !== undefined && row.max_points !== undefined && row.division)
+          .map((row: any) => ({
+            min: Number(row.min_points),
+            max: Number(row.max_points),
+            division: String(row.division || ''),
+          }))
+          .sort((a, b) => a.min - b.min);
 
-        if (!divisionScaleError && Array.isArray(divisionScaleData) && divisionScaleData.length > 0) {
-          const mapped = divisionScaleData
-            .filter((row: any) => row && row.min_points !== undefined && row.max_points !== undefined && row.division)
-            .map((row: any) => ({
-              min: Number(row.min_points),
-              max: Number(row.max_points),
-              division: String(row.division || '')
-            }))
-            .sort((a, b) => a.min - b.min);
-
-          if (mapped.length > 0) {
-            primaryDivisionScale = mapped;
-          }
+        if (mapped.length > 0) {
+          primaryDivisionScale = mapped;
         }
-      } catch (err) {
-        console.warn('Failed to load primary division settings – using defaults', err);
+      } else if (divisionScaleResult.error) {
+        console.warn('Failed to load primary division settings – using defaults', divisionScaleResult.error);
       }
 
       const reportData = {
