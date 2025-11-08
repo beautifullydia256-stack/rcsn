@@ -3050,20 +3050,6 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
       </div>
 
       <div className="relative z-10 space-y-6" style={{ marginTop: '0.4cm' }}>
-          {school?.motto && (
-            <div className="text-[11pt] font-normal italic text-slate-600 mb-3 leading-relaxed">
-              &quot;{school.motto}&quot;
-            </div>
-          )}
-          <div className="text-[14pt] font-semibold uppercase tracking-wide mt-3 mb-1.5 text-slate-900 leading-tight">
-            {getReportTitle()}
-          </div>
-          <div className="text-[10pt] font-normal text-slate-600 mt-1.5">
-            No. <span className="font-medium">{student.admission_number || student.student_id}</span>
-          </div>
-        </div>
-      </div>
-
         {/* STUDENT INFO */}
         <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
           <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
