@@ -3272,7 +3272,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '3.5cm', position: 'relative' }}>
+          <div className="flex items-center justify-center" style={{ minHeight: '3.5cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned far left */}
             <div 
               className="flex-shrink-0"
@@ -3306,7 +3306,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             </div>
 
             {/* Center Column: School Information - Centered */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '200px' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '0', marginRight: '0' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
