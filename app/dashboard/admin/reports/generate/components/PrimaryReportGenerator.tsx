@@ -3178,11 +3178,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         {/* HEADER */}
         <div className="flex items-start justify-between px-6 py-5">
         {(school?.logo_url || school?.logo) ? (
-          <div className="w-24 h-24 flex-shrink-0">
+          <div className="w-48 h-48 flex-shrink-0">
             <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-contain" />
           </div>
         ) : (
-          <div className="w-24 h-24 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
+          <div className="w-48 h-48 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
             <span className="text-xs text-gray-400">School Logo</span>
           </div>
         )}
