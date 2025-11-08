@@ -3255,8 +3255,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             <div 
               className="flex-shrink-0"
               style={{
-                width: '90px',
-                height: '90px',
+                width: '192px',
+                height: '192px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center'
