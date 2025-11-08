@@ -1999,25 +1999,33 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  
+  // Header color states
+  const [schoolNameColor, setSchoolNameColor] = useState('#1e3a8a');
+  const [subtitleColor, setSubtitleColor] = useState('#3b82f6');
+  const [addressColor, setAddressColor] = useState('#1e40af');
+  const [contactColor, setContactColor] = useState('#1e40af');
+  const [mottoColor, setMottoColor] = useState('#2563eb');
+  const [dividerColor, setDividerColor] = useState('#1e3a8a');
 
   useEffect(() => {
     const loadBranding = async () => {
       if (!schoolId) return;
 
       try {
-        // First try with all columns including subtitle, address, and pobox
+        // First try with all columns including subtitle, address, pobox, and colors
         let { data, error } = await supabase
           .from('schools')
-          .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone')
+          .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone, header_school_name_color, header_subtitle_color, header_address_color, header_contact_color, header_motto_color, header_divider_color')
           .eq('school_id', schoolId)
           .single();
 
-        // If error occurs (e.g., column doesn't exist), try without subtitle/address/pobox
+        // If error occurs (e.g., column doesn't exist), try without new columns
         if (error) {
           console.warn('Error loading with new columns, trying fallback:', error);
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('schools')
-            .select('name, logo_url, motto, location, website, contact_email, contact_phone')
+            .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone')
             .eq('school_id', schoolId)
             .single();
           
@@ -2038,6 +2046,14 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
           setWebsite(data.website || '');
           setContactEmail(data.contact_email || '');
           setContactPhone(data.contact_phone || '');
+          
+          // Set header colors with defaults if not present
+          setSchoolNameColor(data.header_school_name_color || '#1e3a8a');
+          setSubtitleColor(data.header_subtitle_color || '#3b82f6');
+          setAddressColor(data.header_address_color || '#1e40af');
+          setContactColor(data.header_contact_color || '#1e40af');
+          setMottoColor(data.header_motto_color || '#2563eb');
+          setDividerColor(data.header_divider_color || '#1e3a8a');
         }
       } catch (err) {
         console.error('Error loading branding:', err);
@@ -2145,15 +2161,21 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         contact_phone: contactPhone
       };
 
-      // Only include subtitle, address, and pobox if they exist (to avoid errors if columns don't exist yet)
+      // Only include subtitle, address, pobox, and colors if they exist (to avoid errors if columns don't exist yet)
       // We'll try to update them, but if they fail, we'll continue with other fields
       try {
         updateData.subtitle = subtitle;
         updateData.address = address;
         updateData.pobox = pobox;
+        updateData.header_school_name_color = schoolNameColor;
+        updateData.header_subtitle_color = subtitleColor;
+        updateData.header_address_color = addressColor;
+        updateData.header_contact_color = contactColor;
+        updateData.header_motto_color = mottoColor;
+        updateData.header_divider_color = dividerColor;
       } catch (e) {
         // Columns might not exist yet - that's okay, we'll update them later
-        console.warn('Subtitle/address/pobox columns may not exist yet:', e);
+        console.warn('Some columns may not exist yet:', e);
       }
 
       const { error } = await supabase
@@ -2383,6 +2405,176 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
                 </>
               ) : (
                 'Save Details'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Header Colors Section */}
+      <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">Report Header Colors</h3>
+        <p className="text-sm text-white/60 mb-4">Customize the colors used in report headers. These colors will be applied to all report templates.</p>
+        
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">School Name Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={schoolNameColor}
+                  onChange={(e) => setSchoolNameColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={schoolNameColor}
+                  onChange={(e) => setSchoolNameColor(e.target.value)}
+                  placeholder="#1e3a8a"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Subtitle Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={subtitleColor}
+                  onChange={(e) => setSubtitleColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={subtitleColor}
+                  onChange={(e) => setSubtitleColor(e.target.value)}
+                  placeholder="#3b82f6"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Address Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={addressColor}
+                  onChange={(e) => setAddressColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={addressColor}
+                  onChange={(e) => setAddressColor(e.target.value)}
+                  placeholder="#1e40af"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Contact Info Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={contactColor}
+                  onChange={(e) => setContactColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={contactColor}
+                  onChange={(e) => setContactColor(e.target.value)}
+                  placeholder="#1e40af"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Motto Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={mottoColor}
+                  onChange={(e) => setMottoColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={mottoColor}
+                  onChange={(e) => setMottoColor(e.target.value)}
+                  placeholder="#2563eb"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Divider Line Color</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={dividerColor}
+                  onChange={(e) => setDividerColor(e.target.value)}
+                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={dividerColor}
+                  onChange={(e) => setDividerColor(e.target.value)}
+                  placeholder="#1e3a8a"
+                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
+            <h4 className="text-blue-300 font-medium text-sm mb-2">💡 Color Preview</h4>
+            <div className="text-white/60 text-xs space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: schoolNameColor }}></div>
+                <span>School Name</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: subtitleColor }}></div>
+                <span>Subtitle</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: addressColor }}></div>
+                <span>Address & Contact</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: mottoColor }}></div>
+                <span>Motto</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: dividerColor }}></div>
+                <span>Divider Line</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-4">
+            <button
+              onClick={handleSaveBranding}
+              disabled={saving}
+              className="px-6 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {saving ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                'Save Colors'
               )}
             </button>
           </div>

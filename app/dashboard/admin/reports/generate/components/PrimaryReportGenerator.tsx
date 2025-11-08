@@ -3112,6 +3112,28 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 }
 
 // Template 4 - Report for Upper Section (P.5 - P.7)
+// Helper function to lighten a hex color for gradient
+function lightenColor(hex: string): string {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Convert to RGB
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Lighten by 50%
+  const lighten = (color: number) => Math.min(255, Math.round(color + (255 - color) * 0.5));
+  
+  // Convert back to hex
+  const toHex = (n: number) => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(lighten(r))}${toHex(lighten(g))}${toHex(lighten(b))}`;
+}
+
 function Template4UpperSectionReport({ student, examSet, school, examSets, gradeSystem }: { student: any; examSet: any; school: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
@@ -3285,7 +3307,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
             {/* Center Column: School Information - Centered */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '200px' }}>
-              {/* School Name - Bold Sans-serif Title - Professional Blue */}
+              {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
                   style={{
@@ -3296,7 +3318,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     letterSpacing: '0.05em',
                     lineHeight: '1.2',
                     marginBottom: '0.4cm',
-                    color: '#1e3a8a',
+                    color: school?.header_school_name_color || '#1e3a8a',
                     marginTop: 0
                   }}
                 >
@@ -3304,14 +3326,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </h1>
               )}
 
-              {/* Subtitle - Serif Font - Professional Blue */}
+              {/* Subtitle - Serif Font - Uses saved color */}
               {school?.subtitle && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
-                    color: '#3b82f6',
+                    color: school?.header_subtitle_color || '#3b82f6',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3320,14 +3342,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Address with P.O.Box - Serif Font - Professional Blue */}
+              {/* Address with P.O.Box - Serif Font - Uses saved color */}
               {(school?.address || school?.pobox) && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#1e40af',
+                    color: school?.header_address_color || '#1e40af',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3336,14 +3358,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Contact Information - Email | Phone - Serif Font - Professional Blue */}
+              {/* Contact Information - Email | Phone - Serif Font - Uses saved color */}
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#1e40af',
+                    color: school?.header_contact_color || '#1e40af',
                     marginBottom: '0.3cm',
                     lineHeight: '1.5'
                   }}
@@ -3354,7 +3376,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Motto - Serif Font Bold Italic with Quotes - Professional Blue */}
+              {/* Motto - Serif Font Bold Italic with Quotes - Uses saved color */}
               {school?.motto && (
                 <div 
                   style={{
@@ -3362,7 +3384,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
-                    color: '#2563eb',
+                    color: school?.header_motto_color || '#2563eb',
                     marginBottom: '0.4cm',
                     lineHeight: '1.6',
                     letterSpacing: '0.02em'
@@ -3374,11 +3396,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             </div>
           </div>
 
-          {/* Elegant Divider Line */}
+          {/* Elegant Divider Line - Uses saved color */}
           <div 
             style={{
               height: '1px',
-              background: 'linear-gradient(to right, #1e3a8a 0%, #60a5fa 50%, #1e3a8a 100%)',
+              background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
               marginTop: '0.6cm',
               marginBottom: '0.5cm',
               WebkitPrintColorAdjust: 'exact',
