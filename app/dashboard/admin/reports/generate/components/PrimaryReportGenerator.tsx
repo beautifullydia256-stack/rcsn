@@ -1210,13 +1210,13 @@ export function PrimaryReportGenerator() {
         }
         
         return {
-          ...student,
-          summary: {
-            ...student.summary,
+        ...student,
+        summary: {
+          ...student.summary,
             classPosition: classPosition,
             streamPosition: getStreamPosition(reportData.students, student),
             totalStudents: totalStudentsInClass
-          }
+        }
         };
       }));
 
@@ -2012,23 +2012,23 @@ export function PrimaryReportGenerator() {
               const midTermExamSets = examSets.filter((es: any) => isMidTerm(es.name || ''));
               
               return (
-                <div>
-                  <label className="block text-white/80 text-sm font-medium mb-2">
-                    Exam Set
-                  </label>
-                  <select
-                    value={selectedExamSetId}
-                    onChange={(e) => setSelectedExamSetId(e.target.value)}
-                    className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option className="text-black" value="all">All Exam Sets (Current Term)</option>
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">
+                  Exam Set
+                </label>
+                <select
+                  value={selectedExamSetId}
+                  onChange={(e) => setSelectedExamSetId(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option className="text-black" value="all">All Exam Sets (Current Term)</option>
                     {midTermExamSets.map((es) => (
-                      <option className="text-black" key={es.id} value={es.id}>
-                        {es.name || `Set - Term ${es.term}, ${es.year}`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <option className="text-black" key={es.id} value={es.id}>
+                      {es.name || `Set - Term ${es.term}, ${es.year}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
               );
             })()}
             {/* Current Term Info */}
@@ -2650,7 +2650,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           {school?.name && (
             <div className="font-bold text-[22pt] uppercase tracking-wide leading-[1.1] mb-3 text-slate-900">
               {school.name}
-            </div>
+          </div>
           )}
           {school?.motto && (
             <div className="text-[11pt] font-normal italic text-slate-600 mb-2 leading-relaxed">
@@ -2962,7 +2962,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             alt="School Watermark"
             className="max-w-3xl w-[70%] opacity-25 object-contain"
           />
-        </div>
+          </div>
       )}
 
       <div className="relative z-10">
@@ -2998,13 +2998,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               }}
             >
               {(school?.logo_url || school?.logo) ? (
-                <img 
+            <img
                   src={school.logo_url || school.logo} 
-                  alt="School Logo" 
+              alt="School Logo"
                   className="w-full h-full object-contain"
                   style={{ maxWidth: '100%', maxHeight: '100%' }}
-                />
-              ) : (
+            />
+          ) : (
                 <div 
                   className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
                   style={{ width: '100%', height: '100%' }}
@@ -3012,10 +3012,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                   <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
                     School<br/>Logo
                   </span>
-                </div>
-              )}
             </div>
-
+          )}
+        </div>
+        
             {/* Center Column: School Information - Starts where badge ends */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '192px', paddingLeft: '0.5cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
@@ -3050,7 +3050,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                   }}
                 >
                   {school.subtitle}
-                </div>
+        </div>
               )}
 
               {/* Address with P.O.Box - Serif Font - Uses saved color */}
@@ -3066,7 +3066,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                   }}
                 >
                   {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
-                </div>
+        </div>
               )}
 
               {/* Contact Information - Email | Phone - Serif Font - Uses saved color */}
@@ -3084,7 +3084,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                   {school?.contact_email && <span>{school.contact_email}</span>}
                   {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
-                </div>
+      </div>
               )}
 
               {/* Motto - Serif Font Bold Italic with Quotes - Uses saved color */}
@@ -3113,14 +3113,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               height: '1px',
               background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
               marginTop: '0.6cm',
-              marginBottom: '0.5cm',
+              marginBottom: '0.2cm',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
           />
 
           {/* Report Type Banner */}
-          <div className="text-center" style={{ marginBottom: '0.8cm' }}>
+          <div className="text-center" style={{ marginBottom: '0.3cm' }}>
             <div 
               className="inline-block"
               style={{
@@ -3164,14 +3164,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               page-break-inside: avoid !important;
               break-inside: avoid !important;
               margin-top: 1cm !important;
-              margin-bottom: 0.8cm !important;
+              margin-bottom: 0.3cm !important;
             }
           }
         `}} />
       </div>
 
-      <div className="relative z-10 space-y-6" style={{ marginTop: '0.4cm' }}>
-        {/* STUDENT INFO */}
+      <div className="relative z-10 space-y-6" style={{ marginTop: '0.1cm' }}>
+      {/* STUDENT INFO */}
         <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
           <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
             <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
@@ -3193,13 +3193,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             ) : (
               <div className="text-xs text-gray-500">Photo</div>
             )}
-          </div>
         </div>
+      </div>
 
-        {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
+      {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
         <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
           <table className="w-full text-[10pt]">
-            <thead>
+          <thead>
               <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
                 <th className="border border-blue-100 px-3 py-2 text-center font-bold">SUBJECT</th>
                 <th className="border border-blue-100 px-3 py-2 text-center font-bold">FULL MARKS</th>
@@ -3211,8 +3211,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 )}
                 <th className="border border-blue-100 px-3 py-2 text-center font-bold">TEACHER'S REMARKS</th>
                 <th className="border border-blue-100 px-3 py-2 text-center font-bold">INITIALS</th>
-              </tr>
-            </thead>
+            </tr>
+          </thead>
           <tbody>
             {(() => {
               const results = student.results || [];
@@ -3275,8 +3275,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                         subjectGroups[subject].end_grade = displayGrade; // Grade from database
                         // Use pre-processed teacher remarks from the processed table (but not for MISSED entries)
                         if (!isMissedEntry) {
-                          subjectGroups[subject].remarks = r.teacher_remark || '';
-                          subjectGroups[subject].initials = r.teacher_initials ?? '';
+                        subjectGroups[subject].remarks = r.teacher_remark || '';
+                        subjectGroups[subject].initials = r.teacher_initials ?? '';
                         }
                       }
                     });
@@ -3350,7 +3350,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             })()}
           </tbody>
         </table>
-        </div>
+      </div>
 
         {/* SUMMARY SECTION - Separate Cards */}
         <div className="grid grid-cols-3 gap-4 text-[10pt]">
@@ -3361,7 +3361,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-4 py-3">
             <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
-          </div>
+        </div>
           <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-4 py-3">
             <div><strong className="text-blue-900">Attendance:</strong></div>
             <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
@@ -3372,7 +3372,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
         {/* COMMENTS & FOOTER */}
         <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4 text-[10pt]">
-          <div className="mb-4">
+        <div className="mb-4">
             <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
             <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || '..............................................................'}</p>
             <p className="mt-2">Signature: ______________________</p>
@@ -3381,7 +3381,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Headteacher's Comments:</h3>
             <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.results?.[0]?.headteacher_comment || '..............................................................'}</p>
             <p className="mt-2">Signature: ______________________</p>
-          </div>
+        </div>
           <div className="flex justify-between items-center text-[11pt] mt-4 pt-4 border-t border-blue-100/60">
             <div>
               <strong className="text-blue-900">Next term begins on:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '____________________'}
@@ -3537,7 +3537,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             alt="School Watermark"
             className="max-w-3xl w-[70%] opacity-30 object-contain"
           />
-        </div>
+          </div>
       )}
 
       <div className="relative z-10">
@@ -3587,8 +3587,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
                     School<br/>Logo
                   </span>
-                </div>
-              )}
+          </div>
+        )}
             </div>
 
             {/* Center Column: School Information - Starts where badge ends */}
@@ -3625,7 +3625,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   }}
                 >
                   {school.subtitle}
-                </div>
+        </div>
               )}
 
               {/* Address with P.O.Box - Serif Font - Uses saved color */}
@@ -3641,7 +3641,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   }}
                 >
                   {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
-                </div>
+          </div>
               )}
 
               {/* Contact Information - Email | Phone - Serif Font - Uses saved color */}
@@ -3659,8 +3659,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   {school?.contact_email && <span>{school.contact_email}</span>}
                   {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
-                </div>
-              )}
+          </div>
+        )}
 
               {/* Motto - Serif Font Bold Italic with Quotes - Uses saved color */}
               {school?.motto && (
@@ -3680,7 +3680,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
             </div>
-          </div>
+      </div>
 
           {/* Elegant Divider Line - Uses saved color */}
           <div 
@@ -3746,7 +3746,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       </div>
 
       <div className="relative z-10 space-y-6" style={{ marginTop: '0.4cm' }}>
-        {/* STUDENT INFO */}
+      {/* STUDENT INFO */}
         <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
           <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
@@ -3772,7 +3772,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       {/* SUBJECTS TABLE */}
       <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
           <table className="w-full text-[10pt]">
-            <thead>
+        <thead>
               <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
                 <th className="border border-blue-100 px-3 py-2 text-left">Subject</th>
             {hasBOTExamSets && !isMidTermSelected && (
@@ -3785,9 +3785,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 <th className="border border-blue-100 px-3 py-2 text-center w-16">Grade</th>
                 <th className="border border-blue-100 px-3 py-2 text-left">Teacher's Comment</th>
                 <th className="border border-blue-100 px-3 py-2 text-left">Teacher</th>
-              </tr>
-            </thead>
-            <tbody>
+          </tr>
+        </thead>
+        <tbody>
           {(student?.subjects || []).map((subj: any, idx: number) => {
             console.log('🔴 Template4 rendering subject:', {
               subject: subj.subject_name,
@@ -3855,11 +3855,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   <td className="border border-blue-100 px-3 py-2 text-center font-bold text-blue-900">{displayGrade}</td>
                   <td className="border border-blue-100 px-3 py-2 text-xs text-slate-700">{subj.teacher_comment || ''}</td>
                   <td className="border border-blue-100 px-3 py-2 text-xs text-slate-700">{subj.teacher_name || ''}</td>
-                </tr>
+              </tr>
             );
           })}
-            </tbody>
-          </table>
+        </tbody>
+      </table>
       </div>
 
       {/* SUMMARY */}
@@ -3869,17 +3869,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             <div><strong className="text-blue-900">Average:</strong> {avg}</div>
             <div><strong className="text-blue-900">Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
             <div><strong className="text-blue-900">Division:</strong> {displayDivision || 'N/A'}</div>
-          </div>
+        </div>
           <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
             <div><strong className="text-blue-900">Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student?.summary?.totalStudents || 'N/A'} students</div>
-          </div>
+        </div>
           <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
             <div className="text-blue-900 font-semibold">Attendance:</div>
-            <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
-            <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
-            <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
-          </div>
+          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+        </div>
       </div>
 
       {/* GRADING SYSTEM */}
@@ -3904,7 +3904,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   ))}
                 </tbody>
               </table>
-            </div>
+          </div>
             <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md overflow-hidden">
               <div className="bg-blue-100/70 px-3 py-2 font-semibold text-center text-blue-900 uppercase tracking-wide">Division by Aggregate Points</div>
               <table className="w-full text-[9pt]">
@@ -3923,9 +3923,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   ))}
                 </tbody>
               </table>
+        </div>
           </div>
         </div>
-      </div>
 
       {/* COMMENTS */}
       <div className="text-[10pt] rounded-2xl bg-white/85 border border-blue-100/70 shadow-md px-6 py-4">
@@ -3940,15 +3940,15 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
       {/* NEXT TERM */}
       <div className="text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
-          <div>
+        <div>
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}</div>
-          </div>
+        </div>
       </div>
 
       {/* FOOTER */}
       <div className="text-center text-[8pt] mt-4 pt-2 border-t border-blue-100/80 text-slate-500">
-          Generated by PwezaCore School Management System
+        Generated by PwezaCore School Management System
         </div>
       </div>
     </div>
