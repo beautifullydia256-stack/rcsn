@@ -133,9 +133,9 @@ async function convertImageToBase64(url: string): Promise<string | null> {
     
     console.log('Converting image to base64:', url);
     
-    // Add timeout to fetch request (optimized for Vercel)
+    // Add timeout to fetch request (optimized for faster processing)
     const controller = new AbortController();
-    const timeout = process.env.VERCEL === '1' ? 3000 : 5000; // Shorter timeout for Vercel
+    const timeout = process.env.VERCEL === '1' ? 2000 : 3000; // Reduced timeout for faster processing
     const timeoutId = setTimeout(() => controller.abort(), timeout);
     
     const response = await fetch(url, {
@@ -414,7 +414,7 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
         defaultViewport: { width: 1200, height: 800 },
         executablePath: await chromium.executablePath(),
         headless: true,
-        timeout: 30000
+        timeout: 20000 // Reduced timeout for faster startup
       });
       console.log('Puppeteer browser launched successfully with Vercel configuration');
     } else {
@@ -437,7 +437,7 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding'
         ],
-        timeout: 30000
+        timeout: 20000 // Reduced timeout for faster startup
       });
       console.log('Puppeteer browser launched successfully with local configuration');
     }
@@ -455,7 +455,7 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
           '--single-process'
         ],
         headless: true,
-        timeout: 30000
+        timeout: 20000 // Reduced timeout for faster startup
       });
       console.log('Puppeteer browser launched successfully with fallback configuration');
     } catch (fallbackError) {
@@ -478,26 +478,26 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
     await page.setViewport(viewportConfig);
     console.log('Viewport set for WYSIWYG fidelity');
     
-    // Set content with proper wait for images to load
+    // Set content - use load instead of networkidle0 for faster rendering
     console.log('Setting page content...');
     try {
       await page.setContent(htmlContent, { 
-        waitUntil: 'networkidle0',
-        timeout: 15000 
+        waitUntil: 'load',
+        timeout: 8000 
       });
-      console.log('Page content set successfully with networkidle0');
+      console.log('Page content set successfully with load');
     } catch (contentError) {
-      console.error('Failed to set content with networkidle0, trying domcontentloaded:', contentError);
+      console.error('Failed to set content with load, trying domcontentloaded:', contentError);
       // Fallback to domcontentloaded
       await page.setContent(htmlContent, { 
         waitUntil: 'domcontentloaded',
-        timeout: 10000 
+        timeout: 5000 
       });
       console.log('Page content set successfully with domcontentloaded');
     }
     
-    // Wait for fonts and images to load completely for perfect WYSIWYG
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Brief wait for fonts and images (reduced from 2000ms to 500ms)
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Generate PDF with perfect WYSIWYG settings to match preview exactly
     console.log('Generating PDF with WYSIWYG fidelity...');
@@ -514,7 +514,7 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       scale: 1.0, // No scaling - exact 1:1 match
       width: '210mm', // Exact A4 width
       height: '297mm', // Exact A4 height
-      timeout: 15000
+      timeout: 10000 // Reduced timeout for faster processing
     };
     
     const pdfBuffer = await page.pdf(pdfOptions);
