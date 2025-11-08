@@ -3380,10 +3380,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           {/* Elegant Divider Line */}
           <div 
             style={{
-              height: '1px',
-              background: 'linear-gradient(to right, #1e3a8a 0%, #60a5fa 50%, #1e3a8a 100%)',
+              height: '2px',
+              background: 'linear-gradient(to right, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0.3) 100%)',
               marginTop: '0.6cm',
               marginBottom: '0.5cm',
+              borderRadius: '1px',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
