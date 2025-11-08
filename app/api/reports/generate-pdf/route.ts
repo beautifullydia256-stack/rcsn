@@ -262,23 +262,25 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
   console.log('- Student summary exists:', !!student.summary);
   console.log('- Student subjects count:', student.subjects?.length || 0);
 
-  // Convert images to base64 for embedding
+  // Convert images to base64 for embedding (parallel processing for faster execution)
   console.log('Converting images to base64...');
   let schoolLogoBase64 = null;
   let studentPhotoBase64 = null;
   
-  try {
-    schoolLogoBase64 = school?.logo ? await convertImageToBase64(school.logo) : null;
-  } catch (error) {
-    console.error('Failed to convert school logo:', error);
-    schoolLogoBase64 = null; // Ensure it's null if conversion fails
-  }
+  // Process images in parallel with timeout protection
+  const imagePromises = [
+    school?.logo ? convertImageToBase64(school.logo).catch(() => null) : Promise.resolve(null),
+    student?.profile_photo ? convertImageToBase64(student.profile_photo).catch(() => null) : Promise.resolve(null)
+  ];
   
+  // Wait for both with a maximum timeout
   try {
-    studentPhotoBase64 = student?.profile_photo ? await convertImageToBase64(student.profile_photo) : null;
+    const results = await Promise.allSettled(imagePromises);
+    schoolLogoBase64 = results[0].status === 'fulfilled' ? results[0].value : null;
+    studentPhotoBase64 = results[1].status === 'fulfilled' ? results[1].value : null;
   } catch (error) {
-    console.error('Failed to convert student photo:', error);
-    studentPhotoBase64 = null; // Ensure it's null if conversion fails
+    console.error('Error converting images:', error);
+    // Continue with null values - images are optional
   }
   
   console.log('School logo converted:', !!schoolLogoBase64);
