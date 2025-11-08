@@ -3234,7 +3234,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       )}
 
       <div className="relative z-10">
-        {/* PRINT-READY PROFESSIONAL HEADER */}
+        {/* HEADER - Matching Image Design Exactly */}
         <div 
           className="print-header-container"
           style={{
@@ -3242,7 +3242,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             paddingBottom: '0.6cm',
             paddingLeft: '1cm',
             paddingRight: '1cm',
-            background: 'linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)',
+            background: '#F5F5F5',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
             pageBreakInside: 'avoid',
@@ -3250,109 +3250,135 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center gap-8" style={{ minHeight: '3.5cm' }}>
-            {/* Left Column: Logo */}
-            <div 
-              className="flex-shrink-0"
-              style={{
-                width: '90px',
-                height: '90px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              {(school?.logo_url || school?.logo) ? (
-                <img 
-                  src={school.logo_url || school.logo} 
-                  alt="School Logo" 
-                  className="w-full h-full object-contain"
-                  style={{ maxWidth: '100%', maxHeight: '100%' }}
-                />
-              ) : (
-                <div 
-                  className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
-                  style={{ width: '100%', height: '100%' }}
+          <div className="flex items-start gap-6" style={{ minHeight: '3.5cm' }}>
+            {/* Left Column: Logo with Banner */}
+            <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {/* Circular Logo Badge - 90px matching image */}
+              <div
+                style={{
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '50%',
+                  border: '6px solid #8B4513',
+                  backgroundColor: '#8B4513',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  marginBottom: '8px',
+                  position: 'relative'
+                }}
+              >
+                {(school?.logo_url || school?.logo) ? (
+                  <img
+                    src={school.logo_url || school.logo}
+                    alt="School Badge"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      padding: '8px'
+                    }}
+                  />
+                ) : (
+                  <div style={{ color: '#FFFFFF', fontSize: '24px', fontWeight: 'bold' }}>SK</div>
+                )}
+              </div>
+              
+              {/* Banner Below Logo with Motto */}
+              {school?.motto && (
+                <div
+                  style={{
+                    backgroundColor: '#8B4513',
+                    border: '1px solid #FFFFFF',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    textAlign: 'center',
+                    minWidth: '120px'
+                  }}
                 >
-                  <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
-                    School<br/>Logo
-                  </span>
+                  <div
+                    style={{
+                      color: '#FFFFFF',
+                      fontSize: '9px',
+                      fontWeight: '600',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      fontFamily: 'Arial, sans-serif'
+                    }}
+                  >
+                    {school.motto}
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Right Column: School Information */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
-              {/* School Name - Elegant Serif Title */}
+            {/* Right Column: School Information - Left Aligned */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', textAlign: 'left' }}>
+              {/* School Name - Largest, Bold, Uppercase */}
               {school?.name && (
-                <h1 
+                <div
                   style={{
-                    fontSize: '19pt',
-                    fontWeight: '700',
-                    fontFamily: 'Times New Roman, Georgia, serif',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
+                    fontSize: '22px',
+                    fontWeight: 'bold',
+                    color: '#000000',
+                    marginBottom: '4px',
+                    fontFamily: 'Arial, sans-serif',
                     lineHeight: '1.2',
-                    marginBottom: '0.4cm',
-                    color: '#1a1a1a',
-                    marginTop: 0
+                    textTransform: 'uppercase'
                   }}
                 >
                   {school.name}
-                </h1>
-              )}
-
-              {/* Address */}
-              {school?.address && (
-                <div 
-                  style={{
-                    fontSize: '10pt',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
-                    fontWeight: '400',
-                    color: '#334155',
-                    marginBottom: '0.25cm',
-                    lineHeight: '1.5'
-                  }}
-                >
-                  {school.address}
                 </div>
               )}
 
-              {/* Contact Information */}
-              {(school?.email || school?.phone) && (
-                <div 
+              {/* Subtitle - Smaller, Regular Weight */}
+              {school?.subtitle && (
+                <div
                   style={{
-                    fontSize: '10pt',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontSize: '12px',
                     fontWeight: '400',
-                    color: '#334155',
-                    marginBottom: '0.3cm',
-                    lineHeight: '1.5'
+                    color: '#000000',
+                    marginBottom: '8px',
+                    fontFamily: 'Arial, sans-serif'
                   }}
                 >
-                  {school?.email && <span>{school.email}</span>}
-                  {school?.email && school?.phone && <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>}
-                  {school?.phone && <span>{school.phone}</span>}
+                  {school.subtitle}
                 </div>
               )}
 
-              {/* Motto - Elegant Italic */}
-              {school?.motto && (
-                <div 
-                  style={{
-                    fontSize: '9pt',
-                    fontFamily: 'Georgia, Times New Roman, serif',
-                    fontStyle: 'italic',
-                    fontWeight: '400',
-                    color: '#475569',
-                    marginBottom: '0.4cm',
-                    lineHeight: '1.6',
-                    letterSpacing: '0.02em'
-                  }}
-                >
-                  &quot;{school.motto}&quot;
-                </div>
-              )}
+              {/* Contact Information Block - Smallest Font */}
+              <div
+                style={{
+                  fontSize: '10px',
+                  fontWeight: '400',
+                  color: '#000000',
+                  fontFamily: 'Arial, sans-serif',
+                  lineHeight: '1.6'
+                }}
+              >
+                {/* Address with P.O.Box */}
+                {(school?.address || school?.pobox) && (
+                  <div style={{ marginBottom: '2px' }}>
+                    {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
+                  </div>
+                )}
+                
+                {/* Telephone */}
+                {school?.contact_phone && (
+                  <div style={{ marginBottom: '2px' }}>Tel: {school.contact_phone}</div>
+                )}
+                
+                {/* Email */}
+                {school?.contact_email && (
+                  <div style={{ marginBottom: '2px' }}>Email: {school.contact_email}</div>
+                )}
+                
+                {/* Website */}
+                {school?.website && (
+                  <div style={{ marginBottom: '2px' }}>Web: {school.website}</div>
+                )}
+              </div>
             </div>
           </div>
 
