@@ -3283,13 +3283,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
             {/* Right Column: School Information */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
-              {/* School Name - Elegant Serif Title */}
+              {/* School Name - Bold Sans-serif Title */}
               {school?.name && (
                 <h1 
                   style={{
                     fontSize: '19pt',
                     fontWeight: '700',
-                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                     lineHeight: '1.2',
@@ -3302,12 +3302,28 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </h1>
               )}
 
-              {/* Address with P.O.Box */}
+              {/* Subtitle - Serif Font */}
+              {school?.subtitle && (
+                <div 
+                  style={{
+                    fontSize: '12pt',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontWeight: '400',
+                    color: '#1a1a1a',
+                    marginBottom: '0.25cm',
+                    lineHeight: '1.5'
+                  }}
+                >
+                  {school.subtitle}
+                </div>
+              )}
+
+              {/* Address with P.O.Box - Serif Font */}
               {(school?.address || school?.pobox) && (
                 <div 
                   style={{
                     fontSize: '12pt',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: '#1a1a1a',
                     marginBottom: '0.25cm',
@@ -3318,12 +3334,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Contact Information - Email | Phone */}
+              {/* Contact Information - Email | Phone - Serif Font */}
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
                     fontSize: '12pt',
-                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: '#1a1a1a',
                     marginBottom: '0.3cm',
@@ -3336,12 +3352,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Motto - Bold Italic with Quotes */}
+              {/* Motto - Serif Font Bold Italic with Quotes */}
               {school?.motto && (
                 <div 
                   style={{
                     fontSize: '11pt',
-                    fontFamily: 'Georgia, Times New Roman, serif',
+                    fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
                     color: '#1a1a1a',
