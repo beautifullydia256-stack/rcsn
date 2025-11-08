@@ -3223,12 +3223,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       className="relative p-8 bg-gradient-to-br from-white via-blue-50/40 to-white text-slate-800"
       style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}
     >
-      {school?.logo_url && (
+      {(school?.logo_url || school?.logo) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
           <img
-            src={school.logo_url}
+            src={school.logo_url || school.logo}
             alt="School Watermark"
-            className="max-w-3xl w-[70%] opacity-25 object-contain"
+            className="max-w-3xl w-[70%] opacity-30 object-contain"
           />
         </div>
       )}
