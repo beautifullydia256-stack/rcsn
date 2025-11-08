@@ -3101,16 +3101,16 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         )}
       </div>
 
-        {/* STUDENT INFO */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+      {/* STUDENT INFO */}
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
           <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
           <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
           <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
           <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
-        </div>
+      </div>
 
-        {/* SUBJECTS TABLE */}
-        <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
+      {/* SUBJECTS TABLE */}
+      <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
           <table className="w-full text-[10pt]">
             <thead>
               <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
@@ -3200,10 +3200,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           })}
             </tbody>
           </table>
-        </div>
+      </div>
 
-        {/* SUMMARY */}
-        <div className="grid grid-cols-3 gap-4 text-[10pt]">
+      {/* SUMMARY */}
+      <div className="grid grid-cols-3 gap-4 text-[10pt]">
           <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
             <div><strong className="text-blue-900">Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
             <div><strong className="text-blue-900">Average:</strong> {avg}</div>
@@ -3220,10 +3220,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
             <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
           </div>
-        </div>
+      </div>
 
-        {/* GRADING SYSTEM */}
-        <div className="text-[10pt]">
+      {/* GRADING SYSTEM */}
+      <div className="text-[10pt]">
           <h3 className="text-[11pt] font-semibold mb-3 text-blue-900">Grading System</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md overflow-hidden">
@@ -3263,10 +3263,12 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   ))}
                 </tbody>
               </table>
-            </div>
           </div>
-        {/* COMMENTS */}
-        <div className="text-[10pt] rounded-2xl bg-white/85 border border-blue-100/70 shadow-md px-6 py-4">
+        </div>
+      </div>
+
+      {/* COMMENTS */}
+      <div className="text-[10pt] rounded-2xl bg-white/85 border border-blue-100/70 shadow-md px-6 py-4">
           <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
           <p className="text-slate-700">{classTeacherComment}</p>
           <p className="mt-2 text-slate-600">Signature: ______________________</p>
@@ -3274,10 +3276,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900">Headteacher's Comments:</h3>
           <p className="text-slate-700">{headTeacherComment}</p>
           <p className="mt-2 text-slate-600">Signature: ______________________</p>
-        </div>
+      </div>
 
-        {/* NEXT TERM AND SIGNATURES */}
-        <div className="flex justify-between items-end text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
+      {/* NEXT TERM AND SIGNATURES */}
+      <div className="flex justify-between items-end text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
           <div>
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
@@ -3288,10 +3290,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               <div className="text-xs uppercase tracking-wide text-blue-900">Head Teacher's Signature</div>
             </div>
           </div>
-        </div>
+      </div>
 
-        {/* FOOTER */}
-        <div className="text-center text-[8pt] mt-4 pt-2 border-t border-blue-100/80 text-slate-500">
+      {/* FOOTER */}
+      <div className="text-center text-[8pt] mt-4 pt-2 border-t border-blue-100/80 text-slate-500">
           Generated by PwezaCore School Management System
         </div>
       </div>
