@@ -3242,7 +3242,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             paddingBottom: '0.2cm',
             paddingLeft: '1cm',
             paddingRight: '1cm',
-            background: 'transparent',
+            background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%)',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
             pageBreakInside: 'avoid',
@@ -3296,8 +3298,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     letterSpacing: '0.05em',
                     lineHeight: '1.2',
                     marginBottom: '0.4cm',
-                    color: '#1a1a1a',
-                    marginTop: 0
+                    color: '#FFFFFF',
+                    marginTop: 0,
+                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
                   }}
                 >
                   {school.name}
@@ -3311,7 +3314,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
-                    color: '#1a1a1a',
+                    color: '#E0E7FF',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3327,7 +3330,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#1a1a1a',
+                    color: '#FFFFFF',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3343,13 +3346,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#1a1a1a',
+                    color: '#FFFFFF',
                     marginBottom: '0.3cm',
                     lineHeight: '1.5'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
+                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#C7D2FE' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
                 </div>
               )}
@@ -3362,7 +3365,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
-                    color: '#1a1a1a',
+                    color: '#E0E7FF',
                     marginBottom: '0.4cm',
                     lineHeight: '1.6',
                     letterSpacing: '0.02em'
