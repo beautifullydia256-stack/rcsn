@@ -2735,11 +2735,11 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
       style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}
     >
       {school?.logo_url && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
           <img
             src={school.logo_url}
             alt="School Watermark"
-            className="max-w-3xl w-[70%] opacity-10 object-contain"
+            className="max-w-3xl w-[70%] opacity-15 object-contain"
           />
         </div>
       )}
@@ -2777,18 +2777,18 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
       </div>
 
         {/* STUDENT INFO */}
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
-          <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
-          <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
-          <div><strong className="text-blue-900">STREAM:</strong> EAST</div>
-          <div><strong className="text-blue-900">CLASS:</strong> {student.current_class}</div>
-          <div><strong className="text-blue-900">LIN:</strong> {student.admission_number || student.student_id}</div>
-          <div><strong className="text-blue-900">Date:</strong> {examSet?.date || '26/05/2025'}</div>
-        </div>
-        
-        {/* Student Photo */}
-        <div className="flex justify-end mb-4">
-          <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden">
+        <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
+            <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
+            <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
+            <div><strong className="text-blue-900">STREAM:</strong> EAST</div>
+            <div><strong className="text-blue-900">CLASS:</strong> {student.current_class}</div>
+            <div><strong className="text-blue-900">LIN:</strong> {student.admission_number || student.student_id}</div>
+            <div><strong className="text-blue-900">Date:</strong> {examSet?.date || '26/05/2025'}</div>
+          </div>
+          
+          {/* Student Photo */}
+          <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -2922,17 +2922,17 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </table>
         </div>
 
-        {/* SUMMARY SECTION (mirrors upper section layout) */}
-        <div className="grid grid-cols-3 gap-4 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
-          <div>
+        {/* SUMMARY SECTION - Separate Cards */}
+        <div className="grid grid-cols-3 gap-4 text-[10pt]">
+          <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-4 py-3">
             <div><strong className="text-blue-900">Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
             <div><strong className="text-blue-900">Average:</strong> {student.summary?.average ?? 'N/A'}</div>
           </div>
-          <div>
+          <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-4 py-3">
             <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
           </div>
-          <div>
+          <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-4 py-3">
             <div><strong className="text-blue-900">Attendance:</strong></div>
             <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
             <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
