@@ -529,23 +529,20 @@ export function PrimaryReportGenerator() {
       // Create a map of subject -> teacher name (formatted)
       const subjectTeacherMap = new Map<string, string>();
       teacherAssignments.forEach((assignment: any) => {
-          const subject = assignment.subject;
-          const teacher = assignment.teachers;
-          if (subject && teacher?.name) {
-            // Format name: "FirstName FirstLetterOfSecondName" (e.g., "John Smith" -> "John S")
-            const nameParts = teacher.name.trim().split(/\s+/);
-            if (nameParts.length >= 2) {
-              const firstName = nameParts[0];
-              const secondNameFirstLetter = nameParts[1].charAt(0).toUpperCase();
-              const formattedName = `${firstName} ${secondNameFirstLetter}`;
-              subjectTeacherMap.set(subject, formattedName);
-            } else if (nameParts.length === 1) {
-              // If only one name, just use it
-              subjectTeacherMap.set(subject, nameParts[0]);
-            }
+        const subject = assignment.subject;
+        const teacher = assignment.teachers;
+        if (subject && teacher?.name) {
+          const nameParts = teacher.name.trim().split(/\s+/);
+          if (nameParts.length >= 2) {
+            const firstName = nameParts[0];
+            const secondNameFirstLetter = nameParts[1].charAt(0).toUpperCase();
+            const formattedName = `${firstName} ${secondNameFirstLetter}`;
+            subjectTeacherMap.set(subject, formattedName);
+          } else if (nameParts.length === 1) {
+            subjectTeacherMap.set(subject, nameParts[0]);
           }
-        });
-      }
+        }
+      });
 
       const referenceExamSet = (selectedExamSetId && selectedExamSetId !== 'all')
         ? (examSets || []).find(es => es.id === selectedExamSetId)
