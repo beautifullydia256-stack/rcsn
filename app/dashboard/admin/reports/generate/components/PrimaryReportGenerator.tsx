@@ -3302,8 +3302,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </h1>
               )}
 
-              {/* Address */}
-              {school?.address && (
+              {/* Address with P.O.Box */}
+              {(school?.address || school?.pobox) && (
                 <div 
                   style={{
                     fontSize: '10pt',
@@ -3314,11 +3314,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     lineHeight: '1.5'
                   }}
                 >
-                  {school.address}{school?.pobox ? ` ${school.pobox}` : ''}
+                  {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
                 </div>
               )}
 
-              {/* Contact Information */}
+              {/* Contact Information - Email | Phone */}
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
@@ -3336,7 +3336,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Motto - Elegant Italic */}
+              {/* Motto - Elegant Italic with Quotes */}
               {school?.motto && (
                 <div 
                   style={{
