@@ -605,13 +605,13 @@ export function PrimaryReportGenerator() {
       const reportData = {
         school: {
           ...schoolInfo,
-          name: customHeader.schoolName || schoolInfo?.name,
-          motto: customHeader.motto || schoolInfo?.motto,
-          phone: customHeader.phone || schoolInfo?.phone,
-          email: customHeader.email || schoolInfo?.email,
-          address: customHeader.address || schoolInfo?.address,
-          logo: customHeader.logoPreview || schoolInfo?.logo_url,
-          logo_url: customHeader.logoPreview || schoolInfo?.logo_url
+          name: customHeader.schoolName || schoolInfo?.name || '',
+          motto: customHeader.motto || schoolInfo?.motto || '',
+          phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
+          email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
+          address: customHeader.address || schoolInfo?.address || schoolInfo?.location || '',
+          logo: customHeader.logoPreview || schoolInfo?.logo_url || null,
+          logo_url: customHeader.logoPreview || schoolInfo?.logo_url || null
         },
         examSet: (() => {
           if (!currentTermInfo) return null;
@@ -2221,26 +2221,32 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
       <div className="flex items-start justify-between mb-4">
         {/* School Logo - Left side */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0">
-          {school?.logo ? (
+          {school?.logo_url || school?.logo ? (
             <img
-              src={school.logo}
+              src={school.logo_url || school.logo}
               alt="School Logo"
               className="w-full h-full object-cover border-0"
             />
           ) : (
             <div className="text-center text-xs">
-              <div className="font-bold">EMIRATES</div>
-              <div className="font-bold">COLLEGE</div>
               <div className="font-bold">SCHOOL</div>
+              <div className="font-bold">LOGO</div>
             </div>
           )}
         </div>
         
         {/* School Info - Right side */}
         <div className="text-center flex-1">
-          <div className="font-bold text-[18pt] uppercase">{school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
-          <div className="font-bold text-[11pt] mt-1">TEL :: {school?.phone || '0701395594'} | EMAIL :: {school?.email || 'info@emiratescollege.sc.ug'} | {school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
-          <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school?.motto || 'Education the Future'}</div>
+          {school?.name && <div className="font-bold text-[18pt] uppercase">{school.name}</div>}
+          {(school?.phone || school?.email || school?.address) && (
+            <div className="font-bold text-[11pt] mt-1">
+              {school?.phone ? `TEL :: ${school.phone}` : ''} 
+              {school?.phone && school?.email ? ' |' : ''} 
+              {school?.email ? ` EMAIL :: ${school.email}` : ''} 
+              {school?.address ? ` | ${school.address}` : ''}
+            </div>
+          )}
+          {school?.motto && <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school.motto}</div>}
         </div>
       </div>
 
@@ -2475,29 +2481,31 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       <div className="flex items-center justify-between mb-6">
         {/* School Logo */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
-          {school?.logo ? (
+          {school?.logo_url || school?.logo ? (
             <img
-              src={school.logo}
+              src={school.logo_url || school.logo}
               alt="School Logo"
               className="w-full h-full object-cover border-0"
             />
           ) : (
             <div className="text-center text-xs">
-              <div className="font-bold">ST. ADRIAN</div>
-              <div className="font-bold">KASOZI</div>
-              <div className="font-bold">SECONDARY</div>
               <div className="font-bold">SCHOOL</div>
+              <div className="font-bold">LOGO</div>
             </div>
           )}
         </div>
         
         {/* School Info */}
         <div className="text-right flex-1">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-        <div className="text-[10pt] mt-1 italic">"{school?.motto || 'WITH GOD, WE CAN'}"</div>
-        <div className="text-[9pt] mt-1">
-          P.O BOX 10 KALISIZO (U), {school?.email || 'st.adriankasozisec@gmail.com'}, {school?.phone || '0772/754-642058'}
-          </div>
+          {school?.name && <div className="font-bold text-[18pt] uppercase">{school.name}</div>}
+          {school?.motto && <div className="text-[10pt] mt-1 italic">"{school.motto}"</div>}
+          {(school?.address || school?.email || school?.phone) && (
+            <div className="text-[9pt] mt-1">
+              {school?.address || ''} {school?.address && (school?.email || school?.phone) ? ', ' : ''}
+              {school?.email || ''} {school?.email && school?.phone ? ', ' : ''}
+              {school?.phone || ''}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2800,9 +2808,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div className="flex items-center justify-between">
         {/* School Logo */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
-          {school?.logo ? (
+          {school?.logo_url || school?.logo ? (
             <img
-              src={school.logo}
+              src={school.logo_url || school.logo}
               alt="School Logo"
               className="w-full h-full object-cover border-0"
             />
@@ -2818,9 +2826,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div className="text-right flex-1">
         <div className="font-bold text-[18pt] uppercase">{school?.name || ''}</div>
           <div className="font-bold text-[13pt] mt-1">
-          {school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
-          Tel: {school?.phone || '0701861636 / 0700338061'} | 
-          E-mail: {school?.email || 'kasumbaj2009@gmail.com'}
+          {school?.address || ''} {school?.address && school?.phone ? '|' : ''} 
+          {school?.phone ? ` Tel: ${school.phone}` : ''} 
+          {school?.phone && school?.email ? ' |' : ''} 
+          {school?.email ? ` E-mail: ${school.email}` : ''}
         </div>
         <div className="text-[12pt] font-bold mt-2 uppercase">{getReportTitle()}</div>
         <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
@@ -3188,10 +3197,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         )}
         
         <div className="flex-1 text-center px-4 text-slate-900">
-          <h1 className="text-3xl font-extrabold uppercase tracking-wide mb-1 text-blue-900">{school?.name || 'School Name'}</h1>
-          <div className="text-sm mb-1">{school?.location || 'Location'}</div>
-          <div className="text-sm mb-1">{school?.contact_email || 'Email'} | {school?.contact_phone || 'Phone'}</div>
-          <div className="text-sm italic text-blue-800/80">&quot;{school?.motto || 'School Motto'}&quot;</div>
+          <h1 className="text-3xl font-extrabold uppercase tracking-wide mb-1 text-blue-900">{school?.name || ''}</h1>
+          {school?.address && <div className="text-sm mb-1">{school.address}</div>}
+          {(school?.email || school?.phone) && (
+            <div className="text-sm mb-1">
+              {school?.email || ''} {school?.email && school?.phone ? '|' : ''} {school?.phone || ''}
+            </div>
+          )}
+          {school?.motto && <div className="text-sm italic text-blue-800/80">&quot;{school.motto}&quot;</div>}
           <div className="mt-2 inline-block px-5 py-2 rounded-full bg-blue-100 text-blue-900 text-xl font-semibold uppercase">
             End Of Term Report - Upper Section
           </div>
