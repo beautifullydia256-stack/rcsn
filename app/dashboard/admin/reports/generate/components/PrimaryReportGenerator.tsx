@@ -3262,7 +3262,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           style={{
             paddingTop: '1.2cm',
             paddingBottom: '0.2cm',
-            paddingLeft: '1cm',
+            paddingLeft: '0',
             paddingRight: '1cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
@@ -3273,7 +3273,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         >
           {/* Two-Column Layout */}
           <div className="flex items-center justify-center" style={{ minHeight: '3.5cm', position: 'relative' }}>
-            {/* Left Column: Logo - Positioned far left */}
+            {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
@@ -3283,7 +3283,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 alignItems: 'center',
                 justifyContent: 'center',
                 position: 'absolute',
-                left: 0
+                left: '0',
+                marginLeft: '0'
               }}
             >
               {(school?.logo_url || school?.logo) ? (
