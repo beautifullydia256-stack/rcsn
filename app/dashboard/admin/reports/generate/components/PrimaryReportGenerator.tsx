@@ -611,6 +611,7 @@ export function PrimaryReportGenerator() {
           phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
           email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
           address: customHeader.address || schoolInfo?.address || schoolInfo?.location || '',
+          pobox: schoolInfo?.pobox || '',
           website: schoolInfo?.website || '',
           contact_phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
           contact_email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
@@ -3825,7 +3826,10 @@ function Template5CleanReportCard({ student, examSet, school }: { student: any; 
             }}
           >
             {school?.address && (
-              <div style={{ marginBottom: '2px' }}>{school.address}</div>
+              <div style={{ marginBottom: '2px' }}>{school.address}{school?.pobox ? `, ${school.pobox}` : ''}</div>
+            )}
+            {!school?.address && school?.pobox && (
+              <div style={{ marginBottom: '2px' }}>{school.pobox}</div>
             )}
             {school?.contact_phone && (
               <div style={{ marginBottom: '2px' }}>Tel: {school.contact_phone}</div>

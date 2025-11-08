@@ -1994,6 +1994,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
   const [subtitle, setSubtitle] = useState('');
   const [motto, setMotto] = useState('');
   const [address, setAddress] = useState('');
+  const [pobox, setPobox] = useState('');
   const [website, setWebsite] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -2004,14 +2005,14 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
       if (!schoolId) return;
 
       try {
-        // First try with all columns including subtitle and address
+        // First try with all columns including subtitle, address, and pobox
         let { data, error } = await supabase
           .from('schools')
-          .select('name, logo_url, motto, subtitle, address, location, website, contact_email, contact_phone')
+          .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone')
           .eq('school_id', schoolId)
           .single();
 
-        // If error occurs (e.g., column doesn't exist), try without subtitle/address
+        // If error occurs (e.g., column doesn't exist), try without subtitle/address/pobox
         if (error) {
           console.warn('Error loading with new columns, trying fallback:', error);
           const { data: fallbackData, error: fallbackError } = await supabase
@@ -2033,6 +2034,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
           setMotto(data.motto || '');
           setSubtitle(data.subtitle || '');
           setAddress(data.address || data.location || '');
+          setPobox(data.pobox || '');
           setWebsite(data.website || '');
           setContactEmail(data.contact_email || '');
           setContactPhone(data.contact_phone || '');
@@ -2116,6 +2118,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         setMotto(updatedData.motto || '');
         setSubtitle(updatedData.subtitle || '');
         setAddress(updatedData.address || updatedData.location || '');
+        setPobox(updatedData.pobox || '');
         setWebsite(updatedData.website || '');
         setContactEmail(updatedData.contact_email || '');
         setContactPhone(updatedData.contact_phone || '');
@@ -2142,14 +2145,15 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         contact_phone: contactPhone
       };
 
-      // Only include subtitle and address if they exist (to avoid errors if columns don't exist yet)
+      // Only include subtitle, address, and pobox if they exist (to avoid errors if columns don't exist yet)
       // We'll try to update them, but if they fail, we'll continue with other fields
       try {
         updateData.subtitle = subtitle;
         updateData.address = address;
+        updateData.pobox = pobox;
       } catch (e) {
         // Columns might not exist yet - that's okay, we'll update them later
-        console.warn('Subtitle/address columns may not exist yet:', e);
+        console.warn('Subtitle/address/pobox columns may not exist yet:', e);
       }
 
       const { error } = await supabase
@@ -2160,7 +2164,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
       if (error) {
         console.error('Save error:', error);
         // If error is about missing columns, try without them
-        if (error.message.includes('column') && (error.message.includes('subtitle') || error.message.includes('address'))) {
+        if (error.message.includes('column') && (error.message.includes('subtitle') || error.message.includes('address') || error.message.includes('pobox'))) {
           const { error: retryError } = await supabase
             .from('schools')
             .update({
@@ -2305,15 +2309,27 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white/80 mb-2">Address</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g., Saddler Way, Naguru P.O.Box 3673, Kampala Uganda"
-              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">Address</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g., Saddler Way, Naguru"
+                className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">P.O.Box</label>
+              <input
+                type="text"
+                value={pobox}
+                onChange={(e) => setPobox(e.target.value)}
+                placeholder="e.g., P.O.Box 3673, Kampala Uganda"
+                className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+              />
+            </div>
           </div>
 
           <div>
