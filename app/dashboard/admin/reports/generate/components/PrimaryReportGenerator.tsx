@@ -2747,6 +2747,39 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     return 'E';
   };
 
+  // Helper functions to detect exam set types
+  const isMid = (name: any) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+  };
+  
+  const isEnd = (name: any) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
+  };
+
+  // Determine which columns to show based on selected exam set
+  // If examSet is provided and has a name, check if it's a specific exam set
+  let showMidTermColumn = true;
+  let showEndOfTermColumn = true;
+  
+  if (examSet && examSet.name) {
+    const examSetName = String(examSet.name).toLowerCase();
+    // If "All Exam Sets" is selected, show both columns
+    if (examSetName.includes('all exam sets') || examSetName === 'all exam sets') {
+      showMidTermColumn = true;
+      showEndOfTermColumn = true;
+    } else if (isMid(examSet.name)) {
+      // If Mid Term is selected, hide END OF TERM column
+      showMidTermColumn = true;
+      showEndOfTermColumn = false;
+    } else if (isEnd(examSet.name)) {
+      // If End of Term is selected, hide MID TERM column
+      showMidTermColumn = false;
+      showEndOfTermColumn = true;
+    }
+  }
+
   return (
     <div
       className="relative p-8 bg-gradient-to-br from-white via-blue-50/40 to-white text-slate-800"
@@ -2824,18 +2857,27 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <table className="w-full text-[10pt]">
             <thead>
               <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
-                {['SUBJECT','FULL MARKS','MID TERM','END OF TERM','TEACHER\'S REMARKS','INITIALS'].map(h => (
-                  <th key={h} className="border border-blue-100 px-3 py-2 text-center font-bold">{h}</th>
-                ))}
+                <th className="border border-blue-100 px-3 py-2 text-center font-bold">SUBJECT</th>
+                <th className="border border-blue-100 px-3 py-2 text-center font-bold">FULL MARKS</th>
+                {showMidTermColumn && (
+                  <th className="border border-blue-100 px-3 py-2 text-center font-bold">MID TERM</th>
+                )}
+                {showEndOfTermColumn && (
+                  <th className="border border-blue-100 px-3 py-2 text-center font-bold">END OF TERM</th>
+                )}
+                <th className="border border-blue-100 px-3 py-2 text-center font-bold">TEACHER'S REMARKS</th>
+                <th className="border border-blue-100 px-3 py-2 text-center font-bold">INITIALS</th>
               </tr>
             </thead>
           <tbody>
             {(() => {
               const results = student.results || [];
               if (results.length === 0) {
+                // Calculate colspan: SUBJECT + FULL MARKS + (MID TERM if shown) + (END OF TERM if shown) + REMARKS + INITIALS
+                const colspan = 4 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0);
                 return (
                   <tr>
-                    <td colSpan={6} className="border border-blue-100 px-3 py-2 text-center text-slate-500">No results available</td>
+                    <td colSpan={colspan} className="border border-blue-100 px-3 py-2 text-center text-slate-500">No results available</td>
                   </tr>
                 );
               }
@@ -2936,8 +2978,12 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
                           <td className="border border-blue-100 px-3 py-2 font-semibold text-left">{group.subject}</td>
                           <td className="border border-blue-100 px-3 py-2 text-center">{group.total_marks}</td>
-                          <td className="border border-blue-100 px-3 py-2 text-center">{group.mid ?? ''}</td>
-                          <td className="border border-blue-100 px-3 py-2 text-center">{group.end ?? ''}</td>
+                          {showMidTermColumn && (
+                            <td className="border border-blue-100 px-3 py-2 text-center">{group.mid ?? ''}</td>
+                          )}
+                          {showEndOfTermColumn && (
+                            <td className="border border-blue-100 px-3 py-2 text-center">{group.end ?? ''}</td>
+                          )}
                           <td className="border border-blue-100 px-3 py-2 text-left">{group.remarks}</td>
                           <td className="border border-blue-100 px-3 py-2 text-center">{group.initials}</td>
                         </tr>
@@ -2947,8 +2993,12 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                   <tr className="bg-blue-100/50">
                     <td className="border border-blue-100 px-3 py-2 font-bold text-left">TOTAL</td>
                     <td className="border border-blue-100 px-3 py-2 font-bold text-center">{totalFullMarks}</td>
-                    <td className="border border-blue-100 px-3 py-2"></td>
-                    <td className="border border-blue-100 px-3 py-2"></td>
+                    {showMidTermColumn && (
+                      <td className="border border-blue-100 px-3 py-2"></td>
+                    )}
+                    {showEndOfTermColumn && (
+                      <td className="border border-blue-100 px-3 py-2"></td>
+                    )}
                     <td className="border border-blue-100 px-3 py-2" colSpan={2}></td>
                   </tr>
                 </>
