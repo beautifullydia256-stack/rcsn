@@ -2730,26 +2730,23 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
   };
 
   return (
-    <div style={{ 
-      fontFamily: 'Times New Roman, Arial, sans-serif',
-      width: '210mm',
-      minHeight: '297mm',
-      margin: '0 auto',
-      padding: '15mm',
-      boxSizing: 'border-box'
-    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
-      
-      {/* WATERMARK */}
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
-        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
-          <div className="text-center text-9xl font-bold text-gray-400">
-            SCHOOL<br/>LOGO
-          </div>
+    <div
+      className="relative p-8 bg-gradient-to-br from-white via-blue-50/40 to-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}
+    >
+      {school?.logo_url && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+          <img
+            src={school.logo_url}
+            alt="School Watermark"
+            className="max-w-3xl w-[70%] opacity-10 object-contain"
+          />
         </div>
-      </div>
-      
-      {/* HEADER */}
-      <div className="flex items-center justify-between mb-6">
+      )}
+
+      <div className="relative z-10 space-y-6">
+        {/* HEADER */}
+        <div className="flex items-center justify-between">
         {/* School Logo */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo ? (
@@ -2779,20 +2776,19 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
       </div>
 
-      {/* STUDENT INFO */}
-      <div className="mb-6 text-[11pt]">
-        <div className="flex justify-between items-start">
-          <div className="grid grid-cols-2 gap-4">
-            <div><strong>STUDENT'S NAME:</strong> {student.name}</div>
-            <div><strong>YEAR:</strong> {examSet?.year || '2025'}</div>
-            <div><strong>STREAM:</strong> EAST</div>
-            <div><strong>CLASS:</strong> {student.current_class}</div>
-            <div><strong>LIN:</strong> {student.admission_number || student.student_id}</div>
-            <div><strong>Date:</strong> {examSet?.date || '26/05/2025'}</div>
-          </div>
-          
-          {/* Student Photo */}
-          <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+        {/* STUDENT INFO */}
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+          <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
+          <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
+          <div><strong className="text-blue-900">STREAM:</strong> EAST</div>
+          <div><strong className="text-blue-900">CLASS:</strong> {student.current_class}</div>
+          <div><strong className="text-blue-900">LIN:</strong> {student.admission_number || student.student_id}</div>
+          <div><strong className="text-blue-900">Date:</strong> {examSet?.date || '26/05/2025'}</div>
+        </div>
+        
+        {/* Student Photo */}
+        <div className="flex justify-end mb-4">
+          <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -2804,25 +2800,24 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             )}
           </div>
         </div>
-      </div>
 
-      {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
-      <div className="mb-4">
-        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '9pt' }}>
-          <thead>
-            <tr>
-              {['SUBJECT','FULL MARKS','MID TERM','END OF TERM','TEACHER\'S REMARKS','INITIALS'].map(h => (
-                <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '6px' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
+        {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
+        <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
+          <table className="w-full text-[10pt]">
+            <thead>
+              <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
+                {['SUBJECT','FULL MARKS','MID TERM','END OF TERM','TEACHER\'S REMARKS','INITIALS'].map(h => (
+                  <th key={h} className="border border-blue-100 px-3 py-2 text-center font-bold">{h}</th>
+                ))}
+              </tr>
+            </thead>
           <tbody>
             {(() => {
               const results = student.results || [];
               if (results.length === 0) {
                 return (
                   <tr>
-                    <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
+                    <td colSpan={6} className="border border-blue-100 px-3 py-2 text-center text-slate-500">No results available</td>
                   </tr>
                 );
               }
@@ -2902,65 +2897,64 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     return subjects.map((group, idx) => {
                       totalFullMarks += group.total_marks;
                       return (
-                        <tr key={idx}>
-                          <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{group.subject}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.total_marks}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.mid ?? ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.end ?? ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{group.remarks}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.initials}</td>
+                        <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
+                          <td className="border border-blue-100 px-3 py-2 font-semibold text-left">{group.subject}</td>
+                          <td className="border border-blue-100 px-3 py-2 text-center">{group.total_marks}</td>
+                          <td className="border border-blue-100 px-3 py-2 text-center">{group.mid ?? ''}</td>
+                          <td className="border border-blue-100 px-3 py-2 text-center">{group.end ?? ''}</td>
+                          <td className="border border-blue-100 px-3 py-2 text-left">{group.remarks}</td>
+                          <td className="border border-blue-100 px-3 py-2 text-center">{group.initials}</td>
                         </tr>
                       );
                     });
                   })()}
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'left' }}>TOTAL</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'center' }}>{totalFullMarks}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }} colSpan={2}></td>
+                  <tr className="bg-blue-100/50">
+                    <td className="border border-blue-100 px-3 py-2 font-bold text-left">TOTAL</td>
+                    <td className="border border-blue-100 px-3 py-2 font-bold text-center">{totalFullMarks}</td>
+                    <td className="border border-blue-100 px-3 py-2"></td>
+                    <td className="border border-blue-100 px-3 py-2"></td>
+                    <td className="border border-blue-100 px-3 py-2" colSpan={2}></td>
                   </tr>
                 </>
               );
             })()}
           </tbody>
         </table>
-      </div>
+        </div>
 
-      {/* SUMMARY SECTION (mirrors upper section layout) */}
-      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
-        <div className="border border-gray-400 p-2">
-          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
-          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+        {/* SUMMARY SECTION (mirrors upper section layout) */}
+        <div className="grid grid-cols-3 gap-4 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+          <div>
+            <div><strong className="text-blue-900">Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
+            <div><strong className="text-blue-900">Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+          </div>
+          <div>
+            <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
+            <div><strong className="text-blue-900">Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
+          </div>
+          <div>
+            <div><strong className="text-blue-900">Attendance:</strong></div>
+            <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+            <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+            <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+          </div>
         </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
-          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
-        </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Attendance:</strong></div>
-          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
-          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
-          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
-        </div>
-      </div>
 
-      {/* COMMENTS & FOOTER to match provided HTML */}
-      <div className="mt-4">
-        <div className="mb-4">
-          <div className="mb-1">
-            <span className="font-bold">Class Teacher's Comments:</span> {student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}
+        {/* COMMENTS & FOOTER */}
+        <div className="bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4 text-[10pt]">
+          <div className="mb-4">
+            <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
+            <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || '..............................................................'}</p>
+            <p className="mt-2">Signature: ______________________</p>
           </div>
-          <div className="mt-2">Signature: ______________________</div>
-        </div>
-        <div className="mb-4">
-          <div className="mb-1">
-            <span className="font-bold">Headteacher's Comments:</span> {student.results && student.results.length > 0 ? student.results[0].headteacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}
+          <div className="mb-4">
+            <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Headteacher's Comments:</h3>
+            <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.results?.[0]?.headteacher_comment || '..............................................................'}</p>
+            <p className="mt-2">Signature: ______________________</p>
           </div>
-          <div className="mt-2">Signature: ______________________</div>
-        </div>
-        <div className="flex justify-between text-[11pt] mt-4">
-          <div>Next term begins on: {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '____________________'}</div>
+          <div className="text-[11pt] mt-4">
+            <p>Next term begins on: {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '____________________'}</p>
+          </div>
         </div>
       </div>
     </div>
