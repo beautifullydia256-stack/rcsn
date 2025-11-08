@@ -3306,10 +3306,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               {(school?.address || school?.pobox) && (
                 <div 
                   style={{
-                    fontSize: '10pt',
+                    fontSize: '12pt',
                     fontFamily: 'Arial, Helvetica, sans-serif',
-                    fontWeight: '400',
-                    color: '#334155',
+                    fontWeight: '600',
+                    color: '#1a1a1a',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3322,29 +3322,29 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
-                    fontSize: '10pt',
+                    fontSize: '12pt',
                     fontFamily: 'Arial, Helvetica, sans-serif',
-                    fontWeight: '400',
-                    color: '#334155',
+                    fontWeight: '600',
+                    color: '#1a1a1a',
                     marginBottom: '0.3cm',
                     lineHeight: '1.5'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>}
+                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
                 </div>
               )}
 
-              {/* Motto - Elegant Italic with Quotes */}
+              {/* Motto - Bold Italic with Quotes */}
               {school?.motto && (
                 <div 
                   style={{
-                    fontSize: '9pt',
+                    fontSize: '11pt',
                     fontFamily: 'Georgia, Times New Roman, serif',
                     fontStyle: 'italic',
-                    fontWeight: '400',
-                    color: '#475569',
+                    fontWeight: '600',
+                    color: '#1a1a1a',
                     marginBottom: '0.4cm',
                     lineHeight: '1.6',
                     letterSpacing: '0.02em'
