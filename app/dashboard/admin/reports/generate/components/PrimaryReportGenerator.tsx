@@ -1075,6 +1075,24 @@ export function PrimaryReportGenerator() {
               };
             });
             
+            // Sort subjects: English, Mathematics, Science first, then others alphabetically
+            const prioritySubjects = ['English', 'Mathematics', 'Science'];
+            subjects.sort((a, b) => {
+              const aIndex = prioritySubjects.indexOf(a.subject_name);
+              const bIndex = prioritySubjects.indexOf(b.subject_name);
+              
+              // If both are priority subjects, maintain their order
+              if (aIndex !== -1 && bIndex !== -1) {
+                return aIndex - bIndex;
+              }
+              // If only a is priority, it comes first
+              if (aIndex !== -1) return -1;
+              // If only b is priority, it comes first
+              if (bIndex !== -1) return 1;
+              // If neither is priority, sort alphabetically
+              return a.subject_name.localeCompare(b.subject_name);
+            });
+            
             // Aggregate and division are now queried directly from database
             // They are calculated and stored at Supabase level in processed_primary_exam_results table
             // No frontend calculation needed - just use the values from the database
@@ -2894,7 +2912,25 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     
                     const subjects = Object.values(subjectGroups);
                     
-                    return subjects.map((group, idx) => {
+                    // Sort subjects: English, Mathematics, Science first, then others alphabetically
+                    const prioritySubjects = ['English', 'Mathematics', 'Science'];
+                    const sortedSubjects = subjects.sort((a, b) => {
+                      const aIndex = prioritySubjects.indexOf(a.subject);
+                      const bIndex = prioritySubjects.indexOf(b.subject);
+                      
+                      // If both are priority subjects, maintain their order
+                      if (aIndex !== -1 && bIndex !== -1) {
+                        return aIndex - bIndex;
+                      }
+                      // If only a is priority, it comes first
+                      if (aIndex !== -1) return -1;
+                      // If only b is priority, it comes first
+                      if (bIndex !== -1) return 1;
+                      // If neither is priority, sort alphabetically
+                      return a.subject.localeCompare(b.subject);
+                    });
+                    
+                    return sortedSubjects.map((group, idx) => {
                       totalFullMarks += group.total_marks;
                       return (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
