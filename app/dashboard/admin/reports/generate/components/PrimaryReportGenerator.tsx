@@ -3091,7 +3091,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
       <div className="relative z-10 space-y-6">
         {/* HEADER */}
-        <div className="flex items-start justify-between rounded-2xl bg-white/85 backdrop-blur-sm shadow-xl border border-blue-100/70 px-6 py-5">
+        <div className="flex items-start justify-between px-6 py-5">
         {(school?.logo_url || school?.logo) ? (
           <div className="w-24 h-24 flex-shrink-0">
             <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-contain" />
