@@ -1735,7 +1735,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
             <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
             <div><strong>STREAM:</strong> EAST</div>
             <div><strong>CLASS:</strong> ${student.current_class}</div>
-            <div><strong>LIN:</strong> __________</div>
+            <div><strong>LIN:</strong> ${student.admission_number || student.student_id || '__________'}</div>
             <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
           </div>
           
@@ -2991,8 +2991,8 @@ function generateProfessionalHeaderHTML(
           ` : ''}
         </div>
       </div>
-      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.6cm; margin-bottom: 0.5cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-      <div style="text-align: center; margin-bottom: 0.8cm;">
+      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.6cm; margin-bottom: 0.2cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+      <div style="text-align: center; margin-bottom: 0.3cm;">
         <div style="display: inline-block; padding: 8px 24px; border-radius: 20px; font-size: 10pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           ${reportTitle}
         </div>
