@@ -532,7 +532,7 @@ export function PrimaryReportGenerator() {
         { min: 13, max: 23, division: 'Division 2' },
         { min: 24, max: 29, division: 'Division 3' },
         { min: 30, max: 34, division: 'Division 4' },
-        { min: 35, max: 60, division: 'U (Ungraded)' }
+        { min: 35, max: 36, division: 'U (Ungraded)' }
       ];
 
       let primaryGradeScale = [...defaultPrimaryGradeScale];
@@ -2973,7 +2973,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
     { min: 13, max: 23, division: 'Division 2' },
     { min: 24, max: 29, division: 'Division 3' },
     { min: 30, max: 34, division: 'Division 4' },
-    { min: 35, max: 60, division: 'U (Ungraded)' }
+    { min: 35, max: 36, division: 'U (Ungraded)' }
   ];
 
   const gradeScale = (gradeSystem?.grades && gradeSystem.grades.length > 0 ? gradeSystem.grades : defaultGradeScale)
