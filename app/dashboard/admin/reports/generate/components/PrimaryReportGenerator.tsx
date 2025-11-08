@@ -3250,8 +3250,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center gap-8" style={{ minHeight: '3.5cm' }}>
-            {/* Left Column: Logo */}
+          <div className="flex items-center" style={{ minHeight: '3.5cm', position: 'relative' }}>
+            {/* Left Column: Logo - Positioned far left */}
             <div 
               className="flex-shrink-0"
               style={{
@@ -3259,7 +3259,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 height: '192px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                position: 'absolute',
+                left: 0
               }}
             >
               {(school?.logo_url || school?.logo) ? (
@@ -3281,8 +3283,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               )}
             </div>
 
-            {/* Right Column: School Information */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
+            {/* Center Column: School Information - Centered */}
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '200px' }}>
               {/* School Name - Bold Sans-serif Title */}
               {school?.name && (
                 <h1 
