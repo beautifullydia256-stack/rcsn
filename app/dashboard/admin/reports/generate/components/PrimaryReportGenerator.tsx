@@ -3127,7 +3127,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       </div>
 
       {/* STUDENT INFO */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
           <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
           <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
           <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
