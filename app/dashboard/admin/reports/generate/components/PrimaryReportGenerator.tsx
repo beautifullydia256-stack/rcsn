@@ -2897,16 +2897,23 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
             {/* Center Column: School Information - Starts where badge ends */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '192px', paddingLeft: '0.5cm' }}>
-              {/* School Name - Original Template 3 styling */}
+              {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
-                <div 
-                  className="font-bold text-[22pt] uppercase tracking-wide leading-[1.1] mb-3"
+                <h1 
                   style={{
-                    color: school?.header_school_name_color || '#1e3a8a'
+                    fontSize: '19pt',
+                    fontWeight: '700',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    lineHeight: '1.2',
+                    marginBottom: '0.4cm',
+                    color: school?.header_school_name_color || '#1e3a8a',
+                    marginTop: 0
                   }}
                 >
                   {school.name}
-                </div>
+                </h1>
               )}
 
               {/* Subtitle - Serif Font - Uses saved color */}
