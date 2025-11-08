@@ -352,8 +352,12 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       // Non O-Level classes → decide based on selected template and class (Primary)
       const currentClass = (reportData.students?.[0]?.current_class || '').toString();
       const isLowerSection = /(primary\s*1|primary\s*2|primary\s*3|p\.\s*1|p1|p\.\s*2|p2|p\.\s*3|p3)/i.test(currentClass);
+      const isUpperSection = /(primary\s*[4567]|p\.\s*[4567]|p[4567])/i.test(currentClass);
 
-      if (template === 'template3' || isLowerSection) {
+      if (template === 'template4' || (isUpperSection && template !== 'template3')) {
+        console.log('Using Primary Upper Section Template (template4)');
+        htmlContent = generateTemplate4UpperSectionHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+      } else if (template === 'template3' || isLowerSection) {
         console.log('Using Primary Lower Section Template (template3)');
         htmlContent = generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
       } else if (template === 'template2') {
@@ -1621,24 +1625,12 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       </div>
       
       <!-- HEADER -->
-      <div class="header">
-        <!-- School Logo -->
-        <div class="school-logo">
-          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">KYOTERA</div><div style="font-weight: bold;">PARENTS\'</div><div style="font-weight: bold;">SECONDARY</div><div style="font-weight: bold;">SCHOOL</div></div>'}
-        </div>
-        
-        <!-- School Info -->
-        <div class="school-info">
-          <div class="school-name">${school?.name || 'KYOTERA PARENTS\' SECONDARY SCHOOL'}</div>
-          <div class="school-contact">
-            ${school?.address || 'P.O.BOX 11, Kyotera- Uganda'} | 
-            Tel: ${school?.phone || '0701861636 / 0700338061'} | 
-            E-mail: ${school?.email || 'kasumbaj2009@gmail.com'}
-          </div>
-          <div class="report-title">END OF TERM ONE STUDENT'S PROGRESSIVE REPORT</div>
-          <div class="report-number">No. ${student.admission_number || student.student_id}</div>
-        </div>
-      </div>
+      ${generateProfessionalHeaderHTML(
+        school,
+        schoolLogoBase64,
+        `STUDENT'S PROGRESSIVE REPORT OF ${examSet?.term ? `TERM ${examSet.term}` : 'TERM'}`,
+        examSet
+      )}
 
       <!-- STUDENT INFO -->
       <div class="student-info">
@@ -2833,4 +2825,94 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
     </body>
     </html>
   `;
+}
+
+// Helper function to lighten a hex color for gradient
+function lightenColor(hex: string): string {
+  hex = hex.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  const lighten = (color: number) => Math.min(255, Math.round(color + (255 - color) * 0.5));
+  const toHex = (n: number) => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  return `#${toHex(lighten(r))}${toHex(lighten(g))}${toHex(lighten(b))}`;
+}
+
+// Helper function to generate professional header HTML matching Template 3 and Template 4
+function generateProfessionalHeaderHTML(
+  school: any,
+  schoolLogoBase64: string | null,
+  reportTitle: string,
+  examSet: any
+): string {
+  const schoolNameColor = school?.header_school_name_color || '#1e3a8a';
+  const subtitleColor = school?.header_subtitle_color || '#3b82f6';
+  const addressColor = school?.header_address_color || '#1e40af';
+  const contactColor = school?.header_contact_color || '#1e40af';
+  const mottoColor = school?.header_motto_color || '#2563eb';
+  const dividerColor = school?.header_divider_color || '#1e3a8a';
+  const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
+
+  return `
+    <div class="print-header-container" style="padding-top: 1.2cm; padding-bottom: 0.2cm; padding-left: 0; padding-right: 1cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+      <div style="display: flex; align-items: center; min-height: 3.5cm; position: relative;">
+        <div style="width: 192px; height: 192px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
+          ${schoolLogoBase64 ? `
+            <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
+          ` : `
+            <div style="width: 100%; height: 100%; border: 1px solid #d1d5db; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: #f9fafb;">
+              <span style="font-size: 9pt; color: #9ca3af; text-align: center; padding: 8px;">School<br/>Logo</span>
+            </div>
+          `}
+        </div>
+        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 192px; padding-left: 0.5cm;">
+          ${school?.name ? `
+            <h1 style="font-size: 19pt; font-weight: 700; font-family: Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 0.4cm; color: ${schoolNameColor}; margin-top: 0;">
+              ${school.name}
+            </h1>
+          ` : ''}
+          ${school?.subtitle ? `
+            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 400; color: ${subtitleColor}; margin-bottom: 0.25cm; line-height: 1.5;">
+              ${school.subtitle}
+            </div>
+          ` : ''}
+          ${(school?.address || school?.pobox) ? `
+            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${addressColor}; margin-bottom: 0.25cm; line-height: 1.5;">
+              ${school?.address || ''}${school?.address && school?.pobox ? ' ' : ''}${school?.pobox || ''}
+            </div>
+          ` : ''}
+          ${(school?.contact_email || school?.contact_phone) ? `
+            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${contactColor}; margin-bottom: 0.3cm; line-height: 1.5;">
+              ${school?.contact_email || ''}${school?.contact_email && school?.contact_phone ? ' <span style="margin: 0 8px; color: #64748b;">|</span> ' : ''}${school?.contact_phone || ''}
+            </div>
+          ` : ''}
+          ${school?.motto ? `
+            <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 600; color: ${mottoColor}; margin-bottom: 0.4cm; line-height: 1.6; letter-spacing: 0.02em;">
+              &quot;${school.motto}&quot;
+            </div>
+          ` : ''}
+        </div>
+      </div>
+      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.6cm; margin-bottom: 0.5cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+      <div style="text-align: center; margin-bottom: 0.8cm;">
+        <div style="display: inline-block; padding: 8px 24px; border-radius: 20px; font-size: 10pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          ${reportTitle}
+        </div>
+        ${(examSet?.name || examSet?.year) ? `
+          <div style="font-size: 9pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.3cm; font-weight: 400;">
+            ${examSet?.name || 'Term Report'} - ${examSet?.year || new Date().getFullYear()}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function generateTemplate4UpperSectionHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
+  // This function will be implemented to match Template4UpperSectionReport
+  // For now, use Template 3 structure as a placeholder - will be updated to match Template 4 exactly
+  return generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
 }
