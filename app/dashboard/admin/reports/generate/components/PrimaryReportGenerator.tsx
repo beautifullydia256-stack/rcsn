@@ -3242,7 +3242,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             paddingBottom: '0.6cm',
             paddingLeft: '1cm',
             paddingRight: '1cm',
-            background: 'linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)',
+            background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
             pageBreakInside: 'avoid',
