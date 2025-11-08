@@ -3199,24 +3199,29 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             {examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}
           </div>
         </div>
-
-        {student?.profile_photo ? (
-          <div className="w-24 h-24 flex-shrink-0">
-            <img src={student.profile_photo} alt="Student Photo" className="w-full h-full object-cover rounded border-2 border-gray-300" />
-          </div>
-        ) : (
-          <div className="w-24 h-24 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
-            <span className="text-xs text-gray-400">Student Photo</span>
-          </div>
-        )}
       </div>
 
       {/* STUDENT INFO */}
-      <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+      <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
           <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
           <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
           <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
           <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
+        </div>
+        
+        {/* Student Photo */}
+        <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          {student?.profile_photo ? (
+            <img
+              src={student.profile_photo}
+              alt="Student Photo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-gray-500">Photo</div>
+          )}
+        </div>
       </div>
 
       {/* SUBJECTS TABLE */}
