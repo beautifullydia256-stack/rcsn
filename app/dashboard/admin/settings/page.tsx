@@ -1419,37 +1419,6 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
       </div>
       {error && <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">{error}</div>}
       
-      {/* Next Term Begins Date */}
-      <div className="mt-6 p-4 rounded-lg bg-green-600/10 border border-green-500/30">
-        <h3 className="text-green-300 font-medium mb-3">📅 Next Term Begins Date</h3>
-        <p className="text-white/60 text-sm mb-3">Set the date when the next term begins. This will appear on student report cards.</p>
-        <div className="flex items-center gap-3">
-          <input
-            type="date"
-            value={nextTermBeginsDate}
-            onChange={(e) => setNextTermBeginsDate(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2"
-          />
-          <button
-            onClick={saveNextTermBeginsDate}
-            disabled={!schoolId || !nextTermBeginsDate || savingNextTermDate}
-            className="rounded-lg bg-green-600 hover:bg-green-500 px-4 py-2 text-white disabled:opacity-50"
-          >
-            {savingNextTermDate ? 'Saving...' : 'Save Date'}
-          </button>
-        </div>
-        {nextTermDateSuccess && (
-          <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-3 py-2 text-sm">
-            {nextTermDateSuccess}
-          </div>
-        )}
-        {error && nextTermBeginsDate && (
-          <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">
-            {error}
-          </div>
-        )}
-      </div>
-      
       <div className="mt-4 text-white/80 text-sm">Configured terms</div>
       <div className="mt-2 overflow-x-auto rounded-xl border border-white/10">
         <table className="min-w-full text-sm">
@@ -1488,6 +1457,37 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
             })}
           </tbody>
         </table>
+      </div>
+      
+      {/* Next Term Begins Date */}
+      <div className="mt-6 p-4 rounded-lg bg-green-600/10 border border-green-500/30">
+        <h3 className="text-green-300 font-medium mb-3">📅 Next Term Begins Date</h3>
+        <p className="text-white/60 text-sm mb-3">Set the date when the next term begins. This will appear on student report cards.</p>
+        <div className="flex items-center gap-3">
+          <input
+            type="date"
+            value={nextTermBeginsDate}
+            onChange={(e) => setNextTermBeginsDate(e.target.value)}
+            className="rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2"
+          />
+          <button
+            onClick={saveNextTermBeginsDate}
+            disabled={!schoolId || !nextTermBeginsDate || savingNextTermDate}
+            className="rounded-lg bg-green-600 hover:bg-green-500 px-4 py-2 text-white disabled:opacity-50"
+          >
+            {savingNextTermDate ? 'Saving...' : 'Save Date'}
+          </button>
+        </div>
+        {nextTermDateSuccess && (
+          <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-3 py-2 text-sm">
+            {nextTermDateSuccess}
+          </div>
+        )}
+        {error && nextTermBeginsDate && (
+          <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">
+            {error}
+          </div>
+        )}
       </div>
     </div>
   );
