@@ -2237,22 +2237,31 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
         
         {/* School Info - Right side */}
         <div className="text-center flex-1">
-          {school?.name && <div className="font-bold text-[18pt] uppercase">{school.name}</div>}
-          {(school?.phone || school?.email || school?.address) && (
-            <div className="font-bold text-[11pt] mt-1">
-              {school?.phone ? `TEL :: ${school.phone}` : ''} 
-              {school?.phone && school?.email ? ' |' : ''} 
-              {school?.email ? ` EMAIL :: ${school.email}` : ''} 
-              {school?.address ? ` | ${school.address}` : ''}
+          {school?.name && (
+            <div className="font-bold text-[20pt] uppercase tracking-tight leading-tight mb-2">
+              {school.name}
             </div>
           )}
-          {school?.motto && <div className="font-bold text-[11pt] mt-1 italic">SCHOOL MOTTO: {school.motto}</div>}
+          {(school?.phone || school?.email || school?.address) && (
+            <div className="text-[11pt] font-medium leading-relaxed mb-1.5">
+              {school?.address && <span>{school.address}</span>}
+              {school?.address && (school?.phone || school?.email) && <span className="mx-2">|</span>}
+              {school?.phone && <span>Tel: {school.phone}</span>}
+              {school?.phone && school?.email && <span className="mx-2">|</span>}
+              {school?.email && <span>Email: {school.email}</span>}
+            </div>
+          )}
+          {school?.motto && (
+            <div className="text-[11pt] font-medium italic text-slate-600 mt-1.5">
+              &quot;{school.motto}&quot;
+            </div>
+          )}
         </div>
       </div>
 
       {/* REPORT TITLE */}
-      <div className="text-center bg-green-600 text-white py-1.5 mb-3">
-        <h1 className="text-[12.5pt] font-bold uppercase">
+      <div className="text-center bg-green-600 text-white py-2 mb-4">
+        <h1 className="text-[13pt] font-bold uppercase tracking-wide leading-tight">
           LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
         </h1>
       </div>
@@ -2497,13 +2506,23 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         
         {/* School Info */}
         <div className="text-right flex-1">
-          {school?.name && <div className="font-bold text-[18pt] uppercase">{school.name}</div>}
-          {school?.motto && <div className="text-[10pt] mt-1 italic">"{school.motto}"</div>}
+          {school?.name && (
+            <div className="font-bold text-[20pt] uppercase tracking-tight leading-tight mb-2">
+              {school.name}
+            </div>
+          )}
+          {school?.motto && (
+            <div className="text-[11pt] font-medium italic text-slate-600 mb-1.5">
+              &quot;{school.motto}&quot;
+            </div>
+          )}
           {(school?.address || school?.email || school?.phone) && (
-            <div className="text-[9pt] mt-1">
-              {school?.address || ''} {school?.address && (school?.email || school?.phone) ? ', ' : ''}
-              {school?.email || ''} {school?.email && school?.phone ? ', ' : ''}
-              {school?.phone || ''}
+            <div className="text-[11pt] font-medium leading-relaxed">
+              {school?.address && <span>{school.address}</span>}
+              {school?.address && (school?.email || school?.phone) && <span className="mx-1.5">,</span>}
+              {school?.email && <span>{school.email}</span>}
+              {school?.email && school?.phone && <span className="mx-1.5">,</span>}
+              {school?.phone && <span>{school.phone}</span>}
             </div>
           )}
         </div>
@@ -2511,7 +2530,9 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       {/* REPORT TITLE */}
       <div className="text-center mb-4">
-        <h1 className="text-[14pt] font-bold uppercase">MIDDLE & TOP CLASS - TERMLY REPORT</h1>
+        <h1 className="text-[13pt] font-bold uppercase tracking-wide leading-tight">
+          MIDDLE & TOP CLASS - TERMLY REPORT
+        </h1>
       </div>
 
       {/* STUDENT INFO */}
@@ -2824,15 +2845,31 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         
         {/* School Info */}
         <div className="text-right flex-1">
-        <div className="font-bold text-[18pt] uppercase">{school?.name || ''}</div>
-          <div className="font-bold text-[13pt] mt-1">
-          {school?.address || ''} {school?.address && school?.phone ? '|' : ''} 
-          {school?.phone ? ` Tel: ${school.phone}` : ''} 
-          {school?.phone && school?.email ? ' |' : ''} 
-          {school?.email ? ` E-mail: ${school.email}` : ''}
-        </div>
-        <div className="text-[12pt] font-bold mt-2 uppercase">{getReportTitle()}</div>
-        <div className="text-[10pt] mt-1">No. {student.admission_number || student.student_id}</div>
+          {school?.name && (
+            <div className="font-bold text-[20pt] uppercase tracking-tight leading-tight mb-2">
+              {school.name}
+            </div>
+          )}
+          {(school?.address || school?.phone || school?.email) && (
+            <div className="text-[11pt] font-medium leading-relaxed mb-1.5">
+              {school?.address && <span>{school.address}</span>}
+              {school?.address && (school?.phone || school?.email) && <span className="mx-2">|</span>}
+              {school?.phone && <span>Tel: {school.phone}</span>}
+              {school?.phone && school?.email && <span className="mx-2">|</span>}
+              {school?.email && <span>Email: {school.email}</span>}
+            </div>
+          )}
+          {school?.motto && (
+            <div className="text-[11pt] font-medium italic text-slate-600 mb-2">
+              &quot;{school.motto}&quot;
+            </div>
+          )}
+          <div className="text-[13pt] font-semibold uppercase tracking-wide mt-2 mb-1">
+            {getReportTitle()}
+          </div>
+          <div className="text-[10pt] font-medium text-slate-700 mt-1">
+            No. {student.admission_number || student.student_id}
+          </div>
         </div>
       </div>
 
@@ -3197,18 +3234,32 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         )}
         
         <div className="flex-1 text-center px-4 text-slate-900">
-          <h1 className="text-3xl font-extrabold uppercase tracking-wide mb-1 text-blue-900">{school?.name || ''}</h1>
-          {school?.address && <div className="text-sm mb-1">{school.address}</div>}
-          {(school?.email || school?.phone) && (
-            <div className="text-sm mb-1">
-              {school?.email || ''} {school?.email && school?.phone ? '|' : ''} {school?.phone || ''}
+          {school?.name && (
+            <h1 className="text-[20pt] font-bold uppercase tracking-tight leading-tight mb-2 text-blue-900">
+              {school.name}
+            </h1>
+          )}
+          {school?.address && (
+            <div className="text-[11pt] font-medium mb-1.5 text-slate-700">
+              {school.address}
             </div>
           )}
-          {school?.motto && <div className="text-sm italic text-blue-800/80">&quot;{school.motto}&quot;</div>}
-          <div className="mt-2 inline-block px-5 py-2 rounded-full bg-blue-100 text-blue-900 text-xl font-semibold uppercase">
+          {(school?.email || school?.phone) && (
+            <div className="text-[11pt] font-medium mb-1.5 text-slate-700">
+              {school?.email && <span>{school.email}</span>}
+              {school?.email && school?.phone && <span className="mx-2">|</span>}
+              {school?.phone && <span>{school.phone}</span>}
+            </div>
+          )}
+          {school?.motto && (
+            <div className="text-[11pt] font-medium italic text-blue-800/80 mb-3">
+              &quot;{school.motto}&quot;
+            </div>
+          )}
+          <div className="mt-3 inline-block px-5 py-2 rounded-full bg-blue-100 text-blue-900 text-[13pt] font-semibold uppercase tracking-wide">
             End Of Term Report - Upper Section
           </div>
-          <div className="text-sm mt-2 text-slate-700">
+          <div className="text-[11pt] font-medium mt-2 text-slate-600">
             {examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}
           </div>
         </div>
