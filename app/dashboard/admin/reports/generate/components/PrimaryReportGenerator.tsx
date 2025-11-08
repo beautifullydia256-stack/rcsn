@@ -3239,7 +3239,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           className="print-header-container"
           style={{
             paddingTop: '1.2cm',
-            paddingBottom: '0.6cm',
+            paddingBottom: '0.2cm',
             paddingLeft: '1cm',
             paddingRight: '1cm',
             background: 'transparent',
@@ -3435,7 +3435,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         `}} />
       </div>
 
-      <div className="relative z-10 space-y-6" style={{ marginTop: '1.5cm' }}>
+      <div className="relative z-10 space-y-6" style={{ marginTop: '0.4cm' }}>
         {/* STUDENT INFO */}
         <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
