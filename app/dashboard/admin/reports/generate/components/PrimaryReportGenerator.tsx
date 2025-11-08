@@ -623,6 +623,12 @@ export function PrimaryReportGenerator() {
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
           const studentPhoto = studentPhotos?.find(p => p.student_id === student.student_id);
           
+          // Calculate fees balance (sum of all fees records for this student)
+          const feesBalance = studentFees.reduce((total, fee) => {
+            const balance = parseFloat(fee.balance || fee.amount_due || '0') || 0;
+            return total + balance;
+          }, 0);
+          
           // Calculate summary with enhanced grading (handle missing data)
           // Only count actual results (not MISSED) for calculations
           // MISSED entries are identified by teacher_remark = 'MISSED' (not by grade)
@@ -1062,11 +1068,16 @@ export function PrimaryReportGenerator() {
 
           return {
             ...student,
-            results: allStudentResults,
+            results: allStudentResults.map((r: any) => ({
+              ...r,
+              next_term_begins_date: schoolInfo?.next_term_begins_date || null
+            })),
             subjects: subjects.length > 0 ? subjects : undefined, // Only add if Template4
             attendance: studentAttendance,
             fees: studentFees,
             projects: studentProjects,
+            feesBalance: feesBalance,
+            next_term_begins_date: schoolInfo?.next_term_begins_date || null,
             comments: {
               ...studentComments,
               class_teacher_name: classTeacherName || (studentComments?.class_teacher_name || ''),
@@ -3281,7 +3292,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       {/* NEXT TERM */}
       <div className="text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
           <div>
-            <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
+            <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
           </div>
       </div>
@@ -3447,7 +3458,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </p>
       </div>
 
-      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '______________________'}</p>
+      <p className="mt-3 text-[11pt]"><strong>Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '______________________'}</p>
 
       {/* Grading system & descriptions */}
       <div className="mt-3">
