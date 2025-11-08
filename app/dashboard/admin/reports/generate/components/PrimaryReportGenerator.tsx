@@ -3249,10 +3249,40 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             breakInside: 'avoid'
           }}
         >
-          {/* Centered Header Layout */}
-          <div className="flex items-center justify-center" style={{ minHeight: '3.5cm' }}>
-            {/* School Information - Centered */}
-            <div className="text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
+          {/* Two-Column Layout */}
+          <div className="flex items-center gap-8" style={{ minHeight: '3.5cm' }}>
+            {/* Left Column: Logo */}
+            <div 
+              className="flex-shrink-0"
+              style={{
+                width: '192px',
+                height: '192px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {(school?.logo_url || school?.logo) ? (
+                <img 
+                  src={school.logo_url || school.logo} 
+                  alt="School Logo" 
+                  className="w-full h-full object-contain"
+                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                />
+              ) : (
+                <div 
+                  className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
+                    School<br/>Logo
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: School Information */}
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
               {/* School Name - Bold Sans-serif Title */}
               {school?.name && (
                 <h1 
