@@ -3006,3 +3006,4 @@ function generateProfessionalHeaderHTML(
       </div>
     </div>
   `
+}
