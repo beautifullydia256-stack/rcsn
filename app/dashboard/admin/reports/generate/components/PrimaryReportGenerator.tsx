@@ -392,12 +392,26 @@ export function PrimaryReportGenerator() {
         .eq('school_id', schoolId)
         .eq('class_name', targetStudents[0].current_class); // Get attendance for the entire class
 
-      // Fetch fees data
+      // Fetch fees data (for backward compatibility)
       const { data: feesData } = await supabase
         .from('student_fees')
         .select('*')
         .eq('school_id', schoolId)
         .in('student_id', targetStudents.map(s => s.student_id));
+
+      // Fetch student payments to calculate balance (same method as outstanding balance page)
+      const { data: paymentsData } = await supabase
+        .from('student_payments')
+        .select('student_id, amount_paid')
+        .eq('school_id', schoolId)
+        .in('student_id', targetStudents.map(s => s.student_id));
+
+      // Calculate total paid per student
+      const paidByStudent: Record<string, number> = {};
+      (paymentsData || []).forEach((p: any) => {
+        const amt = Number(p.amount_paid || 0);
+        paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
+      });
 
       // Fetch termly projects (secondary feature)
       let projectsData: any[] = [];
@@ -623,11 +637,11 @@ export function PrimaryReportGenerator() {
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
           const studentPhoto = studentPhotos?.find(p => p.student_id === student.student_id);
           
-          // Calculate fees balance (sum of all fees records for this student)
-          const feesBalance = studentFees.reduce((total, fee) => {
-            const balance = parseFloat(fee.balance || fee.amount_due || '0') || 0;
-            return total + balance;
-          }, 0);
+          // Calculate fees balance (same method as outstanding balance page)
+          // Balance = expected_fee_amount - sum(amount_paid from student_payments)
+          const expectedFeeAmount = Number(student.expected_fee_amount || 0);
+          const totalPaid = paidByStudent[student.student_id] || 0;
+          const feesBalance = Math.max(0, expectedFeeAmount - totalPaid);
           
           // Calculate summary with enhanced grading (handle missing data)
           // Only count actual results (not MISSED) for calculations
