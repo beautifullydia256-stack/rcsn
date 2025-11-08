@@ -3242,9 +3242,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             paddingBottom: '0.2cm',
             paddingLeft: '1cm',
             paddingRight: '1cm',
-            background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%)',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+            background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
             pageBreakInside: 'avoid',
@@ -3287,7 +3285,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
             {/* Center Column: School Information - Centered */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '200px' }}>
-              {/* School Name - Bold Sans-serif Title */}
+              {/* School Name - Bold Sans-serif Title - Professional Blue */}
               {school?.name && (
                 <h1 
                   style={{
@@ -3298,23 +3296,22 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     letterSpacing: '0.05em',
                     lineHeight: '1.2',
                     marginBottom: '0.4cm',
-                    color: '#FFFFFF',
-                    marginTop: 0,
-                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+                    color: '#1e3a8a',
+                    marginTop: 0
                   }}
                 >
                   {school.name}
                 </h1>
               )}
 
-              {/* Subtitle - Serif Font */}
+              {/* Subtitle - Serif Font - Professional Blue */}
               {school?.subtitle && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
-                    color: '#E0E7FF',
+                    color: '#3b82f6',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3323,14 +3320,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Address with P.O.Box - Serif Font */}
+              {/* Address with P.O.Box - Serif Font - Professional Blue */}
               {(school?.address || school?.pobox) && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#FFFFFF',
+                    color: '#1e40af',
                     marginBottom: '0.25cm',
                     lineHeight: '1.5'
                   }}
@@ -3339,25 +3336,25 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
 
-              {/* Contact Information - Email | Phone - Serif Font */}
+              {/* Contact Information - Email | Phone - Serif Font - Professional Blue */}
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
                     fontSize: '12pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: '#FFFFFF',
+                    color: '#1e40af',
                     marginBottom: '0.3cm',
                     lineHeight: '1.5'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#C7D2FE' }}>|</span>}
+                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
                 </div>
               )}
 
-              {/* Motto - Serif Font Bold Italic with Quotes */}
+              {/* Motto - Serif Font Bold Italic with Quotes - Professional Blue */}
               {school?.motto && (
                 <div 
                   style={{
@@ -3365,7 +3362,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
-                    color: '#E0E7FF',
+                    color: '#2563eb',
                     marginBottom: '0.4cm',
                     lineHeight: '1.6',
                     letterSpacing: '0.02em'
@@ -3380,11 +3377,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           {/* Elegant Divider Line */}
           <div 
             style={{
-              height: '2px',
-              background: 'linear-gradient(to right, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0.3) 100%)',
+              height: '1px',
+              background: 'linear-gradient(to right, #1e3a8a 0%, #60a5fa 50%, #1e3a8a 100%)',
               marginTop: '0.6cm',
               marginBottom: '0.5cm',
-              borderRadius: '1px',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
