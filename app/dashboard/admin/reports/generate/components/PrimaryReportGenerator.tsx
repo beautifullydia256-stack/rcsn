@@ -2952,8 +2952,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.results?.[0]?.headteacher_comment || '..............................................................'}</p>
             <p className="mt-2">Signature: ______________________</p>
           </div>
-          <div className="text-[11pt] mt-4">
-            <p>Next term begins on: {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '____________________'}</p>
+          <div className="flex justify-between items-center text-[11pt] mt-4 pt-4 border-t border-blue-100/60">
+            <div>
+              <strong className="text-blue-900">Next term begins on:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '____________________'}
+            </div>
+            <div>
+              <strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}
+            </div>
           </div>
         </div>
       </div>
