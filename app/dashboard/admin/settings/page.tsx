@@ -1143,6 +1143,7 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
   const [showTermInfo, setShowTermInfo] = useState(false);
   const [nextTermBeginsDate, setNextTermBeginsDate] = useState<string>("");
   const [savingNextTermDate, setSavingNextTermDate] = useState(false);
+  const [nextTermDateSuccess, setNextTermDateSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -1318,19 +1319,35 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
   };
 
   const saveNextTermBeginsDate = async () => {
-    if (!schoolId || !nextTermBeginsDate) return;
+    if (!schoolId || !nextTermBeginsDate) {
+      setError('Please select a date before saving.');
+      return;
+    }
     
     setSavingNextTermDate(true);
-    const { error } = await supabase
+    setError(null);
+    setNextTermDateSuccess(null);
+    
+    const { data, error } = await supabase
       .from('schools')
       .update({ next_term_begins_date: nextTermBeginsDate })
-      .eq('school_id', schoolId);
+      .eq('school_id', schoolId)
+      .select('next_term_begins_date')
+      .single();
     
     setSavingNextTermDate(false);
     if (error) {
-      setError(error.message);
+      setError(`Failed to save: ${error.message}`);
+      setNextTermDateSuccess(null);
     } else {
       setError(null);
+      setNextTermDateSuccess('Next term begins date saved successfully!');
+      // Reload the date to confirm it was saved
+      if (data?.next_term_begins_date) {
+        setNextTermBeginsDate(data.next_term_begins_date);
+      }
+      // Clear success message after 3 seconds
+      setTimeout(() => setNextTermDateSuccess(null), 3000);
     }
   };
 
@@ -1421,6 +1438,16 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
             {savingNextTermDate ? 'Saving...' : 'Save Date'}
           </button>
         </div>
+        {nextTermDateSuccess && (
+          <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-3 py-2 text-sm">
+            {nextTermDateSuccess}
+          </div>
+        )}
+        {error && nextTermBeginsDate && (
+          <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">
+            {error}
+          </div>
+        )}
       </div>
       
       <div className="mt-4 text-white/80 text-sm">Configured terms</div>
