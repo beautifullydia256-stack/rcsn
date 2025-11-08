@@ -606,10 +606,14 @@ export function PrimaryReportGenerator() {
         school: {
           ...schoolInfo,
           name: customHeader.schoolName || schoolInfo?.name || '',
+          subtitle: schoolInfo?.subtitle || '',
           motto: customHeader.motto || schoolInfo?.motto || '',
           phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
           email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
           address: customHeader.address || schoolInfo?.address || schoolInfo?.location || '',
+          website: schoolInfo?.website || '',
+          contact_phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
+          contact_email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
           logo: customHeader.logoPreview || schoolInfo?.logo_url || null,
           logo_url: customHeader.logoPreview || schoolInfo?.logo_url || null
         },
@@ -3702,15 +3706,147 @@ function Template5CleanReportCard({ student, examSet, school }: { student: any; 
         }
       `}} />
 
-      {/* HEADER SECTION */}
-      <div style={{ marginBottom: '20px' }}>
-        {/* Main Title */}
+      {/* HEADER SECTION - Matching Image Design */}
+      <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
+        {/* Left Side: Logo with Banner */}
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          {/* Circular Logo Badge */}
+          <div
+            style={{
+              width: '90px',
+              height: '90px',
+              borderRadius: '50%',
+              border: '6px solid #8B4513',
+              backgroundColor: '#8B4513',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              marginBottom: '8px',
+              position: 'relative'
+            }}
+          >
+            {school?.logo_url || school?.logo ? (
+              <img
+                src={school.logo_url || school.logo}
+                alt="School Badge"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  padding: '8px'
+                }}
+              />
+            ) : (
+              <div style={{ color: '#FFFFFF', fontSize: '24px', fontWeight: 'bold' }}>SK</div>
+            )}
+            {/* Outer Ring with School Name */}
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                border: '6px solid #8B4513',
+                pointerEvents: 'none'
+              }}
+            />
+          </div>
+          
+          {/* Banner Below Logo with Motto */}
+          {school?.motto && (
+            <div
+              style={{
+                backgroundColor: '#8B4513',
+                border: '1px solid #FFFFFF',
+                padding: '6px 12px',
+                borderRadius: '4px',
+                textAlign: 'center',
+                minWidth: '120px'
+              }}
+            >
+              <div
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: '9px',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  fontFamily: 'Arial, sans-serif'
+                }}
+              >
+                {school.motto}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side: School Information */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start' }}>
+          {/* School Name - Large, Bold */}
+          {school?.name && (
+            <div
+              style={{
+                fontSize: '22px',
+                fontWeight: 'bold',
+                color: '#000000',
+                marginBottom: '4px',
+                fontFamily: 'Arial, sans-serif',
+                lineHeight: '1.2'
+              }}
+            >
+              {school.name.toUpperCase()}
+            </div>
+          )}
+
+          {/* Subtitle - Smaller, Regular */}
+          {school?.subtitle && (
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: '400',
+                color: '#000000',
+                marginBottom: '8px',
+                fontFamily: 'Arial, sans-serif'
+              }}
+            >
+              {school.subtitle}
+            </div>
+          )}
+
+          {/* Contact Information Block */}
+          <div
+            style={{
+              fontSize: '10px',
+              fontWeight: '400',
+              color: '#000000',
+              fontFamily: 'Arial, sans-serif',
+              lineHeight: '1.6'
+            }}
+          >
+            {school?.address && (
+              <div style={{ marginBottom: '2px' }}>{school.address}</div>
+            )}
+            {school?.contact_phone && (
+              <div style={{ marginBottom: '2px' }}>Tel: {school.contact_phone}</div>
+            )}
+            {school?.contact_email && (
+              <div style={{ marginBottom: '2px' }}>Email: {school.contact_email}</div>
+            )}
+            {school?.website && (
+              <div style={{ marginBottom: '2px' }}>Web: {school.website}</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Title */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
         <h1
           style={{
             fontSize: '24px',
             fontWeight: 'bold',
             color: '#002B5B',
-            textAlign: 'center',
             letterSpacing: '1px',
             margin: '0 0 12px 0',
             fontFamily: 'Calibri, Times New Roman, sans-serif'
@@ -3725,28 +3861,29 @@ function Template5CleanReportCard({ student, examSet, school }: { student: any; 
             width: '80%',
             height: '2px',
             backgroundColor: '#C0C0C0',
-            margin: '0 auto 20px auto'
+            margin: '0 auto'
           }}
         />
+      </div>
 
-        {/* Student Information Block - 2 Columns */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: '1fr 1fr',
-            gap: '12px 40px',
-            fontSize: '14px',
-            color: '#000000',
-            marginBottom: '20px'
-          }}
-        >
-          <div><strong>Student Name:</strong> {student?.name || '________________'}</div>
-          <div><strong>Class:</strong> {student?.current_class || '________________'}</div>
-          <div><strong>Term:</strong> {examSet?.term || '________________'}</div>
-          <div><strong>Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
-          <div><strong>Index No:</strong> {student?.admission_number || student?.student_id || '________________'}</div>
-          <div><strong>Stream:</strong> ________________</div>
-        </div>
+      {/* Student Information Block - 2 Columns */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '12px 40px',
+          fontSize: '14px',
+          color: '#000000',
+          marginBottom: '20px',
+          marginTop: '20px'
+        }}
+      >
+        <div><strong>Student Name:</strong> {student?.name || '________________'}</div>
+        <div><strong>Class:</strong> {student?.current_class || '________________'}</div>
+        <div><strong>Term:</strong> {examSet?.term || '________________'}</div>
+        <div><strong>Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
+        <div><strong>Index No:</strong> {student?.admission_number || student?.student_id || '________________'}</div>
+        <div><strong>Stream:</strong> ________________</div>
       </div>
 
       {/* SUBJECT TABLE SECTION */}

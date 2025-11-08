@@ -1991,7 +1991,9 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
   const [logo, setLogo] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [schoolName, setSchoolName] = useState('');
+  const [subtitle, setSubtitle] = useState('');
   const [motto, setMotto] = useState('');
+  const [address, setAddress] = useState('');
   const [website, setWebsite] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -2003,7 +2005,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
 
       const { data } = await supabase
         .from('schools')
-        .select('name, logo_url, motto, website, contact_email, contact_phone')
+        .select('name, logo_url, motto, subtitle, address, location, website, contact_email, contact_phone')
         .eq('school_id', schoolId)
         .single();
 
@@ -2011,6 +2013,8 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         setSchoolName(data.name || '');
         setLogo(data.logo_url || null);
         setMotto(data.motto || '');
+        setSubtitle(data.subtitle || '');
+        setAddress(data.address || data.location || '');
         setWebsite(data.website || '');
         setContactEmail(data.contact_email || '');
         setContactPhone(data.contact_phone || '');
@@ -2107,6 +2111,8 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         .from('schools')
         .update({
           motto,
+          subtitle,
+          address,
           website,
           contact_email: contactEmail,
           contact_phone: contactPhone
@@ -2220,12 +2226,35 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">School Subtitle</label>
+            <input
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              placeholder="e.g., Premier Academy Ltd"
+              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+            />
+            <p className="text-xs text-white/40 mt-1">Displayed below school name in report headers</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-white/80 mb-2">School Motto</label>
             <input
               type="text"
               value={motto}
               onChange={(e) => setMotto(e.target.value)}
               placeholder="e.g., Excellence in Education"
+              className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white/80 mb-2">Address</label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="e.g., Saddler Way, Naguru P.O.Box 3673, Kampala Uganda"
               className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
             />
           </div>
