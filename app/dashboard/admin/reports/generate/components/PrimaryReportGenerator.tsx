@@ -616,7 +616,14 @@ export function PrimaryReportGenerator() {
           contact_phone: customHeader.phone || schoolInfo?.phone || schoolInfo?.contact_phone || '',
           contact_email: customHeader.email || schoolInfo?.email || schoolInfo?.contact_email || '',
           logo: customHeader.logoPreview || schoolInfo?.logo_url || null,
-          logo_url: customHeader.logoPreview || schoolInfo?.logo_url || null
+          logo_url: customHeader.logoPreview || schoolInfo?.logo_url || null,
+          // Header colors - use saved colors from database or defaults
+          header_school_name_color: schoolInfo?.header_school_name_color || '#1e3a8a',
+          header_subtitle_color: schoolInfo?.header_subtitle_color || '#3b82f6',
+          header_address_color: schoolInfo?.header_address_color || '#1e40af',
+          header_contact_color: schoolInfo?.header_contact_color || '#1e40af',
+          header_motto_color: schoolInfo?.header_motto_color || '#2563eb',
+          header_divider_color: schoolInfo?.header_divider_color || '#1e3a8a'
         },
         examSet: (() => {
           if (!currentTermInfo) return null;
