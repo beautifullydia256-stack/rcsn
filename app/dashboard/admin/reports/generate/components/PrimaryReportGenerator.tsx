@@ -3285,23 +3285,23 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
             {/* Center Column: School Information - Centered */}
             <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '200px' }}>
-              {/* School Name - Matching Template 3 Style */}
+              {/* School Name - Bold Sans-serif Title */}
               {school?.name && (
-                <div 
+                <h1 
                   style={{
-                    fontSize: '22pt',
+                    fontSize: '19pt',
                     fontWeight: '700',
-                    fontFamily: 'Times New Roman, Times, serif',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    lineHeight: '1.1',
+                    lineHeight: '1.2',
                     marginBottom: '0.4cm',
-                    color: '#0f172a',
+                    color: '#1a1a1a',
                     marginTop: 0
                   }}
                 >
                   {school.name}
-                </div>
+                </h1>
               )}
 
               {/* Subtitle - Serif Font */}
