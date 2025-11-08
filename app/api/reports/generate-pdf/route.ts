@@ -1684,7 +1684,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 5mm 6mm;
+          padding: 2mm 4mm;
           background: #ffffff;
           color: #0f172a;
           -webkit-print-color-adjust: exact;
@@ -1694,7 +1694,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .page-section {
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
@@ -1703,25 +1703,25 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 12px;
-          padding: 10px 12px;
-          font-size: 10pt;
-          background: rgba(255, 255, 255, 0.96);
-          border: 1px solid rgba(191, 219, 254, 0.5);
-          border-radius: 12px;
+          gap: 10px;
+          padding: 8px 10px;
+          font-size: 9.8pt;
+          background: rgba(255, 255, 255, 0.97);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 10px;
         }
 
         .student-info-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
+          gap: 8px;
         }
 
         .student-photo {
-          width: 70px;
-          height: 84px;
-          border: 1px solid rgba(191, 219, 254, 0.6);
-          border-radius: 10px;
+          width: 64px;
+          height: 80px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 8px;
           background: #ffffff;
           display: flex;
           align-items: center;
@@ -1736,30 +1736,30 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .subjects-card {
-          background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.5);
-          border-radius: 12px;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 10px;
           overflow: hidden;
         }
 
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 8.8pt;
+          font-size: 8.6pt;
         }
 
         .subjects-table th,
         .subjects-table td {
-          border: 1px solid rgba(191, 219, 254, 0.6);
-          padding: 4px 6px;
+          border: 1px solid rgba(191, 219, 254, 0.5);
+          padding: 3.5px 5.5px;
         }
 
         .subjects-table th {
-          background: rgba(191, 219, 254, 0.7);
+          background: rgba(191, 219, 254, 0.68);
           color: #1e3a8a;
-          font-weight: 700;
+          font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
           text-align: center;
         }
 
@@ -1797,16 +1797,16 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 8px;
+          gap: 6px;
         }
 
         .summary-card {
-          background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 12px;
-          padding: 10px 12px;
-          font-size: 8.9pt;
-          line-height: 1.45;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 10px;
+          padding: 8px 10px;
+          font-size: 8.5pt;
+          line-height: 1.4;
         }
 
         .summary-card strong {
@@ -1814,12 +1814,12 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .comments-card {
-          background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.5);
-          border-radius: 12px;
-          padding: 12px 14px;
-          font-size: 8.9pt;
-          line-height: 1.45;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 10px;
+          padding: 10px 12px;
+          font-size: 8.5pt;
+          line-height: 1.4;
         }
 
         .comments-card h3 {
