@@ -2839,7 +2839,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           </div>
           
           {/* Student Photo */}
-          <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-28 h-32 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -3211,7 +3211,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         </div>
         
         {/* Student Photo */}
-        <div className="w-20 h-24 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+        <div className="w-28 h-32 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
           {student?.profile_photo ? (
             <img
               src={student.profile_photo}
