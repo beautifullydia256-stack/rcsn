@@ -3220,53 +3220,195 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         </div>
       )}
 
-      <div className="relative z-10 space-y-6">
-        {/* HEADER */}
-        <div className="flex items-start justify-between px-6 py-5">
-        {(school?.logo_url || school?.logo) ? (
-          <div className="w-48 h-48 flex-shrink-0">
-            <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-contain" />
-          </div>
-        ) : (
-          <div className="w-48 h-48 flex-shrink-0 border-2 border-gray-300 rounded flex items-center justify-center bg-gray-50">
-            <span className="text-xs text-gray-400">School Logo</span>
-          </div>
-        )}
-        
-        <div className="flex-1 text-center px-4 text-slate-900">
-          {school?.name && (
-            <h1 className="text-[22pt] font-bold uppercase tracking-wide leading-[1.1] mb-3 text-slate-900">
-              {school.name}
-            </h1>
-          )}
-          {school?.address && (
-            <div className="text-[10pt] font-normal mb-2 text-slate-700 leading-relaxed">
-              <span className="font-medium">{school.address}</span>
+      <div className="relative z-10">
+        {/* PRINT-READY PROFESSIONAL HEADER */}
+        <div 
+          className="print-header-container"
+          style={{
+            paddingTop: '1.2cm',
+            paddingBottom: '0.6cm',
+            paddingLeft: '1cm',
+            paddingRight: '1cm',
+            background: 'linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+            pageBreakInside: 'avoid',
+            breakInside: 'avoid'
+          }}
+        >
+          {/* Two-Column Layout */}
+          <div className="flex items-center gap-8" style={{ minHeight: '3.5cm' }}>
+            {/* Left Column: Logo */}
+            <div 
+              className="flex-shrink-0"
+              style={{
+                width: '90px',
+                height: '90px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {(school?.logo_url || school?.logo) ? (
+                <img 
+                  src={school.logo_url || school.logo} 
+                  alt="School Logo" 
+                  className="w-full h-full object-contain"
+                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                />
+              ) : (
+                <div 
+                  className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
+                    School<br/>Logo
+                  </span>
+                </div>
+              )}
             </div>
-          )}
-          {(school?.email || school?.phone) && (
-            <div className="text-[10pt] font-normal mb-2 text-slate-700 leading-relaxed">
-              {school?.email && <span className="font-medium">{school.email}</span>}
-              {school?.email && school?.phone && <span className="mx-2 text-slate-400">|</span>}
-              {school?.phone && <span className="font-medium">{school.phone}</span>}
+
+            {/* Right Column: School Information */}
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif' }}>
+              {/* School Name - Elegant Serif Title */}
+              {school?.name && (
+                <h1 
+                  style={{
+                    fontSize: '19pt',
+                    fontWeight: '700',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    lineHeight: '1.2',
+                    marginBottom: '0.4cm',
+                    color: '#1a1a1a',
+                    marginTop: 0
+                  }}
+                >
+                  {school.name}
+                </h1>
+              )}
+
+              {/* Address */}
+              {school?.address && (
+                <div 
+                  style={{
+                    fontSize: '10pt',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontWeight: '400',
+                    color: '#334155',
+                    marginBottom: '0.25cm',
+                    lineHeight: '1.5'
+                  }}
+                >
+                  {school.address}
+                </div>
+              )}
+
+              {/* Contact Information */}
+              {(school?.email || school?.phone) && (
+                <div 
+                  style={{
+                    fontSize: '10pt',
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontWeight: '400',
+                    color: '#334155',
+                    marginBottom: '0.3cm',
+                    lineHeight: '1.5'
+                  }}
+                >
+                  {school?.email && <span>{school.email}</span>}
+                  {school?.email && school?.phone && <span style={{ margin: '0 8px', color: '#94a3b8' }}>|</span>}
+                  {school?.phone && <span>{school.phone}</span>}
+                </div>
+              )}
+
+              {/* Motto - Elegant Italic */}
+              {school?.motto && (
+                <div 
+                  style={{
+                    fontSize: '9pt',
+                    fontFamily: 'Georgia, Times New Roman, serif',
+                    fontStyle: 'italic',
+                    fontWeight: '400',
+                    color: '#475569',
+                    marginBottom: '0.4cm',
+                    lineHeight: '1.6',
+                    letterSpacing: '0.02em'
+                  }}
+                >
+                  &quot;{school.motto}&quot;
+                </div>
+              )}
             </div>
-          )}
-          {school?.motto && (
-            <div className="text-[11pt] font-normal italic text-slate-600 mb-4 leading-relaxed">
-              &quot;{school.motto}&quot;
-            </div>
-          )}
-          <div className="mt-4 inline-block px-6 py-2.5 rounded-full bg-blue-100 text-blue-900 text-[13pt] font-semibold uppercase tracking-wide shadow-sm">
-            End Of Term Report - Upper Section
           </div>
-          <div className="text-[10pt] font-normal mt-3 text-slate-600">
-            {examSet?.name || 'Term Report'} - <span className="font-medium">{examSet?.year || new Date().getFullYear()}</span>
+
+          {/* Elegant Divider Line */}
+          <div 
+            style={{
+              height: '1px',
+              background: 'linear-gradient(to right, #1e3a8a 0%, #60a5fa 50%, #1e3a8a 100%)',
+              marginTop: '0.6cm',
+              marginBottom: '0.5cm',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact'
+            }}
+          />
+
+          {/* Report Type Banner */}
+          <div className="text-center" style={{ marginBottom: '0.8cm' }}>
+            <div 
+              className="inline-block"
+              style={{
+                padding: '8px 24px',
+                borderRadius: '20px',
+                fontSize: '10pt',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '0.08em',
+                color: '#1e3a8a',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact'
+              }}
+            >
+              End of Term Report – Upper Section
+            </div>
+            {(examSet?.name || examSet?.year) && (
+              <div 
+                style={{
+                  fontSize: '9pt',
+                  fontFamily: 'Arial, Helvetica, sans-serif',
+                  color: '#64748b',
+                  marginTop: '0.3cm',
+                  fontWeight: '400'
+                }}
+              >
+                {examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Print Media Query Styles */}
+        <style dangerouslySetInnerHTML={{__html: `
+          @media print {
+            .print-header-container {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+              margin-top: 1cm !important;
+              margin-bottom: 0.8cm !important;
+            }
+          }
+        `}} />
       </div>
 
-      {/* STUDENT INFO */}
-      <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+      <div className="relative z-10 space-y-6" style={{ marginTop: '1.5cm' }}>
+        {/* STUDENT INFO */}
+        <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
           <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
           <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
