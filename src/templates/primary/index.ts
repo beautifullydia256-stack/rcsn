@@ -30,6 +30,13 @@ export const PRIMARY_TEMPLATES = {
     description: 'Report card designed for Upper section students',
     section: 'Upper',
     schoolType: 'Nursery/Primary' as const
+  },
+  template5: {
+    id: 'primary_template5',
+    name: 'Clean Report Card',
+    description: 'Clean, elegant, and printable A4 report card template',
+    section: 'All',
+    schoolType: 'Nursery/Primary' as const
   }
 };
 
