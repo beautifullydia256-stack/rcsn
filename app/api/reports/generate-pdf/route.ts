@@ -1522,10 +1522,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 15mm;
+          padding: 10mm;
           box-sizing: border-box;
-          background: white;
-          color: black;
+          background: linear-gradient(135deg, #ffffff 0%, rgba(219, 234, 254, 0.35) 50%, #ffffff 100%);
+          color: #0f172a;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
@@ -1588,53 +1588,55 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
         
         .student-info {
-          margin-bottom: 20px;
-          font-size: 11pt;
+          margin: 6px 0 12px;
+          padding: 14px 16px;
+          font-size: 10.5pt;
+          background: rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(191, 219, 254, 0.6);
+          border-radius: 16px;
+          box-shadow: 0 6px 18px rgba(30, 64, 175, 0.06);
         }
         
         .student-info-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin-bottom: 15px;
+          gap: 14px;
+          margin-bottom: 0;
         }
         
         .student-photo {
-          width: 80px;
-          height: 96px;
-          border: 2px solid #ccc;
-          background: #f0f0f0;
+          width: 74px;
+          height: 90px;
+          border: 2px solid rgba(191, 219, 254, 0.9);
+          background: #fff;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          float: right;
-          margin-left: 20px;
-        }
-        
-        .student-photo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
+          border-radius: 12px;
+          box-shadow: inset 0 0 6px rgba(30, 64, 175, 0.08);
         }
         
         table {
           width: 100%;
           border-collapse: collapse;
           margin-bottom: 20px;
-          font-size: 9pt;
+          font-size: 9.5pt;
         }
         
         th, td {
-          border: 1px solid #000;
-          padding: 4px;
+          border: 1px solid rgba(191, 219, 254, 0.9);
+          padding: 5px;
           text-align: left;
         }
         
         th {
-          background: #f0f0f0;
-          font-weight: bold;
+          background: rgba(191, 219, 254, 0.85);
+          color: #1e3a8a;
+          font-weight: 700;
           text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
         
         .center {
@@ -2953,7 +2955,7 @@ function generateProfessionalHeaderHTML(
 
   return `
     <div class="print-header-container" style="padding-top: 1.2cm; padding-bottom: 0.2cm; padding-left: 0; padding-right: 1cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
-      <div style="display: flex; align-items: center; min-height: 3.5cm; position: relative;">
+      <div style="display: flex; align-items: center; min-height: 3.2cm; position: relative;">
         <div style="width: 192px; height: 192px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `
             <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
@@ -2991,23 +2993,16 @@ function generateProfessionalHeaderHTML(
           ` : ''}
         </div>
       </div>
-      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.6cm; margin-bottom: 0.2cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-      <div style="text-align: center; margin-bottom: 0.3cm;">
-        <div style="display: inline-block; padding: 8px 24px; border-radius: 20px; font-size: 10pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.45cm; margin-bottom: 0.15cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+      <div style="text-align: center; margin-bottom: 0.2cm;">
+        <div style="display: inline-block; padding: 6px 20px; border-radius: 18px; font-size: 9.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           ${reportTitle}
         </div>
         ${(examSet?.name || examSet?.year) ? `
-          <div style="font-size: 9pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.3cm; font-weight: 400;">
+          <div style="font-size: 8.5pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.25cm; font-weight: 400;">
             ${examSet?.name || 'Term Report'} - ${examSet?.year || new Date().getFullYear()}
           </div>
         ` : ''}
       </div>
     </div>
-  `;
-}
-
-function generateTemplate4UpperSectionHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
-  // This function will be implemented to match Template4UpperSectionReport
-  // For now, use Template 3 structure as a placeholder - will be updated to match Template 4 exactly
-  return generateTemplate3KyoteraHTML(reportData, schoolLogoBase64, studentPhotoBase64);
-}
+  `
