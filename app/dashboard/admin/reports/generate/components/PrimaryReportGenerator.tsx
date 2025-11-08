@@ -3050,9 +3050,23 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
   const showENDColumn = !isMidTermSelected; // Hide END column when Mid Term is selected
 
   return (
-    <div className="p-8 bg-white text-black" style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}>
-      {/* HEADER */}
-      <div className="flex items-start justify-between mb-6">
+    <div
+      className="relative p-8 bg-gradient-to-br from-white via-blue-50/40 to-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}
+    >
+      {school?.logo_url && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+          <img
+            src={school.logo_url}
+            alt="School Watermark"
+            className="max-w-3xl w-[70%] opacity-10 object-contain"
+          />
+        </div>
+      )}
+
+      <div className="relative z-10 space-y-6">
+        {/* HEADER */}
+        <div className="flex items-start justify-between rounded-2xl bg-white/85 backdrop-blur-sm shadow-xl border border-blue-100/70 px-6 py-5">
         {(school?.logo_url || school?.logo) ? (
           <div className="w-24 h-24 flex-shrink-0">
             <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-contain" />
@@ -3063,13 +3077,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           </div>
         )}
         
-        <div className="flex-1 text-center px-4">
-          <h1 className="text-2xl font-bold uppercase mb-1">{school?.name || 'School Name'}</h1>
+        <div className="flex-1 text-center px-4 text-slate-900">
+          <h1 className="text-3xl font-extrabold uppercase tracking-wide mb-1 text-blue-900">{school?.name || 'School Name'}</h1>
           <div className="text-sm mb-1">{school?.location || 'Location'}</div>
           <div className="text-sm mb-1">{school?.contact_email || 'Email'} | {school?.contact_phone || 'Phone'}</div>
-          <div className="text-sm italic">&quot;{school?.motto || 'School Motto'}&quot;</div>
-          <div className="mt-2 text-base font-bold uppercase">END OF TERM REPORT - UPPER SECTION</div>
-          <div className="text-sm">{examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}</div>
+          <div className="text-sm italic text-blue-800/80">&quot;{school?.motto || 'School Motto'}&quot;</div>
+          <div className="mt-2 inline-block px-4 py-1 rounded-full bg-blue-100 text-blue-900 text-base font-semibold uppercase">
+            End Of Term Report - Upper Section
+          </div>
+          <div className="text-sm mt-2 text-slate-700">
+            {examSet?.name || 'Term Report'} - {examSet?.year || new Date().getFullYear()}
+          </div>
         </div>
 
         {student?.profile_photo ? (
@@ -3083,32 +3101,33 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         )}
       </div>
 
-      {/* STUDENT INFO */}
-      <div className="grid grid-cols-2 gap-x-8 mb-4 text-[10pt]">
-        <div><strong>Name:</strong> {student?.name || 'Student Name'}</div>
-        <div><strong>Class:</strong> {student?.current_class || 'Class'}</div>
-        <div><strong>Admission No:</strong> {student?.admission_number || 'N/A'}</div>
-        <div><strong>Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
-      </div>
+        {/* STUDENT INFO */}
+        <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-[10pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
+          <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
+          <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
+          <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
+          <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
+        </div>
 
-      {/* SUBJECTS TABLE */}
-      <table className="w-full border-collapse mb-4 text-[10pt]">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="border border-gray-400 px-2 py-1 text-left">Subject</th>
+        {/* SUBJECTS TABLE */}
+        <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
+          <table className="w-full text-[10pt]">
+            <thead>
+              <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
+                <th className="border border-blue-100 px-3 py-2 text-left">Subject</th>
             {hasBOTExamSets && !isMidTermSelected && (
-              <th className="border border-gray-400 px-2 py-1 text-center w-16">BOT</th>
+                  <th className="border border-blue-100 px-3 py-2 text-center w-16">BOT</th>
             )}
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">MID</th>
+                <th className="border border-blue-100 px-3 py-2 text-center w-16">MID</th>
             {showENDColumn && (
-              <th className="border border-gray-400 px-2 py-1 text-center w-16">END</th>
+                  <th className="border border-blue-100 px-3 py-2 text-center w-16">END</th>
             )}
-            <th className="border border-gray-400 px-2 py-1 text-center w-16">Grade</th>
-            <th className="border border-gray-400 px-2 py-1 text-left">Teacher's Comment</th>
-            <th className="border border-gray-400 px-2 py-1 text-left">Teacher</th>
-          </tr>
-        </thead>
-        <tbody>
+                <th className="border border-blue-100 px-3 py-2 text-center w-16">Grade</th>
+                <th className="border border-blue-100 px-3 py-2 text-left">Teacher's Comment</th>
+                <th className="border border-blue-100 px-3 py-2 text-left">Teacher</th>
+              </tr>
+            </thead>
+            <tbody>
           {(student?.subjects || []).map((subj: any, idx: number) => {
             console.log('🔴 Template4 rendering subject:', {
               subject: subj.subject_name,
@@ -3164,117 +3183,117 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             }
             
             return (
-              <tr key={idx}>
-                <td className="border border-gray-400 px-2 py-1">{subj.subject_name || ''}</td>
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/40'}>
+                  <td className="border border-blue-100 px-3 py-2 font-medium text-slate-900">{subj.subject_name || ''}</td>
                 {hasBOTExamSets && !isMidTermSelected && (
-                  <td className="border border-gray-400 px-2 py-1 text-center">{bot}</td>
+                    <td className="border border-blue-100 px-3 py-2 text-center">{bot}</td>
                 )}
-                <td className="border border-gray-400 px-2 py-1 text-center">{mot}</td>
+                  <td className="border border-blue-100 px-3 py-2 text-center">{mot}</td>
                 {showENDColumn && (
-                  <td className="border border-gray-400 px-2 py-1 text-center">{eot}</td>
+                    <td className="border border-blue-100 px-3 py-2 text-center">{eot}</td>
                 )}
-                <td className="border border-gray-400 px-2 py-1 text-center font-bold">{displayGrade}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_comment || ''}</td>
-                <td className="border border-gray-400 px-2 py-1 text-xs">{subj.teacher_name || ''}</td>
-              </tr>
+                  <td className="border border-blue-100 px-3 py-2 text-center font-bold text-blue-900">{displayGrade}</td>
+                  <td className="border border-blue-100 px-3 py-2 text-xs text-slate-700">{subj.teacher_comment || ''}</td>
+                  <td className="border border-blue-100 px-3 py-2 text-xs text-slate-700">{subj.teacher_name || ''}</td>
+                </tr>
             );
           })}
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
 
-      {/* SUMMARY */}
-      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
-        <div className="border border-gray-400 p-2">
-          <div><strong>Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
-          <div><strong>Average:</strong> {avg}</div>
-          <div><strong>Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
-          <div><strong>Division:</strong> {displayDivision || 'N/A'}</div>
+        {/* SUMMARY */}
+        <div className="grid grid-cols-3 gap-4 text-[10pt]">
+          <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
+            <div><strong className="text-blue-900">Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
+            <div><strong className="text-blue-900">Average:</strong> {avg}</div>
+            <div><strong className="text-blue-900">Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
+            <div><strong className="text-blue-900">Division:</strong> {displayDivision || 'N/A'}</div>
+          </div>
+          <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
+            <div><strong className="text-blue-900">Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
+            <div><strong className="text-blue-900">Out of:</strong> {student?.summary?.totalStudents || 'N/A'} students</div>
+          </div>
+          <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md p-4">
+            <div className="text-blue-900 font-semibold">Attendance:</div>
+            <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+            <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+            <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+          </div>
         </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
-          <div><strong>Out of:</strong> {student?.summary?.totalStudents || 'N/A'} students</div>
-        </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Attendance:</strong></div>
-          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
-          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
-          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
-        </div>
-      </div>
 
-      {/* GRADING SYSTEM */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-2">Grading System</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="border border-gray-400">
-            <div className="bg-gray-100 border-b border-gray-400 px-2 py-1 font-semibold text-center">Subject Grade Boundaries</div>
-            <table className="w-full text-[9pt]">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-400 px-2 py-1 text-left">Percentage Range</th>
-                  <th className="border border-gray-400 px-2 py-1 text-center">Grade</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gradeScale.map((range, idx) => (
-                  <tr key={`${range.grade}-${idx}`}>
-                    <td className="border border-gray-400 px-2 py-1">{`${range.min} - ${range.max}`}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center font-semibold">{range.grade}</td>
+        {/* GRADING SYSTEM */}
+        <div className="text-[10pt]">
+          <h3 className="text-[11pt] font-semibold mb-3 text-blue-900">Grading System</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md overflow-hidden">
+              <div className="bg-blue-100/70 px-3 py-2 font-semibold text-center text-blue-900 uppercase tracking-wide">Subject Grade Boundaries</div>
+              <table className="w-full text-[9pt]">
+                <thead>
+                  <tr className="bg-blue-50 text-blue-900">
+                    <th className="border border-blue-100 px-3 py-2 text-left">Percentage Range</th>
+                    <th className="border border-blue-100 px-3 py-2 text-center">Grade</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="border border-gray-400">
-            <div className="bg-gray-100 border-b border-gray-400 px-2 py-1 font-semibold text-center">Division by Aggregate Points</div>
-            <table className="w-full text-[9pt]">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-400 px-2 py-1 text-left">Aggregate Range</th>
-                  <th className="border border-gray-400 px-2 py-1 text-center">Division</th>
-                </tr>
-              </thead>
-              <tbody>
-                {divisionScale.map((range, idx) => (
-                  <tr key={`${range.division}-${idx}`}>
-                    <td className="border border-gray-400 px-2 py-1">{`${range.min} - ${range.max}`}</td>
-                    <td className="border border-gray-400 px-2 py-1 text-center font-semibold">{range.division}</td>
+                </thead>
+                <tbody>
+                  {gradeScale.map((range, idx) => (
+                    <tr key={`${range.grade}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/60'}>
+                      <td className="border border-blue-100 px-3 py-2">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-3 py-2 text-center font-semibold text-blue-900">{range.grade}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="rounded-2xl bg-white/85 border border-blue-100/70 shadow-md overflow-hidden">
+              <div className="bg-blue-100/70 px-3 py-2 font-semibold text-center text-blue-900 uppercase tracking-wide">Division by Aggregate Points</div>
+              <table className="w-full text-[9pt]">
+                <thead>
+                  <tr className="bg-blue-50 text-blue-900">
+                    <th className="border border-blue-100 px-3 py-2 text-left">Aggregate Range</th>
+                    <th className="border border-blue-100 px-3 py-2 text-center">Division</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {divisionScale.map((range, idx) => (
+                    <tr key={`${range.division}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/60'}>
+                      <td className="border border-blue-100 px-3 py-2">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-3 py-2 text-center font-semibold text-blue-900">{range.division}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {/* COMMENTS */}
+        <div className="text-[10pt] rounded-2xl bg-white/85 border border-blue-100/70 shadow-md px-6 py-4">
+          <h3 className="text-[11pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
+          <p className="text-slate-700">{classTeacherComment}</p>
+          <p className="mt-2 text-slate-600">Signature: ______________________</p>
+
+          <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900">Headteacher's Comments:</h3>
+          <p className="text-slate-700">{headTeacherComment}</p>
+          <p className="mt-2 text-slate-600">Signature: ______________________</p>
+        </div>
+
+        {/* NEXT TERM AND SIGNATURES */}
+        <div className="flex justify-between items-end text-[10pt] bg-white/85 border border-blue-100/70 rounded-2xl shadow-md px-6 py-4">
+          <div>
+            <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
+            <div><strong className="text-blue-900">Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
+          </div>
+          <div className="text-right text-slate-700">
+            <div className="mb-8">
+              <div className="border-t-2 border-blue-200 w-48 inline-block"></div>
+              <div className="text-xs uppercase tracking-wide text-blue-900">Head Teacher's Signature</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* COMMENTS */}
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
-        <p>{classTeacherComment}</p>
-        <p className="mt-2">Signature: ______________________</p>
-
-        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
-        <p>{headTeacherComment}</p>
-        <p className="mt-2">Signature: ______________________</p>
-      </div>
-
-      {/* NEXT TERM AND SIGNATURES */}
-      <div className="flex justify-between items-end text-[10pt]">
-        <div>
-          <div><strong>Next Term Begins:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
-          <div><strong>Fees Balance:</strong> UGX {formatCurrency(student?.feesBalance || 0)}</div>
+        {/* FOOTER */}
+        <div className="text-center text-[8pt] mt-4 pt-2 border-t border-blue-100/80 text-slate-500">
+          Generated by PwezaCore School Management System
         </div>
-        <div className="text-right">
-          <div className="mb-8">
-            <div className="border-t border-gray-400 w-48 inline-block"></div>
-            <div className="text-xs">Head Teacher's Signature</div>
-          </div>
-        </div>
-      </div>
-
-      {/* FOOTER */}
-      <div className="text-center text-[8pt] mt-4 pt-2 border-t border-gray-300 text-gray-600">
-        Generated by PwezaCore School Management System
       </div>
     </div>
   );
