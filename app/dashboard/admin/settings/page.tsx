@@ -1431,30 +1431,55 @@ function TermSettings({ schoolId }: { schoolId: string | null }) {
             </tr>
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-            {rows.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-3 text-white/70">No terms set yet.</td></tr>
-            ) : rows.map(r => {
-              // Check if this is the current term
-              const todayStr = new Date().toISOString().slice(0,10);
-              const isCurrentTerm = r.start_date ? 
-                (r.start_date <= todayStr && r.end_date >= todayStr) :
-                (r.end_date >= todayStr); // If no start date, consider it current if end date is in future
+            {(() => {
+              if (rows.length === 0) {
+                return <tr><td colSpan={4} className="px-4 py-3 text-white/70">No terms set yet.</td></tr>;
+              }
               
-              return (
-                <tr key={r.id} className="border-t border-white/10">
-                  <td className="px-4 py-2 text-white">{r.year}</td>
-                  <td className="px-4 py-2 text-white/90">
-                    {isCurrentTerm ? (
-                      <span className="px-2 py-1 bg-green-600/20 text-green-300 rounded text-xs">Ongoing</span>
-                    ) : (
-                      `Term ${r.term}`
-                    )}
-                  </td>
-                  <td className="px-4 py-2 text-white/90">{r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}</td>
-                  <td className="px-4 py-2 text-white/90">{new Date(r.end_date).toLocaleDateString()}</td>
-                </tr>
-              );
-            })}
+              // Find current term and next term
+              const todayStr = new Date().toISOString().slice(0,10);
+              const currentTermRow = rows.find((r: any) => {
+                return r.start_date ? 
+                  (r.start_date <= todayStr && r.end_date >= todayStr) :
+                  (r.end_date >= todayStr);
+              });
+              
+              let nextTermRow = null;
+              if (currentTermRow) {
+                let nextTerm = currentTermRow.term + 1;
+                let nextYear = currentTermRow.year;
+                if (nextTerm > 3) {
+                  nextTerm = 1;
+                  nextYear = currentTermRow.year + 1;
+                }
+                nextTermRow = rows.find((r: any) => r.year === nextYear && r.term === nextTerm);
+              }
+              
+              const displayRows = [currentTermRow, nextTermRow].filter(Boolean);
+              
+              if (displayRows.length === 0) {
+                return <tr><td colSpan={4} className="px-4 py-3 text-white/70">No current or next term found.</td></tr>;
+              }
+              
+              return displayRows.map(r => {
+                const isCurrentTerm = r === currentTermRow;
+                
+                return (
+                  <tr key={r.id} className="border-t border-white/10">
+                    <td className="px-4 py-2 text-white">{r.year}</td>
+                    <td className="px-4 py-2 text-white/90">
+                      {isCurrentTerm ? (
+                        <span className="px-2 py-1 bg-green-600/20 text-green-300 rounded text-xs">Current</span>
+                      ) : (
+                        <span className="px-2 py-1 bg-blue-600/20 text-blue-300 rounded text-xs">Next</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-white/90">{r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}</td>
+                    <td className="px-4 py-2 text-white/90">{new Date(r.end_date).toLocaleDateString()}</td>
+                  </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
       </div>
