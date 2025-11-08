@@ -172,7 +172,26 @@ async function convertImageToBase64(url: string): Promise<string | null> {
 export async function POST(request: NextRequest) {
   try {
     console.log('PDF generation request received');
-    const { reportData, type, template } = await request.json();
+    const { reportData, type, template, htmlContent } = await request.json();
+    
+    // If htmlContent is provided, render it directly (exact preview match)
+    if (htmlContent && typeof htmlContent === 'string') {
+      console.log('Rendering provided HTML content directly (exact preview match)');
+      const pdfBuffer = await renderHTMLToPDF(htmlContent);
+      
+      const filename = type === 'single' && reportData?.students?.[0] 
+        ? `${reportData.students[0].name}_${reportData.students[0].current_class}_Report_${reportData.examSet?.name || 'Report'}.pdf`.replace(/[^a-zA-Z0-9._-]/g, '_')
+        : 'report.pdf';
+      
+      return new NextResponse(pdfBuffer as any, {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="${filename}"`
+        }
+      });
+    }
+
+    // Fallback to original method if no htmlContent
     console.log('Report data received, type:', type, 'template:', template);
     console.log('Template type:', typeof template);
     console.log('Template value:', JSON.stringify(template));
@@ -231,6 +250,80 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error generating PDF report:', error);
     return NextResponse.json({ error: 'Failed to generate PDF report' }, { status: 500 });
+  }
+}
+
+// Function to render HTML directly to PDF (exact preview match)
+async function renderHTMLToPDF(htmlContent: string): Promise<Buffer> {
+  const isVercel = process.env.VERCEL === '1';
+  let browser;
+  
+  try {
+    if (isVercel) {
+      browser = await puppeteer.launch({
+        args: [
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote'
+        ],
+        executablePath: await chromium.executablePath(),
+        headless: true,
+        timeout: 20000
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        timeout: 20000
+      });
+    }
+  } catch (error) {
+    // Fallback
+    browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox'],
+      timeout: 20000
+    });
+  }
+
+  try {
+    const page = await browser.newPage();
+    
+    // Set viewport to match A4
+    await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+    
+    // Set content - use load for faster rendering
+    await page.setContent(htmlContent, { 
+      waitUntil: 'load',
+      timeout: 8000 
+    });
+    
+    // Brief wait for fonts
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Generate PDF with exact settings
+    const pdfBuffer = await page.pdf({
+      format: 'A4',
+      margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
+      printBackground: true,
+      preferCSSPageSize: false,
+      scale: 1.0,
+      width: '210mm',
+      height: '297mm',
+      timeout: 10000
+    });
+    
+    await page.close();
+    await browser.close();
+    
+    return pdfBuffer as Buffer;
+  } catch (error) {
+    await browser.close();
+    throw error;
   }
 }
 

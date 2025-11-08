@@ -1272,13 +1272,134 @@ export function PrimaryReportGenerator() {
     setDownloadingPDF(true);
     setError(null);
     
-    
     try {
+      // Capture the actual rendered HTML from the preview
+      const previewContainer = document.getElementById('report-preview-container');
+      if (!previewContainer) {
+        throw new Error('Preview container not found');
+      }
+
+      // Clone the container to avoid modifying the original
+      const clonedContainer = previewContainer.cloneNode(true) as HTMLElement;
+      
+      // Convert images to base64 data URLs for embedding
+      const images = clonedContainer.querySelectorAll('img');
+      for (const img of Array.from(images)) {
+        try {
+          if (img.src && !img.src.startsWith('data:')) {
+            const response = await fetch(img.src);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            await new Promise<void>((resolve, reject) => {
+              reader.onloadend = () => {
+                img.src = reader.result as string;
+                resolve();
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (imgError) {
+          console.warn('Failed to convert image to base64:', imgError);
+          // Continue without this image
+        }
+      }
+
+      // Get all computed styles and inline them for perfect PDF rendering
+      const allElements = clonedContainer.querySelectorAll('*');
+      for (const el of Array.from(allElements)) {
+        const htmlEl = el as HTMLElement;
+        const computedStyles = window.getComputedStyle(htmlEl);
+        
+        // Build comprehensive inline styles from computed styles
+        const styleMap: { [key: string]: string } = {};
+        const allProps = [
+          'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant',
+          'color', 'background-color', 'background', 'background-image', 'background-size', 'background-position',
+          'border', 'border-top', 'border-right', 'border-bottom', 'border-left', 
+          'border-width', 'border-style', 'border-color', 'border-radius',
+          'padding', 'padding-top', 'padding-right', 'padding-bottom', 'padding-left',
+          'margin', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left',
+          'display', 'flex-direction', 'flex-wrap', 'align-items', 'justify-content', 'gap',
+          'width', 'height', 'min-width', 'min-height', 'max-width', 'max-height',
+          'position', 'top', 'left', 'right', 'bottom', 'z-index',
+          'opacity', 'transform', 'text-align', 'text-transform', 'letter-spacing', 'line-height',
+          'text-decoration', 'vertical-align', 'white-space', 'overflow', 'overflow-x', 'overflow-y',
+          'box-sizing', 'grid-template-columns', 'grid-template-rows', 'grid-gap'
+        ];
+        
+        for (const prop of allProps) {
+          const value = computedStyles.getPropertyValue(prop);
+          if (value && value !== 'none' && value !== 'normal' && value !== 'auto' && value !== '0px') {
+            styleMap[prop] = value;
+          }
+        }
+        
+        // Convert style map to inline style string
+        const inlineStyle = Object.entries(styleMap)
+          .map(([key, value]) => `${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value}`)
+          .join('; ');
+        
+        if (inlineStyle) {
+          htmlEl.setAttribute('style', inlineStyle);
+        }
+      }
+
+      // Extract all CSS from stylesheets (including Tailwind)
+      let allCSS = '';
+      try {
+        for (const sheet of Array.from(document.styleSheets)) {
+          try {
+            if (sheet.cssRules) {
+              for (const rule of Array.from(sheet.cssRules)) {
+                allCSS += rule.cssText + '\n';
+              }
+            }
+          } catch (e) {
+            // Cross-origin stylesheet, skip
+            console.warn('Cannot access stylesheet:', e);
+          }
+        }
+      } catch (e) {
+        console.warn('Error extracting stylesheets:', e);
+      }
+
+      // Get the full HTML with all styles
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            ${allCSS}
+          </style>
+        </head>
+        <body>
+          ${clonedContainer.innerHTML}
+        </body>
+        </html>
+      `;
+
       const response = await fetch('/api/reports/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          reportData,
+          htmlContent, // Send the actual HTML instead of reportData
+          reportData, // Still send reportData for filename generation
           type: 'single',
           template: selectedTemplate
         })
@@ -2098,7 +2219,7 @@ export function PrimaryReportGenerator() {
             </div>
             
             <div className="bg-gray-100 p-4 rounded-lg overflow-auto max-h-[80vh]">
-              <div className="bg-white shadow-lg mx-auto" style={{ width: '210mm', minHeight: '297mm' }}>
+              <div id="report-preview-container" className="bg-white shadow-lg mx-auto" style={{ width: '210mm', minHeight: '297mm' }}>
             {reportData.students.map((student: any, index: number) => (
                   <div key={student.student_id} className={index > 0 ? 'mt-8' : ''}>
                 <ReportPreview 
