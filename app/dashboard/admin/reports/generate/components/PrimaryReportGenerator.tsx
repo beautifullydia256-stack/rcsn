@@ -3107,7 +3107,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <div className="text-sm mb-1">{school?.location || 'Location'}</div>
           <div className="text-sm mb-1">{school?.contact_email || 'Email'} | {school?.contact_phone || 'Phone'}</div>
           <div className="text-sm italic text-blue-800/80">&quot;{school?.motto || 'School Motto'}&quot;</div>
-          <div className="mt-2 inline-block px-4 py-1 rounded-full bg-blue-100 text-blue-900 text-base font-semibold uppercase">
+          <div className="mt-2 inline-block px-5 py-2 rounded-full bg-blue-100 text-blue-900 text-xl font-semibold uppercase">
             End Of Term Report - Upper Section
           </div>
           <div className="text-sm mt-2 text-slate-700">
