@@ -2599,18 +2599,14 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
     return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
 
-  const NURSERY_SKILL_ROWS: string[][] = [
+  const nurserySkillRows: string[][] = [
     ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
     ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
     ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
   ];
 
-  const NURSERY_KEY_LABELS = ['Very good', 'Good', 'Tries'];
-  const NURSERY_STATUS_LABELS = ['Still a problem', 'Promising'];
-
-  const nurserySkillRows = NURSERY_SKILL_ROWS;
-  const nurseryKeyLabels = NURSERY_KEY_LABELS;
-  const nurseryStatusLabels = NURSERY_STATUS_LABELS;
+  const nurseryKeyLabels = ['Very good', 'Good', 'Tries'];
+  const nurseryStatusLabels = ['Still a problem', 'Promising'];
 
   return (
     <div
@@ -4544,72 +4540,4 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
     </div>
   );
 }
-
-      {/* DEVELOPMENTAL SKILLS TABLE */}
-      <div className="mb-5">
-        <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
-        <table
-          className="w-full"
-          style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}
-        >
-          <tbody>
-            {NURSERY_SKILL_ROWS.map((row, rowIdx) => (
-              <tr key={`nursery-skill-row-${rowIdx}`}>
-                {row.map((item, colIdx) => (
-                  <td
-                    key={`nursery-skill-${rowIdx}-${colIdx}`}
-                    style={{
-                      border: '1px solid #000',
-                      padding: '8px 6px',
-                      minHeight: '42px',
-                      textAlign: 'center',
-                      fontWeight: 600,
-                      verticalAlign: 'middle'
-                    }}
-                  >
-                    {item || '\u00A0'}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
-          <span className="font-semibold">Key:</span>
-          {NURSERY_KEY_LABELS.map(label => (
-            <div key={label} className="flex items-center gap-2">
-              <span>{label}:</span>
-              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
-          {NURSERY_STATUS_LABELS.map(label => (
-            <div key={label} className="flex items-center gap-2">
-              <span>{label}:</span>
-              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SUMMARY SECTION (mirrors upper section layout) */}
-      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
-        <div className="border border-gray-400 p-2">
-          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
-          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
-        </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
-          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
-        </div>
-        <div className="border border-gray-400 p-2">
-          <div><strong>Attendance:</strong></div>
-          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
-          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
-          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
-        </div>
-      </div>
 
