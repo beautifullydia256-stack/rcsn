@@ -3099,9 +3099,9 @@ function generateProfessionalHeaderHTML(
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
-    <div class="print-header-container" style="padding-top: 1.2cm; padding-bottom: 0.2cm; padding-left: 0; padding-right: 1cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
-      <div style="display: flex; align-items: center; min-height: 3.2cm; position: relative;">
-        <div style="width: 192px; height: 192px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
+    <div class="print-header-container" style="padding-top: 0.8cm; padding-bottom: 0.12cm; padding-left: 0; padding-right: 0.7cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+      <div style="display: flex; align-items: center; min-height: 2.7cm; position: relative;">
+        <div style="width: 158px; height: 158px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `
             <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           ` : `
@@ -3110,41 +3110,41 @@ function generateProfessionalHeaderHTML(
             </div>
           `}
         </div>
-        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 192px; padding-left: 0.5cm;">
+        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 158px; padding-left: 0.45cm;">
           ${school?.name ? `
-            <h1 style="font-size: 19pt; font-weight: 700; font-family: Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2; margin-bottom: 0.4cm; color: ${schoolNameColor}; margin-top: 0;">
+            <h1 style="font-size: 17pt; font-weight: 700; font-family: Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; margin: 0 0 0.28cm 0; color: ${schoolNameColor}; white-space: nowrap;">
               ${school.name}
             </h1>
           ` : ''}
           ${school?.subtitle ? `
-            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 400; color: ${subtitleColor}; margin-bottom: 0.25cm; line-height: 1.5;">
+            <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 400; color: ${subtitleColor}; margin-bottom: 0.22cm; line-height: 1.4;">
               ${school.subtitle}
             </div>
           ` : ''}
           ${(school?.address || school?.pobox) ? `
-            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${addressColor}; margin-bottom: 0.25cm; line-height: 1.5;">
+            <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${addressColor}; margin-bottom: 0.2cm; line-height: 1.4;">
               ${school?.address || ''}${school?.address && school?.pobox ? ' ' : ''}${school?.pobox || ''}
             </div>
           ` : ''}
           ${(school?.contact_email || school?.contact_phone) ? `
-            <div style="font-size: 12pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${contactColor}; margin-bottom: 0.3cm; line-height: 1.5;">
+            <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${contactColor}; margin-bottom: 0.22cm; line-height: 1.4;">
               ${school?.contact_email || ''}${school?.contact_email && school?.contact_phone ? ' <span style="margin: 0 8px; color: #64748b;">|</span> ' : ''}${school?.contact_phone || ''}
             </div>
           ` : ''}
           ${school?.motto ? `
-            <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 600; color: ${mottoColor}; margin-bottom: 0.4cm; line-height: 1.6; letter-spacing: 0.02em;">
+            <div style="font-size: 10.2pt; font-family: 'Times New Roman', Georgia, serif; font-style: italic; font-weight: 600; color: ${mottoColor}; margin-bottom: 0.3cm; line-height: 1.4; letter-spacing: 0.02em;">
               &quot;${school.motto}&quot;
             </div>
           ` : ''}
         </div>
       </div>
-      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.45cm; margin-bottom: 0.15cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
-      <div style="text-align: center; margin-bottom: 0.2cm;">
-        <div style="display: inline-block; padding: 6px 20px; border-radius: 18px; font-size: 9.5pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+      <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.35cm; margin-bottom: 0.12cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
+      <div style="text-align: center; margin-bottom: 0.15cm;">
+        <div style="display: inline-block; padding: 5px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           ${reportTitle}
         </div>
         ${(examSet?.name || examSet?.year) ? `
-          <div style="font-size: 8.5pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.25cm; font-weight: 400;">
+          <div style="font-size: 8pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.2cm; font-weight: 400;">
             ${examSet?.name || 'Term Report'} - ${examSet?.year || new Date().getFullYear()}
           </div>
         ` : ''}
