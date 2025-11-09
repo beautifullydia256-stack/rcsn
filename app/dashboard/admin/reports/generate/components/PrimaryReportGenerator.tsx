@@ -2583,48 +2583,57 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 // Template 2 - St. Adrian Kasozi Secondary School Format
 function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
   const attendance = student.summary.attendanceDetails || {};
-  const streamDisplay = student?.stream
-    || student?.current_stream
-    || student?.stream_name
-    || student?.class_stream
-    || student?.section
-    || 'N/A';
+
+  const streamDisplay =
+    student?.stream ||
+    student?.current_stream ||
+    student?.stream_name ||
+    student?.class_stream ||
+    student?.section ||
+    'N/A';
 
   const reportDateDisplay = (() => {
     const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
     if (!raw) return 'N/A';
     const parsed = new Date(raw);
-    return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
+    return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
 
-  const nurserySkillRows = [
+  const NURSERY_SKILL_ROWS: string[][] = [
     ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
     ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
     ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
   ];
 
-  const nurseryKeyLabels = ['Very good', 'Good', 'Tries'];
-  const nurseryStatusLabels = ['Still a problem', 'Promising'];
+  const NURSERY_KEY_LABELS = ['Very good', 'Good', 'Tries'];
+  const NURSERY_STATUS_LABELS = ['Still a problem', 'Promising'];
+
+  const nurserySkillRows = NURSERY_SKILL_ROWS;
+  const nurseryKeyLabels = NURSERY_KEY_LABELS;
+  const nurseryStatusLabels = NURSERY_STATUS_LABELS;
 
   return (
-    <div style={{
-      fontFamily: 'Times New Roman, Arial, sans-serif',
-      width: '210mm',
-      minHeight: '297mm',
-      margin: '0 auto',
-      padding: '15mm',
-      boxSizing: 'border-box'
-    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
-      {/* WATERMARK */}
+    <div
+      className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full"
+      style={{
+        fontFamily: 'Times New Roman, Arial, sans-serif',
+        width: '210mm',
+        minHeight: '297mm',
+        margin: '0 auto',
+        padding: '15mm',
+        boxSizing: 'border-box',
+      }}
+    >
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
         <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
           <div className="text-center text-9xl font-bold text-gray-400">
-            SCHOOL<br/>LOGO
+            SCHOOL
+            <br />
+            LOGO
           </div>
         </div>
       </div>
 
-      {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo_url || school?.logo ? (
@@ -2644,7 +2653,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           )}
           {school?.motto && (
             <div className="text-[11pt] font-normal italic text-slate-600 mb-2 leading-relaxed">
-              &quot;{school.motto}&quot;
+              "{school.motto}"
             </div>
           )}
           {(school?.address || school?.email || school?.phone) && (
@@ -2659,24 +2668,36 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      {/* REPORT TITLE */}
       <div className="text-center mb-5 border-b-2 border-slate-300 pb-3">
         <h1 className="text-[14pt] font-bold uppercase tracking-wide leading-tight text-slate-900">
           MIDDLE &amp; TOP CLASS - TERMLY REPORT
         </h1>
       </div>
 
-      {/* STUDENT INFO */}
       <div className="mb-6 text-[11pt]">
         <div className="flex justify-between items-start">
           <div className="grid grid-cols-2 gap-4">
-            <div><strong>Report Number:</strong> {student.admission_number || student.student_id}</div>
-            <div><strong>Term:</strong> {examSet?.term || 'THREE'}</div>
-            <div><strong>Name:</strong> {student.name}</div>
-            <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
-            <div><strong>Class:</strong> {student.current_class}</div>
-            <div><strong>Stream:</strong> {streamDisplay}</div>
-            <div><strong>Date:</strong> {reportDateDisplay}</div>
+            <div>
+              <strong>Report Number:</strong> {student.admission_number || student.student_id}
+            </div>
+            <div>
+              <strong>Term:</strong> {examSet?.term || 'THREE'}
+            </div>
+            <div>
+              <strong>Name:</strong> {student.name}
+            </div>
+            <div>
+              <strong>Year:</strong> {examSet?.year || '2022'}
+            </div>
+            <div>
+              <strong>Class:</strong> {student.current_class}
+            </div>
+            <div>
+              <strong>Stream:</strong> {streamDisplay}
+            </div>
+            <div>
+              <strong>Date:</strong> {reportDateDisplay}
+            </div>
           </div>
           <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
@@ -2688,7 +2709,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      {/* DEVELOPMENTAL SKILLS TABLE */}
       <div className="mb-5">
         <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
         <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}>
@@ -2704,7 +2724,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                       minHeight: '42px',
                       textAlign: 'center',
                       fontWeight: 600,
-                      verticalAlign: 'middle'
+                      verticalAlign: 'middle',
                     }}
                   >
                     {item || '\u00A0'}
@@ -2717,7 +2737,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
         <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
           <span className="font-semibold">Key:</span>
-          {nurseryKeyLabels.map(label => (
+          {nurseryKeyLabels.map((label) => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
@@ -2726,7 +2746,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
 
         <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
-          {nurseryStatusLabels.map(label => (
+          {nurseryStatusLabels.map((label) => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
@@ -2735,25 +2755,33 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      {/* SUMMARY SECTION */}
       <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
         <div className="border border-gray-400 p-2">
-          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
-          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+          <div>
+            <strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}
+          </div>
+          <div>
+            <strong>Average:</strong> {student.summary?.average ?? 'N/A'}
+          </div>
         </div>
         <div className="border border-gray-400 p-2">
-          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
-          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
+          <div>
+            <strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}
+          </div>
+          <div>
+            <strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students
+          </div>
         </div>
         <div className="border border-gray-400 p-2">
-          <div><strong>Attendance:</strong></div>
+          <div>
+            <strong>Attendance:</strong>
+          </div>
           <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
           <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
           <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
         </div>
       </div>
 
-      {/* COMMENTS */}
       <div className="mb-4 text-[10pt]">
         <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
         <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
@@ -2764,17 +2792,21 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         <p>Signature: ______________________</p>
       </div>
 
-      {/* NEXT TERM INFO */}
       <div className="mb-4 text-[10pt]">
-        <p><strong>Next term begins on:</strong> {student?.results?.[0]?.next_term_begins_date ? new Date(student.results[0].next_term_begins_date).toLocaleDateString() : '____________________'}</p>
+        <p>
+          <strong>Next term begins on:</strong>{' '}
+          {student?.results?.[0]?.next_term_begins_date
+            ? new Date(student.results[0].next_term_begins_date).toLocaleDateString()
+            : '____________________'}
+        </p>
       </div>
 
-      {/* DISCLAIMER */}
       <div className="text-center text-[9pt] mt-4">
-        <p><strong>Disclaimer:</strong> "This report is not valid without a school stamp."</p>
+        <p>
+          <strong>Disclaimer:</strong> "This report is not valid without a school stamp."
+        </p>
       </div>
 
-      {/* SCHOOL STAMP PLACEHOLDER */}
       <div className="flex justify-end mt-4">
         <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
           <div className="text-center text-xs text-blue-700">
@@ -4521,7 +4553,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
           style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}
         >
           <tbody>
-            {nurserySkillRows.map((row, rowIdx) => (
+            {NURSERY_SKILL_ROWS.map((row, rowIdx) => (
               <tr key={`nursery-skill-row-${rowIdx}`}>
                 {row.map((item, colIdx) => (
                   <td
@@ -4545,7 +4577,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
 
         <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
           <span className="font-semibold">Key:</span>
-          {nurseryKeyLabels.map(label => (
+          {NURSERY_KEY_LABELS.map(label => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
@@ -4554,7 +4586,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </div>
 
         <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
-          {nurseryStatusLabels.map(label => (
+          {NURSERY_STATUS_LABELS.map(label => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
