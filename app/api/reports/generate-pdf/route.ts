@@ -1127,31 +1127,76 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
     return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
 
-  const nurserySkillRows = [
-    ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
-    ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
-    ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
-  ];
+  const contactEmail = school?.contact_email || school?.email || '';
+  const contactPhone = school?.contact_phone || school?.phone || '';
+  const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
+  const headerMetaItems = [
+    student?.current_class ? `Class: ${student.current_class}` : null,
+    streamDisplay && streamDisplay !== 'N/A' ? `Stream: ${streamDisplay}` : null,
+    examSet?.term ? `Term: ${examSet.term}` : null,
+    examSet?.year ? `Year: ${examSet.year}` : null,
+  ].filter(Boolean) as string[];
+  const headerMetaLine = headerMetaItems.join(' • ');
+  const headerDividerColor = school?.header_divider_color || '#1e3a8a';
+  const headerDividerLight = school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa';
+  const studentPhotoSrc = (() => {
+    if (typeof studentPhotoBase64 === 'string' && studentPhotoBase64.length > 0) {
+      return studentPhotoBase64.startsWith('data:')
+        ? studentPhotoBase64
+        : `data:image/png;base64,${studentPhotoBase64}`;
+    }
+    if (typeof student?.profile_photo === 'string' && student.profile_photo.length > 0) {
+      return student.profile_photo;
+    }
+    return null;
+  })();
 
-  const nurserySkillRowsHtml = nurserySkillRows
-    .map(row => `
-      <tr>
-        ${row.map(item => `<td>${item || '&nbsp;'}</td>`).join('')}
-      </tr>
-    `)
-    .join('');
+  const nurserySkillRowsHtml = NURSERY_SKILL_GRID.map(row => {
+    const cells = row.map(skill => {
+      if (!skill.label) {
+        return '<td style="border: 1px solid #000; padding: 8px 6px; min-height: 42px; background: #ffffff;">&nbsp;</td>';
+      }
 
-  const keyBoxesHtml = ['Very good', 'Good', 'Tries']
-    .map(label => `
-      <div class="nursery-key-item"><span>${label}:</span><span class="nursery-square"></span></div>
-    `)
-    .join('');
+      const performanceWord = resolveNurseryPerformanceValue(student, skill);
+      const backgroundColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : null;
+      const textColor = backgroundColor ? getReadableTextColor(backgroundColor) : '#1f2937';
+      const valueStyle = performanceWord ? '' : 'font-style: italic; opacity: 0.6;';
+      const cellBaseStyles = [
+        'border: 1px solid #000',
+        'padding: 8px 6px',
+        'min-height: 48px',
+        'text-align: center',
+        'vertical-align: middle',
+        'font-weight: 600'
+      ];
 
-  const statusBoxesHtml = ['Still a problem', 'Promising']
-    .map(label => `
-      <div class="nursery-status-item"><span>${label}:</span><span class="nursery-square"></span></div>
-    `)
-    .join('');
+      if (backgroundColor) {
+        cellBaseStyles.push(`background: ${backgroundColor}`);
+        cellBaseStyles.push(`color: ${textColor}`);
+      } else {
+        cellBaseStyles.push('background: #ffffff');
+        cellBaseStyles.push('color: #1f2937');
+      }
+
+      return `
+        <td style="${cellBaseStyles.join('; ')}">
+          <div class="nursery-skill-cell">
+            <span class="nursery-skill-label">${skill.label}</span>
+            <span class="nursery-skill-value" style="${valueStyle}">${performanceWord || '—'}</span>
+          </div>
+        </td>
+      `;
+    }).join('');
+
+    return `<tr>${cells}</tr>`;
+  }).join('');
+
+  const nurseryLegendHtml = NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => `
+    <div class="nursery-legend-item">
+      <span class="nursery-legend-swatch" style="background: ${color}"></span>
+      <span>${label}</span>
+    </div>
+  `).join('');
 
   return `
     <!DOCTYPE html>
@@ -1175,7 +1220,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 15mm;
+          padding: 0.25cm 0.35cm 0.4cm;
           box-sizing: border-box;
           background: white;
           color: black;
@@ -1185,88 +1230,177 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           -moz-osx-font-smoothing: grayscale;
         }
         
-        .header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 30px;
+        .print-header-container {
+          padding-top: 0.3cm;
+          padding-bottom: 0.12cm;
+          padding-right: 0.32cm;
+          background: transparent;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
-        .school-logo {
-          width: 200px;
-          height: 200px;
+        .header-flex {
+          display: flex;
+          align-items: center;
+          min-height: 2cm;
+          position: relative;
+        }
+        
+        .header-logo {
+          width: 120px;
+          height: 120px;
+          position: absolute;
+          left: 0;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          border: none;
           flex-shrink: 0;
+          border: none;
         }
         
-        .school-logo img {
+        .header-logo img {
           width: 100%;
           height: 100%;
-          object-fit: cover;
-          border: none;
+          object-fit: contain;
         }
         
-        .school-info {
-          text-align: right;
+        .header-logo-placeholder {
+          width: 100%;
+          height: 100%;
+          border: 1px solid #d1d5db;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f9fafb;
+          color: #9ca3af;
+          font-size: 9pt;
+          text-align: center;
+          padding: 8px;
+        }
+        
+        .header-center {
           flex: 1;
+          margin-left: 120px;
+          padding-left: 0.28cm;
+          text-align: center;
+          font-family: 'Times New Roman', 'Times', serif;
         }
         
         .school-name {
-          font-weight: bold;
-          font-size: 18pt;
+          font-weight: 700;
+          font-size: 16pt;
+          font-family: Arial, Helvetica, sans-serif;
           text-transform: uppercase;
-          margin-bottom: 5px;
+          letter-spacing: 0.045em;
+          line-height: 1.06;
+          margin: 0 0 0.2cm 0;
+          color: ${school?.header_school_name_color || '#1e3a8a'};
+          white-space: nowrap;
+        }
+        
+        .school-subtitle {
+          font-size: 11pt;
+          font-family: 'Times New Roman', Georgia, serif;
+          font-weight: 400;
+          color: ${school?.header_subtitle_color || '#3b82f6'};
+          margin-bottom: 0.16cm;
+          line-height: 1.3;
+        }
+        
+        .school-address {
+          font-size: 11pt;
+          font-family: 'Times New Roman', Georgia, serif;
+          font-weight: 600;
+          color: ${school?.header_address_color || '#1e40af'};
+          margin-bottom: 0.16cm;
+          line-height: 1.28;
         }
         
         .school-contact {
-          font-size: 9pt;
-          font-weight: normal;
-          margin-bottom: 5px;
+          font-size: 10.8pt;
+          font-family: 'Times New Roman', Georgia, serif;
+          font-weight: 600;
+          color: ${school?.header_contact_color || '#1e40af'};
+          margin-bottom: 0.16cm;
+          line-height: 1.28;
         }
         
         .school-motto {
-          font-size: 10pt;
-          font-weight: normal;
+          font-size: 9.8pt;
+          font-family: 'Times New Roman', Georgia, serif;
           font-style: italic;
-          margin-bottom: 5px;
+          font-weight: 600;
+          color: ${school?.header_motto_color || '#2563eb'};
+          margin-bottom: 0.2cm;
+          line-height: 1.32;
         }
         
-        .report-title {
+        .header-divider {
+          height: 1px;
+          background: linear-gradient(to right, ${headerDividerColor} 0%, ${headerDividerLight} 50%, ${headerDividerColor} 100%);
+          margin-top: 0.2cm;
+          margin-bottom: 0.18cm;
+        }
+        
+        .report-banner {
           text-align: center;
-          margin: 20px 0;
-          font-size: 14pt;
-          font-weight: bold;
+          margin-bottom: 0.18cm;
+        }
+        
+        .report-chip {
+          display: inline-block;
+          padding: 6px 22px;
+          border-radius: 18px;
+          font-size: 9.2pt;
+          font-weight: 600;
           text-transform: uppercase;
-          color: black;
+          letter-spacing: 0.07em;
+          color: #1e3a8a;
+          background: #eff6ff;
+          border: 1px solid #bfdbfe;
+        }
+        
+        .report-meta {
+          font-size: 7.5pt;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          margin-top: 4px;
+          color: #1f2937;
         }
         
         .student-info {
-          margin-bottom: 20px;
+          margin-bottom: 18px;
           font-size: 11pt;
+        }
+        
+        .student-info-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
         }
         
         .student-info-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 16px;
-          margin-bottom: 15px;
+          gap: 14px;
+          margin-bottom: 12px;
         }
         
         .student-photo {
-          width: 80px;
-          height: 96px;
-          border: 2px solid #ccc;
-          background: #f0f0f0;
+          width: 21mm;
+          height: 29mm;
+          border: 1px solid #60a5fa;
+          background: #ffffff;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
           float: right;
-          margin-left: 20px;
+          margin-left: 14px;
+          border-radius: 6px;
+          box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
         }
         
         .student-photo img {
@@ -1278,7 +1412,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 20px;
+          margin-bottom: 18px;
           font-size: 10pt;
         }
         
@@ -1289,37 +1423,98 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         th {
-          background: #f0f0f0;
-          color: black;
-          font-weight: bold;
+          background: #f8fafc;
+          color: #0f172a;
+          font-weight: 600;
           text-align: center;
         }
         
-        .center {
-          text-align: center;
+        .nursery-skill-section {
+          margin-bottom: 12px;
         }
         
-        .summary {
-          margin-bottom: 20px;
+        .nursery-heading {
           font-size: 11pt;
+          font-weight: 700;
+          margin-bottom: 8px;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #0f172a;
+        }
+
+        .nursery-skill-table td {
+          border: 1px solid #000;
+          padding: 0;
+        }
+
+        .nursery-skill-cell {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          min-height: 40px;
+          padding: 10px 6px;
+        }
+
+        .nursery-skill-label {
+          font-size: 8.5pt;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+        }
+
+        .nursery-skill-value {
+          font-size: 10pt;
+          font-weight: 700;
+        }
+
+        .nursery-legend {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 18px;
+          margin-top: 14px;
+          font-size: 9.5pt;
+        }
+
+        .nursery-legend-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 600;
+        }
+
+        .nursery-legend-swatch {
+          width: 18px;
+          height: 18px;
+          border: 1px solid #0f172a;
+          border-radius: 4px;
+          display: inline-block;
         }
         
-        .summary p {
-          margin-bottom: 5px;
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 16px;
+          font-size: 10pt;
         }
         
-        .summary strong {
-          font-weight: bold;
+        .summary-card {
+          border: 1px solid #94a3b8;
+          padding: 8px;
+          border-radius: 6px;
         }
         
         .comments {
-          margin-bottom: 20px;
+          margin-bottom: 18px;
           font-size: 10pt;
         }
         
         .comments h3 {
           font-size: 11pt;
-          font-weight: bold;
+          font-weight: 600;
           margin-bottom: 5px;
         }
         
@@ -1334,67 +1529,69 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         }
         
         .watermark {
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          opacity: 0.1;
-          z-index: -1;
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0.15;
+          z-index: 0;
           pointer-events: none;
         }
         
         .watermark img {
-          width: 900px;
-          height: 900px;
+          width: 58%;
+          max-width: 550px;
           object-fit: contain;
-        }
-        
-        .watermark-placeholder {
-          width: 900px;
-          height: 900px;
-          border: 2px solid #ccc;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f0f0f0;
-          font-size: 108pt;
-          font-weight: bold;
-          color: #ccc;
-          text-align: center;
-          line-height: 1.2;
         }
       </style>
     </head>
     <body>
-      <!-- WATERMARK -->
+      ${
+        (schoolLogoBase64 || school?.logo_url || school?.logo)
+          ? `
       <div class="watermark">
-        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+              <img src="${schoolLogoBase64 ? `data:image/png;base64,${schoolLogoBase64}` : (school.logo_url || school.logo)}" alt="School Watermark" />
       </div>
+          `
+          : ''
+      }
       
-      <!-- HEADER -->
-      <div class="header">
-        <!-- School Logo -->
-        <div class="school-logo">
-          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">ST. ADRIAN</div><div style="font-weight: bold;">KASOZI</div><div style="font-weight: bold;">SECONDARY</div><div style="font-weight: bold;">SCHOOL</div></div>'}
+      <div class="print-header-container">
+        <div class="header-flex">
+          <div class="header-logo">
+            ${
+              schoolLogoBase64
+                ? `<img src="data:image/png;base64,${schoolLogoBase64}" alt="School Logo" />`
+                : (school?.logo_url || school?.logo)
+                  ? `<img src="${school.logo_url || school.logo}" alt="School Logo" />`
+                  : `<div class="header-logo-placeholder">School<br/>Logo</div>`
+            }
         </div>
-        
-        <!-- School Info -->
-        <div class="school-info">
-          <div class="school-name">${school?.name || 'ST. ADRIAN KASOZI SECONDARY SCHOOL'}</div>
-          <div class="school-motto">"${school?.motto || 'WITH GOD, WE CAN'}"</div>
-          <div class="school-contact">P.O BOX 10 KALISIZO (U), ${school?.email || 'st.adriankasozisec@gmail.com'}, ${school?.phone || '0772/754-642058'}</div>
+          <div class="header-center">
+            ${school?.name ? `<div class="school-name">${school.name}</div>` : ''}
+            ${school?.subtitle ? `<div class="school-subtitle">${school.subtitle}</div>` : ''}
+            ${addressLine ? `<div class="school-address">${addressLine}</div>` : ''}
+            ${(contactEmail || contactPhone) ? `
+              <div class="school-contact">
+                ${contactEmail ? `<span>${contactEmail}</span>` : ''}
+                ${(contactEmail && contactPhone) ? `<span style="margin: 0 8px; color: #64748b;">|</span>` : ''}
+                ${contactPhone ? `<span>${contactPhone}</span>` : ''}
         </div>
+            ` : ''}
+            ${school?.motto ? `<div class="school-motto">"${school.motto}"</div>` : ''}
       </div>
-
-      <!-- REPORT TITLE -->
-      <div class="report-title">
-        MIDDLE & TOP CLASS - TERMLY REPORT
+        </div>
+        <div class="header-divider"></div>
+        <div class="report-banner">
+          <div class="report-chip">MIDDLE &amp; TOP CLASS - TERMLY REPORT</div>
+          ${headerMetaLine ? `<div class="report-meta">${headerMetaLine}</div>` : ''}
+        </div>
       </div>
 
       <!-- STUDENT INFO -->
       <div class="student-info">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+        <div class="student-info-row">
           <div class="student-info-grid">
             <div><strong>Report Number:</strong> ${student.admission_number || student.student_id}</div>
             <div><strong>Term:</strong> ${examSet?.term || 'THREE'}</div>
@@ -1407,7 +1604,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           
           <!-- Student Photo -->
           <div class="student-photo">
-            ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+            ${studentPhotoSrc ? `<img src="${studentPhotoSrc}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; background: #f8fafc;">PHOTO</div>'}
           </div>
         </div>
       </div>
@@ -1508,12 +1705,8 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
             ${nurserySkillRowsHtml}
           </tbody>
         </table>
-        <div class="nursery-key">
-          <span class="nursery-key-item"><strong>Key:</strong></span>
-          ${keyBoxesHtml}
-        </div>
-        <div class="nursery-status">
-          ${statusBoxesHtml}
+        <div class="nursery-legend">
+          ${nurseryLegendHtml}
         </div>
       </div>
 
@@ -2004,7 +2197,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
             <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
           </div>
           <div class="student-photo">
-            ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+            ${
+              studentPhotoSrc
+                ? `<img src="${studentPhotoSrc}" alt="Student Photo" />`
+                : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; background: #f8fafc;">PHOTO</div>'
+            }
         </div>
       </div>
 
@@ -2054,14 +2251,14 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           <span class="signature-line">Signature: ______________________</span>
         </div>
         <div class="comment-block">
-          <h3>Headteacher's Comments:</h3>
+        <h3>Headteacher's Comments:</h3>
           <p>${headTeacherComment}</p>
           <span class="signature-line">Signature: ______________________</span>
-        </div>
+      </div>
         <div class="comment-footer">
           <div><strong>Next term begins on:</strong> ${nextTermDisplay}</div>
           <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
-        </div>
+      </div>
       </div>
       <div class="footer">Generated by PwezaCore School Management System</div>
       </div>
@@ -3333,3 +3530,301 @@ function generateProfessionalHeaderHTML(
     </div>
   `
 }
+
+const NURSERY_PERFORMANCE_OPTIONS = [
+  { label: 'Very Good', color: '#4CAF50' },
+  { label: 'Good', color: '#42A5F5' },
+  { label: 'Tries', color: '#FFEB3B' },
+  { label: 'Still a Problem', color: '#FF7043' },
+  { label: 'Promising', color: '#BA68C8' }
+] as const;
+
+type NurserySkillCell = {
+  key: string;
+  label: string;
+};
+
+const NURSERY_PERFORMANCE_COLOR_MAP: Record<string, string> = NURSERY_PERFORMANCE_OPTIONS.reduce((acc, option) => {
+  acc[option.label] = option.color;
+  return acc;
+}, {} as Record<string, string>);
+
+const NURSERY_PERFORMANCE_NORMALIZED_MAP = (() => {
+  const map = new Map<string, string>();
+
+  const addVariant = (label: string, ...variants: string[]) => {
+    variants.forEach(variant => {
+      map.set(variant, label);
+    });
+  };
+
+  NURSERY_PERFORMANCE_OPTIONS.forEach(({ label }) => {
+    const normalized = label.trim().toLowerCase();
+    const collapsed = normalized.replace(/\s+/g, '');
+    addVariant(label, normalized, collapsed);
+  });
+
+  addVariant('Very Good', 'vg');
+  addVariant('Good', 'g');
+  addVariant('Tries', 't');
+  addVariant('Still a Problem', 'stillaproblem', 'still_problem', 'sap', 'problem', 'needsattention');
+  addVariant('Promising', 'p', 'promising', 'prom', 'progressing');
+
+  return map;
+})();
+
+const NURSERY_SKILL_GRID: NurserySkillCell[][] = [
+  [
+    { key: 'toilet', label: 'Toilet' },
+    { key: 'recognition_of_numbers', label: 'Recognition of numbers' },
+    { key: 'property_care', label: 'Property care' },
+    { key: 'handling_of_pencil', label: 'Handling of pencil' },
+    { key: 're_sighting_alphabet', label: 'Re-sighting Alphabet' },
+    { key: 'attention_span', label: 'Attention span' },
+    { key: 'punctuality', label: 'Punctuality' },
+    { key: 'shading', label: 'Shading' }
+  ],
+  [
+    { key: 'nose_care', label: 'Nose care' },
+    { key: 'recognition_of_shapes', label: 'Recognition of shapes' },
+    { key: 'respect', label: 'Respect' },
+    { key: 'arrival_time', label: 'Arrival time' },
+    { key: 'counting_number_sequence', label: 'Counting number sequence' },
+    { key: 're_sighting_poems', label: 'Re-sighting Poems' },
+    { key: 'love_or_interest', label: 'Love or Interest' },
+    { key: 'drawing', label: 'Drawing' }
+  ],
+  [
+    { key: 'recognition_of_letters', label: 'Recognition of letters' },
+    { key: 'sharing', label: 'Sharing' },
+    { key: 'friendship', label: 'Friendship' },
+    { key: 'colours', label: 'Colours' },
+    { key: 'playing', label: 'Playing' },
+    { key: 'emotional', label: 'Emotional' },
+    { key: 'smartness', label: 'Smartness' },
+    { key: 'placeholder', label: '' }
+  ]
+];
+
+const sanitizeNurseryKey = (value: unknown): string => {
+  if (value === null || value === undefined) return '';
+  return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+};
+
+const normalizeNurseryPerformanceWord = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const normalized = raw.toLowerCase();
+  const collapsed = normalized.replace(/\s+/g, '');
+
+  if (NURSERY_PERFORMANCE_NORMALIZED_MAP.has(normalized)) {
+    return NURSERY_PERFORMANCE_NORMALIZED_MAP.get(normalized)!;
+  }
+
+  if (NURSERY_PERFORMANCE_NORMALIZED_MAP.has(collapsed)) {
+    return NURSERY_PERFORMANCE_NORMALIZED_MAP.get(collapsed)!;
+  }
+
+  for (const [key, canonical] of NURSERY_PERFORMANCE_NORMALIZED_MAP.entries()) {
+    if (key === normalized || key === collapsed) {
+      return canonical;
+    }
+  }
+
+  return null;
+};
+
+const getNurserySkillKeyVariants = (skill: NurserySkillCell): string[] => {
+  const label = skill.label || '';
+  const key = skill.key || '';
+  const cleanedLabel = label.replace(/&/g, 'and');
+
+  const variants = [
+    key,
+    cleanedLabel,
+    label,
+    key.replace(/_/g, ' '),
+    key.replace(/_/g, ''),
+    cleanedLabel.toLowerCase(),
+    label.toLowerCase(),
+    cleanedLabel.replace(/\s+/g, '_'),
+    cleanedLabel.replace(/\s+/g, ''),
+    key.toLowerCase(),
+    key.replace(/_/g, '-'),
+    cleanedLabel.replace(/\s+/g, '-')
+  ];
+
+  const unique = new Set<string>();
+  variants.forEach(variant => {
+    const sanitized = sanitizeNurseryKey(variant);
+    if (sanitized) {
+      unique.add(sanitized);
+    }
+  });
+
+  return Array.from(unique);
+};
+
+const gatherNurseryPerformanceSources = (student: any): any[] => {
+  const sources: any[] = [];
+  const pushIfPresent = (value: any) => {
+    if (value !== null && value !== undefined) {
+      sources.push(value);
+    }
+  };
+
+  pushIfPresent(student?.nursery_performance);
+  pushIfPresent(student?.nurseryPerformance);
+  pushIfPresent(student?.nursery_skills);
+  pushIfPresent(student?.nurserySkills);
+  pushIfPresent(student?.developmentalSkills);
+  pushIfPresent(student?.developmental_skills);
+  pushIfPresent(student?.skillAssessments);
+  pushIfPresent(student?.skillsChecklist);
+  pushIfPresent(student?.skills_checklist);
+  pushIfPresent(student?.skills);
+  pushIfPresent(student?.summary?.nurserySkills);
+  pushIfPresent(student?.summary?.nursery_skills);
+  pushIfPresent(student?.summary?.developmentalSkills);
+  pushIfPresent(student?.summary?.developmental_skills);
+  pushIfPresent(student?.summary?.skillsChecklist);
+  pushIfPresent(student?.summary?.skills_checklist);
+
+  if (Array.isArray(student?.results)) {
+    student.results.forEach((result: any) => {
+      pushIfPresent(result?.nurserySkills);
+      pushIfPresent(result?.nursery_skills);
+      pushIfPresent(result?.developmentalSkills);
+      pushIfPresent(result?.developmental_skills);
+      pushIfPresent(result?.skillsChecklist);
+      pushIfPresent(result?.skills_checklist);
+    });
+  }
+
+  return sources;
+};
+
+const extractPerformanceFromSource = (source: any, targetKeys: Set<string>): string | null => {
+  const tryPush = (rawKey: unknown, rawValue: unknown): string | null => {
+    const key = sanitizeNurseryKey(rawKey);
+    if (!key || !targetKeys.has(key)) return null;
+    const normalizedValue = normalizeNurseryPerformanceWord(rawValue);
+    return normalizedValue;
+  };
+
+  if (Array.isArray(source)) {
+    for (const entry of source) {
+      if (!entry) continue;
+
+      if (typeof entry === 'string') {
+        const parts = entry.split(/[:\-]/);
+        if (parts.length >= 2) {
+          const keyCandidate = parts[0];
+          const valueCandidate = parts.slice(1).join('-').trim();
+          const result = tryPush(keyCandidate, valueCandidate);
+          if (result) return result;
+        }
+        continue;
+      }
+
+      if (typeof entry === 'object') {
+        const keyCandidates = [
+          entry.key,
+          entry.skill,
+          entry.skill_name,
+          entry.skillName,
+          entry.name,
+          entry.label,
+          entry.title,
+          entry.description,
+          entry.field
+        ];
+
+        const valueCandidates = [
+          entry.value,
+          entry.performance,
+          entry.status,
+          entry.level,
+          entry.assessment,
+          entry.rating,
+          entry.result,
+          entry.word,
+          entry.selection,
+          entry.score
+        ];
+
+        for (const keyCandidate of keyCandidates) {
+          if (!keyCandidate) continue;
+          for (const valueCandidate of valueCandidates) {
+            const result = tryPush(keyCandidate, valueCandidate);
+            if (result) return result;
+          }
+        }
+
+        if (entry.text) {
+          const parts = String(entry.text).split(/[:\-]/);
+          if (parts.length >= 2) {
+            const keyCandidate = parts[0];
+            const valueCandidate = parts.slice(1).join('-').trim();
+            const result = tryPush(keyCandidate, valueCandidate);
+            if (result) return result;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  if (typeof source === 'object' && source !== null) {
+    for (const [rawKey, rawValue] of Object.entries(source)) {
+      const result = tryPush(rawKey, rawValue);
+      if (result) return result;
+    }
+    return null;
+  }
+
+  if (typeof source === 'string') {
+    try {
+      const parsed = JSON.parse(source);
+      return extractPerformanceFromSource(parsed, targetKeys);
+    } catch {
+      const parts = source.split(/[:\-]/);
+      if (parts.length >= 2) {
+        const keyCandidate = parts[0];
+        const valueCandidate = parts.slice(1).join('-').trim();
+        return tryPush(keyCandidate, valueCandidate);
+      }
+    }
+  }
+
+  return null;
+};
+
+const resolveNurseryPerformanceValue = (student: any, skill: NurserySkillCell): string | null => {
+  if (!skill.label) return null;
+  const targetKeys = new Set(getNurserySkillKeyVariants(skill));
+  const sources = gatherNurseryPerformanceSources(student);
+
+  for (const source of sources) {
+    const value = extractPerformanceFromSource(source, targetKeys);
+    if (value) return value;
+  }
+
+  return null;
+};
+
+const getReadableTextColor = (hex: string): string => {
+  let normalized = hex.replace('#', '');
+  if (normalized.length === 3) {
+    normalized = normalized.split('').map(char => char + char).join('');
+  }
+
+  const r = parseInt(normalized.substring(0, 2), 16);
+  const g = parseInt(normalized.substring(2, 4), 16);
+  const b = parseInt(normalized.substring(4, 6), 16);
+
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#111827' : '#ffffff';
+};

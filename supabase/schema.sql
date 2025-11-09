@@ -99,6 +99,7 @@ CREATE TABLE exam_results (
   teacher_initials TEXT,
   topic TEXT,
   teacher_id UUID REFERENCES teachers(teacher_id) ON DELETE CASCADE,
+  nursery_skill_performance JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

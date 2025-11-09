@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
       teacher_remark: result.remarks || '',
       teacher_initials: 'T.C',
       class_teacher_comment: '',
+      nursery_skill_performance: result.nursery_skill_performance || {},
       processed_at: new Date().toISOString()
     }));
 

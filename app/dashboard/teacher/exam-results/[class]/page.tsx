@@ -6,6 +6,16 @@ import { supabase } from "@/src/lib/supabase";
 import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
+import {
+  NURSERY_PERFORMANCE_OPTIONS,
+  NURSERY_PERFORMANCE_COLOR_MAP,
+  NURSERY_SKILL_GRID,
+  getReadableTextColor as getNurseryReadableTextColor,
+  applyAlphaToHex,
+  normalizeNurseryPerformanceWord,
+  NurseryPerformanceRecord,
+  NurseryPerformanceWord
+} from "@/src/templates/primary/nurseryPerformance";
 
 export default function TeacherExamResultsClassPage() {
   const router = useRouter();
@@ -30,6 +40,7 @@ export default function TeacherExamResultsClassPage() {
     if (isSecondary || isALevel) return null;
     return getSectionForClass(className);
   }, [className, isSecondary, isALevel]);
+  const isNursery = primarySection === 'Nursery /Baby Class';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -47,6 +58,9 @@ export default function TeacherExamResultsClassPage() {
   const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }>>({});
   // Primary aggregate points for core subjects (English, Mathematics, Science, Social Studies)
   const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
+  const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
+  const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
+  const nurserySkillsFlat = useMemo(() => NURSERY_SKILL_GRID.flat().filter(skill => skill.label), []);
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
@@ -675,6 +689,45 @@ export default function TeacherExamResultsClassPage() {
     }));
   };
 
+  const handleNurserySelection = (studentId: string, skillKey: string, performance: NurseryPerformanceWord) => {
+    let changed = false;
+    setNurseryPerformances(prev => {
+      const current = prev[studentId] || {};
+      if (current[skillKey] === performance) {
+        return prev;
+      }
+      changed = true;
+      return {
+        ...prev,
+        [studentId]: {
+          ...current,
+          [skillKey]: performance
+        }
+      };
+    });
+    if (changed) {
+      setNurseryDirtyStudents(prev => ({ ...prev, [studentId]: true }));
+    }
+  };
+
+  const handleNurseryClear = (studentId: string, skillKey: string) => {
+    let changed = false;
+    setNurseryPerformances(prev => {
+      const current = prev[studentId];
+      if (!current || !current[skillKey]) return prev;
+      const next = { ...current };
+      delete next[skillKey];
+      changed = true;
+      return {
+        ...prev,
+        [studentId]: next
+      };
+    });
+    if (changed) {
+      setNurseryDirtyStudents(prev => ({ ...prev, [studentId]: true }));
+    }
+  };
+
   // Secondary change handler: Activity is fully manual; Formative updates Activity; both allow clearing
   const handleSecondaryChange = (studentId: string, field: keyof typeof examResultsSecondary[string], value: string) => {
     setExamResultsSecondary(prev => {
@@ -782,54 +835,100 @@ export default function TeacherExamResultsClassPage() {
       }
 
       if (!isSecondary) {
-        const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
-        if (entries.length === 0) {
-          setError('Please enter marks for at least one student');
-          return;
-        }
-        // Use secure RPC (server-side checks) for reliability
-        // Helper to compute auto teacher comment from rules by average
-        const autoTeacherComment = (_avgPercent: number): string => '';
-
-        const saves = entries.map(async ([studentId, data]) => {
-          const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
-          const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
-          const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
-          const avgPercent = Math.max(0, Math.min(100, parseFloat(data.marks)));
-          const teacherComment = autoTeacherComment(avgPercent);
-          
-          
-          const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
-            p_school_id: schoolId,
-            p_exam_set_id: selectedExamSet,
-            p_student_id: studentId,
-            p_class_name: className,
-            p_subject: (selectedSubject || '').trim(),
-            p_marks_obtained: parseFloat(data.marks),
-            p_total_marks: parseFloat(data.totalMarks || '100'),
-            p_grade: computedGrade,
-            p_remarks: computedRemark,
-            p_teacher_id: teacherIdForSave,
-            p_teacher_comment: teacherComment || null
-          });
-          if (resp.error) {
-            console.error('RPC primary save error:', {
-              code: resp.error.code,
-              message: resp.error.message,
-              details: resp.error.details,
-              hint: resp.error.hint,
-            });
-            throw resp.error;
+        if (isNursery) {
+          const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
+          if (dirtyStudentIds.length === 0) {
+            setError('Please select performance for at least one student');
+            return;
           }
+
+          const saves = dirtyStudentIds.map(async (studentId) => {
+            const performances = nurseryPerformances[studentId] || {};
+            const payload: Record<string, NurseryPerformanceWord> = {};
+            Object.entries(performances).forEach(([skillKey, value]) => {
+              if (value) {
+                payload[skillKey] = value;
+              }
+            });
+
+            const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+              p_school_id: schoolId,
+              p_exam_set_id: selectedExamSet,
+              p_student_id: studentId,
+              p_class_name: className,
+              p_subject: (selectedSubject || '').trim(),
+              p_marks_obtained: 0,
+              p_total_marks: 0,
+              p_grade: 'N/A',
+              p_remarks: '',
+              p_teacher_id: teacherIdForSave,
+              p_teacher_comment: null,
+              p_nursery_skills: payload
+            });
+
+            if (resp.error) {
+              console.error('RPC nursery save error:', resp.error);
+              throw resp.error;
+            }
+          });
+
+          await Promise.all(saves);
+          setSuccess(`Successfully saved nursery performance for ${dirtyStudentIds.length} ${dirtyStudentIds.length === 1 ? 'student' : 'students'}`);
+          setNurseryDirtyStudents({});
+
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await reloadSavedResults();
+        } else {
+          const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+          if (entries.length === 0) {
+            setError('Please enter marks for at least one student');
+            return;
+          }
+          // Use secure RPC (server-side checks) for reliability
+          // Helper to compute auto teacher comment from rules by average
+          const autoTeacherComment = (_avgPercent: number): string => '';
+
+          const saves = entries.map(async ([studentId, data]) => {
+            const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
+            const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
+            const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
+            const avgPercent = Math.max(0, Math.min(100, parseFloat(data.marks)));
+            const teacherComment = autoTeacherComment(avgPercent);
+            
+            
+            const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+              p_school_id: schoolId,
+              p_exam_set_id: selectedExamSet,
+              p_student_id: studentId,
+              p_class_name: className,
+              p_subject: (selectedSubject || '').trim(),
+              p_marks_obtained: parseFloat(data.marks),
+              p_total_marks: parseFloat(data.totalMarks || '100'),
+              p_grade: computedGrade,
+              p_remarks: computedRemark,
+              p_teacher_id: teacherIdForSave,
+              p_teacher_comment: teacherComment || null,
+              p_nursery_skills: null
+            });
+            if (resp.error) {
+              console.error('RPC primary save error:', {
+                code: resp.error.code,
+                message: resp.error.message,
+                details: resp.error.details,
+                hint: resp.error.hint,
+              });
+              throw resp.error;
+            }
+            
+          });
+          await Promise.all(saves);
+          setSuccess(`Successfully saved ${entries.length} exam results`);
           
-        });
-        await Promise.all(saves);
-        setSuccess(`Successfully saved ${entries.length} exam results`);
-        
-        // Force reload saved results after successful save
-        // Small delay to ensure database is updated
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await reloadSavedResults();
+          // Force reload saved results after successful save
+          // Small delay to ensure database is updated
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await reloadSavedResults();
+        }
       } else if (isALevel) {
         // A-Level format - simple marks only
         const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
@@ -981,15 +1080,47 @@ export default function TeacherExamResultsClassPage() {
 
         const rows = data || [];
         if (!isSecondary) {
-          const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
-          rows.forEach(r => {
-            map[r.student_id] = {
-              marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-              totalMarks: r.total_marks != null ? String(r.total_marks) : '',
-              grade: r.grade || ''
-            };
-          });
-          setExamResults(map);
+          if (isNursery) {
+            const map: Record<string, NurseryPerformanceRecord> = {};
+            rows.forEach(r => {
+              const raw = r.nursery_skill_performance;
+              if (!raw) return;
+              let source: Record<string, unknown> | null = null;
+              if (typeof raw === 'string') {
+                try {
+                  source = JSON.parse(raw);
+                } catch {
+                  source = null;
+                }
+              } else if (typeof raw === 'object') {
+                source = raw as Record<string, unknown>;
+              }
+
+              if (source) {
+                const normalized: NurseryPerformanceRecord = {};
+                Object.entries(source).forEach(([skillKey, value]) => {
+                  const normalizedValue = normalizeNurseryPerformanceWord(value);
+                  if (normalizedValue) {
+                    normalized[skillKey] = normalizedValue;
+                  }
+                });
+                map[r.student_id] = normalized;
+              }
+            });
+            setNurseryPerformances(map);
+            setNurseryDirtyStudents({});
+            setExamResults({});
+          } else {
+            const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+            rows.forEach(r => {
+              map[r.student_id] = {
+                marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+                totalMarks: r.total_marks != null ? String(r.total_marks) : '',
+                grade: r.grade || ''
+              };
+            });
+            setExamResults(map);
+          }
         } else {
           const map: Record<string, any> = {};
           rows.forEach(r => {
@@ -1045,15 +1176,47 @@ export default function TeacherExamResultsClassPage() {
       console.log('reloadSavedResults: Found', rows.length, 'saved results');
       
       if (!isSecondary && !isALevel) {
-        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
-        rows.forEach(r => {
-          map[r.student_id] = {
-            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || ''
-          };
-        });
-        setExamResults(map);
+        if (isNursery) {
+          const map: Record<string, NurseryPerformanceRecord> = {};
+          rows.forEach(r => {
+            const raw = r.nursery_skill_performance;
+            if (!raw) return;
+            let source: Record<string, unknown> | null = null;
+            if (typeof raw === 'string') {
+              try {
+                source = JSON.parse(raw);
+              } catch {
+                source = null;
+              }
+            } else if (typeof raw === 'object') {
+              source = raw as Record<string, unknown>;
+            }
+
+            if (source) {
+              const normalized: NurseryPerformanceRecord = {};
+              Object.entries(source).forEach(([skillKey, value]) => {
+                const normalizedValue = normalizeNurseryPerformanceWord(value);
+                if (normalizedValue) {
+                  normalized[skillKey] = normalizedValue;
+                }
+              });
+              map[r.student_id] = normalized;
+            }
+          });
+          setNurseryPerformances(map);
+          setNurseryDirtyStudents({});
+          setExamResults({});
+        } else {
+          const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+          rows.forEach(r => {
+            map[r.student_id] = {
+              marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+              totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
+              grade: r.grade || ''
+            };
+          });
+          setExamResults(map);
+        }
       } else if (isALevel) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
@@ -1105,6 +1268,16 @@ export default function TeacherExamResultsClassPage() {
     (async () => { await reloadSavedResults(); })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExamSet, selectedSubject]);
+
+  useEffect(() => {
+    if (!isNursery) {
+      setNurseryPerformances({});
+      setNurseryDirtyStudents({});
+      return;
+    }
+    setNurseryPerformances({});
+    setNurseryDirtyStudents({});
+  }, [selectedExamSet, selectedSubject, className, isNursery]);
 
   // Refresh class teacher status when teacher ID changes
   useEffect(() => {
@@ -1160,7 +1333,7 @@ export default function TeacherExamResultsClassPage() {
               onClick={() => setShowTeacherRemarks(true)}
               className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
             >
-              Teacher’s Remarks Settings
+              Teacher's Remarks Settings
             </button>
             {isClassTeacher && (
               <button
@@ -1184,7 +1357,7 @@ export default function TeacherExamResultsClassPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-xl font-semibold">Teacher’s Remarks Settings</h2>
+              <h2 className="text-white text-xl font-semibold">Teacher's Remarks Settings</h2>
               <button onClick={() => setShowTeacherRemarks(false)} className="text-white/60 hover:text-white">✕</button>
             </div>
             {/* Subject selector (teacher assigned subjects only) */}
@@ -1262,7 +1435,7 @@ export default function TeacherExamResultsClassPage() {
                       const j = await resp.json().catch(()=>({}));
                       throw new Error(j.error || 'Failed to save');
                     }
-                    alert('Teacher’s remarks settings saved');
+                    alert("Teacher's remarks settings saved");
                     setShowTeacherRemarks(false);
                   } catch (e:any) {
                     alert(e.message);
@@ -1274,12 +1447,12 @@ export default function TeacherExamResultsClassPage() {
         </div>
       )}
 
-      {/* Class Teacher’s Comments Settings Modal */}
+      {/* Class Teacher's Comments Settings Modal */}
       {showClassTeacherComments && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-white text-xl font-semibold">Class Teacher’s Comments Settings - {className}</h2>
+              <h2 className="text-white text-xl font-semibold">Class Teacher's Comments Settings - {className}</h2>
               <button onClick={() => setShowClassTeacherComments(false)} className="text-white/60 hover:text-white">✕</button>
             </div>
             <div className="space-y-3">
@@ -1328,7 +1501,7 @@ export default function TeacherExamResultsClassPage() {
                       const j = await resp.json().catch(()=>({}));
                       throw new Error(j.error || 'Failed to save');
                     }
-                    alert('Class Teacher’s comments settings saved');
+                    alert("Class Teacher's comments settings saved");
                     setShowClassTeacherComments(false);
                   } catch (e:any) {
                     alert(e.message);
@@ -1426,40 +1599,118 @@ export default function TeacherExamResultsClassPage() {
             </div>
             <div className="overflow-x-auto">
               {!isSecondary && !isALevel ? (
-                <table className="min-w-full">
-                  <thead className="bg-white/5">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
-                      {/* Primary has no per-row remark/initials columns */}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/10">
-                    {students.map((student) => {
-                      const marks = examResults[student.student_id]?.marks || '';
-                      const totalMarks = examResults[student.student_id]?.totalMarks || '100';
-                      const grade = examResults[student.student_id]?.grade || '';
-                      const remark = examResults[student.student_id]?.remark || '';
-                      return (
-                        <tr key={student.student_id} className="hover:bg-white/5">
-                          <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
-                          </td>
-                          {/* Primary has no per-row remark/initials */}
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                isNursery ? (
+                  <table className="min-w-full">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
+                        {nurserySkillsFlat.map((skill) => (
+                          <th key={skill.key} className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{skill.label}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {students.map((student) => {
+                        const performance = nurseryPerformances[student.student_id] || {};
+                        return (
+                          <tr key={student.student_id} className="hover:bg-white/5">
+                            <td className="px-4 py-4 align-top text-white">
+                              <div className="font-medium">{student.name}</div>
+                              {student.admission_number && (
+                                <div className="text-xs text-white/60 mt-1">{student.admission_number}</div>
+                              )}
+                            </td>
+                            {nurserySkillsFlat.map((skill) => {
+                              const selected = performance[skill.key];
+                              const color = selected ? NURSERY_PERFORMANCE_COLOR_MAP[selected] : undefined;
+                              const badgeTextColor = selected ? getNurseryReadableTextColor(color) : '#94a3b8';
+                              const cellBackground = selected ? applyAlphaToHex(color, 0.18) : 'transparent';
+                              return (
+                                <td key={`${student.student_id}-${skill.key}`} className="px-3 py-3 align-top" style={{ background: cellBackground }}>
+                                  <div className="flex flex-col items-center gap-2">
+                                    <div
+                                      className="w-full text-center text-xs font-semibold uppercase tracking-wide px-2 py-2 rounded-md border border-white/10 transition-colors"
+                                      style={{
+                                        background: selected ? color : 'rgba(255,255,255,0.05)',
+                                        color: badgeTextColor
+                                      }}
+                                    >
+                                      {selected || 'Select'}
+                                    </div>
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                      {NURSERY_PERFORMANCE_OPTIONS.map(option => {
+                                        const isSelected = option.label === selected;
+                                        const buttonTextColor = getNurseryReadableTextColor(option.color);
+                                        return (
+                                          <button
+                                            key={option.label}
+                                            type="button"
+                                            onClick={() => handleNurserySelection(student.student_id, skill.key, option.label)}
+                                            className="px-2 py-1 text-[11px] font-semibold rounded-full shadow-sm transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/60"
+                                            style={{
+                                              background: option.color,
+                                              color: buttonTextColor,
+                                              opacity: isSelected ? 1 : 0.78,
+                                              transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                                              boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.7)' : '0 1px 4px rgba(15,23,42,0.25)'
+                                            }}
+                                          >
+                                            {option.label}{isSelected ? ' ✓' : ''}
+                                          </button>
+                                        );
+                                      })}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleNurseryClear(student.student_id, skill.key)}
+                                        className="px-2 py-1 text-[11px] font-semibold rounded-full bg-white/15 text-white hover:bg-white/25 transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/40"
+                                      >
+                                        Clear
+                                      </button>
+                                    </div>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  <table className="min-w-full">
+                    <thead className="bg-white/5">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks Obtained</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Total Marks</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Grade</th>
+                        {/* Primary has no per-row remark/initials columns */}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/10">
+                      {students.map((student) => {
+                        const marks = examResults[student.student_id]?.marks || '';
+                        const totalMarks = examResults[student.student_id]?.totalMarks || '100';
+                        const grade = examResults[student.student_id]?.grade || '';
+                        return (
+                          <tr key={student.student_id} className="hover:bg-white/5">
+                            <td className="px-6 py-4 whitespace-nowrap text-white">{student.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input type="number" step="0.1" min="0" value={marks} onChange={(e) => handleMarksChange(student.student_id, 'marks', e.target.value)} className="w-24 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" placeholder="0" />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
+                            </td>
+                            {/* Primary has no per-row remark/initials */}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )
               ) : isALevel ? (
                 <table className="min-w-full">
                   <thead className="bg-white/5">

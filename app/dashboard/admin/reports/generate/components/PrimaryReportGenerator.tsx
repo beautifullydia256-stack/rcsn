@@ -31,7 +31,7 @@ const printStyles = `
     }
   }
 `;
-import { 
+import {
   calculateGrade, 
   calculateDivision, 
   calculateAggregate, 
@@ -49,6 +49,13 @@ import {
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
 import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions, getTemplateForClass, getSectionForClass } from "@/src/templates/primary";
+import {
+  NURSERY_PERFORMANCE_OPTIONS,
+  NURSERY_PERFORMANCE_COLOR_MAP,
+  NURSERY_SKILL_GRID,
+  resolveNurseryPerformanceValue,
+  getReadableTextColor
+} from "@/src/templates/primary/nurseryPerformance";
 
 // Primary/Nursery School Report Generator
 export function PrimaryReportGenerator() {
@@ -2599,78 +2606,224 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
     return Number.isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
 
-  const nurserySkillRows: string[][] = [
-    ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
-    ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
-    ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
-  ];
-
-  const nurseryKeyLabels = ['Very good', 'Good', 'Tries'];
-  const nurseryStatusLabels = ['Still a problem', 'Promising'];
+  const contactEmail = school?.contact_email || school?.email || '';
+  const contactPhone = school?.contact_phone || school?.phone || '';
+  const addressLine = [school?.address, school?.pobox].filter(Boolean).join(' ');
+  const headerMetaItems = [
+    student?.current_class ? `Class: ${student.current_class}` : null,
+    streamDisplay && streamDisplay !== 'N/A' ? `Stream: ${streamDisplay}` : null,
+    examSet?.term ? `Term: ${examSet.term}` : null,
+    examSet?.year ? `Year: ${examSet.year}` : null,
+  ].filter(Boolean);
 
   return (
     <div
-      className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full"
+      className="relative bg-white text-slate-800 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full"
       style={{
-        fontFamily: 'Times New Roman, Arial, sans-serif',
+        fontFamily: 'Times New Roman, Times, serif',
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '15mm',
+        padding: '0.25cm 0.35cm 0.4cm',
         boxSizing: 'border-box',
       }}
     >
-      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
-        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
-          <div className="text-center text-9xl font-bold text-gray-400">
-            SCHOOL
-            <br />
-            LOGO
+      {(school?.logo_url || school?.logo) && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
+          <img
+            src={school.logo_url || school.logo}
+            alt="School Watermark"
+            className="max-w-2xl w-[58%] opacity-15 object-contain"
+          />
+        </div>
+      )}
+
+      <div className="relative z-10">
+        <div
+          className="print-header-container"
+          style={{
+            paddingTop: '0.3cm',
+            paddingBottom: '0.12cm',
+            paddingLeft: '0',
+            paddingRight: '0.32cm',
+            background: 'transparent',
+            WebkitPrintColorAdjust: 'exact',
+            printColorAdjust: 'exact',
+            pageBreakInside: 'avoid',
+            breakInside: 'avoid',
+          }}
+        >
+          <div className="flex items-center" style={{ minHeight: '2cm', position: 'relative' }}>
+            <div
+              className="flex-shrink-0"
+              style={{
+                width: '120px',
+                height: '120px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'absolute',
+                left: '0',
+                marginLeft: '0',
+              }}
+            >
+              {(school?.logo_url || school?.logo) ? (
+                <img
+                  src={school.logo_url || school.logo}
+                  alt="School Logo"
+                  className="w-full h-full object-contain"
+                  style={{ maxWidth: '100%', maxHeight: '100%' }}
+                />
+              ) : (
+                <div
+                  className="border border-gray-300 rounded flex items-center justify-center bg-gray-50"
+                  style={{ width: '100%', height: '100%' }}
+                >
+                  <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
+                    School<br />Logo
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div
+              className="flex-1 text-center"
+              style={{ fontFamily: 'Times New Roman, serif', marginLeft: '120px', paddingLeft: '0.28cm' }}
+            >
+              {school?.name && (
+                <h1
+                  style={{
+                    fontSize: '16pt',
+                    fontWeight: 700,
+                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.045em',
+                    lineHeight: '1.06',
+                    marginBottom: '0.2cm',
+                    color: school?.header_school_name_color || '#1e3a8a',
+                    marginTop: 0,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {school.name}
+                </h1>
+              )}
+
+              {school?.subtitle && (
+                <div
+                  style={{
+                    fontSize: '11pt',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontWeight: 400,
+                    color: school?.header_subtitle_color || '#3b82f6',
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.3',
+                  }}
+                >
+                  {school.subtitle}
+                </div>
+              )}
+
+              {addressLine && (
+                <div
+                  style={{
+                    fontSize: '11pt',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontWeight: 600,
+                    color: school?.header_address_color || '#1e40af',
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.28',
+                  }}
+                >
+                  {addressLine}
+                </div>
+              )}
+
+              {(contactEmail || contactPhone) && (
+                <div
+                  style={{
+                    fontSize: '10.8pt',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontWeight: 600,
+                    color: school?.header_contact_color || '#1e40af',
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.28',
+                  }}
+                >
+                  {contactEmail && <span>{contactEmail}</span>}
+                  {contactEmail && contactPhone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
+                  {contactPhone && <span>{contactPhone}</span>}
+                </div>
+              )}
+
+              {school?.motto && (
+                <div
+                  style={{
+                    fontSize: '9.8pt',
+                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontStyle: 'italic',
+                    fontWeight: 600,
+                    color: school?.header_motto_color || '#2563eb',
+                    marginBottom: '0.2cm',
+                    lineHeight: '1.32',
+                  }}
+                >
+                  &quot;{school.motto}&quot;
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div
+            style={{
+              height: '1px',
+              background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${
+                school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'
+              } 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
+              marginTop: '0.2cm',
+              marginBottom: '0.18cm',
+              WebkitPrintColorAdjust: 'exact',
+              printColorAdjust: 'exact',
+            }}
+          />
+
+          <div className="text-center" style={{ marginBottom: '0.18cm' }}>
+            <div
+              className="inline-block"
+              style={{
+                padding: '6px 22px',
+                borderRadius: '18px',
+                fontSize: '9.2pt',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.07em',
+                color: '#1e3a8a',
+                background: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                WebkitPrintColorAdjust: 'exact',
+                printColorAdjust: 'exact',
+              }}
+            >
+              MIDDLE &amp; TOP CLASS - TERMLY REPORT
+            </div>
+            {headerMetaItems.length > 0 && (
+              <div
+                style={{
+                  fontSize: '7.5pt',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase',
+                  marginTop: '4px',
+                  color: '#1f2937',
+                }}
+              >
+                {headerMetaItems.join(' • ')}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
-          {school?.logo_url || school?.logo ? (
-            <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-cover border-0" />
-          ) : (
-            <div className="text-center text-xs">
-              <div className="font-bold">SCHOOL</div>
-              <div className="font-bold">LOGO</div>
-            </div>
-          )}
-        </div>
-        <div className="text-right flex-1">
-          {school?.name && (
-            <div className="font-bold text-[22pt] uppercase tracking-wide leading-[1.1] mb-3 text-slate-900">
-              {school.name}
-            </div>
-          )}
-          {school?.motto && (
-            <div className="text-[11pt] font-normal italic text-slate-600 mb-2 leading-relaxed">
-              "{school.motto}"
-            </div>
-          )}
-          {(school?.address || school?.email || school?.phone) && (
-            <div className="text-[10pt] font-normal leading-relaxed text-slate-700">
-              {school?.address && <span className="font-medium">{school.address}</span>}
-              {school?.address && (school?.email || school?.phone) && <span className="mx-1.5 text-slate-400">,</span>}
-              {school?.email && <span className="font-medium">{school.email}</span>}
-              {school?.email && school?.phone && <span className="mx-1.5 text-slate-400">,</span>}
-              {school?.phone && <span className="font-medium">{school.phone}</span>}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="text-center mb-5 border-b-2 border-slate-300 pb-3">
-        <h1 className="text-[14pt] font-bold uppercase tracking-wide leading-tight text-slate-900">
-          MIDDLE &amp; TOP CLASS - TERMLY REPORT
-        </h1>
-      </div>
-
-      <div className="mb-6 text-[11pt]">
+      <div className="relative z-10 mb-6 text-[11pt]">
         <div className="flex justify-between items-start">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -2709,43 +2862,82 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
         <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}>
           <tbody>
-            {nurserySkillRows.map((row, rowIdx) => (
+            {NURSERY_SKILL_GRID.map((row, rowIdx) => (
               <tr key={`nursery-skill-row-${rowIdx}`}>
-                {row.map((item, colIdx) => (
-                  <td
-                    key={`nursery-skill-${rowIdx}-${colIdx}`}
-                    style={{
-                      border: '1px solid #000',
-                      padding: '8px 6px',
-                      minHeight: '42px',
-                      textAlign: 'center',
-                      fontWeight: 600,
-                      verticalAlign: 'middle',
-                    }}
-                  >
-                    {item || '\u00A0'}
-                  </td>
-                ))}
+                {row.map((skill, colIdx) => {
+                  if (!skill.label) {
+                    return (
+                      <td
+                        key={`nursery-skill-${rowIdx}-${colIdx}`}
+                        style={{
+                          border: '1px solid #000',
+                          padding: '8px 6px',
+                          minHeight: '42px',
+                          textAlign: 'center',
+                          verticalAlign: 'middle',
+                          background: '#ffffff'
+                        }}
+                      >
+                        {'\u00A0'}
+                      </td>
+                    );
+                  }
+
+                  const performanceWord = resolveNurseryPerformanceValue(student, skill);
+                  const backgroundColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : undefined;
+                  const textColor = backgroundColor ? getReadableTextColor(backgroundColor) : '#1f2937';
+
+                  return (
+                    <td
+                      key={`nursery-skill-${rowIdx}-${colIdx}`}
+                      style={{
+                        border: '1px solid #000',
+                        padding: '8px 6px',
+                        minHeight: '48px',
+                        textAlign: 'center',
+                        fontWeight: 600,
+                        verticalAlign: 'middle',
+                        background: backgroundColor || '#ffffff',
+                        color: textColor,
+                        transition: 'background-color 0.2s ease'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600 }}>
+                          {skill.label}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '10pt',
+                            fontWeight: 700,
+                            fontStyle: performanceWord ? 'normal' : 'italic',
+                            opacity: performanceWord ? 1 : 0.6
+                          }}
+                        >
+                          {performanceWord || '—'}
+                        </span>
+                      </div>
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
-          <span className="font-semibold">Key:</span>
-          {nurseryKeyLabels.map((label) => (
-            <div key={label} className="flex items-center gap-2">
-              <span>{label}:</span>
-              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
-          {nurseryStatusLabels.map((label) => (
-            <div key={label} className="flex items-center gap-2">
-              <span>{label}:</span>
-              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
+        <div className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4">
+          {NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => (
+            <div key={label} className="flex items-center gap-2 font-semibold">
+              <div
+                style={{
+                  width: '18px',
+                  height: '18px',
+                  border: '1px solid #1f2937',
+                  borderRadius: '4px',
+                  background: color
+                }}
+              />
+              <span>{label}</span>
             </div>
           ))}
         </div>

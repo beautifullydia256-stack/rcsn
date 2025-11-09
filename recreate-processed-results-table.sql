@@ -26,6 +26,7 @@ CREATE TABLE public.processed_primary_exam_results (
   grade TEXT,
   teacher_remark TEXT,
   teacher_initials TEXT,
+  nursery_skill_performance JSONB DEFAULT '{}'::jsonb,
   
   -- Class Teacher's Comments (calculated from average of all subjects)
   class_teacher_comment TEXT,
