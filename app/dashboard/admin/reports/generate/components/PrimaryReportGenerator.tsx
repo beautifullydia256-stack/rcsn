@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.35cm',
-            paddingBottom: '0.08cm',
+            paddingTop: '0.2cm',
+            paddingBottom: '0.06cm',
             paddingLeft: '0',
-            paddingRight: '0.55cm',
+            paddingRight: '0.5cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -2997,7 +2997,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.4cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.2cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
@@ -3032,7 +3032,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
         
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.4cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.35cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 

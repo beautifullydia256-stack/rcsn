@@ -3099,8 +3099,8 @@ function generateProfessionalHeaderHTML(
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
-    <div class="print-header-container" style="padding-top: 0.35cm; padding-bottom: 0.08cm; padding-left: 0; padding-right: 0.55cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
-      <div style="display: flex; align-items: center; min-height: 2.4cm; position: relative;">
+    <div class="print-header-container" style="padding-top: 0.2cm; padding-bottom: 0.06cm; padding-left: 0; padding-right: 0.5cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+      <div style="display: flex; align-items: center; min-height: 2.2cm; position: relative;">
         <div style="width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `
             <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
@@ -3110,7 +3110,7 @@ function generateProfessionalHeaderHTML(
             </div>
           `}
         </div>
-        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 150px; padding-left: 0.4cm;">
+        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 150px; padding-left: 0.35cm;">
           ${school?.name ? `
             <h1 style="font-size: 17pt; font-weight: 700; font-family: Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; margin: 0 0 0.28cm 0; color: ${schoolNameColor}; white-space: nowrap;">
               ${school.name}
