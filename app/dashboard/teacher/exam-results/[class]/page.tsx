@@ -851,12 +851,18 @@ export default function TeacherExamResultsClassPage() {
       if (!isSecondary) {
         if (isNursery) {
           const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
-          if (dirtyStudentIds.length === 0) {
-            setError('Please select performance for at least one student');
-            return;
-          }
+        const studentsToPersist = dirtyStudentIds.length > 0
+          ? dirtyStudentIds
+          : Object.entries(nurseryPerformances)
+              .filter(([_, rec]) => rec && Object.values(rec).some(Boolean))
+              .map(([studentId]) => studentId);
 
-          const saves = dirtyStudentIds.map(async (studentId) => {
+        if (studentsToPersist.length === 0) {
+          setError('Please select performance for at least one student');
+          return;
+        }
+
+        const saves = studentsToPersist.map(async (studentId) => {
             const performances = nurseryPerformances[studentId] || {};
             const payload: Record<string, NurseryPerformanceWord> = {};
             Object.entries(performances).forEach(([skillKey, value]) => {
@@ -887,7 +893,7 @@ export default function TeacherExamResultsClassPage() {
           });
 
           await Promise.all(saves);
-          setSuccess(`Successfully saved nursery performance for ${dirtyStudentIds.length} ${dirtyStudentIds.length === 1 ? 'student' : 'students'}`);
+          setSuccess(`Successfully saved nursery performance for ${studentsToPersist.length} ${studentsToPersist.length === 1 ? 'student' : 'students'}`);
           setNurseryDirtyStudents({});
 
           await new Promise(resolve => setTimeout(resolve, 500));
