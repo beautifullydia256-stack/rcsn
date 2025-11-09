@@ -1745,13 +1745,13 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 9.4pt;
+          font-size: 9.1pt;
         }
 
         .subjects-table th,
         .subjects-table td {
           border: 1px solid rgba(191, 219, 254, 0.45);
-          padding: 4.5px 6px;
+          padding: 3.6px 5.4px;
         }
 
         .subjects-table th {
@@ -1797,17 +1797,17 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 6px;
-          margin-bottom: 8px;
+          gap: 3.4px;
+          margin-bottom: 3.6px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-          padding: 6px 8px;
-          font-size: 8.8pt;
-          line-height: 1.32;
+          border-radius: 9px;
+          padding: 4.2px 6px;
+          font-size: 8pt;
+          line-height: 1.26;
         }
 
         .summary-card strong {
@@ -1817,10 +1817,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .comments-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-          padding: 7px 9px;
-          font-size: 8.8pt;
-          line-height: 1.32;
+          border-radius: 9px;
+          padding: 5px 6px;
+          font-size: 8.1pt;
+          line-height: 1.26;
+          margin-bottom: 3.6px;
         }
 
         .comments-card h3 {
@@ -1831,7 +1832,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .comment-block {
-          margin-bottom: 6px;
+          margin-bottom: 4.2px;
         }
 
         .comment-block:last-child {
