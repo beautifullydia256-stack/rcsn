@@ -370,7 +370,11 @@ export default function TeacherExamResultsClassPage() {
             return;
           }
           
-          setTeacherSubjects(teacherSubjects);
+          const processedSubjects = isNursery
+            ? nurserySkillsFlat.map(skill => skill.label)
+            : teacherSubjects;
+          
+          setTeacherSubjects(processedSubjects);
         } else {
               // Use direct assignments
               assignments = directAssignments || [];
@@ -391,7 +395,11 @@ export default function TeacherExamResultsClassPage() {
             return;
           }
           
-          setTeacherSubjects(subjects);
+          const processedSubjects = isNursery
+            ? nurserySkillsFlat.map(skill => skill.label)
+            : subjects;
+          
+          setTeacherSubjects(processedSubjects);
         } else {
           setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
           return;
