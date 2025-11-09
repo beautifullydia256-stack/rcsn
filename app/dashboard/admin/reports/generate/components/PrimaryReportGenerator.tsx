@@ -2824,34 +2824,24 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      <div className="relative z-10 mb-6 text-[11pt]">
-        <div className="flex justify-between items-start">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <strong>Report Number:</strong> {student.admission_number || student.student_id}
-            </div>
-            <div>
-              <strong>Term:</strong> {examSet?.term || 'THREE'}
-            </div>
-            <div>
-              <strong>Name:</strong> {student.name}
-            </div>
-            <div>
-              <strong>Year:</strong> {examSet?.year || '2022'}
-            </div>
-            <div>
-              <strong>Class:</strong> {student.current_class}
-            </div>
-            <div>
-              <strong>Stream:</strong> {streamDisplay}
-            </div>
-            <div>
-              <strong>Date:</strong> {reportDateDisplay}
-            </div>
+      <div className="relative z-10 mb-5 text-[10pt]">
+        <div className="flex items-start justify-between gap-[0.55rem] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2.5">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.8 flex-1">
+            <div><strong className="text-blue-900 uppercase">Student's Name:</strong> {student.name}</div>
+            <div><strong className="text-blue-900 uppercase">Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
+            <div><strong className="text-blue-900 uppercase">Stream:</strong> {streamDisplay}</div>
+            <div><strong className="text-blue-900 uppercase">Class:</strong> {student.current_class}</div>
+            <div><strong className="text-blue-900 uppercase">Admission No:</strong> {student.admission_number || student.student_id}</div>
+            <div><strong className="text-blue-900 uppercase">Term:</strong> {examSet?.term || 'N/A'}</div>
+            <div><strong className="text-blue-900 uppercase">Report Date:</strong> {reportDateDisplay}</div>
           </div>
           <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
-              <img src={student.profile_photo} alt="Student Photo" className="w-full h-full object-cover" />
+              <img
+                src={student.profile_photo}
+                alt="Student Photo"
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="text-[0.55rem] text-gray-500">Photo</div>
             )}
@@ -2888,24 +2878,22 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   const fallbackColor = '#e2e8f0';
                   const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
                   const textColor = getNurseryReadableTextColor(accentColor);
-                  const gradientBackground = performanceWord
-                    ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
-                    : '#f8fafc';
+                  const gradientBackground = `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`;
                   const labelColor = performanceWord
                     ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.9)')
                     : '#1f2937';
                   const wordDisplay = performanceWord || 'Awaiting';
                   const wordColor = performanceWord ? textColor : '#475569';
                   const wordBackground = performanceWord
-                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)')
+                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.2)' : 'rgba(15,23,42,0.14)')
                     : 'rgba(148,163,184,0.22)';
-                  const wordBorderColor = performanceWord ? applyAlphaToHex(accentColor, 0.65) : 'rgba(148,163,184,0.45)';
+                  const wordBorderColor = performanceWord ? applyAlphaToHex(accentColor, 0.55) : 'rgba(148,163,184,0.45)';
                   const cellBorderColor = performanceWord ? accentColor : 'rgba(15,23,42,0.15)';
                   const cellShadow = performanceWord
-                    ? `0 12px 26px ${applyAlphaToHex(accentColor, 0.32)}`
-                    : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
+                    ? `0 14px 28px ${applyAlphaToHex(accentColor, 0.28)}`
+                    : 'inset 0 0 0 1px rgba(148,163,184,0.22)';
                   const wordShadow = performanceWord
-                    ? (textColor === '#ffffff' ? '0 1px 2px rgba(15,23,42,0.3)' : '0 4px 10px rgba(15,23,42,0.12)')
+                    ? (textColor === '#ffffff' ? '0 1px 2px rgba(15,23,42,0.35)' : '0 4px 10px rgba(15,23,42,0.12)')
                     : 'none';
 
                   return (
@@ -2943,7 +2931,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                             background: wordBackground,
                             color: wordColor,
                             border: `1px solid ${wordBorderColor}`,
-                            boxShadow: performanceWord ? `0 8px 18px ${applyAlphaToHex(accentColor, 0.24)}` : 'inset 0 0 0 1px rgba(148,163,184,0.18)',
+                            boxShadow: performanceWord ? `0 8px 18px ${applyAlphaToHex(accentColor, 0.24)}` : 'inset 0 0 0 1px rgba(148,163,184,0.2)',
                             textShadow: wordShadow,
                             fontStyle: performanceWord ? 'normal' : 'italic',
                             opacity: performanceWord ? 1 : 0.7

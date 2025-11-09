@@ -790,6 +790,71 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           height: 100%;
           object-fit: cover;
         }
+
+        .nursery-student-info {
+          margin-bottom: 12px;
+        }
+
+        .nursery-student-row {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          background: #ffffff;
+          border: 1px solid rgba(59,130,246,0.35);
+          border-radius: 12px;
+          padding: 10px 12px;
+          box-shadow: 0 2px 6px rgba(30,64,175,0.10);
+        }
+
+        .nursery-student-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px 22px;
+          font-size: 9.8pt;
+        }
+
+        .nursery-student-grid strong {
+          color: #1e3a8a;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+
+        .nursery-student-grid div {
+          color: #1f2937;
+        }
+
+        .nursery-student-photo {
+          width: 2.1cm;
+          height: 2.9cm;
+          border: 1px solid rgba(59,130,246,0.45);
+          background: #fff;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          box-shadow: 0 4px 10px rgba(30, 64, 175, 0.12);
+        }
+
+        .nursery-student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .nursery-photo-placeholder {
+          font-size: 10px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 100%;
+          background: #f8fafc;
+          font-weight: 600;
+          letter-spacing: 0.08em;
+        }
         
         .report-title {
           background: #4CAF50;
@@ -1623,21 +1688,21 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       </div>
 
       <!-- STUDENT INFO -->
-      <div class="student-info">
-        <div class="student-info-row">
-          <div class="student-info-grid">
-            <div><strong>Report Number:</strong> ${student.admission_number || student.student_id}</div>
-            <div><strong>Term:</strong> ${examSet?.term || 'THREE'}</div>
-            <div><strong>Name:</strong> ${student.name}</div>
-            <div><strong>Year:</strong> ${examSet?.year || '2022'}</div>
-            <div><strong>Class:</strong> ${student.current_class}</div>
-            <div><strong>Stream:</strong> ${streamDisplay}</div>
-            <div><strong>Date:</strong> ${reportDateDisplay}</div>
+      <div class="student-info nursery-student-info">
+        <div class="nursery-student-row">
+          <div class="nursery-student-grid">
+            <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
+            <div><strong>YEAR:</strong> ${examSet?.year || new Date().getFullYear()}</div>
+            <div><strong>STREAM:</strong> ${streamDisplay}</div>
+            <div><strong>CLASS:</strong> ${student.current_class}</div>
+            <div><strong>ADMISSION NO:</strong> ${student.admission_number || student.student_id}</div>
+            <div><strong>TERM:</strong> ${examSet?.term || 'N/A'}</div>
+            <div><strong>REPORT DATE:</strong> ${reportDateDisplay}</div>
           </div>
-          
-          <!-- Student Photo -->
-          <div class="student-photo">
-            ${studentPhotoSrc ? `<img src="${studentPhotoSrc}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; background: #f8fafc;">PHOTO</div>'}
+          <div class="nursery-student-photo">
+            ${studentPhotoSrc
+              ? `<img src="${studentPhotoSrc}" alt="Student Photo" />`
+              : '<div class="nursery-photo-placeholder">PHOTO</div>'}
           </div>
         </div>
       </div>
