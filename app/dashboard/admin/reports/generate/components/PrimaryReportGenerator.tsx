@@ -2885,13 +2885,28 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   }
 
                   const performanceWord = resolveNurseryPerformanceValue(student, skill);
-                  const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : undefined;
-                  const cellBackground = accentColor ? applyAlphaToHex(accentColor, 0.22) : '#ffffff';
-                  const labelColor = accentColor ? '#0f172a' : '#1f2937';
-                  const swatchBackground = accentColor || '#e2e8f0';
-                  const swatchBorder = accentColor ? applyAlphaToHex(accentColor, 0.55) : '#94a3b8';
-                  const cellBorderColor = accentColor || '#1f2937';
-                  const hasPerformance = Boolean(performanceWord);
+                  const fallbackColor = '#e2e8f0';
+                  const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
+                  const textColor = getNurseryReadableTextColor(accentColor);
+                  const gradientBackground = performanceWord
+                    ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
+                    : '#f8fafc';
+                  const labelColor = performanceWord
+                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.9)')
+                    : '#1f2937';
+                  const wordDisplay = performanceWord || 'Awaiting';
+                  const wordColor = performanceWord ? textColor : '#475569';
+                  const wordBackground = performanceWord
+                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)')
+                    : 'rgba(148,163,184,0.22)';
+                  const wordBorderColor = performanceWord ? applyAlphaToHex(accentColor, 0.65) : 'rgba(148,163,184,0.45)';
+                  const cellBorderColor = performanceWord ? accentColor : 'rgba(15,23,42,0.15)';
+                  const cellShadow = performanceWord
+                    ? `0 12px 26px ${applyAlphaToHex(accentColor, 0.32)}`
+                    : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
+                  const wordShadow = performanceWord
+                    ? (textColor === '#ffffff' ? '0 1px 2px rgba(15,23,42,0.3)' : '0 4px 10px rgba(15,23,42,0.12)')
+                    : 'none';
 
                   return (
                     <td
@@ -2903,30 +2918,39 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                         textAlign: 'center',
                         fontWeight: 600,
                         verticalAlign: 'middle',
-                        background: cellBackground,
-                        color: labelColor,
-                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
-                        boxShadow: accentColor ? `0 4px 12px ${applyAlphaToHex(accentColor, 0.18)}` : 'none'
+                        background: gradientBackground,
+                        color: wordColor,
+                        transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
+                        boxShadow: cellShadow
                       }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
                         <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
                           {skill.label}
                         </span>
-                        <div
+                        <span
                           style={{
-                            width: '60px',
-                            height: '18px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '64px',
+                            padding: '4px 14px',
                             borderRadius: '999px',
-                            background: swatchBackground,
-                            border: `1px solid ${swatchBorder}`,
-                            boxShadow: accentColor ? `0 0 0 2px ${applyAlphaToHex(accentColor, 0.12)}` : 'none',
-                            opacity: hasPerformance ? 1 : 0.45
+                            fontSize: '10pt',
+                            fontWeight: 700,
+                            letterSpacing: '0.03em',
+                            textTransform: 'uppercase',
+                            background: wordBackground,
+                            color: wordColor,
+                            border: `1px solid ${wordBorderColor}`,
+                            boxShadow: performanceWord ? `0 8px 18px ${applyAlphaToHex(accentColor, 0.24)}` : 'inset 0 0 0 1px rgba(148,163,184,0.18)',
+                            textShadow: wordShadow,
+                            fontStyle: performanceWord ? 'normal' : 'italic',
+                            opacity: performanceWord ? 1 : 0.7
                           }}
-                        />
-                        {!hasPerformance && (
-                          <span style={{ fontSize: '8pt', fontStyle: 'italic', color: '#64748b' }}>—</span>
-                        )}
+                        >
+                          {wordDisplay}
+                        </span>
                       </div>
                     </td>
                   );
