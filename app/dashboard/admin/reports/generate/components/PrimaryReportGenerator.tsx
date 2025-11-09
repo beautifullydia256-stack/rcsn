@@ -2583,10 +2583,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 // Template 2 - St. Adrian Kasozi Secondary School Format
 function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
   const attendance = student.summary.attendanceDetails || {};
-  const avg = student.summary.average ?? '';
-  const avgGrade = student.summary.division ?? '';
-  const overallPerf = student.summary.performanceRemark ?? '';
-
   const streamDisplay = student?.stream
     || student?.current_stream
     || student?.stream_name
@@ -2601,44 +2597,17 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
     return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
 
-  // O-Level calculation functions (matching exam results page logic)
-  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
-    if (activityScore < 1) return "Missed";
-    if (activityScore < 2.5) return "Moderate";
-    return "Outstanding";
-  };
+  const nurserySkillRows = [
+    ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
+    ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
+    ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
+  ];
 
-  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
-    if (finalScore >= 80) return "A";
-    if (finalScore >= 70) return "B";
-    if (finalScore >= 60) return "C";
-    if (finalScore >= 50) return "D";
-    return "E";
-  };
-
-  // Calculate level of achievement based on grade (Template 2 specific)
-  const getLevelOfAchievement = (grade: string) => {
-    switch (grade) {
-      case 'A': return '2.8';
-      case 'B': return '2.2';
-      case 'C': return '2.0';
-      case 'D': return '1.5';
-      case 'E': return '1.2';
-      default: return '';
-    }
-  };
-
-  // Get descriptor based on level of achievement (Template 2 specific)
-  const getDescriptor = (level: string) => {
-    const num = parseFloat(level);
-    if (num >= 2.5) return 'Outstanding';
-    if (num >= 1.5) return 'Moderate';
-    if (num >= 0.9) return 'Basic';
-    return '';
-  };
+  const nurseryKeyLabels = ['Very good', 'Good', 'Tries'];
+  const nurseryStatusLabels = ['Still a problem', 'Promising'];
 
   return (
-    <div style={{ 
+    <div style={{
       fontFamily: 'Times New Roman, Arial, sans-serif',
       width: '210mm',
       minHeight: '297mm',
@@ -2646,7 +2615,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       padding: '15mm',
       boxSizing: 'border-box'
     }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
-      
       {/* WATERMARK */}
       <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
         <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
@@ -2655,17 +2623,12 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
           </div>
         </div>
       </div>
-      
+
       {/* HEADER */}
       <div className="flex items-center justify-between mb-6">
-        {/* School Logo */}
         <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0 flex-shrink-0">
           {school?.logo_url || school?.logo ? (
-            <img
-              src={school.logo_url || school.logo}
-              alt="School Logo"
-              className="w-full h-full object-cover border-0"
-            />
+            <img src={school.logo_url || school.logo} alt="School Logo" className="w-full h-full object-cover border-0" />
           ) : (
             <div className="text-center text-xs">
               <div className="font-bold">SCHOOL</div>
@@ -2673,13 +2636,11 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             </div>
           )}
         </div>
-        
-        {/* School Info */}
         <div className="text-right flex-1">
           {school?.name && (
             <div className="font-bold text-[22pt] uppercase tracking-wide leading-[1.1] mb-3 text-slate-900">
               {school.name}
-          </div>
+            </div>
           )}
           {school?.motto && (
             <div className="text-[11pt] font-normal italic text-slate-600 mb-2 leading-relaxed">
@@ -2701,7 +2662,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       {/* REPORT TITLE */}
       <div className="text-center mb-5 border-b-2 border-slate-300 pb-3">
         <h1 className="text-[14pt] font-bold uppercase tracking-wide leading-tight text-slate-900">
-          MIDDLE & TOP CLASS - TERMLY REPORT
+          MIDDLE &amp; TOP CLASS - TERMLY REPORT
         </h1>
       </div>
 
@@ -2717,15 +2678,9 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <div><strong>Stream:</strong> {streamDisplay}</div>
             <div><strong>Date:</strong> {reportDateDisplay}</div>
           </div>
-          
-          {/* Student Photo */}
           <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
-              <img
-                src={student.profile_photo}
-                alt="Student Photo"
-                className="w-full h-full object-cover"
-              />
+              <img src={student.profile_photo} alt="Student Photo" className="w-full h-full object-cover" />
             ) : (
               <div className="text-[0.55rem] text-gray-500">Photo</div>
             )}
@@ -2733,105 +2688,54 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      {/* SUBJECTS TABLE */}
-      <div className="mb-4">
-        <h3 className="text-[12pt] font-bold mb-2">End of Term Report - {examSet?.term || 'Term'} {examSet?.year || '2025'}</h3>
-        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
-          <thead>
-            <tr>
-              {['SUBJECT', 'FULL MARKS', 'MID TERM', 'END OF TERM', "TEACHER'S REMARKS", 'INITIALS'].map(h => (
-                <th key={h} className="text-center font-bold uppercase" style={{ border: '1px solid #000', background: '#f0f0f0', padding: '6px' }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
+      {/* DEVELOPMENTAL SKILLS TABLE */}
+      <div className="mb-5">
+        <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}>
           <tbody>
-            {(() => {
-              const results = student.results || [];
-              if (results.length === 0) {
-                return (
-                  <tr>
-                    <td colSpan={6} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>No results available</td>
-                  </tr>
-                );
-              }
-              let totalFullMarks = 0;
-              return (
-                <>
-                  {(() => {
-                    // Use the exact same logic as the PDF generation
-                    const all = Array.isArray(student.results) ? student.results : [];
-                    const isMid = (name: any) => {
-                      const n = String(name || '').trim().toLowerCase();
-                      return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
-                    };
-                    const isEnd = (name: any) => {
-                      const n = String(name || '').trim().toLowerCase();
-                      return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
-                    };
-                    
-                    // Group results by subject
-                    const subjectGroups: { [key: string]: { mid?: any; end?: any; subject: string; total_marks: number; remarks: string; initials: string } } = {};
-                    
-                    all.forEach((r: any) => {
-                      const subject = r.subject ?? '';
-                      const examSetName = r.exam_set_name || r.exam_sets?.name || '';
-                      
-                      if (!subjectGroups[subject]) {
-                        subjectGroups[subject] = {
-                          subject,
-                          total_marks: r.total_marks ?? 100,
-                          remarks: r.remarks || r.overall_remark || r.teacher_remark || '',
-                          initials: r.teacher_initials ?? ''
-                        };
-                      }
-                      
-                      // Check if this is a MISSED entry (marks_obtained = 0 AND teacher_remark = 'MISSED')
-                      const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
-                      const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
-                      
-                      if (isMid(examSetName)) {
-                        subjectGroups[subject].mid = displayMarks;
-                      } else if (isEnd(examSetName)) {
-                        subjectGroups[subject].end = displayMarks;
-                      }
-                    });
-                    
-                    // After processing all results, check if any subjects are missing Mid Term or End of Term results
-                    // If the subject exists in allSubjects but student doesn't have result for that exam set, set it to 'MISSED'
-                    // Note: We need to check if other students have results, but we don't have that data here
-                    // So we'll rely on the fallback code to create MISSED entries in student.results
-                    
-                    const subjects = Object.values(subjectGroups);
-                    
-                    return subjects.map((group, idx) => {
-                      totalFullMarks += group.total_marks;
-                      return (
-                        <tr key={idx}>
-                          <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 'bold', textAlign: 'left' }}>{group.subject}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.total_marks}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.mid ?? ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.end ?? ''}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>{group.remarks}</td>
-                          <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{group.initials}</td>
-                        </tr>
-                      );
-                    });
-                  })()}
-                  <tr>
-                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'left' }}>TOTAL</td>
-                    <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, textAlign: 'center' }}>{totalFullMarks}</td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }}></td>
-                    <td style={{ border: '1px solid #000', padding: '6px' }} colSpan={2}></td>
-                  </tr>
-                </>
-              );
-            })()}
+            {nurserySkillRows.map((row, rowIdx) => (
+              <tr key={`nursery-skill-row-${rowIdx}`}>
+                {row.map((item, colIdx) => (
+                  <td
+                    key={`nursery-skill-${rowIdx}-${colIdx}`}
+                    style={{
+                      border: '1px solid #000',
+                      padding: '8px 6px',
+                      minHeight: '42px',
+                      textAlign: 'center',
+                      fontWeight: 600,
+                      verticalAlign: 'middle'
+                    }}
+                  >
+                    {item || '\u00A0'}
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
+
+        <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
+          <span className="font-semibold">Key:</span>
+          {nurseryKeyLabels.map(label => (
+            <div key={label} className="flex items-center gap-2">
+              <span>{label}:</span>
+              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
+          {nurseryStatusLabels.map(label => (
+            <div key={label} className="flex items-center gap-2">
+              <span>{label}:</span>
+              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* SUMMARY SECTION (mirrors upper section layout) */}
+      {/* SUMMARY SECTION */}
       <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
         <div className="border border-gray-400 p-2">
           <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
@@ -4614,22 +4518,14 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
         <table
           className="w-full"
-          style={{
-            borderCollapse: 'collapse',
-            fontSize: '10pt',
-            tableLayout: 'fixed'
-          }}
+          style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}
         >
           <tbody>
-            {[
-              ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
-              ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
-              ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
-            ].map((row, rowIdx) => (
-              <tr key={`nursery-row-${rowIdx}`}>
+            {nurserySkillRows.map((row, rowIdx) => (
+              <tr key={`nursery-skill-row-${rowIdx}`}>
                 {row.map((item, colIdx) => (
                   <td
-                    key={`nursery-cell-${rowIdx}-${colIdx}`}
+                    key={`nursery-skill-${rowIdx}-${colIdx}`}
                     style={{
                       border: '1px solid #000',
                       padding: '8px 6px',
@@ -4649,11 +4545,7 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
 
         <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
           <span className="font-semibold">Key:</span>
-          {[
-            'Very good',
-            'Good',
-            'Tries'
-          ].map(label => (
+          {nurseryKeyLabels.map(label => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
@@ -4662,15 +4554,30 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
         </div>
 
         <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
-          {[
-            'Still a problem',
-            'Promising'
-          ].map(label => (
+          {nurseryStatusLabels.map(label => (
             <div key={label} className="flex items-center gap-2">
               <span>{label}:</span>
               <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* SUMMARY SECTION (mirrors upper section layout) */}
+      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
+        <div className="border border-gray-400 p-2">
+          <div><strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
+          <div><strong>Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
+          <div><strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
+        </div>
+        <div className="border border-gray-400 p-2">
+          <div><strong>Attendance:</strong></div>
+          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
+          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
+          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
         </div>
       </div>
 
