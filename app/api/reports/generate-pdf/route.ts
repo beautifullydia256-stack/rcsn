@@ -1717,19 +1717,6 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       </div>
 
       <!-- COMMENTS -->
-      <div class="comments">
-        <h3><strong>Class Teacher's Comment:</strong> ${student.results && student.results.length > 0 ? student.results[0].class_teacher_comment || 'Student is progressing well but needs to focus more on specific subjects for better results.' : 'Student is progressing well but needs to focus more on specific subjects for better results.'}</h3>
-        <p>Signature: ______________________</p>
-
-        <h3><strong>Head Teacher's Comment:</strong> ${student.results && student.results.length > 0 ? student.results[0].headteacher_comment || 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.' : 'Student needs to engage the subject teachers to assist in topics which were not properly grasped. There is potential for improvement.'}</h3>
-        <p>Signature: ______________________</p>
-      </div>
-
-      <!-- FOOTER -->
-      <div class="footer">
-        <div>Printed from: Pwezacore</div>
-        <div>School Motto: '${school?.motto || 'Excellence Through Discipline'}'</div>
-      </div>
     </body>
     </html>
   `;

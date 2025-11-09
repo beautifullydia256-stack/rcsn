@@ -2989,24 +2989,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </p>
       </div>
 
-      <div className="text-center text-[9pt] mt-4">
-        <p>
-          <strong>Disclaimer:</strong> "This report is not valid without a school stamp."
-        </p>
-      </div>
-
-      <div className="flex justify-end mt-4">
-        <div className="w-20 h-20 border-2 border-blue-500 rounded-full flex items-center justify-center bg-blue-50">
-          <div className="text-center text-xs text-blue-700">
-            <div className="font-bold">ST. ADRIAN</div>
-            <div className="font-bold">KASOZI</div>
-            <div className="font-bold">SECONDARY</div>
-            <div className="font-bold">SCHOOL</div>
-            <div className="mt-1 text-[8pt]">HEAD TEACHER</div>
-            <div className="text-[7pt]">24/01/2023</div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

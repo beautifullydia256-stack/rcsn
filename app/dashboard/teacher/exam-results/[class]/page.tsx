@@ -13,6 +13,7 @@ import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
   normalizeNurseryPerformanceWord,
+  sanitizeNurseryKey,
   NurseryPerformanceRecord,
   NurseryPerformanceWord
 } from "@/src/templates/primary/nurseryPerformance";
@@ -61,6 +62,11 @@ export default function TeacherExamResultsClassPage() {
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
   const nurserySkillsFlat = useMemo(() => NURSERY_SKILL_GRID.flat().filter(skill => skill.label), []);
+  const activeNurserySkill = useMemo(() => {
+    if (!isNursery || !selectedSubject) return null;
+    const normalized = sanitizeNurseryKey(selectedSubject);
+    return nurserySkillsFlat.find(skill => sanitizeNurseryKey(skill.label) === normalized || sanitizeNurseryKey(skill.key) === normalized) || null;
+  }, [isNursery, selectedSubject, nurserySkillsFlat]);
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
@@ -1600,82 +1606,83 @@ export default function TeacherExamResultsClassPage() {
             <div className="overflow-x-auto">
               {!isSecondary && !isALevel ? (
                 isNursery ? (
-                  <table className="min-w-full">
-                    <thead className="bg-white/5">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
-                        {nurserySkillsFlat.map((skill) => (
-                          <th key={skill.key} className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{skill.label}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/10">
-                      {students.map((student) => {
-                        const performance = nurseryPerformances[student.student_id] || {};
-                        return (
-                          <tr key={student.student_id} className="hover:bg-white/5">
-                            <td className="px-4 py-4 align-top text-white">
-                              <div className="font-medium">{student.name}</div>
-                              {student.admission_number && (
-                                <div className="text-xs text-white/60 mt-1">{student.admission_number}</div>
-                              )}
-                            </td>
-                            {nurserySkillsFlat.map((skill) => {
-                              const selected = performance[skill.key];
-                              const color = selected ? NURSERY_PERFORMANCE_COLOR_MAP[selected] : undefined;
-                              const badgeTextColor = selected ? getNurseryReadableTextColor(color) : '#94a3b8';
-                              const cellBackground = selected ? applyAlphaToHex(color, 0.18) : 'transparent';
-                              return (
-                                <td key={`${student.student_id}-${skill.key}`} className="px-3 py-3 align-top" style={{ background: cellBackground }}>
-                                  <div className="flex flex-col items-center gap-2">
-                                    <div
-                                      className="w-full text-center text-xs font-semibold uppercase tracking-wide px-2 py-2 rounded-md border border-white/10 transition-colors"
-                                      style={{
-                                        background: selected ? color : 'rgba(255,255,255,0.05)',
-                                        color: badgeTextColor
-                                      }}
-                                    >
-                                      {selected || 'Select'}
-                                    </div>
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                      {NURSERY_PERFORMANCE_OPTIONS.map(option => {
-                                        const isSelected = option.label === selected;
-                                        const buttonTextColor = getNurseryReadableTextColor(option.color);
-                                        return (
-                                          <button
-                                            key={option.label}
-                                            type="button"
-                                            onClick={() => handleNurserySelection(student.student_id, skill.key, option.label)}
-                                            className="px-2 py-1 text-[11px] font-semibold rounded-full shadow-sm transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/60"
-                                            style={{
-                                              background: option.color,
-                                              color: buttonTextColor,
-                                              opacity: isSelected ? 1 : 0.78,
-                                              transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                                              boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.7)' : '0 1px 4px rgba(15,23,42,0.25)'
-                                            }}
-                                          >
-                                            {option.label}{isSelected ? ' ✓' : ''}
-                                          </button>
-                                        );
-                                      })}
-                                      <button
-                                        type="button"
-                                        onClick={() => handleNurseryClear(student.student_id, skill.key)}
-                                        className="px-2 py-1 text-[11px] font-semibold rounded-full bg-white/15 text-white hover:bg-white/25 transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/40"
-                                      >
-                                        Clear
-                                      </button>
-                                    </div>
+                  activeNurserySkill ? (
+                    <table className="min-w-full">
+                      <thead className="bg-white/5">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{activeNurserySkill.label}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {students.map((student) => {
+                          const performance = nurseryPerformances[student.student_id] || {};
+                          const skillKey = activeNurserySkill.key;
+                          const selected = performance[skillKey];
+                          const color = selected ? NURSERY_PERFORMANCE_COLOR_MAP[selected] : undefined;
+                          const badgeTextColor = selected ? getNurseryReadableTextColor(color) : '#94a3b8';
+                          const cellBackground = selected ? applyAlphaToHex(color, 0.18) : 'transparent';
+                          return (
+                            <tr key={student.student_id} className="hover:bg-white/5">
+                              <td className="px-4 py-4 align-top text-white">
+                                <div className="font-medium">{student.name}</div>
+                                {student.admission_number && (
+                                  <div className="text-xs text-white/60 mt-1">{student.admission_number}</div>
+                                )}
+                              </td>
+                              <td className="px-3 py-3 align-top" style={{ background: cellBackground }}>
+                                <div className="flex flex-col items-center gap-2">
+                                  <div
+                                    className="w-full text-center text-xs font-semibold uppercase tracking-wide px-2 py-2 rounded-md border border-white/10 transition-colors"
+                                    style={{
+                                      background: selected ? color : 'rgba(255,255,255,0.05)',
+                                      color: badgeTextColor
+                                    }}
+                                  >
+                                    {selected || 'Select'}
                                   </div>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
+                                  <div className="flex flex-wrap justify-center gap-2">
+                                    {NURSERY_PERFORMANCE_OPTIONS.map(option => {
+                                      const isSelected = option.label === selected;
+                                      const buttonTextColor = getNurseryReadableTextColor(option.color);
+                                      return (
+                                        <button
+                                          key={option.label}
+                                          type="button"
+                                          onClick={() => handleNurserySelection(student.student_id, skillKey, option.label)}
+                                          className="px-2 py-1 text-[11px] font-semibold rounded-full shadow-sm transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/60"
+                                          style={{
+                                            background: option.color,
+                                            color: buttonTextColor,
+                                            opacity: isSelected ? 1 : 0.78,
+                                            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                                            boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.7)' : '0 1px 4px rgba(15,23,42,0.25)'
+                                          }}
+                                        >
+                                          {option.label}{isSelected ? ' ✓' : ''}
+                                        </button>
+                                      );
+                                    })}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleNurseryClear(student.student_id, skillKey)}
+                                      className="px-2 py-1 text-[11px] font-semibold rounded-full bg-white/15 text-white hover:bg-white/25 transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/40"
+                                    >
+                                      Clear
+                                    </button>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="p-6 text-center text-white/70 text-sm">
+                      Select a subject that matches one of the nursery developmental skills to begin recording performance.
+                    </div>
+                  )
                 ) : (
                   <table className="min-w-full">
                     <thead className="bg-white/5">
