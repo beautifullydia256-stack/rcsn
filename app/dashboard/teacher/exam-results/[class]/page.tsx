@@ -895,7 +895,7 @@ export default function TeacherExamResultsClassPage() {
               p_exam_set_id: selectedExamSet,
               p_student_id: studentId,
               p_class_name: className,
-              p_subject: (selectedSubject || '').trim(),
+              p_subject: activeNurserySkill?.label || (selectedSubject || '').trim(),
               p_marks_obtained: 0,
               p_total_marks: 0,
               p_grade: 'N/A',
