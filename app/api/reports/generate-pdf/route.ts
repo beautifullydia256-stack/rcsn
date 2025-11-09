@@ -1113,6 +1113,46 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
+  const streamDisplay = student?.stream
+    || student?.current_stream
+    || student?.stream_name
+    || student?.class_stream
+    || student?.section
+    || 'N/A';
+
+  const reportDateDisplay = (() => {
+    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
+    if (!raw) return 'N/A';
+    const parsed = new Date(raw);
+    return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
+  })();
+
+  const nurserySkillRows = [
+    ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
+    ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
+    ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
+  ];
+
+  const nurserySkillRowsHtml = nurserySkillRows
+    .map(row => `
+      <tr>
+        ${row.map(item => `<td>${item || '&nbsp;'}</td>`).join('')}
+      </tr>
+    `)
+    .join('');
+
+  const keyBoxesHtml = ['Very good', 'Good', 'Tries']
+    .map(label => `
+      <div class="nursery-key-item"><span>${label}:</span><span class="nursery-square"></span></div>
+    `)
+    .join('');
+
+  const statusBoxesHtml = ['Still a problem', 'Promising']
+    .map(label => `
+      <div class="nursery-status-item"><span>${label}:</span><span class="nursery-square"></span></div>
+    `)
+    .join('');
+
   return `
     <!DOCTYPE html>
     <html>
@@ -1361,6 +1401,8 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
             <div><strong>Name:</strong> ${student.name}</div>
             <div><strong>Year:</strong> ${examSet?.year || '2022'}</div>
             <div><strong>Class:</strong> ${student.current_class}</div>
+            <div><strong>Stream:</strong> ${streamDisplay}</div>
+            <div><strong>Date:</strong> ${reportDateDisplay}</div>
           </div>
           
           <!-- Student Photo -->
@@ -1457,6 +1499,23 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           }
         </tbody>
       </table>
+
+      <!-- DEVELOPMENTAL SKILLS TABLE -->
+      <div class="nursery-skill-section">
+        <div class="nursery-heading">Developmental Skills Checklist</div>
+        <table class="nursery-skill-table">
+          <tbody>
+            ${nurserySkillRowsHtml}
+          </tbody>
+        </table>
+        <div class="nursery-key">
+          <span class="nursery-key-item"><strong>Key:</strong></span>
+          ${keyBoxesHtml}
+        </div>
+        <div class="nursery-status">
+          ${statusBoxesHtml}
+        </div>
+      </div>
 
       <!-- PERFORMANCE SUMMARY -->
       <div class="summary">

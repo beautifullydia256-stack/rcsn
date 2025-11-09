@@ -2587,6 +2587,20 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
+  const streamDisplay = student?.stream
+    || student?.current_stream
+    || student?.stream_name
+    || student?.class_stream
+    || student?.section
+    || 'N/A';
+
+  const reportDateDisplay = (() => {
+    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
+    if (!raw) return 'N/A';
+    const parsed = new Date(raw);
+    return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
+  })();
+
   // O-Level calculation functions (matching exam results page logic)
   const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
     if (activityScore < 1) return "Missed";
@@ -2700,6 +2714,8 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <div><strong>Name:</strong> {student.name}</div>
             <div><strong>Year:</strong> {examSet?.year || '2022'}</div>
             <div><strong>Class:</strong> {student.current_class}</div>
+            <div><strong>Stream:</strong> {streamDisplay}</div>
+            <div><strong>Date:</strong> {reportDateDisplay}</div>
           </div>
           
           {/* Student Photo */}
@@ -4592,4 +4608,69 @@ function SecondaryReportPreview({ student, examSet, school }: { student: any; ex
     </div>
   );
 }
+
+      {/* DEVELOPMENTAL SKILLS TABLE */}
+      <div className="mb-5">
+        <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
+        <table
+          className="w-full"
+          style={{
+            borderCollapse: 'collapse',
+            fontSize: '10pt',
+            tableLayout: 'fixed'
+          }}
+        >
+          <tbody>
+            {[
+              ['Toilet', 'Recognition of numbers', 'Property care', 'Handling of pencil', 'Re-sighting Alphabet', 'Attention span', 'Punctuality', 'Shading'],
+              ['Nose care', 'Recognition of shapes', 'Respect', 'Arrival time', 'Counting Number sequence', 'Re-sighting Poems', 'Love or Interest', 'Drawing'],
+              ['Recognition of letters', 'Sharing', 'Friendship', 'Colours', 'Playing', 'Emotional', 'Smartness', '']
+            ].map((row, rowIdx) => (
+              <tr key={`nursery-row-${rowIdx}`}>
+                {row.map((item, colIdx) => (
+                  <td
+                    key={`nursery-cell-${rowIdx}-${colIdx}`}
+                    style={{
+                      border: '1px solid #000',
+                      padding: '8px 6px',
+                      minHeight: '42px',
+                      textAlign: 'center',
+                      fontWeight: 600,
+                      verticalAlign: 'middle'
+                    }}
+                  >
+                    {item || '\u00A0'}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="flex flex-wrap gap-8 items-center text-[9.6pt] mt-4">
+          <span className="font-semibold">Key:</span>
+          {[
+            'Very good',
+            'Good',
+            'Tries'
+          ].map(label => (
+            <div key={label} className="flex items-center gap-2">
+              <span>{label}:</span>
+              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap gap-12 items-center text-[9.6pt] mt-3">
+          {[
+            'Still a problem',
+            'Promising'
+          ].map(label => (
+            <div key={label} className="flex items-center gap-2">
+              <span>{label}:</span>
+              <div style={{ width: '18px', height: '18px', border: '1px solid #000' }} />
+            </div>
+          ))}
+        </div>
+      </div>
 
