@@ -2967,8 +2967,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
   return (
     <div
-      className="relative px-[0.35cm] py-[0.25cm] bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.32', paddingTop: '0.15cm' }}
+      className="relative px-[0.25cm] py-[0.25cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.34', paddingTop: '0.15cm' }}
     >
       {school?.logo_url && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -3188,8 +3188,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
       <div className="relative z-10 space-y-3" style={{ marginTop: '0.2cm' }}>
       {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-3 text-[10pt] bg-white border border-blue-100/50 rounded-xl shadow-sm px-4 py-2.5">
-          <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 flex-1">
+        <div className="flex items-start justify-between gap-3.5 text-[10.8pt] bg-white border border-blue-100/50 rounded-xl shadow-sm px-4.5 py-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
             <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
             <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
             <div><strong className="text-blue-900">STREAM:</strong> EAST</div>
@@ -3199,7 +3199,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           </div>
           
           {/* Student Photo */}
-          <div className="w-20 h-24 border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-[2.7cm] h-[3.2cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -3214,19 +3214,19 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
       {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
         <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-[8.7pt]">
+          <table className="w-full text-[9.5pt]">
           <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">SUBJECT</th>
-                <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">FULL MARKS</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">SUBJECT</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">FULL MARKS</th>
                 {showMidTermColumn && (
-                  <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">MID TERM</th>
+                  <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">MID TERM</th>
                 )}
                 {showEndOfTermColumn && (
-                  <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">END OF TERM</th>
+                  <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">END OF TERM</th>
                 )}
-                <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">TEACHER'S REMARKS</th>
-                <th className="border border-blue-100 px-2 py-1.8 text-center font-semibold">INITIALS</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">TEACHER'S REMARKS</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">INITIALS</th>
             </tr>
           </thead>
           <tbody>
@@ -3336,30 +3336,30 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                       totalFullMarks += group.total_marks;
                       return (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
-                          <td className="border border-blue-100 px-2 py-1.3 font-semibold text-left">{group.subject}</td>
-                          <td className="border border-blue-100 px-2 py-1.3 text-center">{group.total_marks}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 font-semibold text-left">{group.subject}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.total_marks}</td>
                           {showMidTermColumn && (
-                            <td className="border border-blue-100 px-2 py-1.3 text-center">{group.mid ?? ''}</td>
+                            <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.mid ?? ''}</td>
                           )}
                           {showEndOfTermColumn && (
-                            <td className="border border-blue-100 px-2 py-1.3 text-center">{group.end ?? ''}</td>
+                            <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.end ?? ''}</td>
                           )}
-                          <td className="border border-blue-100 px-2 py-1.3 text-left">{group.remarks}</td>
-                          <td className="border border-blue-100 px-2 py-1.3 text-center">{group.initials}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-left">{group.remarks}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.initials}</td>
                         </tr>
                       );
                     });
                   })()}
                   <tr className="bg-blue-100/60">
-                    <td className="border border-blue-100 px-2 py-1.5 font-semibold text-left">TOTAL</td>
-                    <td className="border border-blue-100 px-2 py-1.5 font-semibold text-center">{totalFullMarks}</td>
+                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-left">TOTAL</td>
+                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-center">{totalFullMarks}</td>
                     {showMidTermColumn && (
-                      <td className="border border-blue-100 px-2 py-1.5"></td>
+                      <td className="border border-blue-100 px-2.5 py-1.8"></td>
                     )}
                     {showEndOfTermColumn && (
-                      <td className="border border-blue-100 px-2 py-1.5"></td>
+                      <td className="border border-blue-100 px-2.5 py-1.8"></td>
                     )}
-                    <td className="border border-blue-100 px-2 py-1.5" colSpan={2}></td>
+                    <td className="border border-blue-100 px-2.5 py-1.8" colSpan={2}></td>
                   </tr>
                 </>
               );
@@ -3369,16 +3369,16 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
       </div>
 
         {/* SUMMARY SECTION - Separate Cards */}
-        <div className="grid grid-cols-3 gap-2.5 text-[8.6pt]">
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3 py-2">
+        <div className="grid grid-cols-3 gap-3 text-[9.2pt]">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
             <div><strong className="text-blue-900">Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
             <div><strong className="text-blue-900">Average:</strong> {student.summary?.average ?? 'N/A'}</div>
           </div>
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3 py-2">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
             <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
         </div>
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3 py-2">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
             <div><strong className="text-blue-900">Attendance:</strong></div>
             <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
             <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
@@ -3387,7 +3387,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
 
         {/* COMMENTS & FOOTER */}
-        <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-4 py-3 text-[8.6pt] space-y-2.5">
+        <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-4.5 py-3.5 text-[9.2pt] space-y-3">
         <div>
             <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
             <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || '..............................................................'}</p>

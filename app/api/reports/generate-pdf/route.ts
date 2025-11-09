@@ -1703,25 +1703,25 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 8px;
-          padding: 6px 8px;
-          font-size: 9.6pt;
-          background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 9px;
+          gap: 10px;
+          padding: 8px 10px;
+          font-size: 10.8pt;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 10px;
         }
 
         .student-info-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 7px;
+          gap: 8px;
         }
 
         .student-photo {
-          width: 60px;
-          height: 76px;
-          border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 8px;
+          width: 66px;
+          height: 82px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 9px;
           background: #ffffff;
           display: flex;
           align-items: center;
@@ -1737,21 +1737,21 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .subjects-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 9px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 10px;
           overflow: hidden;
         }
 
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 8.4pt;
+          font-size: 9.4pt;
         }
 
         .subjects-table th,
         .subjects-table td {
           border: 1px solid rgba(191, 219, 254, 0.45);
-          padding: 3px 5px;
+          padding: 4.5px 6px;
         }
 
         .subjects-table th {
@@ -1797,16 +1797,16 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 5px;
+          gap: 7px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.35);
-          border-radius: 9px;
-          padding: 7px 9px;
-          font-size: 8.3pt;
-          line-height: 1.35;
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 10px;
+          padding: 8px 10px;
+          font-size: 9.1pt;
+          line-height: 1.4;
         }
 
         .summary-card strong {
@@ -1816,10 +1816,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .comments-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 9px;
-          padding: 8px 10px;
-          font-size: 8.3pt;
-          line-height: 1.35;
+          border-radius: 10px;
+          padding: 9px 11px;
+          font-size: 9.1pt;
+          line-height: 1.4;
         }
 
         .comments-card h3 {
@@ -1830,7 +1830,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .comment-block {
-          margin-bottom: 6px;
+          margin-bottom: 8px;
         }
 
         .comment-block:last-child {
@@ -1849,15 +1849,15 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           gap: 10px;
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 9px;
-          padding: 8px 10px;
-          font-size: 8.4pt;
+          border-radius: 10px;
+          padding: 9px 11px;
+          font-size: 9.1pt;
         }
 
         .footer {
           text-align: center;
-          font-size: 8.3pt;
-          margin-top: 5px;
+          font-size: 8.8pt;
+          margin-top: 6px;
           color: #1e3a8a;
         }
 
