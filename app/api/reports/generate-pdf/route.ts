@@ -1694,7 +1694,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .page-section {
-          margin-bottom: 4px;
+          margin-bottom: 3px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
@@ -1797,16 +1797,17 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 7px;
+          gap: 6px;
+          margin-bottom: 8px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.4);
+          border: 1px solid rgba(191, 219, 254, 0.45);
           border-radius: 10px;
-          padding: 8px 10px;
-          font-size: 9.1pt;
-          line-height: 1.4;
+          padding: 6px 8px;
+          font-size: 8.8pt;
+          line-height: 1.32;
         }
 
         .summary-card strong {
@@ -1815,22 +1816,22 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .comments-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.4);
+          border: 1px solid rgba(191, 219, 254, 0.45);
           border-radius: 10px;
-          padding: 9px 11px;
-          font-size: 9.1pt;
-          line-height: 1.4;
+          padding: 7px 9px;
+          font-size: 8.8pt;
+          line-height: 1.32;
         }
 
         .comments-card h3 {
-          font-size: 10pt;
+          font-size: 9.2pt;
           font-weight: 600;
           color: #1e3a8a;
           margin-bottom: 4px;
         }
 
         .comment-block {
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .comment-block:last-child {
@@ -1839,7 +1840,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .signature-line {
           display: block;
-          margin-top: 6px;
+          margin-top: 5px;
         }
 
         .footer-info {
@@ -1847,18 +1848,19 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           justify-content: space-between;
           align-items: center;
           gap: 10px;
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.4);
+          background: rgba(239, 246, 255, 0.6);
+          border: 1px solid rgba(191, 219, 254, 0.5);
           border-radius: 10px;
-          padding: 9px 11px;
-          font-size: 9.1pt;
+          padding: 7px 9px;
+          font-size: 8.8pt;
+          margin-bottom: 8px;
         }
 
         .footer {
           text-align: center;
-          font-size: 8.8pt;
-          margin-top: 6px;
-          color: #1e3a8a;
+          font-size: 7.6pt;
+          margin-top: 5px;
+          color: #475569;
         }
 
         .watermark {

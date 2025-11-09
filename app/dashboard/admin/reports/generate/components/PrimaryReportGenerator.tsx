@@ -3762,10 +3762,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         `}} />
       </div>
 
-      <div className="relative z-10 space-y-3.5" style={{ marginTop: '0.2cm' }}>
+      <div className="relative z-10 space-y-3" style={{ marginTop: '0.18cm' }}>
       {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-3.5 text-[10.8pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-4.5 py-3">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
+        <div className="flex items-start justify-between gap-3.5 text-[10.2pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-4.5 py-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
             <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
             <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
             <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
@@ -3773,7 +3773,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           </div>
           
           {/* Student Photo */}
-          <div className="w-[2.7cm] h-[3.2cm] border border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-[2.4cm] h-[3cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student?.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -3781,27 +3781,27 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="text-xs text-gray-500">Photo</div>
+              <div className="text-[0.58rem] text-gray-500">Photo</div>
             )}
           </div>
         </div>
 
       {/* SUBJECTS TABLE */}
       <div className="bg-white border border-blue-100/60 rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-[9.4pt]">
+          <table className="w-full text-[9pt]">
         <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2.5 py-1.8 text-left">Subject</th>
+                <th className="border border-blue-100 px-2.5 py-1.6 text-left">Subject</th>
             {hasBOTExamSets && !isMidTermSelected && (
-                  <th className="border border-blue-100 px-2.5 py-1.8 text-center w-16">BOT</th>
+                  <th className="border border-blue-100 px-2.5 py-1.6 text-center w-16">BOT</th>
             )}
-                <th className="border border-blue-100 px-2.5 py-1.8 text-center w-16">MID</th>
+                <th className="border border-blue-100 px-2.5 py-1.6 text-center w-16">MID</th>
             {showENDColumn && (
-                  <th className="border border-blue-100 px-2.5 py-1.8 text-center w-16">END</th>
+                  <th className="border border-blue-100 px-2.5 py-1.6 text-center w-16">END</th>
             )}
-                <th className="border border-blue-100 px-2.5 py-1.8 text-center w-16">Grade</th>
-                <th className="border border-blue-100 px-2.5 py-1.8 text-left">Teacher's Comment</th>
-                <th className="border border-blue-100 px-2.5 py-1.8 text-left">Teacher</th>
+                <th className="border border-blue-100 px-2.5 py-1.6 text-center w-16">Grade</th>
+                <th className="border border-blue-100 px-2.5 py-1.6 text-left">Teacher's Comment</th>
+                <th className="border border-blue-100 px-2.5 py-1.6 text-left">Teacher</th>
           </tr>
         </thead>
         <tbody>
@@ -3861,17 +3861,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             
             return (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
-                  <td className="border border-blue-100 px-2.5 py-1.5 font-medium text-slate-900">{subj.subject_name || ''}</td>
+                  <td className="border border-blue-100 px-2.5 py-1.35 font-medium text-slate-900">{subj.subject_name || ''}</td>
                 {hasBOTExamSets && !isMidTermSelected && (
-                    <td className="border border-blue-100 px-2.5 py-1.5 text-center">{bot}</td>
+                    <td className="border border-blue-100 px-2.5 py-1.35 text-center">{bot}</td>
                 )}
-                  <td className="border border-blue-100 px-2.5 py-1.5 text-center">{mot}</td>
+                  <td className="border border-blue-100 px-2.5 py-1.35 text-center">{mot}</td>
                 {showENDColumn && (
-                    <td className="border border-blue-100 px-2.5 py-1.5 text-center">{eot}</td>
+                    <td className="border border-blue-100 px-2.5 py-1.35 text-center">{eot}</td>
                 )}
-                  <td className="border border-blue-100 px-2.5 py-1.5 text-center font-bold text-blue-900">{displayGrade}</td>
-                  <td className="border border-blue-100 px-2.5 py-1.5 text-[8.9pt] text-slate-700 leading-[1.3]">{subj.teacher_comment || ''}</td>
-                  <td className="border border-blue-100 px-2.5 py-1.5 text-[8.9pt] text-slate-700">{subj.teacher_name || ''}</td>
+                  <td className="border border-blue-100 px-2.5 py-1.35 text-center font-bold text-blue-900">{displayGrade}</td>
+                  <td className="border border-blue-100 px-2.5 py-1.35 text-[8.6pt] text-slate-700 leading-[1.28]">{subj.teacher_comment || ''}</td>
+                  <td className="border border-blue-100 px-2.5 py-1.35 text-[8.6pt] text-slate-700">{subj.teacher_name || ''}</td>
               </tr>
             );
           })}
