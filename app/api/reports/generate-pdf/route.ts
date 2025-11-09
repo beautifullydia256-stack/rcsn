@@ -1684,7 +1684,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 0 1.5mm 1.5mm;
+          padding: 0 1mm 1mm;
           background: #ffffff;
           color: #0f172a;
           -webkit-print-color-adjust: exact;
@@ -3099,9 +3099,9 @@ function generateProfessionalHeaderHTML(
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
-    <div class="print-header-container" style="padding-top: 0.5cm; padding-bottom: 0.1cm; padding-left: 0; padding-right: 0.6cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
-      <div style="display: flex; align-items: center; min-height: 2.7cm; position: relative;">
-        <div style="width: 158px; height: 158px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
+    <div class="print-header-container" style="padding-top: 0.35cm; padding-bottom: 0.08cm; padding-left: 0; padding-right: 0.55cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+      <div style="display: flex; align-items: center; min-height: 2.4cm; position: relative;">
+        <div style="width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `
             <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
           ` : `
@@ -3110,7 +3110,7 @@ function generateProfessionalHeaderHTML(
             </div>
           `}
         </div>
-        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 158px; padding-left: 0.45cm;">
+        <div style="flex: 1; text-align: center; font-family: 'Times New Roman', serif; margin-left: 150px; padding-left: 0.4cm;">
           ${school?.name ? `
             <h1 style="font-size: 17pt; font-weight: 700; font-family: Arial, Helvetica, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; margin: 0 0 0.28cm 0; color: ${schoolNameColor}; white-space: nowrap;">
               ${school.name}

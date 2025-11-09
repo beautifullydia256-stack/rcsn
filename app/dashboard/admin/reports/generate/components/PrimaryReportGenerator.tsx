@@ -2967,8 +2967,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
   return (
     <div
-      className="relative px-4 py-3 bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.32', paddingTop: '0.2cm' }}
+      className="relative px-[0.35cm] py-[0.25cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.32', paddingTop: '0.15cm' }}
     >
       {school?.logo_url && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.5cm',
-            paddingBottom: '0.1cm',
+            paddingTop: '0.35cm',
+            paddingBottom: '0.08cm',
             paddingLeft: '0',
-            paddingRight: '0.6cm',
+            paddingRight: '0.55cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -2997,13 +2997,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.7cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.4cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '158px',
-                height: '158px',
+                width: '150px',
+                height: '150px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3032,7 +3032,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
         
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '158px', paddingLeft: '0.45cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.4cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
@@ -3179,7 +3179,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               print-color-adjust: exact !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 0.5cm !important;
+              margin-top: 0.35cm !important;
               margin-bottom: 0.2cm !important;
             }
           }
