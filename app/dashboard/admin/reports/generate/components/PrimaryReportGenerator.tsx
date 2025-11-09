@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.1cm',
-            paddingBottom: '0.04cm',
+            paddingTop: '0.32cm',
+            paddingBottom: '0.06cm',
             paddingLeft: '0',
-            paddingRight: '0.45cm',
+            paddingRight: '0.4cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -2997,13 +2997,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.1cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.3cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '150px',
-                height: '150px',
+                width: '138px',
+                height: '138px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3032,18 +3032,18 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
         
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.35cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '138px', paddingLeft: '0.32cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
                   style={{
-                    fontSize: '17pt',
+                    fontSize: '16.5pt',
                     fontWeight: '700',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    lineHeight: '1.1',
-                    marginBottom: '0.28cm',
+                    lineHeight: '1.08',
+                    marginBottom: '0.24cm',
                     color: school?.header_school_name_color || '#1e3a8a',
                     marginTop: 0,
                     whiteSpace: 'nowrap'
@@ -3061,8 +3061,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
                     color: school?.header_subtitle_color || '#3b82f6',
-                    marginBottom: '0.22cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.18cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school.subtitle}
@@ -3077,8 +3077,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_address_color || '#1e40af',
-                    marginBottom: '0.2cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
@@ -3093,8 +3093,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_contact_color || '#1e40af',
-                    marginBottom: '0.22cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
@@ -3107,13 +3107,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               {school?.motto && (
                 <div 
                   style={{
-                    fontSize: '10.2pt',
+                    fontSize: '9.8pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
                     color: school?.header_motto_color || '#2563eb',
-                    marginBottom: '0.3cm',
-                    lineHeight: '1.4',
+                    marginBottom: '0.22cm',
+                    lineHeight: '1.32',
                     letterSpacing: '0.02em'
                   }}
                 >
@@ -3128,8 +3128,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             style={{
               height: '1px',
               background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
-              marginTop: '0.35cm',
-              marginBottom: '0.12cm',
+              marginTop: '0.26cm',
+              marginBottom: '0.14cm',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
@@ -3158,10 +3158,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             {(examSet?.name || examSet?.year) && (
               <div 
                 style={{
-                  fontSize: '8.5pt',
+                  fontSize: '7.4pt',
                   fontFamily: 'Arial, Helvetica, sans-serif',
                   color: '#64748b',
-                  marginTop: '0.25cm',
+                  marginTop: '0.14cm',
                   fontWeight: '400'
                 }}
               >
@@ -3179,8 +3179,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               print-color-adjust: exact !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 0.35cm !important;
-              margin-bottom: 0.2cm !important;
+              margin-top: 0.32cm !important;
+              margin-bottom: 0.18cm !important;
             }
           }
         `}} />
@@ -3543,8 +3543,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
   return (
     <div
-      className="relative px-[0.25cm] py-[0.25cm] bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.35', paddingTop: '0.12cm' }}
+      className="relative px-[0.18cm] py-[0.18cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.33', paddingTop: '0.08cm' }}
     >
       {(school?.logo_url || school?.logo) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -3561,10 +3561,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.4cm',
-            paddingBottom: '0.08cm',
+            paddingTop: '0.32cm',
+            paddingBottom: '0.06cm',
             paddingLeft: '0',
-            paddingRight: '0.5cm',
+            paddingRight: '0.4cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -3573,13 +3573,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.5cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.3cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '150px',
-                height: '150px',
+                width: '138px',
+                height: '138px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3608,18 +3608,18 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             </div>
 
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.4cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '138px', paddingLeft: '0.32cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
                   style={{
-                    fontSize: '17pt',
+                    fontSize: '16.5pt',
                     fontWeight: '700',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    lineHeight: '1.1',
-                    marginBottom: '0.28cm',
+                    lineHeight: '1.08',
+                    marginBottom: '0.24cm',
                     color: school?.header_school_name_color || '#1e3a8a',
                     marginTop: 0,
                     whiteSpace: 'nowrap'
@@ -3637,8 +3637,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
                     color: school?.header_subtitle_color || '#3b82f6',
-                    marginBottom: '0.22cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.18cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school.subtitle}
@@ -3653,8 +3653,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_address_color || '#1e40af',
-                    marginBottom: '0.2cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
@@ -3669,8 +3669,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_contact_color || '#1e40af',
-                    marginBottom: '0.2cm',
-                    lineHeight: '1.4'
+                    marginBottom: '0.16cm',
+                    lineHeight: '1.32'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
@@ -3683,13 +3683,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               {school?.motto && (
                 <div 
                   style={{
-                    fontSize: '10.2pt',
+                    fontSize: '9.8pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
                     color: school?.header_motto_color || '#2563eb',
-                    marginBottom: '0.28cm',
-                    lineHeight: '1.4',
+                    marginBottom: '0.22cm',
+                    lineHeight: '1.32',
                     letterSpacing: '0.02em'
                   }}
                 >
@@ -3734,10 +3734,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             {(examSet?.name || examSet?.year) && (
               <div 
                 style={{
-                  fontSize: '7.8pt',
+                  fontSize: '7.4pt',
                   fontFamily: 'Arial, Helvetica, sans-serif',
                   color: '#64748b',
-                  marginTop: '0.16cm',
+                  marginTop: '0.14cm',
                   fontWeight: '400'
                 }}
               >
@@ -3956,15 +3956,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             <p className="text-slate-700 leading-[1.28]">{headTeacherComment}</p>
             <div className="text-slate-700 mt-1.1 text-[7.9pt]">Signature: ____________________</div>
           </div>
-      </div>
-
-      {/* NEXT TERM */}
-      <div className="text-[8.4pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3.1 py-1.9 flex items-center justify-between">
-        <div className="flex flex-col gap-[0.3rem]">
+          <div className="flex justify-between items-center text-[8pt] pt-1.8 mt-1.6 border-t border-blue-100/60">
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}</div>
-        </div>
-        <div className="text-[7pt] text-slate-500 italic">Generated by PwezaCore</div>
+          </div>
       </div>
 
       {/* FOOTER */}
