@@ -2967,8 +2967,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
   return (
     <div
-      className="relative px-[0.25cm] py-[0.25cm] bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.34', paddingTop: '0.15cm' }}
+      className="relative px-[0.2cm] py-[0.25cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.34', paddingTop: '0.08cm' }}
     >
       {school?.logo_url && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.2cm',
-            paddingBottom: '0.06cm',
+            paddingTop: '0.1cm',
+            paddingBottom: '0.04cm',
             paddingLeft: '0',
-            paddingRight: '0.5cm',
+            paddingRight: '0.45cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -2997,7 +2997,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.2cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.1cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"

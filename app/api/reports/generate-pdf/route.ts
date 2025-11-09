@@ -1684,7 +1684,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 0 1mm 1mm;
+          padding: 0;
           background: #ffffff;
           color: #0f172a;
           -webkit-print-color-adjust: exact;
@@ -3099,8 +3099,8 @@ function generateProfessionalHeaderHTML(
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
-    <div class="print-header-container" style="padding-top: 0.2cm; padding-bottom: 0.06cm; padding-left: 0; padding-right: 0.5cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
-      <div style="display: flex; align-items: center; min-height: 2.2cm; position: relative;">
+    <div class="print-header-container" style="padding-top: 0.1cm; padding-bottom: 0.04cm; padding-left: 0; padding-right: 0.45cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+      <div style="display: flex; align-items: center; min-height: 2.1cm; position: relative;">
         <div style="width: 150px; height: 150px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `
             <img src="${schoolLogoBase64}" alt="School Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;" />
