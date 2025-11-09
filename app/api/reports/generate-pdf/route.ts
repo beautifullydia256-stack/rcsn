@@ -1694,6 +1694,12 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           -moz-osx-font-smoothing: grayscale;
         }
 
+        .content-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
         .page-section {
           margin-bottom: 3px;
           page-break-inside: avoid;
@@ -1746,13 +1752,13 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 9.5pt;
+          font-size: 9.8pt;
         }
 
         .subjects-table th,
         .subjects-table td {
           border: 1px solid rgba(191, 219, 254, 0.45);
-          padding: 4.1px 5.8px;
+          padding: 4.6px 6.2px;
         }
 
         .subjects-table th {
@@ -1798,17 +1804,18 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 3.8px;
-          margin-bottom: 4.2px;
+          gap: 4.6px;
+          margin-bottom: 5.2px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 9px;
-          padding: 5px 6.4px;
-          font-size: 8.4pt;
-          line-height: 1.28;
+          border-radius: 10px;
+          padding: 6.2px 7px 6.4px;
+          font-size: 8.7pt;
+          line-height: 1.3;
+          min-height: 52px;
         }
 
         .summary-card strong {
@@ -1818,11 +1825,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .comments-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 9px;
-          padding: 5.6px 6.5px;
-          font-size: 8.3pt;
-          line-height: 1.28;
-          margin-bottom: 4.2px;
+          border-radius: 10px;
+          padding: 6.6px 7.4px;
+          font-size: 8.6pt;
+          line-height: 1.3;
+          margin-bottom: 5.2px;
         }
 
         .comments-card h3 {
@@ -1844,10 +1851,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-top: 4.6px;
-          margin-top: 5.2px;
+          padding-top: 5.2px;
+          margin-top: 6.2px;
           border-top: 1px solid rgba(191, 219, 254, 0.5);
-          font-size: 8pt;
+          font-size: 8.4pt;
         }
 
         .signature-line {
@@ -1870,8 +1877,8 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .footer {
           text-align: center;
-          font-size: 7.6pt;
-          margin-top: 5px;
+          font-size: 7.4pt;
+          margin-top: 6.2px;
           color: #475569;
         }
 
@@ -1927,6 +1934,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         examSet
       )}
 
+      <div class="content-stack">
       <div class="student-info page-section">
         <div class="student-info-grid">
           <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
@@ -2000,6 +2008,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       <div class="footer">
         <div>Printed from: Pwezacore</div>
         <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
+      </div>
       </div>
     </body>
     </html>
@@ -3109,6 +3118,7 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
         examSet
       )}
 
+      <div class="content-stack">
       <div class="student-info page-section">
         <div class="student-info-grid">
           <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
@@ -3182,6 +3192,7 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
       <div class="footer">
         <div>Printed from: Pwezacore</div>
         <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
+      </div>
       </div>
     </body>
     </html>
