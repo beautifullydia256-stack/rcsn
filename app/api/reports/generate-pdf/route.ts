@@ -716,7 +716,7 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 15mm;
+          padding: 4mm 5mm 5mm;
           box-sizing: border-box;
           background: white;
           color: black;
@@ -730,12 +730,12 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
         }
         
         .school-logo {
-          width: 200px;
-          height: 200px;
+          width: 128px;
+          height: 128px;
           display: flex;
           align-items: center;
           justify-content: center;
