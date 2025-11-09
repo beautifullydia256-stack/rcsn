@@ -1979,11 +1979,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           <p>${headTeacherComment}</p>
           <span class="signature-line">Signature: ______________________</span>
         </div>
-      </div>
-
-      <div class="footer-info page-section">
-        <div><strong>Next term begins on:</strong> ${nextTermDisplay}</div>
-        <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
+        <div class="comment-footer">
+          <div><strong>Next term begins on:</strong> ${nextTermDisplay}</div>
+          <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
+        </div>
       </div>
 
       <div class="footer">
@@ -2028,7 +2027,7 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 15mm;
+          padding: 2mm 3mm 3mm;
           box-sizing: border-box;
           background: white;
           color: black;
@@ -2042,12 +2041,12 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 20px;
+          margin-bottom: 6px;
         }
         
         .school-logo {
-          width: 200px;
-          height: 200px;
+          width: 120px;
+          height: 120px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2069,26 +2068,27 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         
         .school-name {
           font-weight: bold;
-          font-size: 18pt;
+          font-size: 14pt;
           text-transform: uppercase;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
         
         .school-contact {
-          font-size: 11pt;
-          font-weight: bold;
-          margin-bottom: 5px;
+          font-size: 9pt;
+          font-weight: normal;
+          margin-bottom: 4px;
         }
         
         .school-motto {
-          font-size: 11pt;
-          font-weight: bold;
+          font-size: 10pt;
+          font-weight: normal;
           font-style: italic;
+          margin-bottom: 4px;
         }
         
         .student-photo {
-          width: 80px;
-          height: 96px;
+          width: 54px;
+          height: 72px;
           border: 2px solid #ccc;
           background: #f0f0f0;
           display: flex;
@@ -2104,23 +2104,36 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .report-title {
-          background: #4CAF50;
+          background: #1e3a8a;
           color: white;
           text-align: center;
-          padding: 10px;
-          margin: 20px 0;
-          font-size: 13pt;
+          padding: 5px 12px;
+          margin: 6px 0 6px;
+          font-size: 10.3pt;
           font-weight: bold;
           text-transform: uppercase;
         }
         
         .student-info {
-          margin-bottom: 20px;
-          font-size: 11pt;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 6px;
+          padding: 5px 6px;
+          font-size: 9.4pt;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 9px;
+        }
+        
+        .student-info-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 5px;
         }
         
         .student-info div {
-          margin-bottom: 5px;
+          margin-bottom: 3px;
         }
         
         .student-info strong {
@@ -2130,20 +2143,21 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 20px;
-          font-size: 10pt;
+          font-size: 8.5pt;
         }
         
         th, td {
-          border: 1px solid #000;
-          padding: 6px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          padding: 3.2px 4.8px;
           text-align: left;
         }
         
         th {
-          background: #4CAF50;
-          color: white;
-          font-weight: bold;
+          background: rgba(191, 219, 254, 0.68);
+          color: #1e3a8a;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
           text-align: center;
         }
         
@@ -2152,8 +2166,8 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .summary {
-          margin-bottom: 20px;
-          font-size: 11pt;
+          margin-bottom: 10px;
+          font-size: 9.5pt;
         }
         
         .summary p {
@@ -2165,12 +2179,12 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .comments {
-          margin-bottom: 20px;
-          font-size: 10pt;
+          margin-bottom: 12px;
+          font-size: 9pt;
         }
         
         .comments h3 {
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: bold;
           margin-bottom: 5px;
         }
@@ -2180,8 +2194,8 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .next-term {
-          margin-bottom: 20px;
-          font-size: 11pt;
+          margin-bottom: 15px;
+          font-size: 9pt;
         }
         
         .next-term strong {
@@ -2189,19 +2203,18 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .grading-system {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
+          font-size: 9pt;
         }
         
         .grading-system h3 {
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: bold;
           margin-bottom: 5px;
         }
         
         .grading-system p {
-          font-size: 10pt;
-          font-weight: bold;
-          margin-bottom: 10px;
+          margin-bottom: 5px;
         }
         
         .description-table th {
@@ -2213,8 +2226,8 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 9pt;
-          margin-top: 20px;
+          font-size: 7.6pt;
+          margin-top: 5px;
         }
         
         .watermark {
@@ -2228,14 +2241,14 @@ function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: string | n
         }
         
         .watermark img {
-          width: 900px;
-          height: 900px;
+          width: 480px;
+          height: 480px;
           object-fit: contain;
         }
         
         .watermark-placeholder {
-          width: 900px;
-          height: 900px;
+          width: 480px;
+          height: 480px;
           border: 2px solid #ccc;
           border-radius: 50%;
           display: flex;
