@@ -1230,24 +1230,18 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
         : '#f8fafc';
       const labelColor = performanceWord
-        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.85)' : 'rgba(15,23,42,0.9)')
+        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
         : '#1f2937';
-      const wordDisplay = performanceWord || 'Awaiting';
-      const wordColor = performanceWord ? textColor : '#475569';
-      const wordBackground = performanceWord
-        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.12)')
-        : 'rgba(148,163,184,0.22)';
-      const wordBorderColor = performanceWord ? applyAlphaToHex(accentColor, 0.6) : 'rgba(148,163,184,0.45)';
-      const cellBorderColor = performanceWord ? accentColor : 'rgba(15,23,42,0.15)';
+      const cellBorderColor = performanceWord ? accentColor : 'rgba(148,163,184,0.45)';
       const cellShadow = performanceWord
-        ? `0 12px 26px ${applyAlphaToHex(accentColor, 0.32)}`
+        ? `0 14px 28px ${applyAlphaToHex(accentColor, 0.28)}`
         : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
-      const wordShadow = performanceWord
-        ? (textColor === '#ffffff' ? 'text-shadow: 0 1px 2px rgba(15,23,42,0.3);' : 'text-shadow: 0 4px 10px rgba(15,23,42,0.12);')
-        : '';
-      const wordBoxShadow = performanceWord
-        ? `0 8px 18px ${applyAlphaToHex(accentColor, 0.24)}`
-        : 'inset 0 0 0 1px rgba(148,163,184,0.18)';
+      const barBackground = performanceWord
+        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.45)' : applyAlphaToHex(accentColor, 0.32))
+        : 'rgba(148,163,184,0.28)';
+      const barBorder = performanceWord
+        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.42)' : applyAlphaToHex(accentColor, 0.45))
+        : 'rgba(148,163,184,0.42)';
 
       const cellBaseStyles = [
         `border: 1px solid ${cellBorderColor}`,
@@ -1257,7 +1251,6 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         'vertical-align: middle',
         'font-weight: 600',
         `background: ${cellBackground}`,
-        `color: ${wordColor}`,
         `box-shadow: ${cellShadow}`
       ];
 
@@ -1267,20 +1260,13 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
             <span class="nursery-skill-label" style="color: ${labelColor};">${skill.label}</span>
             <span class="nursery-skill-value" style="
               display: inline-block;
-              padding: 4px 14px;
-              min-width: 64px;
+              width: 64px;
+              height: 12px;
               border-radius: 999px;
-              font-size: 10pt;
-              font-weight: 700;
-              letter-spacing: 0.03em;
-              text-transform: uppercase;
-              background: ${wordBackground};
-              color: ${wordColor};
-              border: 1px solid ${wordBorderColor};
-              box-shadow: ${wordBoxShadow};
-              ${wordShadow}
-              ${performanceWord ? '' : 'font-style: italic; opacity: 0.75;'}
-            ">${wordDisplay}</span>
+              background: ${barBackground};
+              border: 1px solid ${barBorder};
+              box-shadow: ${performanceWord ? `0 6px 14px ${applyAlphaToHex(accentColor, 0.22)}` : 'none'};
+            "></span>
           </div>
         </td>
       `;
