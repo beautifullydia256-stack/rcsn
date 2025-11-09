@@ -1674,11 +1674,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           size: A4;
           margin: 0;
         }
-
+        
         * {
           box-sizing: border-box;
         }
-
+        
         body {
           font-family: 'Times New Roman', 'Times', serif;
           width: 210mm;
@@ -1693,7 +1693,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
-
+        
         .content-stack {
           display: flex;
           flex-direction: column;
@@ -1717,7 +1717,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           border: 1px solid rgba(191, 219, 254, 0.45);
           border-radius: 10px;
         }
-
+        
         .student-info-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1735,7 +1735,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           justify-content: center;
           overflow: hidden;
         }
-
+        
         .student-photo img {
           width: 100%;
           height: 100%;
@@ -1748,7 +1748,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           border-radius: 10px;
           overflow: hidden;
         }
-
+        
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
@@ -1760,7 +1760,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           border: 1px solid rgba(191, 219, 254, 0.45);
           padding: 4.6px 6.2px;
         }
-
+        
         .subjects-table th {
           background: rgba(191, 219, 254, 0.68);
           color: #1e3a8a;
@@ -1769,7 +1769,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           letter-spacing: 0.04em;
           text-align: center;
         }
-
+        
         .subject-cell {
           font-weight: 600;
           color: #0f172a;
@@ -1778,7 +1778,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .numeric-cell {
           text-align: center;
         }
-
+        
         .remarks-cell {
           text-align: left;
           color: #1f2937;
@@ -1796,7 +1796,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           font-weight: 700;
           text-align: center;
         }
-
+        
         .total-row td:first-child {
           text-align: left;
         }
@@ -1807,7 +1807,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           gap: 4.6px;
           margin-bottom: 5.2px;
         }
-
+        
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
@@ -1817,7 +1817,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           line-height: 1.3;
           min-height: 52px;
         }
-
+        
         .summary-card strong {
           color: #1e3a8a;
         }
@@ -1838,11 +1838,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           color: #1e3a8a;
           margin-bottom: 3.2px;
         }
-
+        
         .comment-block {
           margin-bottom: 4.8px;
         }
-
+        
         .comment-block:last-child {
           margin-bottom: 0;
         }
@@ -1851,17 +1851,17 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-top: 5.2px;
-          margin-top: 6.2px;
+          padding-top: 5px;
+          margin-top: 6px;
           border-top: 1px solid rgba(191, 219, 254, 0.5);
-          font-size: 8.4pt;
+          font-size: 8.1pt;
         }
 
         .signature-line {
           display: block;
           margin-top: 3.6px;
         }
-
+        
         .footer-info {
           display: flex;
           justify-content: space-between;
@@ -1874,14 +1874,14 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           font-size: 8.8pt;
           margin-bottom: 8px;
         }
-
+        
         .footer {
           text-align: center;
-          font-size: 7.4pt;
-          margin-top: 6.2px;
+          font-size: 7.2pt;
           color: #475569;
+          margin-top: 10px;
         }
-
+        
         .watermark {
           position: fixed;
           top: 50%;
@@ -1891,12 +1891,12 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           z-index: -1;
           pointer-events: none;
         }
-
+        
         .watermark img {
           max-width: 55%;
           height: auto;
         }
-
+        
         .watermark-placeholder {
           width: 55%;
           max-width: 360px;
@@ -1926,7 +1926,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       <div class="watermark">
         ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
       </div>
-
+      
       ${generateProfessionalHeaderHTML(
         school,
         schoolLogoBase64,
@@ -1936,36 +1936,36 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
       <div class="content-stack">
       <div class="student-info page-section">
-        <div class="student-info-grid">
-          <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
-          <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
-          <div><strong>STREAM:</strong> EAST</div>
-          <div><strong>CLASS:</strong> ${student.current_class}</div>
+          <div class="student-info-grid">
+            <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
+            <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
+            <div><strong>STREAM:</strong> EAST</div>
+            <div><strong>CLASS:</strong> ${student.current_class}</div>
           <div><strong>LIN:</strong> ${student.admission_number || student.student_id || '__________'}</div>
-          <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
-        </div>
-        <div class="student-photo">
-          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+            <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
+          </div>
+          <div class="student-photo">
+            ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
         </div>
       </div>
 
       <div class="subjects-card page-section">
         <table class="subjects-table">
-          <thead>
-            <tr>
+        <thead>
+          <tr>
               <th>SUBJECT</th>
               <th>FULL MARKS</th>
               ${showMidTermColumn ? '<th>MID TERM</th>' : ''}
               ${showEndOfTermColumn ? '<th>END OF TERM</th>' : ''}
               <th>TEACHER\'S REMARKS</th>
               <th>INITIALS</th>
-            </tr>
-          </thead>
-          <tbody>
+          </tr>
+        </thead>
+        <tbody>
             ${subjectRows}
             ${totalRow}
-          </tbody>
-        </table>
+        </tbody>
+      </table>
       </div>
 
       <div class="summary-grid page-section">
@@ -2004,11 +2004,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
         </div>
       </div>
-
-      <div class="footer">
-        <div>Printed from: Pwezacore</div>
-        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
-      </div>
+      <div class="footer">Generated by PwezaCore School Management System</div>
       </div>
     </body>
     </html>
@@ -3135,21 +3131,21 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
 
       <div class="subjects-card page-section">
         <table class="subjects-table">
-          <thead>
-            <tr>
+            <thead>
+              <tr>
               <th>SUBJECT</th>
               <th>FULL MARKS</th>
               ${showMidTermColumn ? '<th>MID TERM</th>' : ''}
               ${showEndOfTermColumn ? '<th>END OF TERM</th>' : ''}
               <th>TEACHER\'S REMARKS</th>
               <th>INITIALS</th>
-            </tr>
-          </thead>
-          <tbody>
+              </tr>
+            </thead>
+            <tbody>
             ${subjectRows}
             ${totalRow}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
       </div>
 
       <div class="summary-grid page-section">
@@ -3188,11 +3184,7 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
           <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
         </div>
       </div>
-
-      <div class="footer">
-        <div>Printed from: Pwezacore</div>
-        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
-      </div>
+      <div class="footer">Generated by PwezaCore School Management System</div>
       </div>
     </body>
     </html>
