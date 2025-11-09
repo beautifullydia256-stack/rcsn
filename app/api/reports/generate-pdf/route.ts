@@ -1684,7 +1684,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 2mm 4mm;
+          padding: 2mm 3mm 3mm;
           background: #ffffff;
           color: #0f172a;
           -webkit-print-color-adjust: exact;
@@ -1694,7 +1694,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .page-section {
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
@@ -1703,24 +1703,24 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          gap: 10px;
-          padding: 8px 10px;
-          font-size: 9.8pt;
+          gap: 8px;
+          padding: 6px 8px;
+          font-size: 9.6pt;
           background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 9px;
         }
 
         .student-info-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 8px;
+          gap: 7px;
         }
 
         .student-photo {
-          width: 64px;
-          height: 80px;
-          border: 1px solid rgba(191, 219, 254, 0.45);
+          width: 60px;
+          height: 76px;
+          border: 1px solid rgba(191, 219, 254, 0.4);
           border-radius: 8px;
           background: #ffffff;
           display: flex;
@@ -1737,21 +1737,21 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .subjects-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 9px;
           overflow: hidden;
         }
 
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 8.6pt;
+          font-size: 8.4pt;
         }
 
         .subjects-table th,
         .subjects-table td {
-          border: 1px solid rgba(191, 219, 254, 0.5);
-          padding: 3.5px 5.5px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          padding: 3px 5px;
         }
 
         .subjects-table th {
@@ -1797,16 +1797,16 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 6px;
+          gap: 5px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.4);
-          border-radius: 10px;
-          padding: 8px 10px;
-          font-size: 8.5pt;
-          line-height: 1.4;
+          border: 1px solid rgba(191, 219, 254, 0.35);
+          border-radius: 9px;
+          padding: 7px 9px;
+          font-size: 8.3pt;
+          line-height: 1.35;
         }
 
         .summary-card strong {
@@ -1815,11 +1815,11 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .comments-card {
           background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-          padding: 10px 12px;
-          font-size: 8.5pt;
-          line-height: 1.4;
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 9px;
+          padding: 8px 10px;
+          font-size: 8.3pt;
+          line-height: 1.35;
         }
 
         .comments-card h3 {
@@ -1830,7 +1830,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .comment-block {
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .comment-block:last-child {
@@ -1846,18 +1846,18 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
-          background: rgba(255, 255, 255, 0.97);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 12px;
-          padding: 10px 12px;
-          font-size: 8.9pt;
+          gap: 10px;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.4);
+          border-radius: 9px;
+          padding: 8px 10px;
+          font-size: 8.4pt;
         }
 
         .footer {
           text-align: center;
-          font-size: 8.8pt;
-          margin-top: 8px;
+          font-size: 8.3pt;
+          margin-top: 5px;
           color: #1e3a8a;
         }
 
