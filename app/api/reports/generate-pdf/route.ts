@@ -1684,7 +1684,7 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 2mm 3mm 3mm;
+          padding: 0.5mm 2mm 2mm;
           background: #ffffff;
           color: #0f172a;
           -webkit-print-color-adjust: exact;
@@ -3099,7 +3099,7 @@ function generateProfessionalHeaderHTML(
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
-    <div class="print-header-container" style="padding-top: 0.8cm; padding-bottom: 0.12cm; padding-left: 0; padding-right: 0.7cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
+    <div class="print-header-container" style="padding-top: 0.6cm; padding-bottom: 0.1cm; padding-left: 0; padding-right: 0.6cm; background: transparent; -webkit-print-color-adjust: exact; print-color-adjust: exact; page-break-inside: avoid; break-inside: avoid;">
       <div style="display: flex; align-items: center; min-height: 2.7cm; position: relative;">
         <div style="width: 158px; height: 158px; display: flex; align-items: center; justify-content: center; position: absolute; left: 0; margin-left: 0;">
           ${schoolLogoBase64 ? `

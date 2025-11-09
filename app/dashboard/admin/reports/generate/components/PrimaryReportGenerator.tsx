@@ -2967,8 +2967,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
   return (
     <div
-      className="relative px-5 py-4 bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.32' }}
+      className="relative px-4.5 py-3.5 bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.32', paddingTop: '0.3cm' }}
     >
       {school?.logo_url && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.8cm',
-            paddingBottom: '0.12cm',
+            paddingTop: '0.6cm',
+            paddingBottom: '0.1cm',
             paddingLeft: '0',
-            paddingRight: '0.7cm',
+            paddingRight: '0.6cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
