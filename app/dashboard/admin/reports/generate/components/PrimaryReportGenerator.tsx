@@ -54,7 +54,8 @@ import {
   NURSERY_PERFORMANCE_COLOR_MAP,
   NURSERY_SKILL_GRID,
   resolveNurseryPerformanceValue,
-  getReadableTextColor
+  getReadableTextColor,
+  applyAlphaToHex
 } from "@/src/templates/primary/nurseryPerformance";
 
 // Primary/Nursery School Report Generator
@@ -2884,37 +2885,55 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   }
 
                   const performanceWord = resolveNurseryPerformanceValue(student, skill);
-                  const backgroundColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : undefined;
-                  const textColor = backgroundColor ? getReadableTextColor(backgroundColor) : '#1f2937';
+                  const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : undefined;
+                  const cellBackground = accentColor ? applyAlphaToHex(accentColor, 0.22) : '#ffffff';
+                  const labelColor = accentColor ? '#0f172a' : '#1f2937';
+                  const badgeBackground = accentColor ? accentColor : '#e2e8f0';
+                  const badgeTextColor = accentColor ? getReadableTextColor(accentColor) : '#1f2937';
+                  const badgeBorderColor = accentColor ? applyAlphaToHex(accentColor, 0.55) : '#94a3b8';
+                  const cellBorderColor = accentColor || '#1f2937';
+                  const placeholderText = performanceWord || 'Awaiting';
 
                   return (
                     <td
                       key={`nursery-skill-${rowIdx}-${colIdx}`}
                       style={{
-                        border: '1px solid #000',
+                        border: `1px solid ${cellBorderColor}`,
                         padding: '8px 6px',
                         minHeight: '48px',
                         textAlign: 'center',
                         fontWeight: 600,
                         verticalAlign: 'middle',
-                        background: backgroundColor || '#ffffff',
-                        color: textColor,
-                        transition: 'background-color 0.2s ease'
+                        background: cellBackground,
+                        color: labelColor,
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+                        boxShadow: accentColor ? `0 4px 12px ${applyAlphaToHex(accentColor, 0.18)}` : 'none'
                       }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600 }}>
+                        <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
                           {skill.label}
                         </span>
                         <span
                           style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '56px',
+                            padding: '3px 12px',
+                            borderRadius: '999px',
                             fontSize: '10pt',
                             fontWeight: 700,
-                            fontStyle: performanceWord ? 'normal' : 'italic',
-                            opacity: performanceWord ? 1 : 0.6
+                            letterSpacing: '0.02em',
+                            textTransform: 'uppercase',
+                            background: badgeBackground,
+                            color: badgeTextColor,
+                            border: `1px solid ${badgeBorderColor}`,
+                            opacity: performanceWord ? 1 : 0.75,
+                            fontStyle: performanceWord ? 'normal' : 'italic'
                           }}
                         >
-                          {performanceWord || '—'}
+                          {placeholderText}
                         </span>
                       </div>
                     </td>

@@ -1158,31 +1158,47 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       }
 
       const performanceWord = resolveNurseryPerformanceValue(student, skill);
-      const backgroundColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : null;
-      const textColor = backgroundColor ? getReadableTextColor(backgroundColor) : '#1f2937';
-      const valueStyle = performanceWord ? '' : 'font-style: italic; opacity: 0.6;';
+    const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : null;
+    const cellBackground = accentColor ? applyAlphaToHex(accentColor, 0.22) : '#ffffff';
+    const labelColor = accentColor ? '#0f172a' : '#1f2937';
+    const badgeBackground = accentColor ? accentColor : '#e2e8f0';
+    const badgeTextColor = accentColor ? getReadableTextColor(accentColor) : '#1f2937';
+    const badgeBorderColor = accentColor ? applyAlphaToHex(accentColor, 0.6) : '#94a3b8';
+    const cellBorderColor = accentColor || '#1f2937';
+    const placeholderText = performanceWord || 'Awaiting';
       const cellBaseStyles = [
-        'border: 1px solid #000',
+      `border: 1px solid ${cellBorderColor}`,
         'padding: 8px 6px',
         'min-height: 48px',
         'text-align: center',
         'vertical-align: middle',
-        'font-weight: 600'
+      'font-weight: 600',
+      `background: ${cellBackground}`,
+      accentColor ? `box-shadow: 0 4px 12px ${applyAlphaToHex(accentColor, 0.18)}` : ''
       ];
 
-      if (backgroundColor) {
-        cellBaseStyles.push(`background: ${backgroundColor}`);
-        cellBaseStyles.push(`color: ${textColor}`);
-      } else {
-        cellBaseStyles.push('background: #ffffff');
-        cellBaseStyles.push('color: #1f2937');
-      }
+    const badgeStyles = [
+      'display: inline-flex',
+      'align-items: center',
+      'justify-content: center',
+      'min-width: 56px',
+      'padding: 3px 12px',
+      'border-radius: 999px',
+      'font-size: 10pt',
+      'font-weight: 700',
+      'text-transform: uppercase',
+      'letter-spacing: 0.02em',
+      `background: ${badgeBackground}`,
+      `color: ${badgeTextColor}`,
+      `border: 1px solid ${badgeBorderColor}`,
+      performanceWord ? '' : 'opacity: 0.75; font-style: italic;'
+    ].filter(Boolean).join('; ');
 
       return `
         <td style="${cellBaseStyles.join('; ')}">
           <div class="nursery-skill-cell">
-            <span class="nursery-skill-label">${skill.label}</span>
-            <span class="nursery-skill-value" style="${valueStyle}">${performanceWord || '—'}</span>
+          <span class="nursery-skill-label" style="color: ${labelColor};">${skill.label}</span>
+          <span class="nursery-skill-value" style="${badgeStyles}">${placeholderText}</span>
           </div>
         </td>
       `;
@@ -3814,4 +3830,18 @@ const getReadableTextColor = (hex: string): string => {
 
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.6 ? '#111827' : '#ffffff';
+};
+
+const applyAlphaToHex = (hex: string | null, alpha: number): string => {
+  if (!hex) return `rgba(255,255,255,${alpha})`;
+  let normalized = hex.replace('#', '');
+  if (normalized.length === 3) {
+    normalized = normalized.split('').map(char => char + char).join('');
+  }
+
+  const r = parseInt(normalized.substring(0, 2), 16);
+  const g = parseInt(normalized.substring(2, 4), 16);
+  const b = parseInt(normalized.substring(4, 6), 16);
+
+  return `rgba(${r},${g},${b},${alpha})`;
 };
