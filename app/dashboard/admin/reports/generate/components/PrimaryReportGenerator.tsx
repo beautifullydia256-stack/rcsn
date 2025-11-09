@@ -3543,17 +3543,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
   return (
     <div
-      className="relative p-8 bg-gradient-to-br from-white via-blue-50/40 to-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '11pt', lineHeight: '1.4' }}
+      className="relative px-[0.25cm] py-[0.25cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.35', paddingTop: '0.12cm' }}
     >
       {(school?.logo_url || school?.logo) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
           <img
             src={school.logo_url || school.logo}
             alt="School Watermark"
-            className="max-w-3xl w-[70%] opacity-30 object-contain"
+            className="max-w-2xl w-[55%] opacity-20 object-contain"
           />
-          </div>
+        </div>
       )}
 
       <div className="relative z-10">
@@ -3561,10 +3561,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '1.2cm',
-            paddingBottom: '0.2cm',
+            paddingTop: '0.4cm',
+            paddingBottom: '0.08cm',
             paddingLeft: '0',
-            paddingRight: '1cm',
+            paddingRight: '0.5cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -3573,13 +3573,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '3.5cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.5cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '192px',
-                height: '192px',
+                width: '150px',
+                height: '150px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3603,25 +3603,26 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                   <span style={{ fontSize: '9pt', color: '#9ca3af', textAlign: 'center', padding: '8px' }}>
                     School<br/>Logo
                   </span>
-          </div>
-        )}
+                </div>
+              )}
             </div>
 
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '192px', paddingLeft: '0.5cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '150px', paddingLeft: '0.4cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
                   style={{
-                    fontSize: '19pt',
+                    fontSize: '17pt',
                     fontWeight: '700',
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    lineHeight: '1.2',
-                    marginBottom: '0.4cm',
+                    letterSpacing: '0.04em',
+                    lineHeight: '1.1',
+                    marginBottom: '0.28cm',
                     color: school?.header_school_name_color || '#1e3a8a',
-                    marginTop: 0
+                    marginTop: 0,
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {school.name}
@@ -3632,63 +3633,63 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               {school?.subtitle && (
                 <div 
                   style={{
-                    fontSize: '12pt',
+                    fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
                     color: school?.header_subtitle_color || '#3b82f6',
-                    marginBottom: '0.25cm',
-                    lineHeight: '1.5'
+                    marginBottom: '0.22cm',
+                    lineHeight: '1.4'
                   }}
                 >
                   {school.subtitle}
-        </div>
+                </div>
               )}
 
               {/* Address with P.O.Box - Serif Font - Uses saved color */}
               {(school?.address || school?.pobox) && (
                 <div 
                   style={{
-                    fontSize: '12pt',
+                    fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_address_color || '#1e40af',
-                    marginBottom: '0.25cm',
-                    lineHeight: '1.5'
+                    marginBottom: '0.2cm',
+                    lineHeight: '1.4'
                   }}
                 >
                   {school?.address || ''}{school?.address && school?.pobox ? ' ' : ''}{school?.pobox || ''}
-          </div>
+                </div>
               )}
 
-              {/* Contact Information - Email | Phone - Serif Font - Uses saved color */}
+              {/* Contact Information - Email | Phone - Uses saved color */}
               {(school?.contact_email || school?.contact_phone) && (
                 <div 
                   style={{
-                    fontSize: '12pt',
+                    fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
                     color: school?.header_contact_color || '#1e40af',
-                    marginBottom: '0.3cm',
-                    lineHeight: '1.5'
+                    marginBottom: '0.2cm',
+                    lineHeight: '1.4'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
                   {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
-          </div>
-        )}
+                </div>
+              )}
 
               {/* Motto - Serif Font Bold Italic with Quotes - Uses saved color */}
               {school?.motto && (
                 <div 
                   style={{
-                    fontSize: '11pt',
+                    fontSize: '10.2pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
                     color: school?.header_motto_color || '#2563eb',
-                    marginBottom: '0.4cm',
-                    lineHeight: '1.6',
+                    marginBottom: '0.28cm',
+                    lineHeight: '1.4',
                     letterSpacing: '0.02em'
                   }}
                 >
@@ -3696,31 +3697,31 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 </div>
               )}
             </div>
-      </div>
+          </div>
 
           {/* Elegant Divider Line - Uses saved color */}
           <div 
             style={{
               height: '1px',
               background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
-              marginTop: '0.6cm',
-              marginBottom: '0.5cm',
+              marginTop: '0.3cm',
+              marginBottom: '0.18cm',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
           />
 
           {/* Report Type Banner */}
-          <div className="text-center" style={{ marginBottom: '0.8cm' }}>
+          <div className="text-center" style={{ marginBottom: '0.22cm' }}>
             <div 
               className="inline-block"
               style={{
-                padding: '8px 24px',
-                borderRadius: '20px',
-                fontSize: '10pt',
+                padding: '6px 18px',
+                borderRadius: '16px',
+                fontSize: '9pt',
                 fontWeight: '600',
                 textTransform: 'uppercase',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.07em',
                 color: '#1e3a8a',
                 background: '#eff6ff',
                 border: '1px solid #bfdbfe',
@@ -3733,10 +3734,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             {(examSet?.name || examSet?.year) && (
               <div 
                 style={{
-                  fontSize: '8pt',
+                  fontSize: '7.8pt',
                   fontFamily: 'Arial, Helvetica, sans-serif',
                   color: '#64748b',
-                  marginTop: '0.2cm',
+                  marginTop: '0.16cm',
                   fontWeight: '400'
                 }}
               >
@@ -3754,53 +3755,53 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               print-color-adjust: exact !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 1cm !important;
-              margin-bottom: 0.8cm !important;
+              margin-top: 0.4cm !important;
+              margin-bottom: 0.22cm !important;
             }
           }
         `}} />
       </div>
 
-      <div className="relative z-10 space-y-6" style={{ marginTop: '0.4cm' }}>
+      <div className="relative z-10 space-y-3.5" style={{ marginTop: '0.2cm' }}>
       {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-6 text-[11pt] bg-white/85 border border-blue-100/60 rounded-2xl shadow-md px-6 py-4">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-2 flex-1">
-          <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
-          <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
-          <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
-          <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
+        <div className="flex items-start justify-between gap-3.5 text-[10.8pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-4.5 py-3">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
+            <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
+            <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
+            <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
+            <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
+          </div>
+          
+          {/* Student Photo */}
+          <div className="w-[2.7cm] h-[3.2cm] border border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+            {student?.profile_photo ? (
+              <img
+                src={student.profile_photo}
+                alt="Student Photo"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="text-xs text-gray-500">Photo</div>
+            )}
+          </div>
         </div>
-        
-        {/* Student Photo */}
-        <div className="w-28 h-32 border-2 border-blue-200 bg-white/90 rounded-lg shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
-          {student?.profile_photo ? (
-            <img
-              src={student.profile_photo}
-              alt="Student Photo"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="text-xs text-gray-500">Photo</div>
-          )}
-        </div>
-      </div>
 
       {/* SUBJECTS TABLE */}
-      <div className="bg-white/90 border border-blue-100/80 rounded-2xl shadow-lg overflow-hidden">
-          <table className="w-full text-[10pt]">
+      <div className="bg-white border border-blue-100/60 rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full text-[9.5pt]">
         <thead>
-              <tr className="bg-blue-100/80 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-3 py-2 text-left">Subject</th>
+              <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
+                <th className="border border-blue-100 px-2.5 py-2 text-left">Subject</th>
             {hasBOTExamSets && !isMidTermSelected && (
-                  <th className="border border-blue-100 px-3 py-2 text-center w-16">BOT</th>
+                  <th className="border border-blue-100 px-2.5 py-2 text-center w-16">BOT</th>
             )}
-                <th className="border border-blue-100 px-3 py-2 text-center w-16">MID</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center w-16">MID</th>
             {showENDColumn && (
-                  <th className="border border-blue-100 px-3 py-2 text-center w-16">END</th>
+                  <th className="border border-blue-100 px-2.5 py-2 text-center w-16">END</th>
             )}
-                <th className="border border-blue-100 px-3 py-2 text-center w-16">Grade</th>
-                <th className="border border-blue-100 px-3 py-2 text-left">Teacher's Comment</th>
-                <th className="border border-blue-100 px-3 py-2 text-left">Teacher</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-center w-16">Grade</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-left">Teacher's Comment</th>
+                <th className="border border-blue-100 px-2.5 py-2 text-left">Teacher</th>
           </tr>
         </thead>
         <tbody>
