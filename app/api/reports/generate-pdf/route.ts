@@ -2833,7 +2833,7 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 15mm;
+          padding: 1mm 1.8mm 1.8mm;
           box-sizing: border-box;
           background: white;
           color: black;
@@ -2844,54 +2844,135 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
         }
         
         .header {
-          text-align: center;
-          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 4px;
+        }
+        
+        .school-logo {
+          width: 128px;
+          height: 128px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          border: none;
+        }
+        
+        .school-logo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          border: none;
+        }
+        
+        .school-info {
+          text-align: right;
+          flex: 1;
         }
         
         .school-name {
           font-weight: bold;
-          font-size: 16pt;
-          margin-bottom: 10px;
-        }
-        
-        .school-motto {
-          font-size: 12pt;
+          font-size: 18pt;
+          text-transform: uppercase;
           margin-bottom: 5px;
         }
         
         .school-contact {
-          font-size: 10pt;
+          font-size: 11pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .school-motto {
+          font-size: 11pt;
+          font-weight: bold;
+          font-style: italic;
+        }
+        
+        .student-photo {
+          width: 80px;
+          height: 96px;
+          border: 2px solid #ccc;
+          background: #f0f0f0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
         
         .report-title {
+          background: #1e3a8a;
+          color: white;
           text-align: center;
-          margin: 20px 0;
-          font-size: 14pt;
+          padding: 4px 11px;
+          margin: 4px 0 5px;
+          font-size: 10.1pt;
           font-weight: bold;
+          text-transform: uppercase;
         }
         
-        .section-title {
-          font-size: 12pt;
-          font-weight: bold;
-          margin: 20px 0 10px 0;
+        .student-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 5px;
+          padding: 4px 5px;
+          font-size: 9.3pt;
+          background: rgba(255, 255, 255, 0.98);
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 9px;
+        }
+        
+        .student-info-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 4px;
+        }
+        
+        .student-photo {
+          width: 66px;
+          height: 82px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          border-radius: 9px;
+          background: #ffffff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
         
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 20px;
-          font-size: 10pt;
+          font-size: 8.4pt;
         }
         
         th, td {
-          border: 1px solid #000;
-          padding: 6px;
+          border: 1px solid rgba(191, 219, 254, 0.45);
+          padding: 3px 4.5px;
           text-align: left;
         }
         
         th {
-          background: #f0f0f0;
-          font-weight: bold;
+          background: rgba(191, 219, 254, 0.68);
+          color: #1e3a8a;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
           text-align: center;
         }
         
@@ -2899,186 +2980,197 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
           text-align: center;
         }
         
-        .footer {
-          text-align: center;
+        .summary {
+          margin-bottom: 10px;
+          font-size: 9.5pt;
+        }
+        
+        .summary p {
+          margin-bottom: 5px;
+        }
+        
+        .summary strong {
+          font-weight: bold;
+        }
+        
+        .comments {
+          margin-bottom: 12px;
+          font-size: 9pt;
+        }
+        
+        .comments h3 {
           font-size: 10pt;
-          margin-top: 20px;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .comments p {
+          margin-bottom: 5px;
+        }
+        
+        .next-term {
+          margin-bottom: 15px;
+          font-size: 9pt;
+        }
+        
+        .next-term strong {
+          font-weight: bold;
+        }
+        
+        .grading-system {
+          margin-bottom: 15px;
+          font-size: 9pt;
+        }
+        
+        .grading-system h3 {
+          font-size: 10pt;
+          font-weight: bold;
+          margin-bottom: 5px;
+        }
+        
+        .grading-system p {
+          margin-bottom: 5px;
+        }
+        
+        .description-table th {
+          background: #f0f0f0;
+          color: black;
+        }
+        
+        .footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 7.6pt;
+          margin-top: 5px;
+        }
+        
+        .watermark {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          opacity: 0.08;
+          z-index: -1;
+          pointer-events: none;
+        }
+        
+        .watermark img {
+          max-width: 55%;
+          height: auto;
+        }
+        
+        .watermark-placeholder {
+          width: 55%;
+          max-width: 360px;
+          border: 1px dashed rgba(191, 219, 254, 0.5);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(239, 246, 255, 0.45);
+          font-size: 48pt;
+          font-weight: bold;
+          color: rgba(148, 163, 184, 0.75);
+          text-align: center;
+          line-height: 1.2;
+          padding: 20px;
+          margin: 0 auto;
+        }
+
+        @media print {
+          .page-section {
+            break-inside: avoid;
+          }
         }
       </style>
     </head>
     <body>
-      <!-- School Header -->
-      <div class="header">
-        <div class="school-name">${school?.name || 'School Name'}</div>
-        <div class="school-motto">${school?.motto || 'School Motto'}</div>
-        <div class="school-contact">${school?.address || 'School Address'} | Tel: ${school?.phone || 'Phone'} | Email: ${school?.email || 'Email'}</div>
+      <div class="watermark">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
       </div>
 
-      <!-- Report Title -->
-      <div class="report-title">STUDENT REPORT</div>
+      ${generateProfessionalHeaderHTML(
+        school,
+        schoolLogoBase64,
+        `STUDENT'S PROGRESSIVE REPORT OF ${examSet?.term ? `TERM ${examSet.term}` : 'TERM'}`,
+        examSet
+      )}
 
-      <!-- Student Information -->
-      <div class="section-title">Student Information</div>
-      <table>
-        <tr>
-          <td><strong>Name:</strong></td>
-          <td>${student.name}</td>
-        </tr>
-        <tr>
-          <td><strong>Admission No:</strong></td>
-          <td>${student.admission_number || student.student_id}</td>
-        </tr>
-        <tr>
-          <td><strong>Class:</strong></td>
-          <td>${student.current_class}</td>
-        </tr>
-        <tr>
-          <td><strong>Year:</strong></td>
-          <td>${examSet.year}</td>
-        </tr>
-        <tr>
-          <td><strong>Term:</strong></td>
-          <td>${examSet.term}</td>
-        </tr>
-        <tr>
-          <td><strong>Exam Set:</strong></td>
-          <td>${examSet.name}</td>
-        </tr>
-      </table>
+      <div class="student-info page-section">
+        <div class="student-info-grid">
+          <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
+          <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
+          <div><strong>STREAM:</strong> EAST</div>
+          <div><strong>CLASS:</strong> ${student.current_class}</div>
+          <div><strong>LIN:</strong> ${student.admission_number || student.student_id || '__________'}</div>
+          <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
+        </div>
+        <div class="student-photo">
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">PHOTO</div>'}
+        </div>
+      </div>
 
-      <!-- Subject Performance -->
-      <div class="section-title">Subject Performance</div>
-      ${(() => {
-        const all = Array.isArray(student.results) ? student.results : [];
-        
-        // Debug: log all exam set names to see what we're working with
-        console.log('=== REPORT DEBUG ===');
-        console.log('Total results found:', all.length);
-        console.log('All exam set names found:', all.map(r => r.exam_sets?.name || 'NO_NAME').join(', '));
-        console.log('First result structure:', JSON.stringify(all[0], null, 2));
-        
-        const isMid = (name: any) => {
-          const n = String(name || '').trim().toLowerCase();
-          return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
-        };
-        const isEnd = (name: any) => {
-          const n = String(name || '').trim().toLowerCase();
-          return n === 'end of term' || n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
-        };
-        const mid = all.filter((r:any) => isMid(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
-        const end = all.filter((r:any) => isEnd(r.exam_sets?.name || r.exam_set_name || r.exam_set || r.set_name || r.exam_set_id || r.exam_set_title));
-        
-        // If no results are found in either category, show all results in both sections
-        const hasMidResults = mid.length > 0;
-        const hasEndResults = end.length > 0;
-        const showAllInBoth = !hasMidResults && !hasEndResults && all.length > 0;
-        
-        console.log('Mid results count:', mid.length);
-        console.log('End results count:', end.length);
-        console.log('Show all in both:', showAllInBoth);
-
-        const renderRows = (rows: any[]) => rows.length > 0 ? rows.map((result: any) => {
-          const gradeInfo = calculateGrade(result.marks_obtained, result.total_marks);
-          return `
+      <div class="subjects-card page-section">
+        <table class="subjects-table">
+          <thead>
             <tr>
-              <td>${result.subject || ''}</td>
-              <td class="center">${result.marks_obtained ?? ''}/${result.total_marks ?? ''}</td>
-              <td class="center">${gradeInfo.grade}</td>
-              <td class="center">${gradeInfo.remark}</td>
-              <td class="center">${result.teacher_initials || '-'}</td>
+              <th>SUBJECT</th>
+              <th>FULL MARKS</th>
+              ${showMidTermColumn ? '<th>MID TERM</th>' : ''}
+              ${showEndOfTermColumn ? '<th>END OF TERM</th>' : ''}
+              <th>TEACHER\'S REMARKS</th>
+              <th>INITIALS</th>
             </tr>
-          `;
-        }).join('') : `
-          <tr>
-            <td colspan="5" class="center" style="color: #555;">N/A</td>
-          </tr>
-        `;
+          </thead>
+          <tbody>
+            ${subjectRows}
+            ${totalRow}
+          </tbody>
+        </table>
+      </div>
 
-        return `
-          <div style="margin-bottom: 8px; font-weight: bold;">MID TERM</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Subject</th>
-                <th>Marks</th>
-                <th>Grade</th>
-                <th>Remarks</th>
-                <th>Teacher Initials</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${renderRows(showAllInBoth ? all : mid)}
-            </tbody>
-          </table>
+      <div class="summary-grid page-section">
+        <div class="summary-card">
+          <div><strong>Total Marks:</strong> ${summary.totalMarks ?? summary.total_marks ?? 'N/A'}</div>
+          <div><strong>Average:</strong> ${summary.average ?? 'N/A'}</div>
+          <div><strong>Division:</strong> ${summary.division ?? 'N/A'}</div>
+        </div>
+        <div class="summary-card">
+          <div><strong>Class Position:</strong> ${classPosition}</div>
+          <div><strong>Out of:</strong> ${totalStudents} students</div>
+          <div><strong>Overall Performance:</strong> ${overallPerf || 'N/A'}</div>
+        </div>
+        <div class="summary-card">
+          <div><strong>Attendance:</strong></div>
+          <div>Days Present: ${attendancePresent}</div>
+          <div>Days Absent: ${attendanceAbsent}</div>
+          <div>Total Days: ${attendanceTotal}</div>
+          <div>Attendance %: ${attendancePercentage}</div>
+        </div>
+      </div>
 
-          <div style="margin: 16px 0 8px; font-weight: bold;">END OF TERM</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Subject</th>
-                <th>Marks</th>
-                <th>Grade</th>
-                <th>Remarks</th>
-                <th>Teacher Initials</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${renderRows(showAllInBoth ? all : end)}
-            </tbody>
-          </table>
-        `;
-      })()}
+      <div class="comments-card page-section">
+        <div class="comment-block">
+          <h3>Class Teacher's Comments:</h3>
+          <p>${classTeacherComment}</p>
+          <span class="signature-line">Signature: ______________________</span>
+        </div>
+        <div class="comment-block">
+          <h3>Headteacher's Comments:</h3>
+          <p>${headTeacherComment}</p>
+          <span class="signature-line">Signature: ______________________</span>
+        </div>
+        <div class="comment-footer">
+          <div><strong>Next term begins on:</strong> ${nextTermDisplay}</div>
+          <div><strong>Fees Balance:</strong> ${formatCurrency(feesBalance)}</div>
+        </div>
+      </div>
 
-      <!-- Summary -->
-      <div class="section-title">Summary</div>
-      <table>
-        <tr>
-          <td><strong>Total Marks:</strong></td>
-          <td>${formatValue(student.summary.totalMarks)}/${formatValue(student.summary.totalPossibleMarks)}</td>
-        </tr>
-        <tr>
-          <td><strong>Average:</strong></td>
-          <td>${formatPercentage(student.summary.average)}</td>
-        </tr>
-        <tr>
-          <td><strong>Aggregate:</strong></td>
-          <td>${formatValue(student.summary.aggregate)}</td>
-        </tr>
-        <tr>
-          <td><strong>Division:</strong></td>
-          <td>${formatValue(student.summary.division)}</td>
-        </tr>
-        <tr>
-          <td><strong>Class Position:</strong></td>
-          <td>${formatPosition(student.summary.classPosition, student.summary.average)}</td>
-        </tr>
-        <tr>
-          <td><strong>Stream Position:</strong></td>
-          <td>${formatPosition(student.summary.streamPosition, student.summary.average)}</td>
-        </tr>
-        <tr>
-          <td><strong>Attendance:</strong></td>
-          <td>${formatAttendance(student.summary.attendanceDetails.presentDays, student.summary.attendanceDetails.totalSchoolDays, student.summary.attendancePercentage)}</td>
-        </tr>
-        <tr>
-          <td><strong>Performance:</strong></td>
-          <td>${formatValue(student.summary.performanceRemark)}</td>
-        </tr>
-      </table>
-
-      <!-- Remarks -->
-      <div class="section-title">Remarks</div>
-      <p><strong>Class Teacher's Remarks:</strong></p>
-      <p>&nbsp;</p>
-      <p>&nbsp;</p>
-      <p>&nbsp;</p>
-      <p><strong>Head Teacher's Remarks:</strong></p>
-      <p>&nbsp;</p>
-      <p>&nbsp;</p>
-      <p>&nbsp;</p>
-
-      <!-- Footer -->
-      <div class="footer">Printed from: Pwezacore</div>
+      <div class="footer">
+        <div>Printed from: Pwezacore</div>
+        <div>School Motto: '${school?.motto || 'Education the Future'}'</div>
+      </div>
     </body>
     </html>
   `;

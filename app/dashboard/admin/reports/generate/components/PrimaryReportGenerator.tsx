@@ -991,10 +991,10 @@ export function PrimaryReportGenerator() {
                 // This ensures grades are available for display regardless of selection
                 if (isBeginning(examSetName)) {
                   subjectGroups[subject].bot_marks = displayMarks;
-                  subjectGroups[subject].bot_grade = displayGrade; // Grade from database
+                  subjectGroups[subject].bot_grade = displayGrade || ''; // Grade from database
                 } else if (isMid(examSetName)) {
                   subjectGroups[subject].mot_marks = displayMarks;
-                  subjectGroups[subject].mot_grade = displayGrade; // Grade from database
+                  subjectGroups[subject].mot_grade = displayGrade || ''; // Grade from database
                 } else if (isEnd(examSetName)) {
                   // For End of Term, always update marks
                   subjectGroups[subject].eot_marks = displayMarks;
@@ -2985,10 +2985,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.32cm',
-            paddingBottom: '0.06cm',
+            paddingTop: '0.28cm',
+            paddingBottom: '0.05cm',
             paddingLeft: '0',
-            paddingRight: '0.4cm',
+            paddingRight: '0.32cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -2997,13 +2997,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.3cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.1cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '138px',
-                height: '138px',
+                width: '132px',
+                height: '132px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3032,7 +3032,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         </div>
         
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '138px', paddingLeft: '0.32cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '132px', paddingLeft: '0.3cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
@@ -3042,8 +3042,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    lineHeight: '1.08',
-                    marginBottom: '0.24cm',
+                    lineHeight: '1.06',
+                    marginBottom: '0.22cm',
                     color: school?.header_school_name_color || '#1e3a8a',
                     marginTop: 0,
                     whiteSpace: 'nowrap'
@@ -3128,8 +3128,8 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             style={{
               height: '1px',
               background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
-              marginTop: '0.26cm',
-              marginBottom: '0.14cm',
+              marginTop: '0.22cm',
+              marginBottom: '0.12cm',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
@@ -3179,7 +3179,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               print-color-adjust: exact !important;
               page-break-inside: avoid !important;
               break-inside: avoid !important;
-              margin-top: 0.32cm !important;
+              margin-top: 0.28cm !important;
               margin-bottom: 0.18cm !important;
             }
           }
@@ -3188,7 +3188,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
       <div className="relative z-10 space-y-3" style={{ marginTop: '0.2cm' }}>
       {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-3.5 text-[10.8pt] bg-white border border-blue-100/50 rounded-xl shadow-sm px-4.5 py-3">
+        <div className="flex items-start justify-between gap-[0.55rem] text-[9.9pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2">
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
             <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
             <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
@@ -3199,7 +3199,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           </div>
           
           {/* Student Photo */}
-          <div className="w-[2.7cm] h-[3.2cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-[2.0cm] h-[2.6cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -3543,8 +3543,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
   return (
     <div
-      className="relative px-[0.18cm] py-[0.18cm] bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: '1.33', paddingTop: '0.08cm' }}
+      className="relative px-[0.1cm] py-[0.1cm] bg-white text-slate-800"
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.1pt', lineHeight: '1.32', paddingTop: '0.06cm' }}
     >
       {(school?.logo_url || school?.logo) && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -3561,10 +3561,10 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         <div 
           className="print-header-container"
           style={{
-            paddingTop: '0.32cm',
-            paddingBottom: '0.06cm',
+            paddingTop: '0.28cm',
+            paddingBottom: '0.05cm',
             paddingLeft: '0',
-            paddingRight: '0.4cm',
+            paddingRight: '0.32cm',
             background: 'transparent',
             WebkitPrintColorAdjust: 'exact',
             printColorAdjust: 'exact',
@@ -3573,13 +3573,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           }}
         >
           {/* Two-Column Layout */}
-          <div className="flex items-center" style={{ minHeight: '2.3cm', position: 'relative' }}>
+          <div className="flex items-center" style={{ minHeight: '2.1cm', position: 'relative' }}>
             {/* Left Column: Logo - Positioned at very left edge */}
             <div 
               className="flex-shrink-0"
               style={{
-                width: '138px',
-                height: '138px',
+                width: '132px',
+                height: '132px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3608,7 +3608,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             </div>
 
             {/* Center Column: School Information - Starts where badge ends */}
-            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '138px', paddingLeft: '0.32cm' }}>
+            <div className="flex-1 text-center" style={{ fontFamily: 'Times New Roman, serif', marginLeft: '132px', paddingLeft: '0.32cm' }}>
               {/* School Name - Bold Sans-serif Title - Uses saved color */}
               {school?.name && (
                 <h1 
@@ -3618,8 +3618,8 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Arial, Helvetica, sans-serif',
                     textTransform: 'uppercase',
                     letterSpacing: '0.04em',
-                    lineHeight: '1.08',
-                    marginBottom: '0.24cm',
+                    lineHeight: '1.06',
+                    marginBottom: '0.22cm',
                     color: school?.header_school_name_color || '#1e3a8a',
                     marginTop: 0,
                     whiteSpace: 'nowrap'
@@ -3762,7 +3762,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         `}} />
       </div>
 
-      <div className="relative z-10 space-y-2.6" style={{ marginTop: '0.16cm' }}>
+      <div className="relative z-10 space-y-[0.55rem]" style={{ marginTop: '0.1cm' }}>
       {/* STUDENT INFO */}
         <div className="flex items-start justify-between gap-[0.65rem] text-[10pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3.5 py-2.3">
           <div className="grid grid-cols-2 gap-x-4.5 gap-y-1.6 flex-1">
@@ -3788,20 +3788,20 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
 
       {/* SUBJECTS TABLE */}
       <div className="bg-white border border-blue-100/60 rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full text-[8.9pt]">
+          <table className="w-full text-[8.8pt]">
         <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
-                <th className="border border-blue-100 px-2.3 py-1.4 text-left">Subject</th>
+                <th className="border border-blue-100 px-1.8 py-1.1 text-left">Subject</th>
             {hasBOTExamSets && !isMidTermSelected && (
-                  <th className="border border-blue-100 px-2.3 py-1.4 text-center w-16">BOT</th>
+                  <th className="border border-blue-100 px-1.8 py-1.1 text-center w-16">BOT</th>
             )}
-                <th className="border border-blue-100 px-2.3 py-1.4 text-center w-16">MID</th>
+                <th className="border border-blue-100 px-1.8 py-1.1 text-center w-16">MID</th>
             {showENDColumn && (
-                  <th className="border border-blue-100 px-2.3 py-1.4 text-center w-16">END</th>
+                  <th className="border border-blue-100 px-1.8 py-1.1 text-center w-16">END</th>
             )}
-                <th className="border border-blue-100 px-2.3 py-1.4 text-center w-16">Grade</th>
-                <th className="border border-blue-100 px-2.3 py-1.4 text-left">Teacher's Comment</th>
-                <th className="border border-blue-100 px-2.3 py-1.4 text-left">Teacher</th>
+                <th className="border border-blue-100 px-1.8 py-1.1 text-center w-16">Grade</th>
+                <th className="border border-blue-100 px-1.8 py-1.1 text-left">Teacher's Comment</th>
+                <th className="border border-blue-100 px-1.8 py-1.1 text-left">Teacher</th>
           </tr>
         </thead>
         <tbody>
@@ -3861,17 +3861,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             
             return (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
-                  <td className="border border-blue-100 px-2.3 py-1.2 font-medium text-slate-900">{subj.subject_name || ''}</td>
+                  <td className="border border-blue-100 px-2 py-1.1 font-medium text-slate-900">{subj.subject_name || ''}</td>
                 {hasBOTExamSets && !isMidTermSelected && (
-                    <td className="border border-blue-100 px-2.3 py-1.2 text-center">{bot}</td>
+                    <td className="border border-blue-100 px-1.8 py-1.1 text-center">{bot}</td>
                 )}
-                  <td className="border border-blue-100 px-2.3 py-1.2 text-center">{mot}</td>
+                  <td className="border border-blue-100 px-1.8 py-1.1 text-center">{mot}</td>
                 {showENDColumn && (
-                    <td className="border border-blue-100 px-2.3 py-1.2 text-center">{eot}</td>
+                    <td className="border border-blue-100 px-1.8 py-1.1 text-center">{eot}</td>
                 )}
-                  <td className="border border-blue-100 px-2.3 py-1.2 text-center font-bold text-blue-900">{displayGrade}</td>
-                  <td className="border border-blue-100 px-2.3 py-1.2 text-[8.3pt] text-slate-700 leading-[1.26]">{subj.teacher_comment || ''}</td>
-                  <td className="border border-blue-100 px-2.3 py-1.2 text-[8.3pt] text-slate-700">{subj.teacher_name || ''}</td>
+                  <td className="border border-blue-100 px-1.8 py-1.1 text-center font-bold text-blue-900">{displayGrade}</td>
+                  <td className="border border-blue-100 px-1.8 py-1.1 text-[8.2pt] text-slate-700 leading-[1.24]">{subj.teacher_comment || ''}</td>
+                  <td className="border border-blue-100 px-1.8 py-1.1 text-[8.2pt] text-slate-700">{subj.teacher_name || ''}</td>
               </tr>
             );
           })}
@@ -3945,25 +3945,25 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         </div>
 
       {/* COMMENTS */}
-      <div className="text-[8.4pt] rounded-xl bg-white border border-blue-100/60 shadow-sm px-3.1 py-2.3 space-y-1.8">
+      <div className="text-[8.3pt] rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.6 py-1.9 space-y-1.4">
           <div>
-            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1.1 text-[8.9pt]">Class Teacher's Comments</h3>
-            <p className="text-slate-700 leading-[1.28]">{classTeacherComment}</p>
-            <div className="text-slate-700 mt-1.1 text-[7.9pt]">Signature: ____________________</div>
+            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1 text-[8.7pt]">Class Teacher's Comments</h3>
+            <p className="text-slate-700 leading-[1.26]">{classTeacherComment}</p>
+            <div className="text-slate-700 mt-1 text-[7.8pt]">Signature: ____________________</div>
           </div>
           <div>
-            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1.1 text-[8.9pt]">Headteacher's Comments</h3>
-            <p className="text-slate-700 leading-[1.28]">{headTeacherComment}</p>
-            <div className="text-slate-700 mt-1.1 text-[7.9pt]">Signature: ____________________</div>
+            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1 text-[8.7pt]">Headteacher's Comments</h3>
+            <p className="text-slate-700 leading-[1.26]">{headTeacherComment}</p>
+            <div className="text-slate-700 mt-1 text-[7.8pt]">Signature: ____________________</div>
           </div>
-          <div className="flex justify-between items-center text-[8pt] pt-1.8 mt-1.6 border-t border-blue-100/60">
+          <div className="flex justify-between items-center text-[7.9pt] pt-1.4 mt-1.4 border-t border-blue-100/60">
             <div><strong className="text-blue-900">Next Term Begins:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
             <div><strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}</div>
           </div>
       </div>
 
       {/* FOOTER */}
-      <div className="text-center text-[7pt] mt-1.6 pt-[0.22rem] border-t border-blue-100/80 text-slate-500">
+      <div className="text-center text-[6.8pt] mt-1.1 pt-[0.18rem] border-t border-blue-100/80 text-slate-500">
         Generated by PwezaCore School Management System
         </div>
       </div>
