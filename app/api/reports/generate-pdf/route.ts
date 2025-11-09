@@ -1684,9 +1684,10 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 0;
-          background: #ffffff;
-          color: #0f172a;
+          padding: 0.5mm 1.8mm 1mm;
+          box-sizing: border-box;
+          background: white;
+          color: black;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
@@ -1745,13 +1746,13 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 9.1pt;
+          font-size: 9.5pt;
         }
 
         .subjects-table th,
         .subjects-table td {
           border: 1px solid rgba(191, 219, 254, 0.45);
-          padding: 3.6px 5.4px;
+          padding: 4.1px 5.8px;
         }
 
         .subjects-table th {
@@ -1797,17 +1798,17 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         .summary-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 3.4px;
-          margin-bottom: 3.6px;
+          gap: 3.8px;
+          margin-bottom: 4.2px;
         }
 
         .summary-card {
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
           border-radius: 9px;
-          padding: 4.2px 6px;
-          font-size: 8pt;
-          line-height: 1.26;
+          padding: 5px 6.4px;
+          font-size: 8.4pt;
+          line-height: 1.28;
         }
 
         .summary-card strong {
@@ -1818,30 +1819,40 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
           background: rgba(255, 255, 255, 0.98);
           border: 1px solid rgba(191, 219, 254, 0.45);
           border-radius: 9px;
-          padding: 5px 6px;
-          font-size: 8.1pt;
-          line-height: 1.26;
-          margin-bottom: 3.6px;
+          padding: 5.6px 6.5px;
+          font-size: 8.3pt;
+          line-height: 1.28;
+          margin-bottom: 4.2px;
         }
 
         .comments-card h3 {
-          font-size: 9.2pt;
+          font-size: 9pt;
           font-weight: 600;
           color: #1e3a8a;
-          margin-bottom: 4px;
+          margin-bottom: 3.2px;
         }
 
         .comment-block {
-          margin-bottom: 4.2px;
+          margin-bottom: 4.8px;
         }
 
         .comment-block:last-child {
           margin-bottom: 0;
         }
 
+        .comment-footer {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 4.6px;
+          margin-top: 5.2px;
+          border-top: 1px solid rgba(191, 219, 254, 0.5);
+          font-size: 8pt;
+        }
+
         .signature-line {
           display: block;
-          margin-top: 5px;
+          margin-top: 3.6px;
         }
 
         .footer-info {
