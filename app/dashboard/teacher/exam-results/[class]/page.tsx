@@ -888,6 +888,7 @@ export default function TeacherExamResultsClassPage() {
               if (!canonicalKey) return;
               payload[canonicalKey] = value;
             });
+            const payloadJson = Object.keys(payload).length ? JSON.stringify(payload) : null;
 
             const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
               p_school_id: schoolId,
@@ -901,7 +902,7 @@ export default function TeacherExamResultsClassPage() {
               p_remarks: '',
               p_teacher_id: teacherIdForSave,
               p_teacher_comment: null,
-              p_nursery_skills: payload
+              p_nursery_skills: payloadJson
             });
 
             if (resp.error) {
