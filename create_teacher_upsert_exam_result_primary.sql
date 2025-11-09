@@ -6,11 +6,11 @@ CREATE OR REPLACE FUNCTION teacher_upsert_exam_result_primary(
     p_student_id UUID,
     p_class_name TEXT,
     p_subject TEXT,
-    p_marks_obtained NUMERIC,
-    p_total_marks NUMERIC,
-    p_grade TEXT,
-    p_remarks TEXT,
     p_teacher_id TEXT,
+    p_marks_obtained NUMERIC DEFAULT NULL,
+    p_total_marks NUMERIC DEFAULT NULL,
+    p_grade TEXT DEFAULT NULL,
+    p_remarks TEXT DEFAULT NULL,
     p_teacher_comment TEXT DEFAULT NULL,
     p_nursery_skills JSONB DEFAULT NULL
 )
