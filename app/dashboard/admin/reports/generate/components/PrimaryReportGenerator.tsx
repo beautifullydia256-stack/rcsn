@@ -2888,11 +2888,10 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : undefined;
                   const cellBackground = accentColor ? applyAlphaToHex(accentColor, 0.22) : '#ffffff';
                   const labelColor = accentColor ? '#0f172a' : '#1f2937';
-                  const badgeBackground = accentColor ? accentColor : '#e2e8f0';
-                  const badgeTextColor = accentColor ? getReadableTextColor(accentColor) : '#1f2937';
-                  const badgeBorderColor = accentColor ? applyAlphaToHex(accentColor, 0.55) : '#94a3b8';
+                  const swatchBackground = accentColor || '#e2e8f0';
+                  const swatchBorder = accentColor ? applyAlphaToHex(accentColor, 0.55) : '#94a3b8';
                   const cellBorderColor = accentColor || '#1f2937';
-                  const placeholderText = performanceWord || 'Awaiting';
+                  const hasPerformance = Boolean(performanceWord);
 
                   return (
                     <td
@@ -2914,27 +2913,20 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                         <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
                           {skill.label}
                         </span>
-                        <span
+                        <div
                           style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '56px',
-                            padding: '3px 12px',
+                            width: '60px',
+                            height: '18px',
                             borderRadius: '999px',
-                            fontSize: '10pt',
-                            fontWeight: 700,
-                            letterSpacing: '0.02em',
-                            textTransform: 'uppercase',
-                            background: badgeBackground,
-                            color: badgeTextColor,
-                            border: `1px solid ${badgeBorderColor}`,
-                            opacity: performanceWord ? 1 : 0.75,
-                            fontStyle: performanceWord ? 'normal' : 'italic'
+                            background: swatchBackground,
+                            border: `1px solid ${swatchBorder}`,
+                            boxShadow: accentColor ? `0 0 0 2px ${applyAlphaToHex(accentColor, 0.12)}` : 'none',
+                            opacity: hasPerformance ? 1 : 0.45
                           }}
-                        >
-                          {placeholderText}
-                        </span>
+                        />
+                        {!hasPerformance && (
+                          <span style={{ fontSize: '8pt', fontStyle: 'italic', color: '#64748b' }}>—</span>
+                        )}
                       </div>
                     </td>
                   );

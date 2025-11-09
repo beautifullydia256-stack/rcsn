@@ -1161,11 +1161,10 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
     const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : null;
     const cellBackground = accentColor ? applyAlphaToHex(accentColor, 0.22) : '#ffffff';
     const labelColor = accentColor ? '#0f172a' : '#1f2937';
-    const badgeBackground = accentColor ? accentColor : '#e2e8f0';
-    const badgeTextColor = accentColor ? getReadableTextColor(accentColor) : '#1f2937';
-    const badgeBorderColor = accentColor ? applyAlphaToHex(accentColor, 0.6) : '#94a3b8';
+    const swatchBackground = accentColor || '#e2e8f0';
+    const swatchBorder = accentColor ? applyAlphaToHex(accentColor, 0.6) : '#94a3b8';
     const cellBorderColor = accentColor || '#1f2937';
-    const placeholderText = performanceWord || 'Awaiting';
+    const hasPerformance = Boolean(performanceWord);
       const cellBaseStyles = [
       `border: 1px solid ${cellBorderColor}`,
         'padding: 8px 6px',
@@ -1177,28 +1176,22 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       accentColor ? `box-shadow: 0 4px 12px ${applyAlphaToHex(accentColor, 0.18)}` : ''
       ];
 
-    const badgeStyles = [
-      'display: inline-flex',
-      'align-items: center',
-      'justify-content: center',
-      'min-width: 56px',
-      'padding: 3px 12px',
+    const swatchStyles = [
+      'width: 60px',
+      'height: 18px',
       'border-radius: 999px',
-      'font-size: 10pt',
-      'font-weight: 700',
-      'text-transform: uppercase',
-      'letter-spacing: 0.02em',
-      `background: ${badgeBackground}`,
-      `color: ${badgeTextColor}`,
-      `border: 1px solid ${badgeBorderColor}`,
-      performanceWord ? '' : 'opacity: 0.75; font-style: italic;'
+      `background: ${swatchBackground}`,
+      `border: 1px solid ${swatchBorder}`,
+      accentColor ? `box-shadow: 0 0 0 2px ${applyAlphaToHex(accentColor, 0.12)}` : '',
+      hasPerformance ? '' : 'opacity: 0.45;'
     ].filter(Boolean).join('; ');
 
       return `
         <td style="${cellBaseStyles.join('; ')}">
           <div class="nursery-skill-cell">
           <span class="nursery-skill-label" style="color: ${labelColor};">${skill.label}</span>
-          <span class="nursery-skill-value" style="${badgeStyles}">${placeholderText}</span>
+          <span class="nursery-skill-value" style="${swatchStyles}"></span>
+          ${performanceWord ? '' : '<span style="font-size: 8pt; font-style: italic; color: #64748b;">—</span>'}
           </div>
         </td>
       `;
