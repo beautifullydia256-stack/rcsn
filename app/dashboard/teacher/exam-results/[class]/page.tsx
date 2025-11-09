@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { createServerClient } from '@supabase/ssr';
@@ -14,6 +14,7 @@ import {
   applyAlphaToHex,
   normalizeNurseryPerformanceWord,
   sanitizeNurseryKey,
+  getNurserySkillKeyVariants,
   NurseryPerformanceRecord,
   NurseryPerformanceWord
 } from "@/src/templates/primary/nurseryPerformance";
@@ -62,6 +63,22 @@ export default function TeacherExamResultsClassPage() {
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
   const nurserySkillsFlat = useMemo(() => NURSERY_SKILL_GRID.flat().filter(skill => skill.label), []);
+  const nurserySkillVariantLookup = useMemo(() => {
+    const map = new Map<string, string>();
+    nurserySkillsFlat.forEach(skill => {
+      getNurserySkillKeyVariants(skill).forEach(variant => {
+        map.set(variant, skill.key);
+      });
+    });
+    return map;
+  }, [nurserySkillsFlat]);
+  const canonicalizeNurserySkillKey = useCallback((rawKey: unknown): string | null => {
+    const sanitized = sanitizeNurseryKey(rawKey);
+    if (!sanitized) return null;
+    const canonical = nurserySkillVariantLookup.get(sanitized) || sanitized;
+    if (canonical === 'placeholder') return null;
+    return canonical;
+  }, [nurserySkillVariantLookup]);
   const activeNurserySkill = useMemo(() => {
     if (!isNursery || !selectedSubject) return null;
     const normalized = sanitizeNurseryKey(selectedSubject);
@@ -866,9 +883,10 @@ export default function TeacherExamResultsClassPage() {
             const performances = nurseryPerformances[studentId] || {};
             const payload: Record<string, NurseryPerformanceWord> = {};
             Object.entries(performances).forEach(([skillKey, value]) => {
-              if (value) {
-                payload[skillKey] = value;
-              }
+              if (!value) return;
+              const canonicalKey = canonicalizeNurserySkillKey(skillKey);
+              if (!canonicalKey) return;
+              payload[canonicalKey] = value;
             });
 
             const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
@@ -1117,17 +1135,21 @@ export default function TeacherExamResultsClassPage() {
               }
 
               if (source) {
-                const normalized: NurseryPerformanceRecord = {};
-                Object.entries(source).forEach(([skillKey, value]) => {
-                  const normalizedValue = normalizeNurseryPerformanceWord(value);
-                  if (normalizedValue) {
-                    normalized[skillKey] = normalizedValue;
-                  }
-                });
+              const normalized: NurseryPerformanceRecord = {};
+              Object.entries(source).forEach(([skillKey, value]) => {
+                const canonicalKey = canonicalizeNurserySkillKey(skillKey);
+                if (!canonicalKey) return;
+                const normalizedValue = normalizeNurseryPerformanceWord(value);
+                if (normalizedValue) {
+                  normalized[canonicalKey] = normalizedValue;
+                }
+              });
+              if (Object.keys(normalized).length > 0) {
                 map[r.student_id] = normalized;
               }
-            });
-            setNurseryPerformances(map);
+            }
+          });
+          setNurseryPerformances(map);
             setNurseryDirtyStudents({});
             setExamResults({});
           } else {
@@ -1212,14 +1234,17 @@ export default function TeacherExamResultsClassPage() {
               source = raw as Record<string, unknown>;
             }
 
-            if (source) {
-              const normalized: NurseryPerformanceRecord = {};
-              Object.entries(source).forEach(([skillKey, value]) => {
-                const normalizedValue = normalizeNurseryPerformanceWord(value);
-                if (normalizedValue) {
-                  normalized[skillKey] = normalizedValue;
-                }
-              });
+            if (!source) return;
+            const normalized: NurseryPerformanceRecord = {};
+            Object.entries(source).forEach(([skillKey, value]) => {
+              const canonicalKey = canonicalizeNurserySkillKey(skillKey);
+              if (!canonicalKey) return;
+              const normalizedValue = normalizeNurseryPerformanceWord(value);
+              if (normalizedValue) {
+                normalized[canonicalKey] = normalizedValue;
+              }
+            });
+            if (Object.keys(normalized).length > 0) {
               map[r.student_id] = normalized;
             }
           });
