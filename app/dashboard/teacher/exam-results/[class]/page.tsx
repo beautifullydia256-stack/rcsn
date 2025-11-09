@@ -888,7 +888,12 @@ export default function TeacherExamResultsClassPage() {
               if (!canonicalKey) return;
               payload[canonicalKey] = value;
             });
-            const payloadJson = Object.keys(payload).length ? JSON.stringify(payload) : null;
+            const payloadForRpc = Object.keys(payload).length ? payload : null;
+            console.debug('Saving nursery performance', {
+              studentId,
+              subject: activeNurserySkill?.label || selectedSubject,
+              payload: payloadForRpc
+            });
 
             const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
               p_school_id: schoolId,
@@ -902,12 +907,15 @@ export default function TeacherExamResultsClassPage() {
               p_remarks: '',
               p_teacher_id: teacherIdForSave,
               p_teacher_comment: null,
-              p_nursery_skills: payloadJson
+              p_nursery_skills: payloadForRpc
             });
 
             if (resp.error) {
               console.error('RPC nursery save error:', resp.error);
               throw resp.error;
+            }
+            if (resp.data && resp.data.success === false) {
+              throw new Error(resp.data.error || 'Failed to save nursery performance');
             }
           });
 
