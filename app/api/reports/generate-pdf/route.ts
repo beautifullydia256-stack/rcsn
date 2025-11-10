@@ -849,6 +849,18 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
           display: flex;
           align-items: center;
           justify-content: center;
+          height: 100%;
+          width: 100%;
+          background: rgba(226, 232, 240, 0.35);
+          letter-spacing: 0.08em;
+        }
+
+        .nursery-photo-placeholder {
+          font-size: 10px;
+          color: #64748b;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           width: 100%;
           height: 100%;
           background: #f8fafc;
@@ -1219,7 +1231,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
   const nurserySkillRowsHtml = NURSERY_SKILL_GRID.map(row => {
     const cells = row.map(skill => {
       if (!skill.label) {
-        return '<td style="border: 1px solid #000; padding: 8px 6px; min-height: 42px; background: #ffffff;">&nbsp;</td>';
+        return '<td style="border: 2px solid rgba(148,163,184,0.35); padding: 8px 6px; min-height: 42px; background: #ffffff;">&nbsp;</td>';
       }
 
       const performanceWord = resolveNurseryPerformanceValue(student, skill);
@@ -1237,7 +1249,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
 
       const cellBaseStyles = [
-        `border: 1px solid ${cellBorderColor}`,
+        `border: 2px solid ${cellBorderColor}`,
         'padding: 8px 6px',
         'min-height: 48px',
         'text-align: center',
@@ -1278,20 +1290,22 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           size: A4;
           margin: 0;
         }
-        
+
+        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&display=swap');
+
         * {
           box-sizing: border-box;
         }
         
         body {
-          font-family: 'Times New Roman', 'Times', serif;
+          font-family: 'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', sans-serif;
           width: 210mm;
           min-height: 297mm;
           margin: 0;
-          padding: 0.25cm 0.35cm 0.4cm;
+          padding: 0;
           box-sizing: border-box;
-          background: white;
-          color: black;
+          background: linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%);
+          color: #1f2937;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
@@ -1438,45 +1452,81 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           color: #1f2937;
         }
         
+        .nursery-wrapper {
+          position: relative;
+          width: 210mm;
+          min-height: 297mm;
+          padding: 0.6cm;
+          box-sizing: border-box;
+          border-radius: 26px;
+          overflow: hidden;
+        }
+
+        .nursery-overlay {
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%);
+          opacity: 0.65;
+          pointer-events: none;
+        }
+
+        .nursery-paper {
+          position: relative;
+          z-index: 2;
+          background: rgba(255,255,255,0.97);
+          border-radius: 26px;
+          padding: 0.45cm 0.55cm 0.55cm;
+          box-shadow: 0 30px 48px rgba(30,64,175,0.22);
+        }
+
         .student-info {
           margin-bottom: 18px;
-          font-size: 11pt;
+          font-size: 10.4pt;
         }
         
-        .student-info-row {
+        .nursery-student-row {
           display: flex;
-          justify-content: space-between;
           align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          background: linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%);
+          border: 4px solid rgba(30,64,175,0.18);
+          border-radius: 20px;
+          padding: 10px 16px;
+          box-shadow: 0 16px 28px rgba(30,64,175,0.18);
         }
-        
-        .student-info-grid {
+
+        .nursery-student-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 14px;
-          margin-bottom: 12px;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 8px 22px;
         }
-        
-        .student-photo {
+
+        .nursery-student-grid strong {
+          color: #1e3a8a;
+          font-weight: 700;
+          letter-spacing: 0.02em;
+        }
+
+        .nursery-student-photo {
           width: 21mm;
           height: 29mm;
-          border: 1px solid #60a5fa;
+          border: 2px solid #60a5fa;
           background: #ffffff;
+          border-radius: 10px;
           display: flex;
           align-items: center;
           justify-content: center;
           overflow: hidden;
-          float: right;
-          margin-left: 14px;
-          border-radius: 6px;
-          box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+          box-shadow: 0 6px 14px rgba(30,64,175,0.16);
         }
-        
-        .student-photo img {
+
+        .nursery-student-photo img {
           width: 100%;
           height: 100%;
           object-fit: cover;
         }
-        
+
         table {
           width: 100%;
           border-collapse: collapse;
@@ -1515,13 +1565,33 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           padding: 0;
         }
 
+        .nursery-skill-frame {
+          background: linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%);
+          border: 4px solid rgba(30,64,175,0.18);
+          border-radius: 20px;
+          padding: 8px;
+          box-shadow: 0 20px 36px rgba(30,64,175,0.18);
+        }
+
         .nursery-skill-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 10pt;
           background: #ffffff;
           border-radius: 12px;
           overflow: hidden;
-          position: relative;
-          z-index: 2;
-          box-shadow: 0 18px 36px rgba(30,64,175,0.18);
+        }
+
+        .nursery-paper .school-name,
+        .nursery-paper .school-contact,
+        .nursery-paper .report-title,
+        .nursery-paper .report-chip,
+        .nursery-paper .school-meta {
+          font-family: 'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', sans-serif !important;
+        }
+
+        .nursery-paper .school-name {
+          letter-spacing: 0.05em;
         }
 
         .nursery-skill-cell {
@@ -1551,17 +1621,23 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
           flex-wrap: wrap;
           align-items: center;
           gap: 18px;
-          margin-top: 14px;
+          margin-top: 16px;
           font-size: 9.5pt;
+          background: rgba(255,255,255,0.9);
+          border-radius: 16px;
+          padding: 10px 14px;
+          border: 2px dashed rgba(30,64,175,0.24);
+          box-shadow: 0 8px 18px rgba(30,64,175,0.12);
         }
-
+        
         .nursery-legend-item {
           display: flex;
           align-items: center;
           gap: 8px;
           font-weight: 600;
+          letter-spacing: 0.02em;
         }
-
+        
         .nursery-legend-swatch {
           width: 18px;
           height: 18px;
@@ -1777,11 +1853,13 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       <!-- DEVELOPMENTAL SKILLS TABLE -->
       <div class="nursery-skill-section">
         <div class="nursery-heading">Developmental Skills Checklist</div>
-        <table class="nursery-skill-table">
-          <tbody>
-            ${nurserySkillRowsHtml}
-          </tbody>
-        </table>
+        <div class="nursery-skill-frame">
+          <table class="nursery-skill-table">
+            <tbody>
+              ${nurserySkillRowsHtml}
+            </tbody>
+          </table>
+        </div>
         <div class="nursery-legend">
           ${nurseryLegendHtml}
         </div>
@@ -2059,12 +2137,14 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .subjects-card {
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
+          background: linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%);
+          border: 4px solid rgba(30,64,175,0.18);
+          border-radius: 18px;
           overflow: hidden;
+          box-shadow: 0 20px 36px rgba(30,64,175,0.18);
+          padding: 6px;
         }
-        
+
         .subjects-table {
           width: 100%;
           border-collapse: collapse;
@@ -2073,13 +2153,13 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
 
         .subjects-table th,
         .subjects-table td {
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          padding: 4.6px 6.2px;
+          border: 2px solid rgba(255, 255, 255, 0.82);
+          padding: 5.2px 6.6px;
         }
         
         .subjects-table th {
-          background: rgba(191, 219, 254, 0.68);
-          color: #1e3a8a;
+          background: rgba(191, 219, 254, 0.82);
+          color: #1a3a8a;
           font-weight: 600;
           text-transform: uppercase;
           letter-spacing: 0.04em;
@@ -2125,13 +2205,25 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
         
         .summary-card {
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-          padding: 6.2px 7px 6.4px;
-          font-size: 8.7pt;
-          line-height: 1.3;
-          min-height: 52px;
+          border-radius: 18px;
+          padding: 8px 12px;
+          font-size: 8.9pt;
+          line-height: 1.35;
+          min-height: 60px;
+          border: 3px solid rgba(30,64,175,0.12);
+          box-shadow: 0 10px 24px rgba(30,64,175,0.16);
+        }
+
+        .summary-card.sunny {
+          background: linear-gradient(135deg, rgba(255,244,197,0.95) 0%, rgba(255,228,199,0.95) 100%);
+        }
+
+        .summary-card.sky {
+          background: linear-gradient(135deg, rgba(203,238,255,0.95) 0%, rgba(221,209,255,0.95) 100%);
+        }
+
+        .summary-card.meadow {
+          background: linear-gradient(135deg, rgba(207,255,226,0.95) 0%, rgba(223,255,204,0.95) 100%);
         }
         
         .summary-card strong {
@@ -2139,20 +2231,22 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
         }
 
         .comments-card {
-          background: rgba(255, 255, 255, 0.98);
-          border: 1px solid rgba(191, 219, 254, 0.45);
-          border-radius: 10px;
-          padding: 6.6px 7.4px;
-          font-size: 8.6pt;
-          line-height: 1.3;
-          margin-bottom: 5.2px;
+          background: linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%);
+          border: 3px solid rgba(30,64,175,0.12);
+          border-radius: 18px;
+          padding: 12px 16px;
+          font-size: 8.8pt;
+          line-height: 1.35;
+          margin-bottom: 6px;
+          box-shadow: 0 12px 28px rgba(30,64,175,0.14);
         }
 
         .comments-card h3 {
-          font-size: 9pt;
+          font-size: 9.4pt;
           font-weight: 600;
           color: #1e3a8a;
-          margin-bottom: 3.2px;
+          margin-bottom: 4px;
+          letter-spacing: 0.03em;
         }
         
         .comment-block {
@@ -2239,33 +2333,38 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       </style>
     </head>
     <body>
-      <div class="watermark">
-        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
-      </div>
-      
-      ${generateProfessionalHeaderHTML(
-        school,
-        schoolLogoBase64,
-        `STUDENT'S PROGRESSIVE REPORT OF ${examSet?.term ? `TERM ${examSet.term}` : 'TERM'}`,
-        examSet
-      )}
+      <div class="nursery-wrapper">
+        <div class="nursery-overlay"></div>
+        <div class="watermark">
+          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
+        </div>
 
-      <div class="content-stack">
-      <div class="student-info page-section">
-          <div class="student-info-grid">
+        <div class="nursery-paper">
+          ${generateProfessionalHeaderHTML(
+            school,
+            schoolLogoBase64,
+            `STUDENT'S PROGRESSIVE REPORT OF ${examSet?.term ? `TERM ${examSet.term}` : 'TERM'}`,
+            examSet
+          )}
+
+          <div class="content-stack">
+      <div class="student-info nursery-student-info page-section">
+        <div class="nursery-student-row">
+          <div class="nursery-student-grid">
             <div><strong>STUDENT'S NAME:</strong> ${student.name}</div>
-            <div><strong>YEAR:</strong> ${examSet?.year || '2025'}</div>
-            <div><strong>STREAM:</strong> EAST</div>
+            <div><strong>YEAR:</strong> ${examSet?.year || new Date().getFullYear()}</div>
+            <div><strong>STREAM:</strong> ${streamDisplay}</div>
             <div><strong>CLASS:</strong> ${student.current_class}</div>
-          <div><strong>LIN:</strong> ${student.admission_number || student.student_id || '__________'}</div>
-            <div><strong>Date:</strong> ${examSet?.date || '26/05/2025'}</div>
+            <div><strong>ADMISSION NO:</strong> ${student.admission_number || student.student_id || '__________'}</div>
+            <div><strong>REPORT DATE:</strong> ${reportDateDisplay}</div>
           </div>
-          <div class="student-photo">
+          <div class="nursery-student-photo">
             ${
               studentPhotoSrc
                 ? `<img src="${studentPhotoSrc}" alt="Student Photo" />`
-                : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; background: #f8fafc;">PHOTO</div>'
+                : '<div class="nursery-photo-placeholder">PHOTO</div>'
             }
+          </div>
         </div>
       </div>
 
@@ -2289,17 +2388,17 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
       </div>
 
       <div class="summary-grid page-section">
-        <div class="summary-card">
+        <div class="summary-card sunny">
           <div><strong>Total Marks:</strong> ${summary.totalMarks ?? summary.total_marks ?? 'N/A'}</div>
           <div><strong>Average:</strong> ${summary.average ?? 'N/A'}</div>
           <div><strong>Division:</strong> ${summary.division ?? 'N/A'}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card sky">
           <div><strong>Class Position:</strong> ${classPosition}</div>
           <div><strong>Out of:</strong> ${totalStudents} students</div>
           <div><strong>Overall Performance:</strong> ${overallPerf || 'N/A'}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card meadow">
           <div><strong>Attendance:</strong></div>
           <div>Days Present: ${attendancePresent}</div>
           <div>Days Absent: ${attendanceAbsent}</div>
@@ -3469,17 +3568,17 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
       </div>
 
       <div class="summary-grid page-section">
-        <div class="summary-card">
+        <div class="summary-card sunny">
           <div><strong>Total Marks:</strong> ${summary.totalMarks ?? summary.total_marks ?? 'N/A'}</div>
           <div><strong>Average:</strong> ${summary.average ?? 'N/A'}</div>
           <div><strong>Division:</strong> ${summary.division ?? 'N/A'}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card sky">
           <div><strong>Class Position:</strong> ${classPosition}</div>
           <div><strong>Out of:</strong> ${totalStudents} students</div>
           <div><strong>Overall Performance:</strong> ${overallPerf || 'N/A'}</div>
         </div>
-        <div class="summary-card">
+        <div class="summary-card meadow">
           <div><strong>Attendance:</strong></div>
           <div>Days Present: ${attendancePresent}</div>
           <div>Days Absent: ${attendanceAbsent}</div>
@@ -3505,6 +3604,8 @@ function generatePrimaryReportHTML(reportData: any, schoolLogoBase64?: string | 
         </div>
       </div>
       <div class="footer">Generated by PwezaCore School Management System</div>
+      </div>
+        </div>
       </div>
     </body>
     </html>

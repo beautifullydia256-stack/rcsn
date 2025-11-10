@@ -2592,6 +2592,17 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
   const attendance = student.summary.attendanceDetails || {};
 
+  const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
+  const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
+  const innerPaperStyle: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.97)',
+    borderRadius: '26px',
+    padding: '0.45cm 0.55cm 0.55cm',
+    boxShadow: '0 30px 48px rgba(30,64,175,0.22)',
+    position: 'relative',
+    zIndex: 2
+  };
+
   const streamDisplay =
     student?.stream ||
     student?.current_stream ||
@@ -2619,27 +2630,38 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
   return (
     <div
-      className="relative bg-white text-slate-800 print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full"
+      className="relative print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full nursery-wrapper"
       style={{
-        fontFamily: 'Times New Roman, Times, serif',
+        fontFamily: kidsFontStack,
         width: '210mm',
         minHeight: '297mm',
         margin: '0 auto',
-        padding: '0.25cm 0.35cm 0.4cm',
+        padding: '0.6cm',
         boxSizing: 'border-box',
+        backgroundImage: backgroundGradient,
+        color: '#1f2937',
+        borderRadius: '28px',
+        overflow: 'hidden'
       }}
     >
+      <div
+        className="absolute inset-0 pointer-events-none opacity-65"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)'
+        }}
+      />
       {(school?.logo_url || school?.logo) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-1">
           <img
             src={school.logo_url || school.logo}
             alt="School Watermark"
-            className="max-w-2xl w-[58%] opacity-15 object-contain"
+            className="max-w-2xl w-[58%] opacity-12 object-contain"
           />
         </div>
       )}
 
-      <div className="relative z-10">
+      <div className="relative z-10" style={innerPaperStyle}>
         <div
           className="print-header-container"
           style={{
@@ -2696,7 +2718,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   style={{
                     fontSize: '16pt',
                     fontWeight: 700,
-                    fontFamily: 'Arial, Helvetica, sans-serif',
+                    fontFamily: kidsFontStack,
                     textTransform: 'uppercase',
                     letterSpacing: '0.045em',
                     lineHeight: '1.06',
@@ -2714,8 +2736,8 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                 <div
                   style={{
                     fontSize: '11pt',
-                    fontFamily: 'Times New Roman, Georgia, serif',
-                    fontWeight: 400,
+                    fontFamily: kidsFontStack,
+                    fontWeight: 500,
                     color: school?.header_subtitle_color || '#3b82f6',
                     marginBottom: '0.16cm',
                     lineHeight: '1.3',
@@ -2729,7 +2751,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                 <div
                   style={{
                     fontSize: '11pt',
-                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontFamily: kidsFontStack,
                     fontWeight: 600,
                     color: school?.header_address_color || '#1e40af',
                     marginBottom: '0.16cm',
@@ -2743,8 +2765,8 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
               {(contactEmail || contactPhone) && (
                 <div
                   style={{
-                    fontSize: '10.8pt',
-                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontSize: '10.6pt',
+                    fontFamily: kidsFontStack,
                     fontWeight: 600,
                     color: school?.header_contact_color || '#1e40af',
                     marginBottom: '0.16cm',
@@ -2760,8 +2782,8 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
               {school?.motto && (
                 <div
                   style={{
-                    fontSize: '9.8pt',
-                    fontFamily: 'Times New Roman, Georgia, serif',
+                    fontSize: '10.2pt',
+                    fontFamily: kidsFontStack,
                     fontStyle: 'italic',
                     fontWeight: 600,
                     color: school?.header_motto_color || '#2563eb',
@@ -2792,17 +2814,19 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <div
               className="inline-block"
               style={{
-                padding: '6px 22px',
-                borderRadius: '18px',
-                fontSize: '9.2pt',
+                padding: '7px 24px',
+                borderRadius: '20px',
+                fontSize: '9.4pt',
                 fontWeight: 600,
                 textTransform: 'uppercase',
-                letterSpacing: '0.07em',
-                color: '#1e3a8a',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                letterSpacing: '0.08em',
+                color: '#0f172a',
+                background: 'linear-gradient(135deg, rgba(255,244,209,0.95) 0%, rgba(204,238,255,0.95) 100%)',
+                border: '2px solid rgba(30,64,175,0.25)',
+                boxShadow: '0 10px 20px rgba(30,64,175,0.18)',
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact',
+                fontFamily: kidsFontStack
               }}
             >
               MIDDLE &amp; TOP CLASS - TERMLY REPORT
@@ -2824,9 +2848,18 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      <div className="relative z-10 mb-5 text-[10pt]">
-        <div className="flex items-start justify-between gap-[0.55rem] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2.5">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.8 flex-1">
+      <div className="relative z-10 mb-5 text-[10.4pt]">
+        <div
+          className="flex items-start justify-between gap-[0.55rem]"
+          style={{
+            background: 'linear-gradient(120deg, rgba(255,246,207,0.95) 0%, rgba(255,214,235,0.95) 100%)',
+            border: '4px solid rgba(30,64,175,0.18)',
+            borderRadius: '20px',
+            padding: '10px 16px',
+            boxShadow: '0 16px 28px rgba(30,64,175,0.18)'
+          }}
+        >
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 flex-1">
             <div><strong className="text-blue-900 uppercase">Student's Name:</strong> {student.name}</div>
             <div><strong className="text-blue-900 uppercase">Year:</strong> {examSet?.year || new Date().getFullYear()}</div>
             <div><strong className="text-blue-900 uppercase">Stream:</strong> {streamDisplay}</div>
@@ -2835,7 +2868,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <div><strong className="text-blue-900 uppercase">Term:</strong> {examSet?.term || 'N/A'}</div>
             <div><strong className="text-blue-900 uppercase">Report Date:</strong> {reportDateDisplay}</div>
           </div>
-          <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div className="w-[2.1cm] h-[2.9cm] border-2 border-blue-200 bg-white rounded-lg shadow-md flex items-center justify-center overflow-hidden flex-shrink-0">
             {student.profile_photo ? (
               <img
                 src={student.profile_photo}
@@ -2843,7 +2876,21 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="text-[0.55rem] text-gray-500">Photo</div>
+              <div
+                style={{
+                  fontSize: '0.6rem',
+                  color: '#64748b',
+                  letterSpacing: '0.08em',
+                  background: 'rgba(226,232,240,0.35)',
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                PHOTO
+              </div>
             )}
           </div>
         </div>
@@ -2851,21 +2898,27 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       <div className="mb-5">
         <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
-        <table
-          className="w-full"
+        <div
           style={{
-            borderCollapse: 'collapse',
-            fontSize: '10pt',
-            tableLayout: 'fixed',
-            backgroundColor: '#ffffff',
-            borderRadius: '12px',
-            overflow: 'hidden',
-            position: 'relative',
-            zIndex: 1,
-            boxShadow: '0 18px 36px rgba(30,64,175,0.18)'
+            background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+            border: '4px solid rgba(30,64,175,0.18)',
+            borderRadius: '20px',
+            padding: '8px',
+            boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
           }}
         >
-          <tbody>
+          <table
+            className="w-full"
+            style={{
+              borderCollapse: 'collapse',
+              fontSize: '10pt',
+              tableLayout: 'fixed',
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              overflow: 'hidden'
+            }}
+          >
+            <tbody>
             {NURSERY_SKILL_GRID.map((row, rowIdx) => (
               <tr key={`nursery-skill-row-${rowIdx}`}>
                 {row.map((skill, colIdx) => {
@@ -2874,7 +2927,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                       <td
                         key={`nursery-skill-${rowIdx}-${colIdx}`}
                         style={{
-                          border: '1px solid #000',
+                          border: '2px solid rgba(148,163,184,0.35)',
                           padding: '8px 6px',
                           minHeight: '42px',
                           textAlign: 'center',
@@ -2905,7 +2958,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                     <td
                       key={`nursery-skill-${rowIdx}-${colIdx}`}
                       style={{
-                        border: `1px solid ${cellBorderColor}`,
+                        border: `2px solid ${cellBorderColor}`,
                         padding: '8px 6px',
                         minHeight: '48px',
                         textAlign: 'center',
@@ -2927,9 +2980,19 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
               </tr>
             ))}
           </tbody>
-        </table>
+          </table>
+        </div>
 
-        <div className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4">
+        <div
+          className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4"
+          style={{
+            background: 'rgba(255,255,255,0.8)',
+            borderRadius: '16px',
+            padding: '10px 14px',
+            border: '2px dashed rgba(30,64,175,0.24)',
+            boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
+          }}
+        >
           {NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => (
             <div key={label} className="flex items-center gap-2 font-semibold">
               <div
@@ -2948,7 +3011,15 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
-        <div className="border border-gray-400 p-2">
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(255,244,197,0.95) 0%, rgba(255,228,199,0.95) 100%)',
+            border: '3px solid rgba(30,64,175,0.12)',
+            borderRadius: '18px',
+            padding: '10px 14px',
+            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
+          }}
+        >
           <div>
             <strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}
           </div>
@@ -2956,7 +3027,15 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <strong>Average:</strong> {student.summary?.average ?? 'N/A'}
           </div>
         </div>
-        <div className="border border-gray-400 p-2">
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(203,238,255,0.95) 0%, rgba(221,209,255,0.95) 100%)',
+            border: '3px solid rgba(30,64,175,0.12)',
+            borderRadius: '18px',
+            padding: '10px 14px',
+            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
+          }}
+        >
           <div>
             <strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}
           </div>
@@ -2964,7 +3043,15 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             <strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students
           </div>
         </div>
-        <div className="border border-gray-400 p-2">
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(207,255,226,0.95) 0%, rgba(223,255,204,0.95) 100%)',
+            border: '3px solid rgba(30,64,175,0.12)',
+            borderRadius: '18px',
+            padding: '10px 14px',
+            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
+          }}
+        >
           <div>
             <strong>Attendance:</strong>
           </div>
@@ -2974,17 +3061,35 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
         </div>
       </div>
 
-      <div className="mb-4 text-[10pt]">
-        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comments:</h3>
+      <div
+        className="mb-4 text-[10pt]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(219,228,255,0.95) 0%, rgba(255,230,242,0.95) 100%)',
+          border: '3px solid rgba(30,64,175,0.12)',
+          borderRadius: '18px',
+          padding: '12px 16px',
+          boxShadow: '0 12px 28px rgba(30,64,175,0.14)'
+        }}
+      >
+        <h3 className="text-[11pt] font-semibold mb-1 text-blue-900" style={{ letterSpacing: '0.03em' }}>Class Teacher's Comments:</h3>
         <p>{student.comments?.class_teacher_text || '..............................................................'}</p>
         <p>Signature: ______________________</p>
 
-        <h3 className="text-[11pt] font-semibold mb-1 mt-4">Headteacher's Comments:</h3>
+        <h3 className="text-[11pt] font-semibold mb-1 mt-4 text-blue-900" style={{ letterSpacing: '0.03em' }}>Headteacher's Comments:</h3>
         <p>{student.comments?.head_teacher_text || '..............................................................'}</p>
         <p>Signature: ______________________</p>
       </div>
 
-      <div className="mb-4 text-[10pt]">
+      <div
+        className="mb-4 text-[10pt]"
+        style={{
+          background: 'linear-gradient(135deg, rgba(207,255,226,0.92) 0%, rgba(223,255,204,0.92) 100%)',
+          border: '3px solid rgba(30,64,175,0.12)',
+          borderRadius: '18px',
+          padding: '12px 16px',
+          boxShadow: '0 10px 24px rgba(30,64,175,0.12)'
+        }}
+      >
         <p>
           <strong>Next term begins on:</strong>{' '}
           {student?.results?.[0]?.next_term_begins_date
