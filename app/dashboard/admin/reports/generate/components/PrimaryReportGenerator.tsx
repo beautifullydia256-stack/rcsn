@@ -2877,6 +2877,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   const performanceWord = resolveNurseryPerformanceValue(student, skill);
                   const fallbackColor = '#e2e8f0';
                   const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
+                  const hasPerformance = Boolean(performanceWord);
                   const textColor = getReadableTextColor(accentColor);
                   const gradientBackground = hasPerformance
                     ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`

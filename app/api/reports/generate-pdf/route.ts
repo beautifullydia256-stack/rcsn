@@ -1224,22 +1224,23 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
 
       const performanceWord = resolveNurseryPerformanceValue(student, skill);
       const fallbackColor = '#e2e8f0';
+      const hasPerformance = Boolean(performanceWord);
       const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
       const textColor = getReadableTextColor(accentColor);
-      const cellBackground = performanceWord
+      const cellBackground = hasPerformance
         ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
         : '#f8fafc';
-      const labelColor = performanceWord
+      const labelColor = hasPerformance
         ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
         : '#1f2937';
-      const cellBorderColor = performanceWord ? accentColor : 'rgba(148,163,184,0.45)';
-      const cellShadow = performanceWord
+      const cellBorderColor = hasPerformance ? accentColor : 'rgba(148,163,184,0.45)';
+      const cellShadow = hasPerformance
         ? `0 14px 28px ${applyAlphaToHex(accentColor, 0.28)}`
         : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
-      const barBackground = performanceWord
+      const barBackground = hasPerformance
         ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.45)' : applyAlphaToHex(accentColor, 0.32))
         : 'rgba(148,163,184,0.28)';
-      const barBorder = performanceWord
+      const barBorder = hasPerformance
         ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.42)' : applyAlphaToHex(accentColor, 0.45))
         : 'rgba(148,163,184,0.42)';
 
@@ -1265,7 +1266,7 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
               border-radius: 999px;
               background: ${barBackground};
               border: 1px solid ${barBorder};
-              box-shadow: ${performanceWord ? `0 6px 14px ${applyAlphaToHex(accentColor, 0.22)}` : 'none'};
+              box-shadow: ${hasPerformance ? `0 6px 14px ${applyAlphaToHex(accentColor, 0.22)}` : 'none'};
             "></span>
           </div>
         </td>
