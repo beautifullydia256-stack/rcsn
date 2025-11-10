@@ -2590,7 +2590,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 
 // Template 2 - St. Adrian Kasozi Secondary School Format
 function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
-  const attendance = student.summary.attendanceDetails || {};
 
   const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
   const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
@@ -2997,57 +2996,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
               <span>{label}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-4 mb-4 text-[10pt]">
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,244,197,0.95) 0%, rgba(255,228,199,0.95) 100%)',
-            border: '3px solid rgba(30,64,175,0.12)',
-            borderRadius: '18px',
-            padding: '10px 14px',
-            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
-          }}
-        >
-          <div>
-            <strong>Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}
-          </div>
-          <div>
-            <strong>Average:</strong> {student.summary?.average ?? 'N/A'}
-          </div>
-        </div>
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(203,238,255,0.95) 0%, rgba(221,209,255,0.95) 100%)',
-            border: '3px solid rgba(30,64,175,0.12)',
-            borderRadius: '18px',
-            padding: '10px 14px',
-            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
-          }}
-        >
-          <div>
-            <strong>Class Position:</strong> {student.summary?.classPosition || 'N/A'}
-          </div>
-          <div>
-            <strong>Out of:</strong> {student.summary?.totalStudents || 'N/A'} students
-          </div>
-        </div>
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(207,255,226,0.95) 0%, rgba(223,255,204,0.95) 100%)',
-            border: '3px solid rgba(30,64,175,0.12)',
-            borderRadius: '18px',
-            padding: '10px 14px',
-            boxShadow: '0 10px 24px rgba(30,64,175,0.16)'
-          }}
-        >
-          <div>
-            <strong>Attendance:</strong>
-          </div>
-          <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
-          <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
-          <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
         </div>
       </div>
 

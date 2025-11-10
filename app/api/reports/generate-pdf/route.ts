@@ -1182,13 +1182,6 @@ function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string 
 function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
-  const attendance = student.summary.attendanceDetails || {};
-  const daysPresent = attendance.presentDays ?? '';
-  const totalDays = attendance.totalSchoolDays ?? '';
-  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
-  const avg = student.summary.average ?? '';
-  const avgGrade = student.summary.division ?? '';
-  const overallPerf = student.summary.performanceRemark ?? '';
 
   const streamDisplay = student?.stream
     || student?.current_stream
@@ -1203,6 +1196,8 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
     const parsed = new Date(raw);
     return isNaN(parsed.getTime()) ? String(raw) : parsed.toLocaleDateString();
   })();
+
+  const feesBalance = student?.feesBalance ?? 0;
 
   const contactEmail = school?.contact_email || school?.email || '';
   const contactPhone = school?.contact_phone || school?.phone || '';
@@ -1865,12 +1860,6 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         </div>
       </div>
 
-      <!-- PERFORMANCE SUMMARY -->
-      <div class="summary">
-        <p><strong>AVERAGE SCORES:</strong> ${avg} ${avgGrade}</p>
-        <p><strong>OVERALL PERFORMANCE:</strong> ${overallPerf}</p>
-      </div>
-
       <!-- COMMENTS -->
     </body>
     </html>
@@ -2381,26 +2370,6 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
             ${totalRow}
         </tbody>
       </table>
-      </div>
-
-      <div class="summary-grid page-section">
-        <div class="summary-card sunny">
-          <div><strong>Total Marks:</strong> ${summary.totalMarks ?? summary.total_marks ?? 'N/A'}</div>
-          <div><strong>Average:</strong> ${summary.average ?? 'N/A'}</div>
-          <div><strong>Division:</strong> ${summary.division ?? 'N/A'}</div>
-        </div>
-        <div class="summary-card sky">
-          <div><strong>Class Position:</strong> ${classPosition}</div>
-          <div><strong>Out of:</strong> ${totalStudents} students</div>
-          <div><strong>Overall Performance:</strong> ${overallPerf || 'N/A'}</div>
-        </div>
-        <div class="summary-card meadow">
-          <div><strong>Attendance:</strong></div>
-          <div>Days Present: ${attendancePresent}</div>
-          <div>Days Absent: ${attendanceAbsent}</div>
-          <div>Total Days: ${attendanceTotal}</div>
-          <div>Attendance %: ${attendancePercentage}</div>
-        </div>
       </div>
 
       <div class="comments-card page-section">
