@@ -2851,7 +2851,20 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 
       <div className="mb-5">
         <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
-        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt', tableLayout: 'fixed' }}>
+        <table
+          className="w-full"
+          style={{
+            borderCollapse: 'collapse',
+            fontSize: '10pt',
+            tableLayout: 'fixed',
+            backgroundColor: '#ffffff',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            position: 'relative',
+            zIndex: 1,
+            boxShadow: '0 18px 36px rgba(30,64,175,0.18)'
+          }}
+        >
           <tbody>
             {NURSERY_SKILL_GRID.map((row, rowIdx) => (
               <tr key={`nursery-skill-row-${rowIdx}`}>
@@ -2879,22 +2892,14 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                   const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
                   const hasPerformance = Boolean(performanceWord);
                   const textColor = getReadableTextColor(accentColor);
-                  const gradientBackground = hasPerformance
-                    ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
-                    : '#f8fafc';
+                  const gradientBackground = hasPerformance ? accentColor : '#f8fafc';
                   const labelColor = hasPerformance
                     ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
                     : '#1f2937';
                   const cellBorderColor = hasPerformance ? accentColor : 'rgba(148,163,184,0.45)';
                   const cellShadow = hasPerformance
-                    ? `0 14px 28px ${applyAlphaToHex(accentColor, 0.28)}`
+                    ? `0 16px 32px ${applyAlphaToHex(accentColor, 0.35)}`
                     : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
-                  const barBackground = hasPerformance
-                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.45)' : applyAlphaToHex(accentColor, 0.32))
-                    : 'rgba(148,163,184,0.28)';
-                  const barBorder = hasPerformance
-                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.42)' : applyAlphaToHex(accentColor, 0.45))
-                    : 'rgba(148,163,184,0.42)';
 
                   return (
                     <td
@@ -2912,19 +2917,9 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                       }}
                     >
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '8.5pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
+                        <span style={{ fontSize: '9pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
                           {skill.label}
                         </span>
-                        <div
-                          style={{
-                            width: '64px',
-                            height: '12px',
-                            borderRadius: '999px',
-                            background: barBackground,
-                            border: `1px solid ${barBorder}`,
-                            boxShadow: hasPerformance ? `0 6px 14px ${applyAlphaToHex(accentColor, 0.22)}` : 'none'
-                          }}
-                        />
                       </div>
                     </td>
                   );

@@ -1227,22 +1227,14 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
       const hasPerformance = Boolean(performanceWord);
       const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
       const textColor = getReadableTextColor(accentColor);
-      const cellBackground = hasPerformance
-        ? `linear-gradient(145deg, ${lightenColor(accentColor)} 0%, ${accentColor} 100%)`
-        : '#f8fafc';
+      const cellBackground = hasPerformance ? accentColor : '#f8fafc';
       const labelColor = hasPerformance
         ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
         : '#1f2937';
       const cellBorderColor = hasPerformance ? accentColor : 'rgba(148,163,184,0.45)';
       const cellShadow = hasPerformance
-        ? `0 14px 28px ${applyAlphaToHex(accentColor, 0.28)}`
+        ? `0 16px 32px ${applyAlphaToHex(accentColor, 0.35)}`
         : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
-      const barBackground = hasPerformance
-        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.45)' : applyAlphaToHex(accentColor, 0.32))
-        : 'rgba(148,163,184,0.28)';
-      const barBorder = hasPerformance
-        ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.42)' : applyAlphaToHex(accentColor, 0.45))
-        : 'rgba(148,163,184,0.42)';
 
       const cellBaseStyles = [
         `border: 1px solid ${cellBorderColor}`,
@@ -1259,15 +1251,6 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         <td style="${cellBaseStyles.join('; ')}">
           <div class="nursery-skill-cell">
             <span class="nursery-skill-label" style="color: ${labelColor};">${skill.label}</span>
-            <span class="nursery-skill-value" style="
-              display: inline-block;
-              width: 64px;
-              height: 12px;
-              border-radius: 999px;
-              background: ${barBackground};
-              border: 1px solid ${barBorder};
-              box-shadow: ${hasPerformance ? `0 6px 14px ${applyAlphaToHex(accentColor, 0.22)}` : 'none'};
-            "></span>
           </div>
         </td>
       `;
@@ -1530,6 +1513,15 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
         .nursery-skill-table td {
           border: 1px solid #000;
           padding: 0;
+        }
+
+        .nursery-skill-table {
+          background: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          position: relative;
+          z-index: 2;
+          box-shadow: 0 18px 36px rgba(30,64,175,0.18);
         }
 
         .nursery-skill-cell {
