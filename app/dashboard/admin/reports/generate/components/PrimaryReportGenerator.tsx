@@ -2651,16 +2651,6 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
             'radial-gradient(circle at 12% 18%, rgba(255,255,255,0.6) 0%, transparent 60%), radial-gradient(circle at 80% 32%, rgba(255,255,255,0.45) 0%, transparent 55%)'
         }}
       />
-      {(school?.logo_url || school?.logo) && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-1">
-          <img
-            src={school.logo_url || school.logo}
-            alt="School Watermark"
-            className="max-w-2xl w-[58%] opacity-12 object-contain"
-          />
-        </div>
-      )}
-
       <div className="relative z-10" style={innerPaperStyle}>
         <div
           className="print-header-container"

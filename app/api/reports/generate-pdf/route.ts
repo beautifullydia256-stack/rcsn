@@ -2335,10 +2335,6 @@ function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string
     <body>
       <div class="nursery-wrapper">
         <div class="nursery-overlay"></div>
-        <div class="watermark">
-          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
-        </div>
-
         <div class="nursery-paper">
           ${generateProfessionalHeaderHTML(
             school,
