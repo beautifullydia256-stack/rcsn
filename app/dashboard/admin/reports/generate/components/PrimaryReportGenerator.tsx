@@ -124,7 +124,7 @@ export function PrimaryReportGenerator() {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [selectedStudent, setSelectedStudent] = useState<string>("");
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
-  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | 'template4' | string>('template1');
+  const [selectedTemplate, setSelectedTemplate] = useState<'template1' | 'template2' | 'template3' | 'template4' | 'template6' | string>('template1');
   const [customTemplates, setCustomTemplates] = useState<any[]>([]);
   const [classTemplateSettings, setClassTemplateSettings] = useState<any[]>([]);
   const [showClassTemplateSettings, setShowClassTemplateSettings] = useState(false);
@@ -315,18 +315,30 @@ export function PrimaryReportGenerator() {
     init();
   }, []);
 
-  // Auto-select template based on class (NO MANUAL OVERRIDE ALLOWED)
+  const selectedSection = useMemo(() => (selectedClass ? getSectionForClass(selectedClass) : null), [selectedClass]);
+  const isNurserySection = selectedSection === 'Nursery /Baby Class';
+
+  // Auto-select template based on class (allow nursery toggle between defaults)
   useEffect(() => {
     if (selectedClass) {
       // Use automatic section-based template selection (enforced - no overrides)
       const autoTemplate = getTemplateForClass(selectedClass);
-      setSelectedTemplate(autoTemplate);
+      if (selectedSection === 'Nursery /Baby Class') {
+        setSelectedTemplate(prev => {
+          if (prev === 'template6' || prev === 'template2') {
+            return prev;
+          }
+          return autoTemplate;
+        });
+      } else {
+        setSelectedTemplate(autoTemplate);
+      }
       
       // Log the auto-selection for debugging
       const section = getSectionForClass(selectedClass);
-      console.log(`✓ Auto-selected ${autoTemplate} (${PRIMARY_TEMPLATES[autoTemplate as keyof typeof PRIMARY_TEMPLATES]?.name}) for class "${selectedClass}" (${section} Section) - No manual override allowed`);
+      console.log(`✓ Auto-selected ${autoTemplate} (${PRIMARY_TEMPLATES[autoTemplate as keyof typeof PRIMARY_TEMPLATES]?.name}) for class "${selectedClass}" (${section} Section)`);
     }
-  }, [selectedClass]);
+  }, [selectedClass, selectedSection]);
 
   const filteredStudents = selectedClass 
     ? students.filter(s => s.current_class === selectedClass)
@@ -1965,24 +1977,45 @@ export function PrimaryReportGenerator() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Template Selection - Only show for O-Level classes (Senior 1-4) */}
             {/* Template Display - Auto-Selected (Read-Only) */}
-              <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">
-                  Report Template
-                <span className="ml-2 text-xs text-emerald-400 font-normal">✓ Auto-Selected</span>
-                </label>
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">
+                Report Template
+                <span className="ml-2 text-xs text-emerald-400 font-normal">
+                  {isNurserySection ? 'Select preferred nursery layout' : '✓ Auto-selected'}
+                </span>
+              </label>
               <div className="relative">
                 <select
                   value={selectedTemplate}
-                  disabled
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/90 cursor-not-allowed opacity-75"
+                  disabled={!isNurserySection}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    if (!isNurserySection) return;
+                    setSelectedTemplate(next);
+                  }}
+                  className={`w-full rounded-lg border border-white/20 px-3 py-2 text-white/90 ${
+                    isNurserySection ? 'bg-slate-900/60 cursor-pointer' : 'bg-slate-900/40 cursor-not-allowed opacity-75'
+                  }`}
                 >
-                  <optgroup label="Primary School Templates" className="text-black">
-                  <option className="text-black" value="template1">{PRIMARY_TEMPLATES.template1.name}</option>
-                  <option className="text-black" value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
-                  <option className="text-black" value="template3">{PRIMARY_TEMPLATES.template3.name}</option>
-                  <option className="text-black" value="template4">{PRIMARY_TEMPLATES.template4.name}</option>
-                  <option className="text-black" value="template5">{PRIMARY_TEMPLATES.template5.name}</option>
-                  </optgroup>
+                  {isNurserySection ? (
+                    <>
+                      <option className="text-black" value="template6">
+                        {PRIMARY_TEMPLATES.template6.name} (Heritage)
+                      </option>
+                      <option className="text-black" value="template2">
+                        {PRIMARY_TEMPLATES.template2.name}
+                      </option>
+                    </>
+                  ) : (
+                    <optgroup label="Primary School Templates" className="text-black">
+                      <option className="text-black" value="template1">{PRIMARY_TEMPLATES.template1.name}</option>
+                      <option className="text-black" value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
+                      <option className="text-black" value="template3">{PRIMARY_TEMPLATES.template3.name}</option>
+                      <option className="text-black" value="template4">{PRIMARY_TEMPLATES.template4.name}</option>
+                      <option className="text-black" value="template5">{PRIMARY_TEMPLATES.template5.name}</option>
+                      <option className="text-black" value="template6">{PRIMARY_TEMPLATES.template6.name}</option>
+                    </optgroup>
+                  )}
                   {customTemplates.length > 0 && (
                     <optgroup label="Custom Templates" className="text-black">
                       {customTemplates.map((template) => (
@@ -1994,13 +2027,15 @@ export function PrimaryReportGenerator() {
                   )}
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                  <svg className="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className={`w-4 h-4 ${isNurserySection ? 'text-emerald-300' : 'text-emerald-400'}`} fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                   </svg>
-              </div>
+                </div>
               </div>
               <p className="mt-1 text-xs text-white/50">
-                Template automatically selected based on class section. This ensures consistent formatting for all students.
+                {isNurserySection
+                  ? 'Choose between the new heritage nursery template and the classic Middle/Top class layout.'
+                  : 'Template automatically selected based on class section to ensure consistent formatting.'}
               </p>
             </div>
             

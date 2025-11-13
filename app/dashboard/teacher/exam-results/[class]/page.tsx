@@ -173,6 +173,13 @@ export default function TeacherExamResultsClassPage() {
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
 
+  useEffect(() => {
+    if (isNursery) {
+      if (showGradeSettings) setShowGradeSettings(false);
+      if (showClassTeacherComments) setShowClassTeacherComments(false);
+    }
+  }, [isNursery, showGradeSettings, showClassTeacherComments]);
+
   // Auto-set level based on class format
   useEffect(() => {
     if (isSecondary) {
@@ -472,17 +479,21 @@ export default function TeacherExamResultsClassPage() {
         }
 
         // Load Class Teacher's ranges for this class
-        try {
-          const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
-          if (resCT.ok) {
-            const j = await resCT.json();
-            const ranges = Array.isArray(j.ranges) ? j.ranges : [];
-            const sanitized = ranges
-              .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
-              .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
-            if (sanitized.length > 0) setClassTeacherRanges(sanitized);
-          }
-        } catch {}
+        if (!isNursery) {
+          try {
+            const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
+            if (resCT.ok) {
+              const j = await resCT.json();
+              const ranges = Array.isArray(j.ranges) ? j.ranges : [];
+              const sanitized = ranges
+                .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
+                .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
+              if (sanitized.length > 0) setClassTeacherRanges(sanitized);
+            }
+          } catch {}
+        } else {
+          setClassTeacherRanges([]);
+        }
 
         // Comments removed per request
 
@@ -1377,19 +1388,21 @@ export default function TeacherExamResultsClassPage() {
             </div>
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={() => setShowGradeSettings(true)}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
-            >
-              Grade Settings
-            </button>
+            {!isNursery && (
+              <button
+                onClick={() => setShowGradeSettings(true)}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                Grade Settings
+              </button>
+            )}
             <button
               onClick={() => setShowTeacherRemarks(true)}
               className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white"
             >
               Teacher's Remarks Settings
             </button>
-            {isClassTeacher && (
+            {!isNursery && isClassTeacher && (
               <button
                 onClick={() => setShowClassTeacherComments(true)}
                 className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white"
@@ -1502,7 +1515,7 @@ export default function TeacherExamResultsClassPage() {
       )}
 
       {/* Class Teacher's Comments Settings Modal */}
-      {showClassTeacherComments && (
+      {!isNursery && showClassTeacherComments && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-slate-800 rounded-lg p-6 w-full max-w-3xl mx-4 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
@@ -1864,7 +1877,7 @@ export default function TeacherExamResultsClassPage() {
         )}
 
         {/* Grade Settings Modal */}
-        {showGradeSettings && (
+        {!isNursery && showGradeSettings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">

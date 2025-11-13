@@ -15,6 +15,42 @@ function isOLevelClass(className: string): boolean {
   return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
 }
 
+type NurseryCommentRole = 'class_teacher' | 'head_teacher';
+type NurseryAutoCommentMap = Record<NurseryCommentRole, Record<string, string>>;
+
+async function loadNurseryAutoComments(): Promise<NurseryAutoCommentMap> {
+  const base: NurseryAutoCommentMap = {
+    class_teacher: {},
+    head_teacher: {}
+  };
+
+  try {
+    const { data, error } = await supabase
+      .from('nursery_auto_comments')
+      .select('role, grade_letter, comment');
+
+    if (error || !data) {
+      if (error) {
+        console.warn('Failed to load nursery auto comments:', error);
+      }
+      return base;
+    }
+
+    data.forEach(row => {
+      const role = (row.role || '').trim().toLowerCase() as NurseryCommentRole;
+      const grade = (row.grade_letter || '').trim().toUpperCase();
+      if (!role || !grade) return;
+      if (role !== 'class_teacher' && role !== 'head_teacher') return;
+      base[role][grade] = row.comment || '';
+    });
+
+    return base;
+  } catch (err) {
+    console.warn('Error loading nursery auto comments:', err);
+    return base;
+  }
+}
+
 // Helper function to load custom template from Supabase
 async function loadCustomTemplate(schoolId: string, templateId?: string): Promise<{ html: string; css: string } | null> {
   try {
@@ -448,8 +484,15 @@ async function generateSingleReportPDF(reportData: any, template: string = 'temp
       const currentClass = (reportData.students?.[0]?.current_class || '').toString();
       const isLowerSection = /(primary\s*1|primary\s*2|primary\s*3|p\.\s*1|p1|p\.\s*2|p2|p\.\s*3|p3)/i.test(currentClass);
       const isUpperSection = /(primary\s*[4567]|p\.\s*[4567]|p[4567])/i.test(currentClass);
+      let nurseryAutoComments: NurseryAutoCommentMap | null = null;
+      if (template === 'template6') {
+        nurseryAutoComments = await loadNurseryAutoComments();
+      }
 
-      if (template === 'template4' || (isUpperSection && template !== 'template3')) {
+      if (template === 'template6') {
+        console.log('Using Nursery Heritage template (template6)');
+        htmlContent = generateTemplateNurseryCindrelinahHTML(reportData, schoolLogoBase64, studentPhotoBase64, nurseryAutoComments || undefined);
+      } else if (template === 'template4' || (isUpperSection && template !== 'template3')) {
         console.log('Using Primary Upper Section Template (template4)');
         htmlContent = generateTemplate4UpperSectionHTML(reportData, schoolLogoBase64, studentPhotoBase64);
       } else if (template === 'template3' || isLowerSection) {
@@ -1862,6 +1905,1060 @@ function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string 
 
       <!-- COMMENTS -->
     </body>
+    </html>
+  `;
+}
+
+function generateTemplateNurseryCindrelinahHTML(
+  reportData: any,
+  schoolLogoBase64?: string | null,
+  studentPhotoBase64?: string | null,
+  nurseryAutoComments?: NurseryAutoCommentMap
+) {
+  const { school, examSet, students } = reportData;
+  const student = Array.isArray(students) && students.length > 0 ? students[0] : {};
+  const summary = student?.summary || {};
+
+  const formatDate = (input: any): string => {
+    if (!input) return '____________________';
+    const parsed = new Date(input);
+    if (!isNaN(parsed.getTime())) {
+      return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+    if (typeof input === 'string') return input;
+    return '____________________';
+  };
+
+  const computeAge = (): string => {
+    if (student?.age) {
+      return `${student.age} yrs`;
+    }
+    const dobRaw = student?.date_of_birth || student?.dob;
+    if (!dobRaw) return '____';
+    const dob = new Date(dobRaw);
+    if (isNaN(dob.getTime())) return '____';
+    const referenceDateRaw = examSet?.date || student?.report_date || new Date();
+    const ref = new Date(referenceDateRaw);
+    if (isNaN(ref.getTime())) return '____';
+    let age = ref.getFullYear() - dob.getFullYear();
+    const m = ref.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && ref.getDate() < dob.getDate())) {
+      age--;
+    }
+    return age >= 0 ? `${age} yrs` : '____';
+  };
+
+  const escapeHtml = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  };
+
+  const formatMultiline = (value: any, fallback: string): string => {
+    if (!value) return escapeHtml(fallback);
+    return escapeHtml(value).replace(/\r?\n/g, '<br/>');
+  };
+
+  const encodeSvg = (svg: string): string => `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+
+  const iconSprites = {
+    social: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#FDE68A"/><circle cx="24" cy="24" r="10" fill="#2563EB"/><circle cx="48" cy="24" r="10" fill="#F97316"/><path d="M18 44 L30 34 C33 32 39 32 42 34 L54 44" stroke="#1E293B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M22 46 L30 56 C33 60 39 60 42 56 L50 46" fill="#FBBF24"/></svg>`),
+    games: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#DBEAFE"/><circle cx="36" cy="36" r="22" fill="#FFFFFF"/><path d="M36 16 L45 30 L36 36 L27 30 Z" fill="#1E3A8A"/><path d="M36 36 L36 58" stroke="#1E293B" stroke-width="3" stroke-linecap="round"/><path d="M24 44 L36 36 L48 44" stroke="#1E293B" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="24" cy="30" r="4" fill="#93C5FD"/><circle cx="48" cy="30" r="4" fill="#93C5FD"/></svg>`),
+    environment: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#DCFCE7"/><circle cx="50" cy="20" r="8" fill="#FACC15"/><path d="M22 52 C22 40 30 32 36 32 C42 32 50 40 50 52" fill="#34D399"/><rect x="32" y="44" width="8" height="18" rx="3" fill="#92400E"/><rect x="14" y="54" width="44" height="6" rx="3" fill="#4ADE80"/></svg>`),
+    speaking: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#FCE7F3"/><path d="M20 24 H40 C46 24 50 28 50 34 C50 40 46 44 40 44 H36 L28 52 V44 H20 C14 44 10 40 10 34 C10 28 14 24 20 24 Z" fill="#EC4899"/><path d="M40 18 H56 C60 18 64 21 64 26 C64 31 60 34 56 34 H54 V40 L46 34 H40 C36 34 32 31 32 26 C32 21 36 18 40 18 Z" fill="#F472B6"/></svg>`),
+    selfCare: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#FDE2E4"/><circle cx="36" cy="22" r="10" fill="#F87171"/><path d="M20 52 C20 40 28 34 36 42 C44 34 52 40 52 52" fill="#FCA5A5"/><path d="M30 48 L26 58" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/><path d="M42 48 L46 58" stroke="#EF4444" stroke-width="4" stroke-linecap="round"/></svg>`),
+    singing: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#E0E7FF"/><path d="M44 16 V40.5 C42.5 39.8 40.6 39.5 38.7 39.9 C35 40.7 32.6 43.8 33.4 46.9 C34.2 50.1 37.9 51.9 41.6 51.1 C45 50.4 47.3 47.8 47.3 44.9 V26 H54 V16 H44 Z" fill="#6366F1"/><circle cx="28" cy="48" r="8" fill="#C7D2FE"/></svg>`),
+    maths: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#FEF3C7"/><rect x="18" y="18" width="36" height="36" rx="8" fill="#FCD34D"/><path d="M24 30 H48" stroke="#92400E" stroke-width="4" stroke-linecap="round"/><path d="M24 40 H48" stroke="#92400E" stroke-width="4" stroke-linecap="round"/><circle cx="28" cy="28" r="4" fill="#F59E0B"/><circle cx="44" cy="28" r="4" fill="#F59E0B"/><circle cx="36" cy="38" r="4" fill="#F59E0B"/></svg>`),
+    writing: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#E0F2FE"/><path d="M20 20 H52 V52 H20 Z" fill="#BAE6FD" stroke="#0EA5E9" stroke-width="3" stroke-linejoin="round"/><path d="M24 24 H48" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"/><path d="M24 32 H48" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round"/><path d="M24 40 H40" stroke="#0EA5E9" stroke-width="2" stroke-linecap="round"/><path d="M40 44 L48 52 L40 56 L32 48 Z" fill="#F97316"/><path d="M40 44 L48 52" stroke="#EA580C" stroke-width="2" stroke-linecap="round"/></svg>`),
+    language: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#F5E1FF"/><path d="M22 44 H50 C54 44 58 40 58 36 C58 32 54 28 50 28 H38 L42 20 H30 L26 28 H22 C18 28 14 32 14 36 C14 40 18 44 22 44 Z" fill="#A855F7"/><text x="24" y="38" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="14" fill="#FDF4FF">ABC</text></svg>`),
+    helping: encodeSvg(`<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72"><rect width="72" height="72" rx="18" fill="#FFE4E6"/><path d="M18 44 C22 48 28 50 32 44 L36 38 C40 32 50 32 54 38 C58 44 54 52 46 52 H34" stroke="#FB7185" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M20 42 L26 32" stroke="#F43F5E" stroke-width="4" stroke-linecap="round"/><path d="M52 44 L46 34" stroke="#F43F5E" stroke-width="4" stroke-linecap="round"/></svg>`)
+  };
+
+  const schoolPhoneLine = [school?.phone, school?.contact_phone, school?.alt_phone, school?.phone_number]
+    .filter(Boolean)
+    .map((v: any) => String(v).trim())
+    .filter((v, idx, arr) => v && arr.indexOf(v) === idx)
+    .join(' / ');
+
+  const schoolEmailLine = [school?.email, school?.contact_email]
+    .filter(Boolean)
+    .map((v: any) => String(v).trim())
+    .filter((v, idx, arr) => v && arr.indexOf(v) === idx)
+    .join(' • ');
+
+  const schoolAddressLine = [school?.address, school?.location, school?.pobox]
+    .filter(Boolean)
+    .map((v: any) => String(v).trim())
+    .filter((v, idx, arr) => v && arr.indexOf(v) === idx)
+    .join(' • ');
+
+  const computePerformanceGrade = (word: string | null | undefined) => {
+    if (!word) return null;
+    const normalized = String(word).trim().toLowerCase();
+    if (!normalized) return null;
+    if (normalized === 'very good' || normalized === 'excellent') {
+      return { letter: 'A', score: 5 };
+    }
+    if (normalized === 'good' || normalized === 'satisfactory') {
+      return { letter: 'B', score: 4 };
+    }
+    if (normalized === 'promising' || normalized === 'fair') {
+      return { letter: 'B', score: 3.5 };
+    }
+    if (normalized === 'tries' || normalized === 'average') {
+      return { letter: 'C', score: 2.5 };
+    }
+    if (normalized === 'still a problem' || normalized === 'poor') {
+      return { letter: 'D', score: 1.5 };
+    }
+    return { letter: 'C', score: 2.5 };
+  };
+
+  const gradeColors: Record<string, string> = {
+    A: '#2563eb',
+    B: '#16a34a',
+    C: '#f59e0b',
+    D: '#f97316',
+    E: '#dc2626'
+  };
+
+  const getPerformanceResult = (candidates: Array<{ key: string; label: string }>) => {
+    for (const candidate of candidates) {
+      const skillCell = { key: candidate.key, label: candidate.label };
+      const performanceWord = resolveNurseryPerformanceValue(student, skillCell);
+      if (performanceWord) {
+        const gradeInfo = computePerformanceGrade(performanceWord);
+        if (gradeInfo) {
+          const color = NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] || gradeColors[gradeInfo.letter] || '#94a3b8';
+          const score = gradeInfo.score;
+          return {
+            letter: gradeInfo.letter,
+            word: performanceWord,
+            color,
+            textColor: getReadableTextColor(color),
+            score
+          };
+        }
+      }
+    }
+    return null;
+  };
+
+  const learningAreas = [
+    {
+      left: {
+        title: 'Relating with other social development',
+        badge: 'Learning area 1',
+        icon: iconSprites.social,
+        skillCandidates: [
+          { key: 'relating_with_other_social_development', label: 'Relating with other social development' },
+          { key: 'social_development', label: 'Social development' },
+          { key: 'sharing', label: 'Sharing' },
+          { key: 'friendship', label: 'Friendship' },
+          { key: 'respect', label: 'Respect' }
+        ]
+      },
+      right: {
+        title: 'Games',
+        icon: iconSprites.games,
+        skillCandidates: [
+          { key: 'games', label: 'Games' },
+          { key: 'playing', label: 'Playing' },
+          { key: 'physical_games', label: 'Physical games' },
+          { key: 'sports', label: 'Sports' }
+        ]
+      }
+    },
+    {
+      left: {
+        title: 'Relating and knowing my environment',
+        badge: 'Learning area 2',
+        icon: iconSprites.environment,
+        skillCandidates: [
+          { key: 'relating_and_knowing_my_environment', label: 'Relating and knowing my environment' },
+          { key: 'recognition_of_shapes', label: 'Recognition of shapes' },
+          { key: 'recognition_of_numbers', label: 'Recognition of numbers' },
+          { key: 'recognition_of_letters', label: 'Recognition of letters' },
+          { key: 'property_care', label: 'Property care' }
+        ]
+      },
+      right: {
+        title: 'Speaking and listening',
+        icon: iconSprites.speaking,
+        skillCandidates: [
+          { key: 'speaking_and_listening', label: 'Speaking and listening' },
+          { key: 'attention_span', label: 'Attention span' },
+          { key: 're_sighting_poems', label: 'Re-sighting poems' },
+          { key: 'love_or_interest', label: 'Love or interest' }
+        ]
+      }
+    },
+    {
+      left: {
+        title: 'Taking care of myself',
+        badge: 'Learning area 3',
+        icon: iconSprites.selfCare,
+        skillCandidates: [
+          { key: 'taking_care_of_myself', label: 'Taking care of myself' },
+          { key: 'toilet', label: 'Toilet' },
+          { key: 'nose_care', label: 'Nose care' },
+          { key: 'property_care', label: 'Property care' },
+          { key: 'smartness', label: 'Smartness' }
+        ]
+      },
+      right: {
+        title: 'Singing',
+        icon: iconSprites.singing,
+        skillCandidates: [
+          { key: 'singing', label: 'Singing' },
+          { key: 're_sighting_poems', label: 'Re-sighting poems' },
+          { key: 'love_or_interest', label: 'Love or interest' }
+        ]
+      }
+    },
+    {
+      left: {
+        title: 'Development mathematics concepts',
+        badge: 'Learning area 4',
+        icon: iconSprites.maths,
+        skillCandidates: [
+          { key: 'development_mathematics_concepts', label: 'Development mathematics concepts' },
+          { key: 'recognition_of_numbers', label: 'Recognition of numbers' },
+          { key: 'counting_number_sequence', label: 'Counting number sequence' },
+          { key: 'shading', label: 'Shading' }
+        ]
+      },
+      right: {
+        title: 'Writing / reading',
+        icon: iconSprites.writing,
+        skillCandidates: [
+          { key: 'writing_reading', label: 'Writing / reading' },
+          { key: 're_sighting_alphabet', label: 'Re-sighting alphabet' },
+          { key: 'handling_of_pencil', label: 'Handling of pencil' },
+          { key: 'drawing', label: 'Drawing' }
+        ]
+      }
+    },
+    {
+      left: {
+        title: 'Development and using my language',
+        badge: 'Learning area 5',
+        icon: iconSprites.language,
+        skillCandidates: [
+          { key: 'development_using_my_language', label: 'Development and using my language' },
+          { key: 're_sighting_alphabet', label: 'Re-sighting alphabet' },
+          { key: 'recognition_of_letters', label: 'Recognition of letters' },
+          { key: 'speaking_and_listening', label: 'Speaking and listening' }
+        ]
+      },
+      right: {
+        title: 'Helping',
+        icon: iconSprites.helping,
+        skillCandidates: [
+          { key: 'helping', label: 'Helping' },
+          { key: 'sharing', label: 'Sharing' },
+          { key: 'respect', label: 'Respect' },
+          { key: 'love_or_interest', label: 'Love or interest' }
+        ]
+      }
+    }
+  ];
+
+  type PerformanceSnapshot = { letter: string; word: string; color: string; textColor: string; score: number };
+
+  const collectedPerformances: PerformanceSnapshot[] = [];
+
+  const renderLearningCard = (
+    item: {
+      title: string;
+      badge?: string;
+      icon: string;
+      skillCandidates: Array<{ key: string; label: string }>;
+    },
+    result: PerformanceSnapshot | null
+  ) => {
+    const color = result ? result.color : '#e2e8f0';
+    const textColor = result ? result.textColor : '#1f2937';
+    const letter = result ? result.letter : '—';
+    const remark = result ? result.word : 'Awaiting entry';
+    const badgeHtml = item.badge ? `<div class="learning-badge">${escapeHtml(item.badge)}</div>` : '';
+
+    return `
+      <div class="learning-card">
+        ${badgeHtml}
+        <div class="learning-card-body">
+          <div class="learning-icon">
+            <img src="${item.icon}" alt="" />
+          </div>
+          <div class="learning-text">
+            <div class="learning-title">${escapeHtml(item.title)}</div>
+            <div class="grade-row">
+              <span class="grade-badge" style="background:${color};color:${textColor};">${escapeHtml(letter)}</span>
+              <span class="grade-remark">${escapeHtml(remark)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const learningRowsHtml = learningAreas.map(area => {
+    const leftResult = getPerformanceResult(area.left.skillCandidates);
+    if (leftResult) collectedPerformances.push(leftResult);
+    const rightResult = getPerformanceResult(area.right.skillCandidates);
+    if (rightResult) collectedPerformances.push(rightResult);
+
+    return `
+      <tr>
+        <td>${renderLearningCard(area.left, leftResult)}</td>
+        <td>${renderLearningCard(area.right, rightResult)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const aggregatedSkillGrade = (() => {
+    if (collectedPerformances.length === 0) return null;
+    const scores = collectedPerformances.map(item => item.score).filter(score => typeof score === 'number');
+    if (scores.length === 0) return null;
+    const average = scores.reduce((acc, value) => acc + value, 0) / scores.length;
+    if (average >= 4.5) return 'A';
+    if (average >= 3.5) return 'B';
+    if (average >= 2.5) return 'C';
+    if (average >= 1.5) return 'D';
+    return 'E';
+  })();
+
+  const summaryGradeRaw =
+    summary.grade ||
+    summary.overallGrade ||
+    summary.overall_grade ||
+    summary.division ||
+    summary.overallDivision ||
+    summary.overall_division ||
+    student?.overallGrade ||
+    student?.overall_grade ||
+    '';
+
+  let overallGrade = '';
+  if (typeof summaryGradeRaw === 'string' && summaryGradeRaw.trim()) {
+    overallGrade = summaryGradeRaw.trim().charAt(0).toUpperCase();
+  }
+  if (!overallGrade && aggregatedSkillGrade) {
+    overallGrade = aggregatedSkillGrade;
+  }
+  if (!overallGrade && Array.isArray(student?.results)) {
+    const gradeFromSubjects = student.results.find((r: any) => r?.overall_grade)?.overall_grade;
+    if (gradeFromSubjects) {
+      overallGrade = String(gradeFromSubjects).trim().charAt(0).toUpperCase();
+    }
+  }
+  if (!overallGrade) {
+    overallGrade = 'A';
+  }
+
+  const overallGradeColor = gradeColors[overallGrade] || '#2563eb';
+  const overallGradeTextColor = getReadableTextColor(overallGradeColor);
+
+  const summaryRemark =
+    summary.performanceRemark ||
+    summary.performance_remark ||
+    student?.overallRemark ||
+    student?.comments?.overall_remark ||
+    '';
+
+  const gradeKey = overallGrade ? overallGrade.trim().toUpperCase() : '';
+  const autoClassTeacherComment =
+    gradeKey && nurseryAutoComments?.class_teacher?.[gradeKey]
+      ? nurseryAutoComments.class_teacher[gradeKey]
+      : '';
+  const autoHeadTeacherComment =
+    gradeKey && nurseryAutoComments?.head_teacher?.[gradeKey]
+      ? nurseryAutoComments.head_teacher[gradeKey]
+      : '';
+
+  const manualClassTeacherComment =
+    student?.comments?.class_teacher_text ||
+    student?.comments?.class_teacher_comment ||
+    student?.results?.[0]?.class_teacher_comment ||
+    summary.classTeacherComment ||
+    '';
+
+  const manualHeadTeacherComment =
+    student?.comments?.head_teacher_text ||
+    student?.comments?.head_teacher_comment ||
+    student?.results?.[0]?.headteacher_comment ||
+    summary.headTeacherComment ||
+    '';
+
+  const classTeacherComment =
+    (manualClassTeacherComment && manualClassTeacherComment.trim()) ||
+    autoClassTeacherComment ||
+    'We are delighted with your child’s outstanding progress and positive attitude this term. Thank you for the strong support from home.';
+
+  const headTeacherComment =
+    (manualHeadTeacherComment && manualHeadTeacherComment.trim()) ||
+    autoHeadTeacherComment ||
+    'Excellent work. Let’s continue partnering to keep this momentum going.';
+
+  const otherRequirements =
+    student?.comments?.other_requirements ||
+    summary.otherRequirements ||
+    reportData?.otherRequirements ||
+    '';
+
+  const nextTermBeginsDisplay = formatDate(
+    student?.next_term_begins_date ||
+      student?.nextTermBegins ||
+      reportData?.nextTermBegins ||
+      summary.nextTermBegins
+  );
+
+  const nextTermEndsDisplay = formatDate(
+    student?.next_term_ends_date ||
+      student?.nextTermEnds ||
+      reportData?.nextTermEnds ||
+      summary.nextTermEnds
+  );
+
+  const studentPhotoSrc = (() => {
+    if (typeof studentPhotoBase64 === 'string' && studentPhotoBase64.length > 0) {
+      return studentPhotoBase64.startsWith('data:')
+        ? studentPhotoBase64
+        : `data:image/png;base64,${studentPhotoBase64}`;
+    }
+    if (typeof student?.profile_photo === 'string' && student.profile_photo.length > 0) {
+      return student.profile_photo;
+    }
+    return null;
+  })();
+
+  const reportDateDisplay = formatDate(
+    examSet?.date ||
+      student?.report_date ||
+      summary.report_date ||
+      reportData?.reportDate ||
+      new Date()
+  );
+
+  const legendHtml = NURSERY_PERFORMANCE_OPTIONS.map(option => {
+    const gradeInfo = computePerformanceGrade(option.label);
+    const letter = gradeInfo ? gradeInfo.letter : '—';
+    return `
+      <div class="legend-item">
+        <span class="legend-swatch" style="background:${option.color};"></span>
+        <span class="legend-label">${escapeHtml(option.label)} (${letter})</span>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Nursery Term Report</title>
+        <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+        <style>
+          @page {
+            size: A4;
+            margin: 0;
+          }
+
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            width: 210mm;
+            min-height: 297mm;
+            background: linear-gradient(120deg, #fde2f3 0%, #fdf2f8 40%, #fce7f3 100%);
+            color: #1f2937;
+            font-family: 'Baloo 2', 'Poppins', sans-serif;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+
+          .report-shell {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 18mm 16mm 20mm;
+          }
+
+          .report-paper {
+            position: relative;
+            background: #fff7fb;
+            border-radius: 26px;
+            border: 2px solid rgba(244, 114, 182, 0.25);
+            box-shadow: 0 32px 60px rgba(190, 24, 93, 0.25);
+            overflow: hidden;
+          }
+
+          .report-paper::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+              radial-gradient(circle at 10% 15%, rgba(255, 255, 255, 0.8) 0%, transparent 55%),
+              radial-gradient(circle at 90% 10%, rgba(255, 255, 255, 0.6) 0%, transparent 60%),
+              radial-gradient(circle at 50% 85%, rgba(255, 255, 255, 0.65) 0%, transparent 55%);
+            opacity: 0.9;
+            pointer-events: none;
+          }
+
+          .report-content {
+            position: relative;
+            z-index: 2;
+            padding: 18mm 18mm 20mm;
+          }
+
+          .report-header {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 12mm;
+          }
+
+          .school-logo {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.85);
+            border: 2px solid rgba(244, 63, 94, 0.35);
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-shadow: 0 18px 32px rgba(244, 63, 94, 0.18);
+          }
+
+          .school-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+
+          .logo-placeholder {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: rgba(15, 23, 42, 0.55);
+            letter-spacing: 0.08em;
+            text-align: center;
+            padding: 8px;
+          }
+
+          .school-details {
+            flex: 1;
+            text-align: center;
+            padding: 0 8px;
+          }
+
+          .school-name {
+            font-size: 20pt;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #db2777;
+            margin-bottom: 4px;
+          }
+
+          .school-motto {
+            font-size: 11pt;
+            color: #c026d3;
+            font-weight: 600;
+            margin-bottom: 4px;
+          }
+
+          .school-meta {
+            font-size: 10pt;
+            color: #475569;
+            line-height: 1.45;
+          }
+
+          .report-title {
+            margin: 0 auto 16px;
+            width: fit-content;
+            padding: 10px 28px;
+            background: linear-gradient(120deg, #f472b6, #f97316);
+            color: white;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            border-radius: 999px;
+            font-size: 11.5pt;
+            box-shadow: 0 18px 32px rgba(249, 115, 22, 0.2);
+          }
+
+          .student-info-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(236, 72, 153, 0.25);
+            padding: 18px 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.12);
+            margin-bottom: 18px;
+          }
+
+          .student-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px 18px;
+            font-size: 10.5pt;
+          }
+
+          .student-grid strong {
+            display: block;
+            font-weight: 700;
+            color: #be185d;
+            font-size: 9.8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+          }
+
+          .student-grid span {
+            display: block;
+            color: #1e293b;
+            margin-top: 4px;
+            font-weight: 600;
+          }
+
+          .student-photo {
+            width: 96px;
+            height: 120px;
+            border-radius: 16px;
+            border: 2px solid rgba(236, 72, 153, 0.4);
+            background: linear-gradient(160deg, rgba(254, 205, 211, 0.6), rgba(254, 249, 195, 0.6));
+            box-shadow: 0 16px 30px rgba(190, 24, 93, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+          }
+
+          .student-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .photo-placeholder {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: rgba(15, 23, 42, 0.6);
+            text-align: center;
+          }
+
+          .learning-section {
+            margin-top: 10px;
+            border-radius: 24px;
+            padding: 18px 22px;
+            background: linear-gradient(120deg, rgba(255, 228, 249, 0.92), rgba(255, 255, 255, 0.96));
+            border: 1px solid rgba(236, 72, 153, 0.18);
+            box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.12);
+          }
+
+          .learning-heading {
+            font-size: 12pt;
+            font-weight: 700;
+            color: #be185d;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            text-align: center;
+            margin-bottom: 14px;
+          }
+
+          .learning-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 14px 16px;
+          }
+
+          .learning-table td {
+            vertical-align: top;
+          }
+
+          .learning-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 18px;
+            padding: 16px;
+            position: relative;
+            border: 1px solid rgba(236, 72, 153, 0.16);
+            box-shadow: 0 22px 40px rgba(236, 72, 153, 0.16);
+          }
+
+          .learning-badge {
+            position: absolute;
+            top: -12px;
+            left: 16px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            background: linear-gradient(120deg, rgba(236, 72, 153, 0.92), rgba(244, 114, 182, 0.88));
+            border-radius: 999px;
+            color: white;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            box-shadow: 0 8px 16px rgba(236, 72, 153, 0.25);
+          }
+
+          .learning-card-body {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+          }
+
+          .learning-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 18px;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.08);
+          }
+
+          .learning-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .learning-text {
+            flex: 1;
+          }
+
+          .learning-title {
+            font-size: 10.5pt;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.3;
+            margin-bottom: 8px;
+          }
+
+          .grade-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+
+          .grade-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14pt;
+            box-shadow: 0 12px 20px rgba(15, 23, 42, 0.18);
+          }
+
+          .grade-remark {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #475569;
+          }
+
+          .legend {
+            margin-top: 16px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+          }
+
+          .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 999px;
+            padding: 6px 12px;
+            border: 1px solid rgba(236, 72, 153, 0.18);
+            font-size: 9pt;
+            font-weight: 600;
+            color: #be185d;
+          }
+
+          .legend-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
+          }
+
+          .overall-grade-card {
+            margin-top: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            background: linear-gradient(120deg, rgba(236, 72, 153, 0.16), rgba(253, 224, 71, 0.16));
+            border-radius: 22px;
+            padding: 18px 22px;
+            border: 1px solid rgba(236, 72, 153, 0.24);
+            box-shadow: inset 0 0 0 1px rgba(236, 72, 153, 0.12);
+          }
+
+          .overall-labels {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #be185d;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+          }
+
+          .overall-grade-display {
+            width: 68px;
+            height: 68px;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24pt;
+            font-weight: 700;
+            box-shadow: 0 18px 30px rgba(15, 23, 42, 0.18);
+          }
+
+          .overall-remark {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #475569;
+            margin-top: 4px;
+          }
+
+          .comments-grid {
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+          }
+
+          .comment-card {
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 18px;
+            border: 1px solid rgba(236, 72, 153, 0.22);
+            padding: 16px 18px;
+            box-shadow: 0 18px 28px rgba(236, 72, 153, 0.12);
+          }
+
+          .comment-title {
+            font-size: 10.2pt;
+            font-weight: 700;
+            color: #be185d;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+          }
+
+          .comment-body {
+            min-height: 64px;
+            border-bottom: 1px dashed rgba(148, 163, 184, 0.7);
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+            color: #1f2937;
+            font-weight: 600;
+            line-height: 1.5;
+          }
+
+          .comment-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 9pt;
+            color: #475569;
+            font-weight: 600;
+          }
+
+          .comment-footer span {
+            flex: 1;
+          }
+
+          .other-requirements {
+            margin-top: 18px;
+            background: rgba(255, 255, 255, 0.96);
+            border-radius: 18px;
+            padding: 16px 18px;
+            border: 1px solid rgba(236, 72, 153, 0.18);
+            box-shadow: 0 16px 26px rgba(236, 72, 153, 0.12);
+          }
+
+          .other-requirements strong {
+            display: block;
+            font-size: 10pt;
+            font-weight: 700;
+            color: #be185d;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+          }
+
+          .other-requirements p {
+            margin: 0;
+            font-size: 10pt;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.5;
+          }
+
+          .footer-info {
+            margin-top: 18px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 24px;
+            font-size: 10pt;
+            font-weight: 600;
+            color: #0f172a;
+          }
+
+          .footer-info strong {
+            color: #be185d;
+          }
+
+          .signature-line {
+            display: inline-block;
+            min-width: 160px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.6);
+            padding-bottom: 2px;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="report-shell">
+          <div class="report-paper">
+            <div class="report-content">
+              <div class="report-header">
+                <div class="school-logo">
+                  ${schoolLogoBase64
+                    ? `<img src="${schoolLogoBase64}" alt="School logo" />`
+                    : '<div class="logo-placeholder">School Logo</div>'}
+                </div>
+                <div class="school-details">
+                  <div class="school-name">${escapeHtml(school?.name || 'Cindrelinah Junior School')}</div>
+                  <div class="school-motto">${escapeHtml(school?.motto || 'Sail With Us')}</div>
+                  <div class="school-meta">
+                    ${schoolAddressLine ? `${escapeHtml(schoolAddressLine)}<br/>` : ''}
+                    ${schoolPhoneLine ? `Tel: ${escapeHtml(schoolPhoneLine)}<br/>` : ''}
+                    ${schoolEmailLine ? `Email: ${escapeHtml(schoolEmailLine)}` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="report-title">Nursery Termly Report Form</div>
+
+              <div class="student-info-card">
+                <div class="student-grid">
+                  <div>
+                    <strong>Pupil’s Name</strong>
+                    <span>${escapeHtml(student?.name || student?.full_name || '________________________')}</span>
+                  </div>
+                  <div>
+                    <strong>Age</strong>
+                    <span>${escapeHtml(computeAge())}</span>
+                  </div>
+                  <div>
+                    <strong>Class & Stream</strong>
+                    <span>${escapeHtml(
+                      [
+                        student?.current_class || '',
+                        student?.stream || student?.current_stream || ''
+                      ].filter(Boolean).join(' ')
+                      || '________________________'
+                    )}</span>
+                  </div>
+                  <div>
+                    <strong>Term</strong>
+                    <span>${escapeHtml(
+                      examSet?.term
+                        ? `Term ${examSet.term}`
+                        : summary.term
+                        ? `Term ${summary.term}`
+                        : 'Term ___'
+                    )}</span>
+                  </div>
+                  <div>
+                    <strong>Year</strong>
+                    <span>${escapeHtml(
+                      (examSet?.year || summary.year || new Date().getFullYear()).toString()
+                    )}</span>
+                  </div>
+                  <div>
+                    <strong>Date</strong>
+                    <span>${escapeHtml(reportDateDisplay)}</span>
+                  </div>
+                </div>
+
+                <div class="student-photo">
+                  ${studentPhotoSrc
+                    ? `<img src="${studentPhotoSrc}" alt="Student photo" />`
+                    : '<div class="photo-placeholder">Learner Photo</div>'}
+                </div>
+              </div>
+
+              <div class="learning-section">
+                <div class="learning-heading">Learning Areas & Development Checklist</div>
+                <table class="learning-table">
+                  <tbody>
+                    ${learningRowsHtml}
+                  </tbody>
+                </table>
+                <div class="legend">
+                  ${legendHtml}
+                </div>
+              </div>
+
+              <div class="overall-grade-card">
+                <div>
+                  <div class="overall-labels">Overall Grade</div>
+                  <div class="overall-remark">${escapeHtml(summaryRemark || 'Excellent progress this term.')}</div>
+                </div>
+                <div class="overall-grade-display" style="background:${overallGradeColor};color:${overallGradeTextColor};">
+                  ${escapeHtml(overallGrade)}
+                </div>
+              </div>
+
+              <div class="comments-grid">
+                <div class="comment-card">
+                  <div class="comment-title">Class Teacher’s General Comment</div>
+                  <div class="comment-body">${formatMultiline(classTeacherComment, 'She works hard to show improvement.')}</div>
+                  <div class="comment-footer">
+                    <span>${escapeHtml(student?.comments?.class_teacher_name || 'Name')}</span>
+                    <span>Sign: __________</span>
+                  </div>
+                </div>
+                <div class="comment-card">
+                  <div class="comment-title">Head Teacher’s Report</div>
+                  <div class="comment-body">${formatMultiline(headTeacherComment, 'Keep it up dear.')}</div>
+                  <div class="comment-footer">
+                    <span>${escapeHtml(student?.comments?.head_teacher_name || 'Head Teacher')}</span>
+                    <span>Date: __________</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="other-requirements">
+                <strong>Other Requirements</strong>
+                <p>${formatMultiline(otherRequirements || 'All fees must be paid in the school office.', 'All fees must be paid in the school office.')}</p>
+              </div>
+
+              <div class="footer-info">
+                <div><strong>Next Term Begins:</strong> ${escapeHtml(nextTermBeginsDisplay)}</div>
+                <div><strong>Ends:</strong> ${escapeHtml(nextTermEndsDisplay || '____________________')}</div>
+                <div><strong>Printed from:</strong> Pwezacore</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </body>
     </html>
   `;
 }

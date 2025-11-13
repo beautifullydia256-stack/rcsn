@@ -37,6 +37,13 @@ export const PRIMARY_TEMPLATES = {
     description: 'Clean, elegant, and printable A4 report card template',
     section: 'All',
     schoolType: 'Nursery/Primary' as const
+  },
+  template6: {
+    id: 'primary_template6',
+    name: 'Nursery Heritage Report',
+    description: 'Playful nursery report inspired by traditional termly cards with illustrated learning areas',
+    section: 'Nursery /Baby Class',
+    schoolType: 'Nursery/Primary' as const
   }
 };
 
@@ -60,16 +67,16 @@ export const getTemplateBySection = (section: 'Nursery /Baby Class' | 'Baby Clas
 // This determines which template is automatically selected for each class
 export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
   // Nursery /Baby Class Section (Template 1)
-  'Nursery /Baby Class': 'template1',
-  'nursery /baby class': 'template1',
-  'NURSERY /BABY CLASS': 'template1',
+  'Nursery /Baby Class': 'template6',
+  'nursery /baby class': 'template6',
+  'NURSERY /BABY CLASS': 'template6',
   // Legacy support for old class names
-  'Baby Class': 'template1',
-  'baby class': 'template1',
-  'BABY CLASS': 'template1',
-  'Nursery': 'template1',
-  'nursery': 'template1',
-  'NURSERY': 'template1',
+  'Baby Class': 'template6',
+  'baby class': 'template6',
+  'BABY CLASS': 'template6',
+  'Nursery': 'template6',
+  'nursery': 'template6',
+  'NURSERY': 'template6',
   
   // Middle & Top Class Section (Template 2)
   'Middle Class': 'template2',
