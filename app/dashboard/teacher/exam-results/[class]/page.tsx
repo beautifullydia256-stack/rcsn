@@ -1332,9 +1332,10 @@ export default function TeacherExamResultsClassPage() {
     setSuccess(null);
     setExamResults({});
     setExamResultsSecondary({});
-    void (async () => {
+    const loadData = async () => {
       await reloadSavedResults();
-    })();
+    };
+    loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExamSet, selectedSubject]);
 
