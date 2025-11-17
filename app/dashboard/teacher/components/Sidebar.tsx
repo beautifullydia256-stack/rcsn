@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   LayoutDashboard,
   Users,
@@ -59,7 +60,10 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
     router.push('/');
   };
 
-  const handleNavigation = (path: string) => {
+  const handleNavigation = (path: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     router.push(path);
     setIsMobileOpen(false);
   };
@@ -71,106 +75,125 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
     return pathname?.startsWith(item.path);
   };
 
-  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-    <>
-      {/* Logo & Title */}
-      <div className={`flex items-center gap-3 px-4 border-b ${isMobile ? 'py-3' : 'py-6'}`} style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
-        {!isCollapsed && (
-          <div className="flex items-center gap-2 flex-1">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => {
+    const handleLinkClick = () => {
+      if (isMobile) {
+        setIsMobileOpen(false);
+      }
+    };
+
+    return (
+      <>
+        {/* Logo & Title */}
+        <div className={`flex items-center gap-3 px-4 border-b ${isMobile ? 'py-3' : 'py-6'}`} style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-2 flex-1">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-lg text-white">PwezaCore</span>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto">
               <GraduationCap className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg text-white">PwezaCore</span>
-          </div>
-        )}
-        {isCollapsed && (
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center mx-auto">
-            <GraduationCap className="w-5 h-5 text-white" />
-          </div>
-        )}
-        <button
-          onClick={toggleCollapse}
-          className="hidden lg:flex p-1.5 rounded-lg transition-colors"
-          style={{
-            color: 'rgba(255, 255, 255, 0.85)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      </div>
+          )}
+          <button
+            onClick={toggleCollapse}
+            className="hidden lg:flex p-1.5 rounded-lg transition-colors"
+            style={{
+              color: 'rgba(255, 255, 255, 0.85)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+            aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        </div>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const active = isActive(item);
-          
-          return (
-            <motion.button
-              key={item.path}
-              onClick={() => handleNavigation(item.path)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
-              style={{
-                background: active ? 'rgba(77, 171, 255, 0.15)' : 'transparent',
-                border: active ? '1px solid rgba(77, 171, 255, 0.3)' : '1px solid transparent',
-                color: active ? '#4dabff' : 'rgba(255, 255, 255, 0.85)',
-                boxShadow: active ? '0 2px 10px rgba(0, 0, 0, 0.15)' : 'none'
-              }}
+        {/* Navigation Items */}
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item);
+            
+            return (
+              <Link
+                key={item.path}
+                href={item.path}
+                prefetch={true}
+                className="block"
+                onClick={handleLinkClick}
+              >
+                <motion.div
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all cursor-pointer"
+                  style={{
+                    background: active ? 'rgba(77, 171, 255, 0.15)' : 'transparent',
+                    border: active ? '1px solid rgba(77, 171, 255, 0.3)' : '1px solid transparent',
+                    color: active ? '#4dabff' : 'rgba(255, 255, 255, 0.85)',
+                    boxShadow: active ? '0 2px 10px rgba(0, 0, 0, 0.15)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!active) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = 'transparent';
+                    }
+                  }}
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Icon 
+                    className="w-5 h-5 flex-shrink-0" 
+                    style={{ color: active ? '#4dabff' : 'rgba(255, 255, 255, 0.7)' }}
+                  />
+                  {!isCollapsed && (
+                    <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
+                  )}
+                  {active && !isCollapsed && (
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#4dabff' }} />
+                  )}
+                </motion.div>
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Bottom Section */}
+        <div className="px-3 py-4 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+          <Link
+            href="/dashboard/teacher/settings"
+            prefetch={true}
+            className="block"
+            onClick={handleLinkClick}
+          >
+            <motion.div
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors cursor-pointer"
+              style={{ color: 'rgba(255, 255, 255, 0.85)' }}
               onMouseEnter={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                }
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
               }}
               onMouseLeave={(e) => {
-                if (!active) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.borderColor = 'transparent';
-                }
+                e.currentTarget.style.background = 'transparent';
               }}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Icon 
-                className="w-5 h-5 flex-shrink-0" 
-                style={{ color: active ? '#4dabff' : 'rgba(255, 255, 255, 0.7)' }}
-              />
-              {!isCollapsed && (
-                <span className="text-sm font-medium flex-1 text-left">{item.label}</span>
-              )}
-              {active && !isCollapsed && (
-                <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#4dabff' }} />
-              )}
-            </motion.button>
-          );
-        })}
-      </nav>
-
-      {/* Bottom Section */}
-      <div className="px-3 py-4 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
-        <motion.button
-          onClick={() => handleNavigation('/dashboard/teacher/settings')}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-          style={{ color: 'rgba(255, 255, 255, 0.85)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-          whileHover={{ x: 2 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <Settings className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="text-sm font-medium flex-1 text-left">Settings</span>}
-        </motion.button>
+              <Settings className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && <span className="text-sm font-medium flex-1 text-left">Settings</span>}
+            </motion.div>
+          </Link>
         
         <motion.button
           onClick={handleLogout}
