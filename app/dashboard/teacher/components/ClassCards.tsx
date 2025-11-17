@@ -96,30 +96,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
                   </div>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white mb-4">{assignment.class_name}</h3>
-
-                <div className="mb-5">
-                  <div className="text-xs mb-3 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Subjects:</div>
-                  <div className="flex flex-wrap gap-2">
-                    {Array.isArray(assignment.subjects) && assignment.subjects.length > 0 ? (
-                      assignment.subjects.map((subject: string) => (
-                        <span
-                          key={subject}
-                          className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                          style={{
-                            background: colors.iconBg,
-                            color: colors.icon,
-                            border: `1px solid ${colors.icon}66`
-                          }}
-                        >
-                          {subject}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>No subjects assigned</span>
-                    )}
-                  </div>
-                </div>
+                <h3 className="text-2xl font-bold text-white mb-5">{assignment.class_name}</h3>
 
                 <div className="flex gap-2">
                   <GlassButton
