@@ -471,7 +471,7 @@ export default function TeacherDashboard() {
       <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
         <GlassBackground />
         <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <div className="flex flex-col items-center gap-4">
+        <div className="flex flex-col items-center gap-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
             <p className="text-white/85">Loading dashboard...</p>
           </div>
@@ -514,30 +514,55 @@ export default function TeacherDashboard() {
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <div className="mb-8">
-            <GlassCard className="p-6" hover>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                      <User className="w-6 h-6" />
-                    </div>
-                    Welcome, {teacherName}
-                    {isClassTeacher && (
-                      <span 
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ml-3"
-                        style={{
-                          background: 'rgba(139, 92, 246, 0.2)',
-                          border: '1px solid rgba(139, 92, 246, 0.4)',
-                          color: '#c4b5fd'
-                        }}
-                      >
-                        ⭐ Class Teacher
+            <GlassCard 
+              className="p-8 relative overflow-hidden" 
+              hover
+              style={{
+                background: 'linear-gradient(135deg, rgba(77, 171, 255, 0.15) 0%, rgba(99, 102, 241, 0.12) 100%)',
+              }}
+            >
+              {/* Decorative gradient blob */}
+              <div 
+                className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 blur-3xl"
+                style={{ background: '#4dabff' }}
+              />
+              
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xl">
+                    <User className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h1 className="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3 mb-2">
+                      Welcome, {teacherName}
+                      {isClassTeacher && (
+                        <span 
+                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold"
+                          style={{
+                            background: 'rgba(174, 121, 255, 0.25)',
+                            border: '1px solid rgba(174, 121, 255, 0.4)',
+                            color: '#c4b5fd'
+                          }}
+                        >
+                          ⭐ Class Teacher
+                        </span>
+                      )}
+                    </h1>
+                    <div className="flex items-center gap-4 text-white/85 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ background: '#4dabff' }}></span>
+                        {subjectsAssigned.length} Subjects
                       </span>
-                    )}
-                  </h1>
-                  <p className="text-white/85 mt-2 font-medium">
-                    Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
-                  </p>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ background: '#10b981' }}></span>
+                        {totalClassesAssigned} Classes
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ background: '#ae79ff' }}></span>
+                        {totalStudentsInClasses} Students
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </GlassCard>

@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, BarChart3 } from 'lucide-react';
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
+import PerformanceMetrics from './PerformanceMetrics';
 
 interface StudentInsight {
   name: string;
@@ -94,8 +94,8 @@ export default function AIInsights({
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
-          AI-Powered Insights
-        </h2>
+            AI-Powered Insights
+          </h2>
         <div className="flex items-center gap-2">
           {strugglingStudents.length > 0 || improvingStudents.length > 0 ? (
             <span 
@@ -119,7 +119,7 @@ export default function AIInsights({
             </span>
           )}
         </div>
-      </div>
+        </div>
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Struggling Students */}
@@ -223,68 +223,11 @@ export default function AIInsights({
         </div>
       </div>
 
-      {/* Performance Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Performance Trend */}
-        <div>
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" style={{ color: '#4dabff' }} />
-            Class Performance Trend
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={displayPerformance}>
-                <defs>
-                  <linearGradient id="colorAverage" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="name" stroke="rgba(255, 255, 255, 0.55)" />
-                <YAxis stroke="rgba(255, 255, 255, 0.55)" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(30, 30, 40, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px',
-                    color: '#ffffff'
-                  }}
-                />
-                <Area type="monotone" dataKey="average" stroke="#3b82f6" fillOpacity={1} fill="url(#colorAverage)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Attendance Trend */}
-        <div>
-          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" style={{ color: '#10b981' }} />
-            Weekly Attendance Trend
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={displayAttendance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="week" stroke="rgba(255, 255, 255, 0.55)" />
-                <YAxis stroke="rgba(255, 255, 255, 0.55)" />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(30, 30, 40, 0.95)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    borderRadius: '8px',
-                    color: '#ffffff'
-                  }}
-                />
-                <Bar dataKey="attendance" fill="#10b981" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+      {/* Performance Metrics Cards */}
+      <PerformanceMetrics 
+        performanceData={displayPerformance}
+        attendanceData={displayAttendance}
+      />
     </GlassCard>
   );
 }

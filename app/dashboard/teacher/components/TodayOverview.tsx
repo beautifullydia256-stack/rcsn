@@ -60,12 +60,12 @@ export default function TodayOverview({
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Calendar className="w-5 h-5" style={{ color: '#4dabff' }} />
-          Today's Overview
-        </h2>
+            Today's Overview
+          </h2>
         <span className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-        </span>
-      </div>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </span>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Next Class Card */}
@@ -73,35 +73,58 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="relative overflow-hidden rounded-xl p-4"
+            className="relative overflow-hidden rounded-xl p-5"
             style={{
-              background: 'rgba(77, 171, 255, 0.15)',
+              background: 'linear-gradient(135deg, rgba(77, 171, 255, 0.2) 0%, rgba(99, 102, 241, 0.15) 100%)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               border: '1px solid rgba(77, 171, 255, 0.3)',
-              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
             }}
           >
-            <div className="flex items-start justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4" style={{ color: '#4dabff' }} />
-                <span className="text-sm font-medium" style={{ color: '#4dabff' }}>Next Class</span>
-              </div>
-              <span className="text-xs font-semibold" style={{ color: '#4dabff' }}>
-                {next.time}
-              </span>
-            </div>
-            <div className="space-y-1">
-              <div className="font-semibold text-white">{next.subject}</div>
-              <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{next.class_name}</div>
-              {next.room && (
-                <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>{next.room}</div>
-              )}
-              {timeUntilClass > 0 && (
-                <div className="text-xs mt-2" style={{ color: '#4dabff' }}>
-                  {hoursUntil > 0 ? `${hoursUntil}h ` : ''}{minutesUntil}m remaining
+            {/* Decorative gradient blob */}
+            <div 
+              className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-3xl"
+              style={{ background: '#4dabff' }}
+            />
+            <div className="relative z-10">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" style={{ color: '#4dabff' }} />
+                  <span className="text-sm font-medium" style={{ color: '#4dabff' }}>Next Class</span>
                 </div>
-              )}
+                <span 
+                  className="text-sm font-bold px-2 py-1 rounded-lg"
+                  style={{ 
+                    background: 'rgba(77, 171, 255, 0.2)',
+                    color: '#4dabff'
+                  }}
+                >
+                  {next.time}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <div className="text-xl font-bold text-white">{next.subject}</div>
+                <div className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{next.class_name}</div>
+                {next.room && (
+                  <div className="text-xs flex items-center gap-1" style={{ color: 'rgba(255, 255, 255, 0.65)' }}>
+                    <span>📍</span>
+                    {next.room}
+                  </div>
+                )}
+                {timeUntilClass > 0 && (
+                  <div 
+                    className="text-xs mt-3 px-3 py-1.5 rounded-lg inline-block font-medium"
+                    style={{ 
+                      background: 'rgba(77, 171, 255, 0.15)',
+                      color: '#4dabff',
+                      border: '1px solid rgba(77, 171, 255, 0.3)'
+                    }}
+                  >
+                    {hoursUntil > 0 ? `${hoursUntil}h ` : ''}{minutesUntil}m remaining
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
@@ -111,7 +134,7 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative overflow-hidden rounded-lg p-3"
+            className="relative overflow-hidden rounded-xl p-4"
             style={{
               background: 'rgba(255, 255, 255, 0.08)',
               backdropFilter: 'blur(20px)',
@@ -200,7 +223,7 @@ export default function TodayOverview({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="relative z-10 flex items-center justify-between p-3 rounded-lg transition-all duration-300"
+                className="relative z-10 flex items-center justify-between p-4 rounded-xl transition-all duration-300"
                 style={{
                   background: 'rgba(255, 255, 255, 0.08)',
                   backdropFilter: 'blur(20px)',
@@ -235,7 +258,7 @@ export default function TodayOverview({
             </div>
           )}
         </div>
-      </div>
+        </div>
     </GlassCard>
   );
 }

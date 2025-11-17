@@ -28,10 +28,10 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
 
   const getColorClass = (index: number) => {
     const colors = [
-      { icon: '#4dabff', iconBg: 'rgba(77, 171, 255, 0.2)' },
-      { icon: '#10b981', iconBg: 'rgba(16, 185, 129, 0.2)' },
-      { icon: '#ae79ff', iconBg: 'rgba(174, 121, 255, 0.2)' },
-      { icon: '#f59e0b', iconBg: 'rgba(245, 158, 11, 0.2)' },
+      { icon: '#4dabff', iconBg: 'rgba(77, 171, 255, 0.2)', gradientStart: 'rgba(77, 171, 255, 0.25)', gradientEnd: 'rgba(77, 171, 255, 0.15)' },
+      { icon: '#10b981', iconBg: 'rgba(16, 185, 129, 0.2)', gradientStart: 'rgba(16, 185, 129, 0.25)', gradientEnd: 'rgba(16, 185, 129, 0.15)' },
+      { icon: '#ae79ff', iconBg: 'rgba(174, 121, 255, 0.2)', gradientStart: 'rgba(174, 121, 255, 0.25)', gradientEnd: 'rgba(174, 121, 255, 0.15)' },
+      { icon: '#f59e0b', iconBg: 'rgba(245, 158, 11, 0.2)', gradientStart: 'rgba(245, 158, 11, 0.25)', gradientEnd: 'rgba(245, 158, 11, 0.15)' },
     ];
     return colors[index % colors.length];
   };
@@ -55,38 +55,55 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
           return (
             <GlassCard
               key={assignment.class_name}
-              className="p-6 cursor-pointer"
+              className="p-6 cursor-pointer relative overflow-hidden"
               hover
+              style={{
+                background: `linear-gradient(135deg, ${colors.gradientStart} 0%, ${colors.gradientEnd} 100%)`,
+              }}
             >
+              {/* Decorative gradient blob */}
+              <div 
+                className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-3xl"
+                style={{ background: colors.icon }}
+              />
+              
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 whileHover={{ y: -4, scale: 1.02 }}
                 onClick={() => router.push(`/dashboard/teacher/classes/${assignment.class_name}`)}
+                className="relative z-10"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl" style={{ background: colors.iconBg }}>
-                    <GraduationCap className="w-6 h-6" style={{ color: colors.icon }} />
+                <div className="flex items-start justify-between mb-5">
+                  <div className="p-4 rounded-xl" style={{ background: colors.iconBg }}>
+                    <GraduationCap className="w-7 h-7" style={{ color: colors.icon }} />
                   </div>
-                  <div className="flex items-center gap-1 text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+                  <div 
+                    className="flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-lg"
+                    style={{ 
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.9)'
+                    }}
+                  >
                     <Users className="w-4 h-4" />
                     <span>{assignment.student_count}</span>
                   </div>
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-2">{assignment.class_name}</h3>
+                <h3 className="text-2xl font-bold text-white mb-4">{assignment.class_name}</h3>
 
-                <div className="mb-4">
-                  <div className="text-xs mb-2" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Subjects:</div>
+                <div className="mb-5">
+                  <div className="text-xs mb-3 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Subjects:</div>
                   <div className="flex flex-wrap gap-2">
                     {assignment.subjects.map((subject) => (
                       <span
                         key={subject}
-                        className="px-2 py-1 rounded-lg text-xs font-medium"
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
                         style={{
                           background: colors.iconBg,
-                          color: colors.icon
+                          color: colors.icon,
+                          border: `1px solid ${colors.icon}66`
                         }}
                       >
                         {subject}
@@ -102,7 +119,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
                       e.stopPropagation();
                       router.push(`/dashboard/teacher/classes/${assignment.class_name}`);
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 flex items-center justify-center gap-2 text-sm font-medium"
                   >
                     <Eye className="w-4 h-4" />
                     View Class
@@ -113,7 +130,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
                       e.stopPropagation();
                       router.push(`/dashboard/teacher/exam-results/${assignment.class_name}`);
                     }}
-                    className="flex-1 flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 flex items-center justify-center gap-2 text-sm font-medium"
                   >
                     <FileText className="w-4 h-4" />
                     Enter Marks
