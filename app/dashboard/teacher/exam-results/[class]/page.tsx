@@ -2016,7 +2016,7 @@ export default function TeacherExamResultsClassPage() {
                       />
                     </div>
                   </div>
-                    )}
+                )}
                   </>
                 )}
                 {teacherSubjects.map(subject => (
