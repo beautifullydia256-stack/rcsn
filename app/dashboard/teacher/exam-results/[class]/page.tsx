@@ -1171,7 +1171,7 @@ export default function TeacherExamResultsClassPage() {
                 }
               }
             });
-          setNurseryPerformances(map);
+            setNurseryPerformances(map);
             setNurseryDirtyStudents({});
             setExamResults({});
           } else {
