@@ -466,7 +466,7 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
           <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
@@ -476,7 +476,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-white">
       {/* Sidebar */}
       <Sidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -506,21 +506,21 @@ export default function TeacherDashboard() {
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <div className="mb-8">
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
                       <User className="w-6 h-6" />
                     </div>
                     Welcome, {teacherName}
                     {isClassTeacher && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 text-sm font-medium">
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-sm font-medium">
                         ⭐ Class Teacher
                       </span>
                     )}
                   </h1>
-                  <p className="text-gray-600 dark:text-gray-300 mt-2 font-medium">
+                  <p className="text-gray-600 mt-2 font-medium">
                     Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
                   </p>
                 </div>
@@ -594,7 +594,7 @@ export default function TeacherDashboard() {
                         </div>
 
           {/* Footer */}
-          <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
+          <footer className="mt-12 py-6 text-center text-sm text-gray-500 border-t border-gray-200">
             <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
           </footer>
         </main>
