@@ -56,7 +56,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
             <GlassCard
               key={assignment.class_name}
               className="p-6 cursor-pointer"
-              enableHover={true}
+              enableHover
             >
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

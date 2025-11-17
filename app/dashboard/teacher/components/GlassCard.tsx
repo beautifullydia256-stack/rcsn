@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -8,7 +8,7 @@ interface GlassCardProps {
   enableHover?: boolean;
 }
 
-export default function GlassCard({ children, className = '', enableHover = false }: GlassCardProps) {
+const GlassCard: React.FC<GlassCardProps> = ({ children, className = '', enableHover = false }) => {
   return (
     <div
       className={`relative overflow-hidden rounded-[20px] ${
@@ -25,5 +25,7 @@ export default function GlassCard({ children, className = '', enableHover = fals
       {children}
     </div>
   );
-}
+};
+
+export default GlassCard;
 

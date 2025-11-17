@@ -514,7 +514,7 @@ export default function TeacherDashboard() {
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <div className="mb-8">
-            <GlassCard className="p-6" enableHover={true}>
+            <GlassCard className="p-6" enableHover>
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
