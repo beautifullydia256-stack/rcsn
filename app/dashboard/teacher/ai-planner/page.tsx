@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, BookOpen, FileText, Loader2, Download, Copy, Check, X } from 'lucide-react';
@@ -9,7 +9,7 @@ import Navbar from '../components/Navbar';
 
 type ActionType = 'lesson-plan' | 'exam' | null;
 
-export default function AIPlannerPage() {
+function AIPlannerContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const actionParam = searchParams.get('action');
@@ -409,17 +409,16 @@ export default function AIPlannerPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Time Limit (minutes)
-                      </label>
-                      <input
-                        type="number"
-                        value={examForm.time_limit}
-                        onChange={(e) =>
-                          setExamForm({ ...examForm, time_limit: e.target.value })
-                        }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
-                        placeholder="e.g., 60"
-                      />
-                    </div>
+                    </label>
+                    <input
+                      type="number"
+                      value={examForm.time_limit}
+                      onChange={(e) =>
+                        setExamForm({ ...examForm, time_limit: e.target.value })
+                      }
+                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                      placeholder="e.g., 60"
+                    />
                   </div>
                   <button
                     type="submit"
@@ -503,6 +502,18 @@ export default function AIPlannerPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AIPlannerPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      </div>
+    }>
+      <AIPlannerContent />
+    </Suspense>
   );
 }
 
