@@ -95,7 +95,7 @@ export default function QuickActions() {
                   {action.label}
                 </span>
               </button>
-            </motion.div>
+            </div>
           );
         })}
       </div>

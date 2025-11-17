@@ -477,7 +477,6 @@ export default function TeacherDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
       {/* Sidebar */}
       <Sidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -527,7 +526,7 @@ export default function TeacherDashboard() {
                 </div>
               </div>
             </div>
-        </motion.div>
+        </div>
 
           {/* Quick Actions */}
           <QuickActions />

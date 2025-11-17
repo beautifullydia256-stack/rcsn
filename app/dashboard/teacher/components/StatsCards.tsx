@@ -99,7 +99,7 @@ export default function StatsCards({
                 </div>
               </div>
             </div>
-          </motion.div>
+          </div>
         );
       })}
     </div>
