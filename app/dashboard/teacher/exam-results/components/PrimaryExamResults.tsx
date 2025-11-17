@@ -102,27 +102,21 @@ export function PrimaryExamResults() {
 
   if (loading) {
     return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px] p-8">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-white text-2xl font-semibold">Insert Exam Results</h1>
+          <h1 className="text-gray-900 dark:text-white text-2xl font-semibold">Insert Exam Results</h1>
           <div className="flex gap-3">
             <button
               onClick={() => router.push('/dashboard/teacher')}
-              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+              className="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
             >
               Back to Dashboard
             </button>
@@ -130,12 +124,12 @@ export function PrimaryExamResults() {
         </div>
 
         {error && (
-          <div className="mb-6 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-4 py-3">
+          <div className="mb-6 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-4 py-3">
             {error}
           </div>
         )}
 
-        <div className="text-white/80 text-sm mb-6">
+        <div className="text-gray-600 dark:text-gray-400 text-sm mb-6">
           Select a class to input exam results. You can only input results for subjects you are assigned to teach.
         </div>
 
@@ -143,10 +137,10 @@ export function PrimaryExamResults() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-8 text-center"
+            className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center"
           >
-            <div className="text-white/80 text-lg mb-2">No Classes Assigned</div>
-            <div className="text-white/60 text-sm">
+            <div className="text-gray-900 dark:text-white text-lg mb-2">No Classes Assigned</div>
+            <div className="text-gray-600 dark:text-gray-400 text-sm">
               You haven't been assigned to any classes yet. Contact your administrator.
             </div>
           </motion.div>
@@ -163,23 +157,23 @@ export function PrimaryExamResults() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   whileHover={{ y: -4 }}
-                  className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-6 text-white cursor-pointer hover:bg-white/15 transition-all"
+                  className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-6 text-gray-900 dark:text-white cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
                   onClick={() => handleClassSelect(className)}
                 >
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">{className}</h3>
-                    <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
                   
                   <div className="mb-4">
-                    <div className="text-white/80 text-sm mb-2">Subjects you teach:</div>
+                    <div className="text-gray-600 dark:text-gray-400 text-sm mb-2">Subjects you teach:</div>
                     <div className="flex flex-wrap gap-2">
                       {classSubjects.map((subject) => (
                         <span
                           key={subject}
-                          className="px-2 py-1 bg-blue-600/20 text-blue-300 rounded text-xs border border-blue-500/30"
+                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded text-xs border border-blue-300 dark:border-blue-700"
                         >
                           {subject}
                         </span>
@@ -187,7 +181,7 @@ export function PrimaryExamResults() {
                     </div>
                   </div>
                   
-                  <div className="text-white/60 text-sm">
+                  <div className="text-gray-500 dark:text-gray-400 text-sm">
                     Click to input exam results for {className}
                   </div>
                 </motion.div>

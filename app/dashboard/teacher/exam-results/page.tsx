@@ -5,6 +5,8 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { PrimaryExamResults } from "./components/PrimaryExamResults";
 import { SecondaryExamResults } from "./components/SecondaryExamResults";
+import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
 
 export default function TeacherExamResultsPage() {
   const router = useRouter();
@@ -51,10 +53,13 @@ export default function TeacherExamResultsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        <div className="relative flex items-center justify-center min-h-screen">
-          <div className="text-white text-lg">Loading...</div>
+      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+        <Sidebar />
+        <div className="flex-1 flex flex-col lg:ml-72">
+          <Navbar onSearch={() => {}} />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+          </main>
         </div>
       </div>
     );
@@ -62,15 +67,28 @@ export default function TeacherExamResultsPage() {
 
   if (!schoolType) {
     return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-        <div className="relative flex items-center justify-center min-h-screen">
-          <div className="text-white text-lg">Unable to determine school type</div>
+      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+        <Sidebar />
+        <div className="flex-1 flex flex-col lg:ml-72">
+          <Navbar onSearch={() => {}} />
+          <main className="flex-1 flex items-center justify-center">
+            <div className="text-gray-600 dark:text-gray-400">Unable to determine school type</div>
+          </main>
         </div>
       </div>
     );
   }
 
   // Route to appropriate component based on school type
-  return schoolType === 'Nursery/Primary' ? <PrimaryExamResults /> : <SecondaryExamResults />;
+  return (
+    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <Sidebar />
+      <div className="flex-1 flex flex-col lg:ml-72">
+        <Navbar onSearch={() => {}} />
+        <main className="flex-1">
+          {schoolType === 'Nursery/Primary' ? <PrimaryExamResults /> : <SecondaryExamResults />}
+        </main>
+      </div>
+    </div>
+  );
 }
