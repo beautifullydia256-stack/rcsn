@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, Student } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
-import LiquidGlass from 'liquid-glass-react';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import QuickActions from './components/QuickActions';
@@ -478,14 +477,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black relative overflow-hidden">
-      {/* Animated background elements with glass effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40"></div>
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
 
       {/* Sidebar */}
       <Sidebar 
@@ -515,46 +507,26 @@ export default function TeacherDashboard() {
         {/* Dashboard Content */}
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 shadow-2xl overflow-hidden">
-              {/* Fallback glass effect */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl"></div>
-              <LiquidGlass
-                displacementScale={64}
-                blurAmount={0.1}
-                saturation={130}
-                aberrationIntensity={2}
-                elasticity={0.35}
-                cornerRadius={16}
-                padding="0"
-                style={{ background: 'transparent' }}
-              >
-                <div className="flex items-center justify-between mb-2 relative z-10">
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
-                        <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                          <User className="w-6 h-6" />
-                        </div>
-                      </div>
-                      Welcome, {teacherName}
-                      {isClassTeacher && (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-white/20 backdrop-blur-sm text-sm font-medium shadow-sm">
-                          ⭐ Class Teacher
-                        </span>
-                      )}
-                    </h1>
-                    <p className="text-white/80 mt-2 font-medium">
-                      Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
-                    </p>
-                  </div>
+          <div className="mb-8">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                      <User className="w-6 h-6" />
+                    </div>
+                    Welcome, {teacherName}
+                    {isClassTeacher && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700 text-sm font-medium">
+                        ⭐ Class Teacher
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-gray-600 dark:text-gray-300 mt-2 font-medium">
+                    Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
+                  </p>
                 </div>
-              </LiquidGlass>
+              </div>
             </div>
         </motion.div>
 
@@ -624,7 +596,7 @@ export default function TeacherDashboard() {
                         </div>
 
           {/* Footer */}
-          <footer className="mt-12 py-6 text-center text-sm text-white/60 border-t border-white/20">
+          <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">
             <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
           </footer>
         </main>

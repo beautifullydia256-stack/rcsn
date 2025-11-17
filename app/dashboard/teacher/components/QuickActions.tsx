@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import LiquidGlass from 'liquid-glass-react';
 import {
   ClipboardCheck,
   BookOpen,
@@ -29,92 +28,74 @@ export default function QuickActions() {
       icon: ClipboardCheck,
       label: 'Take Attendance',
       path: '/dashboard/teacher/attendance',
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-900/20 hover:bg-blue-900/30'
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-900/20'
     },
     {
       icon: BookOpen,
       label: 'Insert Exam Results',
       path: '/dashboard/teacher/exam-results',
-      color: 'text-green-400',
-      bgColor: 'bg-green-900/20 hover:bg-green-900/30'
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-900/20'
     },
     {
       icon: Sparkles,
       label: 'AI Generate Lesson Plan',
       path: '/dashboard/teacher/ai-planner',
-      color: 'text-purple-400',
-      bgColor: 'bg-purple-900/20 hover:bg-purple-900/30'
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-900/20'
     },
     {
       icon: Upload,
       label: 'Upload Assignment',
       path: '/dashboard/teacher/assignments',
-      color: 'text-orange-400',
-      bgColor: 'bg-orange-900/20 hover:bg-orange-900/30'
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-50 dark:bg-orange-900/20'
     },
     {
       icon: Calendar,
       label: 'View Timetable',
       path: '/dashboard/teacher/timetable',
-      color: 'text-indigo-400',
-      bgColor: 'bg-indigo-900/20 hover:bg-indigo-900/30'
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
     },
     {
       icon: FileText,
       label: 'AI Create Exam Paper',
       path: '/dashboard/teacher/ai-planner?action=exam',
-      color: 'text-pink-400',
-      bgColor: 'bg-pink-900/20 hover:bg-pink-900/30'
+      color: 'text-pink-600 dark:text-pink-400',
+      bgColor: 'bg-pink-50 dark:bg-pink-900/20'
     },
     {
       icon: MessageSquare,
       label: 'Send Message to Class',
       path: '/dashboard/teacher/messages',
-      color: 'text-teal-400',
-      bgColor: 'bg-teal-900/20 hover:bg-teal-900/30'
+      color: 'text-teal-600 dark:text-teal-400',
+      bgColor: 'bg-teal-50 dark:bg-teal-900/20'
     }
   ];
 
   return (
     <div className="mb-8">
-      <h2 className="text-lg font-semibold text-white mb-4 drop-shadow-lg">Quick Actions</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <motion.div
+            <div
               key={action.path}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.95 }}
             >
-              <div className="relative w-full bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-4 shadow-lg overflow-hidden cursor-pointer hover:border-white/40 transition-all" onClick={() => router.push(action.path)}>
-                {/* Fallback glass effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl"></div>
-                <LiquidGlass
-                  displacementScale={64}
-                  blurAmount={0.1}
-                  saturation={130}
-                  aberrationIntensity={2}
-                  elasticity={0.35}
-                  cornerRadius={16}
-                  padding="0"
-                  onClick={() => router.push(action.path)}
-                  style={{ background: 'transparent', minHeight: '100px', width: '100%', cursor: 'pointer' }}
-                >
-                  <div className="flex flex-col items-center justify-center gap-2 relative z-10">
-                    <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300">
-                      <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
-                    </div>
-                    <span className={`relative z-10 text-xs font-medium text-center ${action.color} transition-all drop-shadow-lg`}>
-                      {action.label}
-                    </span>
-                  </div>
-                </LiquidGlass>
-              </div>
+              <button
+                onClick={() => router.push(action.path)}
+                className="w-full bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2"
+              >
+                <div className={`${action.bgColor} p-2.5 rounded-lg`}>
+                  <Icon className={`w-5 h-5 ${action.color}`} />
+                </div>
+                <span className={`text-xs font-medium text-center ${action.color}`}>
+                  {action.label}
+                </span>
+              </button>
             </motion.div>
           );
         })}
