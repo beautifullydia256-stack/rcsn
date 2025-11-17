@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, MessageSquare, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
+import { Search, Bell, MessageSquare, User, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
 import SearchResults from './SearchResults';
@@ -21,7 +21,6 @@ interface NavbarProps {
 export default function Navbar({ onSearch, searchQuery: externalSearchQuery, showSearchResults, onCloseSearch, searchData }: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [teacherName, setTeacherName] = useState('Teacher');
   const [teacherEmail, setTeacherEmail] = useState('');
   const profileRef = useRef<HTMLDivElement>(null);
@@ -46,16 +45,6 @@ export default function Navbar({ onSearch, searchQuery: externalSearchQuery, sho
     };
     loadUser();
 
-    // Check dark mode
-    const checkDarkMode = () => {
-      if (typeof window !== 'undefined') {
-        const isDark = document.documentElement.classList.contains('dark') ||
-          (localStorage.getItem('pwezacore-theme') === 'dark');
-        setIsDarkMode(isDark);
-      }
-    };
-    checkDarkMode();
-
     // Close profile/search on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
@@ -68,21 +57,6 @@ export default function Navbar({ onSearch, searchQuery: externalSearchQuery, sho
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showSearchResults, onCloseSearch]);
-
-  const toggleDarkMode = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    
-    if (typeof window !== 'undefined') {
-      if (newMode) {
-        document.documentElement.classList.add('dark');
-        localStorage.setItem('pwezacore-theme', 'dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-        localStorage.setItem('pwezacore-theme', 'light');
-      }
-    }
-  };
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -151,34 +125,6 @@ export default function Navbar({ onSearch, searchQuery: externalSearchQuery, sho
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
-            {/* Dark Mode Toggle */}
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg transition-colors"
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                color: 'rgba(255, 255, 255, 0.85)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-              }}
-              aria-label="Toggle dark mode"
-            >
-              {isDarkMode ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </motion.button>
-
             {/* Notifications */}
             <motion.button
               whileHover={{ scale: 1.1 }}
