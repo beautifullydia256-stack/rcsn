@@ -45,7 +45,6 @@ export default function SubjectsCard({ subjects = [] }: SubjectsCardProps) {
             {mockSubjects.length} subjects
           </span>
         </div>
-        </div>
 
         <div className="relative z-10 space-y-3">
         {mockSubjects.map((subject, index) => {

@@ -60,7 +60,6 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
             View Full
           </button>
         </div>
-        </div>
 
         <div className="relative z-10">
         {/* Next Class Highlight */}
