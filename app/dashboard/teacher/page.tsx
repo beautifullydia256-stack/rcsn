@@ -17,8 +17,6 @@ import MessagesCard from './components/MessagesCard';
 import NotificationsCard from './components/NotificationsCard';
 import SubjectsCard from './components/SubjectsCard';
 import GlassBackground from './components/GlassBackground';
-import GlassCard from '@/components/ui/GlassCard';
-import { User } from 'lucide-react';
 
 interface Assignment {
   class_name: string;
@@ -512,62 +510,6 @@ export default function TeacherDashboard() {
 
         {/* Dashboard Content */}
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
-          {/* Welcome Header */}
-          <div className="mb-8">
-            <GlassCard 
-              className="p-8 relative overflow-hidden" 
-              hover
-              style={{
-                background: 'linear-gradient(135deg, rgba(77, 171, 255, 0.15) 0%, rgba(99, 102, 241, 0.12) 100%)',
-              }}
-            >
-              {/* Decorative gradient blob */}
-              <div 
-                className="absolute top-0 right-0 w-40 h-40 rounded-full opacity-20 blur-3xl"
-                style={{ background: '#4dabff' }}
-              />
-              
-              <div className="relative z-10 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xl">
-                    <User className="w-8 h-8" />
-                  </div>
-              <div>
-                    <h1 className="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3 mb-2">
-                    Welcome, {teacherName}
-                    {isClassTeacher && (
-                        <span 
-                          className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold"
-                          style={{
-                            background: 'rgba(174, 121, 255, 0.25)',
-                            border: '1px solid rgba(174, 121, 255, 0.4)',
-                            color: '#c4b5fd'
-                          }}
-                        >
-                        ⭐ Class Teacher
-                      </span>
-                    )}
-                  </h1>
-                    <div className="flex items-center gap-4 text-white/85 font-medium">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: '#4dabff' }}></span>
-                        {subjectsAssigned.length} Subjects
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: '#10b981' }}></span>
-                        {totalClassesAssigned} Classes
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full" style={{ background: '#ae79ff' }}></span>
-                        {totalStudentsInClasses} Students
-                      </span>
-              </div>
-              </div>
-          </div>
-              </div>
-            </GlassCard>
-        </div>
-
           {/* Quick Actions */}
           <QuickActions />
 
