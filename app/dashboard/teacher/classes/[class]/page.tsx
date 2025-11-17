@@ -245,7 +245,7 @@ export default function ClassDetailPage() {
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
                       }}
-                      onClick={() => router.push(`/dashboard/teacher/students/${student.student_id}`)}
+                      onClick={() => router.push(`/dashboard/teacher/students/${encodeURIComponent(student.student_id)}`)}
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold">
