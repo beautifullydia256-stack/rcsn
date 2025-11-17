@@ -274,3 +274,5 @@ For support and questions:
 ---
 
 **PwezaCore** - Modern school management made simple.
+
+<!-- Auto-deployment test -->
