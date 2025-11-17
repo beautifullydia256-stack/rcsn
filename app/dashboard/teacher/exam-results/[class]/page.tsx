@@ -6,8 +6,6 @@ import { supabase } from "@/src/lib/supabase";
 import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
-import Sidebar from "../../components/Sidebar";
-import Navbar from "../../components/Navbar";
 import {
   NURSERY_PERFORMANCE_OPTIONS,
   NURSERY_PERFORMANCE_COLOR_MAP,
@@ -482,17 +480,17 @@ export default function TeacherExamResultsClassPage() {
 
         // Load Class Teacher's ranges for this class
         if (!isNursery) {
-        try {
-          const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
-          if (resCT.ok) {
-            const j = await resCT.json();
-            const ranges = Array.isArray(j.ranges) ? j.ranges : [];
-            const sanitized = ranges
-              .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
-              .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
-            if (sanitized.length > 0) setClassTeacherRanges(sanitized);
-          }
-        } catch {}
+          try {
+            const resCT = await fetch(`/api/class-teacher-comments-settings?class=${encodeURIComponent(className)}`, { cache: 'no-store' as any });
+            if (resCT.ok) {
+              const j = await resCT.json();
+              const ranges = Array.isArray(j.ranges) ? j.ranges : [];
+              const sanitized = ranges
+                .filter((r:any) => r && r.min_percent != null && r.max_percent != null)
+                .map((r:any) => ({ id: r.id, min_percent: Number(r.min_percent)||0, max_percent: Number(r.max_percent)||0, comment_text: String(r.comment_text||'') }));
+              if (sanitized.length > 0) setClassTeacherRanges(sanitized);
+            }
+          } catch {}
         } else {
           setClassTeacherRanges([]);
         }
@@ -1157,21 +1155,21 @@ export default function TeacherExamResultsClassPage() {
               }
 
               if (source) {
-                const normalized: NurseryPerformanceRecord = {};
-                Object.entries(source).forEach(([skillKey, value]) => {
-                  const canonicalKey = canonicalizeNurserySkillKey(skillKey);
-                  if (!canonicalKey) return;
-                  const normalizedValue = normalizeNurseryPerformanceWord(value);
-                  if (normalizedValue) {
-                    normalized[canonicalKey] = normalizedValue;
-                  }
-                });
-                if (Object.keys(normalized).length > 0) {
-                  map[r.student_id] = normalized;
+              const normalized: NurseryPerformanceRecord = {};
+              Object.entries(source).forEach(([skillKey, value]) => {
+                const canonicalKey = canonicalizeNurserySkillKey(skillKey);
+                if (!canonicalKey) return;
+                const normalizedValue = normalizeNurseryPerformanceWord(value);
+                if (normalizedValue) {
+                  normalized[canonicalKey] = normalizedValue;
                 }
+              });
+              if (Object.keys(normalized).length > 0) {
+                map[r.student_id] = normalized;
               }
-            });
-            setNurseryPerformances(map);
+            }
+          });
+          setNurseryPerformances(map);
             setNurseryDirtyStudents({});
             setExamResults({});
           } else {
@@ -1202,7 +1200,7 @@ export default function TeacherExamResultsClassPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, isNursery, className]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1332,10 +1330,7 @@ export default function TeacherExamResultsClassPage() {
     setSuccess(null);
     setExamResults({});
     setExamResultsSecondary({});
-    const loadData = async () => {
-      await reloadSavedResults();
-    };
-    loadData();
+    (async () => { await reloadSavedResults(); })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExamSet, selectedSubject]);
 
@@ -1354,7 +1349,6 @@ export default function TeacherExamResultsClassPage() {
     if (resolvedTeacherId && resolvedSchoolId) {
       refreshClassTeacherStatus();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedTeacherId, resolvedSchoolId, className]);
 
   if (loading) {
@@ -1371,41 +1365,36 @@ export default function TeacherExamResultsClassPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
-        <Navbar onSearch={() => {}} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-gray-900 dark:text-white text-2xl font-semibold">Insert Exam Results</h1>
-                <div className="flex items-center gap-3 mt-1">
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Class: {className}</p>
-                  <div className={`px-2 py-1 rounded text-xs font-medium ${
-                    isSecondary 
-                      ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700' 
-                      : 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
-                  }`}>
-                    {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : primarySection ? `${primarySection} Section Format` : 'Primary Format')}
-                  </div>
-                  {primarySection && (
-                    <div className="text-xs text-white/60 italic">
-                      ✓ Section-specific format
-                    </div>
-                  )}
-                </div>
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-white text-2xl font-semibold">Insert Exam Results</h1>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-white/80 text-sm">Class: {className}</p>
+              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                isSecondary 
+                  ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' 
+                  : 'bg-green-600/20 text-green-300 border border-green-500/30'
+              }`}>
+                {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : primarySection ? `${primarySection} Section Format` : 'Primary Format')}
               </div>
+              {primarySection && (
+                <div className="text-xs text-white/60 italic">
+                  ✓ Section-specific format
+                </div>
+              )}
             </div>
           </div>
           <div className="flex gap-3">
             {!isNursery && (
-            <button
-              onClick={() => setShowGradeSettings(true)}
-              className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
-            >
-              Grade Settings
-            </button>
+              <button
+                onClick={() => setShowGradeSettings(true)}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white"
+              >
+                Grade Settings
+              </button>
             )}
             <button
               onClick={() => setShowTeacherRemarks(true)}
@@ -2019,7 +2008,7 @@ export default function TeacherExamResultsClassPage() {
                       />
                     </div>
                   </div>
-                )}
+                    )}
                   </>
                 )}
                 {teacherSubjects.map(subject => (
@@ -2059,7 +2048,6 @@ export default function TeacherExamResultsClassPage() {
         )}
 
         {/* Comments modal removed per request */}
-      </main>
       </div>
     </div>
   );
