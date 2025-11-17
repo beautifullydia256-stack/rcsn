@@ -15,7 +15,6 @@ import ClassCards from './components/ClassCards';
 import AssignmentsCard from './components/AssignmentsCard';
 import MessagesCard from './components/MessagesCard';
 import NotificationsCard from './components/NotificationsCard';
-import SubjectsCard from './components/SubjectsCard';
 import GlassBackground from './components/GlassBackground';
 
 interface Assignment {
@@ -445,24 +444,6 @@ export default function TeacherDashboard() {
     }));
   }, [assignments, students]);
 
-  // Prepare subjects data for SubjectsCard
-  const subjectsData = useMemo(() => {
-    const subjectMap: Record<string, string[]> = {};
-    
-    assignments.forEach(assignment => {
-      if (!subjectMap[assignment.subject]) {
-        subjectMap[assignment.subject] = [];
-      }
-      if (!subjectMap[assignment.subject].includes(assignment.class_name)) {
-        subjectMap[assignment.subject].push(assignment.class_name);
-      }
-    });
-
-    return Object.entries(subjectMap).map(([subject, classes]) => ({
-      subject,
-      classes
-    }));
-  }, [assignments]);
 
   if (loading) {
     return (
@@ -564,11 +545,10 @@ export default function TeacherDashboard() {
           {/* Class Cards */}
           <ClassCards assignments={classAssignmentsData} />
 
-          {/* Two Column Layout - Subjects, Assignments, Messages, Notifications */}
+          {/* Two Column Layout - Assignments, Messages, Notifications */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <SubjectsCard subjects={subjectsData} />
             <AssignmentsCard />
-                        </div>
+          </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MessagesCard />
