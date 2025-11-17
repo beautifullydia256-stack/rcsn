@@ -234,13 +234,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
                 borderRight: '1px solid rgba(255, 255, 255, 0.20)'
               }}
             >
-              <div className="flex items-center justify-between px-4 py-6 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-                    <GraduationCap className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="font-bold text-lg text-white">PwezaCore</span>
-                </div>
+              <div className="flex items-center justify-end px-4 py-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
                 <button
                   onClick={() => setIsMobileOpen(false)}
                   className="p-1.5 rounded-lg transition-colors"
