@@ -86,9 +86,9 @@ export default function AssignmentsCard({ assignments = [] }: AssignmentsCardPro
             View All
           </button>
         </div>
-      </div>
+        </div>
 
-      <div className="space-y-3">
+        <div className="relative z-10 space-y-3">
         {mockAssignments.slice(0, 3).map((assignment, index) => {
           const statusColors = getStatusColor(assignment.status);
           const StatusIcon = getStatusIcon(assignment.status);
@@ -153,18 +153,17 @@ export default function AssignmentsCard({ assignments = [] }: AssignmentsCardPro
             </motion.div>
           );
         })}
-      </div>
 
-      {mockAssignments.length > 3 && (
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => router.push('/dashboard/teacher/assignments')}
-          className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-        >
-          View {mockAssignments.length - 3} more assignments
-        </motion.button>
-      )}
+        {mockAssignments.length > 3 && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/teacher/assignments')}
+            className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            View {mockAssignments.length - 3} more assignments
+          </motion.button>
+        )}
         </div>
       </div>
     </div>

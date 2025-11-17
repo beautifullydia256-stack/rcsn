@@ -64,9 +64,9 @@ export default function MessagesCard({ messages = [] }: MessagesCardProps) {
         >
           View All
         </button>
-      </div>
+        </div>
 
-      <div className="space-y-3">
+        <div className="relative z-10 space-y-3">
         {mockMessages.slice(0, 3).map((message, index) => (
           <motion.div
             key={message.id}
@@ -109,18 +109,17 @@ export default function MessagesCard({ messages = [] }: MessagesCardProps) {
             </div>
           </motion.div>
         ))}
-      </div>
 
-      {mockMessages.length > 3 && (
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => router.push('/dashboard/teacher/messages')}
-          className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-        >
-          View {mockMessages.length - 3} more messages
-        </motion.button>
-      )}
+        {mockMessages.length > 3 && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/teacher/messages')}
+            className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            View {mockMessages.length - 3} more messages
+          </motion.button>
+        )}
         </div>
       </div>
     </div>

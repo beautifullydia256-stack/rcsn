@@ -82,9 +82,9 @@ export default function NotificationsCard({ notifications = [] }: NotificationsC
         >
           View All
         </button>
-      </div>
+        </div>
 
-      <div className="space-y-3">
+        <div className="relative z-10 space-y-3">
         {mockNotifications.slice(0, 4).map((notification, index) => {
           const Icon = getNotificationIcon(notification.type);
           const colors = getNotificationColor(notification.type);
@@ -132,18 +132,19 @@ export default function NotificationsCard({ notifications = [] }: NotificationsC
             </motion.div>
           );
         })}
-      </div>
 
-      {mockNotifications.length > 4 && (
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => router.push('/dashboard/teacher/notifications')}
-          className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-        >
-          View {mockNotifications.length - 4} more notifications
-        </motion.button>
-      )}
+        {mockNotifications.length > 4 && (
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/teacher/notifications')}
+            className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            View {mockNotifications.length - 4} more notifications
+          </motion.button>
+        )}
+        </div>
+      </div>
     </div>
   );
 }

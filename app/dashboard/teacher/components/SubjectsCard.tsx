@@ -45,8 +45,9 @@ export default function SubjectsCard({ subjects = [] }: SubjectsCardProps) {
             {mockSubjects.length} subjects
           </span>
         </div>
+        </div>
 
-      <div className="space-y-3">
+        <div className="relative z-10 space-y-3">
         {mockSubjects.map((subject, index) => {
           const colors = getSubjectColor(index);
           return (
@@ -84,6 +85,7 @@ export default function SubjectsCard({ subjects = [] }: SubjectsCardProps) {
             </motion.div>
           );
         })}
+        </div>
       </div>
     </div>
   );

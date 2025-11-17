@@ -117,7 +117,7 @@ export default function TeacherDashboard() {
       setTeacherName(teacherName);
 
       // Resolve teacher row id
-      let teacherRow = null as any;
+		let teacherRow = null as any;
       const metaTeacherId = userMetadata.teacher_id;
       if (metaTeacherId) {
         const { data: trow } = await supabase
@@ -137,15 +137,15 @@ export default function TeacherDashboard() {
           .maybeSingle();
         if (trow2) teacherRow = trow2;
       }
-      if (!teacherRow && (teacherName || '').trim()) {
-        const { data: trow3 } = await supabase
-          .from('teachers')
-          .select('teacher_id')
-          .eq('school_id', schoolId)
-          .ilike('name', teacherName.trim())
-          .maybeSingle();
-        if (trow3) teacherRow = trow3;
-      }
+		if (!teacherRow && (teacherName || '').trim()) {
+			const { data: trow3 } = await supabase
+				.from('teachers')
+				.select('teacher_id')
+				.eq('school_id', schoolId)
+				.ilike('name', teacherName.trim())
+				.maybeSingle();
+			if (trow3) teacherRow = trow3;
+		}
       setTeacherRowId(teacherRow?.teacher_id || null);
 
       // Check if class teacher
@@ -155,7 +155,7 @@ export default function TeacherDashboard() {
           const { data: ct } = await supabase
             .from('class_teachers')
             .select('id')
-            .eq('school_id', schoolId)
+        .eq('school_id', schoolId)
             .eq('teacher_id', teacherIdToCheck)
             .limit(1);
           setIsClassTeacher(!!(ct && ct.length > 0));
@@ -370,8 +370,8 @@ export default function TeacherDashboard() {
             improvingStudents: aiData.insights.improvingStudents || [],
             performanceData,
             attendanceData: weeklyAttendance,
-          });
-        } else {
+        });
+      } else {
           console.error('AI Insights API error:', aiData.error);
           // Fallback to empty insights if AI fails
           setAiInsights({
@@ -483,7 +483,7 @@ export default function TeacherDashboard() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-      </div>
+        </div>
 
       {/* Sidebar */}
       <Sidebar 
@@ -525,14 +525,14 @@ export default function TeacherDashboard() {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               
               <div className="relative z-10 flex items-center justify-between mb-2">
-                <div>
+              <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 drop-shadow-sm">
                     <div className="relative">
                       <div className="absolute inset-0 bg-white/30 dark:bg-white/10 rounded-full blur-md"></div>
                       <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
                         <User className="w-6 h-6" />
-                      </div>
-                    </div>
+              </div>
+              </div>
                     Welcome, {teacherName}
                     {isClassTeacher && (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-400/20 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-white/30 dark:border-white/10 backdrop-blur-sm text-sm font-medium shadow-sm">
@@ -543,10 +543,10 @@ export default function TeacherDashboard() {
                   <p className="text-gray-700 dark:text-gray-300 mt-2 font-medium">
                     Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
                   </p>
-                </div>
               </div>
-            </div>
-          </motion.div>
+              </div>
+          </div>
+        </motion.div>
 
           {/* Quick Actions */}
           <QuickActions />
@@ -579,17 +579,17 @@ export default function TeacherDashboard() {
                   teacherId={teacherId}
                 />
               )}
-            </div>
+                </div>
 
             {/* Right Column - Timetable Widget */}
-            <div>
+                        <div>
               <TimetableWidget
                 todaySchedule={todayClasses}
                 nextClass={todayClasses[0]}
               />
             </div>
-          </div>
-
+                        </div>
+                        
           {/* AI Insights */}
           <AIInsights 
             strugglingStudents={aiInsights?.strugglingStudents}
@@ -606,12 +606,12 @@ export default function TeacherDashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <SubjectsCard subjects={subjectsData} />
             <AssignmentsCard />
-          </div>
+                        </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <MessagesCard />
             <NotificationsCard />
-          </div>
+                        </div>
 
           {/* Footer */}
           <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-800">

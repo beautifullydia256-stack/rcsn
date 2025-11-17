@@ -60,9 +60,11 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
             View Full
           </button>
         </div>
+        </div>
 
-      {/* Next Class Highlight */}
-      {next && (
+        <div className="relative z-10">
+        {/* Next Class Highlight */}
+        {next && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -93,10 +95,10 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
             Start Class
           </motion.button>
         </motion.div>
-      )}
+        )}
 
-      {/* Today's Schedule List */}
-      <div className="space-y-2">
+        {/* Today's Schedule List */}
+        <div className="space-y-2">
         <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Today's Schedule</h3>
         {mockSchedule.slice(0, 3).map((slot, index) => (
           <motion.div
@@ -129,6 +131,8 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
             View {mockSchedule.length - 3} more classes
           </button>
         )}
+        </div>
+        </div>
       </div>
     </div>
   );
