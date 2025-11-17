@@ -6,8 +6,12 @@ import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import { motion } from 'framer-motion';
 import { Search, Users, Mail, Phone } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import GlassBackground from '../components/GlassBackground';
+import GlassCard from '@/components/ui/GlassCard';
 
 export default function StudentsPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
@@ -62,16 +66,23 @@ export default function StudentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+        <GlassBackground />
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
+            <p className="text-white/85">Loading students...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+      <GlassBackground />
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={setSearchQuery} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <motion.div
@@ -80,15 +91,15 @@ export default function StudentsPage() {
             className="mb-8"
           >
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">
                 My Students
               </h1>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 text-sm text-white/85">
                 <Users className="w-5 h-5" />
                 <span>{students.length} students</span>
               </div>
             </div>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-white/85">
               View and manage students in your classes
             </p>
           </motion.div>
@@ -99,44 +110,55 @@ export default function StudentsPage() {
                 key={student.student_id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-lg">
-                      {student.name}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                      {student.current_class}
-                    </p>
+                <GlassCard
+                  className="p-6 cursor-pointer relative overflow-hidden"
+                  hover
+                  onClick={() => router.push(`/dashboard/teacher/students/${encodeURIComponent(student.student_id)}`)}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-white text-lg mb-1">
+                        {student.name}
+                      </h3>
+                      <p className="text-sm text-white/85">
+                        {student.current_class}
+                      </p>
+                      {student.admission_number && (
+                        <p className="text-xs text-white/55 mt-1">
+                          Admission: {student.admission_number}
+                        </p>
+                      )}
+                    </div>
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+                      {student.name.charAt(0)}
+                    </div>
                   </div>
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold">
-                    {student.name.charAt(0)}
-                  </div>
-                </div>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Status:</span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      student.status === 'active' 
-                        ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    }`}>
+                    <span className="text-xs text-white/55">Status:</span>
+                    <span
+                      className="px-2 py-1 rounded-full text-xs font-medium"
+                      style={{
+                        background: student.status === 'active' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+                        color: student.status === 'active' ? '#10b981' : 'rgba(255, 255, 255, 0.85)',
+                        border: `1px solid ${student.status === 'active' ? 'rgba(16, 185, 129, 0.4)' : 'rgba(255, 255, 255, 0.2)'}`
+                      }}
+                    >
                       {student.status}
                     </span>
                   </div>
-                </div>
+                </GlassCard>
               </motion.div>
             ))}
           </div>
 
           {filteredStudents.length === 0 && (
-            <div className="text-center py-12">
-              <Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400">
+            <GlassCard className="p-12 text-center">
+              <Users className="w-16 h-16 mx-auto mb-4" style={{ color: 'rgba(255, 255, 255, 0.55)' }} />
+              <p className="text-white/85">
                 {searchQuery ? 'No students found matching your search.' : 'No students found.'}
               </p>
-            </div>
+            </GlassCard>
           )}
         </main>
       </div>

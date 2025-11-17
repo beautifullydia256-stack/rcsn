@@ -79,7 +79,7 @@ export default function SearchResults({ query, students, assignments, onClose }:
   }
 
   const handleStudentClick = (studentId: string) => {
-    router.push(`/dashboard/teacher/students`);
+    router.push(`/dashboard/teacher/students/${encodeURIComponent(studentId)}`);
     onClose();
   };
 
