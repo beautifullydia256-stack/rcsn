@@ -16,6 +16,8 @@ import AssignmentsCard from './components/AssignmentsCard';
 import MessagesCard from './components/MessagesCard';
 import NotificationsCard from './components/NotificationsCard';
 import SubjectsCard from './components/SubjectsCard';
+import GlassBackground from './components/GlassBackground';
+import GlassCard from './components/GlassCard';
 import { User } from 'lucide-react';
 
 interface Assignment {
@@ -466,17 +468,23 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+        <GlassBackground />
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
+            <p className="text-white/85">Loading dashboard...</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+      {/* Glassmorphism Background */}
+      <GlassBackground />
+
       {/* Sidebar */}
       <Sidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -506,27 +514,34 @@ export default function TeacherDashboard() {
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <div className="mb-8">
-            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+            <GlassCard className="p-6" hover>
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
                       <User className="w-6 h-6" />
                     </div>
                     Welcome, {teacherName}
                     {isClassTeacher && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 text-sm font-medium">
+                      <span 
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ml-3"
+                        style={{
+                          background: 'rgba(139, 92, 246, 0.2)',
+                          border: '1px solid rgba(139, 92, 246, 0.4)',
+                          color: '#c4b5fd'
+                        }}
+                      >
                         ⭐ Class Teacher
                       </span>
                     )}
                   </h1>
-                  <p className="text-gray-600 mt-2 font-medium">
+                  <p className="text-white/85 mt-2 font-medium">
                     Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
                   </p>
                 </div>
               </div>
-            </div>
-        </div>
+            </GlassCard>
+          </div>
 
           {/* Quick Actions */}
           <QuickActions />
@@ -594,7 +609,7 @@ export default function TeacherDashboard() {
                         </div>
 
           {/* Footer */}
-          <footer className="mt-12 py-6 text-center text-sm text-gray-500 border-t border-gray-200">
+          <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
             <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
           </footer>
         </main>

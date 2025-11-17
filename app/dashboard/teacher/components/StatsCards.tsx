@@ -1,6 +1,7 @@
 'use client';
 
 import { Users, GraduationCap, UserCheck, BookOpen, FileText, ClipboardList } from 'lucide-react';
+import GlassCard from './GlassCard';
 
 interface StatCard {
   icon: any;
@@ -33,49 +34,49 @@ export default function StatsCards({
       icon: GraduationCap,
       label: 'Total Classes Assigned',
       value: totalClasses,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      iconBg: 'bg-blue-100'
+      color: '#4dabff',
+      bgColor: 'rgba(77, 171, 255, 0.15)',
+      iconBg: 'rgba(77, 171, 255, 0.2)'
     },
     {
       icon: Users,
       label: 'Students in My Classes',
       value: totalStudents,
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      iconBg: 'bg-green-100'
+      color: '#10b981',
+      bgColor: 'rgba(16, 185, 129, 0.15)',
+      iconBg: 'rgba(16, 185, 129, 0.2)'
     },
     {
       icon: UserCheck,
       label: 'Students Attended Today',
       value: studentsAttendedToday,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      iconBg: 'bg-purple-100'
+      color: '#ae79ff',
+      bgColor: 'rgba(174, 121, 255, 0.15)',
+      iconBg: 'rgba(174, 121, 255, 0.2)'
     },
     {
       icon: BookOpen,
       label: 'Subjects Assigned',
       value: subjectsAssigned,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      iconBg: 'bg-orange-100'
+      color: '#f59e0b',
+      bgColor: 'rgba(245, 158, 11, 0.15)',
+      iconBg: 'rgba(245, 158, 11, 0.2)'
     },
     {
       icon: FileText,
       label: 'Assignments Due',
       value: assignmentsDue,
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50',
-      iconBg: 'bg-indigo-100'
+      color: '#6366f1',
+      bgColor: 'rgba(99, 102, 241, 0.15)',
+      iconBg: 'rgba(99, 102, 241, 0.2)'
     },
     {
       icon: ClipboardList,
       label: 'Exams Pending Marking',
       value: examsPending,
-      color: 'text-red-600',
-      bgColor: 'bg-red-50',
-      iconBg: 'bg-red-100'
+      color: '#ef4444',
+      bgColor: 'rgba(239, 68, 68, 0.15)',
+      iconBg: 'rgba(239, 68, 68, 0.2)'
     }
   ];
 
@@ -84,22 +85,17 @@ export default function StatsCards({
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <div
-            key={stat.label}
-            className="relative"
-          >
-            <div className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-gray-600 mb-2 font-medium">{stat.label}</p>
-                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                </div>
-                <div className={`${stat.iconBg} p-3 rounded-lg`}>
-                  <Icon className={`w-6 h-6 ${stat.color}`} />
-                </div>
+          <GlassCard key={stat.label} className="p-6" hover>
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-sm mb-2 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{stat.label}</p>
+                <p className="text-3xl font-bold" style={{ color: stat.color }}>{stat.value}</p>
+              </div>
+              <div className="p-3 rounded-lg" style={{ background: stat.iconBg }}>
+                <Icon className="w-6 h-6" style={{ color: stat.color }} />
               </div>
             </div>
-          </div>
+          </GlassCard>
         );
       })}
     </div>

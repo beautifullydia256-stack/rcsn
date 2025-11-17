@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Calendar, Clock, CheckCircle, MessageSquare, AlertCircle, Bell } from 'lucide-react';
+import GlassCard from './GlassCard';
 
 interface TodayClass {
   time: string;
@@ -55,21 +56,16 @@ export default function TodayOverview({
   const minutesUntil = Math.floor((timeUntilClass % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
-    <div className="relative group overflow-hidden">
-      {/* Liquid Glass Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
-      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-        <div className="relative z-10 flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
-            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Today's Overview
-          </h2>
-          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-          </span>
-        </div>
+    <GlassCard className="p-6" hover>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Calendar className="w-5 h-5" style={{ color: '#4dabff' }} />
+          Today's Overview
+        </h2>
+        <span className="text-sm font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+        </span>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Next Class Card */}
@@ -77,25 +73,32 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="relative overflow-hidden bg-gradient-to-br from-blue-400/20 to-indigo-400/20 dark:from-blue-500/10 dark:to-indigo-500/10 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-white/10 shadow-lg"
+            className="relative overflow-hidden rounded-xl p-4"
+            style={{
+              background: 'rgba(77, 171, 255, 0.15)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(77, 171, 255, 0.3)',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+            }}
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Next Class</span>
+                <Clock className="w-4 h-4" style={{ color: '#4dabff' }} />
+                <span className="text-sm font-medium" style={{ color: '#4dabff' }}>Next Class</span>
               </div>
-              <span className="text-xs font-semibold text-blue-700 dark:text-blue-400">
+              <span className="text-xs font-semibold" style={{ color: '#4dabff' }}>
                 {next.time}
               </span>
             </div>
             <div className="space-y-1">
-              <div className="font-semibold text-gray-900 dark:text-white">{next.subject}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">{next.class_name}</div>
+              <div className="font-semibold text-white">{next.subject}</div>
+              <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{next.class_name}</div>
               {next.room && (
-                <div className="text-xs text-gray-500 dark:text-gray-500">{next.room}</div>
+                <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>{next.room}</div>
               )}
               {timeUntilClass > 0 && (
-                <div className="text-xs text-blue-600 dark:text-blue-400 mt-2">
+                <div className="text-xs mt-2" style={{ color: '#4dabff' }}>
                   {hoursUntil > 0 ? `${hoursUntil}h ` : ''}{minutesUntil}m remaining
                 </div>
               )}
@@ -108,59 +111,87 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
+            className="relative overflow-hidden rounded-lg p-3"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+            }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Tasks</span>
+              <CheckCircle className="w-4 h-4" style={{ color: '#10b981' }} />
+              <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Tasks</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{tasks}</div>
+            <div className="text-2xl font-bold text-white">{tasks}</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
+            className="relative overflow-hidden rounded-lg p-3"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+            }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Messages</span>
+              <MessageSquare className="w-4 h-4" style={{ color: '#4dabff' }} />
+              <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Messages</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{messages}</div>
+            <div className="text-2xl font-bold text-white">{messages}</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
+            className="relative overflow-hidden rounded-lg p-3"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+            }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <Bell className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Events</span>
+              <Bell className="w-4 h-4" style={{ color: '#ae79ff' }} />
+              <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Events</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{events}</div>
+            <div className="text-2xl font-bold text-white">{events}</div>
           </motion.div>
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
+            className="relative overflow-hidden rounded-lg p-3"
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+            }}
           >
             <div className="flex items-center gap-2 mb-1">
-              <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-              <span className="text-xs text-gray-600 dark:text-gray-400">Classes</span>
+              <Calendar className="w-4 h-4" style={{ color: '#f59e0b' }} />
+              <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Classes</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">{todayClasses.length}</div>
+            <div className="text-2xl font-bold text-white">{todayClasses.length}</div>
           </motion.div>
         </div>
       </div>
 
       {/* Today's Classes List */}
       <div>
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Today's Schedule</h3>
+        <h3 className="text-sm font-medium mb-3" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Today's Schedule</h3>
         <div className="space-y-2">
           {todayClasses.length > 0 ? (
             todayClasses.map((cls, index) => (
@@ -169,29 +200,43 @@ export default function TodayOverview({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="relative z-10 flex items-center justify-between p-3 rounded-lg bg-white/20 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md"
+                className="relative z-10 flex items-center justify-between p-3 rounded-lg transition-all duration-300"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+                  e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                  e.currentTarget.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.15)';
+                }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white w-16">{cls.time}</div>
+                  <div className="text-sm font-medium text-white w-16">{cls.time}</div>
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{cls.subject}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{cls.class_name}</div>
+                    <div className="font-medium text-white">{cls.subject}</div>
+                    <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>{cls.class_name}</div>
                   </div>
                 </div>
                 {cls.room && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{cls.room}</div>
+                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>{cls.room}</div>
                 )}
               </motion.div>
             ))
           ) : (
-            <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
+            <div className="text-center py-4 text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
               No classes scheduled for today
             </div>
           )}
         </div>
-        </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }
 

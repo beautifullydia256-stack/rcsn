@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, BarChart3 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import GlassCard from './GlassCard';
 
 interface StudentInsight {
   name: string;
@@ -61,61 +62,77 @@ export default function AIInsights({
 
   if (loading) {
     return (
-      <div className="relative group overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
-        <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg mb-8">
+      <GlassCard className="p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+            <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
             AI-Powered Insights
           </h2>
-          <span className="text-xs text-gray-500 dark:text-gray-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg">
+          <span 
+            className="text-xs px-2 py-1 rounded-lg"
+            style={{
+              background: 'rgba(174, 121, 255, 0.2)',
+              color: '#ae79ff'
+            }}
+          >
             Powered by AI
           </span>
         </div>
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 dark:border-purple-400"></div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing student performance with AI...</p>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: '#ae79ff' }}></div>
+            <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Analyzing student performance with AI...</p>
           </div>
         </div>
-        </div>
-      </div>
+      </GlassCard>
     );
   }
 
   return (
-    <div className="relative group overflow-hidden">
-      {/* Liquid Glass Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
-      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300 mb-8">
-        {/* Shimmer effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-        <div className="relative z-10 flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
-            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-            AI-Powered Insights
-          </h2>
+    <GlassCard className="p-6 mb-8" hover>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+          <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
+          AI-Powered Insights
+        </h2>
         <div className="flex items-center gap-2">
           {strugglingStudents.length > 0 || improvingStudents.length > 0 ? (
-            <span className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-lg font-medium">
+            <span 
+              className="text-xs px-2 py-1 rounded-lg font-medium"
+              style={{
+                background: 'rgba(16, 185, 129, 0.2)',
+                color: '#10b981'
+              }}
+            >
               ✓ Real AI Data
             </span>
           ) : (
-            <span className="text-xs text-gray-500 dark:text-gray-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-lg">
+            <span 
+              className="text-xs px-2 py-1 rounded-lg"
+              style={{
+                background: 'rgba(174, 121, 255, 0.2)',
+                color: '#ae79ff'
+              }}
+            >
               Powered by AI
             </span>
           )}
         </div>
-        </div>
+      </div>
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Struggling Students */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Students Needing Attention</h3>
-            <span className="ml-auto text-xs bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-2 py-1 rounded-full">
+            <AlertCircle className="w-5 h-5" style={{ color: '#ef4444' }} />
+            <h3 className="font-semibold text-white">Students Needing Attention</h3>
+            <span 
+              className="ml-auto text-xs px-2 py-1 rounded-full"
+              style={{
+                background: 'rgba(239, 68, 68, 0.2)',
+                color: '#ef4444'
+              }}
+            >
               {displayStruggling.length}
             </span>
           </div>
@@ -127,23 +144,27 @@ export default function AIInsights({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
+                className="p-4 rounded-lg"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.15)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)'
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{student.name}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">{student.subject}</div>
+                    <div className="font-medium text-white">{student.name}</div>
+                    <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{student.subject}</div>
                   </div>
-                  <TrendingDown className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" />
+                  <TrendingDown className="w-4 h-4 flex-shrink-0" style={{ color: '#ef4444' }} />
                 </div>
                 <div className="flex items-start gap-2 mt-2">
-                  <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-700 dark:text-gray-300">{student.recommendation}</p>
+                  <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#f59e0b' }} />
+                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{student.recommendation}</p>
                 </div>
               </motion.div>
               ))
             ) : (
-              <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-center py-4 text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
                 No students needing attention at this time.
               </div>
             )}
@@ -153,9 +174,15 @@ export default function AIInsights({
         {/* Improving Students */}
         <div>
           <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-green-600 dark:text-green-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Students Improving</h3>
-            <span className="ml-auto text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
+            <TrendingUp className="w-5 h-5" style={{ color: '#10b981' }} />
+            <h3 className="font-semibold text-white">Students Improving</h3>
+            <span 
+              className="ml-auto text-xs px-2 py-1 rounded-full"
+              style={{
+                background: 'rgba(16, 185, 129, 0.2)',
+                color: '#10b981'
+              }}
+            >
               {displayImproving.length}
             </span>
           </div>
@@ -167,23 +194,27 @@ export default function AIInsights({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                className="p-4 rounded-lg"
+                style={{
+                  background: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.3)'
+                }}
               >
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <div className="font-medium text-gray-900 dark:text-white">{student.name}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">{student.subject}</div>
+                    <div className="font-medium text-white">{student.name}</div>
+                    <div className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{student.subject}</div>
                   </div>
-                  <TrendingUp className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <TrendingUp className="w-4 h-4 flex-shrink-0" style={{ color: '#10b981' }} />
                 </div>
                 <div className="flex items-start gap-2 mt-2">
-                  <Lightbulb className="w-4 h-4 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-gray-700 dark:text-gray-300">{student.recommendation}</p>
+                  <Lightbulb className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#f59e0b' }} />
+                  <p className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{student.recommendation}</p>
                 </div>
               </motion.div>
               ))
             ) : (
-              <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+              <div className="text-center py-4 text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
                 No improving students to display at this time.
               </div>
             )}
@@ -195,8 +226,8 @@ export default function AIInsights({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Trend */}
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" style={{ color: '#4dabff' }} />
             Class Performance Trend
           </h3>
           <div className="h-64">
@@ -208,16 +239,17 @@ export default function AIInsights({
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                <XAxis dataKey="name" stroke="#6b7280" className="dark:stroke-gray-400" />
-                <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                <XAxis dataKey="name" stroke="rgba(255, 255, 255, 0.55)" />
+                <YAxis stroke="rgba(255, 255, 255, 0.55)" />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
+                    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: '#ffffff'
                   }}
-                  className="dark:bg-gray-800 dark:border-gray-700"
                 />
                 <Area type="monotone" dataKey="average" stroke="#3b82f6" fillOpacity={1} fill="url(#colorAverage)" />
               </AreaChart>
@@ -227,8 +259,8 @@ export default function AIInsights({
 
         {/* Attendance Trend */}
         <div>
-          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4 text-green-600 dark:text-green-400" />
+          <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" style={{ color: '#10b981' }} />
             Weekly Attendance Trend
           </h3>
           <div className="h-64">
@@ -252,7 +284,7 @@ export default function AIInsights({
         </div>
         </div>
       </div>
-    </div>
+    </GlassCard>
   );
 }
 

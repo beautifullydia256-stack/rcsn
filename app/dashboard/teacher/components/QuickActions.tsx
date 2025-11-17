@@ -10,13 +10,14 @@ import {
   FileText,
   MessageSquare
 } from 'lucide-react';
+import GlassCard from './GlassCard';
 
 interface QuickAction {
   icon: any;
   label: string;
   path: string;
   color: string;
-  bgColor: string;
+  iconBg: string;
 }
 
 export default function QuickActions() {
@@ -27,75 +28,79 @@ export default function QuickActions() {
       icon: ClipboardCheck,
       label: 'Take Attendance',
       path: '/dashboard/teacher/attendance',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50'
+      color: '#4dabff',
+      iconBg: 'rgba(77, 171, 255, 0.2)'
     },
     {
       icon: BookOpen,
       label: 'Insert Exam Results',
       path: '/dashboard/teacher/exam-results',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50'
+      color: '#10b981',
+      iconBg: 'rgba(16, 185, 129, 0.2)'
     },
     {
       icon: Sparkles,
       label: 'AI Generate Lesson Plan',
       path: '/dashboard/teacher/ai-planner',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50'
+      color: '#ae79ff',
+      iconBg: 'rgba(174, 121, 255, 0.2)'
     },
     {
       icon: Upload,
       label: 'Upload Assignment',
       path: '/dashboard/teacher/assignments',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50'
+      color: '#f59e0b',
+      iconBg: 'rgba(245, 158, 11, 0.2)'
     },
     {
       icon: Calendar,
       label: 'View Timetable',
       path: '/dashboard/teacher/timetable',
-      color: 'text-indigo-600',
-      bgColor: 'bg-indigo-50'
+      color: '#6366f1',
+      iconBg: 'rgba(99, 102, 241, 0.2)'
     },
     {
       icon: FileText,
       label: 'AI Create Exam Paper',
       path: '/dashboard/teacher/ai-planner?action=exam',
-      color: 'text-pink-600',
-      bgColor: 'bg-pink-50'
+      color: '#ff6bcb',
+      iconBg: 'rgba(255, 107, 203, 0.2)'
     },
     {
       icon: MessageSquare,
       label: 'Send Message to Class',
       path: '/dashboard/teacher/messages',
-      color: 'text-teal-600',
-      bgColor: 'bg-teal-50'
+      color: '#00d4ff',
+      iconBg: 'rgba(0, 212, 255, 0.2)'
     }
   ];
 
   return (
     <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <div
-              key={action.path}
-            >
+            <GlassCard key={action.path} className="p-4" hover>
               <button
                 onClick={() => router.push(action.path)}
-                className="w-full bg-white rounded-lg border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all flex flex-col items-center justify-center gap-2"
+                className="w-full flex flex-col items-center justify-center gap-2 transition-all"
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
               >
-                <div className={`${action.bgColor} p-2.5 rounded-lg`}>
-                  <Icon className={`w-5 h-5 ${action.color}`} />
+                <div className="p-2.5 rounded-lg" style={{ background: action.iconBg }}>
+                  <Icon className="w-5 h-5" style={{ color: action.color }} />
                 </div>
-                <span className={`text-xs font-medium text-center ${action.color}`}>
+                <span className="text-xs font-medium text-center" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
                   {action.label}
                 </span>
               </button>
-            </div>
+            </GlassCard>
           );
         })}
       </div>
