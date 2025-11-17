@@ -44,6 +44,7 @@ export default function TeacherDashboard() {
   const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [aiInsights, setAiInsights] = useState<{
     strugglingStudents: Array<{ name: string; status: string; subject: string; recommendation: string }>;
     improvingStudents: Array<{ name: string; status: string; subject: string; recommendation: string }>;
@@ -488,7 +489,19 @@ export default function TeacherDashboard() {
         isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'
       }`}>
         {/* Navbar */}
-        <Navbar onSearch={setSearchQuery} />
+        <Navbar 
+          onSearch={(query) => {
+            setSearchQuery(query);
+            setShowSearchResults(query.trim().length > 0);
+          }}
+          searchQuery={searchQuery}
+          showSearchResults={showSearchResults}
+          onCloseSearch={() => setShowSearchResults(false)}
+          searchData={{
+            students: students,
+            assignments: assignments
+          }}
+        />
 
         {/* Dashboard Content */}
         <main className="p-4 sm:p-6 lg:p-8">

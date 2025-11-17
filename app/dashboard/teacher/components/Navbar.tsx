@@ -5,19 +5,34 @@ import { useRouter } from 'next/navigation';
 import { Search, Bell, MessageSquare, User, Settings, LogOut, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
+import SearchResults from './SearchResults';
 
 interface NavbarProps {
   onSearch?: (query: string) => void;
+  searchQuery?: string;
+  showSearchResults?: boolean;
+  onCloseSearch?: () => void;
+  searchData?: {
+    students: Array<{ student_id: string; name: string; current_class: string }>;
+    assignments: Array<{ class_name: string; subject: string }>;
+  };
 }
 
-export default function Navbar({ onSearch }: NavbarProps) {
-  const [searchQuery, setSearchQuery] = useState('');
+export default function Navbar({ onSearch, searchQuery: externalSearchQuery, showSearchResults, onCloseSearch, searchData }: NavbarProps) {
+  const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [teacherName, setTeacherName] = useState('Teacher');
   const [teacherEmail, setTeacherEmail] = useState('');
   const profileRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (externalSearchQuery !== undefined) {
+      setSearchQuery(externalSearchQuery);
+    }
+  }, [externalSearchQuery]);
 
   useEffect(() => {
     // Load user data
@@ -41,15 +56,18 @@ export default function Navbar({ onSearch }: NavbarProps) {
     };
     checkDarkMode();
 
-    // Close profile on outside click
+    // Close profile/search on outside click
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node) && showSearchResults) {
+        onCloseSearch?.();
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [showSearchResults, onCloseSearch]);
 
   const toggleDarkMode = () => {
     const newMode = !isDarkMode;
@@ -81,7 +99,7 @@ export default function Navbar({ onSearch }: NavbarProps) {
       <div className="px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Search Bar */}
-          <div className="flex-1 max-w-2xl">
+          <div className="flex-1 max-w-2xl" ref={searchRef}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
               <input
@@ -89,8 +107,21 @@ export default function Navbar({ onSearch }: NavbarProps) {
                 placeholder="Search students, classes, subjects, exams, assignments, messages..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
+                onFocus={() => {
+                  if (searchQuery.trim() && searchData) {
+                    // Show results when focused if there's a query
+                  }
+                }}
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
               />
+              {showSearchResults && searchData && (
+                <SearchResults
+                  query={searchQuery}
+                  students={searchData.students}
+                  assignments={searchData.assignments}
+                  onClose={() => onCloseSearch?.()}
+                />
+              )}
             </div>
           </div>
 
