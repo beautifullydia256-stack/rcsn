@@ -5,14 +5,14 @@ import { ReactNode } from 'react';
 interface GlassCardProps {
   children: ReactNode;
   className?: string;
-  hover?: boolean;
+  enableHover?: boolean;
 }
 
-export default function GlassCard({ children, className = '', hover = false }: GlassCardProps) {
+export default function GlassCard({ children, className = '', enableHover = false }: GlassCardProps) {
   return (
     <div
       className={`relative overflow-hidden rounded-[20px] ${
-        hover ? 'transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)]' : ''
+        enableHover ? 'transition-all duration-300 hover:shadow-[0_8px_30px_rgba(0,0,0,0.35)]' : ''
       } ${className}`}
       style={{
         background: 'rgba(255, 255, 255, 0.08)',

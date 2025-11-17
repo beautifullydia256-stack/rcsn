@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, BarChart3 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -89,7 +90,7 @@ export default function AIInsights({
   }
 
   return (
-    <GlassCard className="p-6 mb-8" hover={true}>
+    <GlassCard className="p-6 mb-8" enableHover={true}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
@@ -266,16 +267,17 @@ export default function AIInsights({
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={displayAttendance}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className="dark:stroke-gray-700" />
-                <XAxis dataKey="week" stroke="#6b7280" className="dark:stroke-gray-400" />
-                <YAxis stroke="#6b7280" className="dark:stroke-gray-400" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
+                <XAxis dataKey="week" stroke="rgba(255, 255, 255, 0.55)" />
+                <YAxis stroke="rgba(255, 255, 255, 0.55)" />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'white',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
+                    backgroundColor: 'rgba(30, 30, 40, 0.95)',
+                    backdropFilter: 'blur(20px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '8px',
+                    color: '#ffffff'
                   }}
-                  className="dark:bg-gray-800 dark:border-gray-700"
                 />
                 <Bar dataKey="attendance" fill="#10b981" radius={[8, 8, 0, 0]} />
               </BarChart>

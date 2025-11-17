@@ -85,7 +85,7 @@ export default function StatsCards({
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <GlassCard key={stat.label} className="p-6" hover={true}>
+          <GlassCard key={stat.label} className="p-6" enableHover={true}>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-sm mb-2 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{stat.label}</p>
