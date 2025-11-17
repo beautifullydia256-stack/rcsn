@@ -1157,21 +1157,21 @@ export default function TeacherExamResultsClassPage() {
               }
 
               if (source) {
-              const normalized: NurseryPerformanceRecord = {};
-              Object.entries(source).forEach(([skillKey, value]) => {
-                const canonicalKey = canonicalizeNurserySkillKey(skillKey);
-                if (!canonicalKey) return;
-                const normalizedValue = normalizeNurseryPerformanceWord(value);
-                if (normalizedValue) {
-                  normalized[canonicalKey] = normalizedValue;
+                const normalized: NurseryPerformanceRecord = {};
+                Object.entries(source).forEach(([skillKey, value]) => {
+                  const canonicalKey = canonicalizeNurserySkillKey(skillKey);
+                  if (!canonicalKey) return;
+                  const normalizedValue = normalizeNurseryPerformanceWord(value);
+                  if (normalizedValue) {
+                    normalized[canonicalKey] = normalizedValue;
+                  }
+                });
+                if (Object.keys(normalized).length > 0) {
+                  map[r.student_id] = normalized;
                 }
-              });
-              if (Object.keys(normalized).length > 0) {
-                map[r.student_id] = normalized;
               }
-            }
-          });
-          setNurseryPerformances(map);
+            });
+            setNurseryPerformances(map);
             setNurseryDirtyStudents({});
             setExamResults({});
           } else {
