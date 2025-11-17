@@ -1,6 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { Users, GraduationCap, UserCheck, BookOpen, FileText, ClipboardList } from 'lucide-react';
 
 interface StatCard {
