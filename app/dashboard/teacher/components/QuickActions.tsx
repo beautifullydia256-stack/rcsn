@@ -82,7 +82,7 @@ export default function QuickActions() {
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <GlassCard key={action.path} className="p-4" hover>
+            <GlassCard key={action.path} className="p-4" hover={true}>
               <button
                 onClick={() => router.push(action.path)}
                 className="w-full flex flex-col items-center justify-center gap-2 transition-all"

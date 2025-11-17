@@ -89,7 +89,7 @@ export default function AIInsights({
   }
 
   return (
-    <GlassCard className="p-6 mb-8" hover>
+    <GlassCard className="p-6 mb-8" hover={true}>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />

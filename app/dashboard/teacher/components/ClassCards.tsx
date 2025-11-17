@@ -28,10 +28,10 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
 
   const getColorClass = (index: number) => {
     const colors = [
-      { bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-200 dark:border-blue-800', icon: 'text-blue-600 dark:text-blue-400', iconBg: 'bg-blue-100 dark:bg-blue-900/40' },
-      { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-200 dark:border-green-800', icon: 'text-green-600 dark:text-green-400', iconBg: 'bg-green-100 dark:bg-green-900/40' },
-      { bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-200 dark:border-purple-800', icon: 'text-purple-600 dark:text-purple-400', iconBg: 'bg-purple-100 dark:bg-purple-900/40' },
-      { bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-200 dark:border-orange-800', icon: 'text-orange-600 dark:text-orange-400', iconBg: 'bg-orange-100 dark:bg-orange-900/40' },
+      { icon: '#4dabff', iconBg: 'rgba(77, 171, 255, 0.2)' },
+      { icon: '#10b981', iconBg: 'rgba(16, 185, 129, 0.2)' },
+      { icon: '#ae79ff', iconBg: 'rgba(174, 121, 255, 0.2)' },
+      { icon: '#f59e0b', iconBg: 'rgba(245, 158, 11, 0.2)' },
     ];
     return colors[index % colors.length];
   };
@@ -56,7 +56,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
             <GlassCard
               key={assignment.class_name}
               className="p-6 cursor-pointer"
-              hover
+              hover={true}
             >
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -67,7 +67,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="p-3 rounded-xl" style={{ background: colors.iconBg }}>
-                    <GraduationCap className="w-6 h-6" style={{ color: colors.icon.replace('text-', '#').replace('-600', '').replace('-400', '') }} />
+                    <GraduationCap className="w-6 h-6" style={{ color: colors.icon }} />
                   </div>
                   <div className="flex items-center gap-1 text-sm" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>
                     <Users className="w-4 h-4" />
@@ -86,7 +86,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
                         className="px-2 py-1 rounded-lg text-xs font-medium"
                         style={{
                           background: colors.iconBg,
-                          color: colors.icon.replace('text-', '#').replace('-600', '').replace('-400', '')
+                          color: colors.icon
                         }}
                       >
                         {subject}
