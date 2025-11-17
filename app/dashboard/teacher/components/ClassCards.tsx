@@ -56,20 +56,30 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               whileHover={{ y: -4, scale: 1.02 }}
-              className={`${colors.bg} ${colors.border} rounded-xl border p-6 shadow-sm hover:shadow-md transition-all cursor-pointer`}
+              className="relative group overflow-hidden cursor-pointer"
+            >
+              {/* Liquid Glass Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+              <div className={`relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300`}
               onClick={() => router.push(`/dashboard/teacher/classes/${assignment.class_name}`)}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`${colors.iconBg} p-3 rounded-xl`}>
-                  <GraduationCap className={`w-6 h-6 ${colors.icon}`} />
-                </div>
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                
+                <div className="relative z-10 flex items-start justify-between mb-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-white/30 dark:bg-white/10 rounded-xl blur-md"></div>
+                    <div className={`relative ${colors.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/30 dark:border-white/10`}>
+                      <GraduationCap className={`w-6 h-6 ${colors.icon} drop-shadow-sm`} />
+                    </div>
+                  </div>
                 <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                   <Users className="w-4 h-4" />
                   <span>{assignment.student_count}</span>
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{assignment.class_name}</h3>
+                  <h3 className="relative z-10 text-xl font-bold text-gray-900 dark:text-white mb-2 drop-shadow-sm">{assignment.class_name}</h3>
 
               <div className="mb-4">
                 <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">Subjects:</div>

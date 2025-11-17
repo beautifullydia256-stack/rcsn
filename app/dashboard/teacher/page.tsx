@@ -477,7 +477,14 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-400/20 dark:bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
+      </div>
+
       {/* Sidebar */}
       <Sidebar 
         isCollapsed={isSidebarCollapsed} 
@@ -485,7 +492,7 @@ export default function TeacherDashboard() {
       />
 
       {/* Main Content */}
-      <div className={`transition-all duration-300 ${
+      <div className={`transition-all duration-300 relative z-10 ${
         isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'
       }`}>
         {/* Navbar */}
@@ -504,29 +511,39 @@ export default function TeacherDashboard() {
         />
 
         {/* Dashboard Content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
+            className="mb-8 relative group overflow-hidden"
           >
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white">
-                    <User className="w-6 h-6" />
-                  </div>
-                  Welcome, {teacherName}
-                  {isClassTeacher && (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border border-purple-300 dark:border-purple-800 text-sm font-medium">
-                      ⭐ Class Teacher
-                    </span>
-                  )}
-                </h1>
-                <p className="text-gray-600 dark:text-gray-400 mt-2">
-                  Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
-                </p>
+            {/* Liquid Glass Background */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+            <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg">
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              <div className="relative z-10 flex items-center justify-between mb-2">
+                <div>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3 drop-shadow-sm">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-white/30 dark:bg-white/10 rounded-full blur-md"></div>
+                      <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                        <User className="w-6 h-6" />
+                      </div>
+                    </div>
+                    Welcome, {teacherName}
+                    {isClassTeacher && (
+                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-400/20 dark:bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-white/30 dark:border-white/10 backdrop-blur-sm text-sm font-medium shadow-sm">
+                        ⭐ Class Teacher
+                      </span>
+                    )}
+                  </h1>
+                  <p className="text-gray-700 dark:text-gray-300 mt-2 font-medium">
+                    Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>

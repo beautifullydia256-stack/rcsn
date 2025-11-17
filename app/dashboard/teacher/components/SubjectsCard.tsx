@@ -32,16 +32,19 @@ export default function SubjectsCard({ subjects = [] }: SubjectsCardProps) {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          Assigned Subjects
-        </h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {mockSubjects.length} subjects
-        </span>
-      </div>
+    <div className="relative group overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
+            <BookOpen className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Assigned Subjects
+          </h2>
+          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+            {mockSubjects.length} subjects
+          </span>
+        </div>
 
       <div className="space-y-3">
         {mockSubjects.map((subject, index) => {
@@ -53,7 +56,7 @@ export default function SubjectsCard({ subjects = [] }: SubjectsCardProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               whileHover={{ x: 4 }}
-              className={`${colors.bg} ${colors.border} border rounded-lg p-4 transition-all`}
+              className="relative z-10 bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg border border-white/20 dark:border-white/10 p-4 transition-all hover:bg-white/30 dark:hover:bg-white/10 shadow-sm"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-3">

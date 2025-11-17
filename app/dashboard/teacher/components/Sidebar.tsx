@@ -74,7 +74,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
   const SidebarContent = () => (
     <>
       {/* Logo & Title */}
-      <div className="flex items-center gap-3 px-4 py-6 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3 px-4 py-6 border-b border-white/20 dark:border-white/10">
         {!isCollapsed && (
           <div className="flex items-center gap-2 flex-1">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -107,11 +107,11 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
             <motion.button
               key={item.path}
               onClick={() => handleNavigation(item.path)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
-                active
-                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-              }`}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all backdrop-blur-sm ${
+                      active
+                        ? 'bg-blue-400/20 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-white/30 dark:border-white/10 shadow-md'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-white/20 dark:hover:bg-white/5 border border-transparent hover:border-white/20 dark:hover:border-white/10'
+                    }`}
               whileHover={{ x: 2 }}
               whileTap={{ scale: 0.98 }}
             >
@@ -128,7 +128,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
       </nav>
 
       {/* Bottom Section */}
-      <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            <div className="px-3 py-4 border-t border-white/20 dark:border-white/10 space-y-1">
         <motion.button
           onClick={() => handleNavigation('/dashboard/teacher/settings')}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
@@ -201,12 +201,12 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
         )}
       </AnimatePresence>
 
-      {/* Desktop Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ width: isCollapsed ? '80px' : '288px' }}
-        className="hidden lg:flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 fixed left-0 top-0 bottom-0 z-30 shadow-sm"
-      >
+            {/* Desktop Sidebar */}
+            <motion.aside
+              initial={false}
+              animate={{ width: isCollapsed ? '80px' : '288px' }}
+              className="hidden lg:flex flex-col bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl border-r border-white/30 dark:border-white/10 fixed left-0 top-0 bottom-0 z-30 shadow-2xl"
+            >
         <SidebarContent />
       </motion.aside>
     </>

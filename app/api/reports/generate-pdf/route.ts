@@ -2958,7 +2958,7 @@ function generateTemplateNurseryCindrelinahHTML(
             </div>
           </div>
         </div>
-      </body>
+    </body>
     </html>
   `;
 }

@@ -42,26 +42,31 @@ export default function TimetableWidget({ todaySchedule, nextClass }: TimetableW
   const next = getNextClass();
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          Today's Timetable
-        </h2>
-        <button
-          onClick={() => router.push('/dashboard/teacher/timetable')}
-          className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
-        >
-          View Full
-        </button>
-      </div>
+    <div className="relative group overflow-hidden">
+      {/* Liquid Glass Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Today's Timetable
+          </h2>
+          <button
+            onClick={() => router.push('/dashboard/teacher/timetable')}
+            className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+          >
+            View Full
+          </button>
+        </div>
 
       {/* Next Class Highlight */}
       {next && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800"
+          className="relative z-10 mb-6 p-4 rounded-xl bg-gradient-to-r from-blue-400/20 to-indigo-400/20 dark:from-blue-500/10 dark:to-indigo-500/10 backdrop-blur-md border border-white/30 dark:border-white/10 shadow-lg"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

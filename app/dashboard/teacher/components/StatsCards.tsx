@@ -91,15 +91,25 @@ export default function StatsCards({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
             whileHover={{ y: -4, scale: 1.02 }}
-            className={`${stat.bgColor} rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm hover:shadow-md transition-all`}
+            className="relative group"
           >
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{stat.label}</p>
-                <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-              </div>
-              <div className={`${stat.iconBg} p-3 rounded-xl`}>
-                <Icon className={`w-6 h-6 ${stat.color}`} />
+            {/* Liquid Glass Card */}
+            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl"></div>
+            <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              
+              <div className="flex items-center justify-between relative z-10">
+                <div className="flex-1">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 font-medium">{stat.label}</p>
+                  <p className={`text-3xl font-bold ${stat.color} drop-shadow-sm`}>{stat.value}</p>
+                </div>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-white/30 dark:bg-white/10 rounded-xl blur-md"></div>
+                  <div className={`relative ${stat.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/30 dark:border-white/10`}>
+                    <Icon className={`w-6 h-6 ${stat.color}`} />
+                  </div>
+                </div>
               </div>
             </div>
           </motion.div>

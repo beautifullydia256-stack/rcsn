@@ -95,7 +95,7 @@ export default function Navbar({ onSearch, searchQuery: externalSearchQuery, sho
   };
 
   return (
-    <nav className="sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 shadow-sm">
+    <nav className="sticky top-0 z-20 bg-white/30 dark:bg-gray-900/30 backdrop-blur-xl border-b border-white/30 dark:border-white/10 shadow-lg">
       <div className="px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-between gap-4">
           {/* Search Bar */}
@@ -112,7 +112,7 @@ export default function Navbar({ onSearch, searchQuery: externalSearchQuery, sho
                     // Show results when focused if there's a query
                   }
                 }}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent transition-all"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-white/30 dark:border-white/10 bg-white/20 dark:bg-white/5 backdrop-blur-md text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50 focus:border-white/50 dark:focus:border-white/20 transition-all shadow-sm"
               />
               {showSearchResults && searchData && (
                 <SearchResults

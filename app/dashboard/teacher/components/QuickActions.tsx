@@ -77,7 +77,7 @@ export default function QuickActions() {
 
   return (
     <div className="mb-8">
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 drop-shadow-sm">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
@@ -90,14 +90,21 @@ export default function QuickActions() {
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => router.push(action.path)}
-              className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border border-gray-200 dark:border-gray-700 ${action.bgColor} transition-all group`}
+              className="relative group overflow-hidden"
             >
-              <div className={`p-2.5 rounded-lg ${action.bgColor} group-hover:scale-110 transition-transform`}>
-                <Icon className={`w-5 h-5 ${action.color}`} />
+              {/* Liquid Glass Background */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-lg"></div>
+              <div className="relative flex flex-col items-center justify-center gap-2 p-4 bg-white/20 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 hover:border-white/50 dark:hover:border-white/20 transition-all duration-300">
+                {/* Shimmer on hover */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                
+                <div className="relative z-10 p-2.5 rounded-xl bg-white/30 dark:bg-white/10 backdrop-blur-sm border border-white/20 dark:border-white/5 group-hover:scale-110 group-hover:bg-white/40 dark:group-hover:bg-white/15 transition-all duration-300">
+                  <Icon className={`w-5 h-5 ${action.color} drop-shadow-sm`} />
+                </div>
+                <span className={`relative z-10 text-xs font-medium text-center ${action.color} group-hover:font-semibold transition-all drop-shadow-sm`}>
+                  {action.label}
+                </span>
               </div>
-              <span className={`text-xs font-medium text-center ${action.color} group-hover:font-semibold transition-all`}>
-                {action.label}
-              </span>
             </motion.button>
           );
         })}

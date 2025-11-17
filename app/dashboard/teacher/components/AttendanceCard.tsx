@@ -196,28 +196,33 @@ export default function AttendanceCard({ schoolId, teacherId }: AttendanceCardPr
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          Teacher Attendance
-        </h2>
-        <button
-          onClick={verifyLocation}
-          disabled={locationVerification.loading}
-          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-          title="Refresh Location"
-        >
-          <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${locationVerification.loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+    <div className="relative group overflow-hidden">
+      {/* Liquid Glass Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
+            <Clock className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Teacher Attendance
+          </h2>
+          <button
+            onClick={verifyLocation}
+            disabled={locationVerification.loading}
+            className="relative z-10 p-1.5 rounded-lg bg-white/20 dark:bg-white/10 backdrop-blur-sm border border-white/20 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/15 transition-all"
+            title="Refresh Location"
+          >
+            <RefreshCw className={`w-4 h-4 text-gray-700 dark:text-gray-300 ${locationVerification.loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
 
-      {/* Location Status */}
-      <div className={`mb-4 p-4 rounded-xl border ${
-        locationVerification.isAtSchool
-          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-      }`}>
+        {/* Location Status */}
+        <div className={`relative z-10 mb-4 p-4 rounded-xl border backdrop-blur-sm ${
+          locationVerification.isAtSchool
+            ? 'bg-green-400/20 dark:bg-green-500/10 border-white/30 dark:border-white/10'
+            : 'bg-red-400/20 dark:bg-red-500/10 border-white/30 dark:border-white/10'
+        }`}>
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <MapPin className={`w-4 h-4 ${

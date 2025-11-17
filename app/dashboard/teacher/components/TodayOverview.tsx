@@ -55,16 +55,21 @@ export default function TodayOverview({
   const minutesUntil = Math.floor((timeUntilClass % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          Today's Overview
-        </h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-        </span>
-      </div>
+    <div className="relative group overflow-hidden">
+      {/* Liquid Glass Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
+      <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
+        {/* Shimmer effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        <div className="relative z-10 flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 drop-shadow-sm">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Today's Overview
+          </h2>
+          <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+          </span>
+        </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         {/* Next Class Card */}
@@ -72,7 +77,7 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800"
+            className="relative overflow-hidden bg-gradient-to-br from-blue-400/20 to-indigo-400/20 dark:from-blue-500/10 dark:to-indigo-500/10 backdrop-blur-md rounded-xl p-4 border border-white/30 dark:border-white/10 shadow-lg"
           >
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -103,7 +108,7 @@ export default function TodayOverview({
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
           >
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
@@ -116,7 +121,7 @@ export default function TodayOverview({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
           >
             <div className="flex items-center gap-2 mb-1">
               <MessageSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -129,7 +134,7 @@ export default function TodayOverview({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
           >
             <div className="flex items-center gap-2 mb-1">
               <Bell className="w-4 h-4 text-purple-600 dark:text-purple-400" />
@@ -142,7 +147,7 @@ export default function TodayOverview({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.3 }}
-            className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3 border border-gray-200 dark:border-gray-700"
+            className="relative overflow-hidden bg-white/20 dark:bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/20 dark:border-white/10 shadow-md"
           >
             <div className="flex items-center gap-2 mb-1">
               <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
@@ -164,7 +169,7 @@ export default function TodayOverview({
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-900 transition-colors"
+                className="relative z-10 flex items-center justify-between p-3 rounded-lg bg-white/20 dark:bg-white/5 backdrop-blur-sm border border-white/20 dark:border-white/10 hover:bg-white/30 dark:hover:bg-white/10 transition-all duration-300 shadow-sm hover:shadow-md"
               >
                 <div className="flex items-center gap-3">
                   <div className="text-sm font-medium text-gray-900 dark:text-white w-16">{cls.time}</div>
@@ -183,6 +188,7 @@ export default function TodayOverview({
               No classes scheduled for today
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>
