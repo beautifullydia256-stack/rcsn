@@ -1354,6 +1354,7 @@ export default function TeacherExamResultsClassPage() {
     if (resolvedTeacherId && resolvedSchoolId) {
       refreshClassTeacherStatus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedTeacherId, resolvedSchoolId, className]);
 
   if (loading) {
@@ -1388,11 +1389,13 @@ export default function TeacherExamResultsClassPage() {
                   }`}>
                     {isSecondary ? 'O-Level Format' : (isALevel ? 'A-Level Format' : primarySection ? `${primarySection} Section Format` : 'Primary Format')}
                   </div>
-              {primarySection && (
-                <div className="text-xs text-white/60 italic">
-                  ✓ Section-specific format
+                  {primarySection && (
+                    <div className="text-xs text-white/60 italic">
+                      ✓ Section-specific format
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
           <div className="flex gap-3">
@@ -2056,6 +2059,7 @@ export default function TeacherExamResultsClassPage() {
         )}
 
         {/* Comments modal removed per request */}
+      </main>
       </div>
     </div>
   );
