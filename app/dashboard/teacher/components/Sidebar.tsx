@@ -71,10 +71,10 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
     return pathname?.startsWith(item.path);
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
     <>
       {/* Logo & Title */}
-      <div className="flex items-center gap-3 px-4 py-6 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+      <div className={`flex items-center gap-3 px-4 border-b ${isMobile ? 'py-3' : 'py-6'}`} style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
         {!isCollapsed && (
           <div className="flex items-center gap-2 flex-1">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -234,7 +234,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
                 borderRight: '1px solid rgba(255, 255, 255, 0.20)'
               }}
             >
-              <div className="flex items-center justify-end px-4 py-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+              <div className="flex items-center justify-end px-4 py-2 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
                 <button
                   onClick={() => setIsMobileOpen(false)}
                   className="p-1.5 rounded-lg transition-colors"
@@ -249,7 +249,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              <SidebarContent />
+              <SidebarContent isMobile={true} />
             </motion.div>
           </>
         )}
@@ -268,7 +268,7 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
         }}
       >
-        <SidebarContent />
+        <SidebarContent isMobile={false} />
       </motion.aside>
     </>
   );
