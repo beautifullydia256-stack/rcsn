@@ -5,6 +5,7 @@ import { supabase } from '@/src/lib/supabase';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
 import ClassCards from '../components/ClassCards';
+import GlassBackground from '../components/GlassBackground';
 import { motion } from 'framer-motion';
 
 export default function ClassesPage() {
@@ -31,10 +32,63 @@ export default function ClassesPage() {
       const response = await fetch('/api/teacher/resolve-assignments', {
         credentials: 'include',
       });
+      
       if (response.ok) {
         const data = await response.json();
-        if (data.assignments) {
-          setAssignments(data.assignments);
+        if (data.assignments && Array.isArray(data.assignments)) {
+          // Transform API response: group subjects by class_name
+          const classMap = new Map<string, { class_name: string; subjects: string[]; student_count: number }>();
+          
+          data.assignments.forEach((assignment: any) => {
+            const className = assignment.class_name;
+            const subject = assignment.subject;
+            
+            if (className && subject) {
+              if (!classMap.has(className)) {
+                classMap.set(className, {
+                  class_name: className,
+                  subjects: [],
+                  student_count: 0
+                });
+              }
+              
+              const classData = classMap.get(className)!;
+              if (!classData.subjects.includes(subject)) {
+                classData.subjects.push(subject);
+              }
+            }
+          });
+          
+          // Fetch student counts for each class
+          const classNames = Array.from(classMap.keys());
+          if (classNames.length > 0 && schoolId) {
+            try {
+              const { data: studentsData } = await supabase
+                .from('students')
+                .select('current_class')
+                .eq('school_id', schoolId)
+                .in('current_class', classNames);
+              
+              if (studentsData) {
+                const counts = new Map<string, number>();
+                studentsData.forEach((student: any) => {
+                  const className = student.current_class;
+                  if (className) {
+                    counts.set(className, (counts.get(className) || 0) + 1);
+                  }
+                });
+                
+                // Update student counts
+                classMap.forEach((classData, className) => {
+                  classData.student_count = counts.get(className) || 0;
+                });
+              }
+            } catch (err) {
+              console.error('Error fetching student counts:', err);
+            }
+          }
+          
+          setAssignments(Array.from(classMap.values()));
         }
       }
     } catch (error) {
@@ -46,16 +100,23 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+        <GlassBackground />
+        <div className="relative z-10 flex items-center justify-center min-h-screen">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
+            <p className="text-white/85">Loading classes...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
+      <GlassBackground />
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={() => {}} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <motion.div
@@ -63,10 +124,10 @@ export default function ClassesPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white">
               My Classes
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-white/85 mt-2">
               View and manage your assigned classes
             </p>
           </motion.div>

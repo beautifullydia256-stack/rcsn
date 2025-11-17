@@ -532,10 +532,10 @@ export default function TeacherDashboard() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xl">
                     <User className="w-8 h-8" />
                   </div>
-                  <div>
+              <div>
                     <h1 className="text-3xl sm:text-4xl font-bold text-white flex items-center gap-3 mb-2">
-                      Welcome, {teacherName}
-                      {isClassTeacher && (
+                    Welcome, {teacherName}
+                    {isClassTeacher && (
                         <span 
                           className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-semibold"
                           style={{
@@ -544,10 +544,10 @@ export default function TeacherDashboard() {
                             color: '#c4b5fd'
                           }}
                         >
-                          ⭐ Class Teacher
-                        </span>
-                      )}
-                    </h1>
+                        ⭐ Class Teacher
+                      </span>
+                    )}
+                  </h1>
                     <div className="flex items-center gap-4 text-white/85 font-medium">
                       <span className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full" style={{ background: '#4dabff' }}></span>
@@ -561,12 +561,12 @@ export default function TeacherDashboard() {
                         <span className="w-2 h-2 rounded-full" style={{ background: '#ae79ff' }}></span>
                         {totalStudentsInClasses} Students
                       </span>
-                    </div>
-                  </div>
-                </div>
+              </div>
+              </div>
+          </div>
               </div>
             </GlassCard>
-          </div>
+        </div>
 
           {/* Quick Actions */}
           <QuickActions />

@@ -19,8 +19,13 @@ interface ClassCardsProps {
 export default function ClassCards({ assignments = [] }: ClassCardsProps) {
   const router = useRouter();
 
+  // Ensure assignments is an array and has valid structure
+  const validAssignments: ClassAssignment[] = Array.isArray(assignments) 
+    ? assignments.filter((a: any) => a && a.class_name && Array.isArray(a.subjects))
+    : [];
+
   // Mock data if not provided
-  const mockAssignments: ClassAssignment[] = assignments.length > 0 ? assignments : [
+  const mockAssignments: ClassAssignment[] = validAssignments.length > 0 ? validAssignments : [
     { class_name: 'S.1 West', subjects: ['Mathematics', 'Physics'], student_count: 32 },
     { class_name: 'S.2 East', subjects: ['Chemistry', 'Biology'], student_count: 28 },
     { class_name: 'S.3 North', subjects: ['Mathematics', 'Physics'], student_count: 35 }
@@ -96,19 +101,23 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
                 <div className="mb-5">
                   <div className="text-xs mb-3 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>Subjects:</div>
                   <div className="flex flex-wrap gap-2">
-                    {assignment.subjects.map((subject) => (
-                      <span
-                        key={subject}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
-                        style={{
-                          background: colors.iconBg,
-                          color: colors.icon,
-                          border: `1px solid ${colors.icon}66`
-                        }}
-                      >
-                        {subject}
-                      </span>
-                    ))}
+                    {Array.isArray(assignment.subjects) && assignment.subjects.length > 0 ? (
+                      assignment.subjects.map((subject: string) => (
+                        <span
+                          key={subject}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{
+                            background: colors.iconBg,
+                            color: colors.icon,
+                            border: `1px solid ${colors.icon}66`
+                          }}
+                        >
+                          {subject}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>No subjects assigned</span>
+                    )}
                   </div>
                 </div>
 
