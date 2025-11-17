@@ -1,13 +1,13 @@
 import React from "react";
 import clsx from "clsx";
 
-interface GlassCardProps {
+interface GlassCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
   className?: string;
   hover?: boolean;
 }
 
-export default function GlassCard({ children, className, hover }: GlassCardProps) {
+export default function GlassCard({ children, className, hover, ...props }: GlassCardProps) {
   return (
     <div
       className={clsx(
@@ -15,6 +15,7 @@ export default function GlassCard({ children, className, hover }: GlassCardProps
         hover && "transition-all duration-300 hover:bg-white/20 hover:border-white/30",
         className
       )}
+      {...props}
     >
       {children}
     </div>
