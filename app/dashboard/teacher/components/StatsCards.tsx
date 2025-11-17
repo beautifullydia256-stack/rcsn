@@ -34,49 +34,49 @@ export default function StatsCards({
       icon: GraduationCap,
       label: 'Total Classes Assigned',
       value: totalClasses,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/40'
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-900/20',
+      iconBg: 'bg-blue-900/40'
     },
     {
       icon: Users,
       label: 'Students in My Classes',
       value: totalStudents,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-50 dark:bg-green-900/20',
-      iconBg: 'bg-green-100 dark:bg-green-900/40'
+      color: 'text-green-400',
+      bgColor: 'bg-green-900/20',
+      iconBg: 'bg-green-900/40'
     },
     {
       icon: UserCheck,
       label: 'Students Attended Today',
       value: studentsAttendedToday,
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-50 dark:bg-purple-900/20',
-      iconBg: 'bg-purple-100 dark:bg-purple-900/40'
+      color: 'text-purple-400',
+      bgColor: 'bg-purple-900/20',
+      iconBg: 'bg-purple-900/40'
     },
     {
       icon: BookOpen,
       label: 'Subjects Assigned',
       value: subjectsAssigned,
-      color: 'text-orange-600 dark:text-orange-400',
-      bgColor: 'bg-orange-50 dark:bg-orange-900/20',
-      iconBg: 'bg-orange-100 dark:bg-orange-900/40'
+      color: 'text-orange-400',
+      bgColor: 'bg-orange-900/20',
+      iconBg: 'bg-orange-900/40'
     },
     {
       icon: FileText,
       label: 'Assignments Due',
       value: assignmentsDue,
-      color: 'text-indigo-600 dark:text-indigo-400',
-      bgColor: 'bg-indigo-50 dark:bg-indigo-900/20',
-      iconBg: 'bg-indigo-100 dark:bg-indigo-900/40'
+      color: 'text-indigo-400',
+      bgColor: 'bg-indigo-900/20',
+      iconBg: 'bg-indigo-900/40'
     },
     {
       icon: ClipboardList,
       label: 'Exams Pending Marking',
       value: examsPending,
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-50 dark:bg-red-900/20',
-      iconBg: 'bg-red-100 dark:bg-red-900/40'
+      color: 'text-red-400',
+      bgColor: 'bg-red-900/20',
+      iconBg: 'bg-red-900/40'
     }
   ];
 
@@ -94,20 +94,20 @@ export default function StatsCards({
             className="relative group"
           >
             {/* Liquid Glass Card */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-2xl"></div>
-            <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl"></div>
+            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
               {/* Shimmer effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
               
               <div className="flex items-center justify-between relative z-10">
                 <div className="flex-1">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 font-medium">{stat.label}</p>
-                  <p className={`text-3xl font-bold ${stat.color} drop-shadow-sm`}>{stat.value}</p>
+                  <p className="text-sm text-white/80 mb-2 font-medium">{stat.label}</p>
+                  <p className={`text-3xl font-bold ${stat.color} drop-shadow-lg`}>{stat.value}</p>
                 </div>
                 <div className="relative">
-                  <div className="absolute inset-0 bg-white/30 dark:bg-white/10 rounded-xl blur-md"></div>
-                  <div className={`relative ${stat.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/30 dark:border-white/10`}>
-                    <Icon className={`w-6 h-6 ${stat.color}`} />
+                  <div className="absolute inset-0 bg-white/20 rounded-xl blur-md"></div>
+                  <div className={`relative ${stat.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/20`}>
+                    <Icon className={`w-6 h-6 ${stat.color} drop-shadow-lg`} />
                   </div>
                 </div>
               </div>
