@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import LiquidGlass from 'liquid-glass-react';
 import { Users, GraduationCap, UserCheck, BookOpen, FileText, ClipboardList } from 'lucide-react';
 
 interface StatCard {
@@ -93,13 +94,16 @@ export default function StatsCards({
             whileHover={{ y: -4, scale: 1.02 }}
             className="relative group"
           >
-            {/* Liquid Glass Card */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl backdrop-blur-xl border border-white/20 shadow-2xl"></div>
-            <div className="relative bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 p-6 shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden">
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              
-              <div className="flex items-center justify-between relative z-10">
+            <LiquidGlass
+              displacementScale={64}
+              blurAmount={0.1}
+              saturation={130}
+              aberrationIntensity={2}
+              elasticity={0.35}
+              cornerRadius={16}
+              padding="24px"
+            >
+              <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm text-white/80 mb-2 font-medium">{stat.label}</p>
                   <p className={`text-3xl font-bold ${stat.color} drop-shadow-lg`}>{stat.value}</p>
@@ -111,7 +115,7 @@ export default function StatsCards({
                   </div>
                 </div>
               </div>
-            </div>
+            </LiquidGlass>
           </motion.div>
         );
       })}

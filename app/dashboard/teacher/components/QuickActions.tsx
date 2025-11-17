@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import LiquidGlass from 'liquid-glass-react';
 import {
   ClipboardCheck,
   BookOpen,
@@ -82,30 +83,34 @@ export default function QuickActions() {
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <motion.button
+            <motion.div
               key={action.path}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => router.push(action.path)}
-              className="relative group overflow-hidden"
             >
-              {/* Liquid Glass Background */}
-              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl backdrop-blur-xl border border-white/20 shadow-lg"></div>
-              <div className="relative flex flex-col items-center justify-center gap-2 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-300">
-                {/* Shimmer on hover */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-                
-                <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 group-hover:scale-110 group-hover:bg-white/30 transition-all duration-300">
-                  <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
+              <LiquidGlass
+                displacementScale={64}
+                blurAmount={0.1}
+                saturation={130}
+                aberrationIntensity={2}
+                elasticity={0.35}
+                cornerRadius={16}
+                padding="16px"
+                onClick={() => router.push(action.path)}
+              >
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300">
+                    <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
+                  </div>
+                  <span className={`relative z-10 text-xs font-medium text-center ${action.color} transition-all drop-shadow-lg`}>
+                    {action.label}
+                  </span>
                 </div>
-                <span className={`relative z-10 text-xs font-medium text-center ${action.color} group-hover:font-semibold transition-all drop-shadow-lg`}>
-                  {action.label}
-                </span>
-              </div>
-            </motion.button>
+              </LiquidGlass>
+            </motion.div>
           );
         })}
       </div>
