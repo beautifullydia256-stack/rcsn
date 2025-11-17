@@ -94,28 +94,31 @@ export default function StatsCards({
             whileHover={{ y: -4, scale: 1.02 }}
             className="relative group"
           >
-            <LiquidGlass
-              displacementScale={64}
-              blurAmount={0.1}
-              saturation={130}
-              aberrationIntensity={2}
-              elasticity={0.35}
-              cornerRadius={16}
-              padding="24px"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm text-white/80 mb-2 font-medium">{stat.label}</p>
-                  <p className={`text-3xl font-bold ${stat.color} drop-shadow-lg`}>{stat.value}</p>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-0 bg-white/20 rounded-xl blur-md"></div>
-                  <div className={`relative ${stat.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/20`}>
-                    <Icon className={`w-6 h-6 ${stat.color} drop-shadow-lg`} />
+            <div className="relative w-full">
+              <LiquidGlass
+                displacementScale={64}
+                blurAmount={0.1}
+                saturation={130}
+                aberrationIntensity={2}
+                elasticity={0.35}
+                cornerRadius={16}
+                padding="24px"
+                style={{ minHeight: '120px', width: '100%' }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-white/80 mb-2 font-medium">{stat.label}</p>
+                    <p className={`text-3xl font-bold ${stat.color} drop-shadow-lg`}>{stat.value}</p>
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-white/20 rounded-xl blur-md"></div>
+                    <div className={`relative ${stat.iconBg} backdrop-blur-sm p-3 rounded-xl border border-white/20`}>
+                      <Icon className={`w-6 h-6 ${stat.color} drop-shadow-lg`} />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </LiquidGlass>
+              </LiquidGlass>
+            </div>
           </motion.div>
         );
       })}

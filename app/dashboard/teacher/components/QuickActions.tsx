@@ -91,25 +91,28 @@ export default function QuickActions() {
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
-              <LiquidGlass
-                displacementScale={64}
-                blurAmount={0.1}
-                saturation={130}
-                aberrationIntensity={2}
-                elasticity={0.35}
-                cornerRadius={16}
-                padding="16px"
-                onClick={() => router.push(action.path)}
-              >
-                <div className="flex flex-col items-center justify-center gap-2">
-                  <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300">
-                    <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
+              <div className="relative w-full">
+                <LiquidGlass
+                  displacementScale={64}
+                  blurAmount={0.1}
+                  saturation={130}
+                  aberrationIntensity={2}
+                  elasticity={0.35}
+                  cornerRadius={16}
+                  padding="16px"
+                  onClick={() => router.push(action.path)}
+                  style={{ minHeight: '100px', width: '100%', cursor: 'pointer' }}
+                >
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300">
+                      <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
+                    </div>
+                    <span className={`relative z-10 text-xs font-medium text-center ${action.color} transition-all drop-shadow-lg`}>
+                      {action.label}
+                    </span>
                   </div>
-                  <span className={`relative z-10 text-xs font-medium text-center ${action.color} transition-all drop-shadow-lg`}>
-                    {action.label}
-                  </span>
-                </div>
-              </LiquidGlass>
+                </LiquidGlass>
+              </div>
             </motion.div>
           );
         })}

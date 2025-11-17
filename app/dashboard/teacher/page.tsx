@@ -485,7 +485,7 @@ export default function TeacherDashboard() {
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/30 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-500/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-      </div>
+        </div>
 
       {/* Sidebar */}
       <Sidebar 
@@ -520,38 +520,41 @@ export default function TeacherDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <LiquidGlass
-              displacementScale={64}
-              blurAmount={0.1}
-              saturation={130}
-              aberrationIntensity={2}
-              elasticity={0.35}
-              cornerRadius={16}
-              padding="24px"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
-                    <div className="relative">
-                      <div className="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
-                      <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
-                        <User className="w-6 h-6" />
+            <div className="relative">
+              <LiquidGlass
+                displacementScale={64}
+                blurAmount={0.1}
+                saturation={130}
+                aberrationIntensity={2}
+                elasticity={0.35}
+                cornerRadius={16}
+                padding="24px"
+                style={{ minHeight: '120px' }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
+                        <div className="relative w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg">
+                          <User className="w-6 h-6" />
+                        </div>
                       </div>
-                    </div>
-                    Welcome, {teacherName}
-                    {isClassTeacher && (
-                      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-white/20 backdrop-blur-sm text-sm font-medium shadow-sm">
-                        ⭐ Class Teacher
-                      </span>
-                    )}
-                  </h1>
-                  <p className="text-white/80 mt-2 font-medium">
-                    Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
-                  </p>
+                      Welcome, {teacherName}
+                      {isClassTeacher && (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-white/20 backdrop-blur-sm text-sm font-medium shadow-sm">
+                          ⭐ Class Teacher
+                        </span>
+                      )}
+                    </h1>
+                    <p className="text-white/80 mt-2 font-medium">
+                      Class Teacher • {subjectsAssigned.length} Subjects • {totalClassesAssigned} Classes
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </LiquidGlass>
-          </motion.div>
+              </LiquidGlass>
+            </div>
+        </motion.div>
 
           {/* Quick Actions */}
           <QuickActions />
