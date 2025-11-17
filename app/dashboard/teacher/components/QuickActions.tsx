@@ -10,7 +10,7 @@ import {
   FileText,
   MessageSquare
 } from 'lucide-react';
-import GlassCard from './GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 
 interface QuickAction {
   icon: any;
@@ -82,7 +82,7 @@ export default function QuickActions() {
         {actions.map((action, index) => {
           const Icon = action.icon;
           return (
-            <GlassCard key={action.path} className="p-4" enableHover>
+            <GlassCard key={action.path} className="p-4" hover>
               <button
                 onClick={() => router.push(action.path)}
                 className="w-full flex flex-col items-center justify-center gap-2 transition-all"

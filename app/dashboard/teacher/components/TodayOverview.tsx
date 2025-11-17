@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Calendar, Clock, CheckCircle, MessageSquare, AlertCircle, Bell } from 'lucide-react';
-import GlassCard from './GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 
 interface TodayClass {
   time: string;
@@ -56,7 +56,7 @@ export default function TodayOverview({
   const minutesUntil = Math.floor((timeUntilClass % (1000 * 60 * 60)) / (1000 * 60));
 
   return (
-    <GlassCard className="p-6" enableHover>
+    <GlassCard className="p-6" hover>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Calendar className="w-5 h-5" style={{ color: '#4dabff' }} />

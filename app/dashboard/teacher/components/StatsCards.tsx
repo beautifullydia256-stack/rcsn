@@ -1,7 +1,7 @@
 'use client';
 
 import { Users, GraduationCap, UserCheck, BookOpen, FileText, ClipboardList } from 'lucide-react';
-import GlassCard from './GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 
 interface StatCard {
   icon: any;
@@ -85,7 +85,7 @@ export default function StatsCards({
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <GlassCard key={stat.label} className="p-6" enableHover>
+          <GlassCard key={stat.label} className="p-6" hover>
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-sm mb-2 font-medium" style={{ color: 'rgba(255, 255, 255, 0.85)' }}>{stat.label}</p>

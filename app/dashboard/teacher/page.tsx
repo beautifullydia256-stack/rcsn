@@ -17,7 +17,7 @@ import MessagesCard from './components/MessagesCard';
 import NotificationsCard from './components/NotificationsCard';
 import SubjectsCard from './components/SubjectsCard';
 import GlassBackground from './components/GlassBackground';
-import GlassCard from './components/GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 import { User } from 'lucide-react';
 
 interface Assignment {
@@ -514,7 +514,7 @@ export default function TeacherDashboard() {
         <main className="p-4 sm:p-6 lg:p-8 relative z-10">
           {/* Welcome Header */}
           <div className="mb-8">
-            <GlassCard className="p-6" enableHover>
+            <GlassCard className="p-6" hover>
               <div className="flex items-center justify-between">
                 <div>
                   <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">

@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, TrendingUp, TrendingDown, AlertCircle, Lightbulb, BarChart3 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import GlassCard from './GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 
 interface StudentInsight {
   name: string;
@@ -63,7 +63,7 @@ export default function AIInsights({
 
   if (loading) {
     return (
-      <GlassCard className="p-6 mb-8" enableHover={false}>
+      <GlassCard className="p-6 mb-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
             <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
@@ -90,7 +90,7 @@ export default function AIInsights({
   }
 
   return (
-    <GlassCard className="p-6 mb-8" enableHover={true}>
+    <GlassCard className="p-6 mb-8" hover>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-white flex items-center gap-2">
           <Sparkles className="w-5 h-5" style={{ color: '#ae79ff' }} />
@@ -283,7 +283,6 @@ export default function AIInsights({
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
         </div>
       </div>
     </GlassCard>

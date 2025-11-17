@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Users, BookOpen, Eye, FileText, GraduationCap } from 'lucide-react';
-import GlassCard from './GlassCard';
+import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
 
 interface ClassAssignment {
@@ -56,7 +56,7 @@ export default function ClassCards({ assignments = [] }: ClassCardsProps) {
             <GlassCard
               key={assignment.class_name}
               className="p-6 cursor-pointer"
-              enableHover
+              hover
             >
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
