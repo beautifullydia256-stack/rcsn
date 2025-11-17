@@ -91,7 +91,9 @@ export default function QuickActions() {
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.95 }}
             >
-              <div className="relative w-full">
+              <div className="relative w-full bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-4 shadow-lg overflow-hidden cursor-pointer hover:border-white/40 transition-all" onClick={() => router.push(action.path)}>
+                {/* Fallback glass effect */}
+                <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl"></div>
                 <LiquidGlass
                   displacementScale={64}
                   blurAmount={0.1}
@@ -99,11 +101,11 @@ export default function QuickActions() {
                   aberrationIntensity={2}
                   elasticity={0.35}
                   cornerRadius={16}
-                  padding="16px"
+                  padding="0"
                   onClick={() => router.push(action.path)}
-                  style={{ minHeight: '100px', width: '100%', cursor: 'pointer' }}
+                  style={{ background: 'transparent', minHeight: '100px', width: '100%', cursor: 'pointer' }}
                 >
-                  <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="flex flex-col items-center justify-center gap-2 relative z-10">
                     <div className="relative z-10 p-2.5 rounded-xl bg-white/20 backdrop-blur-sm border border-white/20 transition-all duration-300">
                       <Icon className={`w-5 h-5 ${action.color} drop-shadow-lg`} />
                     </div>

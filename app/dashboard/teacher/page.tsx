@@ -520,7 +520,9 @@ export default function TeacherDashboard() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <div className="relative">
+            <div className="relative bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6 shadow-2xl overflow-hidden">
+              {/* Fallback glass effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-white/5 rounded-2xl"></div>
               <LiquidGlass
                 displacementScale={64}
                 blurAmount={0.1}
@@ -528,10 +530,10 @@ export default function TeacherDashboard() {
                 aberrationIntensity={2}
                 elasticity={0.35}
                 cornerRadius={16}
-                padding="24px"
-                style={{ minHeight: '120px' }}
+                padding="0"
+                style={{ background: 'transparent' }}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-2 relative z-10">
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3 drop-shadow-lg">
                       <div className="relative">
