@@ -256,10 +256,10 @@ export default function AttendanceCard({ schoolId, teacherId }: AttendanceCardPr
             {locationVerification.error}
           </div>
         )}
-      </div>
+        </div>
 
-      {/* Attendance Status */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
+        {/* Attendance Status */}
+        <div className="relative z-10 grid grid-cols-2 gap-4 mb-6">
         <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700">
           <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Punch In</div>
           {attendanceStatus.punchedIn ? (
@@ -337,6 +337,7 @@ export default function AttendanceCard({ schoolId, teacherId }: AttendanceCardPr
             </>
           )}
         </motion.button>
+        </div>
       </div>
     </div>
   );

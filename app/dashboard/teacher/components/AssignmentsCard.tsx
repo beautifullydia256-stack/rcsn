@@ -64,7 +64,7 @@ export default function AssignmentsCard({ assignments = [] }: AssignmentsCardPro
       <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
       <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 p-6 shadow-lg hover:shadow-2xl transition-all duration-300">
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-      <div className="flex items-center justify-between mb-4">
+        <div className="relative z-10 flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           Assignments
@@ -165,6 +165,8 @@ export default function AssignmentsCard({ assignments = [] }: AssignmentsCardPro
           View {mockAssignments.length - 3} more assignments
         </motion.button>
       )}
+        </div>
+      </div>
     </div>
   );
 }

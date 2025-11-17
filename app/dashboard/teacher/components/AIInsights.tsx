@@ -79,6 +79,7 @@ export default function AIInsights({
             <p className="text-sm text-gray-600 dark:text-gray-400">Analyzing student performance with AI...</p>
           </div>
         </div>
+        </div>
       </div>
     );
   }
@@ -106,9 +107,9 @@ export default function AIInsights({
             </span>
           )}
         </div>
-      </div>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Struggling Students */}
         <div>
           <div className="flex items-center gap-2 mb-4">
@@ -248,6 +249,7 @@ export default function AIInsights({
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
         </div>
       </div>
     </div>
