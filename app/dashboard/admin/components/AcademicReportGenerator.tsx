@@ -366,11 +366,16 @@ export default function AcademicReportGenerator() {
         teacherImpact: [], // Would need teacher-subject mapping
         examAnalysis: {
           totalExams,
-          averagePerformance: averageGrade
+          averagePerformance: averageGrade,
+          assessmentTypes: ['CATs', 'Mid-term Exams', 'Final Exams', 'Projects'],
+          weakestExam: worstSubject.subject || 'N/A',
+          difficultyRating: averageGrade >= 70 ? 'Moderate' : averageGrade >= 50 ? 'Challenging' : 'Very Challenging'
         },
         performanceComparison: {
           currentTerm: averageGrade,
-          previousTerm: averageGrade - 5 // Mock - would need previous term data
+          previousTerm: averageGrade - 5, // Mock - would need previous term data
+          change: 5, // Mock change percentage
+          trend: averageGrade >= (averageGrade - 5) ? 'improving' : 'declining'
         },
         alerts,
         forecasts
