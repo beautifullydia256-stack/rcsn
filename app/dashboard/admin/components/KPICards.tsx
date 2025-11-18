@@ -221,34 +221,46 @@ export default function AdminKPICards() {
               whileHover={{ scale: 1.02, y: -4 }}
             >
               <GlassCard
-                className="p-4 sm:p-6 cursor-pointer relative overflow-hidden"
+                className="p-4 sm:p-6 cursor-pointer relative"
                 hover
                 onClick={() => c.href && router.push(c.href)}
                 style={{
                   background: `linear-gradient(135deg, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.25) 0%, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.15) 100%)`,
+                  overflow: 'visible',
+                  minHeight: 'auto',
                 }}
               >
                 <div
-                  className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-2xl"
+                  className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-2xl pointer-events-none"
                   style={{ background: c.color }}
                 />
-                <div className="relative z-10">
+                <div className="relative z-10" style={{ overflow: 'visible' }}>
                   {/* Mobile: Stack vertically */}
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+                    <div className="flex items-center gap-3 sm:flex-col sm:items-start flex-shrink-0">
                       <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
                         <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: c.color }} />
                       </div>
-                      <div className="text-xs sm:text-sm text-white/85 font-medium sm:font-normal">
+                      <div className="text-xs sm:text-sm text-white/85 font-medium sm:font-normal whitespace-nowrap">
                         {c.label}
                       </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-white break-words leading-tight">
+                    <div className="flex-1 w-full min-w-0" style={{ overflow: 'visible', maxWidth: '100%' }}>
+                      <div 
+                        className="font-bold text-white leading-tight"
+                        style={{
+                          fontSize: 'clamp(0.875rem, 2vw + 0.5rem, 1.875rem)',
+                          wordBreak: 'keep-all',
+                          overflowWrap: 'anywhere',
+                          whiteSpace: 'normal',
+                          overflow: 'visible',
+                          textOverflow: 'clip',
+                        }}
+                      >
                         {loading ? (
                           <div className="animate-pulse bg-white/20 rounded h-8 sm:h-10 w-32 sm:w-40"></div>
                         ) : (
-                          <span className="block" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                          <span className="inline-block" style={{ maxWidth: '100%' }}>
                             {c.value}
                           </span>
                         )}
