@@ -102,27 +102,29 @@ export default function ChartsAnalytics() {
         // Get the 4 terms: current + 3 previous
         // Since allTerms is sorted DESCENDING (most recent first), we want:
         // - Current term (or most recent if no current)
-        // - Plus the 3 most recent terms before it
+        // - Plus the 3 most recent terms that came BEFORE it
         
         // Find index of reference term
         const refIndex = allTerms.findIndex((t: any) => 
           t.year === referenceTerm.year && t.term === referenceTerm.term
         );
 
-        // Get terms: start from index 0 (most recent) up to refIndex + 3 previous
-        // But ensure we get exactly 4 terms total
-        const selectedTerms: any[] = [];
-        const startIndex = Math.max(0, refIndex - 3); // Start 3 terms before current, or from 0
-        const endIndex = Math.min(allTerms.length, startIndex + 4); // Get up to 4 terms
+        // Build list: start with current term, then add 3 previous terms
+        const selectedTerms: any[] = [referenceTerm];
         
-        for (let i = startIndex; i < endIndex && selectedTerms.length < 4; i++) {
+        // Add terms that come AFTER the current term in the array (which are older/previous)
+        // Since array is DESCENDING, indices after refIndex are older terms
+        for (let i = refIndex + 1; i < allTerms.length && selectedTerms.length < 4; i++) {
           selectedTerms.push(allTerms[i]);
         }
         
-        // Ensure we always include the current/reference term
-        if (refIndex >= 0 && !selectedTerms.find((t: any) => t.year === referenceTerm.year && t.term === referenceTerm.term)) {
-          // Replace the last term with the reference term if it's not included
-          selectedTerms[selectedTerms.length - 1] = referenceTerm;
+        // If we don't have 4 terms yet, fill with terms before current (future terms or more recent)
+        // This handles edge cases where there aren't enough previous terms
+        if (selectedTerms.length < 4 && refIndex > 0) {
+          for (let i = refIndex - 1; i >= 0 && selectedTerms.length < 4; i--) {
+            // Insert at beginning to maintain chronological order later
+            selectedTerms.unshift(allTerms[i]);
+          }
         }
 
         // Sort chronologically (oldest first for display)
