@@ -4,8 +4,8 @@
   "description": "Modern AI-powered school management platform for teachers, students, and administrators",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#3b82f6",
+  "background_color": "#0f0f16",
+  "theme_color": "#0f0f16",
   "orientation": "portrait-primary",
   "scope": "/",
   "icons": [
