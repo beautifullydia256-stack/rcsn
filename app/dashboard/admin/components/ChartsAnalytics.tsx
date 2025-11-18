@@ -8,11 +8,12 @@ import { TrendingUp, Users, DollarSign } from 'lucide-react';
 
 export default function ChartsAnalytics() {
   const [attendanceData, setAttendanceData] = useState<Array<{ date: string; percentage: number; present: number; total: number }>>([]);
-  const [loading, setLoading] = useState(true);
+  const [attendanceLoading, setAttendanceLoading] = useState(true);
+  const [feeData, setFeeData] = useState<Array<{ label: string; amount: number; rawAmount: number }>>([]);
+  const [feeLoading, setFeeLoading] = useState(true);
   
   // Mock chart data for other charts
   const performanceData = [85, 82, 88, 90, 87, 92, 89];
-  const feeData = [2.5, 2.8, 2.3, 3.1, 2.9, 3.2, 3.0];
 
   // Get last 7 working days (excluding weekends)
   const getLast7WorkingDays = () => {
@@ -34,9 +35,35 @@ export default function ChartsAnalytics() {
     return days.reverse(); // Return in chronological order (oldest first)
   };
 
+  const getLast7Weeks = () => {
+    const weeks: Array<{ start: Date; end: Date; label: string }> = [];
+    const today = new Date();
+    const day = today.getDay();
+    const diffToMonday = day === 0 ? 6 : day - 1;
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - diffToMonday);
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    for (let i = 6; i >= 0; i--) {
+      const start = new Date(currentWeekStart);
+      start.setDate(start.getDate() - i * 7);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+      weeks.push({
+        start,
+        end,
+        label: `Wk ${7 - i}`
+      });
+    }
+
+    return weeks;
+  };
+
   useEffect(() => {
     const loadAttendanceData = async () => {
       try {
+        setAttendanceLoading(true);
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
         
@@ -46,13 +73,13 @@ export default function ChartsAnalytics() {
         const workingDays = getLast7WorkingDays();
         
         // Get total active students for the school
-        const { data: activeStudents } = await supabase
+        const { count: activeStudentsCount } = await supabase
           .from('students')
-          .select('student_id', { count: 'exact', head: false })
+          .select('student_id', { count: 'exact', head: true })
           .eq('school_id', u.school_id)
           .eq('status', 'active');
         
-        const totalActiveStudents = activeStudents?.length || 0;
+        const totalActiveStudents = activeStudentsCount || 0;
         
         if (totalActiveStudents === 0) {
           setAttendanceData(workingDays.map(date => ({ date, percentage: 0, present: 0, total: 0 })));
@@ -84,11 +111,60 @@ export default function ChartsAnalytics() {
       } catch (error) {
         console.error('Error loading attendance data:', error);
       } finally {
-        setLoading(false);
+        setAttendanceLoading(false);
       }
     };
 
     loadAttendanceData();
+  }, []);
+
+  useEffect(() => {
+    const loadFeeData = async () => {
+      try {
+        setFeeLoading(true);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
+        if (!u?.school_id) return;
+
+        const weekRanges = getLast7Weeks();
+        const earliestStart = weekRanges[0].start.toISOString().slice(0, 10);
+        const latestEnd = weekRanges[weekRanges.length - 1].end.toISOString().slice(0, 10);
+
+        const { data: payments } = await supabase
+          .from('student_payments')
+          .select('amount_paid, payment_date')
+          .eq('school_id', u.school_id)
+          .gte('payment_date', earliestStart)
+          .lte('payment_date', latestEnd);
+
+        const weeklyTotals = weekRanges.map((week) => {
+          const total = (payments || []).reduce((sum, payment) => {
+            if (!payment.payment_date) return sum;
+            const paymentDate = new Date(payment.payment_date);
+            if (paymentDate >= week.start && paymentDate <= week.end) {
+              return sum + Number(payment.amount_paid || 0);
+            }
+            return sum;
+          }, 0);
+
+          return {
+            label: week.label,
+            amount: Number((total / 1_000_000).toFixed(2)),
+            rawAmount: total
+          };
+        });
+
+        setFeeData(weeklyTotals);
+      } catch (error) {
+        console.error('Error loading fee data:', error);
+      } finally {
+        setFeeLoading(false);
+      }
+    };
+
+    loadFeeData();
   }, []);
 
   return (
@@ -133,7 +209,7 @@ export default function ChartsAnalytics() {
             <Users className="w-5 h-5" style={{ color: '#10b981' }} />
             <h3 className="text-lg font-semibold text-white">Attendance Patterns</h3>
           </div>
-          {loading ? (
+          {attendanceLoading ? (
             <div className="h-32 flex items-center justify-center">
               <div className="text-white/70 text-sm">Loading...</div>
             </div>
@@ -190,20 +266,45 @@ export default function ChartsAnalytics() {
             <h3 className="text-lg font-semibold text-white">Fee Collections</h3>
           </div>
           <div className="h-32 flex items-end gap-2">
-            {feeData.map((value, index) => (
-              <div
-                key={index}
-                className="flex-1 rounded-t transition-all hover:opacity-80"
-                style={{
-                  background: 'linear-gradient(to top, #f59e0b, #ff6bcb)',
-                  height: `${(value / 4) * 100}%`,
-                  minHeight: '20px'
-                }}
-                title={`Week ${index + 1}: ${value}M UGX`}
-              />
-            ))}
+            {feeLoading ? (
+              <div className="h-32 flex items-center justify-center">
+                <div className="text-white/70 text-sm">Loading...</div>
+              </div>
+            ) : feeData.length === 0 ? (
+              <div className="h-32 flex items-center justify-center">
+                <div className="text-white/70 text-sm">No fee data available</div>
+              </div>
+            ) : (
+              <>
+                <div className="h-32 flex items-end gap-2">
+                  {feeData.map((week) => {
+                    const maxAmount = Math.max(...feeData.map(f => f.amount), 1);
+                    return (
+                      <div
+                        key={week.label}
+                        className="flex-1 flex flex-col items-center group"
+                      >
+                        <div
+                          className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                          style={{
+                            background: 'linear-gradient(to top, #f59e0b, #ff6bcb)',
+                            height: `${(week.amount / maxAmount) * 100}%`,
+                            minHeight: week.amount > 0 ? '8px' : '4px'
+                          }}
+                          title={`${week.label}: UGX ${week.rawAmount.toLocaleString()}`}
+                        />
+                        <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
+                          <div className="font-medium">{week.label}</div>
+                          <div>{week.amount}M</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="text-xs text-white/70 mt-2 text-center">Last 7 weeks (M UGX)</div>
+              </>
+            )}
           </div>
-          <div className="text-xs text-white/70 mt-2 text-center">Last 7 weeks (M UGX)</div>
         </div>
       </GlassCard>
     </div>
