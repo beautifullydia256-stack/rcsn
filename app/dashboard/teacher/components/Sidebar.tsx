@@ -195,25 +195,26 @@ export default function Sidebar({ isCollapsed: externalCollapsed, onCollapse }: 
             </motion.div>
           </Link>
         
-        <motion.button
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
-          style={{ color: 'rgba(239, 68, 68, 0.9)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-          whileHover={{ x: 2 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          <LogOut className="w-5 h-5 flex-shrink-0" />
-          {!isCollapsed && <span className="text-sm font-medium flex-1 text-left">Logout</span>}
-        </motion.button>
-      </div>
-    </>
-  );
+          <motion.button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors"
+            style={{ color: 'rgba(239, 68, 68, 0.9)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && <span className="text-sm font-medium flex-1 text-left">Logout</span>}
+          </motion.button>
+        </div>
+      </>
+    );
+  };
 
   return (
     <>
