@@ -265,46 +265,44 @@ export default function ChartsAnalytics() {
             <DollarSign className="w-5 h-5" style={{ color: '#f59e0b' }} />
             <h3 className="text-lg font-semibold text-white">Fee Collections</h3>
           </div>
-          <div className="h-32 flex items-end gap-2">
-            {feeLoading ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="text-white/70 text-sm">Loading...</div>
-              </div>
-            ) : feeData.length === 0 ? (
-              <div className="h-32 flex items-center justify-center">
-                <div className="text-white/70 text-sm">No fee data available</div>
-              </div>
-            ) : (
-              <>
-                <div className="h-32 flex items-end gap-2">
-                  {feeData.map((week) => {
-                    const maxAmount = Math.max(...feeData.map(f => f.amount), 1);
-                    return (
+          {feeLoading ? (
+            <div className="h-32 flex items-center justify-center">
+              <div className="text-white/70 text-sm">Loading...</div>
+            </div>
+          ) : feeData.length === 0 ? (
+            <div className="h-32 flex items-center justify-center">
+              <div className="text-white/70 text-sm">No fee data available</div>
+            </div>
+          ) : (
+            <>
+              <div className="h-32 flex items-end gap-2">
+                {feeData.map((week) => {
+                  const maxAmount = Math.max(...feeData.map(f => f.amount), 1);
+                  return (
+                    <div
+                      key={week.label}
+                      className="flex-1 flex flex-col items-center group"
+                    >
                       <div
-                        key={week.label}
-                        className="flex-1 flex flex-col items-center group"
-                      >
-                        <div
-                          className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
-                          style={{
-                            background: 'linear-gradient(to top, #f59e0b, #ff6bcb)',
-                            height: `${(week.amount / maxAmount) * 100}%`,
-                            minHeight: week.amount > 0 ? '8px' : '4px'
-                          }}
-                          title={`${week.label}: UGX ${week.rawAmount.toLocaleString()}`}
-                        />
-                        <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
-                          <div className="font-medium">{week.label}</div>
-                          <div>{week.amount}M</div>
-                        </div>
+                        className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                        style={{
+                          background: 'linear-gradient(to top, #f59e0b, #ff6bcb)',
+                          height: `${(week.amount / maxAmount) * 100}%`,
+                          minHeight: week.amount > 0 ? '8px' : '4px'
+                        }}
+                        title={`${week.label}: UGX ${week.rawAmount.toLocaleString()}`}
+                      />
+                      <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
+                        <div className="font-medium">{week.label}</div>
+                        <div>{week.amount}M</div>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="text-xs text-white/70 mt-2 text-center">Last 7 weeks (M UGX)</div>
-              </>
-            )}
-          </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="text-xs text-white/70 mt-2 text-center">Last 7 weeks (M UGX)</div>
+            </>
+          )}
         </div>
       </GlassCard>
     </div>
