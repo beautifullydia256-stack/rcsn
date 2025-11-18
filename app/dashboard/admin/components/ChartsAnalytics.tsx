@@ -69,62 +69,103 @@ export default function ChartsAnalytics() {
         const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
         if (!u?.school_id) return;
 
-        const { data: terms } = await supabase
+        const today = new Date().toISOString().slice(0, 10);
+        
+        // Get all terms ordered by most recent first
+        const { data: allTerms } = await supabase
           .from('school_terms')
           .select('id, year, term, start_date, end_date')
           .eq('school_id', u.school_id)
           .order('year', { ascending: false })
           .order('term', { ascending: false });
 
-        if (!terms || terms.length === 0) {
+        if (!allTerms || allTerms.length === 0) {
           setTermEnrollmentData([]);
+          setTermLoading(false);
           return;
         }
 
-        const today = new Date().toISOString().slice(0, 10);
-        let currentIndex = terms.findIndex((t: any) => t.start_date && t.end_date
-          ? (t.start_date <= today && t.end_date >= today)
-          : (t.start_date ? t.start_date <= today : false));
-        if (currentIndex === -1) currentIndex = 0;
-
-        const TERMS_LIMIT = 4;
-        let selected = terms.slice(currentIndex, currentIndex + TERMS_LIMIT);
-        if (selected.length < TERMS_LIMIT) {
-          selected = terms.slice(0, Math.min(TERMS_LIMIT, terms.length));
-        }
-        if (selected.length === 0) {
-          setTermEnrollmentData([]);
-          return;
-        }
-
-        const chronological = [...selected].sort((a: any, b: any) => {
-          if (a.year === b.year) {
-            return (a.term || 0) - (b.term || 0);
-          }
-          return (a.year || 0) - (b.year || 0);
+        // Find current term (where today falls between start_date and end_date)
+        const currentTerm = allTerms.find((t: any) => {
+          if (!t.start_date || !t.end_date) return false;
+          return t.start_date <= today && t.end_date >= today;
         });
 
+        // If no current term found, use the most recent term
+        const referenceTerm = currentTerm || allTerms[0];
+        if (!referenceTerm) {
+          setTermEnrollmentData([]);
+          setTermLoading(false);
+          return;
+        }
+
+        // Get the 4 terms: current + 3 previous
+        // Find index of reference term
+        const refIndex = allTerms.findIndex((t: any) => 
+          t.year === referenceTerm.year && t.term === referenceTerm.term
+        );
+
+        // Get terms starting from reference term going backwards
+        const selectedTerms: any[] = [];
+        for (let i = refIndex; i < allTerms.length && selectedTerms.length < 4; i++) {
+          selectedTerms.push(allTerms[i]);
+        }
+
+        // Sort chronologically (oldest first for display)
+        const chronological = [...selectedTerms].sort((a: any, b: any) => {
+          if (a.year !== b.year) {
+            return a.year - b.year;
+          }
+          return a.term - b.term;
+        });
+
+        // Get all students
         const { data: students } = await supabase
           .from('students')
-          .select('created_at, status, graduation_year')
+          .select('student_id, created_at, status, graduation_year')
           .eq('school_id', u.school_id);
 
-        const studentSummaries = (students || []).map((s: any) => ({
-          createdAt: s.created_at ? new Date(s.created_at) : null,
-          status: s.status,
-          graduationYear: s.graduation_year,
-        }));
-
+        // For each term, count students who were enrolled/active at the END of that term
         const termData = chronological.map((term: any) => {
-          const termEndStr = term.end_date || term.start_date;
-          const termEndDate = termEndStr ? new Date(termEndStr) : null;
+          const termEndDate = term.end_date ? new Date(term.end_date + 'T23:59:59') : null;
+          
+          if (!termEndDate) {
+            return {
+              label: `T${term.term} ${term.year}`,
+              count: 0,
+              year: term.year,
+              term: term.term,
+            };
+          }
 
-          const count = studentSummaries.filter((student) => {
-            if (!student.createdAt) return false;
-            if (termEndDate && student.createdAt > termEndDate) return false;
-            if (student.status === 'graduated' && student.graduationYear && term.year && student.graduationYear < term.year) {
+          // Count students who:
+          // 1. Were created before or during the term (created_at <= term.end_date)
+          // 2. Were either active OR graduated after the term ended
+          const count = (students || []).filter((student: any) => {
+            const createdAt = student.created_at ? new Date(student.created_at) : null;
+            if (!createdAt) return false;
+            
+            // Student must have been created before term ended
+            if (createdAt > termEndDate) return false;
+            
+            // If graduated, check if they graduated after this term
+            if (student.status === 'graduated' && student.graduation_year) {
+              // If graduated in a year after this term's year, they were enrolled during this term
+              if (student.graduation_year > term.year) return true;
+              // If graduated in same year but term hasn't ended yet (for current term), count them
+              if (student.graduation_year === term.year) {
+                // For current term, if it's still ongoing, count active students
+                if (currentTerm && term.year === currentTerm.year && term.term === currentTerm.term) {
+                  return student.status === 'active';
+                }
+                // For past terms, if they graduated in same year, they were enrolled
+                return true;
+              }
+              // Graduated before this term's year
               return false;
             }
+            
+            // Active students are always counted
             return true;
           }).length;
 
