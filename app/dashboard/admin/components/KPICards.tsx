@@ -12,7 +12,7 @@ export default function AdminKPICards() {
     students: 0,
     teachers: 0,
     outstanding: 0,
-    receipts: 0,
+    feesCollected: 0,
     attendance: 0
   });
   const [loading, setLoading] = useState(true);
@@ -50,7 +50,7 @@ export default function AdminKPICards() {
           teachersResult,
           attendanceResult,
           balancesResult,
-          receiptsResult
+          feesCollectedResult
         ] = await Promise.all([
           supabase.from("students")
             .select("*", { count: "exact", head: true })
@@ -69,13 +69,13 @@ export default function AdminKPICards() {
             .eq('school_id', u.school_id)
             .eq('status', 'active'),
           currentTermData ? 
-            supabase.from("receipts")
-              .select("receipt_id", { count: "exact", head: true })
+            supabase.from("student_payments")
+              .select("amount_paid")
               .eq("school_id", u.school_id)
-              .gte('created_at', currentTermData.start_date || '1900-01-01')
-              .lte('created_at', currentTermData.end_date || '2100-12-31') :
-            supabase.from("receipts")
-              .select("receipt_id", { count: "exact", head: true })
+              .gte('payment_date', currentTermData.start_date || '1900-01-01')
+              .lte('payment_date', currentTermData.end_date || '2100-12-31') :
+            supabase.from("student_payments")
+              .select("amount_paid")
               .eq("school_id", u.school_id)
         ]);
 
@@ -98,11 +98,15 @@ export default function AdminKPICards() {
           .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
           .reduce((sum: number, balance: number) => sum + balance, 0);
 
+        // Calculate total fees collected this term
+        const feesCollected = (feesCollectedResult.data || [])
+          .reduce((sum: number, payment: any) => sum + Number(payment.amount_paid || 0), 0);
+
         setKpis({
           students: studentsResult.count || 0,
           teachers: teachersResult.count || 0,
           outstanding,
-          receipts: receiptsResult.count || 0,
+          feesCollected,
           attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
         });
       } catch (error) {
@@ -138,11 +142,11 @@ export default function AdminKPICards() {
       href: "/dashboard/admin/outstanding" 
     },
     { 
-      label: "Receipts This Term", 
-      value: kpis.receipts, 
-      icon: Receipt,
+      label: "Fees Collected This Term", 
+      value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected), 
+      icon: DollarSign,
       color: '#ae79ff',
-      href: undefined 
+      href: "/dashboard/admin/payments/recent" 
     },
     { 
       label: "Attendance Today", 
