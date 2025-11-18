@@ -172,8 +172,94 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
     return {
       title: `Academic Report Summary - ${termLabel}`,
       content,
-      action: 'term-report',
+      action: 'academic-report',
       data: { totalStudents, avgMarks, attendanceRate, subjectPerformance }
+    };
+  };
+
+  const generateAttendanceAnalysisReport = async (schoolId: string, currentTerm: any): Promise<AnalysisResult> => {
+    const today = new Date();
+    const last30Days = new Date(today);
+    last30Days.setDate(today.getDate() - 30);
+    const startDate = last30Days.toISOString().slice(0, 10);
+    const endDate = today.toISOString().slice(0, 10);
+
+    // Fetch comprehensive attendance data
+    const [studentsResult, attendanceResult, todayAttendanceResult] = await Promise.all([
+      supabase.from('students')
+        .select('student_id, name, current_class')
+        .eq('school_id', schoolId)
+        .eq('status', 'active'),
+      supabase.from('student_attendance')
+        .select('student_id, date, present, class_name')
+        .eq('school_id', schoolId)
+        .gte('date', startDate)
+        .lte('date', endDate),
+      supabase.from('student_attendance')
+        .select('student_id, present')
+        .eq('school_id', schoolId)
+        .eq('date', endDate)
+    ]);
+
+    const students = studentsResult.data || [];
+    const attendance = attendanceResult.data || [];
+    const todayAttendance = todayAttendanceResult.data || [];
+
+    // Calculate overview
+    const totalStudents = students.length;
+    const presentToday = todayAttendance.filter(a => a.present).length;
+    const absentToday = totalStudents - presentToday;
+    const attendanceRateToday = totalStudents > 0 ? (presentToday / totalStudents) * 100 : 0;
+
+    // Calculate term average
+    const totalRecords = attendance.length;
+    const totalPresent = attendance.filter(a => a.present).length;
+    const overallRate = totalRecords > 0 ? (totalPresent / totalRecords) * 100 : 0;
+
+    // Find students with poor attendance
+    const studentAttendance: Record<string, { present: number; total: number; percentage: number; name: string; class: string }> = {};
+    students.forEach((s: any) => {
+      studentAttendance[s.student_id] = { present: 0, total: 0, percentage: 0, name: s.name, class: s.current_class };
+    });
+    attendance.forEach((a: any) => {
+      if (studentAttendance[a.student_id]) {
+        studentAttendance[a.student_id].total += 1;
+        if (a.present) studentAttendance[a.student_id].present += 1;
+      }
+    });
+    Object.keys(studentAttendance).forEach(sid => {
+      const stats = studentAttendance[sid];
+      stats.percentage = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+    });
+
+    const poorAttendance = Object.entries(studentAttendance)
+      .filter(([_, stats]) => stats.total >= 5 && stats.percentage < 75)
+      .sort((a, b) => a[1].percentage - b[1].percentage)
+      .slice(0, 10);
+
+    const content = `
+📊 ATTENDANCE ANALYSIS REPORT
+Date Range: ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}
+
+📈 OVERVIEW:
+• Total Students: ${totalStudents}
+• Present Today: ${presentToday}
+• Absent Today: ${absentToday}
+• Attendance Rate Today: ${attendanceRateToday.toFixed(1)}%
+• Overall Rate: ${overallRate.toFixed(1)}%
+
+⚠️ STUDENTS AT RISK: ${poorAttendance.length} student(s) with attendance below 75%
+
+💡 RECOMMENDATIONS:
+${poorAttendance.length > 0 ? '• Contact parents of students with poor attendance\n' : ''}${overallRate < 75 ? '• Review attendance policies and incentives\n' : ''}• Continue daily attendance tracking
+• Monitor trends weekly
+    `.trim();
+
+    return {
+      title: `Attendance Analysis Report - ${new Date(startDate).toLocaleDateString()} to ${new Date(endDate).toLocaleDateString()}`,
+      content,
+      action: 'attendance-report',
+      data: { overallRate, poorAttendance, totalStudents, presentToday, absentToday, attendanceRateToday }
     };
   };
 
