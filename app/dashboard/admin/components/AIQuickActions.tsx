@@ -497,6 +497,14 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
   };
 
   const renderProfessionalContent = (result: AnalysisResult) => {
+    if (!result.data) {
+      return (
+        <div className="text-gray-700">
+          <p>No data available. Please try again.</p>
+        </div>
+      );
+    }
+
     if (result.action === 'term-report') {
       const data = result.data;
       return (
@@ -882,30 +890,367 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
   };
 
   const generateHTMLReport = (result: AnalysisResult): string => {
+    const generateContentHTML = () => {
+      if (!result.data) return '<p>No data available.</p>';
+
+      if (result.action === 'term-report') {
+        const data = result.data;
+        return `
+          <section style="background: #eff6ff; border-radius: 8px; padding: 24px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+            <h2 style="color: #1e40af; margin-bottom: 16px; font-size: 20px;">📊 Overview</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Total Students</div>
+                <div style="font-size: 24px; font-weight: bold; color: #111827;">${data.totalStudents || 0}</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Average Performance</div>
+                <div style="font-size: 24px; font-weight: bold; color: #111827;">${(data.avgMarks || 0).toFixed(1)}%</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Attendance Rate</div>
+                <div style="font-size: 24px; font-weight: bold; color: #111827;">${(data.attendanceRate || 0).toFixed(1)}%</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Status</div>
+                <div style="font-size: 18px; font-weight: bold; color: ${(data.avgMarks || 0) >= 70 ? '#10b981' : (data.avgMarks || 0) >= 50 ? '#f59e0b' : '#ef4444'};">
+                  ${(data.avgMarks || 0) >= 70 ? 'Excellent' : (data.avgMarks || 0) >= 50 ? 'Good' : 'Needs Attention'}
+                </div>
+              </div>
+            </div>
+          </section>
+          ${data.subjectPerformance && Object.keys(data.subjectPerformance).length > 0 ? `
+          <section style="margin: 20px 0;">
+            <h2 style="color: #1e40af; margin-bottom: 16px; font-size: 20px;">📚 Subject Performance Analysis</h2>
+            <div style="background: #f9fafb; border-radius: 8px; padding: 24px;">
+              ${Object.entries(data.subjectPerformance)
+                .sort((a: any, b: any) => b[1].avg - a[1].avg)
+                .map(([subject, stats]: [string, any]) => `
+                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #111827;">${subject}</span>
+                    <span style="font-size: 18px; font-weight: bold; color: ${stats.avg >= 70 ? '#10b981' : stats.avg >= 50 ? '#f59e0b' : '#ef4444'};">
+                      ${stats.avg.toFixed(1)}%
+                    </span>
+                  </div>
+                  <div style="width: 100%; background: #e5e7eb; border-radius: 4px; height: 10px; margin-bottom: 4px;">
+                    <div style="width: ${Math.min(stats.avg, 100)}%; height: 10px; border-radius: 4px; background: ${stats.avg >= 70 ? '#10b981' : stats.avg >= 50 ? '#f59e0b' : '#ef4444'};"></div>
+                  </div>
+                  <div style="font-size: 12px; color: #6b7280;">${stats.count} exam(s) recorded</div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+          ` : ''}
+          <section style="background: #fef3c7; border-radius: 8px; padding: 24px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+            <h2 style="color: #92400e; margin-bottom: 16px; font-size: 20px;">💡 Key Insights & Recommendations</h2>
+            <div style="color: #374151; line-height: 1.8;">
+              ${(data.avgMarks || 0) >= 70 ? 
+                '<p style="margin: 8px 0;">✓ Overall academic performance is <strong>excellent</strong>. Continue maintaining high standards.</p>' : 
+                (data.avgMarks || 0) >= 50 ? 
+                '<p style="margin: 8px 0;">⚠ Overall performance is <strong>average</strong>. There is room for improvement through targeted interventions.</p>' : 
+                '<p style="margin: 8px 0;">✗ Overall performance <strong>needs immediate attention</strong>. Implement comprehensive support programs.</p>'}
+              ${(data.attendanceRate || 0) >= 90 ? 
+                '<p style="margin: 8px 0;">✓ Attendance rate is <strong>excellent</strong>. Students are highly engaged.</p>' : 
+                (data.attendanceRate || 0) >= 75 ? 
+                '<p style="margin: 8px 0;">⚠ Attendance is <strong>good</strong> but can be improved with better engagement strategies.</p>' : 
+                '<p style="margin: 8px 0;">✗ Attendance <strong>needs improvement</strong>. Consider implementing attendance improvement strategies and parent communication.</p>'}
+            </div>
+          </section>
+        `;
+      }
+
+      if (result.action === 'analyze-attendance') {
+        const data = result.data;
+        return `
+          <section style="background: #d1fae5; border-radius: 8px; padding: 24px; border-left: 4px solid #10b981; margin: 20px 0;">
+            <h2 style="color: #065f46; margin-bottom: 16px; font-size: 20px;">📊 Attendance Statistics</h2>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Overall Rate</div>
+                <div style="font-size: 32px; font-weight: bold; color: ${(data.overallRate || 0) >= 90 ? '#10b981' : (data.overallRate || 0) >= 75 ? '#f59e0b' : '#ef4444'};">
+                  ${(data.overallRate || 0).toFixed(1)}%
+                </div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Average Daily</div>
+                <div style="font-size: 32px; font-weight: bold; color: #111827;">
+                  ${(data.avgDailyRate || 0).toFixed(1)}%
+                </div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Students At Risk</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ef4444;">${data.poorAttendance?.length || 0}</div>
+              </div>
+            </div>
+          </section>
+          ${data.poorAttendance && data.poorAttendance.length > 0 ? `
+          <section style="margin: 20px 0;">
+            <h2 style="color: #dc2626; margin-bottom: 16px; font-size: 20px;">⚠️ Students Requiring Attention</h2>
+            <div style="background: #fee2e2; border-radius: 8px; padding: 24px; border-left: 4px solid #ef4444;">
+              ${data.poorAttendance.map((item: any, idx: number) => {
+                const [_, stats] = item;
+                return `
+                <div style="background: white; border-radius: 8px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div>
+                      <div style="font-weight: 600; color: #111827;">${stats.name}</div>
+                      <div style="font-size: 14px; color: #6b7280;">${stats.class}</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <div style="font-size: 24px; font-weight: bold; color: ${stats.percentage >= 60 ? '#f59e0b' : '#ef4444'};">
+                        ${stats.percentage.toFixed(1)}%
+                      </div>
+                      <div style="font-size: 12px; color: #6b7280;">${stats.present}/${stats.total} days</div>
+                    </div>
+                  </div>
+                  <div style="width: 100%; background: #e5e7eb; border-radius: 4px; height: 8px;">
+                    <div style="width: ${Math.min(stats.percentage, 100)}%; height: 8px; border-radius: 4px; background: ${stats.percentage >= 60 ? '#f59e0b' : '#ef4444'};"></div>
+                  </div>
+                </div>
+              `;
+              }).join('')}
+            </div>
+          </section>
+          ` : ''}
+          <section style="background: #dbeafe; border-radius: 8px; padding: 24px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+            <h2 style="color: #1e40af; margin-bottom: 16px; font-size: 20px;">💡 Recommendations</h2>
+            <ul style="color: #374151; line-height: 1.8; padding-left: 20px;">
+              ${data.poorAttendance && data.poorAttendance.length > 0 ? '<li>Contact parents of students with poor attendance to discuss concerns and develop improvement plans.</li>' : ''}
+              ${(data.overallRate || 0) < 75 ? '<li>Review and enhance attendance policies and incentives to encourage better student engagement.</li>' : ''}
+              <li>Continue daily attendance tracking and monitoring trends on a weekly basis.</li>
+              <li>Implement early intervention programs for students showing declining attendance patterns.</li>
+            </ul>
+          </section>
+        `;
+      }
+
+      if (result.action === 'newsletter') {
+        const data = result.data;
+        return `
+          <section style="text-align: center; border-bottom: 2px solid #d1d5db; padding-bottom: 24px; margin-bottom: 24px;">
+            <h2 style="font-size: 36px; font-weight: bold; color: #111827; margin-bottom: 8px;">${data.school?.name || 'School'} Newsletter</h2>
+            <p style="font-size: 18px; color: #6b7280;">
+              ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Edition
+            </p>
+          </section>
+          <section style="background: linear-gradient(to right, #dbeafe, #e9d5ff); border-radius: 8px; padding: 24px; margin: 20px 0;">
+            <h2 style="font-size: 24px; font-weight: bold; color: #111827; margin-bottom: 16px;">School Highlights</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold; color: #3b82f6;">${data.totalStudents || 0}</div>
+                <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Total Students</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold; color: ${(data.avgPerformance || 0) >= 70 ? '#10b981' : (data.avgPerformance || 0) >= 50 ? '#f59e0b' : '#ef4444'};">
+                  ${(data.avgPerformance || 0).toFixed(1)}%
+                </div>
+                <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Avg Performance</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold; color: ${(data.attendanceRate || 0) >= 90 ? '#10b981' : (data.attendanceRate || 0) >= 75 ? '#f59e0b' : '#ef4444'};">
+                  ${(data.attendanceRate || 0).toFixed(1)}%
+                </div>
+                <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Attendance</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 32px; font-weight: bold; color: #a855f7;">
+                  ${(data.avgPerformance || 0) >= 70 ? '⭐' : '📈'}
+                </div>
+                <div style="font-size: 14px; color: #6b7280; margin-top: 4px;">Status</div>
+              </div>
+            </div>
+          </section>
+          <section style="background: #f9fafb; border-radius: 8px; padding: 24px; margin: 20px 0;">
+            <h2 style="font-size: 20px; font-weight: bold; color: #111827; margin-bottom: 12px;">Message from Administration</h2>
+            <p style="color: #374151; line-height: 1.8;">
+              We are committed to providing quality education and ensuring every student reaches their full potential. 
+              This month, we have seen ${(data.avgPerformance || 0) >= 70 ? 'excellent' : (data.avgPerformance || 0) >= 50 ? 'good' : 'improving'} 
+              academic performance and ${(data.attendanceRate || 0) >= 90 ? 'outstanding' : (data.attendanceRate || 0) >= 75 ? 'good' : 'improving'} 
+              attendance rates. Thank you for your continued support and partnership in your child's education journey.
+            </p>
+          </section>
+        `;
+      }
+
+      if (result.action === 'at-risk') {
+        const data = result.data;
+        return `
+          <section style="background: #fee2e2; border-radius: 8px; padding: 24px; border-left: 4px solid #ef4444; margin: 20px 0;">
+            <h2 style="color: #991b1b; margin-bottom: 16px; font-size: 20px;">🚨 Risk Assessment Summary</h2>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 24px; font-weight: bold; color: #ef4444;">${data.highRisk?.length || 0}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">High Risk</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">${data.mediumRisk?.length || 0}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Medium Risk</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 24px; font-weight: bold; color: #f97316;">${data.lowRisk?.length || 0}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Low Risk</div>
+              </div>
+              <div style="background: white; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="font-size: 24px; font-weight: bold; color: #111827;">${data.totalAtRisk || 0}</div>
+                <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">Total At Risk</div>
+              </div>
+            </div>
+          </section>
+          ${data.highRisk && data.highRisk.length > 0 ? `
+          <section style="margin: 20px 0;">
+            <h2 style="color: #dc2626; margin-bottom: 16px; font-size: 20px;">🔴 High Risk Students (Immediate Attention Required)</h2>
+            ${data.highRisk.map((student: any, idx: number) => `
+              <div style="background: #fee2e2; border-radius: 8px; padding: 20px; margin-bottom: 12px; border: 2px solid #fecaca; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-weight: bold; font-size: 18px; color: #111827;">${student.name}</div>
+                    <div style="font-size: 14px; color: #6b7280;">${student.class}</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 24px; font-weight: bold; color: #ef4444;">Risk: ${student.riskScore}/100</div>
+                  </div>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 12px;">
+                  <div>
+                    <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Performance</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${student.avgPerformance >= 60 ? '#f59e0b' : '#ef4444'};">
+                      ${student.avgPerformance.toFixed(1)}%
+                    </div>
+                  </div>
+                  <div>
+                    <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 4px;">Attendance</div>
+                    <div style="font-size: 18px; font-weight: 600; color: ${student.attendanceRate >= 75 ? '#f59e0b' : '#ef4444'};">
+                      ${student.attendanceRate.toFixed(1)}%
+                    </div>
+                  </div>
+                </div>
+                <div style="background: white; border-radius: 6px; padding: 12px;">
+                  <div style="font-size: 12px; color: #6b7280; text-transform: uppercase; margin-bottom: 8px;">Identified Issues</div>
+                  <div style="display: flex; flex-wrap: gap: 8px;">
+                    ${student.reasons.map((reason: string) => `
+                      <span style="padding: 4px 12px; background: #fee2e2; color: #991b1b; font-size: 12px; border-radius: 12px;">
+                        ${reason}
+                      </span>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </section>
+          ` : ''}
+          ${data.mediumRisk && data.mediumRisk.length > 0 ? `
+          <section style="margin: 20px 0;">
+            <h2 style="color: #f59e0b; margin-bottom: 16px; font-size: 20px;">🟡 Medium Risk Students (Monitor Closely)</h2>
+            <div style="background: #fef3c7; border-radius: 8px; padding: 16px; border-left: 4px solid #f59e0b;">
+              ${data.mediumRisk.slice(0, 10).map((student: any) => `
+                <div style="background: white; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <span style="font-weight: 600; color: #111827;">${student.name}</span>
+                    <span style="font-size: 14px; color: #6b7280; margin-left: 8px;">(${student.class})</span>
+                  </div>
+                  <span style="color: #f59e0b; font-weight: 600;">Risk: ${student.riskScore}/100</span>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+          ` : ''}
+          <section style="background: #dbeafe; border-radius: 8px; padding: 24px; border-left: 4px solid #3b82f6; margin: 20px 0;">
+            <h2 style="color: #1e40af; margin-bottom: 16px; font-size: 20px;">💡 Recommended Actions</h2>
+            <ul style="color: #374151; line-height: 1.8; padding-left: 20px;">
+              ${data.highRisk && data.highRisk.length > 0 ? `<li>Schedule immediate parent meetings for ${data.highRisk.length} high-risk student(s) to discuss intervention strategies.</li>` : ''}
+              ${data.mediumRisk && data.mediumRisk.length > 0 ? `<li>Provide additional academic support and monitoring for ${data.mediumRisk.length} medium-risk student(s).</li>` : ''}
+              <li>Implement targeted intervention programs focusing on both academic performance and attendance improvement.</li>
+              <li>Establish regular monitoring and follow-up schedules for at-risk students.</li>
+              <li>Consider counseling services and mentorship programs where appropriate.</li>
+            </ul>
+          </section>
+        `;
+      }
+
+      return '<p>Report content not available.</p>';
+    };
+
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>${result.title}</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #f8f9fa; }
-    .document { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h1 { color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; }
-    h2 { color: #2c3e50; margin-top: 30px; }
-    .section { margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 6px; }
-    .stat { display: inline-block; margin: 10px; padding: 15px; background: white; border-radius: 6px; min-width: 150px; }
-    .stat-value { font-size: 24px; font-weight: bold; }
-    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-    th { background: #f0f0f0; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif; 
+      padding: 40px; 
+      background: #f8f9fa; 
+      color: #111827;
+      line-height: 1.6;
+    }
+    .document { 
+      background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%); 
+      padding: 48px; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1); 
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .header {
+      border-bottom: 2px solid #d1d5db;
+      padding-bottom: 24px;
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    h1 { 
+      color: #111827; 
+      font-size: 32px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    .date {
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .branding {
+      text-align: right;
+      font-size: 12px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    h2 { 
+      color: #1e40af; 
+      margin-top: 32px;
+      margin-bottom: 16px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+    .footer {
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      font-size: 12px;
+      color: #6b7280;
+    }
   </style>
 </head>
 <body>
   <div class="document">
-    <h1>${result.title}</h1>
-    <p>Generated on ${new Date().toLocaleDateString()}</p>
-    <div class="section">
-      <pre style="white-space: pre-wrap; font-family: inherit;">${result.content}</pre>
+    <div class="header">
+      <div>
+        <h1>${result.title}</h1>
+        <p class="date">Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+      </div>
+      <div class="branding">
+        <div>PwezaCore</div>
+        <div>School Management System</div>
+      </div>
+    </div>
+    ${generateContentHTML()}
+    <div class="footer">
+      <p>This is an AI-generated report. For questions, contact the school administration.</p>
+      <p style="margin-top: 8px;">© ${new Date().getFullYear()} PwezaCore. All rights reserved.</p>
     </div>
   </div>
 </body>
