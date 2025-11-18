@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
+import LocationSettingsWidget from "../components/LocationSettingsWidget";
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
@@ -101,6 +102,9 @@ export default function AdminSystemSettingsPage() {
           {tab === "exams" && <ExamSets classOptions={classOptions} schoolId={schoolId} schoolType={schoolType} />}
           {tab === "branding" && <SchoolBranding schoolId={schoolId} />}
         </motion.div>
+
+        {/* School Location Settings */}
+        <LocationSettingsWidget />
 
         {/* All Classes quick links */}
         <motion.div

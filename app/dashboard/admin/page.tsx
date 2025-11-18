@@ -8,7 +8,6 @@ import Navbar from './components/Navbar';
 import GlassBackground from './components/GlassBackground';
 import AdminKPICards from './components/KPICards';
 import QuickActions from './components/QuickActions';
-import LocationSettingsWidget from './components/LocationSettingsWidget';
 import PendingExpensesCard from './components/PendingExpensesCard';
 import ChartsAnalytics from './components/ChartsAnalytics';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
@@ -111,9 +110,6 @@ export default function AdminDashboard() {
 
           {/* Quick Actions */}
           <QuickActions />
-
-          {/* Location Settings Widget */}
-          <LocationSettingsWidget />
 
           {/* Pending Expense Approvals */}
           <PendingExpensesCard />
