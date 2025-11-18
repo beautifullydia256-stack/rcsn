@@ -18,6 +18,7 @@ import AITeacherAnalytics from './components/AITeacherAnalytics';
 import AIFeeRecoveryAssistant from './components/AIFeeRecoveryAssistant';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
 import AcademicReportGenerator from './components/AcademicReportGenerator';
+import AttendanceAnalysisReportGenerator from './components/AttendanceAnalysisReportGenerator';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -129,10 +130,7 @@ export default function AdminDashboard() {
             </h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <AcademicReportGenerator />
-              <div className="text-white/70 text-sm p-4 bg-white/5 rounded-lg border border-white/10">
-                <p className="mb-2">📋 <strong>Attendance Analysis Report</strong></p>
-                <p className="text-xs">Available in AI Quick Actions section below</p>
-              </div>
+              <AttendanceAnalysisReportGenerator />
             </div>
           </div>
 
