@@ -41,7 +41,7 @@ export default function RecentReportsSystemHealth() {
 
         const { data: reportsData } = await supabase
           .from("reports")
-          .select("*")
+          .select("report_id, template_name, file_url, created_at, student_id, students!inner(name, current_class)")
           .eq("school_id", u.school_id)
           .order("created_at", { ascending: false })
           .limit(5);
@@ -96,15 +96,28 @@ export default function RecentReportsSystemHealth() {
             ) : (
               reports.map((report) => (
                 <div
-                  key={report.id}
+                  key={report.report_id}
                   className="p-3 rounded-xl flex items-center justify-between"
                   style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
                 >
-                  <div>
-                    <div className="font-medium text-white text-sm">{report.report_type || 'Report'}</div>
-                    <div className="text-xs text-white/70">{new Date(report.created_at).toLocaleDateString()}</div>
+                  <div className="flex-1">
+                    <div className="font-medium text-white text-sm">{report.template_name || 'Student Report'}</div>
+                    <div className="text-xs text-white/70">
+                      {report.students?.name || 'Student'} • {new Date(report.created_at).toLocaleDateString()}
+                    </div>
                   </div>
-                  <button className="text-xs text-purple-400 hover:text-purple-300">View →</button>
+                  <button 
+                    onClick={() => {
+                      if (report.file_url) {
+                        window.open(report.file_url, '_blank');
+                      } else {
+                        router.push(`/dashboard/admin/report-records`);
+                      }
+                    }}
+                    className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                  >
+                    {report.file_url ? 'Open →' : 'View →'}
+                  </button>
                 </div>
               ))
             )}
