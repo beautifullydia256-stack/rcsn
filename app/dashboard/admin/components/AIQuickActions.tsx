@@ -20,7 +20,6 @@ export default function AIQuickActions() {
   const [showModal, setShowModal] = useState(false);
 
   const actions = [
-    { icon: FileText, label: 'Generate Academic Report Summary', color: '#4dabff', action: 'term-report' },
     { icon: BarChart3, label: 'Auto-Analyze Attendance', color: '#10b981', action: 'analyze-attendance' },
     { icon: Mail, label: 'Generate School Newsletter', color: '#ae79ff', action: 'newsletter' },
     { icon: AlertTriangle, label: 'Detect Students At Risk', color: '#ef4444', action: 'at-risk' },
