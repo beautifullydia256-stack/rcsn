@@ -20,7 +20,7 @@ export default function AIQuickActions() {
   const [showModal, setShowModal] = useState(false);
 
   const actions = [
-    { icon: FileText, label: 'Generate Term Report Summary', color: '#4dabff', action: 'term-report' },
+    { icon: FileText, label: 'Generate Academic Report Summary', color: '#4dabff', action: 'term-report' },
     { icon: BarChart3, label: 'Auto-Analyze Attendance', color: '#10b981', action: 'analyze-attendance' },
     { icon: Mail, label: 'Generate School Newsletter', color: '#ae79ff', action: 'newsletter' },
     { icon: AlertTriangle, label: 'Detect Students At Risk', color: '#ef4444', action: 'at-risk' },
@@ -145,7 +145,7 @@ export default function AIQuickActions() {
     const termLabel = currentTerm ? `Term ${currentTerm.term} ${currentTerm.year}` : 'Current Period';
 
     const content = `
-📊 TERM REPORT SUMMARY - ${termLabel}
+📊 ACADEMIC REPORT SUMMARY - ${termLabel}
 
 📈 OVERVIEW:
 • Total Active Students: ${totalStudents}
@@ -166,7 +166,7 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
     `.trim();
 
     return {
-      title: `Term Report Summary - ${termLabel}`,
+      title: `Academic Report Summary - ${termLabel}`,
       content,
       action: 'term-report',
       data: { totalStudents, avgMarks, attendanceRate, subjectPerformance }
