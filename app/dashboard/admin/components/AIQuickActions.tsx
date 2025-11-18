@@ -10,6 +10,7 @@ import { Sparkles, FileText, BarChart3, Mail, AlertTriangle, X } from 'lucide-re
 interface AnalysisResult {
   title: string;
   content: string;
+  action?: string;
   data?: any;
 }
 
@@ -167,6 +168,7 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
     return {
       title: `Term Report Summary - ${termLabel}`,
       content,
+      action: 'term-report',
       data: { totalStudents, avgMarks, attendanceRate, subjectPerformance }
     };
   };
@@ -265,6 +267,7 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
     return {
       title: 'Attendance Analysis Report',
       content,
+      action: 'analyze-attendance',
       data: { overallRate, poorAttendance, dailyAttendance }
     };
   };
@@ -353,6 +356,7 @@ Generated on ${today.toLocaleDateString()}
     return {
       title: 'School Newsletter',
       content,
+      action: 'newsletter',
       data: { school, totalStudents, avgPerformance, attendanceRate }
     };
   };
@@ -487,8 +491,425 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
     return {
       title: 'Students At Risk Detection',
       content,
+      action: 'at-risk',
       data: { highRisk, mediumRisk, lowRisk, totalAtRisk: studentRisks.length }
     };
+  };
+
+  const renderProfessionalContent = (result: AnalysisResult) => {
+    if (result.action === 'term-report') {
+      const data = result.data;
+      return (
+        <div className="space-y-6">
+          {/* Overview Section */}
+          <section className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <FileText className="w-6 h-6 text-blue-600" />
+              Overview
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Total Students</div>
+                <div className="text-2xl font-bold text-gray-900">{data.totalStudents}</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Average Performance</div>
+                <div className="text-2xl font-bold text-gray-900">{data.avgMarks.toFixed(1)}%</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Attendance Rate</div>
+                <div className="text-2xl font-bold text-gray-900">{data.attendanceRate.toFixed(1)}%</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Status</div>
+                <div className={`text-lg font-semibold ${data.avgMarks >= 70 ? 'text-green-600' : data.avgMarks >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {data.avgMarks >= 70 ? 'Excellent' : data.avgMarks >= 50 ? 'Good' : 'Needs Attention'}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Subject Performance */}
+          {data.subjectPerformance && Object.keys(data.subjectPerformance).length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <BarChart3 className="w-6 h-6 text-blue-600" />
+                Subject Performance Analysis
+              </h2>
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="space-y-3">
+                  {Object.entries(data.subjectPerformance)
+                    .sort((a, b) => b[1].avg - a[1].avg)
+                    .map(([subject, stats]: [string, any]) => (
+                      <div key={subject} className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-semibold text-gray-900">{subject}</span>
+                          <span className={`text-lg font-bold ${stats.avg >= 70 ? 'text-green-600' : stats.avg >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {stats.avg.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5">
+                          <div
+                            className={`h-2.5 rounded-full ${stats.avg >= 70 ? 'bg-green-500' : stats.avg >= 50 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${Math.min(stats.avg, 100)}%` }}
+                          />
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{stats.count} exam(s) recorded</div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Key Insights */}
+          <section className="bg-yellow-50 rounded-lg p-6 border-l-4 border-yellow-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-yellow-600" />
+              Key Insights & Recommendations
+            </h2>
+            <div className="space-y-2 text-gray-700">
+              {data.avgMarks >= 70 ? (
+                <p className="flex items-start gap-2">
+                  <span className="text-green-600 mt-1">✓</span>
+                  <span>Overall academic performance is <strong>excellent</strong>. Continue maintaining high standards.</span>
+                </p>
+              ) : data.avgMarks >= 50 ? (
+                <p className="flex items-start gap-2">
+                  <span className="text-yellow-600 mt-1">⚠</span>
+                  <span>Overall performance is <strong>average</strong>. There is room for improvement through targeted interventions.</span>
+                </p>
+              ) : (
+                <p className="flex items-start gap-2">
+                  <span className="text-red-600 mt-1">✗</span>
+                  <span>Overall performance <strong>needs immediate attention</strong>. Implement comprehensive support programs.</span>
+                </p>
+              )}
+              {data.attendanceRate >= 90 ? (
+                <p className="flex items-start gap-2">
+                  <span className="text-green-600 mt-1">✓</span>
+                  <span>Attendance rate is <strong>excellent</strong>. Students are highly engaged.</span>
+                </p>
+              ) : data.attendanceRate >= 75 ? (
+                <p className="flex items-start gap-2">
+                  <span className="text-yellow-600 mt-1">⚠</span>
+                  <span>Attendance is <strong>good</strong> but can be improved with better engagement strategies.</span>
+                </p>
+              ) : (
+                <p className="flex items-start gap-2">
+                  <span className="text-red-600 mt-1">✗</span>
+                  <span>Attendance <strong>needs improvement</strong>. Consider implementing attendance improvement strategies and parent communication.</span>
+                </p>
+              )}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    if (result.action === 'analyze-attendance') {
+      const data = result.data;
+      return (
+        <div className="space-y-6">
+          {/* Statistics */}
+          <section className="bg-green-50 rounded-lg p-6 border-l-4 border-green-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <BarChart3 className="w-6 h-6 text-green-600" />
+              Attendance Statistics
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Overall Rate</div>
+                <div className={`text-3xl font-bold ${data.overallRate >= 90 ? 'text-green-600' : data.overallRate >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {data.overallRate.toFixed(1)}%
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Average Daily</div>
+                <div className="text-3xl font-bold text-gray-900">
+                  {data.avgDailyRate ? data.avgDailyRate.toFixed(1) : '0'}%
+                </div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <div className="text-xs text-gray-500 uppercase mb-1">Students At Risk</div>
+                <div className="text-3xl font-bold text-red-600">{data.poorAttendance?.length || 0}</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Students Needing Attention */}
+          {data.poorAttendance && data.poorAttendance.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6 text-red-600" />
+                Students Requiring Attention
+              </h2>
+              <div className="bg-red-50 rounded-lg p-6 border-l-4 border-red-500">
+                <div className="space-y-3">
+                  {data.poorAttendance.map((item: any, idx: number) => {
+                    const [_, stats] = item;
+                    return (
+                      <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-semibold text-gray-900">{stats.name}</div>
+                            <div className="text-sm text-gray-600">{stats.class}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className={`text-2xl font-bold ${stats.percentage >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                              {stats.percentage.toFixed(1)}%
+                            </div>
+                            <div className="text-xs text-gray-500">{stats.present}/{stats.total} days</div>
+                          </div>
+                        </div>
+                        <div className="mt-2 w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${stats.percentage >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                            style={{ width: `${Math.min(stats.percentage, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Recommendations */}
+          <section className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              Recommendations
+            </h2>
+            <ul className="space-y-2 text-gray-700 list-disc list-inside">
+              {data.poorAttendance && data.poorAttendance.length > 0 && (
+                <li>Contact parents of students with poor attendance to discuss concerns and develop improvement plans.</li>
+              )}
+              {data.overallRate < 75 && (
+                <li>Review and enhance attendance policies and incentives to encourage better student engagement.</li>
+              )}
+              <li>Continue daily attendance tracking and monitoring trends on a weekly basis.</li>
+              <li>Implement early intervention programs for students showing declining attendance patterns.</li>
+            </ul>
+          </section>
+        </div>
+      );
+    }
+
+    if (result.action === 'newsletter') {
+      const data = result.data;
+      return (
+        <div className="space-y-6">
+          {/* Header */}
+          <section className="text-center border-b-2 border-gray-300 pb-6">
+            <h2 className="text-4xl font-bold text-gray-900 mb-2">{data.school?.name || 'School'} Newsletter</h2>
+            <p className="text-lg text-gray-600">
+              {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Edition
+            </p>
+          </section>
+
+          {/* Highlights */}
+          <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">School Highlights</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-3xl font-bold text-blue-600">{data.totalStudents}</div>
+                <div className="text-sm text-gray-600 mt-1">Total Students</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className={`text-3xl font-bold ${data.avgPerformance >= 70 ? 'text-green-600' : data.avgPerformance >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {data.avgPerformance.toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Avg Performance</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className={`text-3xl font-bold ${data.attendanceRate >= 90 ? 'text-green-600' : data.attendanceRate >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>
+                  {data.attendanceRate.toFixed(1)}%
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Attendance</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-3xl font-bold text-purple-600">
+                  {data.avgPerformance >= 70 ? '⭐' : '📈'}
+                </div>
+                <div className="text-sm text-gray-600 mt-1">Status</div>
+              </div>
+            </div>
+          </section>
+
+          {/* Message */}
+          <section className="bg-gray-50 rounded-lg p-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-3">Message from Administration</h2>
+            <p className="text-gray-700 leading-relaxed">
+              We are committed to providing quality education and ensuring every student reaches their full potential. 
+              This month, we have seen {data.avgPerformance >= 70 ? 'excellent' : data.avgPerformance >= 50 ? 'good' : 'improving'} 
+              {' '}academic performance and {data.attendanceRate >= 90 ? 'outstanding' : data.attendanceRate >= 75 ? 'good' : 'improving'} 
+              {' '}attendance rates. Thank you for your continued support and partnership in your child's education journey.
+            </p>
+          </section>
+        </div>
+      );
+    }
+
+    if (result.action === 'at-risk') {
+      const data = result.data;
+      return (
+        <div className="space-y-6">
+          {/* Summary */}
+          <section className="bg-red-50 rounded-lg p-6 border-l-4 border-red-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+              Risk Assessment Summary
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-2xl font-bold text-red-600">{data.highRisk?.length || 0}</div>
+                <div className="text-xs text-gray-600 mt-1">High Risk</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-2xl font-bold text-yellow-600">{data.mediumRisk?.length || 0}</div>
+                <div className="text-xs text-gray-600 mt-1">Medium Risk</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-2xl font-bold text-orange-600">{data.lowRisk?.length || 0}</div>
+                <div className="text-xs text-gray-600 mt-1">Low Risk</div>
+              </div>
+              <div className="bg-white rounded-lg p-4 shadow-sm text-center">
+                <div className="text-2xl font-bold text-gray-900">{data.totalAtRisk || 0}</div>
+                <div className="text-xs text-gray-600 mt-1">Total At Risk</div>
+              </div>
+            </div>
+          </section>
+
+          {/* High Risk Students */}
+          {data.highRisk && data.highRisk.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold text-red-600 mb-4 flex items-center gap-2">
+                <AlertTriangle className="w-6 h-6" />
+                High Risk Students (Immediate Attention Required)
+              </h2>
+              <div className="space-y-3">
+                {data.highRisk.map((student: any, idx: number) => (
+                  <div key={idx} className="bg-red-50 rounded-lg p-5 border-2 border-red-200 shadow-sm">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="font-bold text-lg text-gray-900">{student.name}</div>
+                        <div className="text-sm text-gray-600">{student.class}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-red-600">Risk: {student.riskScore}/100</div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase mb-1">Performance</div>
+                        <div className={`text-lg font-semibold ${student.avgPerformance >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {student.avgPerformance.toFixed(1)}%
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-xs text-gray-500 uppercase mb-1">Attendance</div>
+                        <div className={`text-lg font-semibold ${student.attendanceRate >= 75 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {student.attendanceRate.toFixed(1)}%
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded p-3">
+                      <div className="text-xs text-gray-500 uppercase mb-1">Identified Issues</div>
+                      <div className="flex flex-wrap gap-2">
+                        {student.reasons.map((reason: string, rIdx: number) => (
+                          <span key={rIdx} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                            {reason}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Medium Risk */}
+          {data.mediumRisk && data.mediumRisk.length > 0 && (
+            <section>
+              <h2 className="text-xl font-bold text-yellow-600 mb-4">Medium Risk Students (Monitor Closely)</h2>
+              <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                <div className="space-y-2">
+                  {data.mediumRisk.slice(0, 10).map((student: any, idx: number) => (
+                    <div key={idx} className="bg-white rounded p-3 flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-gray-900">{student.name}</span>
+                        <span className="text-sm text-gray-600 ml-2">({student.class})</span>
+                      </div>
+                      <span className="text-yellow-600 font-semibold">Risk: {student.riskScore}/100</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Recommendations */}
+          <section className="bg-blue-50 rounded-lg p-6 border-l-4 border-blue-500">
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-blue-600" />
+              Recommended Actions
+            </h2>
+            <ul className="space-y-2 text-gray-700 list-disc list-inside">
+              {data.highRisk && data.highRisk.length > 0 && (
+                <li>Schedule immediate parent meetings for {data.highRisk.length} high-risk student(s) to discuss intervention strategies.</li>
+              )}
+              {data.mediumRisk && data.mediumRisk.length > 0 && (
+                <li>Provide additional academic support and monitoring for {data.mediumRisk.length} medium-risk student(s).</li>
+              )}
+              <li>Implement targeted intervention programs focusing on both academic performance and attendance improvement.</li>
+              <li>Establish regular monitoring and follow-up schedules for at-risk students.</li>
+              <li>Consider counseling services and mentorship programs where appropriate.</li>
+            </ul>
+          </section>
+        </div>
+      );
+    }
+
+    // Fallback for other content
+    return (
+      <div className="prose max-w-none">
+        <pre className="whitespace-pre-wrap text-gray-700">{result.content}</pre>
+      </div>
+    );
+  };
+
+  const generateHTMLReport = (result: AnalysisResult): string => {
+    return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>${result.title}</title>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background: #f8f9fa; }
+    .document { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { color: #1a1a1a; border-bottom: 2px solid #333; padding-bottom: 10px; }
+    h2 { color: #2c3e50; margin-top: 30px; }
+    .section { margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 6px; }
+    .stat { display: inline-block; margin: 10px; padding: 15px; background: white; border-radius: 6px; min-width: 150px; }
+    .stat-value { font-size: 24px; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div class="document">
+    <h1>${result.title}</h1>
+    <p>Generated on ${new Date().toLocaleDateString()}</p>
+    <div class="section">
+      <pre style="white-space: pre-wrap; font-family: inherit;">${result.content}</pre>
+    </div>
+  </div>
+</body>
+</html>`;
   };
 
   return (
@@ -599,30 +1020,64 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
 
               {result && (
                 <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
-                  <pre className="text-sm text-white/90 whitespace-pre-wrap font-mono leading-relaxed p-4 rounded-lg"
+                  <div className="bg-white rounded-lg shadow-xl p-8 text-gray-900"
                     style={{
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                      background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
+                      minHeight: '500px'
                     }}
                   >
-                    {result.content}
-                  </pre>
-                  <div className="mt-4 flex gap-3">
+                    {/* Document Header */}
+                    <div className="border-b-2 border-gray-300 pb-4 mb-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h1 className="text-3xl font-bold text-gray-900 mb-2">{result.title}</h1>
+                          <p className="text-sm text-gray-600">
+                            Generated on {new Date().toLocaleDateString('en-US', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">PwezaCore</div>
+                          <div className="text-xs text-gray-500">School Management System</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Document Content */}
+                    <div className="prose prose-lg max-w-none">
+                      {renderProfessionalContent(result)}
+                    </div>
+
+                    {/* Document Footer */}
+                    <div className="mt-8 pt-4 border-t border-gray-200 text-xs text-gray-500 text-center">
+                      <p>This is an AI-generated report. For questions, contact the school administration.</p>
+                      <p className="mt-1">© {new Date().getFullYear()} PwezaCore. All rights reserved.</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex gap-3 justify-end">
                     <button
                       onClick={() => {
-                        const blob = new Blob([result.content], { type: 'text/plain' });
+                        // Generate HTML content for download
+                        const htmlContent = generateHTMLReport(result);
+                        const blob = new Blob([htmlContent], { type: 'text/html' });
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = `${result.title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.txt`;
+                        a.download = `${result.title.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.html`;
                         a.click();
                         URL.revokeObjectURL(url);
                       }}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      className="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
                       style={{
                         background: 'rgba(255, 255, 255, 0.12)',
                         border: '1px solid rgba(255, 255, 255, 0.18)',
-                        color: 'white'
+                        color: 'white',
+                        backdropFilter: 'blur(20px)'
                       }}
                     >
                       Download Report
@@ -633,11 +1088,12 @@ ${studentRisks.length > 0 ? `Please review and take action for ${studentRisks.le
                         setResult(null);
                         setProcessing(null);
                       }}
-                      className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                      className="px-5 py-2.5 rounded-lg text-sm font-medium transition-all hover:scale-105"
                       style={{
                         background: 'rgba(255, 255, 255, 0.12)',
                         border: '1px solid rgba(255, 255, 255, 0.18)',
-                        color: 'white'
+                        color: 'white',
+                        backdropFilter: 'blur(20px)'
                       }}
                     >
                       Close
