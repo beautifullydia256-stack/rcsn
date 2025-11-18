@@ -87,9 +87,10 @@ export default function ChartsAnalytics() {
           : (t.start_date ? t.start_date <= today : false));
         if (currentIndex === -1) currentIndex = 0;
 
-        let selected = terms.slice(currentIndex, currentIndex + 7);
-        if (selected.length < 7) {
-          selected = terms.slice(0, Math.min(7, terms.length));
+        const TERMS_LIMIT = 4;
+        let selected = terms.slice(currentIndex, currentIndex + TERMS_LIMIT);
+        if (selected.length < TERMS_LIMIT) {
+          selected = terms.slice(0, Math.min(TERMS_LIMIT, terms.length));
         }
         if (selected.length === 0) {
           setTermEnrollmentData([]);
@@ -300,7 +301,7 @@ export default function ChartsAnalytics() {
                     </div>
                   ))}
                 </div>
-                <div className="text-xs text-white/70 mt-2 text-center">Current term vs previous 6 terms</div>
+                <div className="text-xs text-white/70 mt-2 text-center">Current term vs previous 3 terms</div>
               </>
             );
           })()}
