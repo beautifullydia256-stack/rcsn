@@ -135,18 +135,18 @@ export default function AdminKPICards() {
       href: "/dashboard/admin/teachers" 
     },
     { 
+      label: "Fees Collected", 
+      value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected), 
+      icon: DollarSign,
+      color: '#ae79ff',
+      href: "/dashboard/admin/payments/recent" 
+    },
+    { 
       label: "Outstanding Balances", 
       value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.outstanding), 
       icon: DollarSign,
       color: '#f59e0b',
       href: "/dashboard/admin/outstanding" 
-    },
-    { 
-      label: "Fees Collected This Term", 
-      value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected), 
-      icon: DollarSign,
-      color: '#ae79ff',
-      href: "/dashboard/admin/payments/recent" 
     },
     { 
       label: "Attendance Today", 
