@@ -185,17 +185,17 @@ export default function AdminKPICards() {
                 <div className="p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
                   <Icon className="w-6 h-6" style={{ color: c.color }} />
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 overflow-visible">
                   <div className="text-sm text-white/85 mb-1">{c.label}</div>
-                  <div className={`font-bold text-white break-words ${
+                  <div className={`font-bold text-white ${
                     (c.label === "Fees Collected" || c.label === "Outstanding Balances") 
-                      ? "text-lg sm:text-xl lg:text-2xl" 
+                      ? "text-base sm:text-lg lg:text-xl xl:text-2xl" 
                       : "text-2xl"
                   }`}>
                     {loading ? (
                       <div className="animate-pulse bg-white/20 rounded h-7 w-20"></div>
                     ) : (
-                      <span className="whitespace-normal break-all">{c.value}</span>
+                      <span className="inline-block">{c.value}</span>
                     )}
                   </div>
                 </div>
