@@ -91,41 +91,57 @@ export default function ChartsAnalytics() {
           return t.start_date <= today && t.end_date >= today;
         });
 
-        // If no current term found, use the most recent term
-        const referenceTerm = currentTerm || allTerms[0];
+        // If no current term found, use the most recent PAST term (not future)
+        let referenceTerm = currentTerm;
+        if (!referenceTerm) {
+          // Find the most recent term that has ended (end_date < today)
+          referenceTerm = allTerms.find((t: any) => {
+            if (!t.end_date) return false;
+            return t.end_date < today;
+          });
+          // If still no term found, use the first term
+          if (!referenceTerm) referenceTerm = allTerms[0];
+        }
+        
         if (!referenceTerm) {
           setTermEnrollmentData([]);
           setTermLoading(false);
           return;
         }
 
-        // Get the 4 terms: current + 3 previous
-        // Since allTerms is sorted DESCENDING (most recent first), we want:
-        // - Current term (or most recent if no current)
-        // - Plus the 3 most recent terms that came BEFORE it
-        
-        // Find index of reference term
-        const refIndex = allTerms.findIndex((t: any) => 
+        // Filter out future terms (end_date > today) - we only want current and past terms
+        const pastAndCurrentTerms = allTerms.filter((t: any) => {
+          if (!t.end_date) return false;
+          return t.end_date <= today || (t.start_date <= today && t.end_date >= today);
+        });
+
+        // Find index of reference term in the filtered list
+        let refIndex = pastAndCurrentTerms.findIndex((t: any) => 
           t.year === referenceTerm.year && t.term === referenceTerm.term
         );
+
+        // If reference term not found in filtered list, use the first term from filtered list
+        if (refIndex === -1) {
+          if (pastAndCurrentTerms.length === 0) {
+            setTermEnrollmentData([]);
+            setTermLoading(false);
+            return;
+          }
+          referenceTerm = pastAndCurrentTerms[0];
+          refIndex = 0;
+        }
 
         // Build list: start with current term, then add 3 previous terms
         const selectedTerms: any[] = [referenceTerm];
         
-        // Add terms that come AFTER the current term in the array (which are older/previous)
+        // Add terms that come AFTER the current term in the filtered array (which are older/previous)
         // Since array is DESCENDING, indices after refIndex are older terms
-        for (let i = refIndex + 1; i < allTerms.length && selectedTerms.length < 4; i++) {
-          selectedTerms.push(allTerms[i]);
+        for (let i = refIndex + 1; i < pastAndCurrentTerms.length && selectedTerms.length < 4; i++) {
+          selectedTerms.push(pastAndCurrentTerms[i]);
         }
         
-        // If we don't have 4 terms yet, fill with terms before current (future terms or more recent)
-        // This handles edge cases where there aren't enough previous terms
-        if (selectedTerms.length < 4 && refIndex > 0) {
-          for (let i = refIndex - 1; i >= 0 && selectedTerms.length < 4; i--) {
-            // Insert at beginning to maintain chronological order later
-            selectedTerms.unshift(allTerms[i]);
-          }
-        }
+        // If we don't have 4 terms yet, we can't add future terms - just use what we have
+        // This handles cases where there aren't enough previous terms in the school's history
 
         // Sort chronologically (oldest first for display)
         const chronological = [...selectedTerms].sort((a: any, b: any) => {
