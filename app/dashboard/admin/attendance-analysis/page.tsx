@@ -881,6 +881,69 @@ export default function AttendanceAnalysisReport() {
             </div>
           </GlassCard>
 
+          {/* Teacher Attendance Analytics */}
+          <GlassCard className="p-6 mb-6 relative overflow-hidden" hover>
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl" style={{ background: '#f59e0b' }} />
+            <div className="relative z-10">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5" style={{ color: '#f59e0b' }} />
+                Teacher Attendance Analytics
+              </h3>
+              {teacherAttendance.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/20">
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Teacher</th>
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Days Present</th>
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Days Absent</th>
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Late Arrivals</th>
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Punch-In Success</th>
+                        <th className="text-left py-3 px-4 text-white/85 font-semibold">Punctuality Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {teacherAttendance.map((teacher, idx) => (
+                        <tr key={idx} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                          <td className="py-3 px-4 text-white">{teacher.name}</td>
+                          <td className="py-3 px-4 text-green-400">{teacher.daysPresent}</td>
+                          <td className="py-3 px-4 text-red-400">{teacher.daysAbsent}</td>
+                          <td className="py-3 px-4 text-yellow-400">{teacher.lateArrivals}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-green-400">{teacher.punchInSuccess}</span>
+                              <span className="text-white/55">/</span>
+                              <span className="text-red-400">{teacher.punchInFail}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className={`font-semibold ${teacher.punctualityScore >= 90 ? 'text-green-400' : teacher.punctualityScore >= 75 ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {teacher.punctualityScore.toFixed(1)}%
+                              </span>
+                              <div className="w-16 h-2 bg-white/10 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${teacher.punctualityScore >= 90 ? 'bg-green-400' : teacher.punctualityScore >= 75 ? 'bg-yellow-400' : 'bg-red-400'}`}
+                                  style={{ width: `${Math.min(teacher.punctualityScore, 100)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-white/70">
+                  <Clock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>Teacher attendance data will appear here</p>
+                  <p className="text-sm text-white/55 mt-1">Data is collected from teacher punch-in records</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+
           {/* AI Insights & Predictions */}
           <GlassCard className="p-6 mb-6 relative overflow-hidden" hover>
             <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-3xl" style={{ background: '#ff6bcb' }} />
