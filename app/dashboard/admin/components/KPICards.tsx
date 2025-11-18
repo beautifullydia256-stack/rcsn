@@ -157,53 +157,110 @@ export default function AdminKPICards() {
     },
   ];
 
+  // Separate money cards from count cards for different layouts
+  const moneyCards = cards.filter(c => c.label === "Fees Collected" || c.label === "Outstanding Balances");
+  const countCards = cards.filter(c => c.label !== "Fees Collected" && c.label !== "Outstanding Balances");
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-      {cards.map((c, i) => {
-        const Icon = c.icon;
-        return (
-          <motion.div
-            key={c.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            whileHover={{ scale: 1.03, y: -4 }}
-          >
-            <GlassCard
-              className="p-6 cursor-pointer relative overflow-hidden"
-              hover
-              onClick={() => c.href && router.push(c.href)}
-              style={{
-                background: `linear-gradient(135deg, rgba(${c.color === '#4dabff' ? '77, 171, 255' : c.color === '#10b981' ? '16, 185, 129' : c.color === '#f59e0b' ? '245, 158, 11' : c.color === '#ae79ff' ? '174, 121, 255' : '0, 212, 255'}, 0.25) 0%, rgba(${c.color === '#4dabff' ? '77, 171, 255' : c.color === '#10b981' ? '16, 185, 129' : c.color === '#f59e0b' ? '245, 158, 11' : c.color === '#ae79ff' ? '174, 121, 255' : '0, 212, 255'}, 0.15) 100%)`,
-              }}
+    <div className="space-y-4 mb-6">
+      {/* Count Cards - Compact layout */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {countCards.map((c, i) => {
+          const Icon = c.icon;
+          return (
+            <motion.div
+              key={c.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ scale: 1.03, y: -4 }}
             >
-              <div
-                className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl"
-                style={{ background: c.color }}
-              />
-              <div className="relative z-10 flex items-center gap-4">
-                <div className="p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
-                  <Icon className="w-6 h-6" style={{ color: c.color }} />
-                </div>
-                <div className="flex-1 min-w-0 overflow-visible">
-                  <div className="text-sm text-white/85 mb-1">{c.label}</div>
-                  <div className={`font-bold text-white ${
-                    (c.label === "Fees Collected" || c.label === "Outstanding Balances") 
-                      ? "text-base sm:text-lg lg:text-xl xl:text-2xl" 
-                      : "text-2xl"
-                  }`}>
-                    {loading ? (
-                      <div className="animate-pulse bg-white/20 rounded h-7 w-20"></div>
-                    ) : (
-                      <span className="inline-block">{c.value}</span>
-                    )}
+              <GlassCard
+                className="p-4 sm:p-6 cursor-pointer relative overflow-hidden"
+                hover
+                onClick={() => c.href && router.push(c.href)}
+                style={{
+                  background: `linear-gradient(135deg, rgba(${c.color === '#4dabff' ? '77, 171, 255' : c.color === '#10b981' ? '16, 185, 129' : c.color === '#f59e0b' ? '245, 158, 11' : c.color === '#ae79ff' ? '174, 121, 255' : '0, 212, 255'}, 0.25) 0%, rgba(${c.color === '#4dabff' ? '77, 171, 255' : c.color === '#10b981' ? '16, 185, 129' : c.color === '#f59e0b' ? '245, 158, 11' : c.color === '#ae79ff' ? '174, 121, 255' : '0, 212, 255'}, 0.15) 100%)`,
+                }}
+              >
+                <div
+                  className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl"
+                  style={{ background: c.color }}
+                />
+                <div className="relative z-10 flex items-center gap-3 sm:gap-4">
+                  <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: c.color }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs sm:text-sm text-white/85 mb-1">{c.label}</div>
+                    <div className="text-xl sm:text-2xl font-bold text-white">
+                      {loading ? (
+                        <div className="animate-pulse bg-white/20 rounded h-6 sm:h-7 w-16 sm:w-20"></div>
+                      ) : (
+                        c.value
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </GlassCard>
-          </motion.div>
-        );
-      })}
+              </GlassCard>
+            </motion.div>
+          );
+        })}
+      </div>
+
+      {/* Money Cards - Full width layout for better digit display */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {moneyCards.map((c, i) => {
+          const Icon = c.icon;
+          return (
+            <motion.div
+              key={c.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (countCards.length + i) * 0.05 }}
+              whileHover={{ scale: 1.02, y: -4 }}
+            >
+              <GlassCard
+                className="p-4 sm:p-6 cursor-pointer relative overflow-hidden"
+                hover
+                onClick={() => c.href && router.push(c.href)}
+                style={{
+                  background: `linear-gradient(135deg, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.25) 0%, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.15) 100%)`,
+                }}
+              >
+                <div
+                  className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-2xl"
+                  style={{ background: c.color }}
+                />
+                <div className="relative z-10">
+                  {/* Mobile: Stack vertically */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 sm:flex-col sm:items-start">
+                      <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
+                        <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: c.color }} />
+                      </div>
+                      <div className="text-xs sm:text-sm text-white/85 font-medium sm:font-normal">
+                        {c.label}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-white break-words leading-tight">
+                        {loading ? (
+                          <div className="animate-pulse bg-white/20 rounded h-8 sm:h-10 w-32 sm:w-40"></div>
+                        ) : (
+                          <span className="block" style={{ wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
+                            {c.value}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </GlassCard>
+            </motion.div>
+          );
+        })}
+      </div>
     </div>
   );
 }
