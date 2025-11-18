@@ -548,13 +548,13 @@ export default function TeacherDashboard() {
           {/* Three Column Layout - Assignments, Messages, Notifications */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
             <div className="lg:col-span-2">
-              <AssignmentsCard />
-            </div>
+            <AssignmentsCard />
+                        </div>
             <div className="space-y-6">
-              <MessagesCard />
-              <NotificationsCard />
+            <MessagesCard />
+            <NotificationsCard />
             </div>
-          </div>
+                        </div>
 
           {/* Footer */}
           <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>

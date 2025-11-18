@@ -1,0 +1,219 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { supabase } from '@/src/lib/supabase';
+import { motion } from 'framer-motion';
+import GlassCard from '@/components/ui/GlassCard';
+import GlassButton from './GlassButton';
+import { Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
+
+interface PendingExpense {
+  expense_id: string;
+  category_name: string;
+  description: string;
+  amount: number;
+  expense_date: string;
+  reference_number: string;
+  recorded_by: string;
+  payment_method: string;
+  created_at: string;
+  recorded_by_name?: string;
+}
+
+export default function PendingExpensesCard() {
+  const [expenses, setExpenses] = useState<PendingExpense[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  const loadPendingExpenses = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("school_id, role")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!userRow?.school_id || !['admin', 'head_teacher'].includes(userRow.role)) {
+        return;
+      }
+
+      const { data: expensesData } = await supabase
+        .from("school_expenses")
+        .select(`
+          expense_id,
+          category_name,
+          description,
+          amount,
+          expense_date,
+          reference_number,
+          recorded_by,
+          payment_method,
+          created_at
+        `)
+        .eq("school_id", userRow.school_id)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      if (expensesData && expensesData.length > 0) {
+        const userIds = expensesData.map(e => e.recorded_by);
+        const { data: userData } = await supabase
+          .from("users")
+          .select("user_id, name")
+          .in("user_id", userIds);
+
+        const userMap = new Map(userData?.map(u => [u.user_id, u.name]) || []);
+        
+        const enrichedExpenses = expensesData.map(e => ({
+          ...e,
+          recorded_by_name: userMap.get(e.recorded_by) || 'Unknown'
+        }));
+
+        setExpenses(enrichedExpenses as any);
+      } else {
+        setExpenses([]);
+      }
+    } catch (error) {
+      console.error("Error loading pending expenses:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPendingExpenses();
+  }, []);
+
+  const handleApproval = async (expenseId: string, action: 'approve' | 'reject') => {
+    setProcessing(expenseId);
+    try {
+      const response = await fetch('/api/accountant/approve-expense', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          expense_id: expenseId,
+          action: action,
+          notes: action === 'approve' ? 'Approved by admin' : 'Rejected by admin'
+        })
+      });
+
+      if (response.ok) {
+        setExpenses(prev => prev.filter(e => e.expense_id !== expenseId));
+      } else {
+        const data = await response.json();
+        alert(`Error: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error processing expense:", error);
+      alert("Failed to process expense");
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: 'UGX',
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  if (loading) {
+    return (
+      <GlassCard className="p-6 mb-6">
+        <div className="animate-pulse space-y-3">
+          <div className="h-6 bg-white/20 rounded w-1/3"></div>
+          <div className="h-4 bg-white/20 rounded w-2/3"></div>
+        </div>
+      </GlassCard>
+    );
+  }
+
+  return (
+    <GlassCard className="p-6 mb-6 relative overflow-hidden" hover>
+      <div
+        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-3xl"
+        style={{ background: '#f59e0b' }}
+      />
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 rounded-xl" style={{ background: 'rgba(245, 158, 11, 0.2)' }}>
+            <Clock className="w-6 h-6" style={{ color: '#f59e0b' }} />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Pending Expense Approvals</h2>
+            <p className="text-sm text-white/85">
+              {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
+            </p>
+          </div>
+        </div>
+
+        {expenses.length === 0 ? (
+          <div className="text-center py-8">
+            <CheckCircle className="w-12 h-12 mx-auto mb-2" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
+            <p className="text-white/85">No pending expenses to approve</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            {expenses.map((expense) => (
+              <motion.div
+                key={expense.expense_id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="p-4 rounded-xl"
+                style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <DollarSign className="w-5 h-5" style={{ color: '#ef4444' }} />
+                      <span className="font-medium text-white">{expense.category_name}</span>
+                      <span className="text-xs text-white/40">•</span>
+                      <span className="text-xs text-white/60">{expense.reference_number}</span>
+                    </div>
+                    <p className="text-sm text-white/85 mb-2">{expense.description}</p>
+                    <div className="flex flex-wrap gap-3 text-xs text-white/70">
+                      <span>Amount: <span className="font-semibold text-red-400">{formatCurrency(expense.amount)}</span></span>
+                      <span>•</span>
+                      <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
+                      <span>•</span>
+                      <span>Method: {expense.payment_method}</span>
+                      <span>•</span>
+                      <span>By: {expense.recorded_by_name}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <GlassButton
+                      variant="primary"
+                      onClick={() => handleApproval(expense.expense_id, 'approve')}
+                      disabled={processing === expense.expense_id}
+                      className="flex items-center gap-1 text-sm"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Approve
+                    </GlassButton>
+                    <GlassButton
+                      variant="primary"
+                      onClick={() => handleApproval(expense.expense_id, 'reject')}
+                      disabled={processing === expense.expense_id}
+                      className="flex items-center gap-1 text-sm"
+                      style={{ background: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.4)' }}
+                    >
+                      <XCircle className="w-4 h-4" />
+                      Reject
+                    </GlassButton>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
+    </GlassCard>
+  );
+}
+
