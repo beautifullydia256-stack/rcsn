@@ -69,6 +69,7 @@ export default function ChartsAnalytics() {
         const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
         if (!u?.school_id) return;
 
+        // Always use current date to ensure it updates when terms change
         const today = new Date().toISOString().slice(0, 10);
         
         // Get all terms ordered by most recent first
@@ -218,6 +219,14 @@ export default function ChartsAnalytics() {
     };
 
     loadTermEnrollment();
+
+    // Refresh data daily to catch term changes
+    // Check every hour to catch term transitions
+    const interval = setInterval(() => {
+      loadTermEnrollment();
+    }, 60 * 60 * 1000); // 1 hour
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
