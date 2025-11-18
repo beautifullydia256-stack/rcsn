@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
 import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
-import { Sparkles, FileText, BarChart3, Mail, AlertTriangle, X } from 'lucide-react';
+import { Sparkles, FileText, BarChart3, Mail, AlertTriangle, X, CalendarCheck, Award, BookOpen, Target, Users, TrendingUp, Brain } from 'lucide-react';
 
 interface AnalysisResult {
   title: string;
@@ -20,6 +20,8 @@ export default function AIQuickActions() {
   const [showModal, setShowModal] = useState(false);
 
   const actions = [
+    { icon: FileText, label: 'Generate Academic Report Summary', color: '#4dabff', action: 'academic-report' },
+    { icon: BarChart3, label: 'Generate Attendance Analysis Report', color: '#10b981', action: 'attendance-report' },
     { icon: BarChart3, label: 'Auto-Analyze Attendance', color: '#10b981', action: 'analyze-attendance' },
     { icon: Mail, label: 'Generate School Newsletter', color: '#ae79ff', action: 'newsletter' },
     { icon: AlertTriangle, label: 'Detect Students At Risk', color: '#ef4444', action: 'at-risk' },
@@ -64,8 +66,11 @@ export default function AIQuickActions() {
       let analysisResult: AnalysisResult | null = null;
 
       switch (action) {
-        case 'term-report':
-          analysisResult = await generateTermReportSummary(schoolId, currentTerm);
+        case 'academic-report':
+          analysisResult = await generateAcademicReportSummary(schoolId, currentTerm);
+          break;
+        case 'attendance-report':
+          analysisResult = await generateAttendanceAnalysisReport(schoolId, currentTerm);
           break;
         case 'analyze-attendance':
           analysisResult = await autoAnalyzeAttendance(schoolId, currentTerm);
@@ -89,7 +94,7 @@ export default function AIQuickActions() {
     }
   };
 
-  const generateTermReportSummary = async (schoolId: string, currentTerm: any): Promise<AnalysisResult> => {
+  const generateAcademicReportSummary = async (schoolId: string, currentTerm: any): Promise<AnalysisResult> => {
     const today = new Date().toISOString().slice(0, 10);
     const termStart = currentTerm?.start_date || today;
     const termEnd = currentTerm?.end_date || today;

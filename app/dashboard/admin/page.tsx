@@ -17,8 +17,6 @@ import AIQuickActions from './components/AIQuickActions';
 import AITeacherAnalytics from './components/AITeacherAnalytics';
 import AIFeeRecoveryAssistant from './components/AIFeeRecoveryAssistant';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
-import AcademicReportGenerator from './components/AcademicReportGenerator';
-import AttendanceAnalysisReportGenerator from './components/AttendanceAnalysisReportGenerator';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -121,18 +119,6 @@ export default function AdminDashboard() {
 
           {/* Recent Payments & Notifications */}
           <RecentPaymentsNotifications />
-
-          {/* Report Generators */}
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-              <span className="text-2xl">📊</span>
-              Report Generators
-            </h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-              <AcademicReportGenerator />
-              <AttendanceAnalysisReportGenerator />
-            </div>
-          </div>
 
           {/* AI-Powered Features */}
           <div className="mb-6">
