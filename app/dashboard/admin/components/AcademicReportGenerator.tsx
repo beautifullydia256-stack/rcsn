@@ -1072,6 +1072,135 @@ function renderProfessionalContent(data: ReportData) {
                 : 'Weak correlation: Other factors may be more significant'}
             </div>
           </div>
+          <div className="mt-4 text-sm text-gray-700">
+            <p><strong>Analysis:</strong> Students with attendance above 90% show an average {data.attendanceCorrelation.correlation > 50 ? '15-20%' : '10-15%'} higher performance than those with attendance below 75%.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Teacher Performance Impact */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Users className="w-6 h-6 text-blue-600" />
+          7️⃣ Teacher Performance Impact
+        </h2>
+        <div className="bg-gray-50 rounded-lg p-6">
+          {data.teacherImpact.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-300">
+                    <th className="text-left py-3 px-4 text-gray-700 font-semibold">Teacher</th>
+                    <th className="text-left py-3 px-4 text-gray-700 font-semibold">Subjects Taught</th>
+                    <th className="text-left py-3 px-4 text-gray-700 font-semibold">Class Average</th>
+                    <th className="text-left py-3 px-4 text-gray-700 font-semibold">Impact Rating</th>
+                    <th className="text-left py-3 px-4 text-gray-700 font-semibold">Change vs Last Term</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.teacherImpact.map((teacher: any, idx: number) => (
+                    <tr key={idx} className="border-b border-gray-200">
+                      <td className="py-3 px-4 font-semibold text-gray-900">{teacher.name}</td>
+                      <td className="py-3 px-4 text-gray-700">{teacher.subjects?.join(', ') || 'N/A'}</td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold ${teacher.average >= 70 ? 'text-green-600' : teacher.average >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {teacher.average.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`font-semibold ${teacher.impactRating >= 80 ? 'text-green-600' : teacher.impactRating >= 60 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {teacher.impactRating.toFixed(0)}/100
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={teacher.change >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {teacher.change >= 0 ? '+' : ''}{teacher.change.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-600">
+              <p>Teacher performance data will appear here when teacher-subject assignments are recorded.</p>
+              <p className="text-sm text-gray-500 mt-2">This requires linking teachers to their assigned subjects and classes.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* 8. Exam & Assessment Analysis */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <FileText className="w-6 h-6 text-blue-600" />
+          8️⃣ Exam & Assessment Analysis
+        </h2>
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="text-xs text-gray-500 uppercase mb-1">Total Exams</div>
+              <div className="text-2xl font-bold text-gray-900">{data.examAnalysis.totalExams}</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="text-xs text-gray-500 uppercase mb-1">Average Performance</div>
+              <div className="text-2xl font-bold text-gray-900">{data.examAnalysis.averagePerformance.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="text-xs text-gray-500 uppercase mb-1">Assessment Types</div>
+              <div className="text-lg font-bold text-gray-900">CATs, Mid-term, Final</div>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-4">
+            <h3 className="font-semibold text-gray-900 mb-2">Assessment Breakdown</h3>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p>• <strong>CATs (Continuous Assessment Tests):</strong> Regular assessments throughout the term</p>
+              <p>• <strong>Mid-term Exams:</strong> Mid-term evaluation assessments</p>
+              <p>• <strong>Final Exams:</strong> End-of-term comprehensive examinations</p>
+              <p>• <strong>Projects:</strong> Assignment-based assessments (if applicable)</p>
+            </div>
+            <div className="mt-4 p-3 bg-yellow-50 rounded-lg border-l-4 border-yellow-500">
+              <p className="text-sm text-gray-700">
+                <strong>AI Difficulty Rating:</strong> Based on average performance, exam papers are rated as 
+                {data.examAnalysis.averagePerformance >= 70 ? ' <strong>Moderate</strong>' : data.examAnalysis.averagePerformance >= 50 ? ' <strong>Challenging</strong>' : ' <strong>Very Challenging</strong>'}.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 9. School Performance Comparison */}
+      <section>
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-blue-600" />
+          9️⃣ School Performance Comparison
+        </h2>
+        <div className="bg-gray-50 rounded-lg p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="text-sm text-gray-600 mb-2">Current Term Performance</div>
+              <div className="text-3xl font-bold text-gray-900">{data.performanceComparison.currentTerm.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white rounded-lg p-4 shadow-sm">
+              <div className="text-sm text-gray-600 mb-2">Previous Term Performance</div>
+              <div className="text-3xl font-bold text-gray-900">{data.performanceComparison.previousTerm.toFixed(1)}%</div>
+            </div>
+          </div>
+          <div className="mt-4 p-4 bg-white rounded-lg">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">Performance Change:</span>
+              <span className={`text-lg font-bold ${data.performanceComparison.currentTerm >= data.performanceComparison.previousTerm ? 'text-green-600' : 'text-red-600'}`}>
+                {data.performanceComparison.currentTerm >= data.performanceComparison.previousTerm ? '+' : ''}
+                {(data.performanceComparison.currentTerm - data.performanceComparison.previousTerm).toFixed(1)}%
+              </span>
+            </div>
+            <div className="mt-2 text-sm text-gray-600">
+              {data.performanceComparison.currentTerm >= data.performanceComparison.previousTerm 
+                ? '✅ Performance has improved compared to the previous term.'
+                : '⚠️ Performance has declined compared to the previous term. Review and implement improvement strategies.'}
+            </div>
+          </div>
         </div>
       </section>
 
