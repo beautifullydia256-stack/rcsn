@@ -4,8 +4,6 @@ import { useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, BookOpen, FileText, Loader2, Download, Copy, Check, X, Printer, Clock, Target, Users, Lightbulb, CheckCircle2, AlertCircle } from 'lucide-react';
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
 
 type ActionType = 'lesson-plan' | 'exam' | null;
 
@@ -313,17 +311,143 @@ function AIPlannerContent() {
     }
   };
 
-  const handleDownload = () => {
-    if (result) {
-      const blob = new Blob([result], { type: 'text/markdown' });
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!result) return;
+    
+    setDownloading(true);
+    try {
+      const docElement = document.getElementById('professional-document');
+      if (!docElement) {
+        throw new Error('Document element not found');
+      }
+
+      // Get form data for filename
+      const formData = action === 'exam' ? examForm : lessonForm;
+      const filename = `${action === 'exam' ? 'Exam' : 'Lesson-Plan'}-${formData.subject || 'Document'}-${formData.class_name || ''}-${new Date().toISOString().split('T')[0]}`;
+
+      // Create full HTML document
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @page { size: A4; margin: 0; }
+            * { box-sizing: border-box; margin: 0; padding: 0; }
+            body { 
+              font-family: Georgia, "Times New Roman", serif;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+            }
+            .bg-gradient-to-r { background: linear-gradient(to right, #7c3aed, #7c3aed, #4f46e5) !important; }
+            .from-purple-700 { background: linear-gradient(to right, #7c3aed, #7c3aed, #4f46e5) !important; }
+            .text-white { color: white !important; }
+            .bg-white { background: white !important; }
+            .p-8 { padding: 2rem; }
+            .p-3 { padding: 0.75rem; }
+            .p-2 { padding: 0.5rem; }
+            .px-8 { padding-left: 2rem; padding-right: 2rem; }
+            .pb-6 { padding-bottom: 1.5rem; }
+            .pt-4 { padding-top: 1rem; }
+            .mt-6 { margin-top: 1.5rem; }
+            .mt-8 { margin-top: 2rem; }
+            .mt-auto { margin-top: auto; }
+            .mb-2 { margin-bottom: 0.5rem; }
+            .mb-4 { margin-bottom: 1rem; }
+            .pb-2 { padding-bottom: 0.5rem; }
+            .pl-2 { padding-left: 0.5rem; }
+            .ml-2 { margin-left: 0.5rem; }
+            .gap-2 { gap: 0.5rem; }
+            .gap-3 { gap: 0.75rem; }
+            .gap-4 { gap: 1rem; }
+            .flex { display: flex; }
+            .grid { display: grid; }
+            .grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
+            .grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
+            .items-center { align-items: center; }
+            .justify-between { justify-content: space-between; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .text-sm { font-size: 0.875rem; }
+            .text-xs { font-size: 0.75rem; }
+            .text-lg { font-size: 1.125rem; }
+            .text-xl { font-size: 1.25rem; }
+            .text-2xl { font-size: 1.5rem; }
+            .text-base { font-size: 1rem; }
+            .font-bold { font-weight: 700; }
+            .font-semibold { font-weight: 600; }
+            .font-medium { font-weight: 500; }
+            .uppercase { text-transform: uppercase; }
+            .tracking-wide { letter-spacing: 0.025em; }
+            .rounded-lg { border-radius: 0.5rem; }
+            .rounded-full { border-radius: 9999px; }
+            .bg-white\\/10 { background: rgba(255,255,255,0.1) !important; }
+            .bg-white\\/20 { background: rgba(255,255,255,0.2) !important; }
+            .bg-purple-100 { background: #f3e8ff !important; }
+            .bg-purple-500 { background: #a855f7 !important; }
+            .text-purple-200 { color: #e9d5ff !important; }
+            .text-purple-500 { color: #a855f7 !important; }
+            .text-purple-700 { color: #7c3aed !important; }
+            .text-gray-500 { color: #6b7280 !important; }
+            .text-gray-700 { color: #374151 !important; }
+            .text-gray-800 { color: #1f2937 !important; }
+            .text-gray-900 { color: #111827 !important; }
+            .border-b-2 { border-bottom: 2px solid; }
+            .border-t-2 { border-top: 2px solid; }
+            .border-purple-200 { border-color: #e9d5ff; }
+            .leading-relaxed { line-height: 1.625; }
+            .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .flex-shrink-0 { flex-shrink: 0; }
+            .w-2 { width: 0.5rem; }
+            .h-2 { height: 0.5rem; }
+            .w-4 { width: 1rem; }
+            .h-4 { height: 1rem; }
+            .w-5 { width: 1.25rem; }
+            .h-5 { height: 1.25rem; }
+            .w-6 { width: 1.5rem; }
+            .h-6 { height: 1.5rem; }
+            .w-8 { width: 2rem; }
+            .h-8 { height: 2rem; }
+            .mt-2 { margin-top: 0.5rem; }
+            svg { display: inline-block; vertical-align: middle; }
+            strong { font-weight: 700; }
+            em { font-style: italic; }
+            code { background: #f3f4f6; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.875rem; }
+          </style>
+        </head>
+        <body>
+          ${docElement.outerHTML}
+        </body>
+        </html>
+      `;
+
+      const response = await fetch('/api/ai/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ htmlContent, filename })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${action === 'exam' ? 'exam' : 'lesson-plan'}-${Date.now()}.md`;
+      a.download = `${filename}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Failed to download PDF: ' + err.message);
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -422,13 +546,8 @@ function AIPlannerContent() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
-      <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
-        <Navbar onSearch={() => {}} />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Header */}
+    <div className="max-w-5xl mx-auto">
+      {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -796,10 +915,20 @@ function AIPlannerContent() {
                     </button>
                     <button
                       onClick={handleDownload}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                      disabled={downloading}
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Download className="w-4 h-4" />
-                      Download
+                      {downloading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Generating PDF...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          Download PDF
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -814,9 +943,6 @@ function AIPlannerContent() {
                 </div>
               </motion.div>
             )}
-          </div>
-        </main>
-      </div>
     </div>
   );
 }
@@ -824,7 +950,7 @@ function AIPlannerContent() {
 export default function AIPlannerPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900 items-center justify-center">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       </div>
     }>

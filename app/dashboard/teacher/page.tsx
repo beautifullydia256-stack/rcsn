@@ -3,8 +3,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, Student } from '@/src/lib/supabase';
-import Sidebar from './components/Sidebar';
-import Navbar from './components/Navbar';
 import QuickActions from './components/QuickActions';
 import TodayOverview from './components/TodayOverview';
 import AttendanceCard from './components/AttendanceCard';
@@ -15,7 +13,6 @@ import ClassCards from './components/ClassCards';
 import AssignmentsCard from './components/AssignmentsCard';
 import MessagesCard from './components/MessagesCard';
 import NotificationsCard from './components/NotificationsCard';
-import GlassBackground from './components/GlassBackground';
 
 interface Assignment {
   class_name: string;
@@ -40,9 +37,6 @@ export default function TeacherDashboard() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [studentsAttendedToday, setStudentsAttendedToday] = useState<number>(0);
   const [isClassTeacher, setIsClassTeacher] = useState<boolean>(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearchResults, setShowSearchResults] = useState(false);
   const [aiInsights, setAiInsights] = useState<{
     strugglingStudents: Array<{ name: string; status: string; subject: string; recommendation: string }>;
     improvingStudents: Array<{ name: string; status: string; subject: string; recommendation: string }>;
@@ -447,121 +441,86 @@ export default function TeacherDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
-        <GlassBackground />
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
-            <p className="text-white/85">Loading dashboard...</p>
-          </div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
+          <p className="text-white/85">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative" style={{ background: 'linear-gradient(135deg, #0f0f16 0%, #1a1a23 50%, #1e1e28 100%)' }}>
-      {/* Glassmorphism Background */}
-      <GlassBackground />
+    <>
+      {/* Quick Actions */}
+      <QuickActions />
 
-      {/* Sidebar */}
-      <Sidebar 
-        isCollapsed={isSidebarCollapsed} 
-        onCollapse={setIsSidebarCollapsed} 
+      {/* Stats Cards */}
+      <StatsCards
+        totalClasses={totalClassesAssigned}
+        totalStudents={totalStudentsInClasses}
+        studentsAttendedToday={studentsAttendedToday}
+        subjectsAssigned={subjectsAssigned.length}
+        assignmentsDue={0}
+        examsPending={0}
       />
 
-      {/* Main Content */}
-      <div className={`transition-all duration-300 relative z-10 ${
-        isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'
-      }`}>
-        {/* Navbar */}
-        <Navbar 
-          onSearch={(query) => {
-            setSearchQuery(query);
-            setShowSearchResults(query.trim().length > 0);
-          }}
-          searchQuery={searchQuery}
-          showSearchResults={showSearchResults}
-          onCloseSearch={() => setShowSearchResults(false)}
-          searchData={{
-            students: students,
-            assignments: assignments
-          }}
-        />
-
-        {/* Dashboard Content */}
-        <main className="p-4 sm:p-6 lg:p-8 relative z-10">
-          {/* Quick Actions */}
-          <QuickActions />
-
-          {/* Stats Cards */}
-          <StatsCards
-            totalClasses={totalClassesAssigned}
-            totalStudents={totalStudentsInClasses}
-            studentsAttendedToday={studentsAttendedToday}
-            subjectsAssigned={subjectsAssigned.length}
-            assignmentsDue={0}
-            examsPending={0}
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Left Column - Today Overview & Attendance */}
+        <div className="lg:col-span-2 space-y-6">
+          <TodayOverview
+            classes={todayClasses}
+            tasks={3}
+            messages={5}
+            events={2}
+            nextClass={todayClasses[0]}
           />
+          
+          {schoolId && teacherId && (
+            <AttendanceCard
+              schoolId={schoolId}
+              teacherId={teacherId}
+            />
+          )}
+        </div>
 
-          {/* Two Column Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            {/* Left Column - Today Overview & Attendance */}
-            <div className="lg:col-span-2 space-y-6">
-              <TodayOverview
-                classes={todayClasses}
-                tasks={3}
-                messages={5}
-                events={2}
-                nextClass={todayClasses[0]}
-              />
-              
-              {schoolId && teacherId && (
-                <AttendanceCard
-                  schoolId={schoolId}
-                  teacherId={teacherId}
-                />
-              )}
-                </div>
-
-            {/* Right Column - Timetable Widget */}
-                        <div>
-              <TimetableWidget
-                todaySchedule={todayClasses}
-                nextClass={todayClasses[0]}
-              />
-            </div>
-                        </div>
-                        
-          {/* AI Insights */}
-          <AIInsights 
-            strugglingStudents={aiInsights?.strugglingStudents}
-            improvingStudents={aiInsights?.improvingStudents}
-            performanceData={aiInsights?.performanceData}
-            attendanceData={aiInsights?.attendanceData}
-            loading={aiInsightsLoading}
+        {/* Right Column - Timetable Widget */}
+        <div>
+          <TimetableWidget
+            todaySchedule={todayClasses}
+            nextClass={todayClasses[0]}
           />
-
-          {/* Class Cards */}
-          <ClassCards assignments={classAssignmentsData} />
-
-          {/* Three Column Layout - Assignments, Messages, Notifications */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="lg:col-span-2">
-            <AssignmentsCard />
-                        </div>
-            <div className="space-y-6">
-            <MessagesCard />
-            <NotificationsCard />
-            </div>
-                        </div>
-
-          {/* Footer */}
-          <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
-            <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
-          </footer>
-        </main>
+        </div>
       </div>
-    </div>
+                        
+      {/* AI Insights */}
+      <AIInsights 
+        strugglingStudents={aiInsights?.strugglingStudents}
+        improvingStudents={aiInsights?.improvingStudents}
+        performanceData={aiInsights?.performanceData}
+        attendanceData={aiInsights?.attendanceData}
+        loading={aiInsightsLoading}
+      />
+
+      {/* Class Cards */}
+      <ClassCards assignments={classAssignmentsData} />
+
+      {/* Three Column Layout - Assignments, Messages, Notifications */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <AssignmentsCard />
+        </div>
+        <div className="space-y-6">
+          <MessagesCard />
+          <NotificationsCard />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+        <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
+      </footer>
+    </>
   );
 }
