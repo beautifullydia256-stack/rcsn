@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, Users, UserCheck, UserX, Search, Download } from "lucide-react";
+import { Calendar, Users, UserCheck, UserX, Search, Download, GraduationCap, Filter } from "lucide-react";
 
 export default function AttendanceRecordsPage() {
   const router = useRouter();
@@ -15,10 +15,13 @@ export default function AttendanceRecordsPage() {
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<'all'|'present'|'absent'>('all');
 
   // Cache for student and teacher names
   const [studentNames, setStudentNames] = useState<Record<string, string>>({});
   const [teacherNames, setTeacherNames] = useState<Record<string, string>>({});
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -28,10 +31,11 @@ export default function AttendanceRecordsPage() {
       if (!u?.school_id) return router.push('/login');
       setSchoolId(u.school_id);
       
-      // Load all students and teachers for name lookup
-      const [studentsRes, teachersRes] = await Promise.all([
-        supabase.from('students').select('student_id, name').eq('school_id', u.school_id),
-        supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id)
+      // Load all students, teachers, and classes
+      const [studentsRes, teachersRes, classesRes] = await Promise.all([
+        supabase.from('students').select('student_id, name, current_class').eq('school_id', u.school_id),
+        supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id),
+        supabase.from('classes').select('class_name').eq('school_id', u.school_id).order('class_name')
       ]);
       
       // Create lookup maps
@@ -46,6 +50,10 @@ export default function AttendanceRecordsPage() {
         teacherMap[t.teacher_id] = t.name;
       });
       setTeacherNames(teacherMap);
+
+      // Get unique classes
+      const classes = (classesRes.data || []).map((c: any) => c.class_name);
+      setAvailableClasses(classes);
       
       // default: load today
       const today = new Date().toISOString().slice(0,10);
@@ -70,12 +78,19 @@ export default function AttendanceRecordsPage() {
     setLoading(true);
     
     if (role === 'students') {
-      const { data } = await supabase
+      let query = supabase
         .from('student_attendance')
         .select('student_id,class_name,date,present')
         .eq('school_id', schoolId)
         .gte('date', from)
-        .lte('date', to)
+        .lte('date', to);
+      
+      // Apply class filter at database level for better performance
+      if (selectedClass) {
+        query = query.eq('class_name', selectedClass);
+      }
+      
+      const { data } = await query
         .order('class_name')
         .order('date', { ascending: false });
       setRows(data || []);
@@ -94,22 +109,31 @@ export default function AttendanceRecordsPage() {
 
   useEffect(() => { 
     if (schoolId) reload(); 
-  }, [role, from, to, schoolId]);
+  }, [role, from, to, schoolId, selectedClass]);
 
-  // Filter rows based on search
-  const filteredRows = rows.filter((r: any) => {
-    if (!searchQuery.trim()) return true;
-    const query = searchQuery.toLowerCase();
-    
-    if (role === 'students') {
-      const name = studentNames[r.student_id] || '';
-      return name.toLowerCase().includes(query) || 
-             r.class_name?.toLowerCase().includes(query);
-    } else {
-      const name = teacherNames[r.teacher_id] || '';
-      return name.toLowerCase().includes(query);
-    }
-  });
+  // Filter rows based on search and status
+  const filteredRows = useMemo(() => {
+    return rows.filter((r: any) => {
+      // Status filter
+      if (role === 'students' && statusFilter !== 'all') {
+        if (statusFilter === 'present' && !r.present) return false;
+        if (statusFilter === 'absent' && r.present) return false;
+      }
+      
+      // Search filter
+      if (!searchQuery.trim()) return true;
+      const query = searchQuery.toLowerCase();
+      
+      if (role === 'students') {
+        const name = studentNames[r.student_id] || '';
+        return name.toLowerCase().includes(query) || 
+               r.class_name?.toLowerCase().includes(query);
+      } else {
+        const name = teacherNames[r.teacher_id] || '';
+        return name.toLowerCase().includes(query);
+      }
+    });
+  }, [rows, searchQuery, statusFilter, role, studentNames, teacherNames]);
 
   // Calculate stats
   const stats = {
@@ -186,45 +210,85 @@ export default function AttendanceRecordsPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-        <select 
-          value={role} 
-          onChange={(e)=>setRole(e.target.value as any)} 
-          className="rounded-lg border border-white/10 bg-white/5 text-white px-3 py-2 focus:border-purple-500 focus:outline-none"
-        >
-          <option value="students" className="bg-slate-800">Students</option>
-          <option value="teachers" className="bg-slate-800">Teachers</option>
-        </select>
-        
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <input 
-            type="date" 
-            value={from} 
-            onChange={(e)=>setFrom(e.target.value)} 
-            className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none" 
-          />
+      <div className="mb-6 space-y-3">
+        {/* Row 1: Type, Class, Status */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="relative">
+            <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <select 
+              value={role} 
+              onChange={(e)=>setRole(e.target.value as any)} 
+              className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
+            >
+              <option value="students" className="bg-slate-800">👨‍🎓 Students</option>
+              <option value="teachers" className="bg-slate-800">👨‍🏫 Teachers</option>
+            </select>
+          </div>
+          
+          {role === 'students' && (
+            <div className="relative">
+              <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <select 
+                value={selectedClass} 
+                onChange={(e)=>setSelectedClass(e.target.value)} 
+                className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
+              >
+                <option value="" className="bg-slate-800">All Classes</option>
+                {availableClasses.map((cls) => (
+                  <option key={cls} value={cls} className="bg-slate-800">{cls}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {role === 'students' && (
+            <div className="relative">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+              <select 
+                value={statusFilter} 
+                onChange={(e)=>setStatusFilter(e.target.value as any)} 
+                className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none appearance-none cursor-pointer"
+              >
+                <option value="all" className="bg-slate-800">All Status</option>
+                <option value="present" className="bg-slate-800">✅ Present Only</option>
+                <option value="absent" className="bg-slate-800">❌ Absent Only</option>
+              </select>
+            </div>
+          )}
         </div>
         
-        <div className="relative">
-          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <input 
-            type="date" 
-            value={to} 
-            onChange={(e)=>setTo(e.target.value)} 
-            className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none" 
-          />
-        </div>
+        {/* Row 2: Date Range and Search */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input 
+              type="date" 
+              value={from} 
+              onChange={(e)=>setFrom(e.target.value)} 
+              className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none" 
+            />
+          </div>
+          
+          <div className="relative">
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input 
+              type="date" 
+              value={to} 
+              onChange={(e)=>setTo(e.target.value)} 
+              className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white focus:border-purple-500 focus:outline-none" 
+            />
+          </div>
         
-        <div className="relative lg:col-span-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <input 
-            type="text"
-            placeholder="Search by name or class..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-purple-500 focus:outline-none" 
-          />
+          <div className="relative lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+            <input 
+              type="text"
+              placeholder="Search by name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-white/40 focus:border-purple-500 focus:outline-none" 
+            />
+          </div>
         </div>
       </div>
 
