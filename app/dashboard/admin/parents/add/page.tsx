@@ -25,25 +25,116 @@ export default function AddParentPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return router.push("/login");
-      const { data } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
-      if (!data?.school_id) return router.push("/login");
-      setSchoolId(data.school_id);
-      
-      // Load school info
-      const { data: schoolData } = await supabase
-        .from("schools")
-        .select("name, address, phone")
-        .eq("school_id", data.school_id)
-        .single();
-      setSchoolInfo(schoolData);
-      
-      const { data: studs } = await supabase.from("students").select("student_id,name,current_class,admission_number").eq("school_id", data.school_id).order("name");
-      setStudents(studs || []);
+      try {
+        setLoading(true);
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error("Auth error:", userError);
+          router.push("/login");
+          return;
+        }
+        
+        // Try to get school_id from users table
+        const { data: userData, error: userDataError } = await supabase
+          .from("users")
+          .select("school_id")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (userDataError) {
+          console.error("Error fetching user data:", userDataError);
+          // Try to get school_id from user metadata as fallback
+          const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+          const schoolIdFromMeta = userMetadata.school_id;
+          
+          if (!schoolIdFromMeta) {
+            setError("Unable to determine school. Please contact support.");
+            setLoading(false);
+            return;
+          }
+          
+          setSchoolId(schoolIdFromMeta);
+          
+          // Load school info
+          const { data: schoolData, error: schoolError } = await supabase
+            .from("schools")
+            .select("name, address, phone")
+            .eq("school_id", schoolIdFromMeta)
+            .single();
+          
+          if (schoolError) {
+            console.error("Error fetching school data:", schoolError);
+            setError("Unable to load school information.");
+            setLoading(false);
+            return;
+          }
+          
+          setSchoolInfo(schoolData);
+          
+          // Load students
+          const { data: studs, error: studentsError } = await supabase
+            .from("students")
+            .select("student_id,name,current_class,admission_number")
+            .eq("school_id", schoolIdFromMeta)
+            .order("name");
+          
+          if (studentsError) {
+            console.error("Error fetching students:", studentsError);
+            // Don't fail completely, just log the error
+          }
+          
+          setStudents(studs || []);
+          setLoading(false);
+        } else {
+          if (!userData?.school_id) {
+            setError("No school associated with your account. Please contact support.");
+            setLoading(false);
+            return;
+          }
+          
+          setSchoolId(userData.school_id);
+          
+          // Load school info
+          const { data: schoolData, error: schoolError } = await supabase
+            .from("schools")
+            .select("name, address, phone")
+            .eq("school_id", userData.school_id)
+            .single();
+          
+          if (schoolError) {
+            console.error("Error fetching school data:", schoolError);
+            setError("Unable to load school information.");
+            setLoading(false);
+            return;
+          }
+          
+          setSchoolInfo(schoolData);
+          
+          // Load students
+          const { data: studs, error: studentsError } = await supabase
+            .from("students")
+            .select("student_id,name,current_class,admission_number")
+            .eq("school_id", userData.school_id)
+            .order("name");
+          
+          if (studentsError) {
+            console.error("Error fetching students:", studentsError);
+            // Don't fail completely, just log the error
+          }
+          
+          setStudents(studs || []);
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Unexpected error:", err);
+        setError(err.message || "An unexpected error occurred. Please try again.");
+        setLoading(false);
+      }
     };
     run();
   }, [router]);
@@ -170,10 +261,32 @@ export default function AddParentPage() {
     }
   };
 
-  if (!schoolInfo) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
+          <div className="text-white">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !schoolInfo) {
+    return (
+      <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <div className="max-w-md mx-auto px-4">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+            <h2 className="text-xl font-semibold mb-2 text-red-300">Error Loading Page</h2>
+            <p className="text-red-200 mb-4">{error}</p>
+            <button
+              onClick={() => router.push('/dashboard/admin')}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
