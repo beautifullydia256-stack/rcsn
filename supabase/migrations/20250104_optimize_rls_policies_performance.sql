@@ -95,6 +95,7 @@ CREATE POLICY "assignments_access" ON public.assignments
 -- Assignment submissions policies - Consolidated to avoid multiple permissive policies
 DROP POLICY IF EXISTS "assignment_submissions_student_submit" ON public.assignment_submissions;
 DROP POLICY IF EXISTS "assignment_submissions_teacher_manage" ON public.assignment_submissions;
+DROP POLICY IF EXISTS "assignment_submissions_insert" ON public.assignment_submissions;
 
 -- Unified INSERT policy (students can submit, teachers can create for students)
 CREATE POLICY "assignment_submissions_insert" ON public.assignment_submissions
@@ -223,35 +224,10 @@ DROP POLICY IF EXISTS "optimized_authenticated_access" ON public.notifications;
 -- Consolidate multiple permissive policies into single policies
 -- ============================================================================
 
--- Assignment submissions: Consolidate INSERT policies
--- Drop the separate policies and create a unified one
+-- Assignment submissions: Already consolidated above, just ensure old policies are dropped
 DROP POLICY IF EXISTS "assignment_submissions_student_submit" ON public.assignment_submissions;
 DROP POLICY IF EXISTS "assignment_submissions_teacher_manage" ON public.assignment_submissions;
-
--- Create unified policy for INSERT (students can submit, teachers can create for students)
 DROP POLICY IF EXISTS "assignment_submissions_insert" ON public.assignment_submissions;
-CREATE POLICY "assignment_submissions_insert" ON public.assignment_submissions
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    -- Students can submit their own assignments
-    student_id IN (
-      SELECT student_id FROM public.users WHERE user_id = (select auth.uid())
-    )
-    OR
-    -- Teachers can create submissions for their students
-    assignment_id IN (
-      SELECT id FROM public.assignments 
-      WHERE teacher_id IN (
-        SELECT teacher_id FROM public.teachers 
-        WHERE school_id IN (
-          SELECT school_id FROM public.users WHERE user_id = (select auth.uid())
-        )
-      )
-    )
-  );
-
--- Keep the teacher manage policy for SELECT/UPDATE/DELETE (different action)
--- This is fine as it's for different actions
 
 -- Assignments: Already consolidated above, just ensure old policies are dropped
 DROP POLICY IF EXISTS "assignments_student_view" ON public.assignments;
