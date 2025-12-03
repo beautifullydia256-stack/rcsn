@@ -31,15 +31,24 @@ a,
   touch-action: manipulation;
 }
 
-/* Minimum touch target size (44x44px) */
+/* Minimum touch target size (44x44px) - exclude checkboxes and radio buttons */
 button,
 a,
-input,
+input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea,
 [role="button"] {
   min-height: 44px;
   min-width: 44px;
+}
+
+/* Checkboxes and radio buttons should use their natural size */
+input[type="checkbox"],
+input[type="radio"] {
+  min-height: auto;
+  min-width: auto;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Improve touch responsiveness */

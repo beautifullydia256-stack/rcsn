@@ -498,12 +498,12 @@ export default function Login() {
             </motion.div>
 
             <motion.div initial={{ x: -16, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.28 }} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <label className="inline-flex items-center gap-2 text-sm text-white/90">
+              <label className="inline-flex items-center gap-2 text-sm text-white/90 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-white/30 bg-white/10 text-blue-500 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-white/30 bg-white/10 text-blue-500 focus:ring-blue-500 cursor-pointer"
                 />
                 Remember me
               </label>
