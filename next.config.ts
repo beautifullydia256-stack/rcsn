@@ -12,17 +12,14 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   
-  eslint: {
-    // Skip ESLint during build (faster builds)
-    ignoreDuringBuilds: true,
-  },
-  
   // Optimize images
   images: {
     formats: ['image/webp', 'image/avif'],
   },
   
   // Webpack optimizations
+  // Note: In Next.js 16, Turbopack is default, but we use webpack for custom optimizations
+  // The empty turbopack config below tells Next.js to use webpack instead
   webpack: (config, { dev, isServer }) => {
     if (!dev && !isServer) {
       // Reduce bundle size in production
@@ -40,6 +37,10 @@ const nextConfig: NextConfig = {
     
     return config;
   },
+  
+  // Empty turbopack config to explicitly use webpack instead of Turbopack
+  // This is required in Next.js 16 when using webpack config
+  turbopack: {},
 };
 
 export default nextConfig;
