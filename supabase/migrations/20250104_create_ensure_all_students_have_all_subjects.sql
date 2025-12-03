@@ -66,8 +66,7 @@ BEGIN
           100,
           'MISSED',
           'MISSED - Entry created automatically'
-        )
-        ON CONFLICT DO NOTHING; -- In case of race conditions
+        );
       END IF;
     END LOOP;
   END LOOP;
