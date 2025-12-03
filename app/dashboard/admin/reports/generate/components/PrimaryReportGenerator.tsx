@@ -316,14 +316,14 @@ export function PrimaryReportGenerator() {
   }, []);
 
   const selectedSection = useMemo(() => (selectedClass ? getSectionForClass(selectedClass) : null), [selectedClass]);
-  const isNurserySection = selectedSection === 'Nursery /Baby Class';
+  const isNurserySection = selectedSection === 'Baby Class';
 
   // Auto-select template based on class (allow nursery toggle between defaults)
   useEffect(() => {
     if (selectedClass) {
       // Use automatic section-based template selection (enforced - no overrides)
       const autoTemplate = getTemplateForClass(selectedClass);
-      if (selectedSection === 'Nursery /Baby Class') {
+      if (selectedSection === 'Baby Class') {
         setSelectedTemplate(prev => {
           if (prev === 'template6' || prev === 'template2') {
             return prev;

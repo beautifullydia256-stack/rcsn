@@ -42,7 +42,7 @@ export default function TeacherExamResultsClassPage() {
     if (isSecondary || isALevel) return null;
     return getSectionForClass(className);
   }, [className, isSecondary, isALevel]);
-  const isNursery = primarySection === 'Nursery /Baby Class';
+  const isNursery = primarySection === 'Baby Class';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

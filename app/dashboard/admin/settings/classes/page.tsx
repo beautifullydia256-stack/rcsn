@@ -61,7 +61,7 @@ export default function ClassesSettingsPage() {
         // Generate class options based on school type
         const classOptions: string[] = [];
         if (sch?.type === 'Nursery/Primary') {
-          classOptions.push('Nursery', 'Middle Class', 'Top Class');
+          classOptions.push('Baby Class', 'Middle Class', 'Top Class');
           for (let i = 1; i <= 7; i++) classOptions.push(`Primary ${i}`);
         } else if (sch?.type === 'Secondary') {
           for (let i = 1; i <= 6; i++) classOptions.push(`Senior ${i}`);

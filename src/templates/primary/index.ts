@@ -5,9 +5,9 @@
 export const PRIMARY_TEMPLATES = {
   template1: {
     id: 'primary_template1',
-    name: 'Report For Nursery /Baby Class',
-    description: 'Report card designed for Nursery /Baby Class students',
-    section: 'Nursery /Baby Class',
+    name: 'Report For Baby Class',
+    description: 'Report card designed for Baby Class students',
+    section: 'Baby Class',
     schoolType: 'Nursery/Primary' as const
   },
   template2: {
@@ -40,9 +40,9 @@ export const PRIMARY_TEMPLATES = {
   },
   template6: {
     id: 'primary_template6',
-    name: 'Nursery Heritage Report',
-    description: 'Playful nursery report inspired by traditional termly cards with illustrated learning areas',
-    section: 'Nursery /Baby Class',
+    name: 'Baby Class Heritage Report',
+    description: 'Playful baby class report inspired by traditional termly cards with illustrated learning areas',
+    section: 'Baby Class',
     schoolType: 'Nursery/Primary' as const
   }
 };
@@ -59,24 +59,24 @@ export const getPrimaryTemplateOptions = () => {
 };
 
 // Helper to get template by section
-export const getTemplateBySection = (section: 'Nursery /Baby Class' | 'Baby Class' | 'Nursery' | 'Lower' | 'Upper') => {
+export const getTemplateBySection = (section: 'Baby Class' | 'Nursery' | 'Lower' | 'Upper') => {
   return Object.entries(PRIMARY_TEMPLATES).find(([_, template]) => template.section === section)?.[0];
 };
 
 // Class-to-Template Mapping for Primary Schools
 // This determines which template is automatically selected for each class
 export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
-  // Nursery /Baby Class Section (Template 1)
-  'Nursery /Baby Class': 'template6',
-  'nursery /baby class': 'template6',
-  'NURSERY /BABY CLASS': 'template6',
-  // Legacy support for old class names
+  // Baby Class Section (Template 6)
   'Baby Class': 'template6',
   'baby class': 'template6',
   'BABY CLASS': 'template6',
+  // Legacy support for old class names (Nursery)
   'Nursery': 'template6',
   'nursery': 'template6',
   'NURSERY': 'template6',
+  'Nursery /Baby Class': 'template6',
+  'nursery /baby class': 'template6',
+  'NURSERY /BABY CLASS': 'template6',
   
   // Middle & Top Class Section (Template 2)
   'Middle Class': 'template2',
@@ -149,6 +149,7 @@ export const getTemplateForClass = (className: string): string => {
 
 // Get section name for a class
 export const getSectionForClass = (className: string): string => {
+  // Updated: Nursery class is now Baby Class
   const template = getTemplateForClass(className);
   const templateData = PRIMARY_TEMPLATES[template as keyof typeof PRIMARY_TEMPLATES];
   return templateData?.section || 'Unknown';

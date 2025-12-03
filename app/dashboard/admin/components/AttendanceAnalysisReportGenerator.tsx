@@ -214,19 +214,19 @@ export default function AttendanceAnalysisReportGenerator() {
 
       // Calculate grade level attendance
       const gradeLevelStats = {
-        Nursery: { total: 0, present: 0 },
+        'Baby Class': { total: 0, present: 0 },
         Primary: { total: 0, present: 0 },
         Secondary: { total: 0, present: 0 }
       };
 
       classAttendance.forEach(c => {
-        const isNursery = c.className.includes('Nursery') || c.className.includes('Middle') || c.className.includes('Top');
+        const isBabyClass = c.className.includes('Baby Class') || c.className.includes('Middle') || c.className.includes('Top');
         const isPrimary = c.className.includes('Primary') || c.className.includes('P');
         const isSecondary = c.className.includes('Senior') || c.className.includes('S');
 
-        if (isNursery) {
-          gradeLevelStats.Nursery.total += c.totalStudents;
-          gradeLevelStats.Nursery.present += c.present;
+        if (isBabyClass) {
+          gradeLevelStats['Baby Class'].total += c.totalStudents;
+          gradeLevelStats['Baby Class'].present += c.present;
         } else if (isPrimary) {
           gradeLevelStats.Primary.total += c.totalStudents;
           gradeLevelStats.Primary.present += c.present;
@@ -310,7 +310,7 @@ export default function AttendanceAnalysisReportGenerator() {
         dailyBreakdown: dailyBreakdownList,
         classAttendance,
         gradeLevelAttendance: {
-          Nursery: gradeLevelStats.Nursery.total > 0 ? (gradeLevelStats.Nursery.present / gradeLevelStats.Nursery.total) * 100 : 0,
+          'Baby Class': gradeLevelStats['Baby Class'].total > 0 ? (gradeLevelStats['Baby Class'].present / gradeLevelStats['Baby Class'].total) * 100 : 0,
           Primary: gradeLevelStats.Primary.total > 0 ? (gradeLevelStats.Primary.present / gradeLevelStats.Primary.total) * 100 : 0,
           Secondary: gradeLevelStats.Secondary.total > 0 ? (gradeLevelStats.Secondary.present / gradeLevelStats.Secondary.total) * 100 : 0
         },

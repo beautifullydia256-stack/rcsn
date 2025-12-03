@@ -857,9 +857,9 @@ export default function AttendanceAnalysisReport() {
                 Attendance by Grade Level
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {['Nursery', 'Primary', 'Secondary'].map((level) => {
+                {['Baby Class', 'Primary', 'Secondary'].map((level) => {
                   const levelClasses = classAttendance.filter(c => 
-                    level === 'Nursery' ? c.className.includes('Nursery') || c.className.includes('Middle') || c.className.includes('Top') :
+                    level === 'Baby Class' ? c.className.includes('Baby Class') || c.className.includes('Middle') || c.className.includes('Top') :
                     level === 'Primary' ? c.className.includes('Primary') || c.className.includes('P') :
                     c.className.includes('Senior') || c.className.includes('S')
                   );

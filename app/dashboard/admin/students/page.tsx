@@ -84,7 +84,7 @@ export default function StudentsListPage() {
             <option value="">All Classes</option>
             {schoolType === 'Nursery/Primary' && (
               <>
-                <option value="Nursery">Nursery</option>
+                <option value="Baby Class">Baby Class</option>
                 <option value="Middle Class">Middle Class</option>
                 <option value="Top Class">Top Class</option>
                 {Array.from({ length: 7 }).map((_, i) => (

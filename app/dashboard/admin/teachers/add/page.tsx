@@ -44,7 +44,7 @@ export default function AddTeacherPage() {
   const classOptions = useMemo(() => {
     const opts: string[] = [];
     if (schoolType === 'Nursery/Primary') {
-      opts.push('Nursery','Middle Class','Top Class');
+      opts.push('Baby Class','Middle Class','Top Class');
       for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
     } else if (schoolType === 'Secondary') {
       for (let i = 1; i <= 6; i++) opts.push(`Senior ${i}`);
@@ -73,7 +73,7 @@ export default function AddTeacherPage() {
 
   // Build labeled subject options from selected classes and class_subjects table
   const classSuffix = (c: string) => {
-    if (c === 'Nursery') return 'N';
+    if (c === 'Baby Class') return 'B';
     if (c === 'Middle Class') return 'M';
     if (c === 'Top Class') return 'T';
     const p = c.match(/^Primary\s+(\d)$/);
