@@ -245,6 +245,7 @@ DROP POLICY IF EXISTS "assignment_submissions_student_submit" ON public.assignme
 DROP POLICY IF EXISTS "assignment_submissions_teacher_manage" ON public.assignment_submissions;
 
 -- Create unified policy for INSERT (students can submit, teachers can create for students)
+DROP POLICY IF EXISTS "assignment_submissions_insert" ON public.assignment_submissions;
 CREATE POLICY "assignment_submissions_insert" ON public.assignment_submissions
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -273,6 +274,7 @@ DROP POLICY IF EXISTS "assignments_student_view" ON public.assignments;
 DROP POLICY IF EXISTS "assignments_teacher_manage" ON public.assignments;
 
 -- Create unified SELECT policy
+DROP POLICY IF EXISTS "assignments_select" ON public.assignments;
 CREATE POLICY "assignments_select" ON public.assignments
   FOR SELECT TO authenticated
   USING (
@@ -295,6 +297,7 @@ CREATE POLICY "assignments_select" ON public.assignments
   );
 
 -- Create separate policy for INSERT/UPDATE/DELETE (teachers and admins only)
+DROP POLICY IF EXISTS "assignments_manage" ON public.assignments;
 CREATE POLICY "assignments_manage" ON public.assignments
   FOR ALL TO authenticated
   USING (
@@ -321,6 +324,7 @@ DROP POLICY IF EXISTS "timetables_teacher_view" ON public.timetables;
 DROP POLICY IF EXISTS "timetables_admin_manage" ON public.timetables;
 
 -- Create unified SELECT policy
+DROP POLICY IF EXISTS "timetables_select" ON public.timetables;
 CREATE POLICY "timetables_select" ON public.timetables
   FOR SELECT TO authenticated
   USING (
@@ -335,6 +339,7 @@ CREATE POLICY "timetables_select" ON public.timetables
   );
 
 -- Create separate policy for INSERT/UPDATE/DELETE (admins only)
+DROP POLICY IF EXISTS "timetables_manage" ON public.timetables;
 CREATE POLICY "timetables_manage" ON public.timetables
   FOR ALL TO authenticated
   USING (
@@ -351,6 +356,7 @@ DROP POLICY IF EXISTS "school admins can view rollover status" ON public.rollove
 DROP POLICY IF EXISTS "system can manage rollover status" ON public.rollover_status;
 
 -- Create unified SELECT policy
+DROP POLICY IF EXISTS "rollover_status_select" ON public.rollover_status;
 CREATE POLICY "rollover_status_select" ON public.rollover_status
   FOR SELECT TO authenticated
   USING (
@@ -362,6 +368,7 @@ CREATE POLICY "rollover_status_select" ON public.rollover_status
   );
 
 -- Create separate policy for INSERT/UPDATE/DELETE (system only)
+DROP POLICY IF EXISTS "rollover_status_manage" ON public.rollover_status;
 CREATE POLICY "rollover_status_manage" ON public.rollover_status
   FOR ALL TO authenticated
   USING (true)
