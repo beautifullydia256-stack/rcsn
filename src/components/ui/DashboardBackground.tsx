@@ -1,8 +1,8 @@
 'use client';
 
-export default function GlassBackground() {
+export default function DashboardBackground() {
   return (
-    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div className="fixed inset-0 -z-10">
       {/* Base dark gradient matching owner dashboard */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black" />
       

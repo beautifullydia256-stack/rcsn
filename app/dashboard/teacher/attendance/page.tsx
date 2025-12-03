@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import GlassBackground from "../components/GlassBackground";
 
 export default function TeacherAttendanceLanding() {
   const router = useRouter();
@@ -85,23 +86,24 @@ export default function TeacherAttendanceLanding() {
   }, [router]);
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen relative">
+      <GlassBackground />
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={() => {}} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="max-w-4xl mx-auto">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Select Class for Attendance</h1>
-              <p className="text-gray-600 dark:text-gray-400">Choose a class to record attendance</p>
+              <h1 className="text-2xl font-bold text-white mb-2">Select Class for Attendance</h1>
+              <p className="text-white/70">Choose a class to record attendance</p>
             </div>
             <motion.div 
               initial={{ opacity: 0, y: 12 }} 
               animate={{ opacity: 1, y: 0 }} 
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6"
+              className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white"
             >
               {classes.length === 0 ? (
-                <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+                <div className="text-center py-12 text-white/70">
                   No classes assigned.
                 </div>
               ) : (
@@ -110,10 +112,10 @@ export default function TeacherAttendanceLanding() {
                     <button 
                       key={c} 
                       onClick={()=>router.push(`/dashboard/teacher/attendance/${encodeURIComponent(c)}`)} 
-                      className="px-4 py-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-left transition-colors"
+                      className="px-4 py-4 rounded-lg border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 backdrop-blur-md text-left transition-colors"
                     >
-                      <div className="text-blue-900 dark:text-blue-100 font-medium">{c}</div>
-                      <div className="text-blue-700 dark:text-blue-300 text-sm mt-1">Record attendance</div>
+                      <div className="text-blue-300 font-medium">{c}</div>
+                      <div className="text-blue-400/80 text-sm mt-1">Record attendance</div>
                     </button>
                   ))}
                 </div>

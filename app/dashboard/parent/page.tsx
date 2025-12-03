@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import DashboardBackground from '@/src/components/ui/DashboardBackground';
 
 interface DashboardSummary {
   student_name: string;
@@ -204,18 +205,23 @@ export default function ParentDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <DashboardBackground />
+        <div className="relative z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 border-t-white"></div>
+          <p className="text-white/80 mt-4">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
 
   if (!summary) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Student Found</h2>
-          <p className="text-gray-600">Please contact your school administrator.</p>
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <DashboardBackground />
+        <div className="relative z-10 text-center rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-8 max-w-md">
+          <h2 className="text-2xl font-bold text-white mb-4">No Student Found</h2>
+          <p className="text-white/70">Please contact your school administrator.</p>
         </div>
       </div>
     );
@@ -226,26 +232,32 @@ export default function ParentDashboard() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <DashboardBackground />
+      
       {/* Navigation */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
+      <motion.nav 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 border-b border-white/10 bg-white/5 backdrop-blur-md sticky top-0 z-50"
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div>
-            <h1 className="text-2xl font-bold text-blue-600">Parent Dashboard</h1>
-              <p className="text-sm text-gray-600">{summary.student_name} - {summary.current_class}</p>
+              <h1 className="text-2xl font-bold text-white">Parent Dashboard</h1>
+              <p className="text-sm text-white/70">{summary.student_name} - {summary.current_class}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+              className="bg-red-600/80 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
             >
               Logout
             </button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* KPI Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -253,15 +265,18 @@ export default function ParentDashboard() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           {/* Attendance Card */}
-          <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
+          <motion.div 
+            whileHover={{ y: -2, scale: 1.02 }} 
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white"
+          >
             <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-600">Attendance</p>
-                <p className="text-3xl font-bold text-gray-900">{attendancePercentage}%</p>
-                <p className="text-xs text-gray-500 mt-1">This Month</p>
+              <div>
+                <p className="text-sm font-medium text-white/70">Attendance</p>
+                <p className="text-3xl font-bold text-white">{attendancePercentage}%</p>
+                <p className="text-xs text-white/60 mt-1">This Month</p>
               </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -269,31 +284,37 @@ export default function ParentDashboard() {
           </motion.div>
 
           {/* Fee Balance Card */}
-          <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
-            <div className="flex items-center justify-between">
-            <div>
-                <p className="text-sm font-medium text-gray-600">Outstanding Balance</p>
-                <p className="text-3xl font-bold text-gray-900">UGX {summary.balance?.toLocaleString() || 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Paid: {summary.total_paid?.toLocaleString() || 0}</p>
-            </div>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </div>
-          </div>
-        </motion.div>
-
-          {/* Unread Notifications */}
-          <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
+          <motion.div 
+            whileHover={{ y: -2, scale: 1.02 }} 
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Unread Messages</p>
-                <p className="text-3xl font-bold text-gray-900">{summary.unread_notifications || 0}</p>
-                <p className="text-xs text-gray-500 mt-1">New notifications</p>
+                <p className="text-sm font-medium text-white/70">Outstanding Balance</p>
+                <p className="text-3xl font-bold text-white">UGX {summary.balance?.toLocaleString() || 0}</p>
+                <p className="text-xs text-white/60 mt-1">Paid: {summary.total_paid?.toLocaleString() || 0}</p>
               </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-green-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Unread Notifications */}
+          <motion.div 
+            whileHover={{ y: -2, scale: 1.02 }} 
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-white/70">Unread Messages</p>
+                <p className="text-3xl font-bold text-white">{summary.unread_notifications || 0}</p>
+                <p className="text-xs text-white/60 mt-1">New notifications</p>
+              </div>
+              <div className="w-12 h-12 bg-yellow-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
               </div>
@@ -301,15 +322,18 @@ export default function ParentDashboard() {
           </motion.div>
 
           {/* Books Borrowed */}
-          <motion.div whileHover={{ y: -2 }} className="bg-white p-6 rounded-lg shadow-lg">
+          <motion.div 
+            whileHover={{ y: -2, scale: 1.02 }} 
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white"
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Library Books</p>
-                <p className="text-3xl font-bold text-gray-900">{summary.books_borrowed || 0}</p>
-                <p className="text-xs text-gray-500 mt-1">Currently borrowed</p>
+                <p className="text-sm font-medium text-white/70">Library Books</p>
+                <p className="text-3xl font-bold text-white">{summary.books_borrowed || 0}</p>
+                <p className="text-xs text-white/60 mt-1">Currently borrowed</p>
               </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center">
+                <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
@@ -318,8 +342,8 @@ export default function ParentDashboard() {
         </motion.div>
 
         {/* Tabs Navigation */}
-        <div className="bg-white rounded-lg shadow-lg mb-8">
-          <div className="border-b border-gray-200">
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 mb-8">
+          <div className="border-b border-white/10">
             <nav className="-mb-px flex space-x-4 px-6 overflow-x-auto">
               {[
                 { id: 'overview', name: 'Overview', icon: '📊' },
@@ -334,10 +358,10 @@ export default function ParentDashboard() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap ${
+                  className={`py-4 px-3 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                     activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                      ? 'border-blue-400 text-white'
+                      : 'border-transparent text-white/70 hover:text-white hover:border-white/30'
                   }`}
                 >
                   <span className="mr-2">{tab.icon}</span>
@@ -353,53 +377,53 @@ export default function ParentDashboard() {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Quick Stats */}
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Student Overview</h3>
+                  <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+                    <h3 className="text-lg font-semibold text-white mb-4">Student Overview</h3>
                     <div className="space-y-3">
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Status:</span>
-                        <span className="font-semibold text-green-600">{summary.status}</span>
+                        <span className="text-white/70">Status:</span>
+                        <span className="font-semibold text-green-400">{summary.status}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Present Days (This Month):</span>
-                        <span className="font-semibold">{summary.days_present_this_month}</span>
+                        <span className="text-white/70">Present Days (This Month):</span>
+                        <span className="font-semibold text-white">{summary.days_present_this_month}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Absent Days (This Month):</span>
-                        <span className="font-semibold">{summary.days_absent_this_month}</span>
+                        <span className="text-white/70">Absent Days (This Month):</span>
+                        <span className="font-semibold text-white">{summary.days_absent_this_month}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Recent Achievements:</span>
-                        <span className="font-semibold text-green-600">{summary.achievements_30d}</span>
+                        <span className="text-white/70">Recent Achievements:</span>
+                        <span className="font-semibold text-green-400">{summary.achievements_30d}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-gray-700">Discipline Incidents (30d):</span>
-                        <span className={`font-semibold ${summary.discipline_incidents_30d > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        <span className="text-white/70">Discipline Incidents (30d):</span>
+                        <span className={`font-semibold ${summary.discipline_incidents_30d > 0 ? 'text-red-400' : 'text-green-400'}`}>
                           {summary.discipline_incidents_30d}
                         </span>
-                          </div>
-                        </div>
                       </div>
+                    </div>
+                  </div>
 
                   {/* Upcoming Events */}
-                  <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming Events</h3>
+                  <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+                    <h3 className="text-lg font-semibold text-white mb-4">Upcoming Events</h3>
                     {events.length === 0 ? (
-                      <p className="text-gray-500 text-center py-4">No upcoming events</p>
+                      <p className="text-white/70 text-center py-4">No upcoming events</p>
                     ) : (
                       <div className="space-y-3">
                         {events.slice(0, 3).map((event) => (
-                          <div key={event.event_id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded">
-                            <div className="flex-shrink-0 w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <div key={event.event_id} className="flex items-start space-x-3 p-3 rounded-lg border border-white/10 bg-white/5">
+                            <div className="flex-shrink-0 w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
                               <span className="text-xl">
                                 {event.event_type === 'exam' ? '📝' : event.event_type === 'holiday' ? '🏖️' : event.event_type === 'meeting' ? '👥' : '📅'}
                               </span>
-                          </div>
+                            </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900">{event.title}</p>
-                              <p className="text-sm text-gray-600">{new Date(event.start_date).toLocaleDateString()}</p>
-                        </div>
-                      </div>
+                              <p className="font-medium text-white">{event.title}</p>
+                              <p className="text-sm text-white/70">{new Date(event.start_date).toLocaleDateString()}</p>
+                            </div>
+                          </div>
                         ))}
                       </div>
                     )}
@@ -407,46 +431,46 @@ export default function ParentDashboard() {
                 </div>
 
                 {/* Recent Notifications */}
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
+                <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">Recent Notifications</h3>
+                    <h3 className="text-lg font-semibold text-white">Recent Notifications</h3>
                     {notifications.length > 3 && (
                       <a 
                         href="/dashboard/parent/notifications" 
-                        className="text-sm text-blue-600 hover:text-blue-700 underline"
+                        className="text-sm text-blue-400 hover:text-blue-300 underline"
                       >
                         View all ({notifications.length})
                       </a>
                     )}
                   </div>
                   {notifications.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No notifications</p>
+                    <p className="text-white/70 text-center py-4">No notifications</p>
                   ) : (
                     <div className="space-y-3">
                       {notifications.slice(0, 3).map((notif) => (
                         <div
                           key={notif.notification_id}
-                          className={`p-4 rounded-lg border ${notif.read ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}
+                          className={`p-4 rounded-lg border ${notif.read ? 'border-white/10 bg-white/5' : 'border-blue-500/30 bg-blue-500/10'}`}
                         >
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <h4 className="font-medium text-gray-900">{notif.title}</h4>
+                                <h4 className="font-medium text-white">{notif.title}</h4>
                                 <span className={`text-xs px-2 py-1 rounded-full ${
-                                  notif.priority === 'urgent' ? 'bg-red-100 text-red-700' :
-                                  notif.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                  'bg-gray-100 text-gray-700'
+                                  notif.priority === 'urgent' ? 'bg-red-500/20 text-red-300' :
+                                  notif.priority === 'high' ? 'bg-orange-500/20 text-orange-300' :
+                                  'bg-white/10 text-white/70'
                                 }`}>
                                   {notif.priority}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-600 mt-1">{notif.message}</p>
-                              <p className="text-xs text-gray-500 mt-2">{new Date(notif.created_at).toLocaleString()}</p>
+                              <p className="text-sm text-white/80 mt-1">{notif.message}</p>
+                              <p className="text-xs text-white/60 mt-2">{new Date(notif.created_at).toLocaleString()}</p>
                             </div>
                             {!notif.read && (
                               <button
                                 onClick={() => markNotificationAsRead(notif.notification_id)}
-                                className="ml-4 text-sm text-blue-600 hover:text-blue-700"
+                                className="ml-4 text-sm text-blue-400 hover:text-blue-300"
                               >
                                 Mark Read
                               </button>
@@ -455,10 +479,10 @@ export default function ParentDashboard() {
                         </div>
                       ))}
                       {notifications.length > 3 && (
-                        <div className="mt-4 pt-3 border-t border-gray-200 text-center">
+                        <div className="mt-4 pt-3 border-t border-white/10 text-center">
                           <a 
                             href="/dashboard/parent/notifications" 
-                            className="text-sm text-blue-600 hover:text-blue-700"
+                            className="text-sm text-blue-400 hover:text-blue-300"
                           >
                             + {notifications.length - 3} more notifications
                           </a>
@@ -474,24 +498,24 @@ export default function ParentDashboard() {
             {activeTab === 'academics' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 {/* Report Cards */}
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Report Cards</h3>
+                <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+                  <h3 className="text-lg font-semibold text-white mb-4">Report Cards</h3>
                 {reports.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No report cards available</p>
+                    <p className="text-white/70 text-center py-4">No report cards available</p>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {reports.map((report) => (
-                        <div key={report.report_id} className="bg-gray-50 p-4 rounded-lg flex items-center justify-between">
+                        <div key={report.report_id} className="rounded-lg border border-white/10 bg-white/5 p-4 flex items-center justify-between">
                           <div>
-                            <h4 className="font-medium text-gray-900">{report.template_name}</h4>
-                            <p className="text-sm text-gray-600">{new Date(report.created_at).toLocaleDateString()}</p>
+                            <h4 className="font-medium text-white">{report.template_name}</h4>
+                            <p className="text-sm text-white/70">{new Date(report.created_at).toLocaleDateString()}</p>
                           </div>
                           {report.file_url && (
                             <a
                               href={report.file_url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                              className="inline-flex items-center px-3 py-2 bg-blue-600/80 hover:bg-blue-600/80 hover:bg-blue-600/80 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
                             >
                               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -506,32 +530,32 @@ export default function ParentDashboard() {
                 </div>
 
                 {/* Exam Results */}
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Exam Results</h3>
+                <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+                  <h3 className="text-lg font-semibold text-white mb-4">Recent Exam Results</h3>
                   {examResults.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No exam results available</p>
+                    <p className="text-white/70 text-center py-4">No exam results available</p>
                   ) : (
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                      <table className="min-w-full divide-y divide-white/10">
+                        <thead className="bg-white/5">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marks</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Subject</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Marks</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Term</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Date</th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-white/10">
                           {examResults.map((result) => (
-                            <tr key={result.grade_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{result.subject}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                <span className={`font-semibold ${result.marks >= 70 ? 'text-green-600' : result.marks >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            <tr key={result.grade_id} className="hover:bg-white/5">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{result.subject}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
+                                <span className={`font-semibold ${result.marks >= 70 ? 'text-green-400' : result.marks >= 50 ? 'text-yellow-400' : 'text-red-400'}`}>
                                   {result.marks}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{result.term}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{new Date(result.created_at).toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">{result.term}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white/70">{new Date(result.created_at).toLocaleDateString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -545,26 +569,26 @@ export default function ParentDashboard() {
             {/* Attendance Tab */}
             {activeTab === 'attendance' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-100 p-8 rounded-lg">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">Attendance Summary</h3>
+                <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-8 text-white">
+                  <h3 className="text-2xl font-bold text-white mb-6 text-center">Attendance Summary</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-lg shadow text-center">
-                      <p className="text-sm font-medium text-gray-600 mb-2">This Month</p>
-                      <p className="text-4xl font-bold text-blue-600">{attendancePercentage}%</p>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+                      <p className="text-sm font-medium text-white/70 mb-2">This Month</p>
+                      <p className="text-4xl font-bold text-blue-400">{attendancePercentage}%</p>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow text-center">
-                      <p className="text-sm font-medium text-gray-600 mb-2">Days Present</p>
-                      <p className="text-4xl font-bold text-green-600">{summary.days_present_this_month}</p>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+                      <p className="text-sm font-medium text-white/70 mb-2">Days Present</p>
+                      <p className="text-4xl font-bold text-green-400">{summary.days_present_this_month}</p>
                     </div>
-                    <div className="bg-white p-6 rounded-lg shadow text-center">
-                      <p className="text-sm font-medium text-gray-600 mb-2">Days Absent</p>
-                      <p className="text-4xl font-bold text-red-600">{summary.days_absent_this_month}</p>
+                    <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
+                      <p className="text-sm font-medium text-white/70 mb-2">Days Absent</p>
+                      <p className="text-4xl font-bold text-red-400">{summary.days_absent_this_month}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <p className="text-gray-600 text-center">
+                <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+                  <p className="text-white/80 text-center">
                     Contact the school for detailed attendance records and teacher remarks.
                   </p>
                 </div>
@@ -577,42 +601,42 @@ export default function ParentDashboard() {
                 {/* Fee Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-blue-50 p-6 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 mb-2">Expected Fee</p>
-                    <p className="text-3xl font-bold text-gray-900">UGX {summary.expected_fee_amount?.toLocaleString() || 0}</p>
+                    <p className="text-sm font-medium text-white/80 mb-2">Expected Fee</p>
+                    <p className="text-3xl font-bold text-white">UGX {summary.expected_fee_amount?.toLocaleString() || 0}</p>
                   </div>
                   <div className="bg-green-50 p-6 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 mb-2">Total Paid</p>
+                    <p className="text-sm font-medium text-white/80 mb-2">Total Paid</p>
                     <p className="text-3xl font-bold text-green-600">UGX {summary.total_paid?.toLocaleString() || 0}</p>
                   </div>
                   <div className="bg-red-50 p-6 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 mb-2">Outstanding Balance</p>
+                    <p className="text-sm font-medium text-white/80 mb-2">Outstanding Balance</p>
                     <p className="text-3xl font-bold text-red-600">UGX {summary.balance?.toLocaleString() || 0}</p>
                   </div>
                 </div>
 
                 {/* Payment History */}
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment History</h3>
+                <div className="bg-white border-2 border-white/10 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-white mb-4">Payment History</h3>
                   {payments.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No payment records</p>
+                    <p className="text-white/70 text-center py-4">No payment records</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-white/5">
                           <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Date</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Amount</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Method</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Description</th>
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                           {payments.map((payment) => (
                             <tr key={payment.payment_id}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{new Date(payment.created_at).toLocaleDateString()}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{new Date(payment.created_at).toLocaleDateString()}</td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">UGX {payment.amount.toLocaleString()}</td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{payment.payment_method}</td>
-                              <td className="px-6 py-4 text-sm text-gray-600">{payment.description || '-'}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-white/80">{payment.payment_method}</td>
+                              <td className="px-6 py-4 text-sm text-white/80">{payment.description || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -625,7 +649,7 @@ export default function ParentDashboard() {
                 <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-lg text-white">
                   <h3 className="text-xl font-semibold mb-2">Make a Payment</h3>
                   <p className="mb-4">Pay school fees online securely</p>
-                  <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                  <button className="bg-white text-blue-600 px-6 py-2 rounded-lg font-semibold hover:bg-white/10 transition-colors">
                     Pay Now (Coming Soon)
                   </button>
                   </div>
@@ -635,9 +659,9 @@ export default function ParentDashboard() {
             {/* Communication Tab */}
             {activeTab === 'communication' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Messages & Notifications</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Messages & Notifications</h3>
                 {notifications.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No messages</p>
+                  <p className="text-white/70 text-center py-8">No messages</p>
                 ) : (
                   <div className="space-y-4">
                     {notifications.map((notif) => (
@@ -648,7 +672,7 @@ export default function ParentDashboard() {
                           notif.category === 'attendance' ? 'border-green-500 bg-green-50' :
                           notif.category === 'financial' ? 'border-yellow-500 bg-yellow-50' :
                           notif.category === 'behavior' ? 'border-purple-500 bg-purple-50' :
-                          'border-gray-500 bg-gray-50'
+                          'border-gray-500 bg-white/5'
                         }`}
                       >
                         <div className="flex items-start justify-between">
@@ -659,29 +683,29 @@ export default function ParentDashboard() {
                                 notif.category === 'attendance' ? 'bg-green-100 text-green-700' :
                                 notif.category === 'financial' ? 'bg-yellow-100 text-yellow-700' :
                                 notif.category === 'behavior' ? 'bg-purple-100 text-purple-700' :
-                                'bg-gray-100 text-gray-700'
+                                'bg-white/10 text-white/90'
                               }`}>
                                 {notif.category}
                               </span>
                               <span className={`text-xs px-2 py-1 rounded-full ${
                                 notif.priority === 'urgent' ? 'bg-red-100 text-red-700' :
                                 notif.priority === 'high' ? 'bg-orange-100 text-orange-700' :
-                                'bg-gray-100 text-gray-700'
+                                'bg-white/10 text-white/90'
                               }`}>
                                 {notif.priority}
                               </span>
                               {!notif.read && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-blue-600 text-white">New</span>
+                                <span className="text-xs px-2 py-1 rounded-full bg-blue-600/80 hover:bg-blue-600 text-white">New</span>
                               )}
                             </div>
-                            <h4 className="font-semibold text-gray-900 text-lg mb-2">{notif.title}</h4>
-                            <p className="text-gray-700 mb-3">{notif.message}</p>
-                            <p className="text-xs text-gray-500">{new Date(notif.created_at).toLocaleString()}</p>
+                            <h4 className="font-semibold text-white text-lg mb-2">{notif.title}</h4>
+                            <p className="text-white/90 mb-3">{notif.message}</p>
+                            <p className="text-xs text-white/70">{new Date(notif.created_at).toLocaleString()}</p>
                           </div>
                           {!notif.read && (
                             <button
                               onClick={() => markNotificationAsRead(notif.notification_id)}
-                              className="ml-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-gray-50"
+                              className="ml-4 px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm hover:bg-white/5"
                             >
                               Mark as Read
                             </button>
@@ -710,10 +734,10 @@ export default function ParentDashboard() {
                 </div>
 
                 {/* Records */}
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Behavior Records</h3>
+                <div className="bg-white border-2 border-white/10 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-white mb-4">Behavior Records</h3>
                   {disciplineRecords.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No records</p>
+                    <p className="text-white/70 text-center py-4">No records</p>
                   ) : (
                     <div className="space-y-4">
                       {disciplineRecords.map((record) => (
@@ -736,12 +760,12 @@ export default function ParentDashboard() {
                                   {record.incident_type}
                                 </span>
                               </div>
-                              <h4 className="font-semibold text-gray-900">{record.title}</h4>
-                              <p className="text-sm text-gray-700 mt-1">{record.description}</p>
+                              <h4 className="font-semibold text-white">{record.title}</h4>
+                              <p className="text-sm text-white/90 mt-1">{record.description}</p>
                               {record.action_taken && (
-                                <p className="text-sm text-gray-600 mt-2"><strong>Action:</strong> {record.action_taken}</p>
+                                <p className="text-sm text-white/80 mt-2"><strong>Action:</strong> {record.action_taken}</p>
                               )}
-                              <p className="text-xs text-gray-500 mt-2">{new Date(record.incident_date).toLocaleDateString()}</p>
+                              <p className="text-xs text-white/70 mt-2">{new Date(record.incident_date).toLocaleDateString()}</p>
                             </div>
                           </div>
                         </div>
@@ -755,13 +779,13 @@ export default function ParentDashboard() {
             {/* Events Tab */}
             {activeTab === 'events' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Upcoming School Events</h3>
+                <h3 className="text-lg font-semibold text-white mb-4">Upcoming School Events</h3>
                 {events.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">No upcoming events</p>
+                  <p className="text-white/70 text-center py-8">No upcoming events</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {events.map((event) => (
-                      <div key={event.event_id} className="bg-white border-2 border-gray-200 p-6 rounded-lg hover:shadow-lg transition-shadow">
+                      <div key={event.event_id} className="bg-white border-2 border-white/10 p-6 rounded-lg hover:shadow-lg transition-shadow">
                         <div className="flex items-start space-x-4">
                           <div className="flex-shrink-0 w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
                             <span className="text-3xl">
@@ -775,9 +799,9 @@ export default function ParentDashboard() {
                             </span>
                           </div>
                           <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 text-lg mb-1">{event.title}</h4>
-                            <p className="text-sm text-gray-600 mb-2">{event.description}</p>
-                            <div className="flex items-center space-x-4 text-sm text-gray-500">
+                            <h4 className="font-semibold text-white text-lg mb-1">{event.title}</h4>
+                            <p className="text-sm text-white/80 mb-2">{event.description}</p>
+                            <div className="flex items-center space-x-4 text-sm text-white/70">
                               <span>📅 {new Date(event.start_date).toLocaleDateString()}</span>
                               {event.location && <span>📍 {event.location}</span>}
                             </div>
@@ -794,23 +818,23 @@ export default function ParentDashboard() {
             {activeTab === 'library' && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
                 <div className="bg-purple-50 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Currently Borrowed</h3>
+                  <h3 className="text-lg font-semibold text-white mb-2">Currently Borrowed</h3>
                   <p className="text-4xl font-bold text-purple-600">{summary.books_borrowed || 0} Books</p>
                 </div>
 
-                <div className="bg-white border-2 border-gray-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Borrowed Books</h3>
+                <div className="bg-white border-2 border-white/10 p-6 rounded-lg">
+                  <h3 className="text-lg font-semibold text-white mb-4">Borrowed Books</h3>
                   {libraryBooks.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4">No books borrowed</p>
+                    <p className="text-white/70 text-center py-4">No books borrowed</p>
                   ) : (
                     <div className="space-y-4">
                       {libraryBooks.map((book) => (
-                        <div key={book.borrow_id} className={`p-4 rounded-lg border ${book.returned_at ? 'bg-gray-50 border-gray-200' : 'bg-blue-50 border-blue-200'}`}>
+                        <div key={book.borrow_id} className={`p-4 rounded-lg border ${book.returned_at ? 'bg-white/5 border-white/10' : 'bg-blue-50 border-blue-200'}`}>
                           <div className="flex items-start justify-between">
                             <div className="flex-1">
-                              <h4 className="font-semibold text-gray-900">{book.title}</h4>
-                              <p className="text-sm text-gray-600">by {book.author}</p>
-                              <div className="mt-2 space-y-1 text-xs text-gray-500">
+                              <h4 className="font-semibold text-white">{book.title}</h4>
+                              <p className="text-sm text-white/80">by {book.author}</p>
+                              <div className="mt-2 space-y-1 text-xs text-white/70">
                                 <p>Borrowed: {new Date(book.borrowed_at).toLocaleDateString()}</p>
                                 <p>Due: {new Date(book.due_date).toLocaleDateString()}</p>
                                 {book.returned_at && (

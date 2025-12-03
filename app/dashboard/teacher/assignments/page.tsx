@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
+import GlassBackground from '../components/GlassBackground';
 import AssignmentsCard from '../components/AssignmentsCard';
 import { motion } from 'framer-motion';
 import { FileText, Plus } from 'lucide-react';
@@ -29,16 +30,20 @@ export default function AssignmentsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <GlassBackground />
+        <div className="relative z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 border-t-white"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen relative">
+      <GlassBackground />
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={() => {}} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <motion.div
@@ -48,17 +53,17 @@ export default function AssignmentsPage() {
           >
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-3">
-                <FileText className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+                <FileText className="w-8 h-8 text-blue-400" />
+                <h1 className="text-2xl sm:text-3xl font-bold text-white">
                   Assignments
                 </h1>
               </div>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors">
+              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-colors">
                 <Plus className="w-5 h-5" />
                 Create Assignment
               </button>
             </div>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-white/70">
               Manage assignments for your classes
             </p>
           </motion.div>

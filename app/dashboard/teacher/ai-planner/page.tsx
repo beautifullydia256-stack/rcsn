@@ -3,6 +3,9 @@
 import { useState, Suspense, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
+import Sidebar from '../components/Sidebar';
+import Navbar from '../components/Navbar';
+import GlassBackground from '../components/GlassBackground';
 import { Sparkles, BookOpen, FileText, Loader2, Download, Copy, Check, X, Printer, Clock, Target, Users, Lightbulb, CheckCircle2, AlertCircle } from 'lucide-react';
 
 type ActionType = 'lesson-plan' | 'exam' | null;
@@ -546,16 +549,22 @@ function AIPlannerContent() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto">
-      {/* Header */}
+    <div className="flex min-h-screen relative">
+      <GlassBackground />
+      <Sidebar />
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
+        <Navbar onSearch={() => {}} />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="max-w-5xl mx-auto">
+            {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
-                <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <Sparkles className="w-8 h-8 text-purple-400" />
+                <h1 className="text-2xl font-bold text-white">
                   AI-Powered Lesson Planner
                 </h1>
               </div>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-white/70">
                 Generate comprehensive lesson plans and exam papers using AI
               </p>
             </div>
@@ -570,8 +579,8 @@ function AIPlannerContent() {
                 }}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
                   action === 'lesson-plan'
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                    ? 'bg-purple-600/80 hover:bg-purple-600 text-white shadow-lg'
+                    : 'border border-white/10 bg-white/10 text-white/80 hover:bg-white/20'
                 }`}
               >
                 <BookOpen className="w-5 h-5" />
@@ -585,8 +594,8 @@ function AIPlannerContent() {
                 }}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all ${
                   action === 'exam'
-                    ? 'bg-purple-600 text-white shadow-lg'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                    ? 'bg-purple-600/80 hover:bg-purple-600 text-white shadow-lg'
+                    : 'border border-white/10 bg-white/10 text-white/80 hover:bg-white/20'
                 }`}
               >
                 <FileText className="w-5 h-5" />
@@ -599,15 +608,15 @@ function AIPlannerContent() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6"
+                className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-6 text-white"
               >
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h2 className="text-lg font-semibold text-white mb-4">
                   Generate Lesson Plan
                 </h2>
                 <form onSubmit={handleLessonPlanSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Subject *
                       </label>
                       <input
@@ -617,12 +626,12 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setLessonForm({ ...lessonForm, subject: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., Mathematics"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Class *
                       </label>
                       <input
@@ -632,13 +641,13 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setLessonForm({ ...lessonForm, class_name: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., S.1 West"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-white/90 mb-1">
                       Topic *
                     </label>
                     <input
@@ -648,13 +657,13 @@ function AIPlannerContent() {
                       onChange={(e) =>
                         setLessonForm({ ...lessonForm, topic: e.target.value })
                       }
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="e.g., Introduction to Algebra"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Duration (minutes)
                       </label>
                       <input
@@ -663,12 +672,12 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setLessonForm({ ...lessonForm, duration: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., 40"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Learning Objectives
                       </label>
                       <input
@@ -677,13 +686,13 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setLessonForm({ ...lessonForm, objectives: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., Understand basic algebra concepts"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-white/90 mb-1">
                       Previous Knowledge
                     </label>
                     <textarea
@@ -692,14 +701,14 @@ function AIPlannerContent() {
                         setLessonForm({ ...lessonForm, previous_knowledge: e.target.value })
                       }
                       rows={3}
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="What students should already know..."
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-purple-600/80 hover:bg-purple-600 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -721,15 +730,15 @@ function AIPlannerContent() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 mb-6"
+                className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-6 text-white"
               >
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+                <h2 className="text-lg font-semibold text-white mb-4">
                   Generate Exam Paper
                 </h2>
                 <form onSubmit={handleExamSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Subject *
                       </label>
                       <input
@@ -739,12 +748,12 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setExamForm({ ...examForm, subject: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., Mathematics"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Class *
                       </label>
                       <input
@@ -754,13 +763,13 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setExamForm({ ...examForm, class_name: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         placeholder="e.g., S.1 West"
                       />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-white/90 mb-1">
                       Topic *
                     </label>
                     <input
@@ -770,13 +779,13 @@ function AIPlannerContent() {
                       onChange={(e) =>
                         setExamForm({ ...examForm, topic: e.target.value })
                       }
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="e.g., Algebra and Equations"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Exam Type
                       </label>
                       <select
@@ -784,16 +793,16 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setExamForm({ ...examForm, exam_type: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
-                        <option value="mixed">Mixed</option>
-                        <option value="multiple_choice">Multiple Choice</option>
-                        <option value="short_answer">Short Answer</option>
-                        <option value="essay">Essay</option>
+                        <option value="mixed" className="bg-slate-800">Mixed</option>
+                        <option value="multiple_choice" className="bg-slate-800">Multiple Choice</option>
+                        <option value="short_answer" className="bg-slate-800">Short Answer</option>
+                        <option value="essay" className="bg-slate-800">Essay</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Number of Questions
                       </label>
                       <input
@@ -804,11 +813,11 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setExamForm({ ...examForm, number_of_questions: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label className="block text-sm font-medium text-white/90 mb-1">
                         Difficulty
                       </label>
                       <select
@@ -816,16 +825,16 @@ function AIPlannerContent() {
                         onChange={(e) =>
                           setExamForm({ ...examForm, difficulty: e.target.value })
                         }
-                        className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                        className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       >
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
+                        <option value="easy" className="bg-slate-800">Easy</option>
+                        <option value="medium" className="bg-slate-800">Medium</option>
+                        <option value="hard" className="bg-slate-800">Hard</option>
                       </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <label className="block text-sm font-medium text-white/90 mb-1">
                       Time Limit (minutes)
                     </label>
                     <input
@@ -834,14 +843,14 @@ function AIPlannerContent() {
                       onChange={(e) =>
                         setExamForm({ ...examForm, time_limit: e.target.value })
                       }
-                      className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       placeholder="e.g., 60"
                     />
                   </div>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-purple-600/80 hover:bg-purple-600 text-white font-medium py-3 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {loading ? (
                       <>
@@ -864,9 +873,9 @@ function AIPlannerContent() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6"
+                className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 mb-6 text-white"
               >
-                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <div className="flex items-center gap-2 text-red-300">
                   <X className="w-5 h-5" />
                   <span className="font-medium">Error: {error}</span>
                 </div>
@@ -877,22 +886,22 @@ function AIPlannerContent() {
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden"
+                className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 overflow-hidden"
               >
                 {/* Header with Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex flex-wrap items-center justify-between gap-4 p-4 sm:p-6 border-b border-white/10">
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <h3 className="text-lg font-semibold text-white">
                       Generated {action === 'exam' ? 'Exam Paper' : 'Lesson Plan'}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    <p className="text-sm text-white/70 mt-1">
                       Professional document ready for printing or download
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={handleCopy}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 border border-white/10 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
                     >
                       {copied ? (
                         <>
@@ -908,7 +917,7 @@ function AIPlannerContent() {
                     </button>
                     <button
                       onClick={handlePrint}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 border border-white/10 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors"
                     >
                       <Printer className="w-4 h-4" />
                       Print
@@ -916,7 +925,7 @@ function AIPlannerContent() {
                     <button
                       onClick={handleDownload}
                       disabled={downloading}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {downloading ? (
                         <>
@@ -943,6 +952,9 @@ function AIPlannerContent() {
                 </div>
               </motion.div>
             )}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
@@ -950,8 +962,11 @@ function AIPlannerContent() {
 export default function AIPlannerPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <div className="flex min-h-screen relative">
+        <GlassBackground />
+        <div className="flex-1 flex items-center justify-center relative z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 border-t-white"></div>
+        </div>
       </div>
     }>
       <AIPlannerContent />

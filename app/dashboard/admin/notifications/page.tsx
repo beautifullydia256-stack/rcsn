@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import DashboardBackground from '@/src/components/ui/DashboardBackground';
 
 interface NotificationStats {
   total: number;
@@ -209,18 +210,23 @@ export default function NotificationsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
+        <DashboardBackground />
+        <div className="relative z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 border-t-white"></div>
+          <p className="text-white/80 mt-4">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <DashboardBackground />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Notifications Management</h1>
-          <p className="text-gray-600 mt-2">Send announcements and manage automated notifications</p>
+          <h1 className="text-3xl font-bold text-white">Notifications Management</h1>
+          <p className="text-white/70 mt-2">Send announcements and manage automated notifications</p>
         </div>
 
         {/* Stats Cards */}
@@ -230,21 +236,21 @@ export default function NotificationsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
           >
-            <div className="bg-white p-6 rounded-lg shadow">
-              <p className="text-sm font-medium text-gray-600">Total Notifications</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
+            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <p className="text-sm font-medium text-white/70">Total Notifications</p>
+              <p className="text-3xl font-bold text-white mt-2">{stats.total}</p>
             </div>
-            <div className="bg-yellow-50 p-6 rounded-lg shadow border border-yellow-200">
-              <p className="text-sm font-medium text-yellow-800">Pending</p>
-              <p className="text-3xl font-bold text-yellow-900 mt-2">{stats.pending}</p>
+            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <p className="text-sm font-medium text-yellow-300">Pending</p>
+              <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.pending}</p>
             </div>
-            <div className="bg-green-50 p-6 rounded-lg shadow border border-green-200">
-              <p className="text-sm font-medium text-green-800">Sent</p>
-              <p className="text-3xl font-bold text-green-900 mt-2">{stats.sent}</p>
+            <div className="rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <p className="text-sm font-medium text-green-300">Sent</p>
+              <p className="text-3xl font-bold text-green-400 mt-2">{stats.sent}</p>
             </div>
-            <div className="bg-red-50 p-6 rounded-lg shadow border border-red-200">
-              <p className="text-sm font-medium text-red-800">Failed</p>
-              <p className="text-3xl font-bold text-red-900 mt-2">{stats.failed}</p>
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <p className="text-sm font-medium text-red-300">Failed</p>
+              <p className="text-3xl font-bold text-red-400 mt-2">{stats.failed}</p>
             </div>
           </motion.div>
         )}
@@ -252,50 +258,50 @@ export default function NotificationsPage() {
         {/* Stats by Type and Category */}
         {stats && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">By Type</h3>
+            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <h3 className="text-lg font-semibold text-white mb-4">By Type</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">📧 Email</span>
-                  <span className="font-semibold text-gray-900">{stats.byType.email}</span>
+                  <span className="text-white/80">📧 Email</span>
+                  <span className="font-semibold text-white">{stats.byType.email}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">📱 SMS</span>
-                  <span className="font-semibold text-gray-900">{stats.byType.sms}</span>
+                  <span className="text-white/80">📱 SMS</span>
+                  <span className="font-semibold text-white">{stats.byType.sms}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">💬 WhatsApp</span>
-                  <span className="font-semibold text-gray-900">{stats.byType.whatsapp}</span>
+                  <span className="text-white/80">💬 WhatsApp</span>
+                  <span className="font-semibold text-white">{stats.byType.whatsapp}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">By Category</h3>
+            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+              <h3 className="text-lg font-semibold text-white mb-4">By Category</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">📚 Academic</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.academic}</span>
+                  <span className="text-white/80">📚 Academic</span>
+                  <span className="font-semibold text-white">{stats.byCategory.academic}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">✓ Attendance</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.attendance}</span>
+                  <span className="text-white/80">✓ Attendance</span>
+                  <span className="font-semibold text-white">{stats.byCategory.attendance}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">💰 Financial</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.financial}</span>
+                  <span className="text-white/80">💰 Financial</span>
+                  <span className="font-semibold text-white">{stats.byCategory.financial}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">⭐ Behavior</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.behavior}</span>
+                  <span className="text-white/80">⭐ Behavior</span>
+                  <span className="font-semibold text-white">{stats.byCategory.behavior}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">📢 Announcements</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.announcement}</span>
+                  <span className="text-white/80">📢 Announcements</span>
+                  <span className="font-semibold text-white">{stats.byCategory.announcement}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">📅 Events</span>
-                  <span className="font-semibold text-gray-900">{stats.byCategory.event}</span>
+                  <span className="text-white/80">📅 Events</span>
+                  <span className="font-semibold text-white">{stats.byCategory.event}</span>
                 </div>
               </div>
             </div>
@@ -303,8 +309,8 @@ export default function NotificationsPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white p-6 rounded-lg shadow mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-8 text-white">
+          <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
           <div className="flex flex-wrap gap-4">
             <button
               onClick={processPendingNotifications}
@@ -344,82 +350,82 @@ export default function NotificationsPage() {
         </div>
 
         {/* Send Announcement Form */}
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Send School Announcement</h3>
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+          <h3 className="text-lg font-semibold text-white mb-4">Send School Announcement</h3>
           
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <label className="block text-sm font-medium text-white/90 mb-2">Category</label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="announcement">📢 Announcement</option>
-                  <option value="academic">📚 Academic</option>
-                  <option value="event">📅 Event</option>
-                  <option value="attendance">✓ Attendance</option>
-                  <option value="financial">💰 Financial</option>
-                  <option value="behavior">⭐ Behavior</option>
+                  <option value="announcement" className="bg-slate-900">📢 Announcement</option>
+                  <option value="academic" className="bg-slate-900">📚 Academic</option>
+                  <option value="event" className="bg-slate-900">📅 Event</option>
+                  <option value="attendance" className="bg-slate-900">✓ Attendance</option>
+                  <option value="financial" className="bg-slate-900">💰 Financial</option>
+                  <option value="behavior" className="bg-slate-900">⭐ Behavior</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+                <label className="block text-sm font-medium text-white/90 mb-2">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="low" className="bg-slate-900">Low</option>
+                  <option value="medium" className="bg-slate-900">Medium</option>
+                  <option value="high" className="bg-slate-900">High</option>
+                  <option value="urgent" className="bg-slate-900">Urgent</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Target Class</label>
+              <label className="block text-sm font-medium text-white/90 mb-2">Target Class</label>
               <select
                 value={targetClass}
                 onChange={(e) => setTargetClass(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="all">All Classes</option>
+                <option value="all" className="bg-slate-900">All Classes</option>
                 {classes.map((cls) => (
-                  <option key={cls} value={cls}>{cls}</option>
+                  <option key={cls} value={cls} className="bg-slate-900">{cls}</option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+              <label className="block text-sm font-medium text-white/90 mb-2">Title *</label>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="e.g., School Closing Date"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Message *</label>
+              <label className="block text-sm font-medium text-white/90 mb-2">Message *</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Enter your announcement message..."
                 rows={6}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <button
               onClick={sendAnnouncement}
               disabled={sending || !title || !message}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors font-semibold"
+              className="w-full px-6 py-3 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg disabled:bg-gray-600/50 disabled:opacity-50 transition-colors font-semibold"
             >
               {sending ? 'Sending...' : 'Send Announcement'}
             </button>
@@ -427,9 +433,9 @@ export default function NotificationsPage() {
         </div>
 
         {/* Info Box */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h4 className="font-semibold text-blue-900 mb-2">ℹ️ How Notifications Work</h4>
-          <ul className="text-sm text-blue-800 space-y-2">
+        <div className="mt-8 rounded-xl border border-blue-500/30 bg-blue-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
+          <h4 className="font-semibold text-blue-300 mb-2">ℹ️ How Notifications Work</h4>
+          <ul className="text-sm text-white/80 space-y-2">
             <li>• Notifications are automatically triggered when events occur (new reports, absences, payments, etc.)</li>
             <li>• All notifications are queued and sent based on parent preferences</li>
             <li>• Click "Process Pending Notifications" to send queued messages via Email/SMS/WhatsApp</li>

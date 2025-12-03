@@ -7,6 +7,7 @@ import { PrimaryExamResults } from "./components/PrimaryExamResults";
 import { SecondaryExamResults } from "./components/SecondaryExamResults";
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
+import GlassBackground from "../components/GlassBackground";
 
 export default function TeacherExamResultsPage() {
   const router = useRouter();
@@ -53,12 +54,13 @@ export default function TeacherExamResultsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="flex min-h-screen relative">
+        <GlassBackground />
         <Sidebar />
-        <div className="flex-1 flex flex-col lg:ml-72">
+        <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
           <Navbar onSearch={() => {}} />
           <main className="flex-1 flex items-center justify-center">
-            <div className="text-gray-600 dark:text-gray-400">Loading...</div>
+            <div className="text-white/70">Loading...</div>
           </main>
         </div>
       </div>
@@ -67,12 +69,13 @@ export default function TeacherExamResultsPage() {
 
   if (!schoolType) {
     return (
-      <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+      <div className="flex min-h-screen relative">
+        <GlassBackground />
         <Sidebar />
-        <div className="flex-1 flex flex-col lg:ml-72">
+        <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
           <Navbar onSearch={() => {}} />
           <main className="flex-1 flex items-center justify-center">
-            <div className="text-gray-600 dark:text-gray-400">Unable to determine school type</div>
+            <div className="text-white/70">Unable to determine school type</div>
           </main>
         </div>
       </div>
@@ -81,9 +84,10 @@ export default function TeacherExamResultsPage() {
 
   // Route to appropriate component based on school type
   return (
-    <div className="flex min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex min-h-screen relative">
+      <GlassBackground />
       <Sidebar />
-      <div className="flex-1 flex flex-col lg:ml-72">
+      <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={() => {}} />
         <main className="flex-1">
           {schoolType === 'Nursery/Primary' ? <PrimaryExamResults /> : <SecondaryExamResults />}
