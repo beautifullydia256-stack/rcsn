@@ -37,7 +37,7 @@ CREATE POLICY "timetables_select" ON public.timetables
 
 -- Separate policy for INSERT/UPDATE/DELETE (admins only)
 CREATE POLICY "timetables_manage" ON public.timetables
-  FOR INSERT, UPDATE, DELETE TO authenticated
+  FOR ALL TO authenticated
   USING (
     school_id IN (SELECT school_id FROM public.schools WHERE admin_id = (select auth.uid()))
     OR school_id IN (SELECT school_id FROM public.users WHERE user_id = (select auth.uid()) AND role = 'admin')
@@ -86,7 +86,7 @@ CREATE POLICY "assignments_select" ON public.assignments
 
 -- Separate policy for INSERT/UPDATE/DELETE (teachers and admins only)
 CREATE POLICY "assignments_manage" ON public.assignments
-  FOR INSERT, UPDATE, DELETE TO authenticated
+  FOR ALL TO authenticated
   USING (
     teacher_id IN (
       SELECT teacher_id FROM public.teachers 
@@ -133,7 +133,7 @@ CREATE POLICY "assignment_submissions_insert" ON public.assignment_submissions
 
 -- Separate policy for SELECT/UPDATE/DELETE (teachers only)
 CREATE POLICY "assignment_submissions_teacher_manage" ON public.assignment_submissions
-  FOR SELECT, UPDATE, DELETE TO authenticated
+  FOR ALL TO authenticated
   USING (
     assignment_id IN (
       SELECT id FROM public.assignments 
@@ -213,7 +213,7 @@ CREATE POLICY "rollover_status_select" ON public.rollover_status
 
 -- Separate policy for INSERT/UPDATE/DELETE (system only)
 CREATE POLICY "rollover_status_manage" ON public.rollover_status
-  FOR INSERT, UPDATE, DELETE TO authenticated
+  FOR ALL TO authenticated
   USING (true)
   WITH CHECK (true);
 
