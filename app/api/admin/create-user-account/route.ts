@@ -211,6 +211,24 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Verify school_id exists in schools table before inserting
+    // This helps catch the issue early with a better error message
+    const { data: schoolCheck, error: schoolCheckError } = await supabaseAdmin
+      .from('schools')
+      .select('school_id')
+      .eq('school_id', adminData.school_id)
+      .single();
+    
+    if (schoolCheckError || !schoolCheck) {
+      if (authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
+      return NextResponse.json({ 
+        error: `The school_id (${adminData.school_id}) does not exist in the schools table. Please verify your school setup.`,
+        details: schoolCheckError?.message
+      }, { status: 400 });
+    }
+
     // Create user profile in users table using service role
     // Note: phone, department, and position are also stored in user_metadata for auth purposes
     const { error: profileError } = await supabaseAdmin.from('users').insert({
