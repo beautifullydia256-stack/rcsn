@@ -247,8 +247,9 @@ export async function POST(request: NextRequest) {
       });
       
       if (rpcError) {
-        // If function doesn't exist, fall back to direct insert
-        if (rpcError.message?.includes('function') && rpcError.message?.includes('does not exist')) {
+        // If function doesn't exist (check for various error formats), fall back to direct insert
+        const errorMsg = rpcError.message?.toLowerCase() || '';
+        if (errorMsg.includes('function') && (errorMsg.includes('does not exist') || errorMsg.includes('schema cache'))) {
           const { error: insertError } = await supabaseAdmin.from('users').insert({
             user_id: authUserId,
             email,
