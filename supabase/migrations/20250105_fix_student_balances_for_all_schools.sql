@@ -134,12 +134,102 @@ $$;
 GRANT EXECUTE ON FUNCTION public.initialize_student_balances_for_term TO authenticated;
 GRANT EXECUTE ON FUNCTION public.initialize_student_balances_for_term TO service_role;
 
+-- 6. AUTOMATIC TRIGGERS - Make balance initialization automatic
+-- ============================================================================
+
+-- Trigger function: Auto-initialize balances when a new term is created
+CREATE OR REPLACE FUNCTION public.auto_initialize_balances_on_new_term()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    -- Automatically initialize balances for all active students when a new term is created
+    PERFORM public.initialize_student_balances_for_term(NEW.school_id, NEW.id);
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger on school_terms INSERT
+DROP TRIGGER IF EXISTS trigger_auto_initialize_balances_on_new_term ON public.school_terms;
+CREATE TRIGGER trigger_auto_initialize_balances_on_new_term
+    AFTER INSERT ON public.school_terms
+    FOR EACH ROW
+    EXECUTE FUNCTION public.auto_initialize_balances_on_new_term();
+
+-- Trigger function: Auto-create balance for new student in current term
+CREATE OR REPLACE FUNCTION public.auto_create_balance_for_new_student()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_current_term_id UUID;
+    v_year INTEGER;
+    v_term INTEGER;
+BEGIN
+    -- Find the current term for this school (most recent term that hasn't ended)
+    SELECT st.id, st.year, st.term INTO v_current_term_id, v_year, v_term
+    FROM public.school_terms st
+    WHERE st.school_id = NEW.school_id
+      AND (st.end_date IS NULL OR st.end_date >= CURRENT_DATE)
+    ORDER BY st.year DESC, st.term DESC
+    LIMIT 1;
+    
+    -- If no current term, try to get the most recent term
+    IF v_current_term_id IS NULL THEN
+        SELECT st.id, st.year, st.term INTO v_current_term_id, v_year, v_term
+        FROM public.school_terms st
+        WHERE st.school_id = NEW.school_id
+        ORDER BY st.year DESC, st.term DESC
+        LIMIT 1;
+    END IF;
+    
+    -- If we found a term, create balance for this student
+    IF v_current_term_id IS NOT NULL AND NEW.status = 'active' THEN
+        INSERT INTO public.student_balances (
+            student_id,
+            school_id,
+            term_id,
+            year,
+            term,
+            total_fees,
+            total_paid
+        )
+        VALUES (
+            NEW.student_id,
+            NEW.school_id,
+            v_current_term_id,
+            v_year,
+            v_term,
+            COALESCE(NEW.expected_fee_amount, 0),
+            0
+        )
+        ON CONFLICT (student_id, term_id) DO NOTHING;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$;
+
+-- Create trigger on students INSERT
+DROP TRIGGER IF EXISTS trigger_auto_create_balance_for_new_student ON public.students;
+CREATE TRIGGER trigger_auto_create_balance_for_new_student
+    AFTER INSERT ON public.students
+    FOR EACH ROW
+    EXECUTE FUNCTION public.auto_create_balance_for_new_student();
+
 -- ============================================================================
 -- COMPLETE
 -- ============================================================================
 -- Now:
 -- 1. Balance will auto-calculate on INSERT/UPDATE
 -- 2. Trigger function works correctly
--- 3. Function available to initialize balances for any school/term
+-- 3. Balances automatically created when:
+--    - A new term is created (for all active students)
+--    - A new student is added (for current term)
+-- 4. Manual function still available if needed
 -- ============================================================================
 
