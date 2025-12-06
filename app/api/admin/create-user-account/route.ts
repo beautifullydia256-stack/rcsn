@@ -44,6 +44,35 @@ export async function POST(request: NextRequest) {
     // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if email already exists in auth.users
+    try {
+      const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === email);
+      
+      if (existingAuthUser) {
+        // Check if there's a corresponding public.users record
+        const { data: existingUserRecord } = await supabaseAdmin
+          .from('users')
+          .select('user_id')
+          .eq('user_id', existingAuthUser.id)
+          .single();
+        
+        if (existingUserRecord) {
+          // Both auth user and public.users record exist - email is truly in use
+          return NextResponse.json({ 
+            error: 'A user with this email address has already been registered' 
+          }, { status: 400 });
+        } else {
+          // Orphaned auth user exists (no public.users record) - delete it first
+          console.log(`Cleaning up orphaned auth user for email: ${email}`);
+          await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
+        }
+      }
+    } catch (checkError) {
+      console.warn('Error checking for existing auth user:', checkError);
+      // Continue with creation attempt - if email exists, Supabase will error
+    }
+
     let authUserId = null;
 
     if (sendEmailInvite) {
@@ -59,8 +88,52 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      if (inviteError) throw inviteError;
-      authUserId = data.user?.id;
+      if (inviteError) {
+        // Check if error is due to email already existing
+        if (inviteError.message?.toLowerCase().includes('already') || inviteError.message?.toLowerCase().includes('registered')) {
+          // Try to find and clean up orphaned auth user
+          try {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const orphanedUser = authUsers?.users?.find(u => u.email === email);
+            if (orphanedUser) {
+              const { data: userRecord } = await supabaseAdmin
+                .from('users')
+                .select('user_id')
+                .eq('user_id', orphanedUser.id)
+                .single();
+              
+              if (!userRecord) {
+                // Orphaned auth user - delete it and retry
+                console.log(`Cleaning up orphaned auth user and retrying for email: ${email}`);
+                await supabaseAdmin.auth.admin.deleteUser(orphanedUser.id);
+                // Retry the invite
+                const { data: retryData, error: retryError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+                  data: {
+                    name,
+                    role,
+                    school_id: adminData.school_id,
+                    department,
+                    position,
+                    phone
+                  }
+                });
+                if (retryError) throw retryError;
+                authUserId = retryData.user?.id;
+              } else {
+                throw inviteError; // Email is truly in use
+              }
+            } else {
+              throw inviteError; // Email exists but we couldn't find it
+            }
+          } catch (cleanupError) {
+            throw inviteError; // Throw original error if cleanup fails
+          }
+        } else {
+          throw inviteError;
+        }
+      } else {
+        authUserId = data.user?.id;
+      }
     } else {
       // Create user with password
       const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
@@ -77,8 +150,55 @@ export async function POST(request: NextRequest) {
         }
       });
 
-      if (signupError) throw signupError;
-      authUserId = data.user?.id;
+      if (signupError) {
+        // Check if error is due to email already existing
+        if (signupError.message?.toLowerCase().includes('already') || signupError.message?.toLowerCase().includes('registered')) {
+          // Try to find and clean up orphaned auth user
+          try {
+            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
+            const orphanedUser = authUsers?.users?.find(u => u.email === email);
+            if (orphanedUser) {
+              const { data: userRecord } = await supabaseAdmin
+                .from('users')
+                .select('user_id')
+                .eq('user_id', orphanedUser.id)
+                .single();
+              
+              if (!userRecord) {
+                // Orphaned auth user - delete it and retry
+                console.log(`Cleaning up orphaned auth user and retrying for email: ${email}`);
+                await supabaseAdmin.auth.admin.deleteUser(orphanedUser.id);
+                // Retry the creation
+                const { data: retryData, error: retryError } = await supabaseAdmin.auth.admin.createUser({
+                  email,
+                  password,
+                  email_confirm: true,
+                  user_metadata: {
+                    name,
+                    role,
+                    school_id: adminData.school_id,
+                    department,
+                    position,
+                    phone
+                  }
+                });
+                if (retryError) throw retryError;
+                authUserId = retryData.user?.id;
+              } else {
+                throw signupError; // Email is truly in use
+              }
+            } else {
+              throw signupError; // Email exists but we couldn't find it
+            }
+          } catch (cleanupError) {
+            throw signupError; // Throw original error if cleanup fails
+          }
+        } else {
+          throw signupError;
+        }
+      } else {
+        authUserId = data.user?.id;
+      }
     }
 
     // Create user profile in users table using service role
@@ -94,7 +214,18 @@ export async function POST(request: NextRequest) {
       position: position || null
     });
 
-    if (profileError) throw profileError;
+    if (profileError) {
+      // If public.users insert fails, clean up the auth user we just created
+      if (authUserId) {
+        console.error('Failed to create user profile, cleaning up auth user:', profileError);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup auth user after profile creation failure:', cleanupError);
+        }
+      }
+      throw profileError;
+    }
 
     return NextResponse.json({ 
       success: true,
