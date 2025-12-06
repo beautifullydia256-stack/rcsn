@@ -231,16 +231,53 @@ export async function POST(request: NextRequest) {
 
     // Create user profile in users table using service role
     // Note: phone, department, and position are also stored in user_metadata for auth purposes
-    const { error: profileError } = await supabaseAdmin.from('users').insert({
-      user_id: authUserId,
-      email,
-      name,
-      role,
-      school_id: adminData.school_id,
-      phone: phone || null,
-      department: department || null,
-      position: position || null
-    });
+    // Try using RPC function first (if it exists), otherwise fall back to direct insert
+    let profileError = null;
+    
+    try {
+      const { error: rpcError } = await supabaseAdmin.rpc('insert_user_with_school', {
+        p_user_id: authUserId,
+        p_email: email,
+        p_name: name,
+        p_role: role,
+        p_school_id: adminData.school_id,
+        p_phone: phone || null,
+        p_department: department || null,
+        p_position: position || null
+      });
+      
+      if (rpcError) {
+        // If function doesn't exist, fall back to direct insert
+        if (rpcError.message?.includes('function') && rpcError.message?.includes('does not exist')) {
+          const { error: insertError } = await supabaseAdmin.from('users').insert({
+            user_id: authUserId,
+            email,
+            name,
+            role,
+            school_id: adminData.school_id,
+            phone: phone || null,
+            department: department || null,
+            position: position || null
+          });
+          profileError = insertError;
+        } else {
+          profileError = rpcError;
+        }
+      }
+    } catch (e: any) {
+      // Fall back to direct insert if RPC fails
+      const { error: insertError } = await supabaseAdmin.from('users').insert({
+        user_id: authUserId,
+        email,
+        name,
+        role,
+        school_id: adminData.school_id,
+        phone: phone || null,
+        department: department || null,
+        position: position || null
+      });
+      profileError = insertError;
+    }
 
     if (profileError) {
       // If public.users insert fails, clean up the auth user we just created
