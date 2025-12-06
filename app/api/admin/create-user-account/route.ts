@@ -201,6 +201,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate school_id exists before inserting
+    if (!adminData.school_id) {
+      if (authUserId) {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      }
+      return NextResponse.json({ 
+        error: 'Admin user does not have a school_id. Please contact support.' 
+      }, { status: 400 });
+    }
+
     // Create user profile in users table using service role
     // Note: phone, department, and position are also stored in user_metadata for auth purposes
     const { error: profileError } = await supabaseAdmin.from('users').insert({
@@ -224,7 +234,20 @@ export async function POST(request: NextRequest) {
           console.error('Failed to cleanup auth user after profile creation failure:', cleanupError);
         }
       }
-      throw profileError;
+      
+      // Provide more helpful error messages
+      let errorMessage = profileError.message || 'Failed to create user profile';
+      if (profileError.message?.includes('relation') && profileError.message?.includes('does not exist')) {
+        errorMessage = `Database schema error: ${profileError.message}. Please ensure all required tables exist in the database.`;
+      } else if (profileError.message?.includes('foreign key') || profileError.message?.includes('schools')) {
+        errorMessage = `Database integrity error: The school_id (${adminData.school_id}) does not exist in the schools table. Please contact support.`;
+      }
+      
+      return NextResponse.json({ 
+        error: errorMessage,
+        details: profileError.message,
+        code: profileError.code
+      }, { status: 500 });
     }
 
     return NextResponse.json({ 
