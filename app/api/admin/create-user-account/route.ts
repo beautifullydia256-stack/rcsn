@@ -36,7 +36,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, name, role, phone, password, sendEmailInvite, department, position } = body;
+    const { email, firstName, lastName, role, phone, password, sendEmailInvite, department, position } = body;
+    
+    // Combine firstName and lastName into name
+    const name = `${firstName || ''} ${lastName || ''}`.trim();
 
     // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -79,16 +82,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile in users table using service role
+    // Note: phone, department, and position are also stored in user_metadata for auth purposes
     const { error: profileError } = await supabaseAdmin.from('users').insert({
       user_id: authUserId,
       email,
       name,
       role,
       school_id: adminData.school_id,
-      phone,
-      department,
-      position,
-      created_by: adminUser.id
+      phone: phone || null,
+      department: department || null,
+      position: position || null
     });
 
     if (profileError) throw profileError;

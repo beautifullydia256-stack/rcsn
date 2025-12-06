@@ -98,10 +98,13 @@ export interface School {
 
 export interface User {
   user_id: string;
-  role: 'owner' | 'admin' | 'teacher' | 'parent' | 'student';
+  role: 'owner' | 'admin' | 'teacher' | 'parent' | 'student' | 'accountant' | 'librarian' | 'head_teacher';
   email: string;
   school_id?: string;
   name: string;
+  phone?: string;
+  department?: string;
+  position?: string;
   created_at: string;
 }
 

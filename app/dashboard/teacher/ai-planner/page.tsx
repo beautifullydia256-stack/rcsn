@@ -555,8 +555,8 @@ function AIPlannerContent() {
       <div className="flex-1 flex flex-col lg:ml-72 relative z-10">
         <Navbar onSearch={() => {}} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Header */}
+    <div className="max-w-5xl mx-auto">
+      {/* Header */}
             <div className="mb-8">
               <div className="flex items-center gap-3 mb-2">
                 <Sparkles className="w-8 h-8 text-purple-400" />
