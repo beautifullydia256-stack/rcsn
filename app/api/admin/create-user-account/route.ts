@@ -259,8 +259,28 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error creating user:', error);
+    console.error('Error details:', {
+      message: error?.message,
+      code: error?.code,
+      details: error?.details,
+      hint: error?.hint,
+      stack: error?.stack
+    });
+    
+    // Provide more specific error messages
+    let errorMessage = error?.message || 'Failed to create user';
+    
+    if (error?.message?.includes('relation') && error?.message?.includes('does not exist')) {
+      errorMessage = `Database schema error: ${error.message}. Please ensure all required tables exist. If the error mentions 'schools', run the migration to fix the foreign key constraint.`;
+    } else if (error?.code === '23503') {
+      errorMessage = `Foreign key constraint violation: The school_id (${adminData?.school_id}) does not exist in the schools table.`;
+    } else if (error?.code === '23505') {
+      errorMessage = 'A user with this email address already exists.';
+    }
+    
     return NextResponse.json({ 
-      error: error?.message || 'Failed to create user' 
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error?.message : undefined
     }, { status: 500 });
   }
 }
