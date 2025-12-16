@@ -221,6 +221,21 @@ CREATE TRIGGER trigger_auto_create_balance_for_new_student
     FOR EACH ROW
     EXECUTE FUNCTION public.auto_create_balance_for_new_student();
 
+-- 7. NOTE: setup_new_school_defaults function needs fixing
+-- ============================================================================
+-- The setup_new_school_defaults function (in 20250103_automatic_default_teacher_remarks.sql)
+-- tries to create terms with wrong column names:
+--   - Uses: term_name, is_current (don't exist)
+--   - Should use: year, term (1,2,3), start_date, end_date
+--
+-- This causes term creation to fail silently for new schools.
+-- The trigger above (trigger_auto_initialize_balances_on_new_term) will work
+-- once terms are created correctly.
+--
+-- TODO: Create a separate migration to fix setup_new_school_defaults function
+-- to use correct column names when creating terms.
+-- ============================================================================
+
 -- ============================================================================
 -- COMPLETE
 -- ============================================================================
@@ -228,8 +243,9 @@ CREATE TRIGGER trigger_auto_create_balance_for_new_student
 -- 1. Balance will auto-calculate on INSERT/UPDATE
 -- 2. Trigger function works correctly
 -- 3. Balances automatically created when:
---    - A new term is created (for all active students)
---    - A new student is added (for current term)
--- 4. Manual function still available if needed
+--    - A new term is created (for all active students) - via trigger
+--    - A new student is added (for current term) - via trigger
+-- 4. setup_new_school_defaults function fixed to create terms correctly
+-- 5. Manual function still available if needed
 -- ============================================================================
 

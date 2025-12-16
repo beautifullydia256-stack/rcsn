@@ -85,12 +85,6 @@ export default function AccountantDashboardPage() {
   const [userName, setUserName] = useState<string>("");
   const [schoolName, setSchoolName] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"balances" | "payments" | "expenses">("balances");
-
-  // Modals
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [showExpenseModal, setShowExpenseModal] = useState(false);
 
   // KPIs
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
@@ -415,10 +409,6 @@ export default function AccountantDashboardPage() {
     });
   }, [expenses, search, expenseStatusFilter, expenseCategoryFilter]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/login');
-  };
 
   if (loading) {
     return (
@@ -439,33 +429,14 @@ export default function AccountantDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-      
-      {/* Header */}
-      <div className="relative border-b border-white/10 bg-white/5 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
-                <span className="text-emerald-300 text-lg">💰</span>
-              </div>
-              <div>
-                <h1 className="text-white text-xl font-semibold">{schoolName}</h1>
-                <p className="text-white/60 text-sm">Accountant Dashboard • {userName}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
+    <div className="relative">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Accountant Dashboard</h1>
+        <p className="text-white/85">Manage payments, expenses, and financial records</p>
       </div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -500,241 +471,119 @@ export default function AccountantDashboardPage() {
           <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
         </motion.div>
 
-        {/* Action Buttons */}
+        {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-wrap items-center gap-3 mb-6"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
         >
-          <button 
-            onClick={() => setShowPaymentModal(true)}
-            className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white shadow-lg font-medium transition-colors"
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/accountant/payments')}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
           >
-            📝 Record Payment
-          </button>
-          <button 
-            onClick={() => setShowReceiptModal(true)}
-            className="px-6 py-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg font-medium transition-colors"
+            <div className="text-2xl mb-2">💳</div>
+            <div className="text-white font-semibold mb-1">Payments</div>
+            <div className="text-white/60 text-sm">View and record payments</div>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/accountant/expenses')}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
           >
-            🧾 Generate Receipt
-          </button>
-          <button 
-            onClick={() => setShowExpenseModal(true)}
-            className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-lg font-medium transition-colors"
+            <div className="text-2xl mb-2">💸</div>
+            <div className="text-white font-semibold mb-1">Expenses</div>
+            <div className="text-white/60 text-sm">Track school expenses</div>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/accountant/balances')}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
           >
-            💸 Record Expense
-          </button>
-          <button 
-            onClick={() => router.push('/dashboard/admin/students/add')}
-            className="px-6 py-3 rounded-lg bg-purple-600 hover:bg-purple-500 text-white shadow-lg font-medium transition-colors"
+            <div className="text-2xl mb-2">📊</div>
+            <div className="text-white font-semibold mb-1">Balances</div>
+            <div className="text-white/60 text-sm">View student balances</div>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push('/dashboard/accountant/reports')}
+            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
           >
-            ➕ Add Student
-          </button>
+            <div className="text-2xl mb-2">📄</div>
+            <div className="text-white font-semibold mb-1">Reports</div>
+            <div className="text-white/60 text-sm">Generate reports</div>
+          </motion.button>
         </motion.div>
 
-        {/* Export PDF Buttons */}
+        {/* Recent Activity Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.25 }}
-          className="flex flex-wrap items-center gap-3 mb-6"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
         >
-          <button
-            onClick={() => {
-              const q = new URLSearchParams();
-              if (selectedClass) q.set('class', selectedClass);
-              window.open(`/api/accountant/collections.pdf?${q.toString()}`, '_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-          >
-            📥 Collections (PDF)
-          </button>
-
-          <button
-            onClick={() => {
-              const q = new URLSearchParams();
-              if (selectedClass) q.set('class', selectedClass);
-              window.open(`/api/accountant/balances.pdf?${q.toString()}`, '_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-          >
-            📥 Balances (PDF)
-          </button>
-
-          <button
-            onClick={() => {
-              const q = new URLSearchParams();
-              if (selectedClass) q.set('class', selectedClass);
-              window.open(`/api/accountant/term-summary.pdf?${q.toString()}`, '_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-          >
-            📥 Term Summary (PDF)
-          </button>
-
-          <button
-            onClick={() => {
-              const q = new URLSearchParams();
-              if (expenseCategoryFilter) q.set('category', expenseCategoryFilter);
-              if (expenseStatusFilter) q.set('status', expenseStatusFilter);
-              window.open(`/api/accountant/expenses.pdf?${q.toString()}`, '_blank');
-            }}
-            className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-colors"
-          >
-            💸 Expenses (PDF)
-          </button>
-        </motion.div>
-
-        {/* Tabs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="flex gap-2 mb-6"
-        >
-          <button
-            onClick={() => setActiveTab("balances")}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === "balances"
-                ? "bg-white text-indigo-900 shadow-lg"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Student Balances
-          </button>
-          <button
-            onClick={() => setActiveTab("payments")}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === "payments"
-                ? "bg-white text-indigo-900 shadow-lg"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            Payment History
-          </button>
-          <button
-            onClick={() => setActiveTab("expenses")}
-            className={`px-6 py-3 rounded-lg font-medium transition-all ${
-              activeTab === "expenses"
-                ? "bg-white text-indigo-900 shadow-lg"
-                : "bg-white/10 text-white hover:bg-white/20"
-            }`}
-          >
-            School Expenses
-          </button>
-        </motion.div>
-
-        {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md p-4 mb-6"
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              type="text"
-              placeholder={activeTab === "expenses" ? "Search by description or reference" : "Search by name or admission number"}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full md:w-80 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
-            />
-            {activeTab !== "expenses" && (
-              <select
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-              >
-                <option value="" className="bg-slate-800">All Classes</option>
-                {classes.map(c => (
-                  <option key={c} value={c} className="bg-slate-800">{c}</option>
+          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6">
+            <h3 className="text-white font-semibold mb-4">Recent Payments</h3>
+            {payments.slice(0, 5).length === 0 ? (
+              <p className="text-white/60 text-sm">No recent payments</p>
+            ) : (
+              <div className="space-y-3">
+                {payments.slice(0, 5).map((payment) => (
+                  <div key={payment.payment_id} className="flex items-center justify-between pb-3 border-b border-white/5">
+                    <div>
+                      <div className="text-white text-sm font-medium">{payment.students.name}</div>
+                      <div className="text-white/60 text-xs">{new Date(payment.payment_date).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-white font-medium">
+                      {formatCurrency(payment.amount_paid)}
+                    </div>
+                  </div>
                 ))}
-              </select>
+              </div>
             )}
-            {activeTab === "balances" && (
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-              >
-                <option value="" className="bg-slate-800">All Status</option>
-                <option value="fully_paid" className="bg-slate-800">Fully Paid</option>
-                <option value="partial" className="bg-slate-800">Partial Payment</option>
-                <option value="not_paid" className="bg-slate-800">Not Paid</option>
-              </select>
+            <button
+              onClick={() => router.push('/dashboard/accountant/payments')}
+              className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
+            >
+              View All Payments →
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6">
+            <h3 className="text-white font-semibold mb-4">Recent Expenses</h3>
+            {expenses.slice(0, 5).length === 0 ? (
+              <p className="text-white/60 text-sm">No recent expenses</p>
+            ) : (
+              <div className="space-y-3">
+                {expenses.slice(0, 5).map((expense) => (
+                  <div key={expense.expense_id} className="flex items-center justify-between pb-3 border-b border-white/5">
+                    <div>
+                      <div className="text-white text-sm font-medium">{expense.description}</div>
+                      <div className="text-white/60 text-xs">{expense.category_name} • {new Date(expense.expense_date).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-white font-medium">
+                      {formatCurrency(expense.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-            {activeTab === "expenses" && (
-              <>
-                <select
-                  value={expenseCategoryFilter}
-                  onChange={(e) => setExpenseCategoryFilter(e.target.value)}
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-                >
-                  <option value="" className="bg-slate-800">All Categories</option>
-                  {expenseCategories.map(cat => (
-                    <option key={cat.category_id} value={cat.category_name} className="bg-slate-800">{cat.category_name}</option>
-                  ))}
-                </select>
-                <select
-                  value={expenseStatusFilter}
-                  onChange={(e) => setExpenseStatusFilter(e.target.value)}
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-                >
-                  <option value="" className="bg-slate-800">All Status</option>
-                  <option value="pending" className="bg-slate-800">Pending Approval</option>
-                  <option value="approved" className="bg-slate-800">Approved</option>
-                  <option value="rejected" className="bg-slate-800">Rejected</option>
-                  <option value="paid" className="bg-slate-800">Paid</option>
-                </select>
-              </>
-            )}
+            <button
+              onClick={() => router.push('/dashboard/accountant/expenses')}
+              className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
+            >
+              View All Expenses →
+            </button>
           </div>
         </motion.div>
-
-        {/* Content */}
-        {activeTab === "balances" ? (
-          <BalancesTable balances={filteredBalances} />
-        ) : activeTab === "payments" ? (
-          <PaymentsTable payments={filteredPayments} />
-        ) : (
-          <ExpensesTable expenses={filteredExpenses} />
-        )}
       </div>
 
-      {/* Modals */}
-      <RecordPaymentModal 
-        isOpen={showPaymentModal}
-        onClose={() => setShowPaymentModal(false)}
-        students={students}
-        schoolId={schoolId}
-        termId={currentTermId}
-        userId={userId}
-        onSuccess={() => {
-          setShowPaymentModal(false);
-          loadData();
-        }}
-      />
-
-      <GenerateReceiptModal
-        isOpen={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
-        payments={payments}
-        balances={balances}
-      />
-
-      <RecordExpenseModal
-        isOpen={showExpenseModal}
-        onClose={() => setShowExpenseModal(false)}
-        expenseCategories={expenseCategories}
-        schoolId={schoolId}
-        termId={currentTermId}
-        userId={userId}
-        onSuccess={() => {
-          setShowExpenseModal(false);
-          loadData();
-        }}
-      />
+      </div>
     </div>
   );
 }
