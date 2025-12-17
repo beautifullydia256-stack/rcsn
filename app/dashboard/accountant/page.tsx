@@ -180,13 +180,24 @@ export default function AccountantDashboardPage() {
       }
 
       // Load students
-      const { data: studentsData } = await supabase
+      const { data: studentsData, error: studentsError } = await supabase
         .from("students")
-        .select("student_id, name, admission_number, class_id, classes(class_name)")
+        .select("student_id, name, admission_number, current_class")
         .eq("school_id", userRow.school_id)
         .eq("status", "active")
         .order("name");
-      setStudents(studentsData as any || []);
+      
+      if (studentsError) {
+        console.error('Error loading students:', studentsError);
+      }
+      
+      // Map current_class to classes.class_name for compatibility
+      const mappedStudents = (studentsData || []).map(s => ({
+        ...s,
+        class_id: null,
+        classes: s.current_class ? { class_name: s.current_class } : null
+      }));
+      setStudents(mappedStudents as any);
 
       // Load classes
       const { data: classesData } = await supabase
