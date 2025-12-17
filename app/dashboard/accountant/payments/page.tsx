@@ -129,26 +129,34 @@ export default function PaymentsPage() {
       // Fetch payments
       let paymentsQuery = supabase
         .from('student_payments')
-        .select(`
-          payment_id,
-          student_id,
-          amount_paid,
-          payment_method,
-          payment_date,
-          transaction_ref,
-          notes,
-          students!inner(name, admission_number, current_class)
-        `)
+        .select('payment_id, student_id, amount_paid, payment_method, payment_date, transaction_ref, notes')
         .eq('school_id', userRow.school_id);
 
       if (currentTerm?.id) {
         paymentsQuery = paymentsQuery.eq('term_id', currentTerm.id);
       }
 
-      const { data: paymentsData } = await paymentsQuery
+      const { data: paymentsData, error: paymentsError } = await paymentsQuery
         .order('payment_date', { ascending: false });
 
-      setPayments(paymentsData as any || []);
+      if (paymentsError) {
+        console.error('Error loading payments:', paymentsError);
+      }
+
+      // Map payments with student info from already loaded students
+      const paymentsWithStudents = (paymentsData || []).map(p => {
+        const student = mappedStudents.find(s => s.student_id === p.student_id);
+        return {
+          ...p,
+          students: student ? {
+            name: student.name,
+            admission_number: student.admission_number,
+            current_class: student.classes?.class_name || ''
+          } : { name: 'Unknown', admission_number: '', current_class: '' }
+        };
+      });
+
+      setPayments(paymentsWithStudents as any);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
