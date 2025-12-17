@@ -13,7 +13,6 @@ interface Payment {
   payment_method: string;
   payment_date: string;
   transaction_ref: string;
-  notes: string;
   students: {
     name: string;
     admission_number: string;
@@ -129,7 +128,7 @@ export default function PaymentsPage() {
       // Fetch payments
       let paymentsQuery = supabase
         .from('student_payments')
-        .select('payment_id, student_id, amount_paid, payment_method, payment_date, transaction_ref, notes')
+        .select('payment_id, student_id, amount_paid, payment_method, payment_date, transaction_ref')
         .eq('school_id', userRow.school_id);
 
       if (currentTerm?.id) {
@@ -186,7 +185,7 @@ export default function PaymentsPage() {
   const totalAmount = filteredPayments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
 
   const exportToCSV = () => {
-    const headers = ['Date', 'Student', 'Admission Number', 'Class', 'Amount', 'Method', 'Reference', 'Notes'];
+    const headers = ['Date', 'Student', 'Admission Number', 'Class', 'Amount', 'Method', 'Reference'];
     const rows = filteredPayments.map(p => [
       p.payment_date,
       p.students.name,
@@ -194,8 +193,7 @@ export default function PaymentsPage() {
       p.students?.current_class || '',
       p.amount_paid.toString(),
       p.payment_method,
-      p.transaction_ref || '',
-      p.notes || ''
+      p.transaction_ref || ''
     ]);
 
     const csvContent = [
@@ -340,13 +338,12 @@ export default function PaymentsPage() {
                 <th className="text-right font-medium px-4 py-3 text-white/90">Amount</th>
                 <th className="text-left font-medium px-4 py-3 text-white/90">Method</th>
                 <th className="text-left font-medium px-4 py-3 text-white/90">Reference</th>
-                <th className="text-left font-medium px-4 py-3 text-white/90">Notes</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-white/60">
+                  <td colSpan={7} className="px-4 py-8 text-center text-white/60">
                     No payments found
                   </td>
                 </tr>
@@ -362,7 +359,6 @@ export default function PaymentsPage() {
                     </td>
                     <td className="px-4 py-3 text-white/90 capitalize">{payment.payment_method}</td>
                     <td className="px-4 py-3 text-white/90 text-sm">{payment.transaction_ref || '-'}</td>
-                    <td className="px-4 py-3 text-white/60 text-sm">{payment.notes || '-'}</td>
                   </tr>
                 ))
               )}
@@ -414,7 +410,6 @@ function RecordPaymentModal({
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [transactionRef, setTransactionRef] = useState('');
-  const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -463,7 +458,6 @@ function RecordPaymentModal({
           payment_method: paymentMethod,
           transaction_ref: finalTransactionRef || null,
           recorded_by: userId,
-          notes: notes || null,
           payment_date: new Date().toISOString().split('T')[0]
         })
         .select('payment_id')
@@ -478,7 +472,6 @@ function RecordPaymentModal({
       setAmount('');
       setPaymentMethod('cash');
       setTransactionRef('');
-      setNotes('');
 
       // Auto-generate receipt PDF
       if (insertedPayment?.payment_id) {
@@ -624,17 +617,6 @@ function RecordPaymentModal({
                 value={transactionRef}
                 onChange={(e) => setTransactionRef(e.target.value)}
                 placeholder="Auto-generated for cash payments"
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
-              />
-            </div>
-
-            <div>
-              <label className="block text-white/80 text-sm mb-2">Notes</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional notes..."
-                rows={3}
                 className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
               />
             </div>
