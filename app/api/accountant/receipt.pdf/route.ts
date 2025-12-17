@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     const school_id = userData?.school_id as string | undefined;
     if (!school_id) return NextResponse.json({ error: 'School not found' }, { status: 400 });
 
-    // Load payment + student
+    // Load payment
     const { data: pay, error: perr } = await supabase
       .from('student_payments')
       .select('*')
@@ -53,12 +53,14 @@ export async function GET(request: NextRequest) {
       .eq('school_id', school_id)
       .maybeSingle();
 
-    // Load student balance for this term
+    // Load student balance (without term_id since it doesn't exist)
     const { data: balance } = await supabase
       .from('student_balances')
       .select('total_fees, total_paid, balance')
       .eq('student_id', pay.student_id)
-      .eq('term_id', pay.term_id)
+      .eq('school_id', school_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     const p = pay as any;
@@ -87,387 +89,447 @@ export async function GET(request: NextRequest) {
     const payMethod = (p.payment_method || 'cash').toUpperCase();
     const txRef = p.transaction_ref || '-';
     const receivedBy = userData?.name || 'Cashier';
-    const totalPaid = Number(p.amount_paid || 0);
-    const notes = p.notes || 'School Fees Payment';
+    const totalPaid = Number(p.amount_paid || p.amount || 0);
+    const description = p.description || 'School Fees Payment';
     
     const totalFees = Number(bal.total_fees || 0);
-    const previousPaid = Number(bal.total_paid || 0) - totalPaid;
+    const previousPaid = Math.max(0, Number(bal.total_paid || 0) - totalPaid);
     const remainingBalance = Number(bal.balance || 0);
 
-    const html = `<!doctype html>
+    const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Payment Receipt - ${rcptNo}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receipt ${rcptNo}</title>
   <style>
-    :root {
-      --primary: #1e40af;
-      --primary-light: #3b82f6;
-      --accent: #059669;
-      --danger: #dc2626;
-      --muted: #6b7280;
-      --light: #f8fafc;
-      --border: #e2e8f0;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600;700&display=swap');
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body {
-      height: 100%;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background: #f1f5f9;
-      color: #1e293b;
-    }
-    .page {
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      background: white;
-      padding: 20mm;
+    
+    body {
+      font-family: 'Source Sans Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.5;
     }
     
-    /* Header with school info */
+    .receipt {
+      width: 210mm;
+      min-height: 148mm;
+      margin: 0 auto;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Decorative border */
+    .receipt::before {
+      content: '';
+      position: absolute;
+      top: 8mm;
+      left: 8mm;
+      right: 8mm;
+      bottom: 8mm;
+      border: 2px solid #1a365d;
+      pointer-events: none;
+    }
+    
+    .receipt-inner {
+      padding: 14mm 16mm;
+    }
+    
+    /* Header */
     .header {
       display: flex;
       align-items: center;
-      gap: 20px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid var(--primary);
-      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 3px double #1a365d;
+      margin-bottom: 16px;
     }
-    .logo-container {
-      width: 80px;
-      height: 80px;
+    
+    .logo-section {
+      width: 70px;
+      height: 70px;
       border-radius: 50%;
-      overflow: hidden;
-      border: 3px solid var(--primary);
+      border: 2px solid #1a365d;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--light);
+      overflow: hidden;
+      background: #f8fafc;
       flex-shrink: 0;
     }
-    .logo-container img {
-      max-width: 100%;
-      max-height: 100%;
+    
+    .logo-section img {
+      max-width: 90%;
+      max-height: 90%;
       object-fit: contain;
     }
+    
     .logo-placeholder {
-      font-size: 24px;
+      font-family: 'Crimson Pro', serif;
+      font-size: 32px;
       font-weight: 700;
-      color: var(--primary);
+      color: #1a365d;
     }
-    .school-info {
+    
+    .school-details {
       flex: 1;
       text-align: center;
-    }
-    .school-name {
-      font-family: 'Playfair Display', serif;
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--primary);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .school-motto {
-      font-size: 12px;
-      color: var(--muted);
-      font-style: italic;
-      margin-top: 4px;
-    }
-    .school-contact {
-      font-size: 11px;
-      color: var(--muted);
-      margin-top: 8px;
+      padding: 0 20px;
     }
     
-    /* Receipt title */
-    .receipt-title {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .receipt-title h1 {
-      font-size: 22px;
+    .school-name {
+      font-family: 'Crimson Pro', serif;
+      font-size: 26px;
       font-weight: 700;
-      color: var(--primary);
+      color: #1a365d;
       text-transform: uppercase;
       letter-spacing: 2px;
-      margin-bottom: 8px;
-    }
-    .receipt-badge {
-      display: inline-block;
-      background: var(--accent);
-      color: white;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
+      margin-bottom: 2px;
     }
     
-    /* Info grid */
-    .info-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 24px;
-    }
-    .info-box {
-      background: var(--light);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 16px;
-    }
-    .info-box h3 {
+    .school-motto {
       font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--muted);
-      margin-bottom: 12px;
-      font-weight: 600;
+      color: #64748b;
+      font-style: italic;
+      margin-bottom: 4px;
     }
+    
+    .school-contact {
+      font-size: 10px;
+      color: #64748b;
+    }
+    
+    /* Receipt Title */
+    .receipt-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .receipt-title {
+      display: inline-block;
+      background: linear-gradient(135deg, #1a365d 0%, #2d4a7c 100%);
+      color: white;
+      padding: 8px 32px;
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      border-radius: 2px;
+    }
+    
+    .receipt-number {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #475569;
+    }
+    
+    .receipt-number strong {
+      color: #1a365d;
+      font-weight: 700;
+    }
+    
+    /* Two Column Layout */
+    .info-columns {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .info-column {
+      flex: 1;
+    }
+    
+    .info-section {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 12px 14px;
+    }
+    
+    .info-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #1a365d;
+      font-weight: 700;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
     .info-row {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 8px;
-      font-size: 13px;
+      font-size: 12px;
+      margin-bottom: 6px;
     }
-    .info-row:last-child { margin-bottom: 0; }
-    .info-label { color: var(--muted); }
-    .info-value { font-weight: 600; color: #1e293b; }
     
-    /* Payment details table */
+    .info-row:last-child { margin-bottom: 0; }
+    
+    .info-label {
+      color: #64748b;
+    }
+    
+    .info-value {
+      font-weight: 600;
+      color: #1e293b;
+      text-align: right;
+    }
+    
+    /* Payment Table */
+    .payment-section {
+      margin-bottom: 16px;
+    }
+    
     .payment-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 24px;
-    }
-    .payment-table th {
-      background: var(--primary);
-      color: white;
-      padding: 12px 16px;
-      text-align: left;
       font-size: 12px;
+    }
+    
+    .payment-table th {
+      background: #1a365d;
+      color: white;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 600;
       text-transform: uppercase;
+      font-size: 10px;
       letter-spacing: 0.5px;
     }
-    .payment-table th:last-child { text-align: right; }
-    .payment-table td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--border);
-      font-size: 14px;
-    }
-    .payment-table td:last-child { text-align: right; font-weight: 600; }
-    .payment-table tbody tr:hover { background: var(--light); }
     
-    /* Summary section */
+    .payment-table th:last-child {
+      text-align: right;
+    }
+    
+    .payment-table td {
+      padding: 12px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #fff;
+    }
+    
+    .payment-table td:last-child {
+      text-align: right;
+      font-weight: 700;
+      font-size: 14px;
+      color: #1a365d;
+    }
+    
+    /* Summary */
     .summary-section {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     }
+    
     .summary-box {
-      width: 280px;
-      background: var(--light);
-      border: 2px solid var(--border);
-      border-radius: 8px;
+      width: 220px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
       overflow: hidden;
     }
+    
     .summary-row {
       display: flex;
       justify-content: space-between;
-      padding: 10px 16px;
-      font-size: 13px;
-      border-bottom: 1px solid var(--border);
+      padding: 8px 12px;
+      font-size: 11px;
+      border-bottom: 1px solid #e2e8f0;
     }
+    
     .summary-row:last-child { border-bottom: none; }
-    .summary-row.total {
-      background: var(--primary);
+    
+    .summary-row.highlight {
+      background: #1a365d;
       color: white;
       font-weight: 700;
-      font-size: 16px;
+      font-size: 13px;
     }
+    
     .summary-row.balance {
       background: ${remainingBalance > 0 ? '#fef2f2' : '#f0fdf4'};
-      color: ${remainingBalance > 0 ? 'var(--danger)' : 'var(--accent)'};
+      color: ${remainingBalance > 0 ? '#dc2626' : '#059669'};
       font-weight: 600;
     }
     
-    /* Footer */
-    .footer {
+    /* Signatures */
+    .signatures {
       display: flex;
       justify-content: space-between;
-      align-items: flex-end;
-      padding-top: 30px;
-      border-top: 1px dashed var(--border);
+      padding-top: 16px;
+      border-top: 1px dashed #cbd5e1;
     }
-    .signature-box {
+    
+    .signature-block {
       text-align: center;
+      width: 140px;
     }
+    
     .signature-line {
-      width: 180px;
       border-bottom: 1px solid #1e293b;
-      margin-bottom: 8px;
-      height: 40px;
+      height: 30px;
+      margin-bottom: 4px;
     }
+    
     .signature-label {
-      font-size: 11px;
-      color: var(--muted);
+      font-size: 9px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    .stamp-area {
-      width: 100px;
-      height: 100px;
-      border: 2px dashed var(--border);
-      border-radius: 8px;
+    
+    .stamp-box {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed #cbd5e1;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--muted);
-      font-size: 10px;
+      font-size: 8px;
+      color: #94a3b8;
       text-align: center;
-    }
-    .footer-note {
-      text-align: center;
-      font-size: 10px;
-      color: var(--muted);
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid var(--border);
+      text-transform: uppercase;
     }
     
-    @page { size: A4; margin: 0; }
+    /* Footer */
+    .footer-note {
+      text-align: center;
+      font-size: 9px;
+      color: #94a3b8;
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
+    }
+    
+    @page { size: A5 landscape; margin: 0; }
     @media print {
-      html, body { background: white; }
-      .page { box-shadow: none; margin: 0; padding: 15mm; }
+      body { background: white; }
+      .receipt { box-shadow: none; }
     }
   </style>
 </head>
 <body>
-  <div class="page">
-    <!-- Header -->
-    <div class="header">
-      <div class="logo-container">
-        ${logoImg ? `<img src="${logoImg}" alt="School Logo">` : `<span class="logo-placeholder">${schoolName.charAt(0)}</span>`}
+  <div class="receipt">
+    <div class="receipt-inner">
+      <!-- Header -->
+      <div class="header">
+        <div class="logo-section">
+          ${logoImg ? `<img src="${logoImg}" alt="Logo">` : `<span class="logo-placeholder">${schoolName.charAt(0)}</span>`}
+        </div>
+        <div class="school-details">
+          <div class="school-name">${schoolName}</div>
+          ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
+          <div class="school-contact">
+            ${[schoolAddress, schoolPhone ? `Tel: ${schoolPhone}` : '', schoolEmail].filter(Boolean).join(' • ')}
+          </div>
+        </div>
+        <div class="logo-section" style="visibility: hidden;"></div>
       </div>
-      <div class="school-info">
-        <div class="school-name">${schoolName}</div>
-        ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
-        <div class="school-contact">
-          ${schoolAddress ? `${schoolAddress}` : ''}
-          ${schoolPhone ? ` | Tel: ${schoolPhone}` : ''}
-          ${schoolEmail ? ` | Email: ${schoolEmail}` : ''}
-        </div>
+      
+      <!-- Receipt Title -->
+      <div class="receipt-header">
+        <div class="receipt-title">Payment Receipt</div>
+        <div class="receipt-number">Receipt No: <strong>${rcptNo}</strong> | Date: <strong>${rcptDate}</strong> | Time: <strong>${rcptTime}</strong></div>
       </div>
-      <div class="logo-container" style="visibility: hidden;">
-        <!-- Placeholder for symmetry -->
-      </div>
-    </div>
-    
-    <!-- Receipt Title -->
-    <div class="receipt-title">
-      <h1>Official Payment Receipt</h1>
-      <span class="receipt-badge">✓ Payment Confirmed</span>
-    </div>
-    
-    <!-- Info Grid -->
-    <div class="info-grid">
-      <div class="info-box">
-        <h3>Receipt Information</h3>
-        <div class="info-row">
-          <span class="info-label">Receipt No:</span>
-          <span class="info-value">${rcptNo}</span>
+      
+      <!-- Info Columns -->
+      <div class="info-columns">
+        <div class="info-column">
+          <div class="info-section">
+            <div class="info-title">Student Details</div>
+            <div class="info-row">
+              <span class="info-label">Name:</span>
+              <span class="info-value">${studentName}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Admission No:</span>
+              <span class="info-value">${admissionNo}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Class:</span>
+              <span class="info-value">${studentClass}</span>
+            </div>
+          </div>
         </div>
-        <div class="info-row">
-          <span class="info-label">Date:</span>
-          <span class="info-value">${rcptDate}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Time:</span>
-          <span class="info-value">${rcptTime}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Received By:</span>
-          <span class="info-value">${receivedBy}</span>
-        </div>
-      </div>
-      <div class="info-box">
-        <h3>Student Information</h3>
-        <div class="info-row">
-          <span class="info-label">Name:</span>
-          <span class="info-value">${studentName}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Admission No:</span>
-          <span class="info-value">${admissionNo}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Class:</span>
-          <span class="info-value">${studentClass}</span>
-        </div>
-        <div class="info-row">
-          <span class="info-label">Payment Method:</span>
-          <span class="info-value">${payMethod}</span>
+        <div class="info-column">
+          <div class="info-section">
+            <div class="info-title">Payment Details</div>
+            <div class="info-row">
+              <span class="info-label">Method:</span>
+              <span class="info-value">${payMethod}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Reference:</span>
+              <span class="info-value">${txRef}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Received By:</span>
+              <span class="info-value">${receivedBy}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Payment Details Table -->
-    <table class="payment-table">
-      <thead>
-        <tr>
-          <th style="width: 60%">Description</th>
-          <th style="width: 20%">Reference</th>
-          <th style="width: 20%">Amount (UGX)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>${notes.replace(/</g, '&lt;')}</td>
-          <td>${txRef.replace(/</g, '&lt;')}</td>
-          <td>${totalPaid.toLocaleString()}</td>
-        </tr>
-      </tbody>
-    </table>
-    
-    <!-- Summary Section -->
-    <div class="summary-section">
-      <div class="summary-box">
-        <div class="summary-row">
-          <span>Total Term Fees:</span>
-          <span>UGX ${totalFees.toLocaleString()}</span>
-        </div>
-        <div class="summary-row">
-          <span>Previously Paid:</span>
-          <span>UGX ${Math.max(0, previousPaid).toLocaleString()}</span>
-        </div>
-        <div class="summary-row total">
-          <span>Amount Paid Now:</span>
-          <span>UGX ${totalPaid.toLocaleString()}</span>
-        </div>
-        <div class="summary-row balance">
-          <span>Outstanding Balance:</span>
-          <span>UGX ${Math.max(0, remainingBalance).toLocaleString()}</span>
+      
+      <!-- Payment Table -->
+      <div class="payment-section">
+        <table class="payment-table">
+          <thead>
+            <tr>
+              <th style="width: 70%">Description</th>
+              <th style="width: 30%">Amount (UGX)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${description}</td>
+              <td>${totalPaid.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Summary -->
+      <div class="summary-section">
+        <div class="summary-box">
+          <div class="summary-row">
+            <span>Term Fees:</span>
+            <span>UGX ${totalFees.toLocaleString()}</span>
+          </div>
+          <div class="summary-row">
+            <span>Previously Paid:</span>
+            <span>UGX ${previousPaid.toLocaleString()}</span>
+          </div>
+          <div class="summary-row highlight">
+            <span>Paid Now:</span>
+            <span>UGX ${totalPaid.toLocaleString()}</span>
+          </div>
+          <div class="summary-row balance">
+            <span>Balance:</span>
+            <span>UGX ${Math.max(0, remainingBalance).toLocaleString()}</span>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <!-- Footer -->
-    <div class="footer">
-      <div class="signature-box">
-        <div class="signature-line"></div>
-        <div class="signature-label">Accountant / Cashier Signature</div>
+      
+      <!-- Signatures -->
+      <div class="signatures">
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">Cashier Signature</div>
+        </div>
+        <div class="stamp-box">Official<br>Stamp</div>
+        <div class="signature-block">
+          <div class="signature-line"></div>
+          <div class="signature-label">Parent/Guardian</div>
+        </div>
       </div>
-      <div class="stamp-area">
-        Official<br>School<br>Stamp
+      
+      <div class="footer-note">
+        This is a computer-generated receipt. Keep for your records. Contact accounts office for queries.
       </div>
-      <div class="signature-box">
-        <div class="signature-line"></div>
-        <div class="signature-label">Parent / Guardian Signature</div>
-      </div>
-    </div>
-    
-    <div class="footer-note">
-      This is an official computer-generated receipt. Please retain for your records.<br>
-      For any queries, contact the school accounts office.
     </div>
   </div>
 </body>
@@ -487,7 +549,8 @@ export async function GET(request: NextRequest) {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
     const pdf = await page.pdf({ 
-      format: 'A4', 
+      format: 'A5',
+      landscape: true,
       printBackground: true, 
       margin: { top: '0', right: '0', bottom: '0', left: '0' } 
     });
@@ -505,4 +568,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: e.message || 'Internal server error' }, { status: 500 });
   }
 }
-
