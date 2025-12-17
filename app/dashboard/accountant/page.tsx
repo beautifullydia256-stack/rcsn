@@ -582,8 +582,6 @@ export default function AccountantDashboardPage() {
           </div>
         </motion.div>
       </div>
-
-      </div>
     </div>
   );
 }
