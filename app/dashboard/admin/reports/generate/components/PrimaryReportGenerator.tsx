@@ -3641,9 +3641,26 @@ function lightenColor(hex: string): string {
 }
 
 function Template4UpperSectionReport({ student, examSet, school, examSets, gradeSystem }: { student: any; examSet: any; school: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
-  const attendance = student.summary.attendanceDetails || {};
-  const avg = student.summary.average ?? '';
-  const avgGrade = student.summary.division ?? '';
+  const attendance = student?.summary?.attendanceDetails || {};
+
+  const streamDisplay =
+    student?.stream ||
+    student?.current_stream ||
+    student?.stream_name ||
+    student?.class_stream ||
+    student?.section ||
+    'N/A';
+
+  const reportDateDisplay = (() => {
+    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
+    if (!raw) return 'N/A';
+    const parsed = new Date(raw);
+    if (isNaN(parsed.getTime())) return raw;
+    return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
+
+  const avg = student?.summary?.average ?? '';
+  const avgGrade = student?.summary?.division ?? '';
   const displayDivision = (() => {
     if (typeof avgGrade !== 'string') return avgGrade;
     const trimmed = avgGrade.trim();
