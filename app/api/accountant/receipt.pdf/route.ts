@@ -46,10 +46,10 @@ export async function GET(request: NextRequest) {
       .eq('student_id', pay.student_id)
       .maybeSingle();
 
-    // Load school details
+    // Load school details (only select columns that exist)
     const { data: school } = await supabase
       .from('schools')
-      .select('name, motto, phone, email, address, logo')
+      .select('*')
       .eq('school_id', school_id)
       .maybeSingle();
 
