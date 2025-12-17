@@ -10,40 +10,22 @@ interface StudentBalance {
   balance_id: string;
   student_id: string;
   term_id: string;
-  class_id: string;
   total_fees: number;
   total_paid: number;
   balance: number;
-  last_payment_date: string | null;
-  students: {
-    name: string;
-    admission_number: string;
-  };
-  classes?: {
-    class_name: string;
-  } | null;
-  school_terms: {
-    year: number;
-    term: number;
-    academic_year: string;
-  };
+  year: number;
+  term: number;
 }
 
 interface Payment {
   payment_id: string;
   student_id: string;
   amount_paid: number;
+  amount: number;
   payment_method: string;
   payment_date: string;
   transaction_ref: string;
-  notes: string;
-  students: {
-    name: string;
-    admission_number: string;
-  };
-  classes?: {
-    class_name: string;
-  } | null;
+  description: string;
 }
 
 interface Student {
@@ -215,14 +197,11 @@ export default function AccountantDashboardPage() {
           balance_id,
           student_id,
           term_id,
-          class_id,
           total_fees,
           total_paid,
           balance,
-          last_payment_date,
-          students!inner(name, admission_number),
-          classes(class_name),
-          school_terms!inner(year, term, academic_year)
+          year,
+          term
         `)
         .eq("school_id", userRow.school_id);
       
@@ -239,28 +218,20 @@ export default function AccountantDashboardPage() {
       }
       setBalances(balancesData as any || []);
 
-      // Fetch payments
-      let paymentsQuery = supabase
+      // Fetch payments (no term_id filter since student_payments doesn't have it)
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from("student_payments")
         .select(`
           payment_id,
           student_id,
           amount_paid,
+          amount,
           payment_method,
           payment_date,
           transaction_ref,
-          notes,
-          students!inner(name, admission_number),
-          classes(class_name)
+          description
         `)
-        .eq("school_id", userRow.school_id);
-      
-      // Only filter by term if we have a current term
-      if (currentTerm?.id) {
-        paymentsQuery = paymentsQuery.eq("term_id", currentTerm.id);
-      }
-      
-      const { data: paymentsData, error: paymentsError } = await paymentsQuery
+        .eq("school_id", userRow.school_id)
         .order("payment_date", { ascending: false });
 
       if (paymentsError) {
@@ -271,12 +242,12 @@ export default function AccountantDashboardPage() {
       // Calculate KPIs
       const todayISO = today;
       const collectedToday = (paymentsData || [])
-        .filter(p => p.payment_date === todayISO)
-        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        .filter((p: any) => p.payment_date === todayISO)
+        .reduce((sum, p: any) => sum + Number(p.amount_paid || p.amount || 0), 0);
       setKpiCollectedToday(collectedToday);
 
       const collectedThisTerm = (paymentsData || [])
-        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+        .reduce((sum, p: any) => sum + Number(p.amount_paid || p.amount || 0), 0);
       setKpiCollectedThisTerm(collectedThisTerm);
 
       // Current Term Outstanding: only positive balances where fees were set
