@@ -13,6 +13,7 @@ interface Payment {
   payment_method: string;
   payment_date: string;
   transaction_ref: string;
+  description?: string;
   students: {
     name: string;
     admission_number: string;
@@ -126,16 +127,10 @@ export default function PaymentsPage() {
       setClasses(uniqueClasses);
 
       // Fetch payments
-      let paymentsQuery = supabase
+      const { data: paymentsData, error: paymentsError } = await supabase
         .from('student_payments')
-        .select('payment_id, student_id, amount_paid, payment_method, payment_date, transaction_ref')
-        .eq('school_id', userRow.school_id);
-
-      if (currentTerm?.id) {
-        paymentsQuery = paymentsQuery.eq('term_id', currentTerm.id);
-      }
-
-      const { data: paymentsData, error: paymentsError } = await paymentsQuery
+        .select('payment_id, student_id, amount_paid, payment_method, payment_date, transaction_ref, description')
+        .eq('school_id', userRow.school_id)
         .order('payment_date', { ascending: false });
 
       if (paymentsError) {
@@ -453,11 +448,11 @@ function RecordPaymentModal({
         .insert({
           student_id: selectedStudent,
           school_id: schoolId,
-          term_id: termId,
+          amount: parseFloat(amount),
           amount_paid: parseFloat(amount),
           payment_method: paymentMethod,
           transaction_ref: finalTransactionRef || null,
-          recorded_by: userId,
+          description: `Payment recorded`,
           payment_date: new Date().toISOString().split('T')[0]
         })
         .select('payment_id')
