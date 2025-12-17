@@ -17,10 +17,8 @@ interface Payment {
   students: {
     name: string;
     admission_number: string;
+    current_class?: string;
   };
-  classes?: {
-    class_name: string;
-  } | null;
 }
 
 interface Student {
@@ -139,8 +137,7 @@ export default function PaymentsPage() {
           payment_date,
           transaction_ref,
           notes,
-          students!inner(name, admission_number),
-          classes(class_name)
+          students!inner(name, admission_number, current_class)
         `)
         .eq('school_id', userRow.school_id);
 
@@ -166,7 +163,7 @@ export default function PaymentsPage() {
   const filteredPayments = useMemo(() => {
     const q = search.toLowerCase();
     return payments.filter(p => {
-      const matchClass = selectedClass ? (p.classes?.class_name === selectedClass) : true;
+      const matchClass = selectedClass ? (p.students?.current_class === selectedClass) : true;
       const matchSearch = !q ||
         p.students.name.toLowerCase().includes(q) ||
         (p.students.admission_number || '').toLowerCase().includes(q) ||
@@ -186,7 +183,7 @@ export default function PaymentsPage() {
       p.payment_date,
       p.students.name,
       p.students.admission_number || '',
-      p.classes?.class_name || '',
+      p.students?.current_class || '',
       p.amount_paid.toString(),
       p.payment_method,
       p.transaction_ref || '',
@@ -351,7 +348,7 @@ export default function PaymentsPage() {
                     <td className="px-4 py-3 text-white/90">{new Date(payment.payment_date).toLocaleDateString()}</td>
                     <td className="px-4 py-3 text-white/90">{payment.students.name}</td>
                     <td className="px-4 py-3 text-white/90">{payment.students.admission_number || '-'}</td>
-                    <td className="px-4 py-3 text-white/90">{payment.classes?.class_name || '-'}</td>
+                    <td className="px-4 py-3 text-white/90">{payment.students?.current_class || '-'}</td>
                     <td className="px-4 py-3 text-right text-white/90 font-medium">
                       {new Intl.NumberFormat(undefined, { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(payment.amount_paid)}
                     </td>
@@ -454,7 +451,6 @@ function RecordPaymentModal({
           student_id: selectedStudent,
           school_id: schoolId,
           term_id: termId,
-          class_id: student?.class_id,
           amount_paid: parseFloat(amount),
           payment_method: paymentMethod,
           transaction_ref: finalTransactionRef || null,
