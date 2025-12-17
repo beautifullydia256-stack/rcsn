@@ -445,7 +445,7 @@ function RecordPaymentModal({
         finalTransactionRef = `CASH-${dateStr}-${studentRef}-${randomNum}`;
       }
 
-      const { error: insertError } = await supabase
+      const { data: insertedPayment, error: insertError } = await supabase
         .from('student_payments')
         .insert({
           student_id: selectedStudent,
@@ -457,10 +457,13 @@ function RecordPaymentModal({
           recorded_by: userId,
           notes: notes || null,
           payment_date: new Date().toISOString().split('T')[0]
-        });
+        })
+        .select('payment_id')
+        .single();
 
       if (insertError) throw insertError;
 
+      // Reset form
       setSelectedStudent('');
       setStudentSearch('');
       setShowStudentDropdown(false);
@@ -468,6 +471,11 @@ function RecordPaymentModal({
       setPaymentMethod('cash');
       setTransactionRef('');
       setNotes('');
+
+      // Auto-generate receipt PDF
+      if (insertedPayment?.payment_id) {
+        window.open(`/api/accountant/receipt.pdf?payment_id=${insertedPayment.payment_id}`, '_blank');
+      }
 
       onSuccess();
     } catch (err) {
