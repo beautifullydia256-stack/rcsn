@@ -114,10 +114,14 @@ export default function AttendanceAnalysisReport() {
           return;
         }
 
-        if (userData?.school_id) {
-          setSchoolId(userData.school_id);
-          await loadAllData(userData.school_id);
+        if (!userData?.school_id) {
+          setError('Your account is not linked to a school. Please contact support to complete your account setup.');
+          setLoading(false);
+          return;
         }
+
+        setSchoolId(userData.school_id);
+        await loadAllData(userData.school_id);
       } catch (error) {
         console.error('Error checking auth:', error);
         router.push('/login');

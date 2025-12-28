@@ -147,8 +147,65 @@ export default function Register() {
       });
 
       if (regError) {
+        console.error('Registration RPC error:', regError);
         await supabase.auth.admin.deleteUser(authData.user.id);
-        throw regError;
+        throw new Error(regError.message || 'Registration failed. Please try again.');
+      }
+
+      // Check if function returned success: false (new function format)
+      if (regData && regData.success === false) {
+        console.error('Registration function returned error:', regData);
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error(regData.message || regData.error || 'School creation failed. Please try again.');
+      }
+
+      // Verify school was created and linked properly
+      if (!regData || !regData.school_id) {
+        console.error('Registration returned invalid data:', regData);
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error('School creation failed. Please try again.');
+      }
+
+      // Verify user has school_id linked
+      const { data: userData, error: userCheckError } = await supabase
+        .from('users')
+        .select('user_id, school_id, role')
+        .eq('user_id', authData.user.id)
+        .single();
+
+      if (userCheckError || !userData) {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error('User record verification failed. Please contact support.');
+      }
+
+      if (!userData.school_id) {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error('School linking failed. Please contact support.');
+      }
+
+      // Verify school exists and is linked to this admin
+      const { data: schoolData, error: schoolCheckError } = await supabase
+        .from('schools')
+        .select('school_id, admin_id, name')
+        .eq('school_id', userData.school_id)
+        .single();
+
+      if (schoolCheckError || !schoolData) {
+        await supabase.auth.admin.deleteUser(authData.user.id);
+        throw new Error('School verification failed. Please contact support.');
+      }
+
+      if (schoolData.admin_id !== authData.user.id) {
+        console.warn('School admin_id mismatch, attempting to fix...');
+        // Try to fix the admin_id
+        const { error: fixError } = await supabase
+          .from('schools')
+          .update({ admin_id: authData.user.id })
+          .eq('school_id', schoolData.school_id);
+        
+        if (fixError) {
+          console.error('Failed to fix admin_id:', fixError);
+        }
       }
 
       // Update school code after registration
