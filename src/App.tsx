@@ -38,6 +38,15 @@ const AccountantDashboard = lazy(() => import('./pages/accountant/Dashboard'));
 const LibrarianDashboard = lazy(() => import('./pages/librarian/Dashboard'));
 const HeadTeacherDashboard = lazy(() => import('./pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazy(() => import('./pages/owner/Dashboard'));
+const LibraryPage = lazy(() => import('./pages/Library'));
+const JobsPage = lazy(() => import('./pages/Jobs'));
+const AffiliatePage = lazy(() => import('./pages/Affiliate'));
+const ContactPage = lazy(() => import('./pages/Contact'));
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPassword'));
+const AuthCallbackPage = lazy(() => import('./pages/auth/Callback'));
+const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicy'));
+const SecurityLetterPage = lazy(() => import('./pages/SecurityLetter'));
+const AffiliateTermsPage = lazy(() => import('./pages/AffiliateTerms'));
 
 function LoadingSpinner() {
   return (
@@ -57,6 +66,15 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/library" element={<LibraryPage />} />
+              <Route path="/jobs" element={<JobsPage />} />
+              <Route path="/affiliate" element={<AffiliatePage />} />
+              <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+              <Route path="/security-letter" element={<SecurityLetterPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
                 <Route path="admin" element={<AdminLayout />}>

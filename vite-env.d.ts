@@ -10,6 +10,7 @@ interface ImportMetaEnv {
   readonly NEXT_PUBLIC_SUPABASE_ANON_KEY?: string;
   readonly NEXT_PUBLIC_GOOGLE_CLIENT_ID?: string;
   readonly NEXT_PUBLIC_GOOGLE_REDIRECT_URI?: string;
+  readonly NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
 }
 
 interface ImportMeta {

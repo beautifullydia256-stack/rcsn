@@ -23,7 +23,7 @@ export function ThemeToggle() {
       >
         {theme === "light" ? (
           <svg
-            className="w-5 h-5 text-white"
+            className="w-5 h-5 text-gray-600 dark:text-white"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -37,7 +37,7 @@ export function ThemeToggle() {
           </svg>
         ) : (
           <svg
-            className="w-5 h-5 text-white"
+            className="w-5 h-5 text-gray-600 dark:text-white"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
