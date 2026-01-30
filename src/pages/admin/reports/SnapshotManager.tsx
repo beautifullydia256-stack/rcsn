@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useSnapshots } from '../../../hooks/useSnapshot';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
 import { lockSnapshot } from '../../../services/snapshotService';
-import { GlassCard } from '../../../components/Glass/GlassCard';
-import { GlassPanel } from '../../../components/Glass/GlassPanel';
+import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { Plus, Lock, Trash2, Eye } from 'lucide-react';
 
@@ -115,131 +115,125 @@ export default function SnapshotManager() {
     }
   };
 
+  const navigate = useNavigate();
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft':
-        return 'text-yellow-600';
+        return 'text-yellow-400';
       case 'locked':
-        return 'text-blue-600';
+        return 'text-blue-400';
       case 'generated':
-        return 'text-green-600';
+        return 'text-green-400';
       default:
-        return 'text-gray-600';
+        return 'text-gray-400';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-foreground">Report Snapshots</h1>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="glass glass-rounded px-6 py-3 font-medium transition-all duration-300 flex items-center gap-2 hover:glass-hover"
-          >
-            <Plus className="w-5 h-5" />
-            Create Snapshot
-          </button>
+    <AdminPageWrapper title="Report Snapshots">
+      <div className="flex items-center justify-end">
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="rounded-lg border border-gray-600 bg-[#1e293b] px-6 py-3 font-medium text-gray-200 hover:bg-white/5 flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          Create Snapshot
+        </button>
       </div>
 
       {error && (
-        <GlassPanel variant="normal" className="p-4">
-          <p className="text-red-500">{error}</p>
-        </GlassPanel>
+        <div className={`${adminCardClass} p-4 border-red-500/50`}>
+          <p className="text-red-400">{error}</p>
+        </div>
       )}
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400"></div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {snapshots.map((snapshot) => (
-            <GlassCard
-              key={snapshot.id}
-              title={`Term ${snapshot.term} ${snapshot.year}`}
-              subtitle={`Status: ${snapshot.status}`}
-            >
-              <div className="space-y-4">
+            <div key={snapshot.id} className={`${adminCardClass} space-y-4`}>
+              <h3 className="text-lg font-semibold text-white">Term {snapshot.term} {snapshot.year}</h3>
+              <p className="text-sm text-gray-400">Status: {snapshot.status}</p>
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <span className="text-sm text-gray-400">Status:</span>
                   <span className={`font-semibold ${getStatusColor(snapshot.status)}`}>
                     {snapshot.status.toUpperCase()}
                   </span>
                 </div>
-
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Students:</span>
-                  <span className="font-semibold">{snapshot.student_count || 0}</span>
+                  <span className="text-sm text-gray-400">Students:</span>
+                  <span className="font-semibold text-white">{snapshot.student_count || 0}</span>
                 </div>
-
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Created:</span>
-                  <span className="text-sm">
+                  <span className="text-sm text-gray-400">Created:</span>
+                  <span className="text-sm text-gray-300">
                     {new Date(snapshot.created_at).toLocaleDateString()}
                   </span>
                 </div>
-
                 {snapshot.locked_at && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Locked:</span>
-                    <span className="text-sm">
+                    <span className="text-sm text-gray-400">Locked:</span>
+                    <span className="text-sm text-gray-300">
                       {new Date(snapshot.locked_at).toLocaleDateString()}
                     </span>
                   </div>
                 )}
-
-                <div className="flex gap-2 pt-4 border-t border-white/20">
-                  {snapshot.status === 'draft' && (
-                    <>
-                      <button
-                        onClick={() => handleLockSnapshot(snapshot.id)}
-                        className="glass glass-rounded px-4 py-2 font-medium transition-all duration-300 flex-1 flex items-center justify-center gap-2 text-sm hover:glass-hover"
-                      >
-                        <Lock className="w-4 h-4" />
-                        Lock
-                      </button>
-                      <button
-                        onClick={() => handleDeleteSnapshot(snapshot.id)}
-                        className="glass glass-rounded px-4 py-2 font-medium transition-all duration-300 flex-1 flex items-center justify-center gap-2 text-sm text-red-500 hover:glass-hover"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
-                    </>
-                  )}
-                  {snapshot.status === 'locked' && (
-                    <button
-                      onClick={() => window.location.href = `/dashboard/admin/reports/generate?snapshot=${snapshot.id}`}
-                      className="glass glass-rounded px-4 py-2 font-medium transition-all duration-300 flex-1 flex items-center justify-center gap-2 text-sm hover:glass-hover"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Generate Reports
-                    </button>
-                  )}
-                  {snapshot.status === 'generated' && (
-                    <button
-                      onClick={() => window.location.href = `/dashboard/admin/reports/view?snapshot=${snapshot.id}`}
-                      className="glass glass-rounded px-4 py-2 font-medium transition-all duration-300 flex-1 flex items-center justify-center gap-2 text-sm hover:glass-hover"
-                    >
-                      <Eye className="w-4 h-4" />
-                      View Reports
-                    </button>
-                  )}
-                </div>
               </div>
-            </GlassCard>
+              <div className="flex gap-2 pt-4 border-t border-gray-600">
+                {snapshot.status === 'draft' && (
+                  <>
+                    <button
+                      onClick={() => handleLockSnapshot(snapshot.id)}
+                      className="rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-gray-200 hover:bg-white/5 flex-1 flex items-center justify-center gap-2"
+                    >
+                      <Lock className="w-4 h-4" />
+                      Lock
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSnapshot(snapshot.id)}
+                      className="rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-red-400 hover:bg-red-500/20 flex-1 flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete
+                    </button>
+                  </>
+                )}
+                {snapshot.status === 'locked' && (
+                  <button
+                    onClick={() => navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshot.id}`)}
+                    className="rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-gray-200 hover:bg-white/5 flex-1 flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Generate Reports
+                  </button>
+                )}
+                {snapshot.status === 'generated' && (
+                  <button
+                    onClick={() => navigate(`/dashboard/admin/reports/viewer?snapshot=${snapshot.id}`)}
+                    className="rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-gray-200 hover:bg-white/5 flex-1 flex items-center justify-center gap-2"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View Reports
+                  </button>
+                )}
+              </div>
+            </div>
           ))}
 
           {snapshots.length === 0 && (
-            <GlassCard className="col-span-full text-center py-12">
-              <p className="text-muted-foreground">No snapshots created yet</p>
+            <div className={`${adminCardClass} col-span-full text-center py-12`}>
+              <p className="text-gray-400">No snapshots created yet</p>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="btn-glass mt-4"
+                className="rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-gray-200 hover:bg-white/5 mt-4"
               >
                 Create First Snapshot
               </button>
-            </GlassCard>
+            </div>
           )}
         </div>
       )}
@@ -256,17 +250,17 @@ export default function SnapshotManager() {
       >
         <div className="space-y-4">
           {error && (
-            <div className="p-3 rounded-lg bg-red-500/20 text-red-500 text-sm">
+            <div className="p-3 rounded-lg bg-red-500/20 text-red-400 text-sm">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium mb-2">Select Exam Set</label>
+            <label className="block text-sm font-medium text-gray-200 mb-2">Select Exam Set</label>
             <select
               value={selectedExamSet}
               onChange={(e) => setSelectedExamSet(e.target.value)}
-              className="glass glass-rounded px-4 py-2 w-full bg-transparent border-none outline-none"
+              className="w-full rounded-lg border border-gray-600 bg-[#0f172a] px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">-- Select Exam Set --</option>
               {examSets.map((es) => (
@@ -281,7 +275,7 @@ export default function SnapshotManager() {
             <button
               onClick={handleCreateSnapshot}
               disabled={creating || !selectedExamSet}
-              className="glass glass-rounded px-6 py-3 font-medium transition-all duration-300 flex-1 hover:glass-hover disabled:opacity-50"
+              className="rounded-lg border border-gray-600 bg-blue-600 px-6 py-3 font-medium text-white flex-1 hover:bg-blue-700 disabled:opacity-50"
             >
               {creating ? 'Creating...' : 'Create Snapshot'}
             </button>
@@ -291,14 +285,14 @@ export default function SnapshotManager() {
                 setSelectedExamSet('');
                 setError('');
               }}
-              className="glass glass-rounded px-6 py-3 font-medium transition-all duration-300 flex-1 hover:glass-hover"
+              className="rounded-lg border border-gray-600 bg-[#1e293b] px-6 py-3 font-medium text-gray-200 flex-1 hover:bg-white/5"
             >
               Cancel
             </button>
           </div>
         </div>
       </GlassModal>
-    </div>
+    </AdminPageWrapper>
   );
 }
 

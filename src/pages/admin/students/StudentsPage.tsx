@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { GlassPanel } from '@/components/Glass/GlassPanel';
+import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 export default function StudentsPage() {
   const navigate = useNavigate();
@@ -55,28 +55,27 @@ export default function StudentsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">All Students</h1>
+    <AdminPageWrapper title="All Students">
+      <div className="flex items-center justify-end">
         <button
           type="button"
-          className="rounded-lg border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground hover:bg-muted/80"
+          className="rounded-lg border border-gray-600 bg-[#1e293b] px-3 py-2 text-sm font-medium text-gray-200 hover:bg-white/5"
           onClick={() => navigate('/dashboard/admin')}
         >
           Back to Dashboard
         </button>
       </div>
 
-      <GlassPanel className="p-4 space-y-4">
+      <div className={`${adminCardClass} space-y-4`}>
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <input
-            className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="flex-1 rounded-lg border border-gray-600 bg-[#0f172a] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Search by name or class"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <select
-            className="w-full md:w-64 rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full md:w-64 rounded-lg border border-gray-600 bg-[#0f172a] px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={klass}
             onChange={(e) => setKlass(e.target.value)}
           >
@@ -99,37 +98,37 @@ export default function StudentsPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto rounded-lg border border-border">
+        <div className="overflow-x-auto rounded-lg border border-gray-600">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/50 text-left">
-                <th className="px-4 py-2 font-medium text-foreground">Name</th>
-                <th className="px-4 py-2 font-medium text-foreground">Class</th>
-                <th className="px-4 py-2 font-medium text-foreground">Status</th>
-                <th className="px-4 py-2 font-medium text-foreground">Enrolled</th>
-                <th className="px-4 py-2 font-medium text-foreground">Actions</th>
+              <tr className="border-b border-gray-600 bg-[#0f172a] text-left">
+                <th className="px-4 py-2 font-medium text-gray-200">Name</th>
+                <th className="px-4 py-2 font-medium text-gray-200">Class</th>
+                <th className="px-4 py-2 font-medium text-gray-200">Status</th>
+                <th className="px-4 py-2 font-medium text-gray-200">Enrolled</th>
+                <th className="px-4 py-2 font-medium text-gray-200">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">Loading...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No students found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No students found.</td></tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.student_id} className="border-b border-border hover:bg-muted/30">
+                  <tr key={r.student_id} className="border-b border-gray-600 hover:bg-white/5">
                     <td className="px-4 py-2">
-                      <button type="button" className="text-primary hover:underline" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>
+                      <button type="button" className="text-blue-400 hover:underline" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>
                         {r.name}
                       </button>
                     </td>
-                    <td className="px-4 py-2 text-muted-foreground">{r.current_class}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{r.status}</td>
-                    <td className="px-4 py-2 text-muted-foreground">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-gray-400">{r.current_class}</td>
+                    <td className="px-4 py-2 text-gray-400">{r.status}</td>
+                    <td className="px-4 py-2 text-gray-400">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
-                        <button type="button" className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground hover:opacity-90" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>View</button>
-                        <button type="button" className="rounded bg-destructive/90 px-2 py-1 text-xs text-destructive-foreground hover:bg-destructive" onClick={() => remove(r.student_id, r.admission_number)}>Delete</button>
+                        <button type="button" className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:opacity-90" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>View</button>
+                        <button type="button" className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600" onClick={() => remove(r.student_id, r.admission_number)}>Delete</button>
                       </div>
                     </td>
                   </tr>
@@ -138,7 +137,7 @@ export default function StudentsPage() {
             </tbody>
           </table>
         </div>
-      </GlassPanel>
-    </div>
+      </div>
+    </AdminPageWrapper>
   );
 }

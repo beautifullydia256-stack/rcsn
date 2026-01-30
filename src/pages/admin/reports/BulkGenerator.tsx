@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useSnapshot } from '../../../hooks/useSnapshot';
-import { GlassCard } from '../../../components/Glass/GlassCard';
-import { GlassPanel } from '../../../components/Glass/GlassPanel';
+import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { Play, CheckCircle, XCircle, Loader } from 'lucide-react';
 
 export default function BulkGenerator() {
@@ -112,85 +111,83 @@ export default function BulkGenerator() {
 
   if (snapshotLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
+      <AdminPageWrapper title="Bulk Report Generation">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400"></div>
+        </div>
+      </AdminPageWrapper>
     );
   }
 
   if (!snapshot) {
     return (
-      <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-foreground">Bulk Report Generation</h1>
-        <GlassCard>
-          <p className="text-muted-foreground">No snapshot selected. Please select a snapshot first.</p>
-        </GlassCard>
-      </div>
+      <AdminPageWrapper title="Bulk Report Generation">
+        <div className={`${adminCardClass} text-center py-8`}>
+          <p className="text-gray-400">No snapshot selected. Please select a snapshot from Snapshots first.</p>
+        </div>
+      </AdminPageWrapper>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-foreground">Bulk Report Generation</h1>
-
-      <GlassCard title={`Snapshot: Term ${snapshot.term} ${snapshot.year}`}>
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Status:</span>
-            <span className={`font-semibold ${
-              snapshot.status === 'locked' ? 'text-blue-600' : 
-              snapshot.status === 'generated' ? 'text-green-600' : 
-              'text-yellow-600'
-            }`}>
-              {snapshot.status.toUpperCase()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Students:</span>
-            <span className="font-semibold">{snapshot.student_count || 0}</span>
-          </div>
+    <AdminPageWrapper title="Bulk Report Generation">
+      <div className={`${adminCardClass} space-y-4`}>
+        <h2 className="text-lg font-semibold text-white">Snapshot: Term {snapshot.term} {snapshot.year}</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">Status:</span>
+          <span className={`font-semibold ${
+            snapshot.status === 'locked' ? 'text-blue-400' :
+            snapshot.status === 'generated' ? 'text-green-400' :
+            'text-yellow-400'
+          }`}>
+            {snapshot.status.toUpperCase()}
+          </span>
         </div>
-      </GlassCard>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">Students:</span>
+          <span className="font-semibold text-white">{snapshot.student_count || 0}</span>
+        </div>
+      </div>
 
       {error && (
-        <GlassPanel variant="normal" className="p-4 bg-red-500/20 text-red-500">
-          {error}
-        </GlassPanel>
+        <div className={`${adminCardClass} p-4 border-red-500/50`}>
+          <p className="text-red-400">{error}</p>
+        </div>
       )}
 
       {snapshot.status !== 'locked' && (
-        <GlassPanel variant="normal" className="p-4 bg-yellow-500/20 text-yellow-600">
-          Snapshot must be locked before generating reports. Please lock the snapshot first.
-        </GlassPanel>
+        <div className={`${adminCardClass} p-4 border-yellow-500/50`}>
+          <p className="text-yellow-400">Snapshot must be locked before generating reports. Please lock the snapshot first.</p>
+        </div>
       )}
 
       {snapshot.status === 'locked' && (
         <>
-          <GlassCard title="Template Selection">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Select Template</label>
-                <select
-                  value={selectedTemplate}
-                  onChange={(e) => setSelectedTemplate(e.target.value)}
-                  className="input-glass w-full"
-                  disabled={generating}
-                >
-                  <option value="">-- Use Default Template --</option>
-                  {templates.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} {t.is_default ? '(Default)' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          <div className={`${adminCardClass} space-y-4`}>
+            <h2 className="text-lg font-semibold text-white">Template Selection</h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-200 mb-2">Select Template</label>
+              <select
+                value={selectedTemplate}
+                onChange={(e) => setSelectedTemplate(e.target.value)}
+                className="w-full rounded-lg border border-gray-600 bg-[#0f172a] px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={generating}
+              >
+                <option value="">-- Use Default Template --</option>
+                {templates.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} {t.is_default ? '(Default)' : ''}
+                  </option>
+                ))}
+              </select>
             </div>
-          </GlassCard>
+          </div>
 
-          <GlassCard title="Class Selection (Optional)">
+          <div className={`${adminCardClass} space-y-3`}>
+            <h2 className="text-lg font-semibold text-white">Class Selection (Optional)</h2>
             <div className="space-y-2">
               {classes.map((className) => (
-                <label key={className} className="flex items-center gap-2">
+                <label key={className} className="flex items-center gap-2 text-gray-200">
                   <input
                     type="checkbox"
                     checked={selectedClasses.includes(className)}
@@ -202,63 +199,61 @@ export default function BulkGenerator() {
                       }
                     }}
                     disabled={generating}
-                    className="rounded"
+                    className="rounded border-gray-500 text-blue-600"
                   />
                   <span>{className}</span>
                 </label>
               ))}
             </div>
-          </GlassCard>
+          </div>
 
-          <GlassCard>
-            <div className="space-y-4">
-              {status === 'generating' && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Loader className="w-5 h-5 animate-spin" />
-                    <span>Generating reports...</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full transition-all"
-                      style={{
-                        width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {progress.current} / {progress.total} students
-                  </p>
+          <div className={`${adminCardClass} space-y-4`}>
+            {status === 'generating' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-gray-200">
+                  <Loader className="w-5 h-5 animate-spin" />
+                  <span>Generating reports...</span>
                 </div>
-              )}
-
-              {status === 'completed' && (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle className="w-5 h-5" />
-                  <span>Reports generated successfully!</span>
+                <div className="w-full bg-gray-600 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all"
+                    style={{
+                      width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
+                    }}
+                  />
                 </div>
-              )}
+                <p className="text-sm text-gray-400">
+                  {progress.current} / {progress.total} students
+                </p>
+              </div>
+            )}
 
-              {status === 'error' && (
-                <div className="flex items-center gap-2 text-red-600">
-                  <XCircle className="w-5 h-5" />
-                  <span>Generation failed</span>
-                </div>
-              )}
+            {status === 'completed' && (
+              <div className="flex items-center gap-2 text-green-400">
+                <CheckCircle className="w-5 h-5" />
+                <span>Reports generated successfully!</span>
+              </div>
+            )}
 
-              <button
-                onClick={handleGenerate}
-                disabled={generating || snapshot.status !== 'locked'}
-                className="btn-glass w-full flex items-center justify-center gap-2"
-              >
-                <Play className="w-5 h-5" />
-                {generating ? 'Generating...' : 'Generate Reports'}
-              </button>
-            </div>
-          </GlassCard>
+            {status === 'error' && (
+              <div className="flex items-center gap-2 text-red-400">
+                <XCircle className="w-5 h-5" />
+                <span>Generation failed</span>
+              </div>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={generating || snapshot.status !== 'locked'}
+              className="w-full rounded-lg border border-gray-600 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <Play className="w-5 h-5" />
+              {generating ? 'Generating...' : 'Generate Reports'}
+            </button>
+          </div>
         </>
       )}
-    </div>
+    </AdminPageWrapper>
   );
 }
 

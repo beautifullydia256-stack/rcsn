@@ -1,17 +1,16 @@
 import { useNavigate } from 'react-router-dom';
-import { GlassPanel } from '@/components/Glass/GlassPanel';
+import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-        <button type="button" className="rounded-lg border border-border bg-muted px-3 py-2 text-sm hover:bg-muted/80" onClick={() => navigate('/dashboard/admin')}>Back to Dashboard</button>
+    <AdminPageWrapper title="Settings">
+      <div className="flex items-center justify-end">
+        <button type="button" className="rounded-lg border border-gray-600 bg-[#1e293b] px-3 py-2 text-sm text-gray-200 hover:bg-white/5" onClick={() => navigate('/dashboard/admin')}>Back to Dashboard</button>
       </div>
-      <GlassPanel className="p-6 text-center text-muted-foreground">
+      <div className={`${adminCardClass} text-center text-gray-400`}>
         <p>School settings are under migration. Use the legacy admin for now.</p>
-      </GlassPanel>
-    </div>
+      </div>
+    </AdminPageWrapper>
   );
 }
