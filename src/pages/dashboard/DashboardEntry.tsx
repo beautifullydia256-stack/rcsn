@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import ThemedLoadingView from '../../components/ui/ThemedLoadingView';
 
 function roleToDashboard(role?: string | null): string {
   if (!role) return '/login';
@@ -37,11 +38,7 @@ export default function DashboardEntry() {
     navigate(dashboard, { replace: true });
   }, [role, navigate]);
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-    </div>
-  );
+  return <ThemedLoadingView />;
 }
 
 

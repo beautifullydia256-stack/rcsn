@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import ThemedLoadingView from '../components/ui/ThemedLoadingView';
 
 export default function ProtectedRoute() {
   const navigate = useNavigate();
@@ -62,11 +63,7 @@ export default function ProtectedRoute() {
   }, [navigate, setUser, setRole]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <ThemedLoadingView />;
   }
 
   return <Outlet />;

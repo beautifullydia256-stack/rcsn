@@ -7,6 +7,7 @@ import ProtectedRoute from './router/ProtectedRoute';
 import AdminLayout from './components/layout/AdminLayout';
 import TeacherLayout from './components/layout/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
+import ThemedLoadingView from './components/ui/ThemedLoadingView';
 
 // Lazy load pages
 const HomePage = lazy(() => import('./pages/Home'));
@@ -54,20 +55,12 @@ const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicy'));
 const SecurityLetterPage = lazy(() => import('./pages/SecurityLetter'));
 const AffiliateTermsPage = lazy(() => import('./pages/AffiliateTerms'));
 
-function LoadingSpinner() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-    </div>
-  );
-}
-
 function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
         <ToastProvider>
-          <Suspense fallback={<LoadingSpinner />}>
+          <Suspense fallback={<ThemedLoadingView />}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />

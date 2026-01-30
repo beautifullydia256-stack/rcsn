@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -16,6 +17,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import GlassBackground from './GlassBackground';
+import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
 
 const sidebarStyle = {
@@ -130,7 +132,9 @@ export default function AdminLayout() {
       </aside>
 
       <main className="relative min-w-0 flex-1 ml-52 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-screen z-0">
-        <Outlet />
+        <Suspense fallback={<AdminContentSkeleton />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

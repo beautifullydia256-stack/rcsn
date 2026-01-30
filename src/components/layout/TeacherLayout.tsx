@@ -1,4 +1,6 @@
+import { Suspense } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
+import TeacherContentSkeleton from './TeacherContentSkeleton';
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
   `block rounded-md px-3 py-2 text-sm font-medium transition-colors ${
@@ -18,7 +20,9 @@ export default function TeacherLayout() {
         <NavLink to="/dashboard/teacher/settings" className={navClass}>Settings</NavLink>
       </nav>
       <main className="min-w-0 flex-1">
-        <Outlet />
+        <Suspense fallback={<TeacherContentSkeleton />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

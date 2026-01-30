@@ -6,6 +6,14 @@ import { DollarSign, Bell } from 'lucide-react';
 
 export default function RecentPaymentsNotifications() {
   const navigate = useNavigate();
+  type PaymentRow = {
+    payment_id: string;
+    amount_paid: number;
+    payment_date: string;
+    payment_method: string;
+    student_id: string;
+    students?: { name: string } | { name: string }[] | null;
+  };
   const [payments, setPayments] = useState<Array<{ payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } }>>([]);
   const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; created_at: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +66,17 @@ export default function RecentPaymentsNotifications() {
             .limit(5),
         ]);
 
-        setPayments((paymentsResult.data || []) as typeof payments);
+        const rawPayments = (paymentsResult.data || []) as PaymentRow[];
+        setPayments(
+          rawPayments.map((p) => ({
+            payment_id: p.payment_id,
+            amount_paid: p.amount_paid,
+            payment_date: p.payment_date,
+            payment_method: p.payment_method,
+            student_id: p.student_id,
+            students: Array.isArray(p.students) ? p.students[0] : p.students ?? undefined,
+          }))
+        );
         setNotifications((notificationsResult.data || []) as typeof notifications);
       } catch (error) {
         console.error('Error loading data:', error);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
 import AdminKPICards from './components/AdminKPICards';
 import QuickActions from './components/QuickActions';
 import PendingExpensesCard from './components/PendingExpensesCard';
@@ -73,14 +74,7 @@ export default function AdminDashboard() {
   }, [navigate]);
 
   if (loading) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-white/30" />
-          <p className="text-white/85">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    return <AdminContentSkeleton />;
   }
 
   if (error) {
