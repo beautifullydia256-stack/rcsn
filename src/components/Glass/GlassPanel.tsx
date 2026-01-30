@@ -6,7 +6,7 @@ interface GlassPanelProps {
   children: ReactNode;
   className?: string;
   variant?: 'subtle' | 'normal' | 'strong';
-  rounded?: 'sm' | 'md' | 'lg' | 'xl';
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
   hover?: boolean;
   onClick?: () => void;
 }
@@ -25,7 +25,8 @@ export function GlassPanel({
     strong: 'glass-strong',
   };
 
-  const roundedClasses = {
+  const roundedClasses: Record<'none' | 'sm' | 'md' | 'lg' | 'xl', string> = {
+    none: '',
     sm: 'glass-rounded',
     md: 'glass-rounded',
     lg: 'glass-rounded-lg',

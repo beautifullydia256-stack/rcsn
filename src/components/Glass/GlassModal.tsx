@@ -55,24 +55,23 @@ export function GlassModal({
             >
               <GlassPanel variant="strong" rounded="xl" className="p-6">
                 {/* Header */}
-                {(title || onClose) && (
-                  <div className="flex items-center justify-between mb-4">
-                    {title && (
-                      <h2 className="text-2xl font-semibold text-foreground">
-                        {title}
-                      </h2>
-                    )}
-                    {onClose && (
-                      <button
-                        onClick={onClose}
-                        className="glass-subtle glass-rounded p-2 hover:glass-hover transition-all"
-                        aria-label="Close"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    )}
-                  </div>
-                )}
+                <div className="flex items-center justify-between mb-4">
+                  {title ? (
+                    <h2 className="text-2xl font-semibold text-foreground">
+                      {title}
+                    </h2>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="glass-subtle glass-rounded p-2 hover:glass-hover transition-all"
+                    aria-label="Close"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
                 
                 {/* Content */}
                 {children}

@@ -31,6 +31,16 @@ export interface SnapshotData {
   attendance_percentage?: number;
   position?: number;
   aggregate?: number;
+  average_percentage?: number | null;
+  division?: string | null;
+  exam_set_name?: string | null;
+  exam_set_term?: string | null;
+  exam_set_year?: string | null;
+  school_logo_url?: string | null;
+  student_photo_url?: string | null;
+  fees_expected?: number | null;
+  fees_paid?: number | null;
+  fees_balance?: number | null;
   frozen_data?: Record<string, any>;
 }
 

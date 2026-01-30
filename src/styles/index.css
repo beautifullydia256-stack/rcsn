@@ -6,7 +6,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border, hsl(0 0% 90%));
   }
   
   body {
@@ -38,16 +38,12 @@
 }
 
 @layer components {
-  /* Glass button base */
+  /* Use classes "btn-glass glass glass-rounded glass-hover" in markup for full effect */
   .btn-glass {
-    @apply glass glass-rounded px-6 py-3 font-medium transition-all duration-300;
-    @apply hover:glass-hover active:glass-active;
+    @apply px-6 py-3 font-medium transition-all duration-300;
   }
-  
-  /* Glass input base */
   .input-glass {
-    @apply glass glass-rounded px-4 py-2 w-full;
-    @apply focus:glass-strong focus:outline-none;
+    @apply px-4 py-2 w-full outline-none;
   }
 }
 

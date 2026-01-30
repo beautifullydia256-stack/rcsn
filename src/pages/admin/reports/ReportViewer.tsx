@@ -6,6 +6,7 @@ import { useSnapshot } from '../../../hooks/useSnapshot';
 import { getCachedReport } from '../../../services/reportCache';
 import { GlassCard } from '../../../components/Glass/GlassCard';
 import { GlassPanel } from '../../../components/Glass/GlassPanel';
+import { GlassModal } from '../../../components/Glass/GlassModal';
 import { Download, Search, Eye } from 'lucide-react';
 
 export default function ReportViewer() {

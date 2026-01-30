@@ -12,6 +12,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        border: "var(--border, hsl(0 0% 90%))",
+        muted: "var(--muted, hsl(0 0% 96%))",
+        "muted-foreground": "var(--muted-foreground, hsl(0 0% 45%))",
+        primary: "var(--primary, hsl(221 83% 53%))",
+        "primary-foreground": "var(--primary-foreground, #fff)",
+        destructive: "var(--destructive, hsl(0 84% 60%))",
+        "destructive-foreground": "var(--destructive-foreground, #fff)",
+        ring: "var(--ring, hsl(221 83% 53%))",
       },
       spacing: {
         'safe-top': 'var(--safe-area-inset-top)',

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from 'react';
-import { compressImage, validateImageFile, formatFileSize, CompressionResult } from '@/src/lib/imageCompression';
+import { compressImage, validateImageFile, formatFileSize, CompressionResult } from '@/lib/imageCompression';
 
 interface ImageUploadProps {
   onImageSelect: (file: File, compressionResult: CompressionResult) => void;

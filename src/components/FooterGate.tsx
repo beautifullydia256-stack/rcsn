@@ -1,10 +1,8 @@
-"use client";
-
-import { usePathname } from "next/navigation";
-import Footer from "@/src/components/Footer";
+import { useLocation } from "react-router-dom";
+import Footer from "@/components/Footer";
 
 export default function FooterGate() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const show = pathname === "/" || pathname?.startsWith("/library") || pathname?.startsWith("/jobs");
   if (!show) return null;
   return <Footer />;

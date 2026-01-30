@@ -144,12 +144,15 @@ export const getTermSchoolDays = (term: 1 | 2 | 3): number => {
 
 // Get all terms for a year
 export const getYearTerms = (year: number) => {
-  return [1, 2, 3].map(term => ({
-    term: term as 1 | 2 | 3,
-    year,
-    startDate: getDefaultTermStartDate(year, term as 1 | 2 | 3),
-    endDate: getDefaultTermEndDate(year, term as 1 | 2 | 3),
-    ...getTermDefinition(term as 1 | 2 | 3)
-  }));
+  return [1, 2, 3].map(termNum => {
+    const term = termNum as 1 | 2 | 3;
+    return {
+      ...getTermDefinition(term),
+      term,
+      year,
+      startDate: getDefaultTermStartDate(year, term),
+      endDate: getDefaultTermEndDate(year, term),
+    };
+  });
 };
 

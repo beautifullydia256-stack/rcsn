@@ -1,7 +1,5 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "react-router-dom";
 
 type ConsentStatus = "accepted" | "declined" | null;
 
@@ -69,7 +67,7 @@ export default function CookieConsent() {
           <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="text-sm leading-6 text-slate-200">
               We use cookies to improve your experience, analyze usage, and provide personalized content. See our {" "}
-              <Link href="/cookie-policy" className="underline hover:text-white">Cookie Policy</Link>.
+              <Link to="/cookie-policy" className="underline hover:text-white">Cookie Policy</Link>.
             </p>
             <div className="flex items-center gap-2 sm:gap-3">
               <button

@@ -1,12 +1,10 @@
-"use client";
-
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
-import { supabase } from "@/src/lib/supabase";
+import { useLocation } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 export default function LiveChatWidget() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
