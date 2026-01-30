@@ -26,6 +26,7 @@ const AttendanceRecordsPage = lazy(() => import('./pages/admin/attendance/Attend
 const SettingsPage = lazy(() => import('./pages/admin/settings/SettingsPage'));
 const SettingsClassesPage = lazy(() => import('./pages/admin/settings/ClassesPage'));
 const ClassDetailPage = lazy(() => import('./pages/admin/settings/ClassDetailPage'));
+const LocationSettingsPage = lazy(() => import('./pages/admin/settings/LocationSettingsPage'));
 const OutstandingPage = lazy(() => import('./pages/admin/outstanding/OutstandingPage'));
 const AdminJobsPage = lazy(() => import('./pages/admin/jobs/AdminJobsPage'));
 const NotificationsPage = lazy(() => import('./pages/admin/notifications/NotificationsPage'));
@@ -94,6 +95,7 @@ function App() {
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="settings/classes" element={<SettingsClassesPage />} />
                   <Route path="settings/classes/:className" element={<ClassDetailPage />} />
+                  <Route path="settings/location" element={<LocationSettingsPage />} />
                   <Route path="jobs" element={<AdminJobsPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="reports/snapshots" element={<SnapshotManager />} />

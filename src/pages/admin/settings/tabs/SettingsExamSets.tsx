@@ -1,0 +1,409 @@
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import SectionHeader from './SectionHeader';
+
+type ExamSet = {
+  id: string;
+  name: string;
+  description: string | null;
+  term: number;
+  year: number;
+  target_classes: string[];
+  is_active: boolean;
+  active_for_input: boolean;
+};
+
+export default function SettingsExamSets({
+  classOptions,
+  schoolId,
+  schoolType,
+}: {
+  classOptions: string[];
+  schoolId: string | null;
+  schoolType: 'Nursery/Primary' | 'Secondary' | null;
+}) {
+  const [examSets, setExamSets] = useState<ExamSet[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [currentTerm, setCurrentTerm] = useState<{ year: number; term: number } | null>(null);
+
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [term, setTerm] = useState(1);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [targetClasses, setTargetClasses] = useState<string[]>([]);
+  const [allClasses, setAllClasses] = useState(false);
+
+  const autoCopyExamSetsFromPreviousYear = async (
+    currentYear: number,
+    currentExamSets: ExamSet[]
+  ) => {
+    if (!schoolId) return;
+    const hasCurrentYear = currentExamSets.some((es) => es.year === currentYear);
+    if (hasCurrentYear) return;
+    const { data: previousYear, error: err } = await supabase
+      .from('exam_sets')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('year', currentYear - 1)
+      .order('term', { ascending: true });
+    if (err || !previousYear?.length) return;
+    const newSets = previousYear.map((es: ExamSet & { target_classes?: string[] }) => ({
+      school_id: schoolId,
+      name: es.name,
+      description: es.description,
+      term: es.term,
+      year: currentYear,
+      target_classes: es.target_classes || [],
+      is_active: false,
+      active_for_input: false,
+    }));
+    await supabase.from('exam_sets').insert(newSets);
+    const { data: updated } = await supabase
+      .from('exam_sets')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .order('name');
+    setExamSets(updated || []);
+  };
+
+  useEffect(() => {
+    const loadExamSets = async () => {
+      if (!schoolId) return;
+      setLoading(true);
+      const { data, error: err } = await supabase
+        .from('exam_sets')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('year', { ascending: false })
+        .order('term', { ascending: true })
+        .order('sort_order', { ascending: true })
+        .order('name');
+      if (err) setError(err.message);
+      setExamSets(data || []);
+
+      const { data: termsData } = await supabase
+        .from('school_terms')
+        .select('*')
+        .eq('school_id', schoolId)
+        .order('year', { ascending: false })
+        .order('term', { ascending: true });
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const current = (termsData || []).find(
+        (r: { start_date?: string; end_date: string }) =>
+          (r.start_date ? r.start_date <= todayStr && r.end_date >= todayStr : r.end_date >= todayStr)
+      );
+      if (current) {
+        setCurrentTerm({ year: current.year, term: current.term });
+        await autoCopyExamSetsFromPreviousYear(current.year, data || []);
+      }
+      setLoading(false);
+    };
+    loadExamSets();
+  }, [schoolId]);
+
+  const saveExamSet = async () => {
+    setError(null);
+    if (!schoolId || !name.trim()) return;
+    setSaving(true);
+    const payload = {
+      school_id: schoolId,
+      name: name.trim(),
+      description: description.trim() || null,
+      term,
+      year,
+      target_classes: allClasses ? [] : targetClasses,
+      is_active: true,
+    };
+    const { error: insertError } = await supabase.from('exam_sets').insert(payload);
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+    setName('');
+    setDescription('');
+    setTerm(1);
+    setYear(new Date().getFullYear());
+    setTargetClasses([]);
+    setAllClasses(false);
+    const { data } = await supabase
+      .from('exam_sets')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: true })
+      .order('sort_order', { ascending: true })
+      .order('name');
+    setExamSets(data || []);
+  };
+
+  const toggleClass = (className: string) => {
+    setTargetClasses((prev) =>
+      prev.includes(className) ? prev.filter((c) => c !== className) : [...prev, className]
+    );
+  };
+
+  const deleteExamSet = async (id: string) => {
+    const examSet = examSets.find((es) => es.id === id);
+    if (!examSet) return;
+    if (currentTerm) {
+      const isPrevious =
+        examSet.year < currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      if (isPrevious) {
+        setError('Cannot delete exam sets for previous terms.');
+        return;
+      }
+    }
+    if (!confirm('Are you sure you want to delete this exam set?')) return;
+    const { error: err } = await supabase.from('exam_sets').delete().eq('id', id);
+    if (err) setError(err.message);
+    else setExamSets((prev) => prev.filter((es) => es.id !== id));
+  };
+
+  const toggleActive = async (id: string, currentActive: boolean) => {
+    const examSet = examSets.find((es) => es.id === id);
+    if (!examSet) return;
+    if (currentTerm) {
+      const isPrevious =
+        examSet.year < currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      if (isPrevious) {
+        setError('Cannot modify exam sets for previous terms.');
+        return;
+      }
+    }
+    const { error: err } = await supabase
+      .from('exam_sets')
+      .update({ is_active: !currentActive })
+      .eq('id', id);
+    if (err) setError(err.message);
+    else setExamSets((prev) => prev.map((es) => (es.id === id ? { ...es, is_active: !currentActive } : es)));
+  };
+
+  const toggleActiveForInput = async (id: string, currentActive: boolean) => {
+    const examSet = examSets.find((es) => es.id === id);
+    if (!examSet) return;
+    if (currentTerm) {
+      const isPrevious =
+        examSet.year < currentTerm.year ||
+        (examSet.year === currentTerm.year && examSet.term < currentTerm.term);
+      if (isPrevious) {
+        setError('Cannot modify exam sets for previous terms.');
+        return;
+      }
+    }
+    if (currentActive) {
+      const { data: results } = await supabase
+        .from('exam_results')
+        .select('id')
+        .eq('exam_set_id', id)
+        .limit(1);
+      if (results?.length) {
+        setError('Cannot turn off exam set. Teachers have already input results.');
+        return;
+      }
+    }
+    const { error: err } = await supabase
+      .from('exam_sets')
+      .update({ active_for_input: !currentActive })
+      .eq('id', id);
+    if (err) setError(err.message);
+    else
+      setExamSets((prev) =>
+        prev.map((es) => (es.id === id ? { ...es, active_for_input: !currentActive } : es))
+      );
+  };
+
+  const filteredSets = currentTerm
+    ? examSets.filter((es) => es.year === currentTerm.year)
+    : examSets;
+  const targetClassesArr = (es: ExamSet) =>
+    Array.isArray(es.target_classes) ? es.target_classes : [];
+
+  return (
+    <div>
+      <SectionHeader
+        title="Exam Sets Management"
+        desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
+      />
+
+      <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
+        <h3 className="mb-3 font-medium text-white">Create New Exam Set</h3>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Exam Set Name (e.g., Beginning of Term)"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+          />
+          <input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+          />
+          <select
+            value={term}
+            onChange={(e) => setTerm(parseInt(e.target.value, 10))}
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          >
+            <option value={1} className="bg-slate-900">Term 1</option>
+            <option value={2} className="bg-slate-900">Term 2</option>
+            <option value={3} className="bg-slate-900">Term 3</option>
+          </select>
+          <input
+            type="number"
+            min={2020}
+            max={2099}
+            value={year}
+            onChange={(e) => setYear(parseInt(e.target.value, 10))}
+            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          />
+        </div>
+        <div className="mt-3">
+          <label className="mb-2 flex items-center gap-2 text-sm text-white/80">
+            <input
+              type="checkbox"
+              checked={allClasses}
+              onChange={(e) => {
+                setAllClasses(e.target.checked);
+                if (e.target.checked) setTargetClasses([]);
+              }}
+              className="accent-blue-500"
+            />
+            Apply to all classes
+          </label>
+          {!allClasses && (
+            <div className="flex flex-wrap gap-2">
+              {classOptions.map((className) => (
+                <button
+                  key={className}
+                  type="button"
+                  onClick={() => toggleClass(className)}
+                  className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
+                    targetClasses.includes(className)
+                      ? 'border-blue-400 bg-blue-600/80 text-white'
+                      : 'border-white/20 bg-white/10 text-white/90 hover:bg-white/15'
+                  }`}
+                >
+                  {className}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          disabled={
+            !schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)
+          }
+          onClick={saveExamSet}
+          className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+        >
+          {saving ? 'Creating...' : 'Create Exam Set'}
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          {error}
+        </div>
+      )}
+
+      <div className="mb-3 text-sm text-white/80">
+        Current Exam Sets ({currentTerm?.year ?? 'Current Year'})
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-white/20 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left">
+              <th className="px-4 py-2 text-white/80">Name</th>
+              <th className="px-4 py-2 text-white/80">Description</th>
+              <th className="px-4 py-2 text-white/80">Term</th>
+              <th className="px-4 py-2 text-white/80">Year</th>
+              <th className="px-4 py-2 text-white/80">Classes</th>
+              <th className="px-4 py-2 text-white/80">Status</th>
+              <th className="px-4 py-2 text-white/80">Active for Input</th>
+              <th className="px-4 py-2 text-white/80">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-white/80">
+                  Loading...
+                </td>
+              </tr>
+            ) : filteredSets.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-4 py-6 text-center text-white/80">
+                  No exam sets created for {currentTerm?.year ?? 'this year'} yet.
+                </td>
+              </tr>
+            ) : (
+              filteredSets.map((es) => (
+                <tr key={es.id} className="border-t border-white/10">
+                  <td className="px-4 py-2 font-medium text-white">{es.name}</td>
+                  <td className="px-4 py-2 text-white/90">{es.description || '-'}</td>
+                  <td className="px-4 py-2 text-white/90">Term {es.term}</td>
+                  <td className="px-4 py-2 text-white/90">{es.year}</td>
+                  <td className="px-4 py-2 text-white/90">
+                    {targetClassesArr(es).length === 0 ? (
+                      <span className="text-green-300">All Classes</span>
+                    ) : (
+                      <span className="text-blue-300">
+                        {targetClassesArr(es).length} class
+                        {targetClassesArr(es).length !== 1 ? 'es' : ''}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleActive(es.id, es.is_active)}
+                      className={`rounded px-2 py-1 text-xs transition-colors ${
+                        es.is_active
+                          ? 'bg-green-600 text-white hover:bg-green-500'
+                          : 'bg-gray-600 text-white hover:bg-gray-500'
+                      }`}
+                    >
+                      {es.is_active ? 'Active' : 'Inactive'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
+                      className={`rounded px-2 py-1 text-xs transition-colors ${
+                        es.active_for_input
+                          ? 'bg-blue-600 text-white hover:bg-blue-500'
+                          : 'bg-gray-600 text-white hover:bg-gray-500'
+                      }`}
+                    >
+                      {es.active_for_input ? 'ON' : 'OFF'}
+                    </button>
+                  </td>
+                  <td className="px-4 py-2">
+                    <button
+                      type="button"
+                      onClick={() => deleteExamSet(es.id)}
+                      className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:scale-105 hover:bg-red-400 transition-transform"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
