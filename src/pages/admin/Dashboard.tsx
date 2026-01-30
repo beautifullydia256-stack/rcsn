@@ -1,214 +1,140 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../lib/supabase';
-import { useAuthStore } from '../../store/authStore';
-import {
-  Users,
-  GraduationCap,
-  BookOpen,
-  FileText,
-  Settings,
-  ClipboardList,
-  UserPlus,
-  CreditCard,
-} from 'lucide-react';
-import GlassCard from '../../components/ui/GlassCard';
-
-const KPI_COLORS = {
-  students: '#4dabff',
-  teachers: '#10b981',
-  classes: '#ae79ff',
-  exams: '#f59e0b',
-} as const;
+import { supabase } from '@/lib/supabase';
+import AdminKPICards from './components/AdminKPICards';
+import QuickActions from './components/QuickActions';
+import PendingExpensesCard from './components/PendingExpensesCard';
+import ChartsAnalytics from './components/ChartsAnalytics';
+import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
+import AISection from './components/AISection';
+import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [counts, setCounts] = useState<{
-    students: number;
-    teachers: number;
-    classes: number;
-    exams: number;
-  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [missingSchoolId, setMissingSchoolId] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    const run = async () => {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-      if (!userData?.school_id) return;
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate(`/login?returnUrl=${encodeURIComponent('/dashboard/admin')}`);
+          return;
+        }
 
-      const [studentsRes, teachersRes, examSetsRes] = await Promise.all([
-        supabase
-          .from('students')
-          .select('student_id', { count: 'exact', head: true })
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role, school_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (userError || !userData) {
+          setError('Unable to load user data. Please contact support.');
+          setLoading(false);
+          return;
+        }
+
+        if (userData.role !== 'admin') {
+          navigate('/dashboard');
+          return;
+        }
+
+        if (!userData.school_id) {
+          setMissingSchoolId(true);
+          setError('Your account is not linked to a school. Please contact support to complete your account setup.');
+          setLoading(false);
+          return;
+        }
+
+        const { data: schoolData, error: schoolError } = await supabase
+          .from('schools')
+          .select('school_id, name')
           .eq('school_id', userData.school_id)
-          .eq('status', 'active'),
-        supabase
-          .from('teachers')
-          .select('teacher_id', { count: 'exact', head: true })
-          .eq('school_id', userData.school_id),
-        supabase
-          .from('exam_sets')
-          .select('id', { count: 'exact', head: true })
-          .eq('school_id', userData.school_id),
-      ]);
+          .single();
 
-      const studentCount = studentsRes.count ?? 0;
-      const teacherCount = teachersRes.count ?? 0;
-      const examCount = examSetsRes.count ?? 0;
+        if (schoolError || !schoolData) {
+          setError('Your school record could not be found. Please contact support.');
+          setLoading(false);
+          return;
+        }
 
-      const { data: classData } = await supabase
-        .from('students')
-        .select('current_class')
-        .eq('school_id', userData.school_id);
-      const classSet = new Set(
-        (classData ?? []).map((r: { current_class: string }) => r.current_class).filter(Boolean)
-      );
-      const classCount = classSet.size;
-
-      setCounts({
-        students: studentCount,
-        teachers: teacherCount,
-        classes: classCount,
-        exams: examCount,
-      });
+        setError(null);
+      } catch (err) {
+        console.error('Error checking auth:', err);
+        setError('An unexpected error occurred. Please try again.');
+      } finally {
+        setLoading(false);
+      }
     };
-    run();
-  }, [user]);
 
-  const kpis = [
-    {
-      key: 'students',
-      label: 'Students',
-      sublabel: 'Total enrolled',
-      value: counts?.students ?? '—',
-      icon: Users,
-      color: KPI_COLORS.students,
-      onClick: () => navigate('/dashboard/admin/students'),
-    },
-    {
-      key: 'teachers',
-      label: 'Teachers',
-      sublabel: 'Active staff',
-      value: counts?.teachers ?? '—',
-      icon: GraduationCap,
-      color: KPI_COLORS.teachers,
-      onClick: () => navigate('/dashboard/admin/teachers'),
-    },
-    {
-      key: 'classes',
-      label: 'Classes',
-      sublabel: 'Active classes',
-      value: counts?.classes ?? '—',
-      icon: BookOpen,
-      color: KPI_COLORS.classes,
-      onClick: undefined,
-    },
-    {
-      key: 'exams',
-      label: 'Exams',
-      sublabel: 'This term',
-      value: counts?.exams ?? '—',
-      icon: FileText,
-      color: KPI_COLORS.exams,
-      onClick: () => navigate('/dashboard/admin/exam-sets'),
-    },
-  ];
+    checkAuth();
+  }, [navigate]);
 
-  const quickLinks = [
-    { to: '/dashboard/admin/students', label: 'Students', subtitle: 'Manage students', icon: Users, color: '#4dabff' },
-    { to: '/dashboard/admin/teachers', label: 'Teachers', subtitle: 'Manage staff', icon: GraduationCap, color: '#10b981' },
-    { to: '/dashboard/admin/parents', label: 'Parents', subtitle: 'Parent accounts', icon: UserPlus, color: '#ff6bcb' },
-    { to: '/dashboard/admin/accounts', label: 'Accounts', subtitle: 'User accounts', icon: CreditCard, color: '#ae79ff' },
-    { to: '/dashboard/admin/exam-sets', label: 'Exam Sets', subtitle: 'Exams & terms', icon: BookOpen, color: '#f59e0b' },
-    { to: '/dashboard/admin/attendance', label: 'Attendance', subtitle: 'Records', icon: ClipboardList, color: '#00d4ff' },
-    { to: '/dashboard/admin/reports/snapshots', label: 'Report Snapshots', subtitle: 'Create & lock', icon: FileText, color: '#8b5cf6' },
-    { to: '/dashboard/admin/reports/bulk', label: 'Bulk Generate', subtitle: 'Generate reports', icon: FileText, color: '#ec4899' },
-    { to: '/dashboard/admin/settings', label: 'Settings', subtitle: 'School settings', icon: Settings, color: '#6366f1' },
-  ];
+  if (loading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-white/30" />
+          <p className="text-white/85">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex max-w-md flex-col items-center gap-4 text-center">
+          <div className="mb-4 text-4xl text-red-400">⚠️</div>
+          <h2 className="mb-2 text-xl font-bold text-white">Account Setup Required</h2>
+          <p className="mb-6 text-white/85">{error}</p>
+          {missingSchoolId && (
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+            >
+              Complete School Setup
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="text-white/70 transition-colors hover:text-white"
+          >
+            Back to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <>
       <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
+        <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">Admin Dashboard</h1>
         <p className="text-white/85">Manage your school operations and view insights</p>
       </div>
 
-      {/* KPI cards - glass style with gradient tint (2f00b44) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          const rgb = k.color === '#4dabff' ? '77, 171, 255' : k.color === '#10b981' ? '16, 185, 129' : k.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11';
-          return (
-            <GlassCard
-              key={k.key}
-              className="p-4 sm:p-6 cursor-pointer relative overflow-hidden transition-all duration-300 hover:bg-white/20 hover:border-white/30"
-              hover
-              onClick={k.onClick}
-              style={{
-                background: `linear-gradient(135deg, rgba(${rgb}, 0.25) 0%, rgba(${rgb}, 0.15) 100%)`,
-              }}
-            >
-              <div
-                className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl pointer-events-none"
-                style={{ background: k.color }}
-              />
-              <div className="relative z-10 flex items-center gap-3 sm:gap-4">
-                <div
-                  className="p-2 sm:p-3 rounded-xl flex-shrink-0"
-                  style={{ background: `${k.color}20` }}
-                >
-                  <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: k.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs sm:text-sm text-white/85 mb-1">{k.label}</div>
-                  <div className="text-xs text-white/70 mb-0.5">{k.sublabel}</div>
-                  <button
-                    type="button"
-                    className="text-xl sm:text-2xl font-bold text-white hover:underline text-left"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      k.onClick?.();
-                    }}
-                  >
-                    {counts != null ? k.value : '—'}
-                  </button>
-                </div>
-              </div>
-            </GlassCard>
-          );
-        })}
-      </div>
+      <AdminKPICards />
 
-      {/* Quick links - glass card with colored pill buttons (2f00b44) */}
-      <GlassCard className="p-6" hover>
-        <h2 className="text-lg font-semibold text-white mb-4">Quick links</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {quickLinks.map(({ to, label, subtitle, icon: Icon, color }) => (
-            <button
-              key={to}
-              type="button"
-              onClick={() => navigate(to)}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-left transition-all hover:scale-[1.02] hover:-translate-y-0.5"
-              style={{
-                background: `${color}20`,
-                border: `1px solid ${color}40`,
-                color: '#ffffff',
-              }}
-            >
-              <Icon className="w-5 h-5 shrink-0" style={{ color }} />
-              <div>
-                <div className="font-medium text-white">{label}</div>
-                <div className="text-xs text-white/80">{subtitle}</div>
-              </div>
-            </button>
-          ))}
-        </div>
-      </GlassCard>
-    </div>
+      <QuickActions />
+
+      <PendingExpensesCard />
+
+      <ChartsAnalytics />
+
+      <RecentPaymentsNotifications />
+
+      <AISection />
+
+      <RecentReportsSystemHealth />
+
+      <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+        <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
+      </footer>
+    </>
   );
 }
