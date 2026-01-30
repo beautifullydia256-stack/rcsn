@@ -1,7 +1,7 @@
 // Google OAuth helper functions for custom domain integration
 
-const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!;
-const GOOGLE_REDIRECT_URI = process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI || 'https://pwezacore.com/auth/google/callback';
+const GOOGLE_CLIENT_ID = import.meta.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? import.meta.env.VITE_GOOGLE_CLIENT_ID ?? '';
+const GOOGLE_REDIRECT_URI = import.meta.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI ?? import.meta.env.VITE_GOOGLE_REDIRECT_URI ?? 'https://pwezacore.com/auth/google/callback';
 
 // Generate Google OAuth URL for login
 export function generateGoogleLoginUrl(): string {
