@@ -1,8 +1,7 @@
-"use client";
+import { useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
-import { useEffect } from "react";
-
-// UTMTracker sends a click beacon to the API on first page load when utm params are present
+/** Tracks UTM params via Supabase Edge Function (no Next.js API). */
 export default function UTMTracker() {
   useEffect(() => {
     try {
@@ -12,11 +11,11 @@ export default function UTMTracker() {
       const utm_campaign = url.searchParams.get('utm_campaign');
       if (!utm_source && !utm_medium && !utm_campaign) return;
 
-      fetch('/api/affiliate/click', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utm_source, utm_medium, utm_campaign, url: window.location.href })
-      }).catch(() => {});
+      supabase.functions
+        .invoke('track-affiliate-click', {
+          body: { utm_source, utm_medium, utm_campaign, url: window.location.href },
+        })
+        .catch(() => {});
     } catch (_) {}
   }, []);
 

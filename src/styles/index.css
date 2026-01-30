@@ -1,0 +1,56 @@
+@import './glass-variables.css';
+@import './liquid-glass.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-gray-50 via-white to-gray-100 text-foreground;
+    font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  .dark body {
+    @apply bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900;
+  }
+  
+  /* Desktop-optimized typography */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+    letter-spacing: -0.02em;
+  }
+  
+  /* Smooth scrolling for desktop */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Focus styles for desktop */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+}
+
+@layer components {
+  /* Glass button base */
+  .btn-glass {
+    @apply glass glass-rounded px-6 py-3 font-medium transition-all duration-300;
+    @apply hover:glass-hover active:glass-active;
+  }
+  
+  /* Glass input base */
+  .input-glass {
+    @apply glass glass-rounded px-4 py-2 w-full;
+    @apply focus:glass-strong focus:outline-none;
+  }
+}
+
+
+
+

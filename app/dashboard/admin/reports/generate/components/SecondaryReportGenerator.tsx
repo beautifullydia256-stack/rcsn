@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * @deprecated Report generation has moved to the SPA snapshot-based UI.
+ * Use /dashboard/admin/reports/snapshots (SnapshotManager) and BulkGenerator instead.
+ * This component is kept for reference only.
+ */
+
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";

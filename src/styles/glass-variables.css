@@ -1,0 +1,57 @@
+/* Liquid Glass CSS Variables */
+
+:root {
+  /* Glass Opacity Levels */
+  --glass-opacity-light: 0.1;
+  --glass-opacity-medium: 0.15;
+  --glass-opacity-strong: 0.2;
+  
+  /* Glass Blur Levels */
+  --glass-blur-subtle: 10px;
+  --glass-blur-normal: 20px;
+  --glass-blur-strong: 30px;
+  
+  /* Glass Border */
+  --glass-border-light: rgba(255, 255, 255, 0.2);
+  --glass-border-medium: rgba(255, 255, 255, 0.3);
+  --glass-border-strong: rgba(255, 255, 255, 0.4);
+  
+  /* Glass Shadow */
+  --glass-shadow-subtle: 0 4px 16px rgba(0, 0, 0, 0.05);
+  --glass-shadow-normal: 0 8px 32px rgba(0, 0, 0, 0.1);
+  --glass-shadow-strong: 0 12px 48px rgba(0, 0, 0, 0.15);
+  
+  /* Glass Saturation */
+  --glass-saturate-normal: 180%;
+  --glass-saturate-strong: 200%;
+  
+  /* Accent Colors (Embedded in Glass) */
+  --glass-accent-primary: rgba(59, 130, 246, 0.2);
+  --glass-accent-success: rgba(34, 197, 94, 0.2);
+  --glass-accent-warning: rgba(251, 191, 36, 0.2);
+  --glass-accent-error: rgba(239, 68, 68, 0.2);
+  
+  /* Glow Effects */
+  --glass-glow-subtle: 0 0 20px rgba(59, 130, 246, 0.1);
+  --glass-glow-medium: 0 0 30px rgba(59, 130, 246, 0.2);
+  --glass-glow-strong: 0 0 40px rgba(59, 130, 246, 0.3);
+}
+
+/* Dark Mode Variables */
+.dark {
+  --glass-opacity-light: 0.2;
+  --glass-opacity-medium: 0.3;
+  --glass-opacity-strong: 0.35;
+  
+  --glass-border-light: rgba(255, 255, 255, 0.1);
+  --glass-border-medium: rgba(255, 255, 255, 0.15);
+  --glass-border-strong: rgba(255, 255, 255, 0.25);
+  
+  --glass-shadow-subtle: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --glass-shadow-normal: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-shadow-strong: 0 12px 48px rgba(0, 0, 0, 0.4);
+}
+
+
+
+
