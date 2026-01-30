@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'framer-motion';
 import GlassCard from '@/components/ui/GlassCard';
 import { Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 
@@ -130,10 +129,8 @@ export default function PendingExpensesCard() {
         ) : (
           <div className="space-y-3 max-h-[500px] overflow-y-auto">
             {expenses.map((expense) => (
-              <motion.div
+              <div
                 key={expense.expense_id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
                 className="p-4 rounded-xl"
                 style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
               >
@@ -177,7 +174,7 @@ export default function PendingExpensesCard() {
                     </button>
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
         )}

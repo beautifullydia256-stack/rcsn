@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import GlassCard from '@/components/ui/GlassCard';
 import {
   UserPlus,
@@ -38,19 +37,14 @@ export default function AdminQuickActions() {
     <GlassCard className="p-6 mb-6" hover>
       <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {actions.map((action, index) => {
+        {actions.map((action) => {
           const Icon = action.icon;
           return (
-            <motion.button
+            <button
               key={action.label}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: index * 0.03 }}
-              whileHover={{ scale: 1.05, y: -2 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => navigate(action.path)}
               type="button"
-              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              onClick={() => navigate(action.path)}
+              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium"
               style={{
                 background: `${action.color}20`,
                 border: `1px solid ${action.color}40`,
@@ -65,7 +59,7 @@ export default function AdminQuickActions() {
             >
               <Icon className="w-4 h-4 shrink-0" style={{ color: action.color }} />
               <span>{action.label}</span>
-            </motion.button>
+            </button>
           );
         })}
       </div>

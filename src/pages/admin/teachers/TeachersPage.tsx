@@ -83,7 +83,15 @@ export default function TeachersPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">Loading...</td></tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={`skeleton-${i}`} className="border-b border-white/10">
+                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-40 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-white/15 animate-pulse" /></td>
+                  </tr>
+                ))
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">No teachers found.</td></tr>
               ) : (

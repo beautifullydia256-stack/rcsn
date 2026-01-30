@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { motion } from 'framer-motion';
 import { Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 
@@ -161,16 +160,10 @@ export default function AdminKPICards() {
   return (
     <div className="space-y-4 mb-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {countCards.map((c, i) => {
+        {countCards.map((c) => {
           const Icon = c.icon;
           return (
-            <motion.div
-              key={c.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              whileHover={{ scale: 1.03, y: -4 }}
-            >
+            <div key={c.label}>
               <GlassCard
                 className="p-4 sm:p-6 cursor-pointer relative overflow-hidden"
                 hover
@@ -192,21 +185,15 @@ export default function AdminKPICards() {
                   </div>
                 </div>
               </GlassCard>
-            </motion.div>
+            </div>
           );
         })}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {moneyCards.map((c, i) => {
+        {moneyCards.map((c) => {
           const Icon = c.icon;
           return (
-            <motion.div
-              key={c.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (countCards.length + i) * 0.05 }}
-              whileHover={{ scale: 1.02, y: -4 }}
-            >
+            <div key={c.label}>
               <GlassCard
                 className="p-4 sm:p-6 cursor-pointer relative"
                 hover
@@ -248,7 +235,7 @@ export default function AdminKPICards() {
                   </div>
                 </div>
               </GlassCard>
-            </motion.div>
+            </div>
           );
         })}
       </div>

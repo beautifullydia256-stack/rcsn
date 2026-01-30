@@ -75,16 +75,6 @@ export default function ParentsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <AdminPageWrapper title="Parents & Guardians">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white" />
-        </div>
-      </AdminPageWrapper>
-    );
-  }
-
   return (
     <AdminPageWrapper
       title="Parents & Guardians"
@@ -108,7 +98,7 @@ export default function ParentsPage() {
         </div>
         <div>
           <p className="text-white/70 text-sm">Total Parents</p>
-          <p className="text-2xl font-bold text-white">{parents.length}</p>
+          <p className="text-2xl font-bold text-white">{loading ? '—' : parents.length}</p>
         </div>
       </div>
 
@@ -120,7 +110,7 @@ export default function ParentsPage() {
           onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        {filteredParents.length === 0 ? (
+        {!loading && filteredParents.length === 0 ? (
           <div className="py-12 text-center">
             <Users className="w-12 h-12 mx-auto mb-4 text-white/30" />
             <h3 className="text-white/70 font-medium mb-1">No parents found</h3>
@@ -152,7 +142,20 @@ export default function ParentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredParents.map((p) => (
+                {loading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <tr key={`skeleton-${i}`} className="border-b border-white/10">
+                      <td className="px-4 py-3"><div className="h-5 w-28 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-36 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-7 w-16 rounded bg-white/15 animate-pulse" /></td>
+                    </tr>
+                  ))
+                ) : (
+                filteredParents.map((p) => (
                   <tr key={p.id} className="border-b border-white/10 hover:bg-white/5">
                     <td className="px-4 py-2 text-white">{p.name}</td>
                     <td className="px-4 py-2 text-white/90">{p.email}</td>
@@ -171,7 +174,8 @@ export default function ParentsPage() {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>

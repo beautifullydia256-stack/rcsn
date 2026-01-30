@@ -23,10 +23,13 @@ export default function StudentsPage() {
         navigate('/login');
         return;
       }
-      const { data: sch } = await supabase.from('schools').select('type').eq('school_id', data.school_id).single();
-      setSchoolType((sch?.type as any) || null);
-      const { data: studs } = await supabase.from('students').select('*').eq('school_id', data.school_id).order('created_at', { ascending: false });
-      setRows(studs || []);
+      const schoolId = data.school_id;
+      const [schoolRes, studentsRes] = await Promise.all([
+        supabase.from('schools').select('type').eq('school_id', schoolId).single(),
+        supabase.from('students').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
+      ]);
+      setSchoolType((schoolRes.data?.type as any) || null);
+      setRows(studentsRes.data || []);
       setLoading(false);
     };
     run();
@@ -111,7 +114,15 @@ export default function StudentsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">Loading...</td></tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={`skeleton-${i}`} className="border-b border-white/10">
+                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-20 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-white/15 animate-pulse" /></td>
+                  </tr>
+                ))
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">No students found.</td></tr>
               ) : (
