@@ -42,7 +42,25 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
             .eq('school_id', schoolId)
             .single();
           if (fallback.error) return;
-          data = fallback.data as Record<string, unknown> & { name?: string; logo_url?: string; motto?: string; subtitle?: string; address?: string; pobox?: string; location?: string; website?: string; contact_email?: string; contact_phone?: string; header_school_name_color?: string; header_subtitle_color?: string; header_address_color?: string; header_contact_color?: string; header_motto_color?: string; header_divider_color?: string };
+          const d = fallback.data;
+          if (d) {
+            setSchoolName(d.name || '');
+            setLogo(d.logo_url || null);
+            setMotto(d.motto || '');
+            setSubtitle(d.subtitle || '');
+            setAddress(d.address || d.location || '');
+            setPobox(d.pobox || '');
+            setWebsite(d.website || '');
+            setContactEmail(d.contact_email || '');
+            setContactPhone(d.contact_phone || '');
+            setSchoolNameColor('#1e3a8a');
+            setSubtitleColor('#3b82f6');
+            setAddressColor('#1e40af');
+            setContactColor('#1e40af');
+            setMottoColor('#2563eb');
+            setDividerColor('#1e3a8a');
+          }
+          return;
         }
         if (data) {
           setSchoolName(data.name || '');
@@ -54,12 +72,12 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
           setWebsite(data.website || '');
           setContactEmail(data.contact_email || '');
           setContactPhone(data.contact_phone || '');
-          setSchoolNameColor((data as { header_school_name_color?: string }).header_school_name_color || '#1e3a8a');
-          setSubtitleColor((data as { header_subtitle_color?: string }).header_subtitle_color || '#3b82f6');
-          setAddressColor((data as { header_address_color?: string }).header_address_color || '#1e40af');
-          setContactColor((data as { header_contact_color?: string }).header_contact_color || '#1e40af');
-          setMottoColor((data as { header_motto_color?: string }).header_motto_color || '#2563eb');
-          setDividerColor((data as { header_divider_color?: string }).header_divider_color || '#1e3a8a');
+          setSchoolNameColor(data.header_school_name_color || '#1e3a8a');
+          setSubtitleColor(data.header_subtitle_color || '#3b82f6');
+          setAddressColor(data.header_address_color || '#1e40af');
+          setContactColor(data.header_contact_color || '#1e40af');
+          setMottoColor(data.header_motto_color || '#2563eb');
+          setDividerColor(data.header_divider_color || '#1e3a8a');
         }
       } catch (err) {
         console.error('Error loading branding:', err);
