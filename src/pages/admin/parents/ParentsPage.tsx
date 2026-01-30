@@ -1,15 +1,181 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { supabase } from '../../../lib/supabase';
+import { useAuthStore } from '../../../store/authStore';
+import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import { UserPlus, Users } from 'lucide-react';
+
+interface Parent {
+  id: string;
+  user_id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  student_id: string;
+  student_name?: string;
+  student_class?: string;
+  created_at: string;
+}
 
 export default function ParentsPage() {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
+  const [parents, setParents] = useState<Parent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    const loadParents = async () => {
+      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
+      if (!userData?.school_id) return;
+      const { data: parentsData } = await supabase
+        .from('parents')
+        .select(`
+          id, user_id, name, email, phone, student_id, created_at,
+          students ( name, current_class )
+        `)
+        .eq('school_id', userData.school_id)
+        .order('created_at', { ascending: false });
+      const formatted = (parentsData || []).map((p: any) => ({
+        ...p,
+        student_name: p.students?.name || 'Unknown',
+        student_class: p.students?.current_class || 'N/A',
+      }));
+      setParents(formatted);
+      setLoading(false);
+    };
+    loadParents();
+  }, [user]);
+
+  const filteredParents = useMemo(() => {
+    if (!searchQuery.trim()) return parents;
+    const q = searchQuery.toLowerCase();
+    return parents.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(q) ||
+        p.email?.toLowerCase().includes(q) ||
+        p.phone?.includes(searchQuery) ||
+        p.student_name?.toLowerCase().includes(q)
+    );
+  }, [parents, searchQuery]);
+
+  const handleDelete = async (parentId: string, parentName: string) => {
+    if (!confirm(`Are you sure you want to remove ${parentName}? This will not delete their login if they have one.`)) return;
+    setDeleting(parentId);
+    try {
+      const { error } = await supabase.from('parents').delete().eq('id', parentId);
+      if (error) throw error;
+      setParents((prev) => prev.filter((p) => p.id !== parentId));
+    } catch (err: any) {
+      alert(`Error: ${err.message}`);
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <AdminPageWrapper title="Parents & Guardians">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white" />
+        </div>
+      </AdminPageWrapper>
+    );
+  }
+
   return (
-    <AdminPageWrapper title="Parents">
-      <div className="flex items-center justify-end">
-        <button type="button" className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm text-white/85 hover:bg-white/5" onClick={() => navigate('/dashboard/admin')}>Back to Dashboard</button>
+    <AdminPageWrapper
+      title="Parents & Guardians"
+      subtitle="Manage parent accounts and their linked students"
+    >
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div />
+        <button
+          type="button"
+          onClick={() => navigate('/dashboard/admin/parents/add')}
+          className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+        >
+          <UserPlus className="w-5 h-5" />
+          Add Parent
+        </button>
       </div>
-      <div className={`${adminCardClass} text-center text-white/70`}>
-        <p>Parents management is under migration. Use the legacy admin for now.</p>
+
+      <div className={`${adminCardClass} mb-6 flex items-center gap-3`} style={{ background: 'linear-gradient(135deg, rgba(77, 171, 255, 0.2) 0%, rgba(77, 171, 255, 0.1) 100%)' }}>
+        <div className="p-2 rounded-lg bg-blue-500/20">
+          <Users className="w-5 h-5 text-blue-400" />
+        </div>
+        <div>
+          <p className="text-white/70 text-sm">Total Parents</p>
+          <p className="text-2xl font-bold text-white">{parents.length}</p>
+        </div>
+      </div>
+
+      <div className={`${adminCardClass} space-y-4`}>
+        <input
+          type="text"
+          placeholder="Search by name, email, phone, or student name..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {filteredParents.length === 0 ? (
+          <div className="py-12 text-center">
+            <Users className="w-12 h-12 mx-auto mb-4 text-white/30" />
+            <h3 className="text-white/70 font-medium mb-1">No parents found</h3>
+            <p className="text-white/50 text-sm mb-4">
+              {searchQuery ? 'Try adjusting your search' : 'Get started by adding your first parent'}
+            </p>
+            {!searchQuery && (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/admin/parents/add')}
+                className="rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Add Parent
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/20 bg-white/5 text-left">
+                  <th className="px-4 py-2 font-medium text-white/85">Name</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Email</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Phone</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Student</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Class</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Enrolled</th>
+                  <th className="px-4 py-2 font-medium text-white/85">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredParents.map((p) => (
+                  <tr key={p.id} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="px-4 py-2 text-white">{p.name}</td>
+                    <td className="px-4 py-2 text-white/90">{p.email}</td>
+                    <td className="px-4 py-2 text-white/90">{p.phone || '-'}</td>
+                    <td className="px-4 py-2 text-white/90">{p.student_name}</td>
+                    <td className="px-4 py-2 text-white/90">{p.student_class}</td>
+                    <td className="px-4 py-2 text-white/90">{p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(p.id, p.name)}
+                        disabled={deleting === p.id}
+                        className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600 disabled:opacity-50"
+                      >
+                        {deleting === p.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </AdminPageWrapper>
   );

@@ -69,7 +69,7 @@ export default function StudentsPage() {
       <div className={`${adminCardClass} space-y-4`}>
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <input
-            className="flex-1 rounded-lg border border-gray-600 bg-[#0f172a] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Search by name or class"
             value={q}
             onChange={(e) => setQ(e.target.value)}

@@ -70,7 +70,7 @@ export default function TeachersPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <div className="overflow-x-auto rounded-lg border border-white/20">
+        <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-white/20 bg-white/5 text-left">

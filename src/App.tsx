@@ -24,6 +24,11 @@ const AccountsPage = lazy(() => import('./pages/admin/accounts/AccountsPage'));
 const ExamSetsPage = lazy(() => import('./pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazy(() => import('./pages/admin/attendance/AttendanceRecordsPage'));
 const SettingsPage = lazy(() => import('./pages/admin/settings/SettingsPage'));
+const SettingsClassesPage = lazy(() => import('./pages/admin/settings/ClassesPage'));
+const ClassDetailPage = lazy(() => import('./pages/admin/settings/ClassDetailPage'));
+const OutstandingPage = lazy(() => import('./pages/admin/outstanding/OutstandingPage'));
+const AdminJobsPage = lazy(() => import('./pages/admin/jobs/AdminJobsPage'));
+const NotificationsPage = lazy(() => import('./pages/admin/notifications/NotificationsPage'));
 const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'));
 const TeacherStudentsPage = lazy(() => import('./pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazy(() => import('./pages/teacher/classes/ClassesPage'));
@@ -85,7 +90,12 @@ function App() {
                   <Route path="accounts" element={<AccountsPage />} />
                   <Route path="exam-sets" element={<ExamSetsPage />} />
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
+                  <Route path="outstanding" element={<OutstandingPage />} />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="settings/classes" element={<SettingsClassesPage />} />
+                  <Route path="settings/classes/:className" element={<ClassDetailPage />} />
+                  <Route path="jobs" element={<AdminJobsPage />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="reports/snapshots" element={<SnapshotManager />} />
                   <Route path="reports/bulk" element={<BulkGenerator />} />
                   <Route path="reports/viewer" element={<ReportViewer />} />
