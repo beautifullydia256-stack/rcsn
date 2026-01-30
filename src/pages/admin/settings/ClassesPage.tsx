@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { Users, User, ArrowRight, BookOpen } from 'lucide-react';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 interface ClassItem {
   name: string;
@@ -11,80 +13,61 @@ interface ClassItem {
   teacherName?: string;
 }
 
+async function fetchClassesPage(userId: string): Promise<ClassItem[]> {
+  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!data?.school_id) return [];
+
+  const { data: sch } = await supabase.from('schools').select('type').eq('school_id', data.school_id).single();
+  const classOptions: string[] = [];
+  if (sch?.type === 'Nursery/Primary') {
+    classOptions.push('Baby Class', 'Middle Class', 'Top Class');
+    for (let i = 1; i <= 7; i++) classOptions.push(`Primary ${i}`);
+  } else if (sch?.type === 'Secondary') {
+    for (let i = 1; i <= 6; i++) classOptions.push(`Senior ${i}`);
+  }
+  if (classOptions.length === 0) return [];
+
+  const { data: students } = await supabase.from('students').select('current_class').eq('school_id', data.school_id);
+  const classCounts: Record<string, number> = {};
+  (students || []).forEach((s: any) => {
+    if (s.current_class) classCounts[s.current_class] = (classCounts[s.current_class] || 0) + 1;
+  });
+
+  const { data: classTeachers } = await supabase.from('classes').select('class_name, class_teacher_id').eq('school_id', data.school_id);
+  const teacherMap: Record<string, string> = {};
+  (classTeachers || []).forEach((ct: any) => {
+    if (ct.class_name && ct.class_teacher_id) teacherMap[ct.class_name] = ct.class_teacher_id;
+  });
+
+  const teacherIds = Object.values(teacherMap);
+  const { data: teachers } =
+    teacherIds.length > 0
+      ? await supabase.from('teachers').select('teacher_id, name').eq('school_id', data.school_id).in('teacher_id', teacherIds)
+      : { data: [] };
+  const teacherNameMap: Record<string, string> = {};
+  (teachers || []).forEach((t: any) => {
+    teacherNameMap[t.teacher_id] = t.name;
+  });
+
+  return classOptions.map((className) => ({
+    name: className,
+    studentCount: classCounts[className] || 0,
+    teacherName: teacherMap[className] ? teacherNameMap[teacherMap[className]] : undefined,
+  }));
+}
+
 export default function SettingsClassesPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [schoolType, setSchoolType] = useState<'Nursery/Primary' | 'Secondary' | null>(null);
-  const [classes, setClasses] = useState<ClassItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
 
-  useEffect(() => {
-    if (!user) return;
-    const run = async () => {
-      try {
-        setLoading(true);
-        const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-        if (!data?.school_id) return;
-        setSchoolId(data.school_id);
+  const { data: classes = [], isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'classes', user?.id ?? ''],
+    queryFn: () => fetchClassesPage(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
-        const { data: sch } = await supabase.from('schools').select('type').eq('school_id', data.school_id).single();
-        if (sch?.type) setSchoolType(sch.type as 'Nursery/Primary' | 'Secondary');
-
-        const classOptions: string[] = [];
-        if (sch?.type === 'Nursery/Primary') {
-          classOptions.push('Baby Class', 'Middle Class', 'Top Class');
-          for (let i = 1; i <= 7; i++) classOptions.push(`Primary ${i}`);
-        } else if (sch?.type === 'Secondary') {
-          for (let i = 1; i <= 6; i++) classOptions.push(`Senior ${i}`);
-        }
-
-        const { data: students } = await supabase
-          .from('students')
-          .select('current_class')
-          .eq('school_id', data.school_id);
-        const classCounts: Record<string, number> = {};
-        (students || []).forEach((s: any) => {
-          if (s.current_class) classCounts[s.current_class] = (classCounts[s.current_class] || 0) + 1;
-        });
-
-        const { data: classTeachers } = await supabase
-          .from('classes')
-          .select('class_name, class_teacher_id')
-          .eq('school_id', data.school_id);
-        const teacherMap: Record<string, string> = {};
-        (classTeachers || []).forEach((ct: any) => {
-          if (ct.class_name && ct.class_teacher_id) teacherMap[ct.class_name] = ct.class_teacher_id;
-        });
-
-        const teacherIds = Object.values(teacherMap);
-        const { data: teachers } =
-          teacherIds.length > 0
-            ? await supabase
-                .from('teachers')
-                .select('teacher_id, name')
-                .eq('school_id', data.school_id)
-                .in('teacher_id', teacherIds)
-            : { data: [] };
-        const teacherNameMap: Record<string, string> = {};
-        (teachers || []).forEach((t: any) => {
-          teacherNameMap[t.teacher_id] = t.name;
-        });
-
-        const classesData = classOptions.map((className) => ({
-          name: className,
-          studentCount: classCounts[className] || 0,
-          teacherName: teacherMap[className] ? teacherNameMap[teacherMap[className]] : undefined,
-        }));
-        setClasses(classesData);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    run();
-  }, [user]);
+  const loading = isLoading;
 
   if (loading) {
     return (

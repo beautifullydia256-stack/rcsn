@@ -1,83 +1,81 @@
 import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import SectionHeader from './SectionHeader';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchTeacherSubjectClassData(userId: string): Promise<{
+  schoolId: string;
+  teachers: { teacher_id: string; name: string }[];
+  assignments: { id: string; teacher_id: string; class_name: string; subject: string }[];
+}> {
+  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [] };
+  const [tchsRes, assignRes] = await Promise.all([
+    supabase.from('teachers').select('teacher_id,name').eq('school_id', u.school_id).order('name'),
+    supabase
+      .from('teacher_class_subjects')
+      .select('id, teacher_id, class_name, subject')
+      .eq('school_id', u.school_id)
+      .order('created_at', { ascending: false }),
+  ]);
+  return {
+    schoolId: u.school_id,
+    teachers: tchsRes.data || [],
+    assignments: assignRes.data || [],
+  };
+}
+
+async function fetchClassSubjects(schoolId: string, selectedClass: string): Promise<string[]> {
+  const { data } = await supabase
+    .from('class_subjects')
+    .select('subject')
+    .eq('school_id', schoolId)
+    .eq('class_name', selectedClass)
+    .order('subject');
+  return (data || []).map((r: { subject: string }) => r.subject);
+}
 
 export default function SettingsTeacherSubjectClass({
   classOptions,
 }: {
   classOptions: string[];
 }) {
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [teachers, setTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
-  const [classSubjects, setClassSubjects] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [assignments, setAssignments] = useState<
-    { id: string; teacher_id: string; class_name: string; subject: string }[]
-  >([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const init = async () => {
-      setError(null);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: u } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-      if (!u?.school_id) return;
-      setSchoolId(u.school_id);
-      const { data: tchs } = await supabase
-        .from('teachers')
-        .select('teacher_id,name')
-        .eq('school_id', u.school_id)
-        .order('name');
-      setTeachers(tchs || []);
-    };
-    init();
-  }, []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id ?? ''],
+    queryFn: () => fetchTeacherSubjectClassData(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const schoolId = data?.schoolId ?? null;
+  const teachers = data?.teachers ?? [];
+  const [assignments, setAssignments] = useState<
+    { id: string; teacher_id: string; class_name: string; subject: string }[]
+  >([]);
 
   useEffect(() => {
-    const loadSubjects = async () => {
-      if (!schoolId || !selectedClass) {
-        setClassSubjects([]);
-        return;
-      }
-      const { data } = await supabase
-        .from('class_subjects')
-        .select('subject')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      setClassSubjects((data || []).map((r: { subject: string }) => r.subject));
-    };
-    loadSubjects();
-  }, [schoolId, selectedClass]);
+    if (data?.assignments) setAssignments(data.assignments);
+  }, [data?.assignments]);
 
-  useEffect(() => {
-    const loadAssignments = async () => {
-      if (!schoolId) {
-        setAssignments([]);
-        return;
-      }
-      setLoading(true);
-      const { data } = await supabase
-        .from('teacher_class_subjects')
-        .select('id, teacher_id, class_name, subject')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false });
-      setAssignments(data || []);
-      setLoading(false);
-    };
-    loadAssignments();
-  }, [schoolId]);
+  const { data: classSubjects = [] } = useQuery({
+    queryKey: ['admin', 'settings', 'classSubjects', schoolId, selectedClass],
+    queryFn: () => fetchClassSubjects(schoolId!, selectedClass),
+    enabled: !!schoolId && !!selectedClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const loading = isLoading;
 
   const assign = async () => {
     setError(null);
@@ -103,13 +101,8 @@ export default function SettingsTeacherSubjectClass({
       setAssignments((prev) => prev.filter((a) => !String(a.id).startsWith('tmp-')));
       return;
     }
-    const { data } = await supabase
-      .from('teacher_class_subjects')
-      .select('id, teacher_id, class_name, subject')
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
-    setAssignments(data || []);
     setSelectedSubjects([]);
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id] });
   };
 
   const remove = async (id: string) => {
@@ -122,6 +115,8 @@ export default function SettingsTeacherSubjectClass({
     if (err) {
       setError(err.message);
       setAssignments(prev);
+    } else {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id] });
     }
   };
 

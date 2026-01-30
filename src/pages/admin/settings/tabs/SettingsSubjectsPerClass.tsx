@@ -1,6 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchSubjectsPerClass(schoolId: string, selectedClass: string): Promise<string[]> {
+  const { data, error: err } = await supabase
+    .from('class_subjects')
+    .select('subject')
+    .eq('school_id', schoolId)
+    .eq('class_name', selectedClass)
+    .order('subject');
+  if (err) throw err;
+  return (data || []).map((r: { subject: string }) => r.subject);
+}
 
 export default function SettingsSubjectsPerClass({
   classOptions,
@@ -9,33 +23,20 @@ export default function SettingsSubjectsPerClass({
   classOptions: string[];
   schoolId: string | null;
 }) {
+  const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState('');
-  const [subjects, setSubjects] = useState<string[]>([]);
   const [newSubject, setNewSubject] = useState('');
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const load = async () => {
-      setError(null);
-      if (!schoolId || !selectedClass) {
-        setSubjects([]);
-        return;
-      }
-      setLoading(true);
-      const { data, error: err } = await supabase
-        .from('class_subjects')
-        .select('subject')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      if (err) setError(err.message);
-      setSubjects((data || []).map((r: { subject: string }) => r.subject));
-      setLoading(false);
-    };
-    load();
-  }, [schoolId, selectedClass]);
+  const { data: subjects = [], isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId, selectedClass],
+    queryFn: () => fetchSubjectsPerClass(schoolId!, selectedClass),
+    enabled: !!schoolId && !!selectedClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const loading = isLoading;
 
   const addSubject = async () => {
     setError(null);
@@ -59,7 +60,6 @@ export default function SettingsSubjectsPerClass({
   const removeSubject = async (subj: string) => {
     setError(null);
     if (!schoolId || !selectedClass) return;
-    setSubjects((prev) => prev.filter((x) => x !== subj));
     const { error: err } = await supabase
       .from('class_subjects')
       .delete()
@@ -68,14 +68,9 @@ export default function SettingsSubjectsPerClass({
       .eq('subject', subj);
     if (err) {
       setError(err.message || 'Failed to remove subject');
-      const { data } = await supabase
-        .from('class_subjects')
-        .select('subject')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      setSubjects((data || []).map((r: { subject: string }) => r.subject));
+      return;
     }
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId, selectedClass] });
   };
 
   return (

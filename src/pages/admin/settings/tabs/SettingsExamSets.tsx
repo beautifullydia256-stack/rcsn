@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 type ExamSet = {
   id: string;
@@ -13,6 +16,70 @@ type ExamSet = {
   active_for_input: boolean;
 };
 
+async function fetchExamSetsPage(schoolId: string): Promise<{
+  examSets: ExamSet[];
+  currentTerm: { year: number; term: number } | null;
+}> {
+  const { data, error: err } = await supabase
+    .from('exam_sets')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('year', { ascending: false })
+    .order('term', { ascending: true })
+    .order('sort_order', { ascending: true })
+    .order('name');
+  if (err) throw err;
+  const examSets = data || [];
+
+  const { data: termsData } = await supabase
+    .from('school_terms')
+    .select('*')
+    .eq('school_id', schoolId)
+    .order('year', { ascending: false })
+    .order('term', { ascending: true });
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const current = (termsData || []).find(
+    (r: { start_date?: string; end_date: string }) =>
+      (r.start_date ? r.start_date <= todayStr && r.end_date >= todayStr : r.end_date >= todayStr)
+  );
+  const currentTerm = current ? { year: current.year, term: current.term } : null;
+
+  if (currentTerm) {
+    const hasCurrentYear = examSets.some((es) => es.year === currentTerm.year);
+    if (!hasCurrentYear) {
+      const { data: previousYear, error: prevErr } = await supabase
+        .from('exam_sets')
+        .select('*')
+        .eq('school_id', schoolId)
+        .eq('year', currentTerm.year - 1)
+        .order('term', { ascending: true });
+      if (!prevErr && previousYear?.length) {
+        const newSets = previousYear.map((es: ExamSet & { target_classes?: string[] }) => ({
+          school_id: schoolId,
+          name: es.name,
+          description: es.description,
+          term: es.term,
+          year: currentTerm.year,
+          target_classes: es.target_classes || [],
+          is_active: false,
+          active_for_input: false,
+        }));
+        await supabase.from('exam_sets').insert(newSets);
+        const { data: updated } = await supabase
+          .from('exam_sets')
+          .select('*')
+          .eq('school_id', schoolId)
+          .order('year', { ascending: false })
+          .order('term', { ascending: true })
+          .order('sort_order', { ascending: true })
+          .order('name');
+        return { examSets: updated || [], currentTerm };
+      }
+    }
+  }
+  return { examSets, currentTerm };
+}
+
 export default function SettingsExamSets({
   classOptions,
   schoolId,
@@ -22,8 +89,8 @@ export default function SettingsExamSets({
   schoolId: string | null;
   schoolType: 'Nursery/Primary' | 'Secondary' | null;
 }) {
+  const queryClient = useQueryClient();
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentTerm, setCurrentTerm] = useState<{ year: number; term: number } | null>(null);
@@ -35,76 +102,21 @@ export default function SettingsExamSets({
   const [targetClasses, setTargetClasses] = useState<string[]>([]);
   const [allClasses, setAllClasses] = useState(false);
 
-  const autoCopyExamSetsFromPreviousYear = async (
-    currentYear: number,
-    currentExamSets: ExamSet[]
-  ) => {
-    if (!schoolId) return;
-    const hasCurrentYear = currentExamSets.some((es) => es.year === currentYear);
-    if (hasCurrentYear) return;
-    const { data: previousYear, error: err } = await supabase
-      .from('exam_sets')
-      .select('*')
-      .eq('school_id', schoolId)
-      .eq('year', currentYear - 1)
-      .order('term', { ascending: true });
-    if (err || !previousYear?.length) return;
-    const newSets = previousYear.map((es: ExamSet & { target_classes?: string[] }) => ({
-      school_id: schoolId,
-      name: es.name,
-      description: es.description,
-      term: es.term,
-      year: currentYear,
-      target_classes: es.target_classes || [],
-      is_active: false,
-      active_for_input: false,
-    }));
-    await supabase.from('exam_sets').insert(newSets);
-    const { data: updated } = await supabase
-      .from('exam_sets')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: true })
-      .order('sort_order', { ascending: true })
-      .order('name');
-    setExamSets(updated || []);
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'examSets', schoolId ?? ''],
+    queryFn: () => fetchExamSetsPage(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_TIME_MS,
+  });
 
   useEffect(() => {
-    const loadExamSets = async () => {
-      if (!schoolId) return;
-      setLoading(true);
-      const { data, error: err } = await supabase
-        .from('exam_sets')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('year', { ascending: false })
-        .order('term', { ascending: true })
-        .order('sort_order', { ascending: true })
-        .order('name');
-      if (err) setError(err.message);
-      setExamSets(data || []);
+    if (data) {
+      setExamSets(data.examSets);
+      setCurrentTerm(data.currentTerm);
+    }
+  }, [data]);
 
-      const { data: termsData } = await supabase
-        .from('school_terms')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('year', { ascending: false })
-        .order('term', { ascending: true });
-      const todayStr = new Date().toISOString().slice(0, 10);
-      const current = (termsData || []).find(
-        (r: { start_date?: string; end_date: string }) =>
-          (r.start_date ? r.start_date <= todayStr && r.end_date >= todayStr : r.end_date >= todayStr)
-      );
-      if (current) {
-        setCurrentTerm({ year: current.year, term: current.term });
-        await autoCopyExamSetsFromPreviousYear(current.year, data || []);
-      }
-      setLoading(false);
-    };
-    loadExamSets();
-  }, [schoolId]);
+  const loading = isLoading;
 
   const saveExamSet = async () => {
     setError(null);
@@ -163,7 +175,7 @@ export default function SettingsExamSets({
     if (!confirm('Are you sure you want to delete this exam set?')) return;
     const { error: err } = await supabase.from('exam_sets').delete().eq('id', id);
     if (err) setError(err.message);
-    else setExamSets((prev) => prev.filter((es) => es.id !== id));
+    else await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
   };
 
   const toggleActive = async (id: string, currentActive: boolean) => {
@@ -214,10 +226,7 @@ export default function SettingsExamSets({
       .update({ active_for_input: !currentActive })
       .eq('id', id);
     if (err) setError(err.message);
-    else
-      setExamSets((prev) =>
-        prev.map((es) => (es.id === id ? { ...es, active_for_input: !currentActive } : es))
-      );
+    else await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
   };
 
   const filteredSets = currentTerm

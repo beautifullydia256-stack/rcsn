@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { UserPlus, Users } from 'lucide-react';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 interface Parent {
   id: string;
@@ -17,37 +20,39 @@ interface Parent {
   created_at: string;
 }
 
+async function fetchParentsList(userId: string): Promise<Parent[]> {
+  const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!userData?.school_id) return [];
+
+  const { data: parentsData } = await supabase
+    .from('parents')
+    .select(`
+      id, user_id, name, email, phone, student_id, created_at,
+      students ( name, current_class )
+    `)
+    .eq('school_id', userData.school_id)
+    .order('created_at', { ascending: false });
+
+  return (parentsData || []).map((p: any) => ({
+    ...p,
+    student_name: p.students?.name || 'Unknown',
+    student_class: p.students?.current_class || 'N/A',
+  })) as Parent[];
+}
+
 export default function ParentsPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [parents, setParents] = useState<Parent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
-    const loadParents = async () => {
-      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!userData?.school_id) return;
-      const { data: parentsData } = await supabase
-        .from('parents')
-        .select(`
-          id, user_id, name, email, phone, student_id, created_at,
-          students ( name, current_class )
-        `)
-        .eq('school_id', userData.school_id)
-        .order('created_at', { ascending: false });
-      const formatted = (parentsData || []).map((p: any) => ({
-        ...p,
-        student_name: p.students?.name || 'Unknown',
-        student_class: p.students?.current_class || 'N/A',
-      }));
-      setParents(formatted);
-      setLoading(false);
-    };
-    loadParents();
-  }, [user]);
+  const { data: parents = [], isLoading } = useQuery({
+    queryKey: ['admin', 'parents', user?.id ?? ''],
+    queryFn: () => fetchParentsList(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
   const filteredParents = useMemo(() => {
     if (!searchQuery.trim()) return parents;
@@ -67,13 +72,15 @@ export default function ParentsPage() {
     try {
       const { error } = await supabase.from('parents').delete().eq('id', parentId);
       if (error) throw error;
-      setParents((prev) => prev.filter((p) => p.id !== parentId));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'parents', user?.id] });
     } catch (err: any) {
       alert(`Error: ${err.message}`);
     } finally {
       setDeleting(null);
     }
   };
+
+  const loading = isLoading;
 
   return (
     <AdminPageWrapper
@@ -155,26 +162,26 @@ export default function ParentsPage() {
                     </tr>
                   ))
                 ) : (
-                filteredParents.map((p) => (
-                  <tr key={p.id} className="border-b border-white/10 hover:bg-white/5">
-                    <td className="px-4 py-2 text-white">{p.name}</td>
-                    <td className="px-4 py-2 text-white/90">{p.email}</td>
-                    <td className="px-4 py-2 text-white/90">{p.phone || '-'}</td>
-                    <td className="px-4 py-2 text-white/90">{p.student_name}</td>
-                    <td className="px-4 py-2 text-white/90">{p.student_class}</td>
-                    <td className="px-4 py-2 text-white/90">{p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
-                    <td className="px-4 py-2">
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(p.id, p.name)}
-                        disabled={deleting === p.id}
-                        className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600 disabled:opacity-50"
-                      >
-                        {deleting === p.id ? 'Removing...' : 'Remove'}
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                  filteredParents.map((p) => (
+                    <tr key={p.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="px-4 py-2 text-white">{p.name}</td>
+                      <td className="px-4 py-2 text-white/90">{p.email}</td>
+                      <td className="px-4 py-2 text-white/90">{p.phone || '-'}</td>
+                      <td className="px-4 py-2 text-white/90">{p.student_name}</td>
+                      <td className="px-4 py-2 text-white/90">{p.student_class}</td>
+                      <td className="px-4 py-2 text-white/90">{p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(p.id, p.name)}
+                          disabled={deleting === p.id}
+                          className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600 disabled:opacity-50"
+                        >
+                          {deleting === p.id ? 'Removing...' : 'Remove'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

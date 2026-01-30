@@ -1,6 +1,52 @@
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+type FeeStatus = {
+  status?: string;
+  message?: string;
+  description?: string;
+  configured_classes?: number;
+  total_classes?: number;
+  action?: string;
+} | null;
+
+async function fetchFinancialSettings(schoolId: string): Promise<{
+  feeStructure: Record<string, string>;
+  admissionFee: string;
+  feeStatus: FeeStatus;
+}> {
+  const { data, error: fetchError } = await supabase
+    .from('school_fee_structure')
+    .select('*')
+    .eq('school_id', schoolId);
+  if (fetchError) throw fetchError;
+
+  const feeMap: Record<string, string> = {};
+  let admFee = '';
+  (data || []).forEach((fee: { class_name: string; tuition_amount?: number; boarding_tuition_amount?: number }) => {
+    const amount = Number(fee.tuition_amount || 0);
+    if (fee.class_name === 'ADMISSION') {
+      admFee = amount > 0 ? amount.toString() : '';
+    } else {
+      feeMap[fee.class_name] = amount > 0 ? amount.toString() : '';
+      feeMap[`${fee.class_name}_boarding_tuition`] =
+        Number(fee.boarding_tuition_amount || 0) > 0 ? String(fee.boarding_tuition_amount) : '';
+    }
+  });
+
+  let feeStatus: FeeStatus = null;
+  try {
+    const { data: statusData } = await supabase.rpc('get_fee_structure_status', { p_school_id: schoolId });
+    feeStatus = statusData as FeeStatus;
+  } catch {
+    // RPC may not exist
+  }
+  return { feeStructure: feeMap, admissionFee: admFee, feeStatus };
+}
 
 export default function SettingsFinancial({
   schoolId,
@@ -9,69 +55,30 @@ export default function SettingsFinancial({
   schoolId: string | null;
   classes: string[];
 }) {
+  const queryClient = useQueryClient();
   const [feeStructure, setFeeStructure] = useState<Record<string, string>>({});
   const [admissionFee, setAdmissionFee] = useState('');
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [feeStatus, setFeeStatus] = useState<{
-    status?: string;
-    message?: string;
-    description?: string;
-    configured_classes?: number;
-    total_classes?: number;
-    action?: string;
-  } | null>(null);
+  const [feeStatus, setFeeStatus] = useState<FeeStatus>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'financial', schoolId ?? ''],
+    queryFn: () => fetchFinancialSettings(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_TIME_MS,
+  });
 
   useEffect(() => {
-    const loadFees = async () => {
-      if (!schoolId) return;
-      setLoading(true);
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('school_fee_structure')
-          .select('*')
-          .eq('school_id', schoolId);
+    if (data) {
+      setFeeStructure(data.feeStructure);
+      setAdmissionFee(data.admissionFee);
+      setFeeStatus(data.feeStatus);
+    }
+  }, [data]);
 
-        if (fetchError) throw fetchError;
-
-        const feeMap: Record<string, string> = {};
-        let admFee = '';
-
-        (data || []).forEach((fee: { class_name: string; tuition_amount?: number; boarding_tuition_amount?: number }) => {
-          const amount = Number(fee.tuition_amount || 0);
-          if (fee.class_name === 'ADMISSION') {
-            admFee = amount > 0 ? amount.toString() : '';
-          } else {
-            feeMap[fee.class_name] = amount > 0 ? amount.toString() : '';
-            feeMap[`${fee.class_name}_boarding_tuition`] =
-              Number(fee.boarding_tuition_amount || 0) > 0
-                ? String(fee.boarding_tuition_amount)
-                : '';
-          }
-        });
-
-        setFeeStructure(feeMap);
-        setAdmissionFee(admFee);
-
-        try {
-          const { data: statusData } = await supabase.rpc('get_fee_structure_status', {
-            p_school_id: schoolId,
-          });
-          setFeeStatus(statusData as typeof feeStatus);
-        } catch {
-          // RPC may not exist
-        }
-      } catch (err) {
-        console.error('Error loading fees:', err);
-        setError('Failed to load fee structure');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadFees();
-  }, [schoolId]);
+  const loading = isLoading;
 
   const saveFeeStructure = async () => {
     if (!schoolId) return;
@@ -129,6 +136,7 @@ export default function SettingsFinancial({
       }
 
       setTimeout(() => setSuccess(null), 5000);
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'financial', schoolId] });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save fee structure');
     } finally {
@@ -139,6 +147,8 @@ export default function SettingsFinancial({
   const updateClassFee = (className: string, value: string) => {
     setFeeStructure((prev) => ({ ...prev, [className]: value }));
   };
+
+  const displayFeeStatus = feeStatus ?? data?.feeStatus;
 
   if (loading) {
     return (
@@ -171,14 +181,14 @@ export default function SettingsFinancial({
         </div>
       )}
 
-      {feeStatus && (
+      {displayFeeStatus && (
         <div
           className={`mb-4 rounded-lg border p-4 ${
-            feeStatus.status === 'fully_configured'
+            displayFeeStatus.status === 'fully_configured'
               ? 'border-green-500/30 bg-green-600/10'
-              : feeStatus.status === 'partially_configured'
+              : displayFeeStatus.status === 'partially_configured'
                 ? 'border-yellow-500/30 bg-yellow-600/10'
-                : feeStatus.status === 'not_configured'
+                : displayFeeStatus.status === 'not_configured'
                   ? 'border-orange-500/30 bg-orange-600/10'
                   : 'border-red-500/30 bg-red-600/10'
           }`}
@@ -186,32 +196,32 @@ export default function SettingsFinancial({
           <div className="mb-2 flex items-center justify-between">
             <h3
               className={`text-sm font-medium ${
-                feeStatus.status === 'fully_configured'
+                displayFeeStatus.status === 'fully_configured'
                   ? 'text-green-300'
-                  : feeStatus.status === 'partially_configured'
+                  : displayFeeStatus.status === 'partially_configured'
                     ? 'text-yellow-300'
-                    : feeStatus.status === 'not_configured'
+                    : displayFeeStatus.status === 'not_configured'
                       ? 'text-orange-300'
                       : 'text-red-300'
               }`}
             >
-              {feeStatus.status === 'fully_configured'
+              {displayFeeStatus.status === 'fully_configured'
                 ? '✅'
-                : feeStatus.status === 'partially_configured'
+                : displayFeeStatus.status === 'partially_configured'
                   ? '⚠️'
-                  : feeStatus.status === 'not_configured'
+                  : displayFeeStatus.status === 'not_configured'
                     ? '🔧'
                     : '❌'}{' '}
-              {feeStatus.message}
+              {displayFeeStatus.message}
             </h3>
           </div>
-          <p className="mb-2 text-sm text-white/70">{feeStatus.description}</p>
+          <p className="mb-2 text-sm text-white/70">{displayFeeStatus.description}</p>
           <div className="flex items-center justify-between text-xs text-white/60">
             <span>
-              Classes: {feeStatus.configured_classes || 0}/{feeStatus.total_classes || 0}{' '}
+              Classes: {displayFeeStatus.configured_classes || 0}/{displayFeeStatus.total_classes || 0}{' '}
               configured
             </span>
-            <span className="text-white/50">{feeStatus.action}</span>
+            <span className="text-white/50">{displayFeeStatus.action}</span>
           </div>
         </div>
       )}

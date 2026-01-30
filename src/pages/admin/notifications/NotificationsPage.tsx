@@ -1,13 +1,25 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchNotificationsPage(userId: string): Promise<{ schoolId: string; classes: string[] }> {
+  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!data?.school_id) return { schoolId: '', classes: [] };
+  const { data: classData } = await supabase
+    .from('students')
+    .select('current_class')
+    .eq('school_id', data.school_id)
+    .eq('status', 'active');
+  const unique = classData ? [...new Set(classData.map((s: any) => s.current_class).filter(Boolean))].sort() : [];
+  return { schoolId: data.school_id, classes: unique };
+}
+
 export default function NotificationsPage() {
-  const { user } = useAuthStore();
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [classes, setClasses] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [category, setCategory] = useState('announcement');
@@ -15,25 +27,16 @@ export default function NotificationsPage() {
   const [targetClass, setTargetClass] = useState('all');
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (!user) return;
-    const run = async () => {
-      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!data?.school_id) return;
-      setSchoolId(data.school_id);
-      const { data: classData } = await supabase
-        .from('students')
-        .select('current_class')
-        .eq('school_id', data.school_id)
-        .eq('status', 'active');
-      if (classData) {
-        const unique = [...new Set(classData.map((s: any) => s.current_class).filter(Boolean))].sort();
-        setClasses(unique);
-      }
-      setLoading(false);
-    };
-    run();
-  }, [user]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'notifications', user?.id ?? ''],
+    queryFn: () => fetchNotificationsPage(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const schoolId = data?.schoolId ?? null;
+  const classes = data?.classes ?? [];
+  const loading = isLoading;
 
   const sendAnnouncement = async () => {
     if (!schoolId || !title || !message) {

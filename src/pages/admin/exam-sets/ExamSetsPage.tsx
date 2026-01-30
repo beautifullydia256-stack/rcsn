@@ -1,31 +1,35 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchExamSets(userId: string) {
+  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!data?.school_id) return [] as any[];
+  const { data: sets } = await supabase
+    .from('exam_sets')
+    .select('*')
+    .eq('school_id', data.school_id)
+    .order('year', { ascending: false })
+    .order('term', { ascending: false });
+  return sets || [];
+}
+
 export default function ExamSetsPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [examSets, setExamSets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
 
-  useEffect(() => {
-    if (!user) return;
-    const run = async () => {
-      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!data?.school_id) return;
-      const { data: sets } = await supabase
-        .from('exam_sets')
-        .select('*')
-        .eq('school_id', data.school_id)
-        .order('year', { ascending: false })
-        .order('term', { ascending: false });
-      setExamSets(sets || []);
-      setLoading(false);
-    };
-    run();
-  }, [user]);
+  const { data: examSets = [], isLoading } = useQuery({
+    queryKey: ['admin', 'exam-sets', user?.id ?? ''],
+    queryFn: () => fetchExamSets(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const loading = isLoading;
 
   return (
     <AdminPageWrapper title="Exam Sets" subtitle="Manage exam sets and terms">

@@ -1,35 +1,38 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchAttendance(userId: string, date: string) {
+  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!data?.school_id) return [] as any[];
+  const { data: att } = await supabase
+    .from('student_attendance')
+    .select('student_id, class_name, date, present')
+    .eq('school_id', data.school_id)
+    .eq('date', date)
+    .order('class_name')
+    .order('date', { ascending: false });
+  return att || [];
+}
+
 export default function AttendanceRecordsPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
 
-  useEffect(() => {
-    if (!user) return;
-    const run = async () => {
-      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!data?.school_id) return;
-      setSchoolId(data.school_id);
-      const { data: att } = await supabase
-        .from('student_attendance')
-        .select('student_id, class_name, date, present')
-        .eq('school_id', data.school_id)
-        .eq('date', date)
-        .order('class_name')
-        .order('date', { ascending: false });
-      setRows(att || []);
-      setLoading(false);
-    };
-    run();
-  }, [user, date]);
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['admin', 'attendance', user?.id ?? '', date],
+    queryFn: () => fetchAttendance(user!.id, date),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const loading = isLoading;
 
   return (
     <AdminPageWrapper title="Attendance Records" subtitle="View and manage student attendance by date">
@@ -65,9 +68,11 @@ export default function AttendanceRecordsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-white/70">Loading...</td>
-                </tr>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={`sk-${i}`}>
+                    <td colSpan={4} className="px-4 py-3"><div className="h-5 rounded bg-white/15 animate-pulse" /></td>
+                  </tr>
+                ))
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-8 text-center text-white/70">No attendance records for this date.</td>

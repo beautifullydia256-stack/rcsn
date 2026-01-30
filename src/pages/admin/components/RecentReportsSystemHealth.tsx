@@ -1,42 +1,38 @@
-import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import GlassCard from '@/components/ui/GlassCard';
 import { FileText, Activity, Database, HardDrive, Zap } from 'lucide-react';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+type ReportRow = { report_id: string; template_name?: string; file_url?: string; created_at: string; students?: { name?: string; current_class?: string } };
+
+async function fetchReports(userId: string): Promise<ReportRow[]> {
+  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!u?.school_id) return [];
+  const { data } = await supabase
+    .from('reports')
+    .select('report_id, template_name, file_url, created_at, student_id, students!inner(name, current_class)')
+    .eq('school_id', u.school_id)
+    .order('created_at', { ascending: false })
+    .limit(5);
+  return (data || []) as ReportRow[];
+}
+
 export default function RecentReportsSystemHealth() {
   const navigate = useNavigate();
-  const [reports, setReports] = useState<Array<{ report_id: string; template_name?: string; file_url?: string; created_at: string; students?: { name?: string; current_class?: string } }>>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
 
-  const currentTerm = useMemo(() => ({ today: new Date().toISOString().slice(0, 10) }), []);
+  const { data: reports = [], isLoading } = useQuery({
+    queryKey: ['dashboard', 'admin', 'reports', user?.id ?? ''],
+    queryFn: () => fetchReports(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-        if (!u?.school_id) return;
-
-        const { data: reportsData } = await supabase
-          .from('reports')
-          .select('report_id, template_name, file_url, created_at, student_id, students!inner(name, current_class)')
-          .eq('school_id', u.school_id)
-          .order('created_at', { ascending: false })
-          .limit(5);
-
-        setReports((reportsData || []) as typeof reports);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [currentTerm.today]);
+  const loading = isLoading;
 
   const systemHealth = {
     database: { status: 'healthy', responseTime: '45ms' },

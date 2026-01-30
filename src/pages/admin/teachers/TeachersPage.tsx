@@ -1,32 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchTeachersList(userId: string) {
+  const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!data?.school_id) return [] as any[];
+  const { data: tchs } = await supabase.from('teachers').select('*').eq('school_id', data.school_id).order('created_at', { ascending: false });
+  return tchs || [];
+}
 
 export default function TeachersPage() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<any[]>([]);
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!data?.school_id) {
-        navigate('/login');
-        return;
-      }
-      const { data: tchs } = await supabase.from('teachers').select('*').eq('school_id', data.school_id).order('created_at', { ascending: false });
-      setRows(tchs || []);
-      setLoading(false);
-    };
-    run();
-  }, [navigate]);
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['admin', 'teachers', user?.id ?? ''],
+    queryFn: () => fetchTeachersList(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -38,11 +37,13 @@ export default function TeachersPage() {
     if (!confirm('Delete this teacher? This cannot be undone.')) return;
     try {
       await supabase.from('teachers').delete().eq('teacher_id', id);
-      setRows((prev) => prev.filter((r) => r.teacher_id !== id));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'teachers', user?.id] });
     } catch (err: any) {
       alert(err?.message || 'Delete failed');
     }
   };
+
+  const loading = isLoading;
 
   return (
     <AdminPageWrapper title="All Teachers">

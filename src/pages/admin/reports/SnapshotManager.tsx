@@ -1,61 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
-import { useSnapshots } from '../../../hooks/useSnapshot';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
 import { lockSnapshot } from '../../../services/snapshotService';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { Plus, Lock, Trash2, Eye } from 'lucide-react';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchSnapshotsPage(userId: string): Promise<{ schoolId: string; examSets: any[]; snapshots: any[] }> {
+  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!u?.school_id) return { schoolId: '', examSets: [], snapshots: [] };
+
+  const [examSetsRes, snapshotsRes] = await Promise.all([
+    supabase.from('exam_sets').select('*').eq('school_id', u.school_id).eq('is_active', true).order('created_at', { ascending: false }),
+    supabase.from('report_snapshots').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }),
+  ]);
+  return {
+    schoolId: u.school_id,
+    examSets: examSetsRes.data || [],
+    snapshots: snapshotsRes.data || [],
+  };
+}
+
 export default function SnapshotManager() {
-  const { user } = useAuthStore();
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [examSets, setExamSets] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [selectedExamSet, setSelectedExamSet] = useState<string>('');
   const [creating, setCreating] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [error, setError] = useState('');
 
-  const { snapshots, loading, refetch } = useSnapshots(schoolId || '');
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'snapshots', user?.id ?? ''],
+    queryFn: () => fetchSnapshotsPage(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
-  useEffect(() => {
-    const fetchSchoolId = async () => {
-      if (!user) return;
+  const schoolId = data?.schoolId ?? null;
+  const examSets = data?.examSets ?? [];
+  const snapshots = data?.snapshots ?? [];
+  const loading = isLoading;
 
-      const { data } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (data?.school_id) {
-        setSchoolId(data.school_id);
-      }
-    };
-
-    fetchSchoolId();
-  }, [user]);
-
-  useEffect(() => {
-    const fetchExamSets = async () => {
-      if (!schoolId) return;
-
-      const { data } = await supabase
-        .from('exam_sets')
-        .select('*')
-        .eq('school_id', schoolId)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      if (data) {
-        setExamSets(data);
-      }
-    };
-
-    fetchExamSets();
-  }, [schoolId]);
+  const refetch = () => queryClient.invalidateQueries({ queryKey: ['admin', 'snapshots', user?.id] });
 
   const handleCreateSnapshot = async () => {
     if (!selectedExamSet || !schoolId) {
@@ -63,7 +55,7 @@ export default function SnapshotManager() {
       return;
     }
 
-    const examSet = examSets.find((es) => es.id === selectedExamSet);
+    const examSet = examSets.find((es: any) => es.id === selectedExamSet);
     if (!examSet) {
       setError('Exam set not found');
       return;
@@ -102,20 +94,19 @@ export default function SnapshotManager() {
     if (!confirm('Are you sure you want to delete this snapshot?')) return;
 
     try {
-      const { error } = await supabase
+      const { error: err } = await supabase
         .from('report_snapshots')
         .delete()
         .eq('id', snapshotId)
-        .eq('status', 'draft'); // Only allow deleting draft snapshots
+        .eq('status', 'draft');
 
-      if (error) throw error;
+      if (err) throw err;
       refetch();
     } catch (err: any) {
-      setError(err.message || 'Failed to delete snapshot');
+      setError((err as Error).message || 'Failed to delete snapshot');
     }
   };
 
-  const navigate = useNavigate();
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft':

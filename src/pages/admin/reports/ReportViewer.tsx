@@ -1,56 +1,41 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useSnapshot } from '../../../hooks/useSnapshot';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { Download, Search, Eye } from 'lucide-react';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchGeneratedReports(snapshotId: string) {
+  const { data, error } = await supabase
+    .from('generated_reports')
+    .select('*, students(student_id, name, current_class, admission_number)')
+    .eq('snapshot_id', snapshotId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
 export default function ReportViewer() {
   const [searchParams] = useSearchParams();
   const snapshotId = searchParams.get('snapshot') || '';
   const { snapshot, loading: snapshotLoading } = useSnapshot(snapshotId);
 
-  const [generatedReports, setGeneratedReports] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
-  const [classes, setClasses] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (!snapshotId) return;
+  const { data: generatedReports = [], isLoading: reportsLoading } = useQuery({
+    queryKey: ['admin', 'reportViewer', snapshotId],
+    queryFn: () => fetchGeneratedReports(snapshotId),
+    enabled: !!snapshotId,
+    staleTime: STALE_TIME_MS,
+  });
 
-    const fetchReports = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('generated_reports')
-          .select('*, students(student_id, name, current_class, admission_number)')
-          .eq('snapshot_id', snapshotId)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-
-        if (data) {
-          setGeneratedReports(data);
-          // Extract unique classes
-          const uniqueClasses = [...new Set(
-            data
-              .map((r: any) => r.students?.current_class)
-              .filter(Boolean)
-          )];
-          setClasses(uniqueClasses);
-        }
-      } catch (err) {
-        console.error('Error fetching reports:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReports();
-  }, [snapshotId]);
+  const classes = [...new Set(generatedReports.map((r: any) => r.students?.current_class).filter(Boolean))] as string[];
 
   const filteredReports = generatedReports.filter((report: any) => {
     const student = report.students;
@@ -105,7 +90,10 @@ export default function ReportViewer() {
     }
   };
 
-  if (snapshotLoading || loading) {
+  const loading = (snapshotLoading && !snapshot) || (reportsLoading && generatedReports.length === 0);
+  const showSpinner = loading && !snapshot && generatedReports.length === 0;
+
+  if (showSpinner) {
     return (
       <AdminPageWrapper title="Generated Reports">
         <div className="flex items-center justify-center py-12">

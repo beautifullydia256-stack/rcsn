@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 export interface Snapshot {
   id: string;
@@ -17,38 +20,24 @@ export interface Snapshot {
   metadata: any;
 }
 
+async function fetchSnapshot(snapshotId: string): Promise<Snapshot | null> {
+  const { data, error } = await supabase
+    .from('report_snapshots')
+    .select('*')
+    .eq('id', snapshotId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 export function useSnapshot(snapshotId: string) {
-  const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!snapshotId) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchSnapshot = async () => {
-      try {
-        const { data, error: fetchError } = await supabase
-          .from('report_snapshots')
-          .select('*')
-          .eq('id', snapshotId)
-          .single();
-
-        if (fetchError) throw fetchError;
-        setSnapshot(data);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSnapshot();
-  }, [snapshotId]);
-
-  return { snapshot, loading, error };
+  const { data: snapshot, isLoading: loading, error: err } = useQuery({
+    queryKey: ['admin', 'snapshot', snapshotId],
+    queryFn: () => fetchSnapshot(snapshotId),
+    enabled: !!snapshotId,
+    staleTime: STALE_TIME_MS,
+  });
+  return { snapshot: snapshot ?? null, loading, error: err?.message ?? null };
 }
 
 export function useSnapshots(schoolId: string) {

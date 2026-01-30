@@ -1,49 +1,47 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+async function fetchStudentsList(userId: string) {
+  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!u?.school_id) return { schoolType: null as 'Nursery/Primary' | 'Secondary' | null, rows: [] as any[] };
+
+  const [schoolRes, studentsRes] = await Promise.all([
+    supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
+    supabase.from('students').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }),
+  ]);
+  const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
+  const rows = studentsRes.data || [];
+  return { schoolType, rows };
+}
 
 export default function StudentsPage() {
   const navigate = useNavigate();
-  const [rows, setRows] = useState<any[]>([]);
-  const [schoolType, setSchoolType] = useState<'Nursery/Primary' | 'Secondary' | null>(null);
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const run = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate('/login');
-        return;
-      }
-      const { data } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      if (!data?.school_id) {
-        navigate('/login');
-        return;
-      }
-      const schoolId = data.school_id;
-      const [schoolRes, studentsRes] = await Promise.all([
-        supabase.from('schools').select('type').eq('school_id', schoolId).single(),
-        supabase.from('students').select('*').eq('school_id', schoolId).order('created_at', { ascending: false }),
-      ]);
-      setSchoolType((schoolRes.data?.type as any) || null);
-      setRows(studentsRes.data || []);
-      setLoading(false);
-    };
-    run();
-  }, [navigate]);
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'students', user?.id ?? ''],
+    queryFn: () => fetchStudentsList(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const rows = data?.rows ?? [];
+  const schoolType = data?.schoolType ?? null;
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     let out = rows;
-    if (t) {
-      out = out.filter((r) => (r.name || '').toLowerCase().includes(t) || (r.current_class || '').toLowerCase().includes(t));
-    }
-    if (klass) {
-      out = out.filter((r) => (r.current_class || '') === klass);
-    }
+    if (t) out = out.filter((r) => (r.name || '').toLowerCase().includes(t) || (r.current_class || '').toLowerCase().includes(t));
+    if (klass) out = out.filter((r) => (r.current_class || '') === klass);
     return out;
   }, [q, klass, rows]);
 
@@ -51,11 +49,13 @@ export default function StudentsPage() {
     if (!confirm('Delete this student? This may require additional cleanup for login credentials.')) return;
     try {
       await supabase.from('students').delete().eq('student_id', id);
-      setRows((prev) => prev.filter((r) => r.student_id !== id));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
     } catch (err: any) {
       alert(err?.message || 'Delete failed');
     }
   };
+
+  const loading = isLoading && !data;
 
   return (
     <AdminPageWrapper title="All Students">
@@ -93,11 +93,10 @@ export default function StudentsPage() {
                 ))}
               </>
             )}
-            {schoolType === 'Secondary' && (
+            {schoolType === 'Secondary' &&
               Array.from({ length: 6 }).map((_, i) => (
                 <option key={`S-${i}`} value={`Senior ${i + 1}`}>{`Senior ${i + 1}`}</option>
-              ))
-            )}
+              ))}
           </select>
         </div>
 

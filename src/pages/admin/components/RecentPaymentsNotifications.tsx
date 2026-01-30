@@ -1,92 +1,89 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
 import GlassCard from '@/components/ui/GlassCard';
 import { DollarSign, Bell } from 'lucide-react';
 
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+type PaymentRow = {
+  payment_id: string;
+  amount_paid: number;
+  payment_date: string;
+  payment_method: string;
+  student_id: string;
+  students?: { name: string } | { name: string }[] | null;
+};
+
+type Payment = { payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } };
+type Notification = { id: string; title: string; message: string; created_at: string };
+
+async function fetchPaymentsNotifications(userId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (!u?.school_id) return { payments: [], notifications: [] };
+
+  const { data: allTerms } = await supabase
+    .from('school_terms')
+    .select('start_date, end_date')
+    .eq('school_id', u.school_id)
+    .order('year', { ascending: false })
+    .order('term', { ascending: false });
+
+  const currentTermData =
+    (allTerms || []).find(
+      (t: { start_date?: string; end_date: string }) =>
+        t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
+    ) || (allTerms?.[0] as { start_date?: string; end_date: string }) || null;
+
+  const [paymentsResult, notificationsResult] = await Promise.all([
+    currentTermData
+      ? supabase
+          .from('student_payments')
+          .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
+          .eq('school_id', u.school_id)
+          .gte('payment_date', currentTermData.start_date || '1900-01-01')
+          .lte('payment_date', currentTermData.end_date || '2100-12-31')
+          .order('payment_date', { ascending: false })
+          .limit(5)
+      : supabase
+          .from('student_payments')
+          .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
+          .eq('school_id', u.school_id)
+          .order('payment_date', { ascending: false })
+          .limit(5),
+    supabase.from('notifications').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }).limit(5),
+  ]);
+
+  const rawPayments = (paymentsResult.data || []) as PaymentRow[];
+  const payments: Payment[] = rawPayments.map((p) => ({
+    payment_id: p.payment_id,
+    amount_paid: p.amount_paid,
+    payment_date: p.payment_date,
+    payment_method: p.payment_method,
+    student_id: p.student_id,
+    students: Array.isArray(p.students) ? p.students[0] : p.students ?? undefined,
+  }));
+  const notifications = (notificationsResult.data || []) as Notification[];
+  return { payments, notifications };
+}
+
 export default function RecentPaymentsNotifications() {
   const navigate = useNavigate();
-  type PaymentRow = {
-    payment_id: string;
-    amount_paid: number;
-    payment_date: string;
-    payment_method: string;
-    student_id: string;
-    students?: { name: string } | { name: string }[] | null;
-  };
-  const [payments, setPayments] = useState<Array<{ payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } }>>([]);
-  const [notifications, setNotifications] = useState<Array<{ id: string; title: string; message: string; created_at: string }>>([]);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((s) => s.user);
 
-  const currentTerm = useMemo(() => ({ today: new Date().toISOString().slice(0, 10) }), []);
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard', 'admin', 'paymentsNotifications', user?.id ?? ''],
+    queryFn: () => fetchPaymentsNotifications(user!.id),
+    enabled: !!user?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-
-        const { data: u } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-        if (!u?.school_id) return;
-
-        const { data: allTerms } = await supabase
-          .from('school_terms')
-          .select('start_date, end_date')
-          .eq('school_id', u.school_id)
-          .order('year', { ascending: false })
-          .order('term', { ascending: false });
-
-        const currentTermData =
-          (allTerms || []).find(
-            (t: { start_date?: string; end_date: string }) =>
-              t.start_date ? t.start_date <= currentTerm.today && t.end_date >= currentTerm.today : t.end_date >= currentTerm.today
-          ) || (allTerms?.[0] as { start_date?: string; end_date: string }) || null;
-
-        const [paymentsResult, notificationsResult] = await Promise.all([
-          currentTermData
-            ? supabase
-                .from('student_payments')
-                .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
-                .eq('school_id', u.school_id)
-                .gte('payment_date', currentTermData.start_date || '1900-01-01')
-                .lte('payment_date', currentTermData.end_date || '2100-12-31')
-                .order('payment_date', { ascending: false })
-                .limit(5)
-            : supabase
-                .from('student_payments')
-                .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
-                .eq('school_id', u.school_id)
-                .order('payment_date', { ascending: false })
-                .limit(5),
-          supabase
-            .from('notifications')
-            .select('*')
-            .eq('school_id', u.school_id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-        ]);
-
-        const rawPayments = (paymentsResult.data || []) as PaymentRow[];
-        setPayments(
-          rawPayments.map((p) => ({
-            payment_id: p.payment_id,
-            amount_paid: p.amount_paid,
-            payment_date: p.payment_date,
-            payment_method: p.payment_method,
-            student_id: p.student_id,
-            students: Array.isArray(p.students) ? p.students[0] : p.students ?? undefined,
-          }))
-        );
-        setNotifications((notificationsResult.data || []) as typeof notifications);
-      } catch (error) {
-        console.error('Error loading data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadData();
-  }, [currentTerm.today]);
+  const payments = data?.payments ?? [];
+  const notifications = data?.notifications ?? [];
+  const loading = isLoading;
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(amount);

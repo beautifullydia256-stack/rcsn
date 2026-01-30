@@ -94,6 +94,8 @@ export default function PendingExpensesCard() {
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(amount);
 
+  const loading = isLoading;
+
   if (loading) {
     return (
       <GlassCard className="p-6 mb-6">

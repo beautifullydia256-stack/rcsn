@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { UserPlus, Shield, BookOpen, Calculator } from 'lucide-react';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 interface UserAccount {
   user_id: string;
@@ -17,35 +20,32 @@ interface UserAccount {
   last_sign_in_at?: string;
 }
 
+async function fetchAccounts(userId: string): Promise<UserAccount[]> {
+  const { data: userData } = await supabase.from('users').select('school_id, role').eq('user_id', userId).single();
+  if (!userData?.school_id || userData.role !== 'admin') return [];
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .eq('school_id', userData.school_id)
+    .in('role', ['admin', 'librarian', 'accountant'])
+    .order('created_at', { ascending: false });
+  return (data || []) as UserAccount[];
+}
+
 export default function AccountsPage() {
   const navigate = useNavigate();
-  const { user: authUser } = useAuthStore();
-  const [accounts, setAccounts] = useState<UserAccount[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const authUser = useAuthStore((s) => s.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!authUser) return;
-    const loadAccounts = async () => {
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id, role')
-        .eq('user_id', authUser.id)
-        .single();
-      if (!userData?.school_id || userData.role !== 'admin') return;
-      const { data: accountsData } = await supabase
-        .from('users')
-        .select('*')
-        .eq('school_id', userData.school_id)
-        .in('role', ['admin', 'librarian', 'accountant'])
-        .order('created_at', { ascending: false });
-      setAccounts(accountsData || []);
-      setLoading(false);
-    };
-    loadAccounts();
-  }, [authUser]);
+  const { data: accounts = [], isLoading } = useQuery({
+    queryKey: ['admin', 'accounts', authUser?.id ?? ''],
+    queryFn: () => fetchAccounts(authUser!.id),
+    enabled: !!authUser?.id,
+    staleTime: STALE_TIME_MS,
+  });
 
   const filteredAccounts = useMemo(() => {
     let result = accounts;
@@ -68,7 +68,7 @@ export default function AccountsPage() {
     try {
       const { error } = await supabase.from('users').delete().eq('user_id', userId);
       if (error) throw error;
-      setAccounts((prev) => prev.filter((a) => a.user_id !== userId));
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id] });
     } catch (err: any) {
       alert(`Error: ${err.message}. You may need to remove this user via Supabase dashboard or API.`);
     } finally {
@@ -84,6 +84,8 @@ export default function AccountsPage() {
       default: return 'bg-white/10 text-white/80 border-white/20';
     }
   };
+
+  const loading = isLoading;
 
   if (loading) {
     return (

@@ -1,6 +1,41 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+
+const STALE_TIME_MS = 5 * 60 * 1000;
+
+type Requirement = {
+  id: string;
+  requirement_name: string;
+  description?: string;
+  cost: number;
+  status: string;
+  boarding_type?: string;
+  class_name?: string;
+  created_at?: string;
+};
+
+async function fetchRequirementsPage(
+  schoolId: string,
+  classOptionsFallback: string[]
+): Promise<{ requirements: Requirement[]; classOptions: string[] }> {
+  const [reqRes, classRes] = await Promise.all([
+    supabase
+      .from('school_requirements')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('requirement_name'),
+    supabase.from('classes').select('class_name').eq('school_id', schoolId).order('class_name'),
+  ]);
+  if (reqRes.error) throw reqRes.error;
+  const requirements = reqRes.data || [];
+  const classOptions =
+    classRes.data?.length ?
+      classRes.data.map((c: { class_name: string }) => c.class_name)
+    : classOptionsFallback;
+  return { requirements, classOptions };
+}
 
 export default function SettingsSchoolRequirements({
   schoolId,
@@ -9,19 +44,7 @@ export default function SettingsSchoolRequirements({
   schoolId: string | null;
   classOptionsFallback: string[];
 }) {
-  const [requirements, setRequirements] = useState<
-    {
-      id: string;
-      requirement_name: string;
-      description?: string;
-      cost: number;
-      status: string;
-      boarding_type?: string;
-      class_name?: string;
-      created_at?: string;
-    }[]
-  >([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -30,7 +53,6 @@ export default function SettingsSchoolRequirements({
     'name' | 'cost' | 'status' | 'boarding_type' | 'class_name' | 'created_at'
   >('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [classOptions, setClassOptions] = useState<string[]>([]);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [requirementName, setRequirementName] = useState('');
@@ -42,47 +64,16 @@ export default function SettingsSchoolRequirements({
   );
   const [className, setClassName] = useState('');
 
-  const loadClasses = async () => {
-    if (!schoolId) return;
-    try {
-      const { data, error: err } = await supabase
-        .from('classes')
-        .select('class_name')
-        .eq('school_id', schoolId)
-        .order('class_name');
-      if (!err && data?.length) {
-        setClassOptions(data.map((c: { class_name: string }) => c.class_name));
-      } else {
-        setClassOptions(classOptionsFallback);
-      }
-    } catch {
-      setClassOptions(classOptionsFallback);
-    }
-  };
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin', 'settings', 'requirements', schoolId ?? ''],
+    queryFn: () => fetchRequirementsPage(schoolId!, classOptionsFallback),
+    enabled: !!schoolId,
+    staleTime: STALE_TIME_MS,
+  });
 
-  const loadRequirements = async () => {
-    if (!schoolId) return;
-    setLoading(true);
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('school_requirements')
-        .select('*')
-        .eq('school_id', schoolId)
-        .order('requirement_name');
-      if (fetchError) throw fetchError;
-      setRequirements(data || []);
-    } catch (err) {
-      console.error('Error loading requirements:', err);
-      setError('Failed to load school requirements');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadRequirements();
-    loadClasses();
-  }, [schoolId]);
+  const requirements = data?.requirements ?? [];
+  const classOptions = data?.classOptions ?? classOptionsFallback;
+  const loading = isLoading;
 
   const handleSave = async () => {
     if (!schoolId || !requirementName.trim()) {
@@ -150,7 +141,7 @@ export default function SettingsSchoolRequirements({
       const { error: err } = await supabase.from('school_requirements').delete().eq('id', id);
       if (err) throw err;
       setSuccess('Requirement deleted successfully!');
-      await loadRequirements();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'requirements', schoolId] });
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to delete');
