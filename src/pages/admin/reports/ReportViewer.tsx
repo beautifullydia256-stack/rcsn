@@ -109,7 +109,7 @@ export default function ReportViewer() {
     return (
       <AdminPageWrapper title="Generated Reports">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
         </div>
       </AdminPageWrapper>
     );
@@ -124,24 +124,24 @@ export default function ReportViewer() {
       <div className={`${adminCardClass}`}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-200 mb-2">Search</label>
-            <div className="rounded-lg border border-gray-600 bg-[#0f172a] px-4 py-2 flex items-center gap-2">
-              <Search className="w-4 h-4 text-gray-400" />
+            <label className="block text-sm font-medium text-white/85 mb-2">Search</label>
+            <div className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 flex items-center gap-2">
+              <Search className="w-4 h-4 text-white/70" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by name or admission number..."
-                className="bg-transparent border-none outline-none flex-1 text-white placeholder-gray-500"
+                className="bg-transparent border-none outline-none flex-1 text-white placeholder-white/50"
               />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-200 mb-2">Filter by Class</label>
+            <label className="block text-sm font-medium text-white/85 mb-2">Filter by Class</label>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full rounded-lg border border-gray-600 bg-[#0f172a] px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Classes</option>
               {classes.map((className) => (
@@ -164,44 +164,44 @@ export default function ReportViewer() {
           return (
             <div key={report.id} className={`${adminCardClass} space-y-3`}>
               <h3 className="text-lg font-semibold text-white">{student?.name || 'Unknown Student'}</h3>
-              <p className="text-sm text-gray-400">{student?.current_class || ''} - {student?.admission_number || ''}</p>
+              <p className="text-sm text-white/70">{student?.current_class || ''} - {student?.admission_number || ''}</p>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Average:</span>
+                  <span className="text-white/70">Average:</span>
                   <span className="font-semibold text-white">
                     {summary?.average ? summary.average.toFixed(2) + '%' : 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Position:</span>
+                  <span className="text-white/70">Position:</span>
                   <span className="font-semibold text-white">
                     {summary?.classPosition || 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Division:</span>
+                  <span className="text-white/70">Division:</span>
                   <span className="font-semibold text-white">
                     {summary?.division || 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Generated:</span>
-                  <span className="text-sm text-gray-300">
+                  <span className="text-white/70">Generated:</span>
+                  <span className="text-sm text-white/85">
                     {new Date(report.generated_at).toLocaleDateString()}
                   </span>
                 </div>
               </div>
-              <div className="flex gap-2 pt-4 border-t border-gray-600">
+              <div className="flex gap-2 pt-4 border-t border-white/20">
                 <button
                   onClick={() => handleViewReport(report)}
-                  className="flex-1 rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-gray-200 hover:bg-white/5 flex items-center justify-center gap-2"
+                  className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-2 backdrop-blur-xl"
                 >
                   <Eye className="w-4 h-4" />
                   View
                 </button>
                 <button
                   onClick={() => handleDownloadPDF(report)}
-                  className="flex-1 rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-2 text-sm text-gray-200 hover:bg-white/5 flex items-center justify-center gap-2"
+                  className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-2 backdrop-blur-xl"
                 >
                   <Download className="w-4 h-4" />
                   PDF
@@ -214,7 +214,7 @@ export default function ReportViewer() {
 
       {filteredReports.length === 0 && (
         <div className={`${adminCardClass} text-center py-12`}>
-          <p className="text-gray-400">
+          <p className="text-white/85">
             {generatedReports.length === 0
               ? 'No reports generated yet. Generate reports first.'
               : 'No reports match your filters.'}
@@ -231,20 +231,20 @@ export default function ReportViewer() {
           size="xl"
         >
           <div className="space-y-4">
-            <div className="rounded-lg border border-gray-600 bg-[#1e293b] p-4">
+            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl p-4">
               <h3 className="font-semibold text-white mb-2">Summary</h3>
-              <div className="grid grid-cols-2 gap-2 text-sm text-gray-200">
-                <div><span className="text-gray-400">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) || 'N/A'}%</div>
-                <div><span className="text-gray-400">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition || 'N/A'}</div>
-                <div><span className="text-gray-400">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division || 'N/A'}</div>
-                <div><span className="text-gray-400">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) || 'N/A'}</div>
+              <div className="grid grid-cols-2 gap-2 text-sm text-white/85">
+                <div><span className="text-white/70">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) || 'N/A'}%</div>
+                <div><span className="text-white/70">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition || 'N/A'}</div>
+                <div><span className="text-white/70">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division || 'N/A'}</div>
+                <div><span className="text-white/70">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) || 'N/A'}</div>
               </div>
             </div>
-            <div className="rounded-lg border border-gray-600 bg-[#1e293b] p-4">
+            <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl p-4">
               <h3 className="font-semibold text-white mb-2">Subjects</h3>
               <div className="space-y-2">
                 {viewingReport.reportData?.students?.[0]?.results?.map((result: any, idx: number) => (
-                  <div key={idx} className="flex items-center justify-between text-sm text-gray-200">
+                  <div key={idx} className="flex items-center justify-between text-sm text-white/85">
                     <span>{result.subject}</span>
                     <span className="font-semibold text-white">{result.marks_obtained} / {result.total_marks} ({result.grade})</span>
                   </div>
@@ -254,14 +254,14 @@ export default function ReportViewer() {
             <div className="flex gap-4">
               <button
                 onClick={() => handleDownloadPDF(viewingReport)}
-                className="flex-1 rounded-lg border border-gray-600 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 flex items-center justify-center gap-2"
+                className="flex-1 rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 flex items-center justify-center gap-2"
               >
                 <Download className="w-5 h-5" />
                 Download PDF
               </button>
               <button
                 onClick={() => setViewingReport(null)}
-                className="flex-1 rounded-lg border border-gray-600 bg-[#1e293b] px-4 py-3 font-medium text-gray-200 hover:bg-white/5"
+                className="flex-1 rounded-xl border border-white/20 bg-white/10 px-4 py-3 font-medium text-white hover:bg-white/20"
               >
                 Close
               </button>

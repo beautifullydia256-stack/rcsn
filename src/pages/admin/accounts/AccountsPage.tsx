@@ -6,9 +6,9 @@ export default function AccountsPage() {
   return (
     <AdminPageWrapper title="Accounts">
       <div className="flex items-center justify-end">
-        <button type="button" className="rounded-lg border border-gray-600 bg-[#1e293b] px-3 py-2 text-sm text-gray-200 hover:bg-white/5" onClick={() => navigate('/dashboard/admin')}>Back to Dashboard</button>
+        <button type="button" className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm text-white/85 hover:bg-white/5" onClick={() => navigate('/dashboard/admin')}>Back to Dashboard</button>
       </div>
-      <div className={`${adminCardClass} text-center text-gray-400`}>
+      <div className={`${adminCardClass} text-center text-white/70`}>
         <p>Accounts management is under migration. Use the legacy admin for now.</p>
       </div>
     </AdminPageWrapper>

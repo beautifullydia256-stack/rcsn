@@ -49,14 +49,14 @@ export default function TeachersPage() {
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
-          className="rounded-lg border border-gray-600 bg-[#1e293b] px-3 py-2 text-sm font-medium text-gray-200 hover:bg-white/5"
+          className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
           onClick={() => navigate('/dashboard/admin/teachers/add')}
         >
           Add Teacher
         </button>
         <button
           type="button"
-          className="rounded-lg border border-gray-600 bg-[#1e293b] px-3 py-2 text-sm font-medium text-gray-200 hover:bg-white/5"
+          className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
           onClick={() => navigate('/dashboard/admin')}
         >
           Back to Dashboard
@@ -65,38 +65,38 @@ export default function TeachersPage() {
 
       <div className={`${adminCardClass} space-y-4`}>
         <input
-          className="w-full md:max-w-md rounded-lg border border-gray-600 bg-[#0f172a] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:max-w-md rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
           placeholder="Search by name or email"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <div className="overflow-x-auto rounded-lg border border-gray-600">
+        <div className="overflow-x-auto rounded-lg border border-white/20">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-600 bg-[#0f172a] text-left">
-                <th className="px-4 py-2 font-medium text-gray-200">Name</th>
-                <th className="px-4 py-2 font-medium text-gray-200">Phone</th>
-                <th className="px-4 py-2 font-medium text-gray-200">Email</th>
-                <th className="px-4 py-2 font-medium text-gray-200">Hired</th>
-                <th className="px-4 py-2 font-medium text-gray-200">Actions</th>
+              <tr className="border-b border-white/20 bg-white/5 text-left">
+                <th className="px-4 py-2 font-medium text-white/85">Name</th>
+                <th className="px-4 py-2 font-medium text-white/85">Phone</th>
+                <th className="px-4 py-2 font-medium text-white/85">Email</th>
+                <th className="px-4 py-2 font-medium text-white/85">Hired</th>
+                <th className="px-4 py-2 font-medium text-white/85">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-400">No teachers found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">No teachers found.</td></tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.teacher_id} className="border-b border-gray-600 hover:bg-white/5">
+                  <tr key={r.teacher_id} className="border-b border-white/20 hover:bg-white/5">
                     <td className="px-4 py-2">
                       <button type="button" className="text-blue-400 hover:underline" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>
                         {r.name}
                       </button>
                     </td>
-                    <td className="px-4 py-2 text-gray-400">{r.phone || '-'}</td>
-                    <td className="px-4 py-2 text-gray-400">{r.email}</td>
-                    <td className="px-4 py-2 text-gray-400">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-white/70">{r.phone || '-'}</td>
+                    <td className="px-4 py-2 text-white/70">{r.email}</td>
+                    <td className="px-4 py-2 text-white/70">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
                         <button type="button" className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:opacity-90" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>View</button>

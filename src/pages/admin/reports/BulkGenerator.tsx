@@ -113,7 +113,7 @@ export default function BulkGenerator() {
     return (
       <AdminPageWrapper title="Bulk Report Generation">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white"></div>
         </div>
       </AdminPageWrapper>
     );
@@ -123,7 +123,7 @@ export default function BulkGenerator() {
     return (
       <AdminPageWrapper title="Bulk Report Generation">
         <div className={`${adminCardClass} text-center py-8`}>
-          <p className="text-gray-400">No snapshot selected. Please select a snapshot from Snapshots first.</p>
+          <p className="text-white/85">No snapshot selected. Please select a snapshot from Snapshots first.</p>
         </div>
       </AdminPageWrapper>
     );
@@ -134,7 +134,7 @@ export default function BulkGenerator() {
       <div className={`${adminCardClass} space-y-4`}>
         <h2 className="text-lg font-semibold text-white">Snapshot: Term {snapshot.term} {snapshot.year}</h2>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">Status:</span>
+          <span className="text-sm text-white/70">Status:</span>
           <span className={`font-semibold ${
             snapshot.status === 'locked' ? 'text-blue-400' :
             snapshot.status === 'generated' ? 'text-green-400' :
@@ -144,7 +144,7 @@ export default function BulkGenerator() {
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">Students:</span>
+          <span className="text-sm text-white/70">Students:</span>
           <span className="font-semibold text-white">{snapshot.student_count || 0}</span>
         </div>
       </div>
@@ -166,11 +166,11 @@ export default function BulkGenerator() {
           <div className={`${adminCardClass} space-y-4`}>
             <h2 className="text-lg font-semibold text-white">Template Selection</h2>
             <div>
-              <label className="block text-sm font-medium text-gray-200 mb-2">Select Template</label>
+              <label className="block text-sm font-medium text-white/85 mb-2">Select Template</label>
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value)}
-                className="w-full rounded-lg border border-gray-600 bg-[#0f172a] px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={generating}
               >
                 <option value="">-- Use Default Template --</option>
@@ -187,7 +187,7 @@ export default function BulkGenerator() {
             <h2 className="text-lg font-semibold text-white">Class Selection (Optional)</h2>
             <div className="space-y-2">
               {classes.map((className) => (
-                <label key={className} className="flex items-center gap-2 text-gray-200">
+                <label key={className} className="flex items-center gap-2 text-white/85">
                   <input
                     type="checkbox"
                     checked={selectedClasses.includes(className)}
@@ -199,7 +199,7 @@ export default function BulkGenerator() {
                       }
                     }}
                     disabled={generating}
-                    className="rounded border-gray-500 text-blue-600"
+                    className="rounded border-white/30 text-blue-500"
                   />
                   <span>{className}</span>
                 </label>
@@ -210,19 +210,19 @@ export default function BulkGenerator() {
           <div className={`${adminCardClass} space-y-4`}>
             {status === 'generating' && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 text-gray-200">
+                <div className="flex items-center gap-2 text-white/85">
                   <Loader className="w-5 h-5 animate-spin" />
                   <span>Generating reports...</span>
                 </div>
-                <div className="w-full bg-gray-600 rounded-full h-2">
+                <div className="w-full bg-white/20 rounded-full h-2">
                   <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
+                    className="bg-blue-500 h-2 rounded-full transition-all"
                     style={{
                       width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
                     }}
                   />
                 </div>
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-white/70">
                   {progress.current} / {progress.total} students
                 </p>
               </div>
@@ -245,7 +245,7 @@ export default function BulkGenerator() {
             <button
               onClick={handleGenerate}
               disabled={generating || snapshot.status !== 'locked'}
-              className="w-full rounded-lg border border-gray-600 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Play className="w-5 h-5" />
               {generating ? 'Generating...' : 'Generate Reports'}
