@@ -19,9 +19,9 @@ interface GenerateReportsRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight (200 OK for broad client/proxy compatibility)
+  // CORS preflight: MUST be first, return 204 with headers (Supabase/browser expectation)
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 200, headers: { ...corsHeaders } });
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {

@@ -183,10 +183,14 @@ export default function GenerateReportsPage() {
         examSet.year
       );
       setGeneratingStep('generating');
-      const { data, error: fnError } = await supabase.functions.invoke('generate-reports-bulk', {
-        body: { snapshotId },
+      // Call same-origin API to avoid CORS (API proxies to Supabase Edge Function)
+      const apiRes = await fetch('/api/generate-reports-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ snapshotId }),
       });
-      if (fnError) throw fnError;
+      const data = await apiRes.json().catch(() => ({}));
+      if (!apiRes.ok) throw new Error(data?.error || apiRes.statusText || 'Generation failed');
       if (!data?.success) throw new Error(data?.error || 'Generation failed');
       setCompletedSnapshotId(snapshotId);
       setGeneratingStep('completed');
