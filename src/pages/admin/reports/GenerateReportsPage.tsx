@@ -14,9 +14,12 @@ import { getCurrentTerm } from '../../../lib/termStructure';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
+type TermOption = { term: number; year: number };
+
 type PageData = {
   schoolId: string;
-  currentTerm: { term: number; year: number };
+  currentTerm: TermOption;
+  allTerms: TermOption[];
   classes: string[];
   examSets: any[];
 };
@@ -58,11 +61,28 @@ async function fetchPageData(userId: string): Promise<PageData | null> {
     .select('id, name, term, year')
     .eq('school_id', u.school_id)
     .eq('is_active', true)
-    .order('created_at', { ascending: false });
+    .order('year', { ascending: false })
+    .order('term', { ascending: false });
+
+  const termSet = new Map<string, TermOption>();
+  (terms || []).forEach((t: { term: number; year: number }) => {
+    const key = `${t.term}-${t.year}`;
+    if (!termSet.has(key)) termSet.set(key, { term: t.term, year: t.year });
+  });
+  (sets || []).forEach((es: { term: number; year: number }) => {
+    const key = `${es.term}-${es.year}`;
+    if (!termSet.has(key)) termSet.set(key, { term: es.term, year: es.year });
+  });
+  let allTerms = Array.from(termSet.values()).sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.term - a.term;
+  });
+  if (allTerms.length === 0) allTerms = [currentTerm];
 
   return {
     schoolId: u.school_id,
     currentTerm,
+    allTerms,
     classes: classList,
     examSets: sets || [],
   };
@@ -83,6 +103,7 @@ export default function GenerateReportsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
+  const [selectedTermKey, setSelectedTermKey] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
@@ -110,6 +131,15 @@ export default function GenerateReportsPage() {
     return t?.name ?? 'Report For Baby Class';
   }, [selectedClass]);
 
+  const selectedTerm = useMemo((): TermOption | null => {
+    if (!pageData) return null;
+    if (selectedTermKey) {
+      const [t, y] = selectedTermKey.split('-').map(Number);
+      if (!isNaN(t) && !isNaN(y)) return { term: t, year: y };
+    }
+    return pageData.currentTerm;
+  }, [pageData, selectedTermKey]);
+
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return studentsInClass;
     const q = studentSearch.toLowerCase();
@@ -126,11 +156,12 @@ export default function GenerateReportsPage() {
       setError('Please select a class');
       return;
     }
+    const term = selectedTerm || pageData.currentTerm;
     const examSet = pageData.examSets.find(
-      (es: any) => es.term === pageData.currentTerm.term && es.year === pageData.currentTerm.year
+      (es: any) => es.term === term.term && es.year === term.year
     ) || pageData.examSets[0];
     if (!examSet) {
-      setError('No exam set found for current term. Create an exam set first.');
+      setError(`No exam set found for Term ${term.term}, ${term.year}. Create an exam set for that term first.`);
       return;
     }
     if (reportType === 'single' && !selectedStudent) {
@@ -222,12 +253,29 @@ export default function GenerateReportsPage() {
               </select>
             </div>
 
-            {/* Current Term */}
-            {pageData && (
-              <div className="flex items-center">
-                <div className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white/80 text-sm">
-                  <strong>Current Term:</strong> Term {pageData.currentTerm.term}. {pageData.currentTerm.year}
-                </div>
+            {/* Term – choose any term (defaults to current) */}
+            {pageData && pageData.allTerms.length > 0 && (
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Term</label>
+                <select
+                  value={selectedTermKey || `${pageData.currentTerm.term}-${pageData.currentTerm.year}`}
+                  onChange={(e) => setSelectedTermKey(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {pageData.allTerms.map((t) => {
+                    const key = `${t.term}-${t.year}`;
+                    const isCurrent =
+                      t.term === pageData.currentTerm.term && t.year === pageData.currentTerm.year;
+                    return (
+                      <option key={key} value={key} className="text-black">
+                        Term {t.term}, {t.year}{isCurrent ? ' (Current)' : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="mt-1 text-xs text-white/50">
+                  Choose the term for which to generate reports.
+                </p>
               </div>
             )}
 
