@@ -72,11 +72,11 @@ export default function ReportsGeneratePage() {
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header – same as old 2f00b44 reports page */}
-        <div className="flex items-center justify-between mb-8">
+        {/* Header – same as old 2f00b44 reports page. data-build lets you confirm new deploy. */}
+        <div className="flex items-center justify-between mb-8" data-page="reports-generate-hub">
           <div>
             <h1 className="text-white text-2xl font-semibold">Generate Reports</h1>
-            <p className="text-white/80 text-sm mt-1">Create student academic reports for exams and terms</p>
+            <p className="text-white/80 text-sm mt-1">Create student academic reports for exams and terms · Select exam set below</p>
           </div>
           <button
             onClick={() => navigate('/dashboard/admin/reports')}
