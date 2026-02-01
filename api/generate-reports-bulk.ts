@@ -7,12 +7,13 @@
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = { setHeader: (k: string, v: string) => void; status: (n: number) => Res; json: (x: unknown) => void; end: () => void };
 
-function getEnv(name: string): string {
-  return (
-    process.env[name] ||
-    process.env[`VITE_${name}`] ||
-    ''
-  ).trim();
+function getEnv(key: string): string {
+  const candidates = [
+    process.env[key],
+    process.env[`VITE_${key}`],
+    process.env[`NEXT_PUBLIC_${key}`],
+  ].filter(Boolean) as string[];
+  return (candidates[0] || '').trim();
 }
 
 function sendJson(res: Res, status: number, obj: { error?: string; [k: string]: unknown }): void {
