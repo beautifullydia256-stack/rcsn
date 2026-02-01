@@ -190,7 +190,15 @@ export default function GenerateReportsPage() {
         body: JSON.stringify({ snapshotId }),
       });
       const data = await apiRes.json().catch(() => ({}));
-      if (!apiRes.ok) throw new Error(data?.error || apiRes.statusText || 'Generation failed');
+      if (!apiRes.ok) {
+        const msg =
+          typeof data?.error === 'string'
+            ? data.error
+            : apiRes.status === 500
+              ? 'Server error. Check Vercel → Project → Settings → Environment Variables: add SUPABASE_URL and SUPABASE_ANON_KEY for Production/Preview, then redeploy.'
+              : apiRes.statusText || 'Generation failed';
+        throw new Error(msg);
+      }
       if (!data?.success) throw new Error(data?.error || 'Generation failed');
       setCompletedSnapshotId(snapshotId);
       setGeneratingStep('completed');
@@ -372,11 +380,14 @@ export default function GenerateReportsPage() {
           )}
           {generatingStep === 'error' && (
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-              {generationError}
+              <p className="font-medium">{generationError}</p>
+              <p className="mt-1 text-xs text-red-200/90">
+                If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY); redeploy; or check Vercel → Deployments → Functions → Logs.
+              </p>
               <button
                 type="button"
                 onClick={() => { setGeneratingStep('idle'); setGenerationError(''); void handlePreviewReport(); }}
-                className="ml-2 underline hover:no-underline"
+                className="mt-2 underline hover:no-underline"
               >
                 Try again
               </button>
