@@ -4,7 +4,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
-import { lockSnapshot } from '../../../services/snapshotService';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -59,7 +58,6 @@ export default function ReportsGeneratePage() {
         examSet.term,
         examSet.year
       );
-      await lockSnapshot(snapshotId);
       navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshotId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to prepare reports');

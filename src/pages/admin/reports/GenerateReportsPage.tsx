@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
-import { lockSnapshot } from '../../../services/snapshotService';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 
@@ -177,7 +176,6 @@ export default function GenerateReportsPage() {
         examSet.term,
         examSet.year
       );
-      await lockSnapshot(snapshotId);
       navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshotId}`);
     } catch (err: any) {
       setError(err.message || 'Failed to prepare reports');
