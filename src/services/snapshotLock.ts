@@ -71,14 +71,27 @@ export async function createSnapshotFromExamSet(
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId), // Head teacher uses same table
   ]);
 
-  // student_comments may not exist in all projects (404-safe): check error, don't rely on throw
-  let studentComments: any[] = [];
-  const { data: commentsData, error: commentsError } = await supabase
-    .from('student_comments')
-    .select('*')
+  // Per-student comments from report_comments (comment_type + comment_text) for this term/year
+  let studentComments: Array<{ student_id: string; class_teacher_text?: string; headteacher_text?: string }> = [];
+  const { data: reportCommentsRows, error: reportCommentsError } = await supabase
+    .from('report_comments')
+    .select('student_id, comment_type, comment_text')
     .eq('school_id', schoolId)
+    .eq('term', term)
+    .eq('year', year)
     .in('student_id', studentIds);
-  if (!commentsError) studentComments = commentsData ?? [];
+  if (!reportCommentsError && reportCommentsRows?.length) {
+    const byStudent = new Map<string, { class_teacher_text?: string; headteacher_text?: string }>();
+    for (const row of reportCommentsRows) {
+      const t = (row.comment_type || '').toLowerCase().replace(/\s+/g, '_');
+      const text = row.comment_text || '';
+      if (!byStudent.has(row.student_id)) byStudent.set(row.student_id, {});
+      const entry = byStudent.get(row.student_id)!;
+      if (t === 'class_teacher' || t === 'class_teacher_comment') entry.class_teacher_text = text;
+      else if (t === 'headteacher' || t === 'head_teacher' || t === 'headteacher_comment') entry.headteacher_text = text;
+    }
+    studentComments = Array.from(byStudent.entries()).map(([student_id, v]) => ({ student_id, ...v }));
+  }
 
   // 5. Calculate fees balances (pre-calculated)
   const paidByStudent: Record<string, number> = {};
