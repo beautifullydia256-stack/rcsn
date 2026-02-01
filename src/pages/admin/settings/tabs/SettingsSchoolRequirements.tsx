@@ -116,7 +116,7 @@ export default function SettingsSchoolRequirements({
       setStatus('Active');
       setBoardingType('Day Scholar');
       setClassName('');
-      await loadRequirements();
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'requirements', schoolId] });
       setTimeout(() => setSuccess(null), 3000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to save requirement');

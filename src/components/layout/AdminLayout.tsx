@@ -61,6 +61,7 @@ function NavLinkStyle({
 
 /**
  * Admin sidebar: exact 2f00b44 structure — flat list, icons, bottom Settings + Logout.
+ * Layout has no key tied to route so it stays mounted; only <Outlet /> content updates on navigation (SPA-style).
  */
 export default function AdminLayout() {
   const navigate = useNavigate();

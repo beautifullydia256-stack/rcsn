@@ -13,7 +13,7 @@ async function fetchStudentsList(userId: string) {
 
   const [schoolRes, studentsRes] = await Promise.all([
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
-    supabase.from('students').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }),
+    supabase.from('students').select('student_id, name, current_class, status, created_at, admission_number').eq('school_id', u.school_id).order('created_at', { ascending: false }),
   ]);
   const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
   const rows = studentsRes.data || [];

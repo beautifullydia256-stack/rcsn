@@ -7,6 +7,7 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
     isActive ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
   }`;
 
+/** Layout stays mounted; only <Outlet /> content updates on navigation (SPA-style). */
 export default function TeacherLayout() {
   return (
     <div className="flex gap-6 p-4">

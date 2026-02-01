@@ -16,8 +16,8 @@ async function fetchSnapshotsPage(userId: string): Promise<{ schoolId: string; e
   if (!u?.school_id) return { schoolId: '', examSets: [], snapshots: [] };
 
   const [examSetsRes, snapshotsRes] = await Promise.all([
-    supabase.from('exam_sets').select('*').eq('school_id', u.school_id).eq('is_active', true).order('created_at', { ascending: false }),
-    supabase.from('report_snapshots').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }),
+    supabase.from('exam_sets').select('id, name, term, year').eq('school_id', u.school_id).eq('is_active', true).order('created_at', { ascending: false }),
+    supabase.from('report_snapshots').select('id, term, year, status, student_count, created_at, locked_at').eq('school_id', u.school_id).order('created_at', { ascending: false }),
   ]);
   return {
     schoolId: u.school_id,

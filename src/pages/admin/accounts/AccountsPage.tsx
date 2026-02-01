@@ -25,7 +25,7 @@ async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   if (!userData?.school_id || userData.role !== 'admin') return [];
   const { data } = await supabase
     .from('users')
-    .select('*')
+    .select('user_id, email, name, role, phone, department, position, created_at, last_sign_in_at')
     .eq('school_id', userData.school_id)
     .in('role', ['admin', 'librarian', 'accountant'])
     .order('created_at', { ascending: false });

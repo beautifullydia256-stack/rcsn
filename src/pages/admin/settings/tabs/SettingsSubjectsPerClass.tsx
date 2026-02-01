@@ -43,7 +43,7 @@ export default function SettingsSubjectsPerClass({
     if (!schoolId || !selectedClass) return;
     const s = newSubject.trim();
     if (!s) return;
-    if (!subjects.includes(s)) setSubjects((prev) => [...prev, s]);
+    if (subjects.includes(s)) return;
     setSaving(true);
     const { error: insertError } = await supabase
       .from('class_subjects')
@@ -51,10 +51,10 @@ export default function SettingsSubjectsPerClass({
     setSaving(false);
     if (insertError) {
       setError(insertError.message || 'Failed to add subject');
-      setSubjects((prev) => prev.filter((x) => x !== s));
       return;
     }
     setNewSubject('');
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId, selectedClass] });
   };
 
   const removeSubject = async (subj: string) => {

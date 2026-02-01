@@ -11,7 +11,7 @@ async function fetchExamSets(userId: string) {
   if (!data?.school_id) return [] as any[];
   const { data: sets } = await supabase
     .from('exam_sets')
-    .select('*')
+    .select('id, name, term, year, is_active, created_at')
     .eq('school_id', data.school_id)
     .order('year', { ascending: false })
     .order('term', { ascending: false });
