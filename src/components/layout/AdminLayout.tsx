@@ -96,7 +96,7 @@ export default function AdminLayout() {
           <NavLinkStyle to="/dashboard/admin/parents" icon={UserPlus}>Parents</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/accounts" icon={Briefcase}>Staff</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign}>Finance</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/reports/snapshots" icon={FileText}>Reports</NavLinkStyle>
+          <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText}>Reports</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList}>Attendance</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen}>Exam Sets</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2}>Classes</NavLinkStyle>
