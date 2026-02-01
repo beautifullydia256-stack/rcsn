@@ -1,65 +1,148 @@
 /**
- * Generate Reports page – e579629 / 2f00b44 style: gradient, animated card, no snapshot UI.
+ * Student Report Generator – matches screenshot: Report Configuration card,
+ * Report Template (auto-selected), Report Type, Current Term, Class, Student, Preview Report.
  */
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
 import { lockSnapshot } from '../../../services/snapshotService';
+import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
+import { getCurrentTerm } from '../../../lib/termStructure';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-const cardClass =
-  'rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20';
+type PageData = {
+  schoolId: string;
+  currentTerm: { term: number; year: number };
+  classes: string[];
+  examSets: any[];
+};
 
-async function fetchExamSets(userId: string): Promise<{ schoolId: string; examSets: any[] }> {
+async function fetchPageData(userId: string): Promise<PageData | null> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolId: '', examSets: [] };
+  if (!u?.school_id) return null;
+
+  const { data: terms } = await supabase
+    .from('school_terms')
+    .select('term, year, start_date, end_date')
+    .eq('school_id', u.school_id)
+    .order('year', { ascending: false })
+    .order('term', { ascending: false });
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const current =
+    (terms || []).find(
+      (t: { start_date?: string; end_date: string }) =>
+        t.start_date && t.end_date && t.start_date <= todayStr && t.end_date >= todayStr
+    ) || (terms?.[0] as { term: number; year: number });
+  const fallback = getCurrentTerm();
+  const currentTerm = current ? { term: current.term, year: current.year } : { term: fallback.term, year: fallback.year };
+
+  const { data: classRows } = await supabase
+    .from('classes')
+    .select('class_name')
+    .eq('school_id', u.school_id)
+    .order('class_name');
+  let classList: string[] = (classRows || []).map((r: { class_name: string }) => r.class_name);
+  if (classList.length === 0) {
+    const { data: students } = await supabase.from('students').select('current_class').eq('school_id', u.school_id);
+    const set = new Set<string>();
+    (students || []).forEach((s: { current_class?: string }) => s.current_class && set.add(s.current_class));
+    classList = Array.from(set).sort();
+  }
+
   const { data: sets } = await supabase
     .from('exam_sets')
     .select('id, name, term, year')
     .eq('school_id', u.school_id)
     .eq('is_active', true)
     .order('created_at', { ascending: false });
-  return { schoolId: u.school_id, examSets: sets || [] };
+
+  return {
+    schoolId: u.school_id,
+    currentTerm,
+    classes: classList,
+    examSets: sets || [],
+  };
+}
+
+async function fetchStudentsInClass(schoolId: string, className: string) {
+  const { data } = await supabase
+    .from('students')
+    .select('student_id, name, admission_number, current_class')
+    .eq('school_id', schoolId)
+    .eq('current_class', className)
+    .eq('status', 'active')
+    .order('name');
+  return (data || []) as { student_id: string; name: string; admission_number?: string; current_class: string }[];
 }
 
 export default function GenerateReportsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const [selectedExamSetId, setSelectedExamSetId] = useState('');
-  const [generating, setGenerating] = useState(false);
+  const [reportType, setReportType] = useState<'single' | 'class'>('single');
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState('');
+  const [studentSearch, setStudentSearch] = useState('');
+  const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState('');
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'reports-generate-examsets', user?.id ?? ''],
-    queryFn: () => fetchExamSets(user!.id),
+  const { data: pageData, isLoading } = useQuery({
+    queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
+    queryFn: () => fetchPageData(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });
 
-  const schoolId = data?.schoolId ?? null;
-  const examSets = data?.examSets ?? [];
+  const { data: studentsInClass = [] } = useQuery({
+    queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass],
+    queryFn: () => fetchStudentsInClass(pageData!.schoolId, selectedClass),
+    enabled: !!pageData?.schoolId && !!selectedClass,
+    staleTime: STALE_TIME_MS,
+  });
 
-  const handleGenerate = async () => {
-    if (!schoolId || !selectedExamSetId) {
-      setError('Please select an exam set');
+  const templateDisplayName = useMemo(() => {
+    if (!selectedClass) return 'Report For Baby Class';
+    const key = getTemplateForClass(selectedClass);
+    const t = PRIMARY_TEMPLATES[key as keyof typeof PRIMARY_TEMPLATES];
+    return t?.name ?? 'Report For Baby Class';
+  }, [selectedClass]);
+
+  const filteredStudents = useMemo(() => {
+    if (!studentSearch.trim()) return studentsInClass;
+    const q = studentSearch.toLowerCase();
+    return studentsInClass.filter(
+      (s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.admission_number || '').toLowerCase().includes(q)
+    );
+  }, [studentsInClass, studentSearch]);
+
+  const handlePreviewReport = async () => {
+    if (!pageData?.schoolId) return;
+    if (!selectedClass) {
+      setError('Please select a class');
       return;
     }
-    const examSet = examSets.find((es: any) => es.id === selectedExamSetId);
+    const examSet = pageData.examSets.find(
+      (es: any) => es.term === pageData.currentTerm.term && es.year === pageData.currentTerm.year
+    ) || pageData.examSets[0];
     if (!examSet) {
-      setError('Exam set not found');
+      setError('No exam set found for current term. Create an exam set first.');
       return;
     }
-    setGenerating(true);
+    if (reportType === 'single' && !selectedStudent) {
+      setError('Please select a student');
+      return;
+    }
+    setPreviewing(true);
     setError('');
     try {
       const snapshotId = await createSnapshotFromExamSet(
-        schoolId,
-        selectedExamSetId,
+        pageData.schoolId,
+        examSet.id,
         examSet.term,
         examSet.year
       );
@@ -68,7 +151,7 @@ export default function GenerateReportsPage() {
     } catch (err: any) {
       setError(err.message || 'Failed to prepare reports');
     } finally {
-      setGenerating(false);
+      setPreviewing(false);
     }
   };
 
@@ -76,71 +159,138 @@ export default function GenerateReportsPage() {
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header – old 2f00b44 style */}
+        {/* Header – exact from screenshot */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-white text-2xl font-semibold">Generate Reports</h1>
-            <p className="text-white/80 text-sm mt-1">Create student academic reports for exams and terms</p>
+            <h1 className="text-white text-2xl font-bold">Student Report Generator</h1>
+            <p className="text-white/80 text-sm mt-1">Generate and download student academic reports.</p>
           </div>
-          <button
-            onClick={() => navigate('/dashboard/admin/reports')}
-            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
-          >
-            Back to Reports
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
+            >
+              Customize Header
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard/admin/reports')}
+              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+            >
+              Back to Reports
+            </button>
+          </div>
         </div>
 
-        {/* One card – centered, animated like old app (e579629 / hub) */}
-        <div className="flex justify-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ scale: 1.02 }}
-            transition={{ duration: 0.25 }}
-            className={`${cardClass} p-6 w-full max-w-xl`}
-          >
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+        {/* Report Configuration card – exact from screenshot */}
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6">
+          <h2 className="text-white text-lg font-medium mb-4">Report Configuration</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Report Template – auto-selected, read-only display */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">
+                Report Template
+                <span className="ml-2 text-xs text-emerald-400 font-normal">✓ Auto-selected</span>
+              </label>
+              <div className="relative flex items-center rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/90">
+                <span>{templateDisplayName}</span>
+                <span className="ml-2 text-emerald-400">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                </span>
               </div>
-              <h3 className="text-white text-lg font-medium mb-2">Select exam set</h3>
-              <p className="text-white/70 text-sm">Choose the exam set to generate reports for</p>
+              <p className="mt-1 text-xs text-white/50">
+                Template automatically selected based on class section to ensure consistent formatting.
+              </p>
             </div>
 
-            {isLoading ? (
-              <p className="text-white/70 text-sm text-center">Loading exam sets…</p>
-            ) : (
-              <div className="space-y-4">
-                <select
-                  value={selectedExamSetId}
-                  onChange={(e) => setSelectedExamSetId(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">— Select exam set —</option>
-                  {examSets.map((es: any) => (
-                    <option key={es.id} value={es.id}>
-                      {es.name} – Term {es.term} {es.year}
-                    </option>
-                  ))}
-                </select>
-                {error && (
-                  <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
-                    {error}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={handleGenerate}
-                  disabled={!selectedExamSetId || generating}
-                  className="w-full px-6 py-3 rounded-lg bg-blue-600 border border-blue-500/50 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {generating ? 'Preparing…' : 'Generate Reports'}
-                </button>
+            {/* Report Type */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Report Type</label>
+              <select
+                value={reportType}
+                onChange={(e) => {
+                  setReportType(e.target.value as 'single' | 'class');
+                  setSelectedStudent('');
+                }}
+                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="single" className="text-black">Single Student</option>
+                <option value="class" className="text-black">Entire Class</option>
+              </select>
+            </div>
+
+            {/* Current Term */}
+            {pageData && (
+              <div className="flex items-center">
+                <div className="w-full rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-white/80 text-sm">
+                  <strong>Current Term:</strong> Term {pageData.currentTerm.term}. {pageData.currentTerm.year}
+                </div>
               </div>
             )}
-          </motion.div>
+
+            {/* Class */}
+            <div>
+              <label className="block text-white/80 text-sm font-medium mb-2">Class</label>
+              <select
+                value={selectedClass}
+                onChange={(e) => {
+                  setSelectedClass(e.target.value);
+                  setSelectedStudent('');
+                  setStudentSearch('');
+                }}
+                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="" className="text-white/70">Select Class</option>
+                {pageData?.classes.map((c) => (
+                  <option key={c} value={c} className="text-black">{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Student – only when Single Student */}
+          {reportType === 'single' && (
+            <div className="mb-6">
+              <label className="block text-white/80 text-sm font-medium mb-2">Student</label>
+              <input
+                type="text"
+                value={studentSearch}
+                onChange={(e) => setStudentSearch(e.target.value)}
+                placeholder="Search by name or admission number"
+                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+              />
+              <select
+                value={selectedStudent}
+                onChange={(e) => setSelectedStudent(e.target.value)}
+                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="" className="text-white/70">Select Student</option>
+                {filteredStudents.map((s) => (
+                  <option key={s.student_id} value={s.student_id} className="text-black">
+                    {s.name} {s.admission_number ? `(${s.admission_number})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={handlePreviewReport}
+            disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
+            className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {previewing ? 'Preparing…' : 'Preview Report'}
+          </button>
         </div>
       </div>
     </div>
