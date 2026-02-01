@@ -7,6 +7,9 @@
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = { setHeader: (k: string, v: string) => void; status: (n: number) => Res; json: (x: unknown) => void; end: () => void };
 
+const ENV_KEYS_URL = ['SUPABASE_URL', 'VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'] as const;
+const ENV_KEYS_ANON = ['SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const;
+
 function getEnv(key: string): string {
   const candidates = [
     process.env[key],
@@ -14,6 +17,12 @@ function getEnv(key: string): string {
     process.env[`NEXT_PUBLIC_${key}`],
   ].filter(Boolean) as string[];
   return (candidates[0] || '').trim();
+}
+
+function envDebug(): string {
+  const url = ENV_KEYS_URL.map((k) => `${k}=${process.env[k] ? 'set' : 'missing'}`).join(', ');
+  const anon = ENV_KEYS_ANON.map((k) => `${k}=${process.env[k] ? 'set' : 'missing'}`).join(', ');
+  return `Env in function: ${url}; ${anon}.`;
 }
 
 function sendJson(res: Res, status: number, obj: { error?: string; [k: string]: unknown }): void {
@@ -38,8 +47,9 @@ export default async function handler(req: Req, res: Res) {
     const supabaseUrl = getEnv('SUPABASE_URL');
     const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
     if (!supabaseUrl || !supabaseAnonKey) {
+      const debug = envDebug();
       return sendJson(res, 500, {
-        error: 'API missing Supabase config. In Vercel: Project → Settings → Environment Variables → add SUPABASE_URL and SUPABASE_ANON_KEY for Production and Preview.',
+        error: `API missing Supabase config. ${debug} In Vercel: add SUPABASE_URL and SUPABASE_ANON_KEY (or NEXT_PUBLIC_*) for Production/Preview, then redeploy.`,
       });
     }
 
