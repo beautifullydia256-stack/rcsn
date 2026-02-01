@@ -183,11 +183,13 @@ export default function GenerateReportsPage() {
         examSet.year
       );
       setGeneratingStep('generating');
-      // Call same-origin API to avoid CORS (API proxies to Supabase Edge Function)
+      // Send Supabase URL/key so API works even when Vercel env vars are not available
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
       const apiRes = await fetch('/api/generate-reports-bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshotId }),
+        body: JSON.stringify({ snapshotId, supabaseUrl, supabaseAnonKey }),
       });
       const data = await apiRes.json().catch(() => ({}));
       if (!apiRes.ok) {

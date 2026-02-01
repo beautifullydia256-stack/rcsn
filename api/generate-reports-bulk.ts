@@ -10,18 +10,26 @@ type Res = { setHeader: (k: string, v: string) => void; status: (n: number) => R
 const ENV_KEYS_URL = ['SUPABASE_URL', 'VITE_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL'] as const;
 const ENV_KEYS_ANON = ['SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY'] as const;
 
-function getEnv(key: string): string {
+function safeEnv(): Record<string, string | undefined> {
+  try {
+    return (typeof process !== 'undefined' && process && process.env) ? process.env as Record<string, string | undefined> : {};
+  } catch {
+    return {};
+  }
+}
+
+function getEnv(env: Record<string, string | undefined>, key: string): string {
   const candidates = [
-    process.env[key],
-    process.env[`VITE_${key}`],
-    process.env[`NEXT_PUBLIC_${key}`],
+    env[key],
+    env[`VITE_${key}`],
+    env[`NEXT_PUBLIC_${key}`],
   ].filter(Boolean) as string[];
   return (candidates[0] || '').trim();
 }
 
-function envDebug(): string {
-  const url = ENV_KEYS_URL.map((k) => `${k}=${process.env[k] ? 'set' : 'missing'}`).join(', ');
-  const anon = ENV_KEYS_ANON.map((k) => `${k}=${process.env[k] ? 'set' : 'missing'}`).join(', ');
+function envDebug(env: Record<string, string | undefined>): string {
+  const url = ENV_KEYS_URL.map((k) => `${k}=${env[k] ? 'set' : 'missing'}`).join(', ');
+  const anon = ENV_KEYS_ANON.map((k) => `${k}=${env[k] ? 'set' : 'missing'}`).join(', ');
   return `Env in function: ${url}; ${anon}.`;
 }
 
@@ -44,22 +52,36 @@ export default async function handler(req: Req, res: Res) {
       return sendJson(res, 405, { error: 'Method not allowed' });
     }
 
-    const supabaseUrl = getEnv('SUPABASE_URL');
-    const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
-    if (!supabaseUrl || !supabaseAnonKey) {
-      const debug = envDebug();
-      return sendJson(res, 500, {
-        error: `API missing Supabase config. ${debug} In Vercel: add SUPABASE_URL and SUPABASE_ANON_KEY (or NEXT_PUBLIC_*) for Production/Preview, then redeploy.`,
-      });
-    }
-
-    let body = req?.body as { snapshotId?: string; templateId?: string; classNames?: string[]; studentIds?: string[] } | undefined;
+    let body = req?.body as {
+      snapshotId?: string;
+      templateId?: string;
+      classNames?: string[];
+      studentIds?: string[];
+      supabaseUrl?: string;
+      supabaseAnonKey?: string;
+    } | undefined;
     if (body === undefined || body === null) {
       body = {};
     }
     const snapshotId = body?.snapshotId;
     if (!snapshotId || typeof snapshotId !== 'string') {
       return sendJson(res, 400, { error: 'snapshotId is required' });
+    }
+
+    // Prefer URL/key from request body (client sends them so we don't rely on Vercel env)
+    const env = safeEnv();
+    const supabaseUrl =
+      (typeof body.supabaseUrl === 'string' && body.supabaseUrl.trim()) ||
+      getEnv(env, 'SUPABASE_URL') ||
+      '';
+    const supabaseAnonKey =
+      (typeof body.supabaseAnonKey === 'string' && body.supabaseAnonKey.trim()) ||
+      getEnv(env, 'SUPABASE_ANON_KEY') ||
+      '';
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return sendJson(res, 500, {
+        error: 'Missing Supabase URL or anon key. Send supabaseUrl and supabaseAnonKey in the request body, or set SUPABASE_URL and SUPABASE_ANON_KEY in Vercel.',
+      });
     }
 
     const fnRes = await fetch(`${supabaseUrl}/functions/v1/generate-reports-bulk`, {
