@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
+import { generateReportsBulkClient } from '../../../services/reportGenerator';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 
@@ -183,25 +184,9 @@ export default function GenerateReportsPage() {
         examSet.year
       );
       setGeneratingStep('generating');
-      // Send Supabase URL/key so API works even when Vercel env vars are not available
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-      const apiRes = await fetch('/api/generate-reports-bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ snapshotId, supabaseUrl, supabaseAnonKey }),
-      });
-      const data = await apiRes.json().catch(() => ({}));
-      if (!apiRes.ok) {
-        const msg =
-          typeof data?.error === 'string'
-            ? data.error
-            : apiRes.status === 500
-              ? 'Server error. Check Vercel → Project → Settings → Environment Variables: add SUPABASE_URL and SUPABASE_ANON_KEY for Production/Preview, then redeploy.'
-              : apiRes.statusText || 'Generation failed';
-        throw new Error(msg);
-      }
-      if (!data?.success) throw new Error(data?.error || 'Generation failed');
+      // Client-side bulk generation (no API, no Edge Function – works everywhere)
+      const result = await generateReportsBulkClient(snapshotId);
+      if (!result.success) throw new Error(result.error || 'Generation failed');
       setCompletedSnapshotId(snapshotId);
       setGeneratingStep('completed');
     } catch (err: any) {

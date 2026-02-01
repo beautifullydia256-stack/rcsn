@@ -115,3 +115,170 @@ export async function bulkGenerateReports(
   return [];
 }
 
+/**
+ * Bulk report generation done entirely in the client (no Edge Function, no API).
+ * Same logic as supabase/functions/generate-reports-bulk. Use when Edge Function
+ * is unavailable (CORS) or API proxy has env issues. Requires RLS to allow
+ * SELECT on report_snapshots, report_snapshot_data, schools, exam_sets;
+ * INSERT on generated_reports; UPDATE on report_snapshots.
+ */
+export async function generateReportsBulkClient(
+  snapshotId: string,
+  templateId?: string,
+  classNames?: string[],
+  studentIds?: string[]
+): Promise<{ success: boolean; generatedCount: number; totalStudents: number; error?: string }> {
+  const { data: snapshot, error: snapshotError } = await supabase
+    .from('report_snapshots')
+    .select('*')
+    .eq('id', snapshotId)
+    .single();
+
+  if (snapshotError || !snapshot) {
+    return { success: false, generatedCount: 0, totalStudents: 0, error: 'Snapshot not found' };
+  }
+  if (snapshot.status !== 'locked' && snapshot.status !== 'generated') {
+    return { success: false, generatedCount: 0, totalStudents: 0, error: 'Snapshot must be locked before generation' };
+  }
+
+  let snapshotDataQuery = supabase
+    .from('report_snapshot_data')
+    .select('*')
+    .eq('snapshot_id', snapshotId);
+  if (classNames?.length) {
+    snapshotDataQuery = snapshotDataQuery.in('class_name', classNames);
+  }
+  const { data: allSnapshotData, error: dataError } = await snapshotDataQuery;
+  if (dataError) {
+    return { success: false, generatedCount: 0, totalStudents: 0, error: dataError.message };
+  }
+
+  let uniqueStudentIds = [...new Set(allSnapshotData?.map((d: any) => d.student_id) || [])];
+  if (studentIds?.length) {
+    uniqueStudentIds = uniqueStudentIds.filter((id) => studentIds.includes(id));
+  }
+
+  const { data: school } = await supabase
+    .from('schools')
+    .select('*')
+    .eq('school_id', snapshot.school_id)
+    .single();
+
+  const { data: examSet } = await supabase
+    .from('exam_sets')
+    .select('*')
+    .eq('id', snapshot.exam_set_id)
+    .single();
+
+  const startTime = Date.now();
+  await supabase
+    .from('report_snapshots')
+    .update({ status: 'generated', generation_started_at: new Date().toISOString() })
+    .eq('id', snapshotId);
+
+  const batchSize = 50;
+  let generatedCount = 0;
+
+  try {
+  for (let i = 0; i < uniqueStudentIds.length; i += batchSize) {
+    const batch = uniqueStudentIds.slice(i, i + batchSize);
+    const inserts = batch.map(async (studentId) => {
+      const studentData = allSnapshotData?.filter((d: any) => d.student_id === studentId) || [];
+      if (studentData.length === 0) return null;
+      const results = studentData.map((d: any) => ({
+        subject: d.subject,
+        marks_obtained: d.marks_obtained,
+        total_marks: d.total_marks,
+        grade: d.grade,
+        remarks: d.remarks,
+        teacher_initials: d.teacher_initials,
+        teacher_comment: d.teacher_comment,
+      }));
+      const firstRecord = studentData[0];
+      const frozenData = firstRecord.frozen_data || {};
+      const reportData = {
+        school: {
+          ...school,
+          name: frozenData.school_name || school?.name || '',
+          address: frozenData.school_address || school?.address || '',
+          phone: frozenData.school_phone || school?.phone || '',
+          email: frozenData.school_email || school?.email || '',
+          motto: frozenData.school_motto || school?.motto || '',
+          logo_url: firstRecord.school_logo_url || school?.logo_url || null,
+        },
+        examSet: {
+          id: snapshot.exam_set_id,
+          name: firstRecord.exam_set_name || examSet?.name || '',
+          term: firstRecord.exam_set_term || snapshot.term,
+          year: firstRecord.exam_set_year || snapshot.year,
+        },
+        students: [
+          {
+            student_id: studentId,
+            name: frozenData.student_name || '',
+            current_class: firstRecord.class_name,
+            admission_number: frozenData.admission_number || '',
+            profile_photo: firstRecord.student_photo_url || null,
+            results,
+            attendance: [],
+            fees: {
+              expected: firstRecord.fees_expected || 0,
+              paid: firstRecord.fees_paid || 0,
+              balance: firstRecord.fees_balance || 0,
+            },
+            comments: {
+              class_teacher_text: firstRecord.class_teacher_comment || '',
+              headteacher_text: firstRecord.headteacher_comment || '',
+            },
+            summary: {
+              totalMarks: studentData.reduce((s: number, d: any) => s + (d.marks_obtained || 0), 0),
+              totalPossibleMarks: studentData.reduce((s: number, d: any) => s + (d.total_marks || 100), 0),
+              average: firstRecord.average_percentage ?? null,
+              aggregate: firstRecord.aggregate ?? null,
+              division: firstRecord.division ?? null,
+              attendancePercentage: firstRecord.attendance_percentage ?? null,
+              classPosition: firstRecord.position ?? null,
+              totalStudents: frozenData.total_students_in_class ?? null,
+              performanceRemark: firstRecord.division || 'N/A',
+            },
+          },
+        ],
+      };
+      const { data, error } = await supabase
+        .from('generated_reports')
+        .insert({
+          snapshot_id: snapshotId,
+          student_id: studentId,
+          template_id: templateId ?? null,
+          report_data: reportData,
+          template_version: '1.0',
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data?.id;
+    });
+    const batchResults = await Promise.all(inserts);
+    generatedCount += batchResults.filter(Boolean).length;
+  }
+
+  const duration = Math.floor((Date.now() - startTime) / 1000);
+  await supabase
+    .from('report_snapshots')
+    .update({
+      generation_completed_at: new Date().toISOString(),
+      generation_duration_seconds: duration,
+    })
+    .eq('id', snapshotId);
+
+  return { success: true, generatedCount, totalStudents: uniqueStudentIds.length };
+  } catch (err: any) {
+    return {
+      success: false,
+      generatedCount: 0,
+      totalStudents: uniqueStudentIds.length,
+      error: err.message || 'Bulk generation failed',
+    };
+  }
+}
+
