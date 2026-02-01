@@ -176,7 +176,7 @@ export default function GenerateReportsPage() {
         examSet.term,
         examSet.year
       );
-      navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshotId}`);
+      navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshotId}&auto=1`);
     } catch (err: any) {
       setError(err.message || 'Failed to prepare reports');
     } finally {

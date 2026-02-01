@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { useSnapshot } from '../../../hooks/useSnapshot';
@@ -8,10 +8,13 @@ import { Play, CheckCircle, XCircle, Loader } from 'lucide-react';
 
 export default function BulkGenerator() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const snapshotId = searchParams.get('snapshot') || '';
+  const autoRun = searchParams.get('auto') === '1';
   const { user } = useAuthStore();
   const { snapshot, loading: snapshotLoading } = useSnapshot(snapshotId);
-  
+  const autoRunDone = useRef(false);
+
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [classes, setClasses] = useState<string[]>([]);
@@ -66,6 +69,42 @@ export default function BulkGenerator() {
 
     fetchData();
   }, [snapshotId, user]);
+
+  // When coming from Student Report Generator with auto=1: run generation and redirect to viewer (no form)
+  useEffect(() => {
+    if (!autoRun || !snapshotId || !snapshot || snapshot.status !== 'locked' || autoRunDone.current) return;
+
+    const runAndRedirect = async () => {
+      autoRunDone.current = true;
+      setGenerating(true);
+      setStatus('generating');
+      setError('');
+      setProgress({ current: 0, total: snapshot.student_count || 0 });
+
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error('Not authenticated');
+
+        const { data, error: rpcError } = await supabase.functions.invoke('generate-reports-bulk', {
+          body: { snapshotId },
+        });
+
+        if (rpcError) throw rpcError;
+        if (!data?.success) throw new Error(data?.error || 'Generation failed');
+
+        setStatus('completed');
+        setProgress({ current: data.generatedCount || 0, total: data.totalStudents || 0 });
+        navigate(`/dashboard/admin/reports/viewer?snapshot=${snapshotId}`, { replace: true });
+      } catch (err: any) {
+        setError(err.message || 'Generation failed');
+        setStatus('error');
+      } finally {
+        setGenerating(false);
+      }
+    };
+
+    runAndRedirect();
+  }, [autoRun, snapshotId, snapshot, navigate]);
 
   const handleGenerate = async () => {
     if (!snapshotId) {
@@ -124,6 +163,54 @@ export default function BulkGenerator() {
       <AdminPageWrapper title="Bulk Report Generation">
         <div className={`${adminCardClass} text-center py-8`}>
           <p className="text-white/85">No snapshot selected. Please select a snapshot from Snapshots first.</p>
+        </div>
+      </AdminPageWrapper>
+    );
+  }
+
+  // When auto=1 (from Student Report Generator): show only "Generating reports..." then redirect to viewer
+  if (autoRun) {
+    return (
+      <AdminPageWrapper title="Generating reports">
+        <div className={`${adminCardClass} text-center py-12 space-y-6`}>
+          {status === 'generating' && (
+            <>
+              <div className="flex justify-center">
+                <Loader className="w-12 h-12 animate-spin text-blue-400" />
+              </div>
+              <p className="text-white font-medium">Generating reports...</p>
+              <div className="w-full max-w-xs mx-auto bg-white/20 rounded-full h-2">
+                <div
+                  className="bg-blue-500 h-2 rounded-full transition-all"
+                  style={{
+                    width: `${progress.total > 0 ? (progress.current / progress.total) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              <p className="text-sm text-white/70">{progress.current} / {progress.total} students</p>
+            </>
+          )}
+          {status === 'error' && (
+            <>
+              <XCircle className="w-12 h-12 text-red-400 mx-auto" />
+              <p className="text-red-400">{error}</p>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/admin/reports/generate')}
+                className="rounded-lg bg-white/10 border border-white/20 px-4 py-2 text-white hover:bg-white/15"
+              >
+                Back to Report Generator
+              </button>
+            </>
+          )}
+          {status === 'idle' && snapshot?.status === 'locked' && (
+            <>
+              <div className="flex justify-center">
+                <Loader className="w-12 h-12 animate-spin text-blue-400" />
+              </div>
+              <p className="text-white font-medium">Preparing...</p>
+            </>
+          )}
         </div>
       </AdminPageWrapper>
     );
