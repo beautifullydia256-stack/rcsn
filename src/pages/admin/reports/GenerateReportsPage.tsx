@@ -1,9 +1,9 @@
 /**
- * Generate Reports page – old 2f00b44 style only.
- * Gradient, one card, Select exam set + Generate Reports. No snapshot UI.
+ * Generate Reports page – e579629 / 2f00b44 style: gradient, animated card, no snapshot UI.
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
@@ -90,9 +90,15 @@ export default function GenerateReportsPage() {
           </button>
         </div>
 
-        {/* One card – same style as hub (2f00b44) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className={`${cardClass} p-6`}>
+        {/* One card – centered, animated like old app (e579629 / hub) */}
+        <div className="flex justify-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ scale: 1.02 }}
+            transition={{ duration: 0.25 }}
+            className={`${cardClass} p-6 w-full max-w-xl`}
+          >
             <div className="text-center mb-6">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
                 <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,7 +140,7 @@ export default function GenerateReportsPage() {
                 </button>
               </div>
             )}
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>
