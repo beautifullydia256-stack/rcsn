@@ -108,6 +108,9 @@ export default function GenerateReportsPage() {
   const [studentSearch, setStudentSearch] = useState('');
   const [previewing, setPreviewing] = useState(false);
   const [error, setError] = useState('');
+  const [generatingStep, setGeneratingStep] = useState<'idle' | 'creating' | 'generating' | 'completed' | 'error'>('idle');
+  const [completedSnapshotId, setCompletedSnapshotId] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState('');
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
@@ -169,6 +172,9 @@ export default function GenerateReportsPage() {
     }
     setPreviewing(true);
     setError('');
+    setGenerationError('');
+    setCompletedSnapshotId(null);
+    setGeneratingStep('creating');
     try {
       const snapshotId = await createSnapshotFromExamSet(
         pageData.schoolId,
@@ -176,9 +182,17 @@ export default function GenerateReportsPage() {
         examSet.term,
         examSet.year
       );
-      navigate(`/dashboard/admin/reports/bulk?snapshot=${snapshotId}&auto=1`);
+      setGeneratingStep('generating');
+      const { data, error: fnError } = await supabase.functions.invoke('generate-reports-bulk', {
+        body: { snapshotId },
+      });
+      if (fnError) throw fnError;
+      if (!data?.success) throw new Error(data?.error || 'Generation failed');
+      setCompletedSnapshotId(snapshotId);
+      setGeneratingStep('completed');
     } catch (err: any) {
-      setError(err.message || 'Failed to prepare reports');
+      setGenerationError(err.message || 'Failed to generate reports');
+      setGeneratingStep('error');
     } finally {
       setPreviewing(false);
     }

@@ -58,7 +58,6 @@ export async function createSnapshotFromExamSet(
     { data: commentRules },
     { data: classTeacherCommentSettings },
     { data: headTeacherCommentSettings },
-    { data: studentComments },
   ] = await Promise.all([
     supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', studentIds),
@@ -70,8 +69,20 @@ export async function createSnapshotFromExamSet(
     supabase.from('teacher_comment_rules').select('*').eq('school_id', schoolId),
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId),
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId), // Head teacher uses same table
-    supabase.from('student_comments').select('*').eq('school_id', schoolId).in('student_id', studentIds),
   ]);
+
+  // student_comments may not exist in all projects (404-safe)
+  let studentComments: any[] = [];
+  try {
+    const { data } = await supabase
+      .from('student_comments')
+      .select('*')
+      .eq('school_id', schoolId)
+      .in('student_id', studentIds);
+    studentComments = data || [];
+  } catch {
+    studentComments = [];
+  }
 
   // 5. Calculate fees balances (pre-calculated)
   const paidByStudent: Record<string, number> = {};
