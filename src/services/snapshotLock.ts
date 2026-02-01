@@ -71,18 +71,14 @@ export async function createSnapshotFromExamSet(
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId), // Head teacher uses same table
   ]);
 
-  // student_comments may not exist in all projects (404-safe)
+  // student_comments may not exist in all projects (404-safe): check error, don't rely on throw
   let studentComments: any[] = [];
-  try {
-    const { data } = await supabase
-      .from('student_comments')
-      .select('*')
-      .eq('school_id', schoolId)
-      .in('student_id', studentIds);
-    studentComments = data || [];
-  } catch {
-    studentComments = [];
-  }
+  const { data: commentsData, error: commentsError } = await supabase
+    .from('student_comments')
+    .select('*')
+    .eq('school_id', schoolId)
+    .in('student_id', studentIds);
+  if (!commentsError) studentComments = commentsData ?? [];
 
   // 5. Calculate fees balances (pre-calculated)
   const paidByStudent: Record<string, number> = {};

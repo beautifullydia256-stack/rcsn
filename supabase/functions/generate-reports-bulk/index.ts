@@ -19,9 +19,9 @@ interface GenerateReportsRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
+  // Handle CORS preflight (200 OK for broad client/proxy compatibility)
   if (req.method === 'OPTIONS') {
-    return new Response(null, { status: 204, headers: { ...corsHeaders } });
+    return new Response(null, { status: 200, headers: { ...corsHeaders } });
   }
 
   try {

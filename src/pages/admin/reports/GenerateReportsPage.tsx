@@ -343,13 +343,49 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
+          {generatingStep === 'creating' && (
+            <div className="mb-4 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
+              Preparing snapshot…
+            </div>
+          )}
+          {generatingStep === 'generating' && (
+            <div className="mb-4 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
+              Generating reports…
+            </div>
+          )}
+          {generatingStep === 'completed' && completedSnapshotId && (
+            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 flex items-center justify-between gap-3">
+              <span>Reports ready.</span>
+              <a
+                href={`/dashboard/admin/reports/viewer?snapshot=${completedSnapshotId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
+              >
+                View reports
+              </a>
+            </div>
+          )}
+          {generatingStep === 'error' && (
+            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+              {generationError}
+              <button
+                type="button"
+                onClick={() => { setGeneratingStep('idle'); setGenerationError(''); void handlePreviewReport(); }}
+                className="ml-2 underline hover:no-underline"
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handlePreviewReport}
             disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
             className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {previewing ? 'Preparing…' : 'Preview Report'}
+            {previewing ? (generatingStep === 'creating' ? 'Preparing…' : 'Generating…') : 'Preview Report'}
           </button>
         </div>
       </div>
