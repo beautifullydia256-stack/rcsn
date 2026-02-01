@@ -2,7 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+
+/** Same card style as old 2f00b44 reports page */
+const reportCardClass =
+  'rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -57,26 +60,30 @@ export default function ReportsHub() {
   });
 
   return (
-    <AdminPageWrapper
-      title="Reports Management"
-      subtitle="Generate and manage student academic reports"
-    >
-      <div className="flex items-center justify-between mb-8">
-        <div />
-        <button
-          onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-white hover:bg-white/20 backdrop-blur-xl"
-        >
-          Back to Dashboard
-        </button>
-      </div>
+    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
+      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header – same as old 2f00b44 */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-white text-2xl font-semibold">Reports Management</h1>
+            <p className="text-white/80 text-sm mt-1">Generate and manage student academic reports</p>
+          </div>
+          <button
+            onClick={() => navigate('/dashboard/admin')}
+            className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+          >
+            Back to Dashboard
+          </button>
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <button
-          type="button"
-          className={`${adminCardClass} text-left cursor-pointer hover:bg-white/15 transition-colors`}
-          onClick={() => navigate('/dashboard/admin/reports/generate')}
-        >
+        {/* Report Options – same grid and card style as old 2f00b44 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <button
+            type="button"
+            className={`${reportCardClass} p-6 text-left cursor-pointer hover:bg-white/15 transition-colors`}
+            onClick={() => navigate('/dashboard/admin/reports/generate')}
+          >
           <div className="text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -90,7 +97,7 @@ export default function ReportsHub() {
 
         <button
           type="button"
-          className={`${adminCardClass} text-left cursor-pointer hover:bg-white/15 transition-colors`}
+          className={`${reportCardClass} p-6 text-left cursor-pointer hover:bg-white/15 transition-colors`}
           onClick={() => navigate('/dashboard/admin/report-records')}
         >
           <div className="text-center">
@@ -106,7 +113,7 @@ export default function ReportsHub() {
 
         <button
           type="button"
-          className={`${adminCardClass} text-left cursor-pointer hover:bg-white/15 transition-colors`}
+          className={`${reportCardClass} p-6 text-left cursor-pointer hover:bg-white/15 transition-colors`}
           onClick={() => navigate('/dashboard/admin/settings')}
         >
           <div className="text-center">
@@ -122,23 +129,25 @@ export default function ReportsHub() {
         </button>
       </div>
 
-      <div className={`${adminCardClass} mt-8`}>
-        <h3 className="text-white text-lg font-medium mb-4">Report Statistics</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-400">{stats.today}</div>
-            <div className="text-white/70 text-sm">Reports Generated Today</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-400">{stats.term}</div>
-            <div className="text-white/70 text-sm">Total Reports This Term</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">{stats.pending}</div>
-            <div className="text-white/70 text-sm">Pending Reports</div>
+        {/* Report Statistics – same as old 2f00b44 */}
+        <div className={`${reportCardClass} mt-8 p-6`}>
+          <h3 className="text-white text-lg font-medium mb-4">Report Statistics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-400">{stats.today}</div>
+              <div className="text-white/70 text-sm">Reports Generated Today</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-400">{stats.term}</div>
+              <div className="text-white/70 text-sm">Total Reports This Term</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-400">{stats.pending}</div>
+              <div className="text-white/70 text-sm">Pending Reports</div>
+            </div>
           </div>
         </div>
       </div>
-    </AdminPageWrapper>
+    </div>
   );
 }

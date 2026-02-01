@@ -86,8 +86,9 @@ export default function ReportsGeneratePage() {
           </button>
         </div>
 
-        {/* Main card – same style as old report options cards (2f00b44) */}
-        <div className={`${cardClass} p-6 max-w-xl`}>
+        {/* Main card – same grid slot and style as hub cards (2f00b44) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className={`${cardClass} p-6`}>
           <div className="text-center mb-6">
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center">
               <svg className="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,6 +130,7 @@ export default function ReportsGeneratePage() {
               </button>
             </div>
           )}
+          </div>
         </div>
       </div>
     </div>
