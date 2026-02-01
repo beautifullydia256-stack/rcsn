@@ -72,7 +72,14 @@ export async function createSnapshotFromExamSet(
   ]);
 
   // Per-student comments from report_comments (comment_type + comment_text) for this term/year
-  let studentComments: Array<{ student_id: string; class_teacher_text?: string; headteacher_text?: string }> = [];
+  type StudentComment = {
+    student_id: string;
+    class_teacher_text?: string;
+    class_teacher_comment?: string;
+    headteacher_text?: string;
+    headteacher_comment?: string;
+  };
+  let studentComments: StudentComment[] = [];
   const { data: reportCommentsRows, error: reportCommentsError } = await supabase
     .from('report_comments')
     .select('student_id, comment_type, comment_text')
