@@ -20,9 +20,9 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 async function fetchGeneratedReports(snapshotId: string) {
   const { data, error } = await supabase
     .from('generated_reports')
-    .select('*, students(student_id, name, current_class, admission_number)')
+    .select('id, snapshot_id, student_id, report_data, generated_at, pdf_url')
     .eq('snapshot_id', snapshotId)
-    .order('created_at', { ascending: false });
+    .order('generated_at', { ascending: false });
   if (error) throw error;
   return data || [];
 }
@@ -141,7 +141,7 @@ export default function GenerateReportsPage() {
     staleTime: STALE_TIME_MS,
   });
 
-  const { data: generatedReports = [] } = useQuery({
+  const { data: generatedReports = [], isLoading: reportsLoading, isError: reportsError } = useQuery({
     queryKey: ['admin', 'generated-reports', completedSnapshotId ?? ''],
     queryFn: () => fetchGeneratedReports(completedSnapshotId!),
     enabled: !!completedSnapshotId,
@@ -374,16 +374,8 @@ export default function GenerateReportsPage() {
             </div>
           )}
           {generatingStep === 'completed' && completedSnapshotId && (
-            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200 flex items-center justify-between gap-3">
-              <span>Reports ready.</span>
-              <a
-                href={`/dashboard/admin/reports/viewer?snapshot=${completedSnapshotId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700"
-              >
-                View reports
-              </a>
+            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+              Reports ready. Preview below — no new window.
             </div>
           )}
           {generatingStep === 'error' && (
@@ -415,47 +407,58 @@ export default function GenerateReportsPage() {
           {generatingStep === 'completed' && completedSnapshotId && (
             <div className="mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
               <h2 className="text-white text-lg font-semibold mb-4">Generated reports</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {generatedReports.map((report: any) => {
-                  const student = report.students;
-                  const reportData = report.report_data;
-                  const summary = reportData?.students?.[0]?.summary;
-                  return (
-                    <div key={report.id} className="rounded-xl border border-white/20 bg-white/10 p-4 space-y-3">
-                      <h3 className="text-white font-medium">{student?.name || 'Unknown'}</h3>
-                      <p className="text-sm text-white/70">{student?.current_class || ''} · {student?.admission_number || ''}</p>
-                      <div className="flex justify-between text-sm text-white/85">
-                        <span>Average:</span>
-                        <span>{summary?.average != null ? summary.average.toFixed(1) + '%' : '—'}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-white/85">
-                        <span>Position:</span>
-                        <span>{summary?.classPosition ?? '—'}</span>
-                      </div>
-                      <div className="flex gap-2 pt-2 border-t border-white/20">
-                        <button
-                          type="button"
-                          onClick={() => setViewingReport({ ...report, reportData: report.report_data })}
-                          className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-1"
-                        >
-                          <Eye className="w-4 h-4" />
-                          View
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => report.pdf_url ? window.open(report.pdf_url, '_blank') : undefined}
-                          className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-1"
-                        >
-                          <Download className="w-4 h-4" />
-                          PDF
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              {generatedReports.length === 0 && (
+              {reportsLoading && (
                 <p className="text-white/70 text-sm">Loading reports…</p>
+              )}
+              {reportsError && (
+                <p className="text-red-300 text-sm">Could not load reports. Try refreshing.</p>
+              )}
+              {!reportsLoading && !reportsError && generatedReports.length === 0 && (
+                <p className="text-white/70 text-sm">No reports found for this snapshot.</p>
+              )}
+              {!reportsLoading && !reportsError && generatedReports.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {generatedReports.map((report: any) => {
+                    const reportData = report.report_data;
+                    const student = reportData?.students?.[0];
+                    const summary = reportData?.students?.[0]?.summary;
+                    const name = student?.name || 'Unknown';
+                    const className = student?.current_class || '';
+                    const admissionNumber = reportData?.students?.[0]?.admission_number ?? report.student_id?.slice(0, 8) ?? '—';
+                    return (
+                      <div key={report.id} className="rounded-xl border border-white/20 bg-white/10 p-4 space-y-3">
+                        <h3 className="text-white font-medium">{name}</h3>
+                        <p className="text-sm text-white/70">{className} · {admissionNumber}</p>
+                        <div className="flex justify-between text-sm text-white/85">
+                          <span>Average:</span>
+                          <span>{summary?.average != null ? summary.average.toFixed(1) + '%' : '—'}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-white/85">
+                          <span>Position:</span>
+                          <span>{summary?.classPosition ?? '—'}</span>
+                        </div>
+                        <div className="flex gap-2 pt-2 border-t border-white/20">
+                          <button
+                            type="button"
+                            onClick={() => setViewingReport({ ...report, reportData: report.report_data, students: { name, current_class: className, admission_number: admissionNumber } })}
+                            className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => report.pdf_url ? window.open(report.pdf_url, '_blank') : undefined}
+                            className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20 flex items-center justify-center gap-1"
+                          >
+                            <Download className="w-4 h-4" />
+                            PDF
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           )}
