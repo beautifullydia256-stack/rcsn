@@ -1,5 +1,5 @@
 import { lazy } from 'react';
-import { RouteObject } from 'react-router-dom';
+import { Navigate, RouteObject } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import AdminLayout from '../components/layout/AdminLayout';
 import TeacherLayout from '../components/layout/TeacherLayout';
@@ -12,7 +12,6 @@ const DashboardEntry = lazy(() => import('../pages/dashboard/DashboardEntry'));
 
 // Admin routes
 const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
-const SnapshotManager = lazy(() => import('../pages/admin/reports/SnapshotManager'));
 const BulkGenerator = lazy(() => import('../pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazy(() => import('../pages/admin/reports/ReportViewer'));
 const StudentsPage = lazy(() => import('../pages/admin/students/StudentsPage'));
@@ -79,7 +78,7 @@ export const router: RouteObject[] = [
           { path: 'exam-sets', element: <ExamSetsPage /> },
           { path: 'attendance', element: <AttendanceRecordsPage /> },
           { path: 'settings', element: <SettingsPage /> },
-          { path: 'reports/snapshots', element: <SnapshotManager /> },
+          { path: 'reports/snapshots', element: <Navigate to="/dashboard/admin/reports" replace /> },
           { path: 'reports/bulk', element: <BulkGenerator /> },
           { path: 'reports/viewer', element: <ReportViewer /> },
         ],

@@ -18,7 +18,6 @@ const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
 const ReportsHub = lazy(() => import('./pages/admin/reports/ReportsHub'));
 const ReportsGeneratePage = lazy(() => import('./pages/admin/reports/ReportsGeneratePage'));
 const ReportRecordsPage = lazy(() => import('./pages/admin/reports/ReportRecordsPage'));
-const SnapshotManager = lazy(() => import('./pages/admin/reports/SnapshotManager'));
 const BulkGenerator = lazy(() => import('./pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazy(() => import('./pages/admin/reports/ReportViewer'));
 const StudentsPage = lazy(() => import('./pages/admin/students/StudentsPage'));
@@ -96,7 +95,7 @@ function App() {
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="report-records" element={<ReportRecordsPage />} />
                   <Route path="reports/generate" element={<ReportsGeneratePage />} />
-                  <Route path="reports/snapshots" element={<SnapshotManager />} />
+                  <Route path="reports/snapshots" element={<Navigate to="/dashboard/admin/reports" replace />} />
                   <Route path="reports/bulk" element={<BulkGenerator />} />
                   <Route path="reports/viewer" element={<ReportViewer />} />
                   <Route path="reports" element={<ReportsHub />} />

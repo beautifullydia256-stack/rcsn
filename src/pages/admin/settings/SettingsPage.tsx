@@ -182,7 +182,7 @@ export default function SettingsPage() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/admin/reports/snapshots')}
+            onClick={() => navigate('/dashboard/admin/reports')}
             className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
           >
             Report Records

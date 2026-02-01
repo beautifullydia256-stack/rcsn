@@ -55,7 +55,7 @@ export default function RecentReportsSystemHealth() {
             </div>
             <button
               type="button"
-              onClick={() => navigate('/dashboard/admin/reports/snapshots')}
+              onClick={() => navigate('/dashboard/admin/reports')}
               className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
             >
               View all →
@@ -83,7 +83,7 @@ export default function RecentReportsSystemHealth() {
                     type="button"
                     onClick={() => {
                       if (report.file_url) window.open(report.file_url, '_blank');
-                      else navigate('/dashboard/admin/reports/snapshots');
+                      else navigate('/dashboard/admin/reports');
                     }}
                     className="text-xs text-purple-400 hover:text-purple-300 transition-colors"
                   >
