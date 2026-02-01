@@ -1,21 +1,24 @@
 /**
  * Proxy to Supabase Edge Function generate-reports-bulk.
  * Avoids CORS: browser calls same-origin /api/generate-reports-bulk; server calls Supabase.
- * Set SUPABASE_URL and SUPABASE_ANON_KEY in Vercel (or VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).
+ * In Vercel: add SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY)
+ * to Project → Settings → Environment Variables for Production/Preview.
  */
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = { setHeader: (k: string, v: string) => void; status: (n: number) => Res; json: (x: unknown) => void; end: () => void };
 
-const SUPABASE_URL =
-  process.env.SUPABASE_URL ||
-  process.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY =
-  process.env.SUPABASE_ANON_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY;
+function getEnv(name: string): string {
+  return (
+    process.env[name] ||
+    process.env[`VITE_${name}`] ||
+    ''
+  ).trim();
+}
 
 export default async function handler(req: Req, res: Res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+
   if (req.method === 'OPTIONS') {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     return res.status(200).end();
@@ -25,24 +28,29 @@ export default async function handler(req: Req, res: Res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  const supabaseUrl = getEnv('SUPABASE_URL');
+  const supabaseAnonKey = getEnv('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseAnonKey) {
     return res.status(500).json({
-      error: 'Server missing SUPABASE_URL or SUPABASE_ANON_KEY',
+      error: 'API missing Supabase config. In Vercel, set SUPABASE_URL and SUPABASE_ANON_KEY (or VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) in Environment Variables.',
     });
   }
 
-  const body = req.body as { snapshotId?: string; templateId?: string; classNames?: string[]; studentIds?: string[] };
+  let body = req.body as { snapshotId?: string; templateId?: string; classNames?: string[]; studentIds?: string[] } | undefined;
+  if (body === undefined || body === null) {
+    body = {};
+  }
   const snapshotId = body?.snapshotId;
-  if (!snapshotId) {
+  if (!snapshotId || typeof snapshotId !== 'string') {
     return res.status(400).json({ error: 'snapshotId is required' });
   }
 
   try {
-    const fnRes = await fetch(`${SUPABASE_URL}/functions/v1/generate-reports-bulk`, {
+    const fnRes = await fetch(`${supabaseUrl}/functions/v1/generate-reports-bulk`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        Authorization: `Bearer ${supabaseAnonKey}`,
       },
       body: JSON.stringify({
         snapshotId,
@@ -53,10 +61,10 @@ export default async function handler(req: Req, res: Res) {
     });
 
     const data = await fnRes.json().catch(() => ({}));
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    const errMsg = typeof data?.error === 'string' ? data.error : undefined;
 
     if (!fnRes.ok) {
-      return res.status(fnRes.status).json(data?.error ? { error: data.error } : data);
+      return res.status(fnRes.status).json({ error: errMsg || `Supabase function returned ${fnRes.status}` });
     }
     return res.status(200).json(data);
   } catch (err: unknown) {
