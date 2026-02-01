@@ -1,6 +1,7 @@
-const CACHE_NAME = 'pwezacore-v1';
-const RUNTIME_CACHE = 'pwezacore-runtime-v1';
-const STATIC_CACHE = 'pwezacore-static-v1';
+// Bump version on deploy so old cached JS (e.g. snapshot layout) is cleared
+const CACHE_NAME = 'pwezacore-v2';
+const RUNTIME_CACHE = 'pwezacore-runtime-v2';
+const STATIC_CACHE = 'pwezacore-static-v2';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
