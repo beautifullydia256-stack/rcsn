@@ -118,6 +118,7 @@ export default function GenerateReportsPage() {
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTermKey, setSelectedTermKey] = useState('');
+  const [selectedExamSetId, setSelectedExamSetId] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [studentSearch, setStudentSearch] = useState('');
@@ -165,6 +166,14 @@ export default function GenerateReportsPage() {
     return pageData.currentTerm;
   }, [pageData, selectedTermKey]);
 
+  const examSetsForSelectedTerm = useMemo(() => {
+    if (!pageData) return [];
+    const term = selectedTerm || pageData.currentTerm;
+    return (pageData.examSets || []).filter(
+      (es: any) => es.term === term.term && es.year === term.year
+    );
+  }, [pageData, selectedTerm]);
+
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return studentsInClass;
     const q = studentSearch.toLowerCase();
@@ -182,9 +191,18 @@ export default function GenerateReportsPage() {
       return;
     }
     const term = selectedTerm || pageData.currentTerm;
-    const examSet = pageData.examSets.find(
-      (es: any) => es.term === term.term && es.year === term.year
-    ) || pageData.examSets[0];
+    let examSet: any | undefined;
+
+    if (selectedExamSetId) {
+      examSet = pageData.examSets.find((es: any) => es.id === selectedExamSetId);
+    } else {
+      // Default behaviour: use the latest exam set for the selected term (e.g. End of Term)
+      const forTerm = (pageData.examSets || []).filter(
+        (es: any) => es.term === term.term && es.year === term.year
+      );
+      examSet = forTerm[forTerm.length - 1] || pageData.examSets[0];
+    }
+
     if (!examSet) {
       setError(`No exam set found for Term ${term.term}, ${term.year}. Create an exam set for that term first.`);
       return;
@@ -302,7 +320,10 @@ export default function GenerateReportsPage() {
                 <label className="block text-white/80 text-sm font-medium mb-2">Term</label>
                 <select
                   value={selectedTermKey || `${pageData.currentTerm.term}-${pageData.currentTerm.year}`}
-                  onChange={(e) => setSelectedTermKey(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedTermKey(e.target.value);
+                    setSelectedExamSetId('');
+                  }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   {pageData.allTerms.map((t) => {
@@ -318,6 +339,30 @@ export default function GenerateReportsPage() {
                 </select>
                 <p className="mt-1 text-xs text-white/50">
                   Choose the term for which to generate reports.
+                </p>
+              </div>
+            )}
+
+            {/* Exam Set – choose specific exam set within the selected term */}
+            {pageData && examSetsForSelectedTerm.length > 0 && (
+              <div>
+                <label className="block text-white/80 text-sm font-medium mb-2">Exam Set</label>
+                <select
+                  value={selectedExamSetId}
+                  onChange={(e) => setSelectedExamSetId(e.target.value)}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="" className="text-black">
+                    Auto (latest exam set for selected term)
+                  </option>
+                  {examSetsForSelectedTerm.map((es: any) => (
+                    <option key={es.id} value={es.id} className="text-black">
+                      {es.name || `Set - Term ${es.term}, ${es.year}`}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-white/50">
+                  Pick Mid Term or End of Term exam set. Leave on Auto to use the latest set (usually End of Term).
                 </p>
               </div>
             )}
