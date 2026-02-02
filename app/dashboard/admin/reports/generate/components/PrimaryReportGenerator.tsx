@@ -97,6 +97,8 @@ export function PrimaryReportGenerator() {
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [schoolInfo, setSchoolInfo] = useState<any>(null);
   const [examSets, setExamSets] = useState<any[]>([]);
+  const [allTermsList, setAllTermsList] = useState<{ term: number; year: number }[]>([]);
+  const [selectedTermKey, setSelectedTermKey] = useState<string>('');
   const [currentTermInfo, setCurrentTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [nextTermInfo, setNextTermInfo] = useState<{ year: number; term: number } | null>(null);
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
@@ -237,12 +239,19 @@ export function PrimaryReportGenerator() {
           detectedCurrentYear = currentTermData.year;
           detectedCurrentTerm = currentTermData.term;
           setCurrentTermInfo({ year: currentTermData.year, term: currentTermData.term });
+          setSelectedTermKey(`${currentTermData.term}-${currentTermData.year}`);
         } else {
           // Fallback: guess based on current month
           const month = new Date().getMonth() + 1;
           detectedCurrentTerm = month <= 4 ? 1 : month <= 7 ? 2 : 3;
           setCurrentTermInfo({ year: detectedCurrentYear, term: detectedCurrentTerm });
+          setSelectedTermKey(`${detectedCurrentTerm}-${detectedCurrentYear}`);
         }
+        
+        // All terms (current + older) for term selector
+        const termOptions = (allTerms || []).map((t: any) => ({ term: t.term, year: t.year }))
+          .sort((a: { term: number; year: number }, b: { term: number; year: number }) => (b.year !== a.year ? b.year - a.year : b.term - a.term));
+        setAllTermsList(termOptions.length > 0 ? termOptions : [{ term: detectedCurrentTerm, year: detectedCurrentYear }]);
         
         // Calculate next term
         let nextYear = detectedCurrentYear;
@@ -253,8 +262,7 @@ export function PrimaryReportGenerator() {
         }
         setNextTermInfo({ year: nextYear, term: nextTerm });
 
-        // Load exam sets for the current term that have results
-        // First, get exam sets that have results in the database
+        // Load exam sets that have results (all terms, so user can select older terms)
         let examSetsWithResultsQuery = supabase
           .from('exam_results')
           .select('exam_set_id')
@@ -262,28 +270,18 @@ export function PrimaryReportGenerator() {
         
         const { data: examResultsData } = await examSetsWithResultsQuery;
         
-        // Get unique exam set IDs that have results
         const examSetIdsWithResults = [...new Set((examResultsData || []).map(r => r.exam_set_id))];
         
         if (examSetIdsWithResults.length > 0) {
-          // Load exam sets that have results
-          let examSetsQuery = supabase
+          const examSetsQuery = supabase
             .from('exam_sets')
             .select('*')
             .eq('school_id', u.school_id)
             .eq('is_active', true)
             .in('id', examSetIdsWithResults);
-          
-          if (detectedCurrentYear != null && detectedCurrentTerm != null) {
-            examSetsQuery = examSetsQuery
-              .eq('year', detectedCurrentYear)
-              .eq('term', detectedCurrentTerm);
-          }
           const { data: examSetsData } = await examSetsQuery.order('name', { ascending: true });
-          
           setExamSets(examSetsData || []);
         } else {
-          // No exam sets have results yet
           setExamSets([]);
         }
 
@@ -2064,17 +2062,43 @@ export function PrimaryReportGenerator() {
               </select>
             </div>
 
-            {/* Exam Set Selection */}
-            {examSets && examSets.length > 0 && (() => {
-              // Helper function to detect if exam set is Mid Term
+            {/* Term selection (current + older terms) */}
+            {allTermsList.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-white/80 text-sm font-medium mb-2">Term</label>
+                <select
+                  value={selectedTermKey || (currentTermInfo ? `${currentTermInfo.term}-${currentTermInfo.year}` : '')}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    setSelectedTermKey(key);
+                    const [t, y] = key.split('-').map(Number);
+                    if (!isNaN(t) && !isNaN(y)) {
+                      setCurrentTermInfo({ term: t, year: y });
+                      setSelectedExamSetId('all');
+                    }
+                  }}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {allTermsList.map((t) => {
+                    const key = `${t.term}-${t.year}`;
+                    return (
+                      <option className="text-black" key={key} value={key}>
+                        Term {t.term}, {t.year}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="mt-1 text-xs text-white/50">Choose current or older term for reports.</p>
+              </div>
+            )}
+            {/* Exam Set Selection (filtered by selected term) */}
+            {examSets && examSets.length > 0 && currentTermInfo && (() => {
               const isMidTerm = (name: string) => {
                 const n = String(name || '').trim().toLowerCase();
                 return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
               };
-              
-              // Filter to only show Mid Term exam sets
-              const midTermExamSets = examSets.filter((es: any) => isMidTerm(es.name || ''));
-              
+              const examSetsForTerm = examSets.filter((es: any) => es.term === currentTermInfo.term && es.year === currentTermInfo.year);
+              const midTermExamSets = examSetsForTerm.filter((es: any) => isMidTerm(es.name || ''));
               return (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
@@ -2085,8 +2109,8 @@ export function PrimaryReportGenerator() {
                   onChange={(e) => setSelectedExamSetId(e.target.value)}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
-                  <option className="text-black" value="all">All Exam Sets (Current Term)</option>
-                    {midTermExamSets.map((es) => (
+                  <option className="text-black" value="all">All Exam Sets (Selected Term)</option>
+                  {midTermExamSets.map((es) => (
                     <option className="text-black" key={es.id} value={es.id}>
                       {es.name || `Set - Term ${es.term}, ${es.year}`}
                     </option>
@@ -2095,14 +2119,6 @@ export function PrimaryReportGenerator() {
               </div>
               );
             })()}
-            {/* Current Term Info */}
-            {currentTermInfo && (
-              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-3 mb-4">
-                <div className="text-white/80 text-sm">
-                  <strong>Current Term:</strong> Term {currentTermInfo.term}, {currentTermInfo.year}
-                </div>
-              </div>
-            )}
 
             {/* Class Selection */}
             <div>
