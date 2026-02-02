@@ -13,7 +13,8 @@ import { generateReportsBulkClient } from '../../../services/reportGenerator';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
-import { Eye, Download } from 'lucide-react';
+import { ReportCardPreview } from '../../../components/reports/ReportCardPreview';
+import { Eye, Download, FileDown, Printer } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -218,6 +219,16 @@ export default function GenerateReportsPage() {
     }
   };
 
+  const handlePrintReport = () => {
+    window.print();
+  };
+
+  const handleDownloadAsPdf = () => {
+    window.print();
+  };
+
+  const hasReportsReady = generatingStep === 'completed' && !reportsLoading && !reportsError && generatedReports.length > 0;
+
   return (
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
@@ -394,16 +405,64 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handlePreviewReport}
-            disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
-            className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {previewing ? (generatingStep === 'creating' ? 'Preparing…' : 'Generating…') : 'Preview Report'}
-          </button>
+          <div className="flex flex-wrap gap-3 items-center">
+            <button
+              type="button"
+              onClick={handlePreviewReport}
+              disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
+              className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {previewing ? (generatingStep === 'creating' ? 'Preparing…' : 'Generating…') : 'Preview Report'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadAsPdf}
+              disabled={!hasReportsReady}
+              title={hasReportsReady ? 'Open print dialog — choose "Save as PDF" to download PDF' : 'Generate reports first'}
+              className="px-5 py-3 rounded-lg bg-red-600/90 text-white font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              {reportType === 'single' ? 'Download as PDF (Single)' : 'Download All as PDF (Class)'}
+            </button>
+            <button
+              type="button"
+              onClick={handlePrintReport}
+              disabled={!hasReportsReady}
+              title={hasReportsReady ? 'Print report(s)' : 'Generate reports first'}
+              className="px-5 py-3 rounded-lg bg-amber-600/90 text-white font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Printer className="w-4 h-4" />
+              Print Report
+            </button>
+          </div>
 
-          {/* Reports preview below (same page, no new tab – old 2f00b44 style) */}
+          {/* Report Preview – single student = one card, entire class = all cards (old 2f00b44 style) */}
+          {generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0 && (() => {
+            const reportsToShow = reportType === 'single' && selectedStudent
+              ? generatedReports.filter((r: any) => r.student_id === selectedStudent)
+              : generatedReports;
+            if (reportsToShow.length === 0) return null;
+            return (
+              <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-white text-lg font-semibold">Report Preview</h2>
+                  <span className="text-white/70 text-sm">Template: {templateDisplayName}</span>
+                </div>
+                <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg overflow-auto max-h-[80vh]">
+                  <div className="bg-white dark:bg-transparent mx-auto space-y-8" style={{ width: '210mm', maxWidth: '100%' }}>
+                    {reportsToShow.map((report: any) => (
+                      <ReportCardPreview key={report.id} reportData={report.report_data} />
+                    ))}
+                  </div>
+                </div>
+                <p className="mt-4 text-white/70 text-sm text-center">
+                  This preview shows exactly how the report{reportsToShow.length > 1 ? 's' : ''} will look when downloaded or printed.
+                </p>
+              </div>
+            );
+          })()}
+
+          {/* Generated reports list (quick View / PDF) */}
           {generatingStep === 'completed' && completedSnapshotId && (
             <div className="mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
               <h2 className="text-white text-lg font-semibold mb-4">Generated reports</h2>

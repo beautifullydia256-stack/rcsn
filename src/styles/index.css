@@ -47,6 +47,32 @@
   }
 }
 
+/* Report preview: when printing, show only the report cards */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #report-preview-print-area,
+  #report-preview-print-area * {
+    visibility: visible;
+  }
+  #report-preview-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    max-width: none;
+    background: white;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+  #report-preview-print-area .bg-gray-100,
+  #report-preview-print-area .dark\:bg-gray-800\/50 {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+}
 
 
 
