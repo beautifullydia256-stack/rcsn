@@ -29,7 +29,46 @@ export async function createSnapshotFromExamSet(
   if (snapshotError) throw snapshotError;
   if (!snapshot) throw new Error('Failed to create snapshot');
 
-  // 2. Fetch ALL exam results for this exam set (all students, all subjects)
+  // 2. Determine which exam sets to include
+  // Old behaviour: 
+  // - If Mid Term is selected → use ONLY that Mid Term exam set
+  // - If End of Term (or any non-mid) is selected → include ALL exam sets for that term (Mid + End),
+  //   so End of Term reports show both Mid + End columns.
+  const { data: baseExamSet, error: baseExamSetError } = await supabase
+    .from('exam_sets')
+    .select('*')
+    .eq('id', examSetId)
+    .single();
+
+  if (baseExamSetError || !baseExamSet) {
+    throw baseExamSetError || new Error('Exam set not found');
+  }
+
+  const isMidTermName = (name: string | null | undefined) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+  };
+
+  let examSetIdsToInclude: string[] = [examSetId];
+
+  if (!isMidTermName(baseExamSet.name)) {
+    // Treat non-Mid selections (e.g. End of Term) as "All exam sets for this term"
+    const { data: allExamSetsForTerm, error: allSetsError } = await supabase
+      .from('exam_sets')
+      .select('id, name')
+      .eq('school_id', schoolId)
+      .eq('term', baseExamSet.term)
+      .eq('year', baseExamSet.year);
+
+    if (allSetsError) throw allSetsError;
+
+    const ids = (allExamSetsForTerm || []).map((es: any) => es.id).filter(Boolean);
+    if (ids.length > 0) {
+      examSetIdsToInclude = ids;
+    }
+  }
+
+  // 3. Fetch ALL exam results for the selected exam set(s) (all students, all subjects)
   const { data: examResults, error: resultsError } = await supabase
     .from('exam_results')
     .select(`
@@ -38,7 +77,7 @@ export async function createSnapshotFromExamSet(
       exam_sets!inner(id, name, term, year)
     `)
     .eq('school_id', schoolId)
-    .eq('exam_set_id', examSetId);
+    .in('exam_set_id', examSetIdsToInclude);
 
   if (resultsError) throw resultsError;
 
@@ -54,7 +93,6 @@ export async function createSnapshotFromExamSet(
     { data: studentPayments },
     { data: studentPhotos },
     { data: schoolInfo },
-    { data: examSetInfo },
     { data: commentRules },
     { data: classTeacherCommentSettings },
     { data: headTeacherCommentSettings },
@@ -65,7 +103,6 @@ export async function createSnapshotFromExamSet(
     supabase.from('student_payments').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
-    supabase.from('exam_sets').select('*').eq('id', examSetId).single(),
     supabase.from('teacher_comment_rules').select('*').eq('school_id', schoolId),
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId),
     supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId), // Head teacher uses same table
@@ -272,9 +309,9 @@ export async function createSnapshotFromExamSet(
       fees_expected: expectedFee,
       student_photo_url: studentPhoto?.photo_url || null,
       school_logo_url: schoolInfo?.logo_url || null,
-      exam_set_name: result.exam_sets?.name || examSetInfo?.name || '',
-      exam_set_term: result.exam_sets?.term || examSetInfo?.term || term,
-      exam_set_year: result.exam_sets?.year || examSetInfo?.year || year,
+      exam_set_name: result.exam_sets?.name || baseExamSet?.name || '',
+      exam_set_term: result.exam_sets?.term || baseExamSet?.term || term,
+      exam_set_year: result.exam_sets?.year || baseExamSet?.year || year,
       frozen_data: {
         student_name: student?.name || '',
         admission_number: student?.admission_number || '',
@@ -299,7 +336,7 @@ export async function createSnapshotFromExamSet(
       student_count: studentIds.length,
       class_count: classNames.length,
       metadata: {
-        exam_set_name: examSetInfo?.name,
+        exam_set_name: baseExamSet?.name,
         total_subjects: [...new Set(examResults?.map((r: any) => r.subject) || [])].length,
       },
     })
