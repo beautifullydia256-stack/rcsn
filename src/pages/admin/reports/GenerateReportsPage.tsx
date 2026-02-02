@@ -13,7 +13,7 @@ import { generateReportsBulkClient } from '../../../services/reportGenerator';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
-import { ReportCardPreview } from '../../../components/reports/ReportCardPreview';
+import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
 import { Eye, Download, FileDown, Printer } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -451,7 +451,7 @@ export default function GenerateReportsPage() {
                 <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg overflow-auto max-h-[80vh]">
                   <div className="bg-white dark:bg-transparent mx-auto space-y-8" style={{ width: '210mm', maxWidth: '100%' }}>
                     {reportsToShow.map((report: any) => (
-                      <ReportCardPreview key={report.id} reportData={report.report_data} />
+                      <ReportPreviewFromData key={report.id} reportData={report.report_data} />
                     ))}
                   </div>
                 </div>
