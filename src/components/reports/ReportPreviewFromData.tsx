@@ -20,11 +20,24 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
   if (!reportData?.students?.[0]) return null;
 
   const raw = reportData.students[0];
+  const comments = raw.comments ?? {};
+  const rawResults = raw.results ?? [];
+  const results = rawResults.map((r: any) => ({
+    ...r,
+    final_score: r.final_score ?? r.marks_obtained,
+    overall_remark: r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '',
+    remark: r.remark ?? r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '',
+  }));
   const student = {
     ...raw,
-    results: raw.results ?? [],
+    results,
     summary: raw.summary ?? {},
-    comments: raw.comments ?? {},
+    comments: {
+      ...comments,
+      head_teacher_text: comments.head_teacher_text ?? comments.headteacher_text ?? '',
+      class_teacher_text: comments.class_teacher_text ?? comments.class_teacher_comment ?? '',
+    },
+    feesBalance: raw.fees?.balance ?? raw.feesBalance ?? 0,
   };
   const school = reportData.school || {};
   const examSet = reportData.examSet || {};

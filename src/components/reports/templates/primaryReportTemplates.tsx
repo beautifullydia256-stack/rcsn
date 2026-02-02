@@ -190,18 +190,18 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
           </tr>
         </thead>
         <tbody>
-          {student.results.length > 0 ? (
-            student.results.map((result: any, index: number) => {
-              // Use proper O-Level data structure
+          {(student.results?.length ?? 0) > 0 ? (
+            (student.results || []).map((result: any, index: number) => {
+              // O-Level or primary: support both activity_score/formative_score and marks_obtained/final_score
               const activity = result.activity_score ?? '';
               const activityNum = parseFloat(activity) || 0;
               const descriptor = result.descriptor || calculateDescriptor(activityNum);
               const formative = result.formative_score ?? '';
               const exam = result.exam_score ?? '';
-              const finalScore = result.final_score ?? '';
-              const finalNum = parseFloat(finalScore) || 0;
+              const finalScore = result.final_score ?? result.marks_obtained ?? '';
+              const finalNum = parseFloat(String(finalScore)) || 0;
               const gradeText = result.grade || calculateGrade(finalNum);
-              const overallRemark = result.overall_remark ?? '';
+              const overallRemark = result.overall_remark ?? result.remarks ?? result.teacher_comment ?? '';
               const teacherInitials = result.teacher_initials ?? '';
               const topic = result.topic || '';
               

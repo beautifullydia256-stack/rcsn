@@ -193,6 +193,10 @@ export async function generateReportsBulkClient(
         remarks: d.remarks,
         teacher_initials: d.teacher_initials,
         teacher_comment: d.teacher_comment,
+        // Aliases for O-Level and other templates
+        final_score: d.marks_obtained,
+        overall_remark: d.remarks ?? d.teacher_comment ?? '',
+        remark: d.remarks ?? d.teacher_comment ?? '',
       }));
       const firstRecord = studentData[0];
       const frozenData = firstRecord.frozen_data || {};
@@ -229,6 +233,7 @@ export async function generateReportsBulkClient(
             comments: {
               class_teacher_text: firstRecord.class_teacher_comment || '',
               headteacher_text: firstRecord.headteacher_comment || '',
+              head_teacher_text: firstRecord.headteacher_comment || '',
             },
             summary: {
               totalMarks: studentData.reduce((s: number, d: any) => s + (d.marks_obtained || 0), 0),
