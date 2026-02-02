@@ -1173,21 +1173,31 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                       const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
                       const displayGrade = r.grade ?? ''; // Grade from database
                       
+                      const remark = r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '';
+                      const initials = r.teacher_initials ?? '';
                       if (isMid(examSetName)) {
                         subjectGroups[subject].mid = displayMarks;
-                        subjectGroups[subject].mid_grade = displayGrade; // Grade from database
-                        // Use Mid Term results for remarks and initials if End of Term not available (but not for MISSED entries)
+                        subjectGroups[subject].mid_grade = displayGrade;
                         if (!subjectGroups[subject].remarks && !isMissedEntry) {
-                          subjectGroups[subject].remarks = r.teacher_remark || '';
-                          subjectGroups[subject].initials = r.teacher_initials ?? '';
+                          subjectGroups[subject].remarks = remark;
+                          subjectGroups[subject].initials = initials;
                         }
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = displayMarks;
-                        subjectGroups[subject].end_grade = displayGrade; // Grade from database
-                        // Use pre-processed teacher remarks from the processed table (but not for MISSED entries)
+                        subjectGroups[subject].end_grade = displayGrade;
                         if (!isMissedEntry) {
-                        subjectGroups[subject].remarks = r.teacher_remark || '';
-                        subjectGroups[subject].initials = r.teacher_initials ?? '';
+                          subjectGroups[subject].remarks = remark;
+                          subjectGroups[subject].initials = initials;
+                        }
+                      } else {
+                        // Primary / single exam set: one row per subject – show marks and teacher initials
+                        subjectGroups[subject].mid = displayMarks;
+                        subjectGroups[subject].mid_grade = displayGrade;
+                        subjectGroups[subject].end = displayMarks;
+                        subjectGroups[subject].end_grade = displayGrade;
+                        if (!isMissedEntry) {
+                          subjectGroups[subject].remarks = remark;
+                          subjectGroups[subject].initials = initials;
                         }
                       }
                     });
@@ -1196,13 +1206,15 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     // If they're still missing here, it means the fallback didn't create them
                     // This could happen if the subject isn't in allSubjects or exam set matching failed
                     
-                    // If no remarks found from any exam set, use any available remarks
+                    // If no remarks found from any exam set, use any available remarks/initials
                     Object.values(subjectGroups).forEach((group: any) => {
-                      if (!group.remarks) {
-                        const anyResult = all.find((r: any) => r.subject === group.subject);
-                        if (anyResult) {
-                          group.remarks = anyResult.teacher_remark || '';
-                          group.initials = anyResult.teacher_initials ?? '';
+                      const anyResult = all.find((r: any) => r.subject === group.subject);
+                      if (anyResult) {
+                        if (!group.remarks) group.remarks = anyResult.teacher_remark ?? anyResult.remarks ?? anyResult.teacher_comment ?? '';
+                        if (!group.initials) group.initials = anyResult.teacher_initials ?? '';
+                        if (group.mid === undefined && group.end === undefined) {
+                          group.mid = anyResult.marks_obtained ?? '';
+                          group.end = anyResult.marks_obtained ?? '';
                         }
                       }
                     });
@@ -1699,15 +1711,6 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
         </thead>
         <tbody>
           {(student?.subjects || []).map((subj: any, idx: number) => {
-            console.log('🔴 Template4 rendering subject:', {
-              subject: subj.subject_name,
-              eot_grade: subj.eot_grade,
-              eot_marks: subj.eot_marks,
-              mot_grade: subj.mot_grade,
-              bot_grade: subj.bot_grade,
-              full_subject: subj
-            });
-            
             const bot = subj.bot_marks ?? '';
             const mot = subj.mot_marks ?? '';
             const eot = subj.eot_marks ?? '';
@@ -1728,28 +1731,6 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             } else {
               // "All exam sets" selected - use End of Term grade
               displayGrade = subj.eot_grade || '';
-              
-              // Debug: ALWAYS log (not just in dev mode)
-              console.log('🟠 Grade decision (All Exam Sets):', {
-                subject: subj.subject_name,
-                chosen_grade: displayGrade,
-                eot_grade: subj.eot_grade,
-                eot_marks: subj.eot_marks,
-                bot_grade: subj.bot_grade,
-                mot_grade: subj.mot_grade,
-                full_subject_object: subj
-              });
-              
-              if (!displayGrade) {
-                console.warn('⚠️ Empty End of Term grade for subject:', {
-                  subject: subj.subject_name,
-                  eot_grade: subj.eot_grade,
-                  eot_marks: subj.eot_marks,
-                  bot_grade: subj.bot_grade,
-                  mot_grade: subj.mot_grade,
-                  full_subject_object: subj
-                });
-              }
             }
             
             return (
@@ -1764,7 +1745,6 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 )}
                   <td className="border border-blue-100 px-2.2 py-1.12 text-center font-bold text-blue-900">{displayGrade}</td>
                   <td className="border border-blue-100 px-2.2 py-1.12 text-[9.2pt] text-slate-700 leading-[1.27]">{subj.teacher_comment || ''}</td>
-                  <td className="border border-blue-100 px-2.3 py-1.18 text-center font-bold text-blue-900">{displayGrade}</td>
                   <td className="border border-blue-100 px-2.3 py-1.18 text-[9.2pt] text-slate-700 leading-[1.27]">{subj.teacher_name || ''}</td>
               </tr>
             );

@@ -185,6 +185,9 @@ export async function generateReportsBulkClient(
     const inserts = batch.map(async (studentId) => {
       const studentData = allSnapshotData?.filter((d: any) => d.student_id === studentId) || [];
       if (studentData.length === 0) return null;
+      const firstRecord = studentData[0];
+      const frozenData = firstRecord.frozen_data || {};
+      const examSetName = firstRecord.exam_set_name || examSet?.name || '';
       const results = studentData.map((d: any) => ({
         subject: d.subject,
         marks_obtained: d.marks_obtained,
@@ -193,13 +196,68 @@ export async function generateReportsBulkClient(
         remarks: d.remarks,
         teacher_initials: d.teacher_initials,
         teacher_comment: d.teacher_comment,
+        exam_set_name: d.exam_set_name ?? examSetName,
+        teacher_remark: d.remarks ?? d.teacher_comment ?? '',
         // Aliases for O-Level and other templates
         final_score: d.marks_obtained,
         overall_remark: d.remarks ?? d.teacher_comment ?? '',
         remark: d.remarks ?? d.teacher_comment ?? '',
       }));
-      const firstRecord = studentData[0];
-      const frozenData = firstRecord.frozen_data || {};
+      // Template4 (Upper Section) expects student.subjects: array of { subject_name, eot_marks, mot_marks, bot_marks, eot_grade, mot_grade, bot_grade, total_marks, teacher_comment, teacher_name }
+      const subjectMap = new Map<string, { subject_name: string; eot_marks: number | ''; mot_marks: number | ''; bot_marks: number | ''; eot_grade: string; mot_grade: string; bot_grade: string; total_marks: number; teacher_comment: string; teacher_name: string }>();
+      const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
+      const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
+      const isEot = (n: string) => /end|eot/i.test(String(n || '').trim());
+      for (const d of studentData) {
+        const sub = d.subject ?? '';
+        if (!sub) continue;
+        const existing = subjectMap.get(sub);
+        const marks = d.marks_obtained ?? '';
+        const grade = d.grade ?? '';
+        const total = Number(d.total_marks ?? 100);
+        const teacherComment = d.teacher_comment ?? d.remarks ?? '';
+        const teacherName = d.teacher_initials ?? '';
+        if (!existing) {
+          subjectMap.set(sub, {
+            subject_name: sub,
+            eot_marks: isEot(d.exam_set_name ?? examSetName) ? marks : '',
+            mot_marks: isMid(d.exam_set_name ?? examSetName) ? marks : '',
+            bot_marks: isBot(d.exam_set_name ?? examSetName) ? marks : '',
+            eot_grade: isEot(d.exam_set_name ?? examSetName) ? grade : '',
+            mot_grade: isMid(d.exam_set_name ?? examSetName) ? grade : '',
+            bot_grade: isBot(d.exam_set_name ?? examSetName) ? grade : '',
+            total_marks: total,
+            teacher_comment: teacherComment,
+            teacher_name: teacherName,
+          });
+        } else {
+          if (isEot(d.exam_set_name ?? examSetName)) {
+            existing.eot_marks = marks;
+            existing.eot_grade = grade;
+          } else if (isMid(d.exam_set_name ?? examSetName)) {
+            existing.mot_marks = marks;
+            existing.mot_grade = grade;
+          } else if (isBot(d.exam_set_name ?? examSetName)) {
+            existing.bot_marks = marks;
+            existing.bot_grade = grade;
+          }
+          if (teacherComment) existing.teacher_comment = teacherComment;
+          if (teacherName) existing.teacher_name = teacherName;
+        }
+      }
+      // Single exam set: use same marks/grade for eot and mot so table shows data
+      const subjects = Array.from(subjectMap.values()).map((s) => {
+        if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
+          const first = studentData.find((d: any) => (d.subject ?? '') === s.subject_name);
+          if (first) {
+            s.eot_marks = first.marks_obtained ?? '';
+            s.eot_grade = first.grade ?? '';
+            s.mot_marks = first.marks_obtained ?? '';
+            s.mot_grade = first.grade ?? '';
+          }
+        }
+        return s;
+      });
       const reportData = {
         school: {
           ...school,
@@ -224,6 +282,7 @@ export async function generateReportsBulkClient(
             admission_number: frozenData.admission_number || '',
             profile_photo: firstRecord.student_photo_url || null,
             results,
+            subjects,
             attendance: [],
             fees: {
               expected: firstRecord.fees_expected || 0,
