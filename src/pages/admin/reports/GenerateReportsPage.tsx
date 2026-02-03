@@ -70,9 +70,8 @@ async function fetchPageData(userId: string): Promise<PageData | null> {
 
   const { data: sets } = await supabase
     .from('exam_sets')
-    .select('id, name, term, year')
+    .select('id, name, term, year, is_active')
     .eq('school_id', u.school_id)
-    .eq('is_active', true)
     .order('year', { ascending: false })
     .order('term', { ascending: false });
 
@@ -106,7 +105,6 @@ async function fetchStudentsInClass(schoolId: string, className: string) {
     .select('student_id, name, admission_number, current_class')
     .eq('school_id', schoolId)
     .eq('current_class', className)
-    .eq('status', 'active')
     .order('name');
   return (data || []) as { student_id: string; name: string; admission_number?: string; current_class: string }[];
 }
