@@ -218,15 +218,28 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
+      // Single student or entire class: only snapshot that subset — much faster (1–2 s instead of 20–30 s)
+      const snapshotFilter =
+        reportType === 'single' && selectedStudent
+          ? { studentIds: [selectedStudent] }
+          : reportType === 'class' && selectedClass
+            ? { classNames: [selectedClass] }
+            : undefined;
       const snapshotId = await createSnapshotFromExamSet(
         pageData.schoolId,
         examSet.id,
         examSet.term,
-        examSet.year
+        examSet.year,
+        snapshotFilter
       );
       setGeneratingStep('generating');
-      // Client-side bulk generation (no API, no Edge Function – works everywhere)
-      const result = await generateReportsBulkClient(snapshotId);
+      // Client-side bulk generation: entire class = only selected class; single = only selected student
+      const result = await generateReportsBulkClient(
+        snapshotId,
+        undefined,
+        reportType === 'class' && selectedClass ? [selectedClass] : undefined,
+        reportType === 'single' && selectedStudent ? [selectedStudent] : undefined
+      );
       if (!result.success) throw new Error(result.error || 'Generation failed');
       setCompletedSnapshotId(snapshotId);
       setGeneratingStep('completed');

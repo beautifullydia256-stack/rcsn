@@ -3,15 +3,18 @@ import { getSnapshotData, insertSnapshotData, lockSnapshot } from './snapshotSer
 import type { SnapshotData } from './snapshotService';
 import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from '../lib/reportUtils';
 
+export type SnapshotFilter = { studentIds?: string[]; classNames?: string[] };
+
 /**
- * Create a complete snapshot by locking ALL current academic data
- * This extracts and pre-calculates EVERYTHING needed for reports
+ * Create a complete snapshot by locking current academic data.
+ * When filter is provided (single student or entire class), only that data is fetched and stored — much faster.
  */
 export async function createSnapshotFromExamSet(
   schoolId: string,
   examSetId: string,
   term: number,
-  year: number
+  year: number,
+  filter?: SnapshotFilter
 ): Promise<string> {
   // 1. Create snapshot record
   const { data: snapshot, error: snapshotError } = await supabase
@@ -68,8 +71,8 @@ export async function createSnapshotFromExamSet(
     }
   }
 
-  // 3. Fetch ALL exam results for the selected exam set(s) (all students, all subjects)
-  const { data: examResults, error: resultsError } = await supabase
+  // 3. Fetch exam results for the selected exam set(s). When filter is set (single student or class), only fetch that subset — much faster.
+  let examResultsQuery = supabase
     .from('exam_results')
     .select(`
       *,
@@ -78,12 +81,15 @@ export async function createSnapshotFromExamSet(
     `)
     .eq('school_id', schoolId)
     .in('exam_set_id', examSetIdsToInclude);
+  if (filter?.studentIds?.length) examResultsQuery = examResultsQuery.in('student_id', filter.studentIds);
+  if (filter?.classNames?.length) examResultsQuery = examResultsQuery.in('class_name', filter.classNames);
 
+  const { data: examResults, error: resultsError } = await examResultsQuery;
   if (resultsError) throw resultsError;
 
-  // 3. Get all unique student IDs and classes
+  // 3. Get unique student IDs and classes from the (possibly filtered) results
   const studentIds = [...new Set(examResults?.map((r: any) => r.student_id) || [])];
-  const classNames = [...new Set(examResults?.map((r: any) => r.class_name) || [])];
+  const classNamesFromResults = [...new Set(examResults?.map((r: any) => r.class_name) || [])];
 
   // 3b. Fetch pre-computed aggregate, division, class_position from Supabase (no app-side calculation when present)
   const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
@@ -360,7 +366,7 @@ export async function createSnapshotFromExamSet(
     .from('report_snapshots')
     .update({
       student_count: studentIds.length,
-      class_count: classNames.length,
+      class_count: classNamesFromResults.length,
       metadata: {
         exam_set_name: baseExamSet?.name,
         total_subjects: [...new Set(examResults?.map((r: any) => r.subject) || [])].length,
