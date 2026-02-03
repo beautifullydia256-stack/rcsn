@@ -173,27 +173,6 @@ export default function GenerateReportsPage() {
     staleTime: STALE_TIME_MS,
   });
 
-  const { data: studentsInClass = [] } = useQuery({
-    queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass],
-    queryFn: () => fetchStudentsInClass(pageData!.schoolId, selectedClass),
-    enabled: !!pageData?.schoolId && !!selectedClass,
-    staleTime: STALE_TIME_MS,
-  });
-
-  const { data: generatedReports = [], isLoading: reportsLoading, isError: reportsError } = useQuery({
-    queryKey: ['admin', 'generated-reports', completedSnapshotId ?? ''],
-    queryFn: () => fetchGeneratedReports(completedSnapshotId!),
-    enabled: !!completedSnapshotId,
-    staleTime: STALE_TIME_MS,
-  });
-
-  const templateDisplayName = useMemo(() => {
-    if (!selectedClass) return 'Report For Baby Class';
-    const key = getTemplateForClass(selectedClass);
-    const t = PRIMARY_TEMPLATES[key as keyof typeof PRIMARY_TEMPLATES];
-    return t?.name ?? 'Report For Baby Class';
-  }, [selectedClass]);
-
   const selectedTerm = useMemo((): TermOption | null => {
     if (!pageData) return null;
     if (selectedTermKey) {
@@ -224,6 +203,30 @@ export default function GenerateReportsPage() {
     });
     return sorted[0]?.id ?? null;
   }, [pageData?.examSets, examSetsForSelectedTerm, selectedExamSetId]);
+
+  const { data: studentsInClass = [] } = useQuery({
+    queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass, effectiveExamSetId ?? ''],
+    queryFn: () =>
+      effectiveExamSetId
+        ? fetchStudentsWithResultsInClass(pageData!.schoolId, effectiveExamSetId, selectedClass)
+        : fetchStudentsInClass(pageData!.schoolId, selectedClass),
+    enabled: !!pageData?.schoolId && !!selectedClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const { data: generatedReports = [], isLoading: reportsLoading, isError: reportsError } = useQuery({
+    queryKey: ['admin', 'generated-reports', completedSnapshotId ?? ''],
+    queryFn: () => fetchGeneratedReports(completedSnapshotId!),
+    enabled: !!completedSnapshotId,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const templateDisplayName = useMemo(() => {
+    if (!selectedClass) return 'Report For Baby Class';
+    const key = getTemplateForClass(selectedClass);
+    const t = PRIMARY_TEMPLATES[key as keyof typeof PRIMARY_TEMPLATES];
+    return t?.name ?? 'Report For Baby Class';
+  }, [selectedClass]);
 
   const { data: classesForExamSet = [] } = useQuery({
     queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
