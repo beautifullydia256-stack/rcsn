@@ -296,7 +296,8 @@ export async function createSnapshotFromExamSet(
       grade: gradeInfo.grade,
       remarks: result.remarks || gradeInfo.remark,
       teacher_initials: result.teacher_initials || '',
-      teacher_comment: result.teacher_comment || '',
+      // Store effective teacher comment: use remarks when teacher_comment is empty (DB often has remarks filled, teacher_comment blank)
+      teacher_comment: (result.teacher_comment && String(result.teacher_comment).trim()) ? result.teacher_comment : (result.remarks || gradeInfo.remark || ''),
       class_teacher_comment: resolvedComments[result.student_id]?.classTeacher || '',
       headteacher_comment: resolvedComments[result.student_id]?.headTeacher || '',
       attendance_percentage: attendance?.percentage ?? undefined,

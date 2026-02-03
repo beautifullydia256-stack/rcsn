@@ -34,18 +34,26 @@ export async function transformSnapshotToReportFormat(
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
 
-  // 4. Group data by subject
-  const results = studentData.map((d) => ({
-    subject: d.subject,
-    marks_obtained: d.marks_obtained,
-    total_marks: d.total_marks,
-    grade: d.grade,
-    remarks: d.remarks,
-    teacher_initials: d.teacher_initials,
-    teacher_comment: d.teacher_comment,
-    exam_set_id: snapshot.exam_set_id,
-    exam_set_name: d.exam_set_name || snapshot.exam_sets?.name,
-  }));
+  // 4. Group data by subject (teacher_comment from remarks when empty - matches snapshot/reportGenerator)
+  const effectiveRemark = (d: { teacher_comment?: string; remarks?: string }) =>
+    (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
+  const results = studentData.map((d) => {
+    const remark = effectiveRemark(d);
+    return {
+      subject: d.subject,
+      marks_obtained: d.marks_obtained,
+      total_marks: d.total_marks,
+      grade: d.grade,
+      remarks: d.remarks,
+      teacher_initials: d.teacher_initials,
+      teacher_comment: remark,
+      teacher_remark: remark,
+      overall_remark: remark,
+      remark,
+      exam_set_id: snapshot.exam_set_id,
+      exam_set_name: d.exam_set_name || snapshot.exam_sets?.name,
+    };
+  });
 
   // 5. Calculate summary from frozen data (already calculated, just extract)
   const summary = {

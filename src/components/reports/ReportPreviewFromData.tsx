@@ -22,13 +22,16 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
   const raw = reportData.students[0];
   const comments = raw.comments ?? {};
   const rawResults = raw.results ?? [];
-  const results = rawResults.map((r: any) => ({
-    ...r,
-    final_score: r.final_score ?? r.marks_obtained,
-    overall_remark: r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '',
-    remark: r.remark ?? r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '',
-    teacher_remark: r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '',
-  }));
+  const results = rawResults.map((r: any) => {
+    const remark = r.overall_remark || r.teacher_remark || r.remarks || r.teacher_comment || '';
+    return {
+      ...r,
+      final_score: r.final_score ?? r.marks_obtained,
+      overall_remark: remark,
+      remark: remark,
+      teacher_remark: remark,
+    };
+  });
   // Template4 expects student.subjects (subject_name, eot_marks, teacher_name, etc.). Derive from results if missing.
   const subjects =
     raw.subjects && Array.isArray(raw.subjects) && raw.subjects.length > 0
@@ -44,7 +47,7 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
             const marks = r.marks_obtained ?? r.final_score ?? '';
             const grade = r.grade ?? '';
             const total = Number(r.total_marks ?? 100);
-            const teacherComment = r.teacher_comment ?? r.remarks ?? r.overall_remark ?? r.teacher_remark ?? '';
+            const teacherComment = r.teacher_comment || r.remarks || r.overall_remark || r.teacher_remark || '';
             const teacherName = r.teacher_initials ?? '';
             if (!bySubject.has(sub)) {
               bySubject.set(sub, {

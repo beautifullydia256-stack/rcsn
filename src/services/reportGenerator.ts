@@ -188,21 +188,24 @@ export async function generateReportsBulkClient(
       const firstRecord = studentData[0];
       const frozenData = firstRecord.frozen_data || {};
       const examSetName = firstRecord.exam_set_name || examSet?.name || '';
-      const results = studentData.map((d: any) => ({
-        subject: d.subject,
-        marks_obtained: d.marks_obtained,
-        total_marks: d.total_marks,
-        grade: d.grade,
-        remarks: d.remarks,
-        teacher_initials: d.teacher_initials,
-        teacher_comment: d.teacher_comment,
-        exam_set_name: d.exam_set_name ?? examSetName,
-        teacher_remark: d.remarks ?? d.teacher_comment ?? '',
-        // Aliases for O-Level and other templates
-        final_score: d.marks_obtained,
-        overall_remark: d.remarks ?? d.teacher_comment ?? '',
-        remark: d.remarks ?? d.teacher_comment ?? '',
-      }));
+      const effectiveRemark = (d: any) => (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
+      const results = studentData.map((d: any) => {
+        const remark = effectiveRemark(d);
+        return {
+          subject: d.subject,
+          marks_obtained: d.marks_obtained,
+          total_marks: d.total_marks,
+          grade: d.grade,
+          remarks: d.remarks,
+          teacher_initials: d.teacher_initials,
+          teacher_comment: remark,
+          exam_set_name: d.exam_set_name ?? examSetName,
+          teacher_remark: remark,
+          overall_remark: remark,
+          remark,
+          final_score: d.marks_obtained,
+        };
+      });
       // Template4 (Upper Section) expects student.subjects: array of { subject_name, eot_marks, mot_marks, bot_marks, eot_grade, mot_grade, bot_grade, total_marks, teacher_comment, teacher_name }
       const subjectMap = new Map<string, { subject_name: string; eot_marks: number | ''; mot_marks: number | ''; bot_marks: number | ''; eot_grade: string; mot_grade: string; bot_grade: string; total_marks: number; teacher_comment: string; teacher_name: string }>();
       const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
@@ -215,7 +218,7 @@ export async function generateReportsBulkClient(
         const marks = d.marks_obtained ?? '';
         const grade = d.grade ?? '';
         const total = Number(d.total_marks ?? 100);
-        const teacherComment = d.teacher_comment ?? d.remarks ?? '';
+        const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
         const teacherName = d.teacher_initials ?? '';
         if (!existing) {
           subjectMap.set(sub, {
@@ -345,4 +348,3 @@ export async function generateReportsBulkClient(
     };
   }
 }
-
