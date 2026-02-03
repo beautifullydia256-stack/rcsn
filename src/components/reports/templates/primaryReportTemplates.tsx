@@ -1386,6 +1386,17 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       division: String(range.division || '')
     }))
     .sort((a, b) => a.min - b.min);
+
+  // Primary schools: grade MUST come from Subject Grade Boundaries (same scale shown in report), not A–F
+  const getGradeFromMarks = (marks: number | string, totalMarks: number | string, scale: { min: number; max: number; grade: string }[]): string => {
+    const m = Number(marks);
+    const t = Number(totalMarks);
+    if (t == null || t <= 0 || Number.isNaN(m)) return '';
+    const pct = (m / t) * 100;
+    const range = scale.find(r => pct >= r.min && pct <= r.max);
+    return range ? String(range.grade || '').toUpperCase() : 'F9';
+  };
+
   const endOfTermResult = (() => {
     const results = student?.results || [];
     const endResults = results.filter((r: any) => {
@@ -1714,23 +1725,23 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             const bot = subj.bot_marks ?? '';
             const mot = subj.mot_marks ?? '';
             const eot = subj.eot_marks ?? '';
-            const total = subj.total_marks ?? '';
-            
-            // Use grade directly from database (already calculated at Supabase)
-            // Determine which grade to display based on selected exam set or End of Term if "All Exam Sets"
+            const total = subj.total_marks ?? 100;
+            const totalNum = Number(total) || 100;
+
+            // PRIMARY: grade MUST come from Subject Grade Boundaries (D1–F9), never A–F
+            // Derive grade from marks using the same scale shown in "Subject Grade Boundaries"
             let displayGrade = '';
             if (selectedExamSetForDisplay) {
               const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
               if (isBeginning(selectedExamSetName)) {
-                displayGrade = subj.bot_grade || '';
+                displayGrade = getGradeFromMarks(subj.bot_marks, totalNum, gradeScale) || subj.bot_grade || '';
               } else if (isMid(selectedExamSetName)) {
-                displayGrade = subj.mot_grade || '';
+                displayGrade = getGradeFromMarks(subj.mot_marks, totalNum, gradeScale) || subj.mot_grade || '';
               } else if (isEnd(selectedExamSetName)) {
-                displayGrade = subj.eot_grade || '';
+                displayGrade = getGradeFromMarks(subj.eot_marks, totalNum, gradeScale) || subj.eot_grade || '';
               }
             } else {
-              // "All exam sets" selected - use End of Term grade
-              displayGrade = subj.eot_grade || '';
+              displayGrade = getGradeFromMarks(subj.eot_marks, totalNum, gradeScale) || subj.eot_grade || '';
             }
             
             return (

@@ -1,9 +1,11 @@
 /**
  * Renders one report using the ported primary templates (Template1–5, SecondaryReportPreview).
  * Uses getTemplateForClass so each class gets its assigned template.
+ * Primary grades always use Subject Grade Boundaries (D1–F9), never A–F.
  */
 import { getTemplateForClass } from '../../templates/primary';
 import { ReportPreview } from './templates/primaryReportTemplates';
+import { calculatePrimaryGrade } from '../../lib/reportUtils';
 
 type ReportPreviewFromDataProps = {
   reportData: any;
@@ -45,10 +47,17 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
             const sub = r.subject ?? '';
             if (!sub) continue;
             const marks = r.marks_obtained ?? r.final_score ?? '';
-            const grade = r.grade ?? '';
             const total = Number(r.total_marks ?? 100);
             const teacherComment = r.teacher_comment || r.remarks || r.overall_remark || r.teacher_remark || '';
             const teacherName = r.teacher_initials ?? '';
+            // Primary: grade MUST come from Subject Grade Boundaries (D1–F9), never A–F
+            const rawGrade = (r.grade ?? '').toString().trim();
+            const isAtoF = ['A', 'B', 'C', 'D', 'E', 'F'].includes(rawGrade.toUpperCase());
+            const grade = (rawGrade && !isAtoF)
+              ? rawGrade
+              : (total > 0 && (marks !== '' && marks !== null))
+                ? calculatePrimaryGrade(Number(marks) || 0, total).grade
+                : rawGrade || '';
             if (!bySubject.has(sub)) {
               bySubject.set(sub, {
                 subject_name: sub,
