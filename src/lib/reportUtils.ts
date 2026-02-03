@@ -8,7 +8,7 @@ export interface GradeScale {
   remark: string;
 }
 
-// Ugandan grading system
+// Ugandan grading system (secondary / O-Level style)
 export const UGANDA_GRADE_SCALE: GradeScale[] = [
   { min: 80, max: 100, grade: 'A', points: 6, remark: 'Excellent' },
   { min: 70, max: 79, grade: 'B', points: 5, remark: 'Very Good' },
@@ -17,6 +17,27 @@ export const UGANDA_GRADE_SCALE: GradeScale[] = [
   { min: 40, max: 49, grade: 'E', points: 2, remark: 'Fair' },
   { min: 0, max: 39, grade: 'F', points: 1, remark: 'Fail' }
 ];
+
+// Primary school Subject Grade Boundaries (D1–F9) – used in report templates
+export const PRIMARY_GRADE_SCALE: { min: number; max: number; grade: string }[] = [
+  { min: 75, max: 100, grade: 'D1' },
+  { min: 70, max: 74, grade: 'D2' },
+  { min: 65, max: 69, grade: 'C3' },
+  { min: 60, max: 64, grade: 'C4' },
+  { min: 55, max: 59, grade: 'C5' },
+  { min: 50, max: 54, grade: 'C6' },
+  { min: 45, max: 49, grade: 'P7' },
+  { min: 40, max: 44, grade: 'P8' },
+  { min: 0, max: 39, grade: 'F9' }
+];
+
+export function calculatePrimaryGrade(marks: number, totalMarks: number): { grade: string; remark: string } {
+  const percentage = (marks / totalMarks) * 100;
+  const scale = PRIMARY_GRADE_SCALE.find(s => percentage >= s.min && percentage <= s.max);
+  const grade = scale?.grade ?? 'F9';
+  const remark = grade === 'F9' ? 'Fail' : 'Pass';
+  return { grade, remark };
+}
 
 export function calculateGrade(marks: number, totalMarks: number): { grade: string; points: number; remark: string } {
   const percentage = (marks / totalMarks) * 100;

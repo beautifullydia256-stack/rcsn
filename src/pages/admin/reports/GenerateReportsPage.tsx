@@ -196,11 +196,12 @@ export default function GenerateReportsPage() {
     if (selectedExamSetId) {
       examSet = pageData.examSets.find((es: any) => es.id === selectedExamSetId);
     } else {
-      // Default behaviour: use the latest exam set for the selected term (e.g. End of Term)
+      // Auto: prefer End of Term when both Mid and End exist; otherwise use the only set
       const forTerm = (pageData.examSets || []).filter(
         (es: any) => es.term === term.term && es.year === term.year
       );
-      examSet = forTerm[forTerm.length - 1] || pageData.examSets[0];
+      const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
+      examSet = forTerm.find((es: any) => !isMidTerm(es.name || '')) ?? forTerm[forTerm.length - 1] ?? pageData.examSets[0];
     }
 
     if (!examSet) {

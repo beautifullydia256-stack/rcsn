@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import { getSnapshotData, insertSnapshotData, lockSnapshot } from './snapshotService';
 import type { SnapshotData } from './snapshotService';
-import { calculateGrade, calculateDivision, calculateAggregate } from '../lib/reportUtils';
+import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from '../lib/reportUtils';
 
 /**
  * Create a complete snapshot by locking ALL current academic data
@@ -85,6 +85,24 @@ export async function createSnapshotFromExamSet(
   const studentIds = [...new Set(examResults?.map((r: any) => r.student_id) || [])];
   const classNames = [...new Set(examResults?.map((r: any) => r.class_name) || [])];
 
+  // 3b. Fetch pre-computed aggregate, division, class_position from Supabase (no app-side calculation when present)
+  const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
+  const { data: processedRows } = await supabase
+    .from('processed_primary_exam_results')
+    .select('student_id, aggregate, division, class_position')
+    .eq('school_id', schoolId)
+    .in('exam_set_id', examSetIdsToInclude)
+    .in('student_id', studentIds);
+  (processedRows || []).forEach((row: any) => {
+    if (row.student_id && !processedByStudent[row.student_id]) {
+      processedByStudent[row.student_id] = {
+        aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
+        division: row.division && String(row.division).trim() ? row.division : undefined,
+        class_position: row.class_position != null ? Number(row.class_position) : undefined,
+      };
+    }
+  });
+
   // 4. Fetch ALL additional data needed for reports
   const [
     { data: students },
@@ -157,43 +175,45 @@ export async function createSnapshotFromExamSet(
     studentResultsByClass[className][studentId].push(result);
   });
 
-  // 7. Calculate positions for each class (pre-calculated)
+  // 7. Positions, averages, aggregates: use Supabase (processed_primary_exam_results) when present; only calculate when missing
   const studentPositions: Record<string, number> = {};
   const studentAverages: Record<string, number> = {};
   const studentAggregates: Record<string, number> = {};
 
   Object.entries(studentResultsByClass).forEach(([className, classStudents]) => {
-    // Calculate average for each student
     const studentAveragesList: Array<{ studentId: string; average: number; aggregate: number }> = [];
-    
+
     Object.entries(classStudents).forEach(([studentId, results]) => {
+      const fromDb = processedByStudent[studentId];
       const validResults = results.filter((r: any) => r.marks_obtained !== null && r.total_marks !== null);
+
       if (validResults.length === 0) {
         studentAverages[studentId] = 0;
-        studentAggregates[studentId] = 0;
+        studentAggregates[studentId] = fromDb?.aggregate ?? 0;
+        if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
         return;
       }
 
       const totalMarks = validResults.reduce((sum: number, r: any) => sum + Number(r.marks_obtained || 0), 0);
       const totalPossible = validResults.reduce((sum: number, r: any) => sum + Number(r.total_marks || 100), 0);
       const average = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
-      
-      // Calculate aggregate using reportUtils
-      const aggregate = calculateAggregate(validResults.map((r: any) => ({
+
+      studentAverages[studentId] = average;
+      studentAggregates[studentId] = fromDb?.aggregate ?? calculateAggregate(validResults.map((r: any) => ({
         marks_obtained: Number(r.marks_obtained || 0),
         total_marks: Number(r.total_marks || 100),
       })));
+      if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
 
-      studentAverages[studentId] = average;
-      studentAggregates[studentId] = aggregate;
-      
-      studentAveragesList.push({ studentId, average, aggregate });
+      studentAveragesList.push({ studentId, average, aggregate: studentAggregates[studentId] });
     });
 
-    // Sort by average descending and assign positions
+    // Assign positions only for students that don't have DB position (sort by average, assign)
     studentAveragesList.sort((a, b) => b.average - a.average);
     studentAveragesList.forEach((item, index) => {
-      studentPositions[item.studentId] = index + 1;
+      if (studentPositions[item.studentId] == null) {
+        studentPositions[item.studentId] = index + 1;
+      }
     });
   });
 
@@ -282,10 +302,14 @@ export async function createSnapshotFromExamSet(
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
 
-    // Calculate grade and division (pre-calculated)
-    const gradeInfo = calculateGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
+    // Grade: use Supabase (exam_results.grade) when present; only calculate when missing
+    const dbGrade = result.grade && String(result.grade).trim();
+    const gradeInfo = dbGrade
+      ? { grade: dbGrade, remark: result.remarks || '' }
+      : calculatePrimaryGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
     const average = studentAverages[result.student_id] || 0;
-    const division = calculateDivision(average);
+    const fromDb = processedByStudent[result.student_id];
+    const division = fromDb?.division ?? calculateDivision(average);
 
     snapshotData.push({
       student_id: result.student_id,
@@ -301,8 +325,8 @@ export async function createSnapshotFromExamSet(
       class_teacher_comment: resolvedComments[result.student_id]?.classTeacher || '',
       headteacher_comment: resolvedComments[result.student_id]?.headTeacher || '',
       attendance_percentage: attendance?.percentage ?? undefined,
-      position: studentPositions[result.student_id] ?? undefined,
-      aggregate: studentAggregates[result.student_id] ?? undefined,
+      position: (processedByStudent[result.student_id]?.class_position ?? studentPositions[result.student_id]) ?? undefined,
+      aggregate: (processedByStudent[result.student_id]?.aggregate ?? studentAggregates[result.student_id]) ?? undefined,
       average_percentage: average,
       division: division,
       fees_balance: feesBalance,
