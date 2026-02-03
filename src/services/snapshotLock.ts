@@ -302,9 +302,10 @@ export async function createSnapshotFromExamSet(
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
 
-    // Grade: use Supabase (exam_results.grade) when present; only calculate when missing
+    // Grade: use Supabase (exam_results.grade) when present and valid (D1-F9); recalculate if A-F (old format) or missing
     const dbGrade = result.grade && String(result.grade).trim();
-    const gradeInfo = dbGrade
+    const isOldFormat = dbGrade && ['A', 'B', 'C', 'D', 'E', 'F'].includes(dbGrade.toUpperCase());
+    const gradeInfo = (dbGrade && !isOldFormat)
       ? { grade: dbGrade, remark: result.remarks || '' }
       : calculatePrimaryGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
     const average = studentAverages[result.student_id] || 0;
