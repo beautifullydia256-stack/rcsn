@@ -32,44 +32,30 @@ export async function createSnapshotFromExamSet(
   if (snapshotError) throw snapshotError;
   if (!snapshot) throw new Error('Failed to create snapshot');
 
-  // 2. Determine which exam sets to include
-  // Old behaviour: 
-  // - If Mid Term is selected → use ONLY that Mid Term exam set
-  // - If End of Term (or any non-mid) is selected → include ALL exam sets for that term (Mid + End),
-  //   so End of Term reports show both Mid + End columns.
-  const { data: baseExamSet, error: baseExamSetError } = await supabase
+  // 2. Determine which exam sets to include (single query: fetch all sets for this term)
+  // Mid Term → use only that set; End of Term → include all sets for term (Mid + End columns).
+  const { data: examSetsForTerm, error: examSetsError } = await supabase
     .from('exam_sets')
-    .select('*')
-    .eq('id', examSetId)
-    .single();
+    .select('id, name, term, year')
+    .eq('school_id', schoolId)
+    .eq('term', term)
+    .eq('year', year);
 
-  if (baseExamSetError || !baseExamSet) {
-    throw baseExamSetError || new Error('Exam set not found');
-  }
+  if (examSetsError) throw examSetsError;
+
+  const baseExamSet = (examSetsForTerm || []).find((es: any) => es.id === examSetId);
+  if (!baseExamSet) throw new Error('Exam set not found');
 
   const isMidTermName = (name: string | null | undefined) => {
     const n = String(name || '').trim().toLowerCase();
     return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
   };
 
-  let examSetIdsToInclude: string[] = [examSetId];
-
-  if (!isMidTermName(baseExamSet.name)) {
-    // Treat non-Mid selections (e.g. End of Term) as "All exam sets for this term"
-    const { data: allExamSetsForTerm, error: allSetsError } = await supabase
-      .from('exam_sets')
-      .select('id, name')
-      .eq('school_id', schoolId)
-      .eq('term', baseExamSet.term)
-      .eq('year', baseExamSet.year);
-
-    if (allSetsError) throw allSetsError;
-
-    const ids = (allExamSetsForTerm || []).map((es: any) => es.id).filter(Boolean);
-    if (ids.length > 0) {
-      examSetIdsToInclude = ids;
-    }
-  }
+  const examSetIdsToInclude: string[] =
+    isMidTermName(baseExamSet.name) && examSetsForTerm?.length
+      ? [examSetId]
+      : (examSetsForTerm || []).map((es: any) => es.id).filter(Boolean);
+  if (examSetIdsToInclude.length === 0) examSetIdsToInclude.push(examSetId);
 
   // 3. Fetch exam results for the selected exam set(s). When filter is set (single student or class), only fetch that subset — much faster.
   let examResultsQuery = supabase
@@ -109,7 +95,14 @@ export async function createSnapshotFromExamSet(
     }
   });
 
-  // 4. Fetch ALL additional data needed for reports
+  // 4. Fetch additional data needed for reports (one query per source; comment settings filtered by class when scoped)
+  let commentSettingsQuery = supabase
+    .from('class_teacher_comments_settings')
+    .select('*')
+    .eq('school_id', schoolId);
+  if (classNamesFromResults.length > 0) {
+    commentSettingsQuery = commentSettingsQuery.in('class_name', classNamesFromResults);
+  }
   const [
     { data: students },
     { data: attendanceData },
@@ -117,9 +110,7 @@ export async function createSnapshotFromExamSet(
     { data: studentPayments },
     { data: studentPhotos },
     { data: schoolInfo },
-    { data: commentRules },
-    { data: classTeacherCommentSettings },
-    { data: headTeacherCommentSettings },
+    { data: commentSettings },
   ] = await Promise.all([
     supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', studentIds),
@@ -127,10 +118,10 @@ export async function createSnapshotFromExamSet(
     supabase.from('student_payments').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
-    supabase.from('teacher_comment_rules').select('*').eq('school_id', schoolId),
-    supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId),
-    supabase.from('class_teacher_comments_settings').select('*').eq('school_id', schoolId), // Head teacher uses same table
+    commentSettingsQuery,
   ]);
+  const classTeacherCommentSettings = commentSettings;
+  const headTeacherCommentSettings = commentSettings;
 
   // Per-student comments from report_comments (comment_type + comment_text) for this term/year
   type StudentComment = {

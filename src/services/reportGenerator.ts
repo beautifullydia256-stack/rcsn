@@ -149,6 +149,9 @@ export async function generateReportsBulkClient(
   if (classNames?.length) {
     snapshotDataQuery = snapshotDataQuery.in('class_name', classNames);
   }
+  if (studentIds?.length) {
+    snapshotDataQuery = snapshotDataQuery.in('student_id', studentIds);
+  }
   const { data: allSnapshotData, error: dataError } = await snapshotDataQuery;
   if (dataError) {
     return { success: false, generatedCount: 0, totalStudents: 0, error: dataError.message };

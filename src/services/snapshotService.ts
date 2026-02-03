@@ -130,14 +130,18 @@ export async function getSnapshots(
 }
 
 /**
- * Get snapshot data for a specific snapshot
+ * Get snapshot data for a specific snapshot.
+ * When studentId is provided, only that student's rows are fetched (faster for single-student preview).
  */
-export async function getSnapshotData(snapshotId: string): Promise<SnapshotData[]> {
-  const { data, error } = await supabase
+export async function getSnapshotData(snapshotId: string, studentId?: string): Promise<SnapshotData[]> {
+  let query = supabase
     .from('report_snapshot_data')
     .select('*')
-    .eq('snapshot_id', snapshotId)
-    .order('student_id, subject');
+    .eq('snapshot_id', snapshotId);
+  if (studentId) {
+    query = query.eq('student_id', studentId);
+  }
+  const { data, error } = await query.order('student_id, subject');
 
   if (error) throw error;
   return data || [];

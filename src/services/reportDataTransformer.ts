@@ -22,8 +22,8 @@ export async function transformSnapshotToReportFormat(
     throw new Error('Snapshot not found');
   }
 
-  // 2. Get ALL snapshot data for this student (all subjects)
-  const allSnapshotData = await getSnapshotData(snapshotId);
+  // 2. Get snapshot data for this student only (all subjects) — single-student query when possible
+  const allSnapshotData = await getSnapshotData(snapshotId, studentId);
   const studentData = allSnapshotData.filter((d) => d.student_id === studentId);
 
   if (studentData.length === 0) {
