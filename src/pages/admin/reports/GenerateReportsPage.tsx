@@ -1,7 +1,5 @@
 /**
- * Student Report Generator – matches screenshot: Report Configuration card,
- * Report Template (auto-selected), Report Type, Current Term, Class, Student, Preview Report.
- * Preview shows reports below on the same page (no new tab), like the old 2f00b44 flow.
+ * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -433,21 +431,6 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
-          {generatingStep === 'creating' && (
-            <div className="mb-4 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
-              Preparing snapshot…
-            </div>
-          )}
-          {generatingStep === 'generating' && (
-            <div className="mb-4 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-sm text-blue-200">
-              Generating reports…
-            </div>
-          )}
-          {generatingStep === 'completed' && completedSnapshotId && (
-            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-              Reports ready. Preview below — no new window.
-            </div>
-          )}
           {generatingStep === 'error' && (
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
               <p className="font-medium">{generationError}</p>
