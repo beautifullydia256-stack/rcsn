@@ -194,12 +194,22 @@ export default function GenerateReportsPage() {
     if (selectedExamSetId) {
       examSet = pageData.examSets.find((es: any) => es.id === selectedExamSetId);
     } else {
-      // Auto: prefer End of Term when both Mid and End exist; otherwise use the only set
+      // Auto (primary): if only one set (e.g. Mid Term) → use it; if both Mid + End of Term → prefer End of Term so report shows both columns
       const forTerm = (pageData.examSets || []).filter(
         (es: any) => es.term === term.term && es.year === term.year
       );
       const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
-      examSet = forTerm.find((es: any) => !isMidTerm(es.name || '')) ?? forTerm[forTerm.length - 1] ?? pageData.examSets[0];
+      const isEndOfTerm = (name: string) => /end|eot|end of term/i.test(String(name || '').trim());
+      if (forTerm.length === 0) {
+        examSet = pageData.examSets?.[0];
+      } else if (forTerm.length === 1) {
+        examSet = forTerm[0];
+      } else {
+        // Both Mid and End exist: prefer End of Term so snapshot includes Mid + End columns
+        examSet = forTerm.find((es: any) => isEndOfTerm(es.name || ''))
+          ?? forTerm.find((es: any) => !isMidTerm(es.name || ''))
+          ?? forTerm[forTerm.length - 1];
+      }
     }
 
     if (!examSet) {
