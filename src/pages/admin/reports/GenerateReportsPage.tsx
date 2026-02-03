@@ -126,6 +126,7 @@ export default function GenerateReportsPage() {
   const [completedSnapshotId, setCompletedSnapshotId] = useState<string | null>(null);
   const [generationError, setGenerationError] = useState('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
+  const [showNoResultsModal, setShowNoResultsModal] = useState(false);
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
@@ -194,26 +195,31 @@ export default function GenerateReportsPage() {
     if (selectedExamSetId) {
       examSet = pageData.examSets.find((es: any) => es.id === selectedExamSetId);
     } else {
-      // Auto (primary): if only one set (e.g. Mid Term) → use it; if both Mid + End of Term → prefer End of Term so report shows both columns
+      // Auto (primary): one set → use it; both Mid + End of Term → prefer End of Term so report shows both columns
       const forTerm = (pageData.examSets || []).filter(
         (es: any) => es.term === term.term && es.year === term.year
       );
       const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
-      const isEndOfTerm = (name: string) => /end|eot|end of term/i.test(String(name || '').trim());
       if (forTerm.length === 0) {
-        examSet = pageData.examSets?.[0];
+        // No exam set for this term — do not use another term's data; show error below
+        examSet = undefined;
       } else if (forTerm.length === 1) {
         examSet = forTerm[0];
       } else {
-        // Both Mid and End exist: prefer End of Term so snapshot includes Mid + End columns
-        examSet = forTerm.find((es: any) => isEndOfTerm(es.name || ''))
-          ?? forTerm.find((es: any) => !isMidTerm(es.name || ''))
-          ?? forTerm[forTerm.length - 1];
+        // Multiple sets: put non–Mid Term first, then take first (so we always pick End of Term when both exist)
+        const sorted = [...forTerm].sort((a, b) => {
+          const aMid = isMidTerm(a.name || '');
+          const bMid = isMidTerm(b.name || '');
+          if (aMid === bMid) return 0;
+          return aMid ? 1 : -1; // non-Mid (End of Term) first
+        });
+        examSet = sorted[0];
       }
     }
 
     if (!examSet) {
-      setError(`No exam set found for Term ${term.term}, ${term.year}. Create an exam set for that term first.`);
+      setError('');
+      setShowNoResultsModal(true);
       return;
     }
     if (reportType === 'single' && !selectedStudent) {
@@ -388,6 +394,11 @@ export default function GenerateReportsPage() {
                 </p>
               </div>
             )}
+            {pageData && examSetsForSelectedTerm.length === 0 && selectedTerm && (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+                No exam set for Term {(selectedTerm || pageData.currentTerm).term}, {(selectedTerm || pageData.currentTerm).year}. Create a Mid Term or End of Term exam set for this term to generate reports.
+              </div>
+            )}
 
             {/* Class */}
             <div>
@@ -513,6 +524,25 @@ export default function GenerateReportsPage() {
               </div>
             );
           })()}
+
+          {/* No results for selected term – pop-up with OK */}
+          <GlassModal
+            isOpen={showNoResultsModal}
+            onClose={() => setShowNoResultsModal(false)}
+            title="No results found"
+            size="md"
+          >
+            <p className="text-white/90 mb-4">
+              No results found for the selected term. There is no Mid Term, End of Term, or Beginning of Term exam set for Term {(selectedTerm || pageData?.currentTerm)?.term}, {(selectedTerm || pageData?.currentTerm)?.year}. Create an exam set for this term to generate reports.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowNoResultsModal(false)}
+              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3"
+            >
+              OK
+            </button>
+          </GlassModal>
 
           {/* Report preview modal (same as ReportViewer) */}
           {viewingReport && (
