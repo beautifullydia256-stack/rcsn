@@ -103,6 +103,18 @@ export default function AdminDashboard() {
 
   if (!data) return null;
 
+  // Ensure year rollover has run when we open the app in a new year (once per year, no button)
+  const rolloverFired = useRef(false);
+  useEffect(() => {
+    if (!data?.schoolId || rolloverFired.current) return;
+    rolloverFired.current = true;
+    fetch('/api/admin/term-rollover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ school_id: data.schoolId }),
+    }).catch(() => {});
+  }, [data?.schoolId]);
+
   return (
     <>
       <div className="mb-6">

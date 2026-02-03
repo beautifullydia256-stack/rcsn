@@ -111,6 +111,44 @@ async function fetchStudentsInClass(schoolId: string, className: string) {
   return (data || []) as { student_id: string; name: string; admission_number?: string; current_class: string }[];
 }
 
+/** Classes that have at least one exam result for this exam set (so graduated classes like P7 still appear for past terms). */
+async function fetchClassesForExamSet(schoolId: string, examSetId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('exam_results')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('exam_set_id', examSetId);
+  if (error) return [];
+  const set = new Set((data || []).map((r: { class_name: string }) => r.class_name).filter(Boolean));
+  return Array.from(set).sort();
+}
+
+/** Students who have exam results in this exam set for this class (includes graduated students for past terms). */
+async function fetchStudentsWithResultsInClass(
+  schoolId: string,
+  examSetId: string,
+  className: string
+): Promise<{ student_id: string; name: string; admission_number?: string; current_class: string }[]> {
+  const { data: resultRows } = await supabase
+    .from('exam_results')
+    .select('student_id, students!inner(name, admission_number, current_class)')
+    .eq('school_id', schoolId)
+    .eq('exam_set_id', examSetId)
+    .eq('class_name', className);
+  const byId = new Map<string, { student_id: string; name: string; admission_number?: string; current_class: string }>();
+  (resultRows || []).forEach((r: any) => {
+    const sid = r.student_id;
+    if (sid && !byId.has(sid))
+      byId.set(sid, {
+        student_id: sid,
+        name: r.students?.name ?? '',
+        admission_number: r.students?.admission_number,
+        current_class: r.students?.current_class ?? className,
+      });
+  });
+  return Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+}
+
 export default function GenerateReportsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
@@ -172,6 +210,27 @@ export default function GenerateReportsPage() {
       (es: any) => es.term === term.term && es.year === term.year
     );
   }, [pageData, selectedTerm]);
+
+  const isMidTermName = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
+  const effectiveExamSetId = useMemo(() => {
+    if (!pageData?.examSets?.length || !examSetsForSelectedTerm.length) return null;
+    if (selectedExamSetId) return selectedExamSetId;
+    const forTerm = examSetsForSelectedTerm;
+    if (forTerm.length === 1) return forTerm[0].id;
+    const sorted = [...forTerm].sort((a, b) => {
+      const aMid = isMidTermName(a.name);
+      const bMid = isMidTermName(b.name);
+      return aMid === bMid ? 0 : aMid ? 1 : -1;
+    });
+    return sorted[0]?.id ?? null;
+  }, [pageData?.examSets, examSetsForSelectedTerm, selectedExamSetId]);
+
+  const { data: classesForExamSet = [] } = useQuery({
+    queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
+    queryFn: () => fetchClassesForExamSet(pageData!.schoolId, effectiveExamSetId!),
+    enabled: !!pageData?.schoolId && !!effectiveExamSetId,
+    staleTime: STALE_TIME_MS,
+  });
 
   const filteredStudents = useMemo(() => {
     if (!studentSearch.trim()) return studentsInClass;
@@ -351,6 +410,8 @@ export default function GenerateReportsPage() {
                   onChange={(e) => {
                     setSelectedTermKey(e.target.value);
                     setSelectedExamSetId('');
+                    setSelectedClass('');
+                    setSelectedStudent('');
                   }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
@@ -377,7 +438,11 @@ export default function GenerateReportsPage() {
                 <label className="block text-white/80 text-sm font-medium mb-2">Exam Set</label>
                 <select
                   value={selectedExamSetId}
-                  onChange={(e) => setSelectedExamSetId(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedExamSetId(e.target.value);
+                    setSelectedClass('');
+                    setSelectedStudent('');
+                  }}
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="" className="text-black">
@@ -400,23 +465,32 @@ export default function GenerateReportsPage() {
               </div>
             )}
 
-            {/* Class */}
+            {/* Class – only classes that have results for the selected exam set (so past terms show e.g. P7) */}
             <div>
               <label className="block text-white/80 text-sm font-medium mb-2">Class</label>
-              <select
-                value={selectedClass}
-                onChange={(e) => {
-                  setSelectedClass(e.target.value);
-                  setSelectedStudent('');
-                  setStudentSearch('');
-                }}
-                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="" className="text-white/70">Select Class</option>
-                {pageData?.classes.map((c) => (
-                  <option key={c} value={c} className="text-black">{c}</option>
-                ))}
-              </select>
+              {effectiveExamSetId ? (
+                <select
+                  value={selectedClass}
+                  onChange={(e) => {
+                    setSelectedClass(e.target.value);
+                    setSelectedStudent('');
+                    setStudentSearch('');
+                  }}
+                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="" className="text-white/70">Select Class</option>
+                  {classesForExamSet.map((c) => (
+                    <option key={c} value={c} className="text-black">{c}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/70 text-sm">
+                  Select Term and Exam Set first — then classes with results for that set will appear.
+                </div>
+              )}
+              {effectiveExamSetId && classesForExamSet.length === 0 && (
+                <p className="mt-1 text-xs text-amber-300">No results for this exam set yet.</p>
+              )}
             </div>
           </div>
 

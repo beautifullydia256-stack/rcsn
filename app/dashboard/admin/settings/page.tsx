@@ -146,35 +146,6 @@ export default function AdminSystemSettingsPage() {
           </div>
         </motion.div>
 
-        {/* Term 3 Rollover */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4 text-white"
-        >
-          <div className="mb-2 text-white font-medium">Term 3 Rollover</div>
-          <div className="text-white/80 text-sm mb-3">
-            Promote classes, graduate candidates ({schoolType === 'Nursery/Primary' ? 'P7' : 'S4/S6'}) to Old Students, and remove their logins.
-          </div>
-          <button
-            className="px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50"
-            disabled={!schoolId}
-            onClick={async ()=>{
-              if (!schoolId) return;
-              const resp = await fetch('/api/admin/term-rollover', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ school_id: schoolId }) });
-              const j = await resp.json();
-              if (!resp.ok) {
-                alert(j.error || 'Failed to check rollover status');
-              } else {
-                if (j.rollover_completed) {
-                  alert(`✅ ${j.message}\n\n📊 Results:\n• Students Graduated: ${j.students_graduated}\n• Students Promoted: ${j.students_promoted}\n• Academic Year: ${j.academic_year}${j.manually_triggered ? '\n• Manually Triggered: Yes' : '\n• Automatically Completed'}`);
-                } else {
-                  alert(`ℹ️ ${j.message}`);
-                }
-              }
-            }}
-          >Check Rollover Status</button>
-        </motion.div>
       </div>
     </div>
   );

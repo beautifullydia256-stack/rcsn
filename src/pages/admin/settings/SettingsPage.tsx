@@ -190,45 +190,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium text-white">Term 3 Rollover</div>
-        <div className="mb-3 text-sm text-white/80">
-          Promote classes, graduate candidates (
-          {schoolType === 'Nursery/Primary' ? 'P7' : 'S4/S6'}) to Old Students, and remove their
-          logins.
-        </div>
-        <button
-          type="button"
-          disabled={!schoolId}
-          onClick={async () => {
-            if (!schoolId) return;
-            try {
-              const resp = await fetch('/api/admin/term-rollover', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ school_id: schoolId }),
-              });
-              const j = await resp.json();
-              if (!resp.ok) {
-                alert(j.error || 'Failed to check rollover status');
-              } else {
-                if (j.rollover_completed) {
-                  alert(
-                    `✅ ${j.message}\n\n📊 Results:\n• Students Graduated: ${j.students_graduated}\n• Students Promoted: ${j.students_promoted}\n• Academic Year: ${j.academic_year}${j.manually_triggered ? '\n• Manually Triggered: Yes' : '\n• Automatically Completed'}`
-                  );
-                } else {
-                  alert(`ℹ️ ${j.message}`);
-                }
-              }
-            } catch (err) {
-              alert(err instanceof Error ? err.message : 'Request failed');
-            }
-          }}
-          className="rounded-lg bg-blue-600 px-3 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-        >
-          Check Rollover Status
-        </button>
-      </div>
     </AdminPageWrapper>
   );
 }
