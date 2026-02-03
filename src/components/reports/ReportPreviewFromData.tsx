@@ -34,10 +34,28 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
       teacher_remark: remark,
     };
   });
+  // Primary: ensure grade is always D1–F9 (Subject Grade Boundaries), never A–F
+  const toPrimaryGrade = (grade: string, marks: unknown, total: number): string => {
+    const g = (grade ?? '').toString().trim();
+    if (g && !['A', 'B', 'C', 'D', 'E', 'F'].includes(g.toUpperCase())) return g;
+    const t = total > 0 ? total : 100;
+    const m = Number(marks);
+    if (marks !== '' && marks != null && !Number.isNaN(m)) return calculatePrimaryGrade(m, t).grade;
+    return g || '';
+  };
+
   // Template4 expects student.subjects (subject_name, eot_marks, teacher_name, etc.). Derive from results if missing.
   const subjects =
     raw.subjects && Array.isArray(raw.subjects) && raw.subjects.length > 0
-      ? raw.subjects
+      ? (raw.subjects as { subject_name?: string; eot_marks?: unknown; mot_marks?: unknown; bot_marks?: unknown; eot_grade?: string; mot_grade?: string; bot_grade?: string; total_marks?: number; teacher_comment?: string; teacher_name?: string }[]).map((s) => {
+          const total = Number(s.total_marks) || 100;
+          return {
+            ...s,
+            eot_grade: toPrimaryGrade(s.eot_grade ?? '', s.eot_marks, total),
+            mot_grade: toPrimaryGrade(s.mot_grade ?? '', s.mot_marks, total),
+            bot_grade: toPrimaryGrade(s.bot_grade ?? '', s.bot_marks, total),
+          };
+        })
       : (() => {
           const bySubject = new Map<
             string,

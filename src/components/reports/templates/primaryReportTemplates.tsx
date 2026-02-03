@@ -1728,21 +1728,22 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             const total = subj.total_marks ?? 100;
             const totalNum = Number(total) || 100;
 
-            // PRIMARY: grade MUST come from Subject Grade Boundaries (D1–F9), never A–F
-            // Derive grade from marks using the same scale shown in "Subject Grade Boundaries"
+            // PRIMARY: use grade from data only (no calculation). Data comes from Supabase
+            // and is already normalized to D1–F9 in ReportPreviewFromData / reportGenerator.
             let displayGrade = '';
             if (selectedExamSetForDisplay) {
               const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
               if (isBeginning(selectedExamSetName)) {
-                displayGrade = getGradeFromMarks(subj.bot_marks, totalNum, gradeScale) || subj.bot_grade || '';
+                displayGrade = subj.bot_grade ?? '';
               } else if (isMid(selectedExamSetName)) {
-                displayGrade = getGradeFromMarks(subj.mot_marks, totalNum, gradeScale) || subj.mot_grade || '';
+                displayGrade = subj.mot_grade ?? '';
               } else if (isEnd(selectedExamSetName)) {
-                displayGrade = getGradeFromMarks(subj.eot_marks, totalNum, gradeScale) || subj.eot_grade || '';
+                displayGrade = subj.eot_grade ?? '';
               }
             } else {
-              displayGrade = getGradeFromMarks(subj.eot_marks, totalNum, gradeScale) || subj.eot_grade || '';
+              displayGrade = subj.eot_grade ?? '';
             }
+            if (!displayGrade) displayGrade = '—';
             
             return (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>

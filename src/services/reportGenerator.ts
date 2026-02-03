@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { transformSnapshotToReportFormat } from './reportDataTransformer';
+import { calculatePrimaryGrade } from '../lib/reportUtils';
 
 /**
  * Get cached report from generated_reports table
@@ -211,13 +212,22 @@ export async function generateReportsBulkClient(
       const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
       const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
       const isEot = (n: string) => /end|eot/i.test(String(n || '').trim());
+      // Primary: grade MUST be D1–F9 (Subject Grade Boundaries), never A–F
+      const toPrimaryGrade = (g: string, m: unknown, t: number): string => {
+        const grade = (g ?? '').toString().trim();
+        if (grade && !['A', 'B', 'C', 'D', 'E', 'F'].includes(grade.toUpperCase())) return grade;
+        const total = t > 0 ? t : 100;
+        const marksNum = Number(m);
+        if (m !== '' && m != null && !Number.isNaN(marksNum)) return calculatePrimaryGrade(marksNum, total).grade;
+        return grade || '';
+      };
       for (const d of studentData) {
         const sub = d.subject ?? '';
         if (!sub) continue;
         const existing = subjectMap.get(sub);
         const marks = d.marks_obtained ?? '';
-        const grade = d.grade ?? '';
         const total = Number(d.total_marks ?? 100);
+        const grade = toPrimaryGrade(d.grade ?? '', marks, total);
         const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
         const teacherName = d.teacher_initials ?? '';
         if (!existing) {
@@ -248,15 +258,18 @@ export async function generateReportsBulkClient(
           if (teacherName) existing.teacher_name = teacherName;
         }
       }
-      // Single exam set: use same marks/grade for eot and mot so table shows data
+      // Single exam set: use same marks/grade for eot and mot so table shows data (grades as D1–F9)
       const subjects = Array.from(subjectMap.values()).map((s) => {
         if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
           const first = studentData.find((d: any) => (d.subject ?? '') === s.subject_name);
           if (first) {
-            s.eot_marks = first.marks_obtained ?? '';
-            s.eot_grade = first.grade ?? '';
-            s.mot_marks = first.marks_obtained ?? '';
-            s.mot_grade = first.grade ?? '';
+            const m = first.marks_obtained ?? '';
+            const t = Number(first.total_marks ?? 100) || 100;
+            const g = toPrimaryGrade(first.grade ?? '', m, t);
+            s.eot_marks = m;
+            s.eot_grade = g;
+            s.mot_marks = m;
+            s.mot_grade = g;
           }
         }
         return s;
