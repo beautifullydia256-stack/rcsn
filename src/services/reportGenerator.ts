@@ -191,7 +191,9 @@ export async function generateReportsBulkClient(
       if (studentData.length === 0) return null;
       const firstRecord = studentData[0];
       const frozenData = firstRecord.frozen_data || {};
-      const examSetName = firstRecord.exam_set_name || examSet?.name || '';
+      // Snapshot represents the selected exam set. Snapshot rows may include MID/EOT rows,
+      // so don't let the first row (often Mid Term) override the selected exam set name.
+      const examSetName = examSet?.name || '';
       const effectiveRemark = (d: any) => (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
       const results = studentData.map((d: any) => {
         const remark = effectiveRemark(d);
@@ -289,9 +291,9 @@ export async function generateReportsBulkClient(
         },
         examSet: {
           id: snapshot.exam_set_id,
-          name: firstRecord.exam_set_name || examSet?.name || '',
-          term: firstRecord.exam_set_term || snapshot.term,
-          year: firstRecord.exam_set_year || snapshot.year,
+          name: examSet?.name || '',
+          term: examSet?.term ?? snapshot.term,
+          year: examSet?.year ?? snapshot.year,
         },
         students: [
           {

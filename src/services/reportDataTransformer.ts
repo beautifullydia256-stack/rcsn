@@ -89,9 +89,12 @@ export async function transformSnapshotToReportFormat(
     },
     examSet: {
       id: snapshot.exam_set_id,
-      name: firstRecord.exam_set_name || snapshot.exam_sets?.name || '',
-      term: firstRecord.exam_set_term || snapshot.term,
-      year: firstRecord.exam_set_year || snapshot.year,
+      // IMPORTANT: the snapshot itself represents the selected exam set (e.g. End of Term).
+      // Snapshot rows may include Mid/End rows to support multi-column templates, so never
+      // take the "firstRecord" exam_set_name (it can be Mid Term and will break preview).
+      name: snapshot.exam_sets?.name || '',
+      term: snapshot.exam_sets?.term ?? snapshot.term,
+      year: snapshot.exam_sets?.year ?? snapshot.year,
     },
     students: [
       {
