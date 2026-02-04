@@ -250,9 +250,16 @@ export function PrimaryReportGenerator() {
           setSelectedTermKey(`${detectedCurrentTerm}-${detectedCurrentYear}`);
         }
         
-        // All terms (current + older) for term selector
-        const termOptions = (allTerms || []).map((t: any) => ({ term: t.term, year: t.year }))
-          .sort((a: { term: number; year: number }, b: { term: number; year: number }) => (b.year !== a.year ? b.year - a.year : b.term - a.term));
+        // All terms for selector, but ONLY up to the current detected term (no future terms like Term 2/3 of next year).
+        const termOptions = (allTerms || [])
+          .map((t: any) => ({ term: t.term, year: t.year }))
+          .filter((t: { term: number; year: number }) =>
+            t.year < detectedCurrentYear ||
+            (t.year === detectedCurrentYear && t.term <= detectedCurrentTerm)
+          )
+          .sort((a: { term: number; year: number }, b: { term: number; year: number }) =>
+            b.year !== a.year ? b.year - a.year : b.term - a.term
+          );
         setAllTermsList(termOptions.length > 0 ? termOptions : [{ term: detectedCurrentTerm, year: detectedCurrentYear }]);
         
         // Calculate next term
