@@ -46,6 +46,9 @@ async function fetchDashboardAuth(userId: string) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  // Ensure year rollover has run when we open the app in a new year (once per year, no button)
+  // Hooks must be declared before any conditional returns.
+  const rolloverFired = useRef(false);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['dashboard', 'admin', 'auth', user?.id ?? ''],
@@ -54,6 +57,16 @@ export default function AdminDashboard() {
     staleTime: STALE_TIME_MS,
     retry: false,
   });
+
+  useEffect(() => {
+    if (!data?.schoolId || rolloverFired.current) return;
+    rolloverFired.current = true;
+    fetch('/api/admin/term-rollover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ school_id: data.schoolId }),
+    }).catch(() => {});
+  }, [data?.schoolId]);
 
   if ((!user?.id || isLoading) && !data) {
     return <AdminContentSkeleton />;
@@ -103,18 +116,6 @@ export default function AdminDashboard() {
   }
 
   if (!data) return null;
-
-  // Ensure year rollover has run when we open the app in a new year (once per year, no button)
-  const rolloverFired = useRef(false);
-  useEffect(() => {
-    if (!data?.schoolId || rolloverFired.current) return;
-    rolloverFired.current = true;
-    fetch('/api/admin/term-rollover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ school_id: data.schoolId }),
-    }).catch(() => {});
-  }, [data?.schoolId]);
 
   return (
     <>
