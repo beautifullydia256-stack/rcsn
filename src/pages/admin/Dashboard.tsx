@@ -61,11 +61,16 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!data?.schoolId || rolloverFired.current) return;
     rolloverFired.current = true;
-    fetch('/api/admin/term-rollover', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ school_id: data.schoolId }),
-    }).catch(() => {});
+    // Call DB function directly from the SPA (avoids relying on Next.js /api routes).
+    // Runs once per year (guarded by rollover_status), so safe to call on dashboard load.
+    void (async () => {
+      try {
+        const { error } = await supabase.rpc('automatic_term3_rollover');
+        if (error) throw error;
+      } catch {
+        // Silent fail; rollover is idempotent and will retry next load.
+      }
+    })();
   }, [data?.schoolId]);
 
   if ((!user?.id || isLoading) && !data) {
