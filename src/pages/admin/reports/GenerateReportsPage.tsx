@@ -121,30 +121,20 @@ async function fetchClassesForExamSet(schoolId: string, examSetId: string): Prom
   return Array.from(set).sort();
 }
 
-/** Students who have exam results in this exam set for this class (includes graduated students for past terms). */
+/** Students who have exam results in this exam set for this class (includes graduated). Uses RPC so RLS does not hide graduated students. */
 async function fetchStudentsWithResultsInClass(
   schoolId: string,
   examSetId: string,
   className: string
 ): Promise<{ student_id: string; name: string; admission_number?: string; current_class: string }[]> {
-  const { data: resultRows } = await supabase
-    .from('exam_results')
-    .select('student_id, students!inner(name, admission_number, current_class)')
-    .eq('school_id', schoolId)
-    .eq('exam_set_id', examSetId)
-    .eq('class_name', className);
-  const byId = new Map<string, { student_id: string; name: string; admission_number?: string; current_class: string }>();
-  (resultRows || []).forEach((r: any) => {
-    const sid = r.student_id;
-    if (sid && !byId.has(sid))
-      byId.set(sid, {
-        student_id: sid,
-        name: r.students?.name ?? '',
-        admission_number: r.students?.admission_number,
-        current_class: r.students?.current_class ?? className,
-      });
+  const { data, error } = await supabase.rpc('get_report_students_for_class', {
+    p_school_id: schoolId,
+    p_exam_set_id: examSetId,
+    p_class_name: className,
   });
-  return Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  if (error) throw error;
+  const rows = (data || []) as { student_id: string; name: string; admission_number?: string; current_class: string }[];
+  return rows.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 }
 
 export default function GenerateReportsPage() {

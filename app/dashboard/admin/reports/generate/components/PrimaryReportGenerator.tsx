@@ -104,6 +104,8 @@ export function PrimaryReportGenerator() {
   const [selectedExamSetId, setSelectedExamSetId] = useState<string>('all');
   const [reportTitleSettings, setReportTitleSettings] = useState<{ title_template: string; use_dynamic_term: boolean } | null>(null);
   const [students, setStudents] = useState<any[]>([]);
+  // Students list for the selected class/exam set (includes graduated via RPC)
+  const [classStudents, setClassStudents] = useState<any[]>([]);
   const [classes, setClasses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -322,6 +324,47 @@ export function PrimaryReportGenerator() {
   const selectedSection = useMemo(() => (selectedClass ? getSectionForClass(selectedClass) : null), [selectedClass]);
   const isNurserySection = selectedSection === 'Baby Class';
 
+  // Prefer End of Term when "All Exam Sets" is selected (important for old/graduated classes)
+  const effectiveExamSetId = useMemo(() => {
+    if (!currentTermInfo) return null;
+    const examSetsForTerm = (examSets || []).filter(
+      (es: any) => es && es.term === currentTermInfo.term && es.year === currentTermInfo.year
+    );
+    if (selectedExamSetId && selectedExamSetId !== 'all') return selectedExamSetId;
+    if (examSetsForTerm.length === 0) return null;
+    const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
+    // Prefer non-midterm sets (usually End of Term)
+    const sorted = [...examSetsForTerm].sort((a, b) => {
+      const aMid = isMidTerm(a?.name);
+      const bMid = isMidTerm(b?.name);
+      return aMid === bMid ? 0 : aMid ? 1 : -1;
+    });
+    return sorted[0]?.id ?? null;
+  }, [currentTermInfo, examSets, selectedExamSetId]);
+
+  // Load student list for the selected class from results (includes graduated students)
+  useEffect(() => {
+    const run = async () => {
+      if (!schoolId || !selectedClass || !effectiveExamSetId) {
+        setClassStudents([]);
+        return;
+      }
+      try {
+        const { data, error } = await supabase.rpc('get_report_students_for_class', {
+          p_school_id: schoolId,
+          p_exam_set_id: effectiveExamSetId,
+          p_class_name: selectedClass,
+        });
+        if (error) throw error;
+        setClassStudents(Array.isArray(data) ? data : []);
+      } catch (e: any) {
+        console.error('Failed to load class students:', e);
+        setClassStudents([]);
+      }
+    };
+    void run();
+  }, [schoolId, selectedClass, effectiveExamSetId]);
+
   // Auto-select template based on class (allow nursery toggle between defaults)
   useEffect(() => {
     if (selectedClass) {
@@ -344,18 +387,17 @@ export function PrimaryReportGenerator() {
     }
   }, [selectedClass, selectedSection]);
 
-  const filteredStudents = selectedClass 
-    ? students.filter(s => s.current_class === selectedClass)
-    : students;
+  // Prefer students derived from results (includes graduated); fallback to full students list
+  const baseStudents = selectedClass ? (classStudents.length ? classStudents : students.filter(s => s.current_class === selectedClass)) : students;
 
-  const visibleStudents = (studentSearch ? filteredStudents.filter(s => {
+  const visibleStudents = (studentSearch ? baseStudents.filter(s => {
     const q = studentSearch.toLowerCase();
     return (
       (s.name || "").toLowerCase().includes(q) ||
       (s.admission_number || "").toLowerCase().includes(q) ||
       (s.student_id || "").toLowerCase().includes(q)
     );
-  }) : filteredStudents);
+  }) : baseStudents);
 
   const refreshSchoolData = async () => {
     if (!schoolId) return;
