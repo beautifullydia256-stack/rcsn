@@ -84,10 +84,13 @@ async function fetchPageData(userId: string): Promise<PageData | null> {
     const key = `${es.term}-${es.year}`;
     if (!termSet.has(key)) termSet.set(key, { term: es.term, year: es.year });
   });
-  let allTerms = Array.from(termSet.values()).sort((a, b) => {
-    if (a.year !== b.year) return b.year - a.year;
-    return b.term - a.term;
-  });
+  // Only include terms up to and including the detected current term (no future terms like Term 2/3 of next year).
+  let allTerms = Array.from(termSet.values())
+    .filter((t) => t.year < currentTerm.year || (t.year === currentTerm.year && t.term <= currentTerm.term))
+    .sort((a, b) => {
+      if (a.year !== b.year) return b.year - a.year;
+      return b.term - a.term;
+    });
   if (allTerms.length === 0) allTerms = [currentTerm];
 
   return {
