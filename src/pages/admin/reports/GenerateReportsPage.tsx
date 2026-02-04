@@ -13,6 +13,7 @@ import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
 import { Eye, Download, FileDown, Printer } from 'lucide-react';
+import JSZip from 'jszip';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -156,6 +157,8 @@ export default function GenerateReportsPage() {
   const [generationError, setGenerationError] = useState('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
+  const [showClassDownloadModal, setShowClassDownloadModal] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
@@ -211,6 +214,15 @@ export default function GenerateReportsPage() {
     enabled: !!completedSnapshotId,
     staleTime: STALE_TIME_MS,
   });
+
+  // Reports to show in preview and downloads (single student or entire class)
+  const reportsToShow = useMemo(() => {
+    if (!generatedReports?.length) return [] as any[];
+    if (reportType === 'single' && selectedStudent) {
+      return (generatedReports as any[]).filter((r) => r.student_id === selectedStudent);
+    }
+    return generatedReports as any[];
+  }, [generatedReports, reportType, selectedStudent]);
 
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return 'Report For Baby Class';
@@ -322,8 +334,220 @@ export default function GenerateReportsPage() {
     window.print();
   };
 
+  const buildHtmlForElement = async (element: HTMLElement): Promise<string> => {
+    const cloned = element.cloneNode(true) as HTMLElement;
+    const images = cloned.querySelectorAll('img');
+    for (const img of Array.from(images)) {
+      try {
+        if (img.src && !img.src.startsWith('data:')) {
+          const response = await fetch(img.src);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          await new Promise<void>((resolve, reject) => {
+            reader.onloadend = () => {
+              img.src = reader.result as string;
+              resolve();
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch {
+        // Ignore individual image failures
+      }
+    }
+
+    let allCSS = '';
+    try {
+      for (const sheet of Array.from(document.styleSheets)) {
+        try {
+          const cssSheet = sheet as CSSStyleSheet;
+          if (cssSheet.cssRules) {
+            for (const rule of Array.from(cssSheet.cssRules)) {
+              allCSS += rule.cssText + '\n';
+            }
+          }
+        } catch {
+          // Cross-origin stylesheet - skip
+        }
+      }
+    } catch {
+      // Ignore CSS extraction errors
+    }
+
+    return `<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      @page { size: A4; margin: 0; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      ${allCSS}
+    </style>
+  </head>
+  <body>
+    ${cloned.innerHTML}
+  </body>
+</html>`;
+  };
+
+  const downloadPdfFromHtml = async (htmlContent: string, filename: string) => {
+    const response = await fetch('/api/ai/generate-pdf', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ htmlContent, filename }),
+    });
+    if (!response.ok) throw new Error('Failed to generate PDF');
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  const handleDownloadSinglePdf = async () => {
+    if (!hasReportsReady) return;
+    // If backend has already generated and cached a PDF for this student, reuse it
+    if (reportType === 'single' && reportsToShow.length > 0) {
+      const cached = reportsToShow[0] as any;
+      if (cached.pdf_url) {
+        const a = document.createElement('a');
+        a.href = cached.pdf_url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        // Let storage filename stand; browser will download or open
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      }
+    }
+
+    const container = document.getElementById('report-preview-print-area');
+    if (!container) return;
+    setDownloadingPdf(true);
+    try {
+      const html = await buildHtmlForElement(container);
+      const first = reportsToShow[0];
+      const rd = first?.report_data || {};
+      const student = rd.students?.[0];
+      const examSet = rd.examSet || {};
+      const baseName = student
+        ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
+        : `Report_${examSet.name || 'Report'}.pdf`;
+      await downloadPdfFromHtml(html, baseName);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  const handleDownloadClassCombinedPdf = async () => {
+    if (!hasReportsReady) return;
+    const container = document.getElementById('report-preview-print-area');
+    if (!container) return;
+    setDownloadingPdf(true);
+    try {
+      const html = await buildHtmlForElement(container);
+      const first = reportsToShow[0];
+      const rd = first?.report_data || {};
+      const examSet = rd.examSet || {};
+      const className = selectedClass || rd.students?.[0]?.current_class || 'Class';
+      const baseName = `${className}_Reports_${examSet.name || 'Report'}.pdf`;
+      await downloadPdfFromHtml(html, baseName);
+    } finally {
+      setDownloadingPdf(false);
+      setShowClassDownloadModal(false);
+    }
+  };
+
+  const handleDownloadClassZip = async () => {
+    if (!hasReportsReady) return;
+    setDownloadingPdf(true);
+    try {
+      // If every student in the class already has a cached PDF URL, download and ZIP those directly.
+      const zip = new JSZip();
+      const allHavePdfUrls = reportsToShow.length > 0 && reportsToShow.every((r: any) => r.pdf_url);
+
+      if (allHavePdfUrls) {
+        for (let i = 0; i < reportsToShow.length; i++) {
+          const report = reportsToShow[i] as any;
+          const rd = report.report_data || {};
+          const student = rd.students?.[0];
+          const examSet = rd.examSet || {};
+          const baseName = student
+            ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
+            : `Student_${i + 1}_Report_${examSet.name || 'Report'}.pdf`;
+          const response = await fetch(report.pdf_url as string);
+          if (!response.ok) continue;
+          const arrayBuffer = await response.arrayBuffer();
+          zip.file(baseName.replace(/[^a-zA-Z0-9._-]/g, '_'), arrayBuffer);
+        }
+      } else {
+        // Fallback: render each student card via /api/ai/generate-pdf (current behaviour)
+        const container = document.getElementById('report-preview-print-area');
+        if (!container) return;
+        const cards = Array.from(container.querySelectorAll('.report-student-card')) as HTMLElement[];
+        if (!cards.length) {
+          await handleDownloadClassCombinedPdf();
+          return;
+        }
+        for (let i = 0; i < cards.length; i++) {
+          const card = cards[i];
+          const html = await buildHtmlForElement(card);
+          const report = reportsToShow[i];
+          const rd = report?.report_data || {};
+          const student = rd.students?.[0];
+          const examSet = rd.examSet || {};
+          const baseName = student
+            ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
+            : `Student_${i + 1}_Report_${examSet.name || 'Report'}.pdf`;
+          const response = await fetch('/api/ai/generate-pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ htmlContent: html, filename: baseName }),
+          });
+          if (!response.ok) throw new Error('Failed to generate PDF for class ZIP');
+          const arrayBuffer = await response.arrayBuffer();
+          zip.file(baseName.replace(/[^a-zA-Z0-9._-]/g, '_'), arrayBuffer);
+        }
+      }
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = window.URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      const first = reportsToShow[0];
+      const rd = first?.report_data || {};
+      const examSet = rd.examSet || {};
+      const className = selectedClass || rd.students?.[0]?.current_class || 'Class';
+      a.href = url;
+      a.download = `${className}_Reports_${examSet.name || 'Report'}.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } finally {
+      setDownloadingPdf(false);
+      setShowClassDownloadModal(false);
+    }
+  };
+
   const handleDownloadAsPdf = () => {
-    window.print();
+    if (!hasReportsReady) return;
+    if (reportType === 'single') {
+      void handleDownloadSinglePdf();
+    } else {
+      setShowClassDownloadModal(true);
+    }
   };
 
   const hasReportsReady = generatingStep === 'completed' && !reportsLoading && !reportsError && generatedReports.length > 0;
@@ -569,9 +793,6 @@ export default function GenerateReportsPage() {
 
           {/* Report Preview – single student = one card, entire class = all cards (old 2f00b44 style) */}
           {generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0 && (() => {
-            const reportsToShow = reportType === 'single' && selectedStudent
-              ? generatedReports.filter((r: any) => r.student_id === selectedStudent)
-              : generatedReports;
             if (reportsToShow.length === 0) return null;
             return (
               <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
@@ -582,7 +803,9 @@ export default function GenerateReportsPage() {
                 <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg overflow-auto max-h-[80vh]">
                   <div className="bg-white dark:bg-transparent mx-auto space-y-8" style={{ width: '210mm', maxWidth: '100%' }}>
                     {reportsToShow.map((report: any) => (
-                      <ReportPreviewFromData key={report.id} reportData={report.report_data} />
+                      <div key={report.id} className="report-student-card">
+                        <ReportPreviewFromData reportData={report.report_data} />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -610,6 +833,36 @@ export default function GenerateReportsPage() {
             >
               OK
             </button>
+          </GlassModal>
+
+          {/* Class download mode selector – only for entire class downloads */}
+          <GlassModal
+            isOpen={showClassDownloadModal}
+            onClose={() => !downloadingPdf && setShowClassDownloadModal(false)}
+            title="Download class reports"
+            size="sm"
+          >
+            <p className="text-white/90 mb-4">
+              How would you like to download the class reports?
+            </p>
+            <div className="space-y-3">
+              <button
+                type="button"
+                disabled={downloadingPdf}
+                onClick={() => void handleDownloadClassCombinedPdf()}
+                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-4 py-3"
+              >
+                {downloadingPdf ? 'Preparing PDF…' : 'One combined PDF (all students)'}
+              </button>
+              <button
+                type="button"
+                disabled={downloadingPdf}
+                onClick={() => void handleDownloadClassZip()}
+                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-medium px-4 py-3 border border-white/15"
+              >
+                {downloadingPdf ? 'Preparing ZIP…' : 'ZIP with one PDF per student'}
+              </button>
+            </div>
           </GlassModal>
 
           {/* Report preview modal (same as ReportViewer) */}
