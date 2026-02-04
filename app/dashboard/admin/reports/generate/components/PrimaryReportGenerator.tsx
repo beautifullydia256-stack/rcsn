@@ -2140,7 +2140,12 @@ export function PrimaryReportGenerator() {
                 return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
               };
               const examSetsForTerm = examSets.filter((es: any) => es.term === currentTermInfo.term && es.year === currentTermInfo.year);
-              const midTermExamSets = examSetsForTerm.filter((es: any) => isMidTerm(es.name || ''));
+              const sortedExamSetsForTerm = [...examSetsForTerm].sort((a: any, b: any) => {
+                const aMid = isMidTerm(a?.name || '');
+                const bMid = isMidTerm(b?.name || '');
+                // Prefer non-midterm first (usually End of Term), then midterm
+                return aMid === bMid ? 0 : aMid ? 1 : -1;
+              });
               return (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
@@ -2152,7 +2157,7 @@ export function PrimaryReportGenerator() {
                   className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/70 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option className="text-black" value="all">All Exam Sets (Selected Term)</option>
-                  {midTermExamSets.map((es) => (
+                  {sortedExamSetsForTerm.map((es) => (
                     <option className="text-black" key={es.id} value={es.id}>
                       {es.name || `Set - Term ${es.term}, ${es.year}`}
                     </option>
