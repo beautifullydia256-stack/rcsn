@@ -399,10 +399,14 @@ export default function GenerateReportsPage() {
   };
 
   const downloadPdfFromHtml = async (htmlContent: string, filename: string) => {
-    const response = await fetch('/api/ai/generate-pdf', {
+    // Use the same Next.js endpoint as the old dashboard generator
+    const response = await fetch('/api/reports/generate-pdf', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ htmlContent, filename }),
+      body: JSON.stringify({
+        htmlContent,
+        type: 'single',
+      }),
     });
     if (!response.ok) throw new Error('Failed to generate PDF');
     const blob = await response.blob();
@@ -447,6 +451,10 @@ export default function GenerateReportsPage() {
         ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
         : `Report_${examSet.name || 'Report'}.pdf`;
       await downloadPdfFromHtml(html, baseName);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to download single PDF:', err);
+      setError(err instanceof Error ? `Failed to download PDF: ${err.message}` : 'Failed to download PDF');
     } finally {
       setDownloadingPdf(false);
     }
@@ -465,6 +473,10 @@ export default function GenerateReportsPage() {
       const className = selectedClass || rd.students?.[0]?.current_class || 'Class';
       const baseName = `${className}_Reports_${examSet.name || 'Report'}.pdf`;
       await downloadPdfFromHtml(html, baseName);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to download combined class PDF:', err);
+      setError(err instanceof Error ? `Failed to download class PDF: ${err.message}` : 'Failed to download class PDF');
     } finally {
       setDownloadingPdf(false);
       setShowClassDownloadModal(false);
@@ -512,10 +524,13 @@ export default function GenerateReportsPage() {
           const baseName = student
             ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
             : `Student_${i + 1}_Report_${examSet.name || 'Report'}.pdf`;
-          const response = await fetch('/api/ai/generate-pdf', {
+          const response = await fetch('/api/reports/generate-pdf', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ htmlContent: html, filename: baseName }),
+            body: JSON.stringify({
+              htmlContent: html,
+              type: 'single',
+            }),
           });
           if (!response.ok) throw new Error('Failed to generate PDF for class ZIP');
           const arrayBuffer = await response.arrayBuffer();
@@ -535,6 +550,10 @@ export default function GenerateReportsPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to download class ZIP:', err);
+      setError(err instanceof Error ? `Failed to download class ZIP: ${err.message}` : 'Failed to download class ZIP');
     } finally {
       setDownloadingPdf(false);
       setShowClassDownloadModal(false);
@@ -841,6 +860,7 @@ export default function GenerateReportsPage() {
             onClose={() => !downloadingPdf && setShowClassDownloadModal(false)}
             title="Download class reports"
             size="sm"
+            className="-mt-24"
           >
             <p className="text-white/90 mb-4">
               How would you like to download the class reports?
