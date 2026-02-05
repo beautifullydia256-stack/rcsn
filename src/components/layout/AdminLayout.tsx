@@ -61,6 +61,15 @@ export default function AdminLayout() {
   const [searchQuery, setSearchQuery] = useState('');
   const profileRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
+      setIsMobileDevice(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua));
+    };
+    checkMobile();
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -135,19 +144,21 @@ export default function AdminLayout() {
           </button>
         </nav>
 
-        <div className="mx-3 mb-4 p-4 rounded-xl bg-green-600 text-white">
-          <div className="flex items-center gap-2 mb-2">
-            <Smartphone className="w-5 h-5 text-white" />
-            <span className="text-sm font-semibold">Download our Mobile App</span>
+        {isMobileDevice && (
+          <div className="mx-3 mb-4 p-4 rounded-xl bg-green-600 text-white">
+            <div className="flex items-center gap-2 mb-2">
+              <Smartphone className="w-5 h-5 text-white" />
+              <span className="text-sm font-semibold">Download our Mobile App</span>
+            </div>
+            <p className="text-xs text-white/90 mb-3">Get easy in another way.</p>
+            <a
+              href="#"
+              className="block w-full py-2 rounded-lg text-center text-sm font-medium bg-white text-green-600 hover:bg-green-50 transition-colors"
+            >
+              Download
+            </a>
           </div>
-          <p className="text-xs text-white/90 mb-3">Get easy in another way.</p>
-          <a
-            href="#"
-            className="block w-full py-2 rounded-lg text-center text-sm font-medium bg-white text-green-600 hover:bg-green-50 transition-colors"
-          >
-            Download
-          </a>
-        </div>
+        )}
       </aside>
 
       <div className={`relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 ${isDashboard ? 'bg-gray-50' : ''}`}>
