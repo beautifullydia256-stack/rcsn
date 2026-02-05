@@ -1,9 +1,7 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import GlassCard from '@/components/ui/GlassCard';
 import { DollarSign, Bell } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -90,89 +88,78 @@ export default function RecentPaymentsNotifications() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <GlassCard className="p-6 relative overflow-hidden" hover>
-        <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl" style={{ background: '#4dabff' }} />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl" style={{ background: 'rgba(77, 171, 255, 0.2)' }}>
-                <DollarSign className="w-5 h-5" style={{ color: '#4dabff' }} />
-              </div>
-              <h2 className="text-lg font-semibold text-white">Recent Payments</h2>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-green-100">
+              <DollarSign className="w-5 h-5 text-green-600" />
             </div>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/admin/outstanding')}
-              className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              View all →
-            </button>
+            <h2 className="text-lg font-semibold text-gray-900">Recent Payments</h2>
           </div>
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-sm text-white/85">Loading...</div>
-            ) : payments.length === 0 ? (
-              <div className="text-sm text-white/85">No recent payments</div>
-            ) : (
-              payments.map((payment) => (
-                <div
-                  key={payment.payment_id}
-                  className="flex items-center justify-between p-3 rounded-xl"
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
-                >
-                  <div>
-                    <div className="font-medium text-white text-sm">{(payment.students as { name?: string })?.name || 'Unknown'}</div>
-                    <div className="text-xs text-white/70">
-                      {payment.payment_method} • {new Date(payment.payment_date).toLocaleDateString()}
-                    </div>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/outstanding')}
+            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+          >
+            View all →
+          </button>
+        </div>
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading...</div>
+          ) : payments.length === 0 ? (
+            <div className="text-sm text-gray-500">No recent payments</div>
+          ) : (
+            payments.map((payment) => (
+              <div
+                key={payment.payment_id}
+                className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"
+              >
+                <div>
+                  <div className="font-medium text-gray-900 text-sm">{(payment.students as { name?: string })?.name || 'Unknown'}</div>
+                  <div className="text-xs text-gray-500">
+                    {payment.payment_method} • {new Date(payment.payment_date).toLocaleDateString()}
                   </div>
-                  <div className="text-sm font-semibold text-white">{formatCurrency(payment.amount_paid)}</div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      </GlassCard>
-
-      <GlassCard className="p-6 relative overflow-hidden" hover>
-        <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl" style={{ background: '#ae79ff' }} />
-        <div className="relative z-10">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl" style={{ background: 'rgba(174, 121, 255, 0.2)' }}>
-                <Bell className="w-5 h-5" style={{ color: '#ae79ff' }} />
+                <div className="text-sm font-semibold text-gray-900">{formatCurrency(payment.amount_paid)}</div>
               </div>
-              <h2 className="text-lg font-semibold text-white">Notifications</h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/admin/notifications')}
-              className="text-sm text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              View all →
-            </button>
-          </div>
-          <div className="space-y-3">
-            {loading ? (
-              <div className="text-sm text-white/85">Loading...</div>
-            ) : notifications.length === 0 ? (
-              <div className="text-sm text-white/85">No notifications</div>
-            ) : (
-              notifications.map((n) => (
-                <div
-                  key={n.id}
-                  className="p-3 rounded-xl"
-                  style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
-                >
-                  <div className="font-medium text-white text-sm mb-1">{n.title}</div>
-                  <div className="text-xs text-white/70">{n.message}</div>
-                  <div className="text-xs text-white/55 mt-1">{new Date(n.created_at).toLocaleDateString()}</div>
-                </div>
-              ))
-            )}
-          </div>
+            ))
+          )}
         </div>
-      </GlassCard>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-green-100">
+              <Bell className="w-5 h-5 text-green-600" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/notifications')}
+            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+          >
+            View all →
+          </button>
+        </div>
+        <div className="space-y-3">
+          {loading ? (
+            <div className="text-sm text-gray-500">Loading...</div>
+          ) : notifications.length === 0 ? (
+            <div className="text-sm text-gray-500">No notifications</div>
+          ) : (
+            notifications.map((n) => (
+              <div key={n.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
+                <div className="font-medium text-gray-900 text-sm mb-1">{n.title}</div>
+                <div className="text-xs text-gray-600">{n.message}</div>
+                <div className="text-xs text-gray-500 mt-1">{new Date(n.created_at).toLocaleDateString()}</div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }

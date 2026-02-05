@@ -1,5 +1,5 @@
-import { Suspense } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Suspense, useState, useEffect, useRef } from 'react';
+import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -15,6 +15,8 @@ import {
   Settings,
   Bell,
   LogOut,
+  Search,
+  Smartphone,
 } from 'lucide-react';
 import GlassBackground from './GlassBackground';
 import AdminContentSkeleton from './AdminContentSkeleton';
@@ -45,9 +47,9 @@ function NavLinkStyle({
         <span
           className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
           style={{
-            background: isActive ? 'rgba(77, 171, 255, 0.15)' : 'transparent',
-            border: isActive ? '1px solid rgba(77, 171, 255, 0.3)' : '1px solid transparent',
-            color: isActive ? '#4dabff' : 'rgba(255, 255, 255, 0.85)',
+            background: isActive ? 'rgba(22, 163, 74, 0.2)' : 'transparent',
+            border: isActive ? '1px solid rgba(22, 163, 74, 0.4)' : '1px solid transparent',
+            color: isActive ? '#22c55e' : 'rgba(255, 255, 255, 0.85)',
             boxShadow: isActive ? '0 2px 10px rgba(0, 0, 0, 0.15)' : 'none',
           }}
         >
@@ -59,21 +61,54 @@ function NavLinkStyle({
   );
 }
 
-/**
- * Admin sidebar: exact 2f00b44 structure — flat list, icons, bottom Settings + Logout.
- * Layout has no key tied to route so it stays mounted; only <Outlet /> content updates on navigation (SPA-style).
- */
 export default function AdminLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isDashboard = location.pathname === '/dashboard/admin';
+
+  const [adminName, setAdminName] = useState('Admin');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const profileRef = useRef<HTMLDivElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase.from('users').select('name, email').eq('user_id', user.id).single();
+        if (data) {
+          setAdminName(data.name || 'Admin');
+          setAdminEmail(data.email || '');
+        }
+      }
+    };
+    loadUser();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate('/');
   };
 
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
     <div className="min-h-screen relative">
-      <GlassBackground />
+      {!isDashboard && <GlassBackground />}
 
       <aside
         className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto"
@@ -83,13 +118,16 @@ export default function AdminLayout() {
           className="flex items-center gap-2 px-4 py-6 border-b"
           style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shrink-0">
+          <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <span className="font-bold text-lg text-white">PwezaCore</span>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div className="px-4 pt-2 pb-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Menu</span>
+        </div>
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavLinkStyle to="/dashboard/admin" end icon={LayoutDashboard}>Dashboard</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/students" icon={Users}>Students</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/teachers" icon={GraduationCap}>Teachers</NavLinkStyle>
@@ -105,38 +143,134 @@ export default function AdminLayout() {
           <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell}>Notifications</NavLinkStyle>
         </nav>
 
-        <div
-          className="px-3 py-4 border-t space-y-1"
-          style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}
-        >
+        <div className="px-4 pt-3 pb-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">General</span>
+        </div>
+        <div className="px-3 py-2 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
           <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>Settings</NavLinkStyle>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
-            style={{
-              color: 'rgba(239, 68, 68, 0.9)',
-              background: 'transparent',
-              border: '1px solid transparent',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
+            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all text-red-400 hover:bg-red-500/10"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
             Logout
           </button>
         </div>
+
+        <div className="mx-3 mb-4 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
+          <div className="flex items-center gap-2 mb-2">
+            <Smartphone className="w-5 h-5 text-green-500" />
+            <span className="text-sm font-semibold text-white">Download our Mobile App</span>
+          </div>
+          <p className="text-xs text-white/80 mb-3">Get easy in another way.</p>
+          <a
+            href="#"
+            className="block w-full py-2 rounded-lg text-center text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+          >
+            Download
+          </a>
+        </div>
       </aside>
 
-      <main className="relative min-w-0 flex-1 ml-52 p-4 sm:p-6 lg:p-8 overflow-y-auto min-h-screen z-0">
-        <Suspense fallback={<AdminContentSkeleton />}>
-          <Outlet />
-        </Suspense>
-      </main>
+      <div className={`relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 ${isDashboard ? 'bg-gray-50' : ''}`}>
+        {isDashboard && (
+          <nav className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+            <div className="px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-1 flex-wrap items-center gap-3 max-w-4xl">
+                  <div className="relative flex-1 min-w-[200px]">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Search students, fees, reports..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘F</span>
+                  </div>
+                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
+                    <option value="">Term</option>
+                    <option value="1">Term 1</option>
+                    <option value="2">Term 2</option>
+                    <option value="3">Term 3</option>
+                  </select>
+                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
+                    <option value="">Class</option>
+                    <option value="P1">Primary 1</option>
+                    <option value="P2">Primary 2</option>
+                  </select>
+                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
+                    <option value="">Academic Year</option>
+                    <option value="2025">2025</option>
+                    <option value="2024">2024</option>
+                  </select>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="hidden sm:block text-sm text-gray-600">
+                    {greeting()}, <span className="font-medium text-gray-900">{adminName}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/dashboard/admin/notifications')}
+                    className="relative p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                  >
+                    <Bell className="w-5 h-5" />
+                  </button>
+                  <div className="relative" ref={profileRef}>
+                    <button
+                      type="button"
+                      onClick={() => setProfileOpen(!profileOpen)}
+                      className="flex items-center gap-2 p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white font-semibold text-sm">
+                        {adminName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="hidden md:block text-left max-w-[140px]">
+                        <div className="text-sm font-medium text-gray-900 truncate">{adminName}</div>
+                        <div className="text-xs text-gray-500 truncate">{adminEmail}</div>
+                      </div>
+                    </button>
+                    {profileOpen && (
+                      <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden z-50">
+                        <div className="p-4 border-b border-gray-100">
+                          <div className="font-medium text-gray-900">{adminName}</div>
+                          <div className="text-sm text-gray-500 truncate">{adminEmail}</div>
+                        </div>
+                        <div className="p-1">
+                          <button
+                            type="button"
+                            onClick={() => { navigate('/dashboard/admin/settings'); setProfileOpen(false); }}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Settings className="w-4 h-4" />
+                            Settings
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50"
+                          >
+                            <LogOut className="w-4 h-4" />
+                            Logout
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nav>
+        )}
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <Suspense fallback={<AdminContentSkeleton />}>
+            <Outlet />
+          </Suspense>
+        </main>
+      </div>
     </div>
   );
 }

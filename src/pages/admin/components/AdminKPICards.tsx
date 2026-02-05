@@ -1,11 +1,9 @@
-import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
-import GlassCard from '@/components/ui/GlassCard';
+import { Users, GraduationCap, DollarSign, CalendarCheck, ArrowUpRight } from 'lucide-react';
 
-const STALE_TIME_MS = 5 * 60 * 1000; // 5 min
+const STALE_TIME_MS = 5 * 60 * 1000;
 
 type Kpis = {
   students: number;
@@ -17,7 +15,6 @@ type Kpis = {
 
 async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = new Date().toISOString().slice(0, 10);
-
   const { data: allTerms } = await supabase
     .from('school_terms')
     .select('id, start_date, end_date, year, term')
@@ -38,23 +35,10 @@ async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     balancesResult,
     feesCollectedResult,
   ] = await Promise.all([
-    supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('school_id', schoolId)
-      .eq('status', 'active'),
+    supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-    supabase
-      .from('student_attendance')
-      .select('student_id')
-      .eq('school_id', schoolId)
-      .eq('date', today)
-      .eq('present', true),
-    supabase
-      .from('students')
-      .select('student_id, expected_fee_amount')
-      .eq('school_id', schoolId)
-      .eq('status', 'active'),
+    supabase.from('student_attendance').select('student_id').eq('school_id', schoolId).eq('date', today).eq('present', true),
+    supabase.from('students').select('student_id, expected_fee_amount').eq('school_id', schoolId).eq('status', 'active'),
     currentTermData
       ? supabase
           .from('student_payments')
@@ -75,8 +59,7 @@ async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const paidByStudent: Record<string, number> = {};
   (payments || []).forEach((p: { student_id: string; amount_paid: number }) => {
     if (studentIds.includes(p.student_id)) {
-      const amt = Number(p.amount_paid || 0);
-      paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
+      paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
     }
   });
 
@@ -85,10 +68,10 @@ async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
       (s: { student_id: string; expected_fee_amount?: number }) =>
         Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0))
     )
-    .reduce((sum: number, balance: number) => sum + balance, 0);
+    .reduce((sum: number, b: number) => sum + b, 0);
 
   const feesCollected = (feesCollectedResult.data || []).reduce(
-    (sum: number, payment: { amount_paid?: number }) => sum + Number(payment.amount_paid || 0),
+    (sum: number, p: { amount_paid?: number }) => sum + Number(p.amount_paid || 0),
     0
   );
 
@@ -107,7 +90,6 @@ interface AdminKPICardsProps {
 
 export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
   const navigate = useNavigate();
-
   const { data: kpis, isLoading } = useQuery({
     queryKey: ['dashboard', 'admin', 'kpis', schoolId],
     queryFn: () => fetchAdminKpis(schoolId),
@@ -115,119 +97,61 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
     staleTime: STALE_TIME_MS,
   });
 
-  const cards = useMemo(() => {
-    if (!kpis) return [];
-    return [
-      { label: 'Total Students', value: kpis.students, icon: Users, color: '#4dabff', href: '/dashboard/admin/students' },
-      { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#10b981', href: '/dashboard/admin/teachers' },
-      {
-        label: 'Fees Collected',
-        value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected),
-        icon: DollarSign,
-        color: '#ae79ff',
-        href: '/dashboard/admin/outstanding',
-      },
-      {
-        label: 'Outstanding Balances',
-        value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.outstanding),
-        icon: DollarSign,
-        color: '#f59e0b',
-        href: '/dashboard/admin/outstanding',
-      },
-      { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#00d4ff', href: undefined },
-    ];
-  }, [kpis]);
-
-  const moneyCards = cards.filter((c) => c.label === 'Fees Collected' || c.label === 'Outstanding Balances');
-  const countCards = cards.filter((c) => c.label !== 'Fees Collected' && c.label !== 'Outstanding Balances');
-
-  const rgb = (c: { color: string }) =>
-    c.color === '#4dabff' ? '77, 171, 255' : c.color === '#10b981' ? '16, 185, 129' : c.color === '#f59e0b' ? '245, 158, 11' : c.color === '#ae79ff' ? '174, 121, 255' : '0, 212, 255';
-
-  const loading = isLoading && !kpis;
+  const cards = kpis
+    ? [
+        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students', trend: 'vs last term' },
+        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers', trend: 'vs last term' },
+        {
+          label: 'Fees Collected',
+          value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected),
+          icon: DollarSign,
+          color: '#16a34a',
+          href: '/dashboard/admin/outstanding',
+          trend: 'this term',
+        },
+        {
+          label: 'Outstanding Balances',
+          value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.outstanding),
+          icon: DollarSign,
+          color: '#dc2626',
+          href: '/dashboard/admin/outstanding',
+          trend: 'to recover',
+        },
+        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined, trend: 'present' },
+      ]
+    : [];
 
   return (
-    <div className="space-y-4 mb-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {countCards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <div key={c.label}>
-              <GlassCard
-                className="p-4 sm:p-6 cursor-pointer relative overflow-hidden"
-                hover
-                onClick={() => c.href && navigate(c.href)}
-                style={{
-                  background: `linear-gradient(135deg, rgba(${rgb(c)}, 0.25) 0%, rgba(${rgb(c)}, 0.15) 100%)`,
-                }}
-              >
-                <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl" style={{ background: c.color }} />
-                <div className="relative z-10 flex items-center gap-3 sm:gap-4">
-                  <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
-                    <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: c.color }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs sm:text-sm text-white/85 mb-1">{c.label}</div>
-                    <div className="text-xl sm:text-2xl font-bold text-white">
-                      {loading ? <div className="animate-pulse bg-white/20 rounded h-6 sm:h-7 w-16 sm:w-20" /> : c.value}
-                    </div>
-                  </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {cards.map((c) => {
+        const Icon = c.icon;
+        return (
+          <div
+            key={c.label}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+          >
+            <button
+              type="button"
+              onClick={() => c.href && navigate(c.href)}
+              className="w-full p-4 sm:p-5 text-left hover:bg-gray-50/50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="p-2 rounded-lg flex-shrink-0 bg-green-100">
+                  <Icon className="w-5 h-5 text-green-600" style={{ color: c.color }} />
                 </div>
-              </GlassCard>
-            </div>
-          );
-        })}
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {moneyCards.map((c) => {
-          const Icon = c.icon;
-          return (
-            <div key={c.label}>
-              <GlassCard
-                className="p-4 sm:p-6 cursor-pointer relative"
-                hover
-                onClick={() => c.href && navigate(c.href)}
-                style={{
-                  background: `linear-gradient(135deg, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.25) 0%, rgba(${c.color === '#ae79ff' ? '174, 121, 255' : '245, 158, 11'}, 0.15) 100%)`,
-                  overflow: 'visible',
-                  minHeight: 'auto',
-                }}
-              >
-                <div className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-2xl pointer-events-none" style={{ background: c.color }} />
-                <div className="relative z-10" style={{ overflow: 'visible' }}>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                    <div className="flex items-center gap-3 sm:flex-col sm:items-start flex-shrink-0">
-                      <div className="p-2 sm:p-3 rounded-xl flex-shrink-0" style={{ background: `${c.color}20` }}>
-                        <Icon className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: c.color }} />
-                      </div>
-                      <div className="text-xs sm:text-sm text-white/85 font-medium sm:font-normal whitespace-nowrap">{c.label}</div>
-                    </div>
-                    <div className="flex-1 w-full min-w-0" style={{ overflow: 'visible', maxWidth: '100%' }}>
-                      <div
-                        className="font-bold text-white leading-tight"
-                        style={{
-                          fontSize: 'clamp(0.875rem, 2vw + 0.5rem, 1.875rem)',
-                          wordBreak: 'keep-all',
-                          overflowWrap: 'anywhere',
-                          whiteSpace: 'normal',
-                          overflow: 'visible',
-                          textOverflow: 'clip',
-                        }}
-                      >
-                        {loading ? (
-                          <div className="animate-pulse bg-white/20 rounded h-8 sm:h-10 w-32 sm:w-40" />
-                        ) : (
-                          <span className="inline-block" style={{ maxWidth: '100%' }}>{c.value}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                {c.href && <ArrowUpRight className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden />}
+              </div>
+              <div className="mt-3">
+                <div className="text-xs sm:text-sm text-gray-500 mb-0.5">{c.label}</div>
+                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {isLoading ? <div className="animate-pulse bg-gray-200 rounded h-7 w-16" /> : c.value}
                 </div>
-              </GlassCard>
-            </div>
-          );
-        })}
-      </div>
+                <div className="mt-1 text-xs text-green-600 font-medium">{c.trend}</div>
+              </div>
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -8,6 +8,9 @@ import AdminKPICards from './components/AdminKPICards';
 import QuickActions from './components/QuickActions';
 import PendingExpensesCard from './components/PendingExpensesCard';
 import ChartsAnalytics from './components/ChartsAnalytics';
+import RemindersCard from './components/RemindersCard';
+import UpcomingDueCard from './components/UpcomingDueCard';
+import StaffOverviewCard from './components/StaffOverviewCard';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
 
@@ -45,8 +48,6 @@ async function fetchDashboardAuth(userId: string) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  // Ensure year rollover has run when we open the app in a new year (once per year, no button)
-  // Hooks must be declared before any conditional returns.
   const rolloverFired = useRef(false);
 
   const { data, isLoading, isError, error } = useQuery({
@@ -60,20 +61,25 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (!data?.schoolId || rolloverFired.current) return;
     rolloverFired.current = true;
-    // Call DB function directly from the SPA (avoids relying on Next.js /api routes).
-    // Runs once per year (guarded by rollover_status), so safe to call on dashboard load.
     void (async () => {
       try {
         const { error } = await supabase.rpc('automatic_term3_rollover');
         if (error) throw error;
       } catch {
-        // Silent fail; rollover is idempotent and will retry next load.
+        // Silent fail
       }
     })();
   }, [data?.schoolId]);
 
   if ((!user?.id || isLoading) && !data) {
-    return <AdminContentSkeleton />;
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-green-600" />
+          <p className="text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   if (isError && error) {
@@ -95,14 +101,14 @@ export default function AdminDashboard() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex max-w-md flex-col items-center gap-4 text-center">
-          <div className="mb-4 text-4xl text-red-400">⚠️</div>
-          <h2 className="mb-2 text-xl font-bold text-white">Account Setup Required</h2>
-          <p className="mb-6 text-white/85">{displayMessage}</p>
+          <div className="mb-4 text-4xl text-red-500">⚠️</div>
+          <h2 className="mb-2 text-xl font-bold text-gray-900">Account Setup Required</h2>
+          <p className="mb-6 text-gray-600">{displayMessage}</p>
           {missingSchoolId && (
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="rounded-lg bg-blue-600 px-6 py-3 text-white transition-colors hover:bg-blue-700"
+              className="rounded-lg bg-green-600 px-6 py-3 text-white transition-colors hover:bg-green-700"
             >
               Complete School Setup
             </button>
@@ -110,7 +116,7 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="text-white/70 transition-colors hover:text-white"
+            className="text-gray-600 hover:text-gray-900 transition-colors"
           >
             Back to Login
           </button>
@@ -123,9 +129,27 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="mb-6">
-        <h1 className="mb-2 text-2xl font-bold text-white sm:text-3xl">Admin Dashboard</h1>
-        <p className="text-white/85">Manage your school operations and view insights</p>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
+          <p className="text-gray-600">Plan, prioritize, and manage your school with ease.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/students')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+          >
+            + Add Student
+          </button>
+          <button
+            type="button"
+            onClick={() => {}}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+          >
+            Import Data
+          </button>
+        </div>
       </div>
 
       <AdminKPICards schoolId={data.schoolId} />
@@ -136,11 +160,18 @@ export default function AdminDashboard() {
 
       <ChartsAnalytics />
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <RemindersCard />
+        <UpcomingDueCard />
+      </div>
+
       <RecentPaymentsNotifications />
+
+      <StaffOverviewCard />
 
       <RecentReportsSystemHealth />
 
-      <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
+      <footer className="mt-12 py-6 text-center text-sm text-gray-500">
         <p>© 2025 PwezaCore School Management System.</p>
       </footer>
     </>

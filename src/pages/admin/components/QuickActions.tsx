@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import GlassCard from '@/components/ui/GlassCard';
 import {
   UserPlus,
   GraduationCap,
@@ -19,50 +18,42 @@ export default function AdminQuickActions() {
   const navigate = useNavigate();
 
   const actions = [
-    { icon: UserPlus, label: 'Add Student', color: '#4dabff', path: '/dashboard/admin/students' },
-    { icon: GraduationCap, label: 'Add Teacher', color: '#10b981', path: '/dashboard/admin/teachers' },
-    { icon: Users, label: 'Add Parent', color: '#ff6bcb', path: '/dashboard/admin/parents' },
-    { icon: Briefcase, label: 'Add Accounts Manager', color: '#ae79ff', path: '/dashboard/admin/accounts' },
-    { icon: FileText, label: 'Generate Reports', color: '#f59e0b', path: '/dashboard/admin/reports' },
-    { icon: Receipt, label: 'Generate Receipts', color: '#00d4ff', path: '/dashboard/admin/outstanding' },
-    { icon: BriefcaseIcon, label: 'Post Job Vacancy', color: '#ef4444', path: '/dashboard/admin/jobs' },
-    { icon: BookOpen, label: 'Add Librarian', color: '#8b5cf6', path: '/dashboard/admin/accounts' },
-    { icon: UserCog, label: 'Appoint Head Teacher', color: '#ec4899', path: '/dashboard/admin/accounts' },
-    { icon: FileCheck, label: 'Headed Paper', color: '#14b8a6', path: '/dashboard/admin/reports' },
-    { icon: MapPin, label: 'Location Settings', color: '#06b6d4', path: '/dashboard/admin/settings/location' },
-    { icon: Settings, label: 'System Settings', color: '#6366f1', path: '/dashboard/admin/settings' },
+    { icon: UserPlus, label: 'Add Student', color: '#16a34a', path: '/dashboard/admin/students' },
+    { icon: GraduationCap, label: 'Add Teacher', color: '#16a34a', path: '/dashboard/admin/teachers' },
+    { icon: Users, label: 'Add Parent', color: '#16a34a', path: '/dashboard/admin/parents' },
+    { icon: Briefcase, label: 'Add Accounts Manager', color: '#6b7280', path: '/dashboard/admin/accounts' },
+    { icon: FileText, label: 'Generate Reports', color: '#6b7280', path: '/dashboard/admin/reports' },
+    { icon: Receipt, label: 'Generate Receipts', color: '#6b7280', path: '/dashboard/admin/outstanding' },
+    { icon: BriefcaseIcon, label: 'Post Job Vacancy', color: '#6b7280', path: '/dashboard/admin/jobs' },
+    { icon: BookOpen, label: 'Add Librarian', color: '#6b7280', path: '/dashboard/admin/accounts' },
+    { icon: UserCog, label: 'Appoint Head Teacher', color: '#6b7280', path: '/dashboard/admin/accounts' },
+    { icon: FileCheck, label: 'Headed Paper', color: '#6b7280', path: '/dashboard/admin/reports' },
+    { icon: MapPin, label: 'Location Settings', color: '#6b7280', path: '/dashboard/admin/settings/location' },
+    { icon: Settings, label: 'System Settings', color: '#6b7280', path: '/dashboard/admin/settings' },
   ];
 
   return (
-    <GlassCard className="p-6 mb-6" hover>
-      <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
+          const isGreen = action.color === '#16a34a';
           return (
             <button
               key={action.label}
               type="button"
               onClick={() => navigate(action.path)}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium"
-              style={{
-                background: `${action.color}20`,
-                border: `1px solid ${action.color}40`,
-                color: '#ffffff',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = `${action.color}30`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = `${action.color}20`;
-              }}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
+                isGreen ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+              }`}
             >
-              <Icon className="w-4 h-4 shrink-0" style={{ color: action.color }} />
+              <Icon className="w-4 h-4" style={{ color: action.color }} />
               <span>{action.label}</span>
             </button>
           );
         })}
       </div>
-    </GlassCard>
+    </div>
   );
 }
