@@ -40,7 +40,7 @@ export default function AttendanceRecordsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
         >
           Back to Dashboard
         </button>
@@ -56,7 +56,7 @@ export default function AttendanceRecordsPage() {
             className="rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-x-auto rounded-2xl border border-gray-200 bg-white backdrop-blur-xl overflow-hidden">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="border-b border-white/20 bg-white/5 text-left">

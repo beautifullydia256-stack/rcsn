@@ -54,14 +54,23 @@ function NavLinkStyle({
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const isDashboard = location.pathname === '/dashboard/admin';
+  const isAdminSection = location.pathname.startsWith('/dashboard/admin');
 
   const [adminName, setAdminName] = useState('Admin');
   const [adminEmail, setAdminEmail] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{
+    students: { student_id: string; name: string; current_class?: string; admission_number?: string }[];
+    teachers: { teacher_id: string; name: string; email?: string }[];
+    reports: { report_id: string; template_name?: string; created_at: string; student_name?: string }[];
+  }>({ students: [], teachers: [], reports: [] });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -75,10 +84,11 @@ export default function AdminLayout() {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase.from('users').select('name, email').eq('user_id', user.id).single();
+        const { data } = await supabase.from('users').select('name, email, school_id').eq('user_id', user.id).single();
         if (data) {
           setAdminName(data.name || 'Admin');
           setAdminEmail(data.email || '');
+          setSchoolId((data as { school_id?: string }).school_id ?? null);
         }
       }
     };
@@ -88,10 +98,70 @@ export default function AdminLayout() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
+    };
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSearchOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, []);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 2) {
+      setSearchOpen(false);
+      setSearchResults({ students: [], teachers: [], reports: [] });
+      return;
+    }
+    if (!schoolId) return;
+    const q = searchQuery.trim();
+    const t = setTimeout(async () => {
+      setSearchLoading(true);
+      setSearchOpen(true);
+      try {
+        const [studentsRes, teachersRes, reportsRes] = await Promise.all([
+          supabase
+            .from('students')
+            .select('student_id, name, current_class, admission_number')
+            .eq('school_id', schoolId)
+            .or(`name.ilike.%${q}%,admission_number.ilike.%${q}%,current_class.ilike.%${q}%`)
+            .limit(8),
+          supabase
+            .from('teachers')
+            .select('teacher_id, name, email')
+            .eq('school_id', schoolId)
+            .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
+            .limit(5),
+          supabase
+            .from('reports')
+            .select('report_id, template_name, created_at, students(name)')
+            .eq('school_id', schoolId)
+            .ilike('template_name', `%${q}%`)
+            .order('created_at', { ascending: false })
+            .limit(5),
+        ]);
+        const students = (studentsRes.data || []) as { student_id: string; name: string; current_class?: string; admission_number?: string }[];
+        const teachers = (teachersRes.data || []) as { teacher_id: string; name: string; email?: string }[];
+        const reportsRaw = (reportsRes.data || []) as { report_id: string; template_name?: string; created_at: string; students?: { name?: string } | { name?: string }[] }[];
+        const reports = reportsRaw.map((r) => ({
+          report_id: r.report_id,
+          template_name: r.template_name,
+          created_at: r.created_at,
+          student_name: Array.isArray(r.students) ? r.students[0]?.name : (r.students as { name?: string })?.name,
+        }));
+        setSearchResults({ students, teachers, reports });
+      } catch {
+        setSearchResults({ students: [], teachers: [], reports: [] });
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery, schoolId]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -107,7 +177,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen relative">
-      {!isDashboard && <GlassBackground />}
+      {!isAdminSection && <GlassBackground />}
 
       <aside className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
         <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
@@ -161,22 +231,102 @@ export default function AdminLayout() {
         )}
       </aside>
 
-      <div className={`relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 ${isDashboard ? 'bg-gray-50' : ''}`}>
-        {isDashboard && (
+      <div className={`relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 ${isAdminSection ? 'bg-gray-50' : ''}`}>
+        {isAdminSection && (
           <nav className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
             <div className="px-4 sm:px-6 lg:px-8 py-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-1 flex-wrap items-center gap-3 max-w-4xl">
-                  <div className="relative flex-1 min-w-[200px]">
+                  <div ref={searchRef} className="relative flex-1 min-w-[200px]">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Search students, fees, reports..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => searchQuery.trim().length >= 2 && setSearchOpen(true)}
                       className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
                     />
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘F</span>
+                    {searchOpen && (
+                      <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden max-h-[min(400px,70vh)] overflow-y-auto">
+                        {searchLoading ? (
+                          <div className="p-4 text-center text-gray-500 text-sm">Searching...</div>
+                        ) : (
+                          <>
+                            {searchResults.students.length > 0 && (
+                              <div className="border-b border-gray-100">
+                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
+                                  <Users className="w-4 h-4" /> Students
+                                </div>
+                                {searchResults.students.map((s) => (
+                                  <button
+                                    key={s.student_id}
+                                    type="button"
+                                    onClick={() => {
+                                      navigate(`/dashboard/admin/students/${s.student_id}`);
+                                      setSearchQuery('');
+                                      setSearchOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
+                                  >
+                                    <span className="font-medium text-gray-900 truncate">{s.name}</span>
+                                    <span className="text-gray-500 shrink-0">{s.current_class || '—'}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {searchResults.teachers.length > 0 && (
+                              <div className="border-b border-gray-100">
+                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
+                                  <GraduationCap className="w-4 h-4" /> Teachers
+                                </div>
+                                {searchResults.teachers.map((t) => (
+                                  <button
+                                    key={t.teacher_id}
+                                    type="button"
+                                    onClick={() => {
+                                      navigate(`/dashboard/admin/teachers/${t.teacher_id}`);
+                                      setSearchQuery('');
+                                      setSearchOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
+                                  >
+                                    <span className="font-medium text-gray-900 truncate">{t.name}</span>
+                                    {t.email && <span className="text-gray-500 text-xs truncate max-w-[180px]">{t.email}</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {searchResults.reports.length > 0 && (
+                              <div className="border-b border-gray-100">
+                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
+                                  <FileText className="w-4 h-4" /> Reports
+                                </div>
+                                {searchResults.reports.map((r) => (
+                                  <button
+                                    key={r.report_id}
+                                    type="button"
+                                    onClick={() => {
+                                      navigate('/dashboard/admin/report-records');
+                                      setSearchQuery('');
+                                      setSearchOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
+                                  >
+                                    <span className="font-medium text-gray-900 truncate">{r.template_name || 'Report'}</span>
+                                    {r.student_name && <span className="text-gray-500 shrink-0 truncate max-w-[120px]">{r.student_name}</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {!searchLoading && searchQuery.trim().length >= 2 && searchResults.students.length === 0 && searchResults.teachers.length === 0 && searchResults.reports.length === 0 && (
+                              <div className="p-4 text-center text-gray-500 text-sm">No results found.</div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
                     <option value="">Term</option>

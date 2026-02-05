@@ -62,7 +62,7 @@ export default function StudentsPage() {
       <div className="flex items-center justify-end">
         <button
           type="button"
-          className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           onClick={() => navigate('/dashboard/admin')}
         >
           Back to Dashboard
@@ -72,13 +72,13 @@ export default function StudentsPage() {
       <div className={`${adminCardClass} space-y-4`}>
         <div className="flex flex-col md:flex-row md:items-center gap-2">
           <input
-            className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
             placeholder="Search by name or class"
             value={q}
             onChange={(e) => setQ(e.target.value)}
           />
           <select
-            className="w-full md:w-64 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full md:w-64 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
             value={klass}
             onChange={(e) => setKlass(e.target.value)}
           >
@@ -100,45 +100,45 @@ export default function StudentsPage() {
           </select>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white overflow-hidden">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-white/20 bg-white/5 text-left">
-                <th className="px-4 py-2 font-medium text-white/85">Name</th>
-                <th className="px-4 py-2 font-medium text-white/85">Class</th>
-                <th className="px-4 py-2 font-medium text-white/85">Status</th>
-                <th className="px-4 py-2 font-medium text-white/85">Enrolled</th>
-                <th className="px-4 py-2 font-medium text-white/85">Actions</th>
+              <tr className="border-b border-gray-200 bg-gray-50 text-left">
+                <th className="px-4 py-2 font-medium text-gray-700">Name</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Class</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Status</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Enrolled</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="border-b border-white/10">
-                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-20 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-white/15 animate-pulse" /></td>
+                  <tr key={`skeleton-${i}`} className="border-b border-gray-100">
+                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-20 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-gray-200 animate-pulse" /></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">No students found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No students found.</td></tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.student_id} className="border-b border-white/10 hover:bg-white/5">
+                  <tr key={r.student_id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-2">
-                      <button type="button" className="text-blue-400 hover:underline" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>
+                      <button type="button" className="text-green-600 hover:underline font-medium" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>
                         {r.name}
                       </button>
                     </td>
-                    <td className="px-4 py-2 text-white/85">{r.current_class}</td>
-                    <td className="px-4 py-2 text-white/85">{r.status}</td>
-                    <td className="px-4 py-2 text-white/85">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.current_class}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.status}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
-                        <button type="button" className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:opacity-90" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>View</button>
-                        <button type="button" className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600" onClick={() => remove(r.student_id, r.admission_number)}>Delete</button>
+                        <button type="button" className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700" onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}>View</button>
+                        <button type="button" className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" onClick={() => remove(r.student_id, r.admission_number)}>Delete</button>
                       </div>
                     </td>
                   </tr>

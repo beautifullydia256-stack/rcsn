@@ -453,35 +453,31 @@ export default function GenerateReportsPage() {
   const hasReportsReady = generatingStep === 'completed' && !reportsLoading && !reportsError && generatedReports.length > 0;
 
   return (
-    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header – exact from screenshot */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-white text-2xl font-bold">Student Report Generator</h1>
-            <p className="text-white/80 text-sm mt-1">Generate and download student academic reports.</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700"
-            >
-              Customize Header
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/admin/reports')}
-              className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
-            >
-              Back to Reports
-            </button>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Student Report Generator</h1>
+          <p className="text-gray-600 text-sm mt-1">Generate and download student academic reports.</p>
         </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="px-4 py-2 rounded-xl bg-green-600 text-white font-medium hover:bg-green-700"
+          >
+            Customize Header
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/reports')}
+            className="px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 text-sm font-medium"
+          >
+            Back to Reports
+          </button>
+        </div>
+      </div>
 
-        {/* Report Configuration card – exact from screenshot */}
-        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6">
-          <h2 className="text-white text-lg font-medium mb-4">Report Configuration</h2>
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-6">
+          <h2 className="text-gray-900 text-lg font-medium mb-4">Report Configuration</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Report Template – auto-selected, read-only display */}
@@ -806,7 +802,6 @@ export default function GenerateReportsPage() {
             </GlassModal>
           )}
         </div>
-      </div>
     </div>
   );
 }

@@ -78,10 +78,10 @@ export default function AccountsPage() {
 
   const getRoleBadgeClass = (role: string) => {
     switch (role) {
-      case 'admin': return 'bg-purple-500/20 text-purple-300 border-purple-400/30';
-      case 'librarian': return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
-      case 'accountant': return 'bg-emerald-500/20 text-emerald-300 border-emerald-400/30';
-      default: return 'bg-white/10 text-white/80 border-white/20';
+      case 'admin': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'librarian': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'accountant': return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
@@ -91,7 +91,7 @@ export default function AccountsPage() {
     return (
       <AdminPageWrapper title="Staff Accounts">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white" />
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-green-600" />
         </div>
       </AdminPageWrapper>
     );
@@ -107,7 +107,7 @@ export default function AccountsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/accounts/add')}
-          className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           <UserPlus className="w-5 h-5" />
           Add Account
@@ -115,31 +115,31 @@ export default function AccountsPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className={`${adminCardClass} flex items-center gap-3`} style={{ background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%)' }}>
-          <div className="p-2 rounded-lg bg-purple-500/20">
-            <Shield className="w-5 h-5 text-purple-400" />
+        <div className={`${adminCardClass} flex items-center gap-3 bg-purple-50 border-purple-100`}>
+          <div className="p-2 rounded-lg bg-purple-100">
+            <Shield className="w-5 h-5 text-purple-600" />
           </div>
           <div>
-            <p className="text-white/70 text-sm">Admins</p>
-            <p className="text-xl font-bold text-white">{accounts.filter((a) => a.role === 'admin').length}</p>
+            <p className="text-gray-600 text-sm">Admins</p>
+            <p className="text-xl font-bold text-gray-900">{accounts.filter((a) => a.role === 'admin').length}</p>
           </div>
         </div>
-        <div className={`${adminCardClass} flex items-center gap-3`} style={{ background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%)' }}>
-          <div className="p-2 rounded-lg bg-blue-500/20">
-            <BookOpen className="w-5 h-5 text-blue-400" />
+        <div className={`${adminCardClass} flex items-center gap-3 bg-blue-50 border-blue-100`}>
+          <div className="p-2 rounded-lg bg-blue-100">
+            <BookOpen className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <p className="text-white/70 text-sm">Librarians</p>
-            <p className="text-xl font-bold text-white">{accounts.filter((a) => a.role === 'librarian').length}</p>
+            <p className="text-gray-600 text-sm">Librarians</p>
+            <p className="text-xl font-bold text-gray-900">{accounts.filter((a) => a.role === 'librarian').length}</p>
           </div>
         </div>
-        <div className={`${adminCardClass} flex items-center gap-3`} style={{ background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%)' }}>
-          <div className="p-2 rounded-lg bg-emerald-500/20">
-            <Calculator className="w-5 h-5 text-emerald-400" />
+        <div className={`${adminCardClass} flex items-center gap-3 bg-emerald-50 border-emerald-100`}>
+          <div className="p-2 rounded-lg bg-emerald-100">
+            <Calculator className="w-5 h-5 text-emerald-600" />
           </div>
           <div>
-            <p className="text-white/70 text-sm">Accountants</p>
-            <p className="text-xl font-bold text-white">{accounts.filter((a) => a.role === 'accountant').length}</p>
+            <p className="text-gray-600 text-sm">Accountants</p>
+            <p className="text-xl font-bold text-gray-900">{accounts.filter((a) => a.role === 'accountant').length}</p>
           </div>
         </div>
       </div>
@@ -151,12 +151,12 @@ export default function AccountsPage() {
             placeholder="Search by name, email, or department..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full sm:w-48 rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full sm:w-48 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           >
             <option value="">All roles</option>
             <option value="admin">Admin</option>
@@ -164,33 +164,33 @@ export default function AccountsPage() {
             <option value="accountant">Accountant</option>
           </select>
         </div>
-        <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white overflow-hidden">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-white/20 bg-white/5 text-left">
-                <th className="px-4 py-2 font-medium text-white/85">Name</th>
-                <th className="px-4 py-2 font-medium text-white/85">Email</th>
-                <th className="px-4 py-2 font-medium text-white/85">Role</th>
-                <th className="px-4 py-2 font-medium text-white/85">Department</th>
-                <th className="px-4 py-2 font-medium text-white/85">Last Sign-in</th>
-                <th className="px-4 py-2 font-medium text-white/85">Actions</th>
+              <tr className="border-b border-gray-200 bg-gray-50 text-left">
+                <th className="px-4 py-2 font-medium text-gray-700">Name</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Email</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Role</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Department</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Last Sign-in</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredAccounts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-white/70">No accounts found.</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">No accounts found.</td>
                 </tr>
               ) : (
                 filteredAccounts.map((a) => (
-                  <tr key={a.user_id} className="border-b border-white/10 hover:bg-white/5">
-                    <td className="px-4 py-2 text-white">{a.name || '-'}</td>
-                    <td className="px-4 py-2 text-white/90">{a.email}</td>
+                  <tr key={a.user_id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="px-4 py-2 text-gray-900 font-medium">{a.name || '-'}</td>
+                    <td className="px-4 py-2 text-gray-700">{a.email}</td>
                     <td className="px-4 py-2">
                       <span className={`px-2 py-1 rounded border text-xs ${getRoleBadgeClass(a.role)}`}>{a.role}</span>
                     </td>
-                    <td className="px-4 py-2 text-white/90">{a.department || '-'}</td>
-                    <td className="px-4 py-2 text-white/90">
+                    <td className="px-4 py-2 text-gray-700">{a.department || '-'}</td>
+                    <td className="px-4 py-2 text-gray-700">
                       {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '-'}
                     </td>
                     <td className="px-4 py-2">
@@ -198,7 +198,7 @@ export default function AccountsPage() {
                         type="button"
                         onClick={() => handleDelete(a.user_id, a.email)}
                         disabled={deleting === a.user_id}
-                        className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600 disabled:opacity-50"
+                        className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700 disabled:opacity-50"
                       >
                         {deleting === a.user_id ? 'Deleting...' : 'Delete'}
                       </button>

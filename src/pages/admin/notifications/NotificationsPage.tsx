@@ -88,7 +88,7 @@ export default function NotificationsPage() {
     return (
       <AdminPageWrapper title="Notifications">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white" />
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-green-600" />
         </div>
       </AdminPageWrapper>
     );
@@ -109,9 +109,9 @@ export default function NotificationsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-white/85 mb-1">Category</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
             <select
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -134,9 +134,9 @@ export default function NotificationsPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-white/85 mb-1">Priority</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
             <select
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
               value={priority}
               onChange={(e) => setPriority(e.target.value)}
             >
@@ -165,7 +165,7 @@ export default function NotificationsPage() {
           type="button"
           onClick={sendAnnouncement}
           disabled={sending}
-          className="rounded-xl border border-blue-500/50 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
           {sending ? 'Sending...' : 'Send Announcement'}
         </button>

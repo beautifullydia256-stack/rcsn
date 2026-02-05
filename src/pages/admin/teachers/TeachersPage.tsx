@@ -50,14 +50,14 @@ export default function TeachersPage() {
       <div className="flex items-center justify-end gap-2">
         <button
           type="button"
-          className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           onClick={() => navigate('/dashboard/admin/teachers/add')}
         >
           Add Teacher
         </button>
         <button
           type="button"
-          className="rounded-lg border border-white/20 bg-white/10 backdrop-blur-xl px-3 py-2 text-sm font-medium text-white/85 hover:bg-white/5"
+          className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           onClick={() => navigate('/dashboard/admin')}
         >
           Back to Dashboard
@@ -66,50 +66,50 @@ export default function TeachersPage() {
 
       <div className={`${adminCardClass} space-y-4`}>
         <input
-          className="w-full md:max-w-md rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full md:max-w-md rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
           placeholder="Search by name or email"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <div className="overflow-x-auto rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl overflow-hidden">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white overflow-hidden">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="border-b border-white/20 bg-white/5 text-left">
-                <th className="px-4 py-2 font-medium text-white/85">Name</th>
-                <th className="px-4 py-2 font-medium text-white/85">Phone</th>
-                <th className="px-4 py-2 font-medium text-white/85">Email</th>
-                <th className="px-4 py-2 font-medium text-white/85">Hired</th>
-                <th className="px-4 py-2 font-medium text-white/85">Actions</th>
+              <tr className="border-b border-gray-200 bg-gray-50 text-left">
+                <th className="px-4 py-2 font-medium text-gray-700">Name</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Phone</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Email</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Hired</th>
+                <th className="px-4 py-2 font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 8 }).map((_, i) => (
-                  <tr key={`skeleton-${i}`} className="border-b border-white/10">
-                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-40 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-white/15 animate-pulse" /></td>
-                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-white/15 animate-pulse" /></td>
+                  <tr key={`skeleton-${i}`} className="border-b border-gray-100">
+                    <td className="px-4 py-3"><div className="h-5 w-32 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-40 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
+                    <td className="px-4 py-3"><div className="h-7 w-20 rounded bg-gray-200 animate-pulse" /></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-white/70">No teachers found.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">No teachers found.</td></tr>
               ) : (
                 filtered.map((r) => (
-                  <tr key={r.teacher_id} className="border-b border-white/20 hover:bg-white/5">
+                  <tr key={r.teacher_id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-2">
-                      <button type="button" className="text-blue-400 hover:underline" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>
+                      <button type="button" className="text-green-600 hover:underline font-medium" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>
                         {r.name}
                       </button>
                     </td>
-                    <td className="px-4 py-2 text-white/70">{r.phone || '-'}</td>
-                    <td className="px-4 py-2 text-white/70">{r.email}</td>
-                    <td className="px-4 py-2 text-white/70">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.phone || '-'}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.email}</td>
+                    <td className="px-4 py-2 text-gray-700">{r.created_at ? new Date(r.created_at).toLocaleString() : '-'}</td>
                     <td className="px-4 py-2">
                       <div className="flex gap-2">
-                        <button type="button" className="rounded bg-blue-600 px-2 py-1 text-xs text-white hover:opacity-90" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>View</button>
-                        <button type="button" className="rounded bg-red-600/90 px-2 py-1 text-xs text-white hover:bg-red-600" onClick={() => remove(r.teacher_id)}>Delete</button>
+                        <button type="button" className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700" onClick={() => navigate(`/dashboard/admin/teachers/${r.teacher_id}`)}>View</button>
+                        <button type="button" className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700" onClick={() => remove(r.teacher_id)}>Delete</button>
                       </div>
                     </td>
                   </tr>

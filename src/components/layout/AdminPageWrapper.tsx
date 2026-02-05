@@ -1,8 +1,8 @@
 import { ReactNode } from 'react';
 
 /**
- * Shared wrapper for admin content pages (2f00b44 glass style).
- * Background from AdminLayout; glass cards via adminCardClass.
+ * Shared wrapper for admin content pages (light theme, same as dashboard).
+ * Background from AdminLayout (bg-gray-50); white cards via adminCardClass.
  */
 export default function AdminPageWrapper({
   title,
@@ -17,8 +17,8 @@ export default function AdminPageWrapper({
     <div className="space-y-6">
       {(title || subtitle) && (
         <div>
-          {title && <h1 className="text-2xl sm:text-3xl font-bold text-white">{title}</h1>}
-          {subtitle && <p className="text-white/85 mt-1">{subtitle}</p>}
+          {title && <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{title}</h1>}
+          {subtitle && <p className="text-gray-600 mt-1">{subtitle}</p>}
         </div>
       )}
       {children}
@@ -26,6 +26,6 @@ export default function AdminPageWrapper({
   );
 }
 
-/** Card style for admin pages (2f00b44 glass: frosted, bordered) */
+/** Card style for admin pages (white card, same as dashboard) */
 export const adminCardClass =
-  'rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl shadow-lg p-6';
+  'rounded-xl border border-gray-200 bg-white shadow-sm p-6';
