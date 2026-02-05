@@ -152,24 +152,26 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <AdminKPICards schoolId={data.schoolId} />
+      <div className="space-y-6">
+        <AdminKPICards schoolId={data.schoolId} />
 
-      <QuickActions />
+        <QuickActions />
 
-      <PendingExpensesCard />
+        <PendingExpensesCard />
 
-      <ChartsAnalytics />
+        <ChartsAnalytics />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <RemindersCard />
-        <UpcomingDueCard />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <RemindersCard />
+          <UpcomingDueCard />
+        </div>
+
+        <RecentPaymentsNotifications />
+
+        <StaffOverviewCard />
+
+        <RecentReportsSystemHealth />
       </div>
-
-      <RecentPaymentsNotifications />
-
-      <StaffOverviewCard />
-
-      <RecentReportsSystemHealth />
 
       <footer className="mt-12 py-6 text-center text-sm text-gray-500">
         <p>© 2025 PwezaCore School Management System.</p>

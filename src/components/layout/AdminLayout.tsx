@@ -125,7 +125,7 @@ export default function AdminLayout() {
         </div>
 
         <div className="px-4 pt-2 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">Menu</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">MENU</span>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavLinkStyle to="/dashboard/admin" end icon={LayoutDashboard}>Dashboard</NavLinkStyle>
@@ -144,7 +144,7 @@ export default function AdminLayout() {
         </nav>
 
         <div className="px-4 pt-3 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/50">General</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">GENERAL</span>
         </div>
         <div className="px-3 py-2 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
           <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>Settings</NavLinkStyle>
