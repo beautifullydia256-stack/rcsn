@@ -20,8 +20,7 @@ import {
   X,
   Building2,
   CreditCard,
-  TrendingUp,
-  UserCog
+  Smartphone,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -166,8 +165,15 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
           })}
         </nav>
 
-        {/* Bottom Section */}
-        <div className="px-3 py-4 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+        {/* GENERAL label */}
+        {!isCollapsed && (
+          <div className="px-4 pt-3 pb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'rgba(255, 255, 255, 0.5)' }}>General</span>
+          </div>
+        )}
+
+        {/* Bottom Section - Settings & Logout */}
+        <div className="px-3 py-2 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
           <Link
             href="/dashboard/admin/settings"
             prefetch={true}
@@ -208,6 +214,24 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
             {!isCollapsed && <span className="text-sm font-medium flex-1 text-left">Logout</span>}
           </motion.button>
         </div>
+
+        {/* Download our Mobile App card */}
+        {!isCollapsed && (
+          <div className="mx-3 mb-4 p-4 rounded-xl border" style={{ background: 'rgba(22, 163, 74, 0.15)', borderColor: 'rgba(22, 163, 74, 0.3)' }}>
+            <div className="flex items-center gap-2 mb-2">
+              <Smartphone className="w-5 h-5 text-green-600" />
+              <span className="text-sm font-semibold text-white">Download our Mobile App</span>
+            </div>
+            <p className="text-xs text-white/80 mb-3">Get easy in another way.</p>
+            <a
+              href="#"
+              className="block w-full py-2 rounded-lg text-center text-sm font-medium text-white transition-colors hover:opacity-90"
+              style={{ background: '#16a34a' }}
+            >
+              Download
+            </a>
+          </div>
+        )}
       </>
     );
   };

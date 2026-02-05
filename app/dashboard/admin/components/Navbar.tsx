@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Bell, User, Settings, LogOut } from 'lucide-react';
+import { Search, Bell, Settings, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
 
@@ -13,12 +13,21 @@ interface NavbarProps {
   onCloseSearch?: () => void;
 }
 
-export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery, showSearchResults, onCloseSearch }: NavbarProps) {
+export default function AdminNavbar({
+  onSearch,
+  searchQuery: externalSearchQuery,
+  showSearchResults,
+  onCloseSearch,
+}: NavbarProps) {
   const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '');
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [adminName, setAdminName] = useState('Admin');
   const [adminEmail, setAdminEmail] = useState('');
+  const [selectedTerm, setSelectedTerm] = useState<string>('');
+  const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const profileRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -29,14 +38,16 @@ export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery
 
   useEffect(() => {
     const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         const { data: userData } = await supabase
           .from('users')
           .select('name, email')
           .eq('user_id', user.id)
           .single();
-        
+
         if (userData) {
           setAdminName(userData.name || 'Admin');
           setAdminEmail(userData.email || '');
@@ -44,7 +55,20 @@ export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery
       }
     };
     loadUser();
+  }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setIsProfileOpen(false);
@@ -64,121 +88,115 @@ export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery
     router.push('/');
   };
 
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   return (
-    <nav
-      className="sticky top-0 z-20 shadow-lg"
-      style={{
-        background: 'rgba(255, 255, 255, 0.08)',
-        backdropFilter: 'blur(25px)',
-        WebkitBackdropFilter: 'blur(25px)',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.20)'
-      }}
-    >
+    <nav className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex items-center justify-between gap-4">
-          {/* Search Bar */}
-          <div className="flex-1 max-w-2xl">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5" style={{ color: 'rgba(255, 255, 255, 0.55)' }} />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Search + Filters row */}
+          <div className="flex flex-1 flex-wrap items-center gap-3 max-w-4xl">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
+                ref={searchInputRef}
                 type="text"
-                placeholder="Search students, teachers, parents, payments, reports..."
+                placeholder="Search students, fees, reports..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl transition-all shadow-sm focus:outline-none focus:ring-2"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.18)',
-                  color: '#ffffff',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(77, 171, 255, 0.5)';
-                  e.currentTarget.style.boxShadow = '0 0 0 2px rgba(77, 171, 255, 0.2)';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.18)';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘F</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedTerm}
+                onChange={(e) => setSelectedTerm(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+              >
+                <option value="">Term</option>
+                <option value="1">Term 1</option>
+                <option value="2">Term 2</option>
+                <option value="3">Term 3</option>
+              </select>
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+              >
+                <option value="">Class</option>
+                <option value="P1">Primary 1</option>
+                <option value="P2">Primary 2</option>
+                <option value="P3">Primary 3</option>
+                <option value="P4">Primary 4</option>
+                <option value="P5">Primary 5</option>
+                <option value="P6">Primary 6</option>
+                <option value="S1">Senior 1</option>
+                <option value="S2">Senior 2</option>
+                <option value="S3">Senior 3</option>
+                <option value="S4">Senior 4</option>
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+              >
+                <option value="">Academic Year</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+                <option value="2023">2023</option>
+              </select>
             </div>
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-3">
-            {/* Notifications */}
+          {/* Right: Greeting + Notifications + Profile (name + email visible) */}
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="hidden sm:block text-sm text-gray-600">
+              {greeting()}, <span className="font-medium text-gray-900">{adminName}</span>
+            </span>
             <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               onClick={() => router.push('/dashboard/admin/notifications')}
-              className="relative p-2 rounded-lg transition-colors"
-              style={{
-                background: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                color: 'rgba(255, 255, 255, 0.85)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.18)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
-              }}
+              className="relative p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
               aria-label="Notifications"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2" style={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
             </motion.button>
 
-            {/* Profile Dropdown */}
             <div className="relative" ref={profileRef}>
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
-                className="flex items-center gap-2 p-1.5 rounded-lg transition-colors"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                }}
+                className="flex items-center gap-2 p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 transition-colors"
               >
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-semibold text-sm">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white font-semibold text-sm">
                   {adminName.charAt(0).toUpperCase()}
                 </div>
-                <div className="hidden md:block text-left">
-                  <div className="text-sm font-medium text-white">{adminName}</div>
-                  <div className="text-xs" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>Admin</div>
+                <div className="hidden md:block text-left max-w-[140px]">
+                  <div className="text-sm font-medium text-gray-900 truncate">{adminName}</div>
+                  <div className="text-xs text-gray-500 truncate">{adminEmail}</div>
                 </div>
               </motion.button>
 
               <AnimatePresence>
                 {isProfileOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: -10 }}
+                    initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute right-0 mt-2 w-56 rounded-xl shadow-lg overflow-hidden z-50"
-                    style={{
-                      background: 'rgba(255, 255, 255, 0.08)',
-                      backdropFilter: 'blur(25px)',
-                      WebkitBackdropFilter: 'blur(25px)',
-                      border: '1px solid rgba(255, 255, 255, 0.20)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)'
-                    }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden z-50"
                   >
-                    <div className="p-4 border-b" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
-                      <div className="font-medium text-white">{adminName}</div>
-                      <div className="text-sm truncate" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>{adminEmail}</div>
+                    <div className="p-4 border-b border-gray-100">
+                      <div className="font-medium text-gray-900">{adminName}</div>
+                      <div className="text-sm text-gray-500 truncate">{adminEmail}</div>
                     </div>
                     <div className="p-1">
                       <button
@@ -186,31 +204,17 @@ export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery
                           router.push('/dashboard/admin/settings');
                           setIsProfileOpen(false);
                         }}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
-                        style={{ color: 'rgba(255, 255, 255, 0.85)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <Settings className="w-4 h-4" />
-                        <span className="text-sm">Settings</span>
+                        Settings
                       </button>
                       <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors"
-                        style={{ color: 'rgba(239, 68, 68, 0.9)' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
-                        <span className="text-sm">Logout</span>
+                        Logout
                       </button>
                     </div>
                   </motion.div>
@@ -223,4 +227,3 @@ export default function AdminNavbar({ onSearch, searchQuery: externalSearchQuery
     </nav>
   );
 }
-

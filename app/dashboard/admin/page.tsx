@@ -7,12 +7,10 @@ import AdminKPICards from './components/KPICards';
 import QuickActions from './components/QuickActions';
 import PendingExpensesCard from './components/PendingExpensesCard';
 import ChartsAnalytics from './components/ChartsAnalytics';
+import RemindersCard from './components/RemindersCard';
+import UpcomingDueCard from './components/UpcomingDueCard';
+import StaffOverviewCard from './components/StaffOverviewCard';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
-import AIInsightsPanel from './components/AIInsightsPanel';
-import AIForecasting from './components/AIForecasting';
-import AIQuickActions from './components/AIQuickActions';
-import AITeacherAnalytics from './components/AITeacherAnalytics';
-import AIFeeRecoveryAssistant from './components/AIFeeRecoveryAssistant';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
 
 export default function AdminDashboard() {
@@ -88,8 +86,8 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
-          <p className="text-white/85">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-green-600"></div>
+          <p className="text-gray-600">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -99,20 +97,20 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4 max-w-md text-center">
-          <div className="text-red-400 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-white mb-2">Account Setup Required</h2>
-          <p className="text-white/85 mb-6">{error}</p>
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Account Setup Required</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
           {missingSchoolId && (
             <button
               onClick={() => router.push('/auth/setup-school')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               Complete School Setup
             </button>
           )}
           <button
             onClick={() => router.push('/login')}
-            className="px-6 py-2 text-white/70 hover:text-white transition-colors"
+            className="px-6 py-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             Back to Login
           </button>
@@ -123,10 +121,26 @@ export default function AdminDashboard() {
 
   return (
     <>
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Admin Dashboard</h1>
-        <p className="text-white/85">Manage your school operations and view insights</p>
+      {/* Page Header: Title, subtitle, CTAs */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
+          <p className="text-gray-600">Plan, prioritize, and manage your school with ease.</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => router.push('/dashboard/admin/students/add')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+          >
+            + Add Student
+          </button>
+          <button
+            onClick={() => router.push('#')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+          >
+            Import Data
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -138,35 +152,27 @@ export default function AdminDashboard() {
       {/* Pending Expense Approvals */}
       <PendingExpensesCard />
 
-      {/* Charts & Analytics */}
+      {/* Charts & Analytics (hero + secondary) */}
       <ChartsAnalytics />
+
+      {/* Reminders + Upcoming (two-column) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <RemindersCard />
+        <UpcomingDueCard />
+      </div>
 
       {/* Recent Payments & Notifications */}
       <RecentPaymentsNotifications />
 
-      {/* AI-Powered Features */}
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-          <span className="text-2xl">🤖</span>
-          AI-Powered Features
-        </h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <AIInsightsPanel />
-          <AIForecasting />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <AIQuickActions />
-          <AITeacherAnalytics />
-        </div>
-        <AIFeeRecoveryAssistant />
-      </div>
+      {/* Staff Overview (optional) */}
+      <StaffOverviewCard />
 
       {/* Recent Reports & System Health */}
       <RecentReportsSystemHealth />
 
       {/* Footer */}
-      <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
-        <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
+      <footer className="mt-12 py-6 text-center text-sm text-gray-500">
+        <p>© 2025 PwezaCore School Management System.</p>
       </footer>
     </>
   );

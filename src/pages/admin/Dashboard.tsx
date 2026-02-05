@@ -9,7 +9,6 @@ import QuickActions from './components/QuickActions';
 import PendingExpensesCard from './components/PendingExpensesCard';
 import ChartsAnalytics from './components/ChartsAnalytics';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
-import AISection from './components/AISection';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
 
 const STALE_TIME_MS = 5 * 60 * 1000; // 5 min
@@ -139,12 +138,10 @@ export default function AdminDashboard() {
 
       <RecentPaymentsNotifications />
 
-      <AISection />
-
       <RecentReportsSystemHealth />
 
       <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
-        <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
+        <p>© 2025 PwezaCore School Management System.</p>
       </footer>
     </>
   );

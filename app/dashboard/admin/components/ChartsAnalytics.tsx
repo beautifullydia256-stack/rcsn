@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { motion } from 'framer-motion';
-import GlassCard from '@/components/ui/GlassCard';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
+
+const GREEN_PRIMARY = '#16a34a';
+const GREEN_LIGHT = '#22c55e';
 
 export default function ChartsAnalytics() {
   const [termEnrollmentData, setTermEnrollmentData] = useState<Array<{ label: string; count: number; year: number; term: number }>>([]);
@@ -337,166 +338,146 @@ export default function ChartsAnalytics() {
   }, []);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-      {/* Student Enrollment Trends */}
-      <GlassCard className="p-6 relative overflow-hidden" hover>
-        <div
-          className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl"
-          style={{ background: '#4dabff' }}
-        />
-        <div className="relative z-10">
+    <div className="space-y-6 mb-6">
+      {/* Hero: Enrollment & Attendance Analytics (bar chart - last 7 working days) */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <Users className="w-5 h-5 text-green-600" />
+          <h3 className="text-lg font-semibold text-gray-900">Enrollment & Attendance Analytics</h3>
+        </div>
+        {attendanceLoading ? (
+          <div className="h-40 flex items-center justify-center">
+            <div className="text-gray-500 text-sm">Loading...</div>
+          </div>
+        ) : attendanceData.length === 0 ? (
+          <div className="h-40 flex items-center justify-center">
+            <div className="text-gray-500 text-sm">No attendance data available</div>
+          </div>
+        ) : (
+          <>
+            <div className="h-40 flex items-end gap-2">
+              {attendanceData.map((day) => {
+                const date = new Date(day.date);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+                const dayNumber = date.getDate();
+                const maxPercentage = Math.max(...attendanceData.map((d) => d.percentage), 100);
+                return (
+                  <div key={day.date} className="flex-1 flex flex-col items-center group">
+                    <div
+                      className="w-full rounded-t transition-all hover:opacity-90 cursor-pointer"
+                      style={{
+                        background: `linear-gradient(to top, ${GREEN_PRIMARY}, ${GREEN_LIGHT})`,
+                        height: `${maxPercentage > 0 ? (day.percentage / maxPercentage) * 100 : 0}%`,
+                        minHeight: day.percentage > 0 ? '8px' : '4px',
+                      }}
+                      title={`${dayName} ${dayNumber}: ${day.percentage}% (${day.present}/${day.total})`}
+                    />
+                    <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
+                      <div className="font-medium text-gray-700">{dayName}</div>
+                      <div>{dayNumber}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="text-xs text-gray-500 mt-2 text-center">Last 7 working days</div>
+          </>
+        )}
+      </div>
+
+      {/* Secondary charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Enrollment Trends (by term) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <TrendingUp className="w-5 h-5" style={{ color: '#4dabff' }} />
-            <h3 className="text-lg font-semibold text-white">Enrollment Trends</h3>
+            <TrendingUp className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Enrollment by Term</h3>
           </div>
           {termLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">Loading...</div>
+              <div className="text-gray-500 text-sm">Loading...</div>
             </div>
           ) : termEnrollmentData.length === 0 ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">No term data available</div>
-            </div>
-          ) : (() => {
-            const maxCount = Math.max(...termEnrollmentData.map(t => t.count), 1);
-            return (
-              <>
-                <div className="h-32 flex items-end gap-2">
-                  {termEnrollmentData.map((term) => (
-                    <div
-                      key={`${term.year}-${term.term}`}
-                      className="flex-1 flex flex-col items-center group"
-                    >
-                      <div
-                        className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
-                        style={{
-                          background: 'linear-gradient(to top, #4dabff, #00d4ff)',
-                          height: `${(term.count / maxCount) * 100}%`,
-                          minHeight: term.count > 0 ? '8px' : '4px'
-                        }}
-                        title={`${term.label}: ${term.count.toLocaleString()} students`}
-                      />
-                      <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
-                        <div className="font-medium">{term.label}</div>
-                        <div>{term.count}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="text-xs text-white/70 mt-2 text-center">Current term vs previous 3 terms</div>
-              </>
-            );
-          })()}
-        </div>
-      </GlassCard>
-
-      {/* Attendance Patterns */}
-      <GlassCard className="p-6 relative overflow-hidden" hover>
-        <div
-          className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl"
-          style={{ background: '#10b981' }}
-        />
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-4">
-            <Users className="w-5 h-5" style={{ color: '#10b981' }} />
-            <h3 className="text-lg font-semibold text-white">Attendance Patterns</h3>
-          </div>
-          {attendanceLoading ? (
-            <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">Loading...</div>
-            </div>
-          ) : attendanceData.length === 0 ? (
-            <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">No attendance data available</div>
+              <div className="text-gray-500 text-sm">No term data available</div>
             </div>
           ) : (
-            <>
-              <div className="h-32 flex items-end gap-2">
-                {attendanceData.map((day, index) => {
-                  const date = new Date(day.date);
-                  const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-                  const dayNumber = date.getDate();
-                  const maxPercentage = Math.max(...attendanceData.map(d => d.percentage), 100);
-                  
-                  return (
-                    <div
-                      key={day.date}
-                      className="flex-1 flex flex-col items-center group"
-                    >
+            (() => {
+              const maxCount = Math.max(...termEnrollmentData.map((t) => t.count), 1);
+              return (
+                <>
+                  <div className="h-32 flex items-end gap-2">
+                    {termEnrollmentData.map((term) => (
                       <div
-                        className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
-                        style={{
-                          background: 'linear-gradient(to top, #10b981, #00d4ff)',
-                          height: `${maxPercentage > 0 ? (day.percentage / maxPercentage) * 100 : 0}%`,
-                          minHeight: day.percentage > 0 ? '8px' : '4px'
-                        }}
-                        title={`${dayName} ${dayNumber}: ${day.percentage}% (${day.present}/${day.total})`}
-                      />
-                      <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
-                        <div className="font-medium">{dayName}</div>
-                        <div>{dayNumber}</div>
+                        key={`${term.year}-${term.term}`}
+                        className="flex-1 flex flex-col items-center group"
+                      >
+                        <div
+                          className="w-full rounded-t transition-all hover:opacity-90 cursor-pointer"
+                          style={{
+                            background: `linear-gradient(to top, ${GREEN_PRIMARY}, ${GREEN_LIGHT})`,
+                            height: `${(term.count / maxCount) * 100}%`,
+                            minHeight: term.count > 0 ? '8px' : '4px',
+                          }}
+                          title={`${term.label}: ${term.count.toLocaleString()} students`}
+                        />
+                        <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
+                          <div className="font-medium text-gray-700">{term.label}</div>
+                          <div>{term.count}</div>
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="text-xs text-white/70 mt-2 text-center">Last 7 working days</div>
-            </>
+                    ))}
+                  </div>
+                  <div className="text-xs text-gray-500 mt-2 text-center">Current term vs previous 3 terms</div>
+                </>
+              );
+            })()
           )}
         </div>
-      </GlassCard>
 
-      {/* Fee Collections vs Outstanding */}
-      <GlassCard className="p-6 relative overflow-hidden" hover>
-        <div
-          className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-20 blur-2xl"
-          style={{ background: '#f59e0b' }}
-        />
-        <div className="relative z-10">
+        {/* Fee Collections by week */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <DollarSign className="w-5 h-5" style={{ color: '#f59e0b' }} />
-            <h3 className="text-lg font-semibold text-white">Fee Collections</h3>
+            <DollarSign className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Fee Collections by Week</h3>
           </div>
           {feeLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">Loading...</div>
+              <div className="text-gray-500 text-sm">Loading...</div>
             </div>
           ) : feeData.length === 0 ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-white/70 text-sm">No fee data available</div>
+              <div className="text-gray-500 text-sm">No fee data available</div>
             </div>
           ) : (
             <>
               <div className="h-32 flex items-end gap-2">
                 {feeData.map((week) => {
-                  const maxAmount = Math.max(...feeData.map(f => f.amount), 1);
+                  const maxAmount = Math.max(...feeData.map((f) => f.amount), 1);
                   return (
-                    <div
-                      key={week.label}
-                      className="flex-1 flex flex-col items-center group"
-                    >
+                    <div key={week.label} className="flex-1 flex flex-col items-center group">
                       <div
-                        className="w-full rounded-t transition-all hover:opacity-80 cursor-pointer"
+                        className="w-full rounded-t transition-all hover:opacity-90 cursor-pointer"
                         style={{
-                          background: 'linear-gradient(to top, #f59e0b, #ff6bcb)',
+                          background: `linear-gradient(to top, ${GREEN_PRIMARY}, ${GREEN_LIGHT})`,
                           height: `${(week.amount / maxAmount) * 100}%`,
-                          minHeight: week.amount > 0 ? '8px' : '4px'
+                          minHeight: week.amount > 0 ? '8px' : '4px',
                         }}
                         title={`${week.label}: UGX ${week.rawAmount.toLocaleString()}`}
                       />
-                      <div className="text-[10px] text-white/70 mt-1 text-center leading-tight">
-                        <div className="font-medium">{week.label}</div>
+                      <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
+                        <div className="font-medium text-gray-700">{week.label}</div>
                         <div>{week.amount}M</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div className="text-xs text-white/70 mt-2 text-center">Last 7 weeks (M UGX)</div>
+              <div className="text-xs text-gray-500 mt-2 text-center">Last 7 weeks (M UGX)</div>
             </>
           )}
         </div>
-      </GlassCard>
+      </div>
     </div>
   );
 }

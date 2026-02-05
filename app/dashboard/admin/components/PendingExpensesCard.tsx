@@ -3,8 +3,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
-import GlassCard from '@/components/ui/GlassCard';
-import GlassButton from './GlassButton';
 import { Clock, CheckCircle, XCircle, DollarSign } from 'lucide-react';
 
 interface PendingExpense {
@@ -124,96 +122,90 @@ export default function PendingExpensesCard() {
 
   if (loading) {
     return (
-      <GlassCard className="p-6 mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-6 bg-white/20 rounded w-1/3"></div>
-          <div className="h-4 bg-white/20 rounded w-2/3"></div>
+          <div className="h-6 bg-gray-200 rounded w-1/3" />
+          <div className="h-4 bg-gray-200 rounded w-2/3" />
         </div>
-      </GlassCard>
+      </div>
     );
   }
 
   return (
-    <GlassCard className="p-6 mb-6 relative overflow-hidden" hover>
-      <div
-        className="absolute top-0 right-0 w-32 h-32 rounded-full opacity-20 blur-3xl"
-        style={{ background: '#f59e0b' }}
-      />
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 rounded-xl" style={{ background: 'rgba(245, 158, 11, 0.2)' }}>
-            <Clock className="w-6 h-6" style={{ color: '#f59e0b' }} />
-          </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Pending Expense Approvals</h2>
-            <p className="text-sm text-white/85">
-              {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
-            </p>
-          </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-3 rounded-xl bg-amber-100">
+          <Clock className="w-6 h-6 text-amber-600" />
         </div>
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">Pending Expense Approvals</h2>
+          <p className="text-sm text-gray-500">
+            {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
+          </p>
+        </div>
+      </div>
 
-        {expenses.length === 0 ? (
-          <div className="text-center py-8">
-            <CheckCircle className="w-12 h-12 mx-auto mb-2" style={{ color: 'rgba(255, 255, 255, 0.3)' }} />
-            <p className="text-white/85">No pending expenses to approve</p>
-          </div>
-        ) : (
-          <div className="space-y-3 max-h-[500px] overflow-y-auto">
-            {expenses.map((expense) => (
-              <motion.div
-                key={expense.expense_id}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="p-4 rounded-xl"
-                style={{ background: 'rgba(255, 255, 255, 0.08)', border: '1px solid rgba(255, 255, 255, 0.15)' }}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <DollarSign className="w-5 h-5" style={{ color: '#ef4444' }} />
-                      <span className="font-medium text-white">{expense.category_name}</span>
-                      <span className="text-xs text-white/40">•</span>
-                      <span className="text-xs text-white/60">{expense.reference_number}</span>
-                    </div>
-                    <p className="text-sm text-white/85 mb-2">{expense.description}</p>
-                    <div className="flex flex-wrap gap-3 text-xs text-white/70">
-                      <span>Amount: <span className="font-semibold text-red-400">{formatCurrency(expense.amount)}</span></span>
-                      <span>•</span>
-                      <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>Method: {expense.payment_method}</span>
-                      <span>•</span>
-                      <span>By: {expense.recorded_by_name}</span>
-                    </div>
+      {expenses.length === 0 ? (
+        <div className="text-center py-8">
+          <CheckCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+          <p className="text-gray-500">No pending expenses to approve</p>
+        </div>
+      ) : (
+        <div className="space-y-3 max-h-[500px] overflow-y-auto">
+          {expenses.map((expense) => (
+            <motion.div
+              key={expense.expense_id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="p-4 rounded-xl bg-gray-50 border border-gray-100"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <DollarSign className="w-5 h-5 text-red-500" />
+                    <span className="font-medium text-gray-900">{expense.category_name}</span>
+                    <span className="text-xs text-gray-400">•</span>
+                    <span className="text-xs text-gray-600">{expense.reference_number}</span>
                   </div>
-                  <div className="flex gap-2">
-                    <GlassButton
-                      variant="primary"
-                      onClick={() => handleApproval(expense.expense_id, 'approve')}
-                      disabled={processing === expense.expense_id}
-                      className="flex items-center gap-1 text-sm"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Approve
-                    </GlassButton>
-                    <GlassButton
-                      variant="primary"
-                      onClick={() => handleApproval(expense.expense_id, 'reject')}
-                      disabled={processing === expense.expense_id}
-                      className="flex items-center gap-1 text-sm"
-                      style={{ background: 'rgba(239, 68, 68, 0.2)', borderColor: 'rgba(239, 68, 68, 0.4)' }}
-                    >
-                      <XCircle className="w-4 h-4" />
-                      Reject
-                    </GlassButton>
+                  <p className="text-sm text-gray-600 mb-2">{expense.description}</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                    <span>
+                      Amount: <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span>
+                    </span>
+                    <span>•</span>
+                    <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
+                    <span>•</span>
+                    <span>Method: {expense.payment_method}</span>
+                    <span>•</span>
+                    <span>By: {expense.recorded_by_name}</span>
                   </div>
                 </div>
-              </motion.div>
-            ))}
-          </div>
-        )}
-      </div>
-    </GlassCard>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleApproval(expense.expense_id, 'approve')}
+                    disabled={processing === expense.expense_id}
+                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleApproval(expense.expense_id, 'reject')}
+                    disabled={processing === expense.expense_id}
+                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    Reject
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
