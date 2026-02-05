@@ -22,14 +22,6 @@ import GlassBackground from './GlassBackground';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
 
-const sidebarStyle = {
-  background: 'rgba(255, 255, 255, 0.08)',
-  backdropFilter: 'blur(25px)',
-  WebkitBackdropFilter: 'blur(25px)',
-  borderRight: '1px solid rgba(255, 255, 255, 0.20)',
-  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-};
-
 function NavLinkStyle({
   to,
   end,
@@ -45,13 +37,11 @@ function NavLinkStyle({
     <NavLink to={to} end={end} className="block">
       {({ isActive }) => (
         <span
-          className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
-          style={{
-            background: isActive ? 'rgba(22, 163, 74, 0.2)' : 'transparent',
-            border: isActive ? '1px solid rgba(22, 163, 74, 0.4)' : '1px solid transparent',
-            color: isActive ? '#22c55e' : 'rgba(255, 255, 255, 0.85)',
-            boxShadow: isActive ? '0 2px 10px rgba(0, 0, 0, 0.15)' : 'none',
-          }}
+          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+            isActive
+              ? 'bg-green-600 text-white'
+              : 'text-gray-700 hover:bg-gray-100'
+          }`}
         >
           <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
           {children}
@@ -110,22 +100,16 @@ export default function AdminLayout() {
     <div className="min-h-screen relative">
       {!isDashboard && <GlassBackground />}
 
-      <aside
-        className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto"
-        style={sidebarStyle}
-      >
-        <div
-          className="flex items-center gap-2 px-4 py-6 border-b"
-          style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}
-        >
+      <aside className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
           <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-white">PwezaCore</span>
+          <span className="font-bold text-lg text-gray-900">PwezaCore</span>
         </div>
 
         <div className="px-4 pt-2 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">MENU</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">MENU</span>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavLinkStyle to="/dashboard/admin" end icon={LayoutDashboard}>Dashboard</NavLinkStyle>
@@ -144,29 +128,29 @@ export default function AdminLayout() {
         </nav>
 
         <div className="px-4 pt-3 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-white/80">GENERAL</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">GENERAL</span>
         </div>
-        <div className="px-3 py-2 border-t space-y-1" style={{ borderColor: 'rgba(255, 255, 255, 0.20)' }}>
+        <div className="px-3 py-2 border-t border-gray-200 space-y-1">
           <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>Settings</NavLinkStyle>
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all text-red-400 hover:bg-red-500/10"
+            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all"
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-5 h-5 flex-shrink-0 text-gray-600" />
             Logout
           </button>
         </div>
 
-        <div className="mx-3 mb-4 p-4 rounded-xl border border-green-500/30 bg-green-500/10">
+        <div className="mx-3 mb-4 p-4 rounded-xl bg-green-600 text-white">
           <div className="flex items-center gap-2 mb-2">
-            <Smartphone className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-semibold text-white">Download our Mobile App</span>
+            <Smartphone className="w-5 h-5 text-white" />
+            <span className="text-sm font-semibold">Download our Mobile App</span>
           </div>
-          <p className="text-xs text-white/80 mb-3">Get easy in another way.</p>
+          <p className="text-xs text-white/90 mb-3">Get easy in another way.</p>
           <a
             href="#"
-            className="block w-full py-2 rounded-lg text-center text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            className="block w-full py-2 rounded-lg text-center text-sm font-medium bg-white text-green-600 hover:bg-green-50 transition-colors"
           >
             Download
           </a>
