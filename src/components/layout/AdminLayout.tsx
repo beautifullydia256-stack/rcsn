@@ -125,13 +125,6 @@ export default function AdminLayout() {
           <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard}>Job Vacancies</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>System Settings</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell}>Notifications</NavLinkStyle>
-        </nav>
-
-        <div className="px-4 pt-3 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">GENERAL</span>
-        </div>
-        <div className="px-3 py-2 border-t border-gray-200 space-y-1">
-          <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>Settings</NavLinkStyle>
           <button
             type="button"
             onClick={handleLogout}
@@ -140,7 +133,7 @@ export default function AdminLayout() {
             <LogOut className="w-5 h-5 flex-shrink-0 text-gray-600" />
             Logout
           </button>
-        </div>
+        </nav>
 
         <div className="mx-3 mb-4 p-4 rounded-xl bg-green-600 text-white">
           <div className="flex items-center gap-2 mb-2">
