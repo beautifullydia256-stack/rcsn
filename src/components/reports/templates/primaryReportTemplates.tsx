@@ -838,24 +838,23 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     return n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
   };
 
-  // Determine which columns to show based on selected exam set
-  // If examSet is provided and has a name, check if it's a specific exam set
+  // Determine which columns to show (same rule as Template4 / Primary 7 for consistency)
+  // Mid Term only → show just Mid column; End of Term or Auto → show BOTH Mid and End columns.
   let showMidTermColumn = true;
   let showEndOfTermColumn = true;
-  
+
   if (examSet && examSet.name) {
     const examSetName = String(examSet.name).toLowerCase();
-    // If "All Exam Sets" is selected, show both columns
     if (examSetName.includes('all exam sets') || examSetName === 'all exam sets') {
       showMidTermColumn = true;
       showEndOfTermColumn = true;
     } else if (isMid(examSet.name)) {
-      // If Mid Term is selected, hide END OF TERM column
+      // Mid Term selected: show only Mid Term column
       showMidTermColumn = true;
       showEndOfTermColumn = false;
-    } else if (isEnd(examSet.name)) {
-      // If End of Term is selected, hide MID TERM column
-      showMidTermColumn = false;
+    } else {
+      // End of Term (or Auto) selected: show BOTH Mid and End columns so both tables appear
+      showMidTermColumn = true;
       showEndOfTermColumn = true;
     }
   }
