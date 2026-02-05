@@ -398,63 +398,19 @@ export default function GenerateReportsPage() {
 </html>`;
   };
 
-  const downloadPdfFromHtml = async (htmlContent: string, filename: string) => {
-    // Use the same Next.js endpoint as the old dashboard generator
-    const response = await fetch('/api/reports/generate-pdf', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        htmlContent,
-        type: 'single',
-      }),
-    });
-    if (!response.ok) throw new Error('Failed to generate PDF');
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+  // NOTE: From the SPA we cannot reliably call the Next.js PDF APIs that live on a different host.
+  // To guarantee a working experience everywhere, we fall back to the browser's print dialog.
+  // Users can then choose "Save as PDF" in the print UI to download a real PDF.
+  const downloadPdfFromHtml = async (_htmlContent: string, _filename: string) => {
+    window.print();
   };
 
   const handleDownloadSinglePdf = async () => {
     if (!hasReportsReady) return;
-    // If backend has already generated and cached a PDF for this student, reuse it
-    if (reportType === 'single' && reportsToShow.length > 0) {
-      const cached = reportsToShow[0] as any;
-      if (cached.pdf_url) {
-        const a = document.createElement('a');
-        a.href = cached.pdf_url;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        // Let storage filename stand; browser will download or open
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        return;
-      }
-    }
-
-    const container = document.getElementById('report-preview-print-area');
-    if (!container) return;
+    // Just open the print dialog – user can choose "Save as PDF"
     setDownloadingPdf(true);
     try {
-      const html = await buildHtmlForElement(container);
-      const first = reportsToShow[0];
-      const rd = first?.report_data || {};
-      const student = rd.students?.[0];
-      const examSet = rd.examSet || {};
-      const baseName = student
-        ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
-        : `Report_${examSet.name || 'Report'}.pdf`;
-      await downloadPdfFromHtml(html, baseName);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to download single PDF:', err);
-      setError(err instanceof Error ? `Failed to download PDF: ${err.message}` : 'Failed to download PDF');
+      window.print();
     } finally {
       setDownloadingPdf(false);
     }
@@ -462,21 +418,10 @@ export default function GenerateReportsPage() {
 
   const handleDownloadClassCombinedPdf = async () => {
     if (!hasReportsReady) return;
-    const container = document.getElementById('report-preview-print-area');
-    if (!container) return;
+    // Combined class: also just use the print dialog
     setDownloadingPdf(true);
     try {
-      const html = await buildHtmlForElement(container);
-      const first = reportsToShow[0];
-      const rd = first?.report_data || {};
-      const examSet = rd.examSet || {};
-      const className = selectedClass || rd.students?.[0]?.current_class || 'Class';
-      const baseName = `${className}_Reports_${examSet.name || 'Report'}.pdf`;
-      await downloadPdfFromHtml(html, baseName);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to download combined class PDF:', err);
-      setError(err instanceof Error ? `Failed to download class PDF: ${err.message}` : 'Failed to download class PDF');
+      window.print();
     } finally {
       setDownloadingPdf(false);
       setShowClassDownloadModal(false);
@@ -487,73 +432,9 @@ export default function GenerateReportsPage() {
     if (!hasReportsReady) return;
     setDownloadingPdf(true);
     try {
-      // If every student in the class already has a cached PDF URL, download and ZIP those directly.
-      const zip = new JSZip();
-      const allHavePdfUrls = reportsToShow.length > 0 && reportsToShow.every((r: any) => r.pdf_url);
-
-      if (allHavePdfUrls) {
-        for (let i = 0; i < reportsToShow.length; i++) {
-          const report = reportsToShow[i] as any;
-          const rd = report.report_data || {};
-          const student = rd.students?.[0];
-          const examSet = rd.examSet || {};
-          const baseName = student
-            ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
-            : `Student_${i + 1}_Report_${examSet.name || 'Report'}.pdf`;
-          const response = await fetch(report.pdf_url as string);
-          if (!response.ok) continue;
-          const arrayBuffer = await response.arrayBuffer();
-          zip.file(baseName.replace(/[^a-zA-Z0-9._-]/g, '_'), arrayBuffer);
-        }
-      } else {
-        // Fallback: render each student card via /api/ai/generate-pdf (current behaviour)
-        const container = document.getElementById('report-preview-print-area');
-        if (!container) return;
-        const cards = Array.from(container.querySelectorAll('.report-student-card')) as HTMLElement[];
-        if (!cards.length) {
-          await handleDownloadClassCombinedPdf();
-          return;
-        }
-        for (let i = 0; i < cards.length; i++) {
-          const card = cards[i];
-          const html = await buildHtmlForElement(card);
-          const report = reportsToShow[i];
-          const rd = report?.report_data || {};
-          const student = rd.students?.[0];
-          const examSet = rd.examSet || {};
-          const baseName = student
-            ? `${student.name}_${student.current_class}_Report_${examSet.name || 'Report'}.pdf`
-            : `Student_${i + 1}_Report_${examSet.name || 'Report'}.pdf`;
-          const response = await fetch('/api/reports/generate-pdf', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              htmlContent: html,
-              type: 'single',
-            }),
-          });
-          if (!response.ok) throw new Error('Failed to generate PDF for class ZIP');
-          const arrayBuffer = await response.arrayBuffer();
-          zip.file(baseName.replace(/[^a-zA-Z0-9._-]/g, '_'), arrayBuffer);
-        }
-      }
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
-      const url = window.URL.createObjectURL(zipBlob);
-      const a = document.createElement('a');
-      const first = reportsToShow[0];
-      const rd = first?.report_data || {};
-      const examSet = rd.examSet || {};
-      const className = selectedClass || rd.students?.[0]?.current_class || 'Class';
-      a.href = url;
-      a.download = `${className}_Reports_${examSet.name || 'Report'}.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to download class ZIP:', err);
-      setError(err instanceof Error ? `Failed to download class ZIP: ${err.message}` : 'Failed to download class ZIP');
+      // ZIP option: we cannot build a real ZIP on the server from the SPA's domain today.
+      // For now, just open the print dialog as a graceful fallback.
+      window.print();
     } finally {
       setDownloadingPdf(false);
       setShowClassDownloadModal(false);
