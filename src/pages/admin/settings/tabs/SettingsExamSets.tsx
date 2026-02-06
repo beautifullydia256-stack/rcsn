@@ -242,25 +242,25 @@ export default function SettingsExamSets({
         desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
       />
 
-      <div className="mb-6 rounded-lg border border-white/10 bg-white/5 p-4">
-        <h3 className="mb-3 font-medium text-white">Create New Exam Set</h3>
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <h3 className="mb-3 font-medium text-gray-900">Create New Exam Set</h3>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Exam Set Name (e.g., Beginning of Term)"
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 placeholder-gray-400"
           />
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description (optional)"
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/60"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 placeholder-gray-400"
           />
           <select
             value={term}
             onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
           >
             <option value={1} className="bg-slate-900">Term 1</option>
             <option value={2} className="bg-slate-900">Term 2</option>
@@ -272,11 +272,11 @@ export default function SettingsExamSets({
             max={2099}
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
           />
         </div>
         <div className="mt-3">
-          <label className="mb-2 flex items-center gap-2 text-sm text-white/80">
+          <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"
               checked={allClasses}
@@ -298,7 +298,7 @@ export default function SettingsExamSets({
                   className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
                     targetClasses.includes(className)
                       ? 'border-blue-400 bg-blue-600/80 text-white'
-                      : 'border-white/20 bg-white/10 text-white/90 hover:bg-white/15'
+                      : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
                   }`}
                 >
                   {className}
@@ -320,53 +320,53 @@ export default function SettingsExamSets({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
           {error}
         </div>
       )}
 
-      <div className="mb-3 text-sm text-white/80">
+      <div className="mb-3 text-sm text-gray-700">
         Current Exam Sets ({currentTerm?.year ?? 'Current Year'})
       </div>
-      <div className="overflow-x-auto rounded-xl border border-white/20 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-lg shadow-black/20 backdrop-blur-md">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left">
-              <th className="px-4 py-2 text-white/80">Name</th>
-              <th className="px-4 py-2 text-white/80">Description</th>
-              <th className="px-4 py-2 text-white/80">Term</th>
-              <th className="px-4 py-2 text-white/80">Year</th>
-              <th className="px-4 py-2 text-white/80">Classes</th>
-              <th className="px-4 py-2 text-white/80">Status</th>
-              <th className="px-4 py-2 text-white/80">Active for Input</th>
-              <th className="px-4 py-2 text-white/80">Actions</th>
+              <th className="px-4 py-2 text-gray-700">Name</th>
+              <th className="px-4 py-2 text-gray-700">Description</th>
+              <th className="px-4 py-2 text-gray-700">Term</th>
+              <th className="px-4 py-2 text-gray-700">Year</th>
+              <th className="px-4 py-2 text-gray-700">Classes</th>
+              <th className="px-4 py-2 text-gray-700">Status</th>
+              <th className="px-4 py-2 text-gray-700">Active for Input</th>
+              <th className="px-4 py-2 text-gray-700">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-white/80">
+                <td colSpan={8} className="px-4 py-6 text-center text-gray-700">
                   Loading...
                 </td>
               </tr>
             ) : filteredSets.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-white/80">
+                <td colSpan={8} className="px-4 py-6 text-center text-gray-700">
                   No exam sets created for {currentTerm?.year ?? 'this year'} yet.
                 </td>
               </tr>
             ) : (
               filteredSets.map((es) => (
-                <tr key={es.id} className="border-t border-white/10">
-                  <td className="px-4 py-2 font-medium text-white">{es.name}</td>
-                  <td className="px-4 py-2 text-white/90">{es.description || '-'}</td>
-                  <td className="px-4 py-2 text-white/90">Term {es.term}</td>
-                  <td className="px-4 py-2 text-white/90">{es.year}</td>
-                  <td className="px-4 py-2 text-white/90">
+                <tr key={es.id} className="border-t border-gray-100">
+                  <td className="px-4 py-2 font-medium text-gray-900">{es.name}</td>
+                  <td className="px-4 py-2 text-gray-800">{es.description || '-'}</td>
+                  <td className="px-4 py-2 text-gray-800">Term {es.term}</td>
+                  <td className="px-4 py-2 text-gray-800">{es.year}</td>
+                  <td className="px-4 py-2 text-gray-800">
                     {targetClassesArr(es).length === 0 ? (
-                      <span className="text-green-300">All Classes</span>
+                      <span className="text-green-700">All Classes</span>
                     ) : (
-                      <span className="text-blue-300">
+                      <span className="text-blue-700">
                         {targetClassesArr(es).length} class
                         {targetClassesArr(es).length !== 1 ? 'es' : ''}
                       </span>

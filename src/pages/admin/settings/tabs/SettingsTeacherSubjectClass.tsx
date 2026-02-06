@@ -130,7 +130,7 @@ export default function SettingsTeacherSubjectClass({
         <select
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
         >
           <option value="" className="bg-slate-900">
             Select Teacher
@@ -144,7 +144,7 @@ export default function SettingsTeacherSubjectClass({
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-white outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">Select Class</option>
           {classOptions.map((c) => (
@@ -153,11 +153,11 @@ export default function SettingsTeacherSubjectClass({
             </option>
           ))}
         </select>
-        <div className="min-h-[44px] rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white">
+        <div className="min-h-[44px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900">
           {selectedClass ? (
             <div className="flex flex-wrap gap-2">
               {classSubjects.length === 0 ? (
-                <span className="text-sm text-white/70">No subjects in this class yet</span>
+                <span className="text-sm text-gray-600">No subjects in this class yet</span>
               ) : (
                 classSubjects.map((s) => (
                   <button
@@ -166,7 +166,7 @@ export default function SettingsTeacherSubjectClass({
                     className={`rounded-lg border px-3 py-1 text-sm ${
                       selectedSubjects.includes(s)
                         ? 'border-blue-400 bg-blue-600/80 text-white'
-                        : 'border-white/20 bg-white/10 text-white/90 hover:bg-white/15'
+                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                     onClick={() =>
                       setSelectedSubjects((prev) =>
@@ -180,7 +180,7 @@ export default function SettingsTeacherSubjectClass({
               )}
             </div>
           ) : (
-            <span className="text-sm text-white/70">Select a class to view subjects</span>
+            <span className="text-sm text-gray-600">Select a class to view subjects</span>
           )}
         </div>
         <button
@@ -189,48 +189,48 @@ export default function SettingsTeacherSubjectClass({
             !selectedTeacher || !selectedClass || selectedSubjects.length === 0 || saving
           }
           onClick={assign}
-          className="rounded-lg bg-green-600 px-3 py-2 hover:bg-green-500 disabled:opacity-50"
+          className="rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
         >
           {saving ? 'Assigning...' : 'Assign'}
         </button>
       </div>
 
-      <div className="mt-4 text-sm text-white/80">Current assignments</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-white/20 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md">
+      <div className="mt-4 text-sm text-gray-700">Current assignments</div>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-lg shadow-black/20 backdrop-blur-md">
         <table className="min-w-full text-sm">
           <thead>
             <tr className="text-left">
-              <th className="px-4 py-2 text-white/80">Teacher</th>
-              <th className="px-4 py-2 text-white/80">Class</th>
-              <th className="px-4 py-2 text-white/80">Subject</th>
-              <th className="px-4 py-2 text-white/80">Actions</th>
+              <th className="px-4 py-2 text-gray-700">Teacher</th>
+              <th className="px-4 py-2 text-gray-700">Class</th>
+              <th className="px-4 py-2 text-gray-700">Subject</th>
+              <th className="px-4 py-2 text-gray-700">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-white/80">
+                <td colSpan={4} className="px-4 py-6 text-center text-gray-700">
                   Loading...
                 </td>
               </tr>
             ) : assignments.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-white/80">
+                <td colSpan={4} className="px-4 py-6 text-center text-gray-700">
                   No assignments yet.
                 </td>
               </tr>
             ) : (
               assignments.map((a) => (
-                <tr key={a.id} className="border-t border-white/10">
-                  <td className="px-4 py-2 text-white">
+                <tr key={a.id} className="border-t border-gray-100">
+                  <td className="px-4 py-2 text-gray-900">
                     {teachers.find((t) => t.teacher_id === a.teacher_id)?.name || a.teacher_id}
                   </td>
-                  <td className="px-4 py-2 text-white/90">{a.class_name}</td>
-                  <td className="px-4 py-2 text-white/90">{a.subject}</td>
+                  <td className="px-4 py-2 text-gray-800">{a.class_name}</td>
+                  <td className="px-4 py-2 text-gray-800">{a.subject}</td>
                   <td className="px-4 py-2">
                     <button
                       type="button"
-                      className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:scale-105 hover:bg-red-400 transition-transform"
+                      className="rounded bg-red-500 px-2 py-1 text-xs text-gray-900 hover:scale-105 hover:bg-red-400 transition-transform"
                       onClick={() => remove(a.id)}
                     >
                       Remove
@@ -243,7 +243,7 @@ export default function SettingsTeacherSubjectClass({
         </table>
       </div>
       {error && (
-        <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
           {error}
         </div>
       )}

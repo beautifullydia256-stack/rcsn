@@ -165,23 +165,23 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
         desc="Upload your school badge and customize branding information."
       />
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="mb-4 text-lg font-semibold text-white">School Badge / Logo</h3>
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">School Badge / Logo</h3>
         <div className="flex flex-col items-start gap-6 md:flex-row">
           <div className="flex-shrink-0">
-            <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-white/20 bg-white/5">
+            <div className="flex h-40 w-40 items-center justify-center overflow-hidden rounded-lg border-2 border-gray-200 bg-gray-50">
               {logo ? (
                 <img src={logo} alt="School Badge" className="h-full w-full object-contain p-2" />
               ) : (
-                <div className="p-4 text-center text-sm text-white/40">
+                <div className="p-4 text-center text-sm text-gray-400">
                   <span className="block">No badge uploaded</span>
                 </div>
               )}
             </div>
-            <p className="mt-2 text-center text-xs text-white/50">Current Badge</p>
+            <p className="mt-2 text-center text-xs text-gray-500">Current Badge</p>
           </div>
           <div className="flex-1">
-            <label className="mb-2 block text-sm font-medium text-white/80">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
               Upload New Badge
             </label>
             <input
@@ -189,9 +189,9 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
               accept="image/*"
               onChange={handleBadgeUpload}
               disabled={uploading}
-              className="block w-full text-sm text-white/80 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-blue-500 file:cursor-pointer disabled:opacity-50"
+              className="block w-full text-sm text-gray-700 file:mr-4 file:rounded-lg file:border-0 file:bg-green-600 file:px-4 file:py-2 file:font-semibold file:text-white hover:file:bg-blue-500 file:cursor-pointer disabled:opacity-50"
             />
-            <p className="mt-2 text-xs text-white/50">
+            <p className="mt-2 text-xs text-gray-500">
               Recommended: PNG or JPG, max 2MB, square ratio (e.g., 500x500px)
             </p>
             {uploading && (
@@ -203,8 +203,8 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
           </div>
         </div>
         <div className="mt-4 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
-          <h4 className="mb-2 text-sm font-medium text-blue-300">📌 Where Your Badge Appears</h4>
-          <ul className="space-y-1 text-xs text-white/60">
+          <h4 className="mb-2 text-sm font-medium text-blue-700">📌 Where Your Badge Appears</h4>
+          <ul className="space-y-1 text-xs text-gray-500">
             <li>• Student report cards (all templates)</li>
             <li>• Headed paper and official documents</li>
             <li>• Exam result sheets</li>
@@ -213,90 +213,90 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="mb-4 text-lg font-semibold text-white">School Information</h3>
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">School Information</h3>
         <div className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium text-white/80">School Name</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">School Name</label>
             <input
               type="text"
               value={schoolName}
               disabled
-              className="w-full cursor-not-allowed rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white/50"
+              className="w-full cursor-not-allowed rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500"
             />
-            <p className="mt-1 text-xs text-white/40">Contact support to change school name</p>
+            <p className="mt-1 text-xs text-gray-400">Contact support to change school name</p>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-white/80">School Subtitle</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">School Subtitle</label>
             <input
               type="text"
               value={subtitle}
               onChange={(e) => setSubtitle(e.target.value)}
               placeholder="e.g., Premier Academy Ltd"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
             />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-white/80">School Motto</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">School Motto</label>
             <input
               type="text"
               value={motto}
               onChange={(e) => setMotto(e.target.value)}
               placeholder="e.g., Excellence in Education"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
             />
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-white/80">Address</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Address</label>
               <input
                 type="text"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g., Saddler Way, Naguru"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-white/80">P.O.Box</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">P.O.Box</label>
               <input
                 type="text"
                 value={pobox}
                 onChange={(e) => setPobox(e.target.value)}
                 placeholder="e.g., P.O.Box 3673, Kampala Uganda"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-white/80">Website</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">Website</label>
             <input
               type="url"
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
               placeholder="https://www.yourschool.com"
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
             />
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-white/80">Contact Email</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Contact Email</label>
               <input
                 type="email"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
                 placeholder="info@yourschool.com"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-white/80">Contact Phone</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Contact Phone</label>
               <input
                 type="tel"
                 value={contactPhone}
                 onChange={(e) => setContactPhone(e.target.value)}
                 placeholder="+256 XXX XXX XXX"
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
               />
             </div>
           </div>
@@ -309,7 +309,7 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
             >
               {saving ? (
                 <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-transparent" />
                   Saving...
                 </>
               ) : (
@@ -320,9 +320,9 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <h3 className="mb-4 text-lg font-semibold text-white">Report Header Colors</h3>
-        <p className="mb-4 text-sm text-white/60">
+      <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+        <h3 className="mb-4 text-lg font-semibold text-gray-900">Report Header Colors</h3>
+        <p className="mb-4 text-sm text-gray-500">
           Customize the colors used in report headers.
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -335,19 +335,19 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
             { label: 'Divider Line Color', value: dividerColor, set: setDividerColor },
           ].map(({ label, value, set }) => (
             <div key={label}>
-              <label className="mb-2 block text-sm font-medium text-white/80">{label}</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{label}</label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
                   value={value}
                   onChange={(e) => set(e.target.value)}
-                  className="h-10 w-16 cursor-pointer rounded-lg border border-white/10 bg-white/5"
+                  className="h-10 w-16 cursor-pointer rounded-lg border border-gray-200 bg-gray-50"
                 />
                 <input
                   type="text"
                   value={value}
                   onChange={(e) => set(e.target.value)}
-                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-4 py-2 text-white placeholder-white/30"
+                  className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-900 placeholder-gray-400"
                   placeholder="#1e3a8a"
                 />
               </div>

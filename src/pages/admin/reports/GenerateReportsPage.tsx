@@ -482,11 +482,11 @@ export default function GenerateReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Report Template – auto-selected, read-only display */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">
+              <label className="block text-gray-700 text-sm font-medium mb-2">
                 Report Template
-                <span className="ml-2 text-xs text-emerald-400 font-normal">✓ Auto-selected</span>
+                <span className="ml-2 text-xs text-emerald-600 font-normal">✓ Auto-selected</span>
               </label>
-              <div className="relative flex items-center rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/90">
+              <div className="relative flex items-center rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900">
                 <span>{templateDisplayName}</span>
                 <span className="ml-2 text-emerald-400">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -494,7 +494,7 @@ export default function GenerateReportsPage() {
                   </svg>
                 </span>
               </div>
-              <p className="mt-1 text-xs text-white/50">
+              <p className="mt-1 text-xs text-gray-500">
                 Template automatically selected based on class section to ensure consistent formatting.
               </p>
             </div>
@@ -508,7 +508,7 @@ export default function GenerateReportsPage() {
                   setReportType(e.target.value as 'single' | 'class');
                   setSelectedStudent('');
                 }}
-                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="single" className="text-black">Single Student</option>
                 <option value="class" className="text-black">Entire Class</option>
@@ -518,7 +518,7 @@ export default function GenerateReportsPage() {
             {/* Term – choose any term (defaults to current) */}
             {pageData && pageData.allTerms.length > 0 && (
               <div>
-                <label className="block text-white/80 text-sm font-medium mb-2">Term</label>
+                <label className="block text-gray-700 text-sm font-medium mb-2">Term</label>
                 <select
                   value={selectedTermKey || `${pageData.currentTerm.term}-${pageData.currentTerm.year}`}
                   onChange={(e) => {
@@ -527,7 +527,7 @@ export default function GenerateReportsPage() {
                     setSelectedClass('');
                     setSelectedStudent('');
                   }}
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
                   {pageData.allTerms.map((t) => {
                     const key = `${t.term}-${t.year}`;
@@ -540,7 +540,7 @@ export default function GenerateReportsPage() {
                     );
                   })}
                 </select>
-                <p className="mt-1 text-xs text-white/50">
+                <p className="mt-1 text-xs text-gray-500">
                   Choose the term for which to generate reports.
                 </p>
               </div>
@@ -557,7 +557,7 @@ export default function GenerateReportsPage() {
                     setSelectedClass('');
                     setSelectedStudent('');
                   }}
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
                   <option value="" className="text-black">
                     Auto (latest exam set for selected term)
@@ -568,20 +568,20 @@ export default function GenerateReportsPage() {
                     </option>
                   ))}
                 </select>
-                <p className="mt-1 text-xs text-white/50">
+                <p className="mt-1 text-xs text-gray-500">
                   Pick Mid Term or End of Term exam set. Leave on Auto to use the latest set (usually End of Term).
                 </p>
               </div>
             )}
             {pageData && examSetsForSelectedTerm.length === 0 && selectedTerm && (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                 No exam set for Term {(selectedTerm || pageData.currentTerm).term}, {(selectedTerm || pageData.currentTerm).year}. Create a Mid Term or End of Term exam set for this term to generate reports.
               </div>
             )}
 
             {/* Class – only classes that have results for the selected exam set (so past terms show e.g. P7) */}
             <div>
-              <label className="block text-white/80 text-sm font-medium mb-2">Class</label>
+              <label className="block text-gray-700 text-sm font-medium mb-2">Class</label>
               {effectiveExamSetId ? (
                 <select
                   value={selectedClass}
@@ -590,20 +590,20 @@ export default function GenerateReportsPage() {
                     setSelectedStudent('');
                     setStudentSearch('');
                   }}
-                  className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 >
-                  <option value="" className="text-white/70">Select Class</option>
+                  <option value="">Select Class</option>
                   {classesForExamSet.map((c) => (
-                    <option key={c} value={c} className="text-black">{c}</option>
+                    <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               ) : (
-                <div className="rounded-lg border border-white/20 bg-slate-900/40 px-3 py-2 text-white/70 text-sm">
+                <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-600 text-sm">
                   Select Term and Exam Set first — then classes with results for that set will appear.
                 </div>
               )}
               {effectiveExamSetId && classesForExamSet.length === 0 && (
-                <p className="mt-1 text-xs text-amber-300">No results for this exam set yet.</p>
+                <p className="mt-1 text-xs text-amber-700">No results for this exam set yet.</p>
               )}
             </div>
           </div>
@@ -611,20 +611,20 @@ export default function GenerateReportsPage() {
           {/* Student – only when Single Student */}
           {reportType === 'single' && (
             <div className="mb-6">
-              <label className="block text-white/80 text-sm font-medium mb-2">Student</label>
+              <label className="block text-gray-700 text-sm font-medium mb-2">Student</label>
               <input
                 type="text"
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
                 placeholder="Search by name or admission number"
-                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white placeholder-white/50 focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-green-500 focus:border-green-500 mb-2"
               />
               <select
                 value={selectedStudent}
                 onChange={(e) => setSelectedStudent(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-slate-900/60 px-3 py-2 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
-                <option value="" className="text-white/70">Select Student</option>
+                <option value="">Select Student</option>
                 {filteredStudents.map((s) => (
                   <option key={s.student_id} value={s.student_id} className="text-black">
                     {s.name} {s.admission_number ? `(${s.admission_number})` : ''}
@@ -635,15 +635,15 @@ export default function GenerateReportsPage() {
           )}
 
           {error && (
-            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {generatingStep === 'error' && (
-            <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
               <p className="font-medium">{generationError}</p>
-              <p className="mt-1 text-xs text-red-200/90">
+              <p className="mt-1 text-xs text-red-600">
                 If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY); redeploy; or check Vercel → Deployments → Functions → Logs.
               </p>
               <button
@@ -691,10 +691,10 @@ export default function GenerateReportsPage() {
           {generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0 && (() => {
             if (reportsToShow.length === 0) return null;
             return (
-              <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-white/10 bg-white/5 backdrop-blur-md p-6">
+              <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-gray-200 bg-gray-50 p-6">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-white text-lg font-semibold">Report Preview</h2>
-                  <span className="text-white/70 text-sm">Template: {templateDisplayName}</span>
+                  <h2 className="text-gray-900 text-lg font-semibold">Report Preview</h2>
+                  <span className="text-gray-600 text-sm">Template: {templateDisplayName}</span>
                 </div>
                 <div className="bg-gray-100 dark:bg-gray-800/50 p-4 rounded-lg overflow-auto max-h-[80vh]">
                   <div className="bg-white dark:bg-transparent mx-auto space-y-8" style={{ width: '210mm', maxWidth: '100%' }}>
@@ -705,7 +705,7 @@ export default function GenerateReportsPage() {
                     ))}
                   </div>
                 </div>
-                <p className="mt-4 text-white/70 text-sm text-center">
+                <p className="mt-4 text-gray-600 text-sm text-center">
                   This preview shows exactly how the report{reportsToShow.length > 1 ? 's' : ''} will look when downloaded or printed.
                 </p>
               </div>
@@ -719,13 +719,13 @@ export default function GenerateReportsPage() {
             title="No results found"
             size="md"
           >
-            <p className="text-white/90 mb-4">
+            <p className="text-gray-700 mb-4">
               No results found for the selected term. There is no Mid Term, End of Term, or Beginning of Term exam set for Term {(selectedTerm || pageData?.currentTerm)?.term}, {(selectedTerm || pageData?.currentTerm)?.year}. Create an exam set for this term to generate reports.
             </p>
             <button
               type="button"
               onClick={() => setShowNoResultsModal(false)}
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-3"
+              className="w-full rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-3"
             >
               OK
             </button>
@@ -739,7 +739,7 @@ export default function GenerateReportsPage() {
             size="sm"
             className="-mt-24"
           >
-            <p className="text-white/90 mb-4">
+            <p className="text-gray-700 mb-4">
               How would you like to download the class reports?
             </p>
             <div className="space-y-3">
@@ -755,7 +755,7 @@ export default function GenerateReportsPage() {
                 type="button"
                 disabled={downloadingPdf}
                 onClick={() => void handleDownloadClassZip()}
-                className="w-full rounded-xl bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white font-medium px-4 py-3 border border-white/15"
+                className="w-full rounded-xl bg-gray-200 hover:bg-gray-300 disabled:opacity-50 text-gray-800 font-medium px-4 py-3 border border-gray-300"
               >
                 {downloadingPdf ? 'Preparing ZIP…' : 'ZIP with one PDF per student'}
               </button>
@@ -771,22 +771,22 @@ export default function GenerateReportsPage() {
               size="xl"
             >
               <div className="space-y-4">
-                <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
-                  <h3 className="font-semibold text-white mb-2">Summary</h3>
-                  <div className="grid grid-cols-2 gap-2 text-sm text-white/85">
-                    <div><span className="text-white/70">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) ?? '—'}%</div>
-                    <div><span className="text-white/70">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition ?? '—'}</div>
-                    <div><span className="text-white/70">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division ?? '—'}</div>
-                    <div><span className="text-white/70">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) ?? '—'}</div>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Summary</h3>
+                  <div className="grid grid-cols-2 gap-2 text-sm text-gray-700">
+                    <div><span className="text-gray-500">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) ?? '—'}%</div>
+                    <div><span className="text-gray-500">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition ?? '—'}</div>
+                    <div><span className="text-gray-500">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division ?? '—'}</div>
+                    <div><span className="text-gray-500">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) ?? '—'}</div>
                   </div>
                 </div>
-                <div className="rounded-2xl border border-white/20 bg-white/10 p-4">
-                  <h3 className="font-semibold text-white mb-2">Subjects</h3>
+                <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">Subjects</h3>
                   <div className="space-y-2">
                     {viewingReport.reportData?.students?.[0]?.results?.map((result: any, idx: number) => (
-                      <div key={idx} className="flex justify-between text-sm text-white/85">
+                      <div key={idx} className="flex justify-between text-sm text-gray-700">
                         <span>{result.subject}</span>
-                        <span className="font-semibold text-white">{result.marks_obtained} / {result.total_marks} ({result.grade})</span>
+                        <span className="font-semibold text-gray-900">{result.marks_obtained} / {result.total_marks} ({result.grade})</span>
                       </div>
                     ))}
                   </div>
@@ -794,7 +794,7 @@ export default function GenerateReportsPage() {
                 <button
                   type="button"
                   onClick={() => setViewingReport(null)}
-                  className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 font-medium text-white hover:bg-white/20"
+                  className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-medium text-gray-700 hover:bg-gray-50"
                 >
                   Close
                 </button>

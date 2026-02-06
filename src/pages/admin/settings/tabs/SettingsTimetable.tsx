@@ -220,7 +220,7 @@ export default function SettingsTimetable({
         <button
           type="button"
           onClick={handleDownloadPDF}
-          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500"
+          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-gray-900 hover:bg-red-500"
         >
           <svg
             className="h-4 w-4"
@@ -240,7 +240,7 @@ export default function SettingsTimetable({
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
         >
@@ -252,7 +252,7 @@ export default function SettingsTimetable({
           ))}
         </select>
         <select
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={selectedDay}
           onChange={(e) => setSelectedDay(e.target.value)}
         >
@@ -265,18 +265,18 @@ export default function SettingsTimetable({
         </select>
         <input
           type="time"
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
         />
         <input
           type="time"
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
         />
         <select
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white md:col-span-2"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 md:col-span-2"
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
           disabled={!selectedClass}
@@ -289,7 +289,7 @@ export default function SettingsTimetable({
           ))}
         </select>
         <select
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white md:col-span-2"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 md:col-span-2"
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
         >
@@ -311,22 +311,22 @@ export default function SettingsTimetable({
       </div>
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-600/10 p-3 text-sm text-red-200">
+        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-600/10 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
 
       {timetablePeriods.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-4 font-medium text-white">Current Timetable Periods</h3>
+          <h3 className="mb-4 font-medium text-gray-900">Current Timetable Periods</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {timetablePeriods.map((period) => (
               <div
                 key={period.id}
-                className="rounded-lg border border-white/10 bg-white/5 p-4"
+                className="rounded-lg border border-gray-200 bg-gray-50 p-4"
               >
                 <div className="mb-2 flex items-start justify-between">
-                  <h4 className="font-medium text-white">{period.class_name}</h4>
+                  <h4 className="font-medium text-gray-900">{period.class_name}</h4>
                   <button
                     type="button"
                     onClick={() => handleRemovePeriod(period.id)}
@@ -335,7 +335,7 @@ export default function SettingsTimetable({
                     Remove
                   </button>
                 </div>
-                <div className="space-y-1 text-sm text-white/80">
+                <div className="space-y-1 text-sm text-gray-700">
                   <div>
                     <strong>Day:</strong> {period.day_of_week}
                   </div>
@@ -356,15 +356,15 @@ export default function SettingsTimetable({
       )}
 
       {timetablePeriods.length === 0 && (
-        <div className="mt-4 py-8 text-center text-sm text-white/60">
+        <div className="mt-4 py-8 text-center text-sm text-gray-600">
           No periods added yet. Fill in the form above and click &quot;Add Period&quot; to create
           your timetable.
         </div>
       )}
 
       <div className="mt-6 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
-        <h4 className="mb-2 text-sm font-medium text-blue-300">📄 PDF Export</h4>
-        <p className="text-xs text-white/60">
+        <h4 className="mb-2 text-sm font-medium text-blue-700">📄 PDF Export</h4>
+        <p className="text-xs text-gray-600">
           Click the &quot;Download PDF&quot; button above to export the timetable as a formatted
           PDF document.
         </p>

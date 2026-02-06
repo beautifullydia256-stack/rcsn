@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import NativeModal from '@/components/NativeModal';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import ImageUpload from '@/components/ImageUpload';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -40,6 +42,7 @@ interface AddStudentModalProps {
 }
 
 export default function AddStudentModal({ open, onClose }: AddStudentModalProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [name, setName] = useState('');
@@ -50,6 +53,8 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
   const [guardianName, setGuardianName] = useState('');
   const [guardianPhone, setGuardianPhone] = useState('');
   const [guardianEmail, setGuardianEmail] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,6 +133,32 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
         });
       }
 
+      if (studentId && profilePhoto) {
+        try {
+          const base64String = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              const result = e.target?.result as string;
+              if (result) resolve(result);
+              else reject(new Error('Failed to convert file to base64'));
+            };
+            reader.onerror = () => reject(new Error('FileReader error'));
+            reader.readAsDataURL(profilePhoto);
+          });
+          await supabase.from('student_photos').insert({
+            student_id: studentId,
+            school_id: schoolId,
+            photo_url: base64String,
+            photo_filename: profilePhoto.name,
+            photo_size: profilePhoto.size,
+            photo_type: profilePhoto.type,
+            is_primary: true,
+          });
+        } catch (photoErr) {
+          console.error('Photo upload failed:', photoErr);
+        }
+      }
+
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
       onClose();
     } catch (err: any) {
@@ -153,7 +184,19 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
             </div>
           )}
 
-          <p className="text-sm text-gray-500">Enter basic information. Optionally add guardian and more details below.</p>
+          <p className="text-sm text-gray-500">Enter basic information. Optionally add guardian and photo below, or use the full form for all fields.</p>
+          <a
+            href="/dashboard/admin/students/add"
+            onClick={(e) => {
+              e.preventDefault();
+              onClose();
+              navigate('/dashboard/admin/students/add');
+            }}
+            className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:text-green-700 font-medium"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Add with full form (photo, guardian, fees, medical, etc.)
+          </a>
 
           {/* Basic */}
           <div className="space-y-3">
@@ -285,6 +328,24 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     placeholder="e.g. guardian@example.com"
                   />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">Student photo (optional)</label>
+                  <ImageUpload
+                    onImageSelect={(file) => {
+                      setProfilePhoto(file);
+                      setUploadError(null);
+                    }}
+                    onError={(err) => {
+                      setUploadError(err);
+                      setProfilePhoto(null);
+                    }}
+                    maxSizeKB={500}
+                    maxWidth={600}
+                    maxHeight={600}
+                    placeholder="Upload passport photo"
+                  />
+                  {uploadError && <p className="mt-1 text-xs text-red-600">{uploadError}</p>}
                 </div>
                 <p className="text-xs text-gray-500">Address, date of birth, and other fields can be added later in the student profile.</p>
               </div>

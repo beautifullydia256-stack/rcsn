@@ -247,35 +247,35 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
 
       <div className="mb-4 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
         <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-medium text-blue-300">📅 Uganda Academic Calendar</h4>
+          <h4 className="text-sm font-medium text-blue-700">📅 Uganda Academic Calendar</h4>
           <button
             type="button"
             onClick={() => setShowTermInfo(!showTermInfo)}
-            className="text-xs text-blue-300 hover:text-blue-200"
+            className="text-xs text-blue-700 hover:text-blue-800"
           >
             {showTermInfo ? 'Hide' : 'Show'} Details
           </button>
         </div>
         {showTermInfo && (
-          <div className="mt-3 space-y-2 text-xs text-white/70">
+          <div className="mt-3 space-y-2 text-xs text-gray-700">
             <div className="grid grid-cols-3 gap-3">
-              <div className="rounded bg-white/5 p-2">
-                <div className="mb-1 font-medium text-white">Term I</div>
+              <div className="rounded bg-gray-50 p-2">
+                <div className="mb-1 font-medium text-gray-900">Term I</div>
                 <div>February - May</div>
-                <div className="text-white/50">Duration: ~3 months</div>
+                <div className="text-gray-600">Duration: ~3 months</div>
               </div>
-              <div className="rounded bg-white/5 p-2">
-                <div className="mb-1 font-medium text-white">Term II</div>
+              <div className="rounded bg-gray-50 p-2">
+                <div className="mb-1 font-medium text-gray-900">Term II</div>
                 <div>June - August</div>
-                <div className="text-white/50">Duration: ~2.5 months</div>
+                <div className="text-gray-600">Duration: ~2.5 months</div>
               </div>
-              <div className="rounded bg-white/5 p-2">
-                <div className="mb-1 font-medium text-white">Term III</div>
+              <div className="rounded bg-gray-50 p-2">
+                <div className="mb-1 font-medium text-gray-900">Term III</div>
                 <div>September - December</div>
-                <div className="text-white/50">Duration: ~3 months</div>
+                <div className="text-gray-600">Duration: ~3 months</div>
               </div>
             </div>
-            <p className="mt-2 italic text-white/50">
+            <p className="mt-2 italic text-gray-600">
               ℹ️ These are standard Uganda term dates. You can customize dates below.
             </p>
           </div>
@@ -283,7 +283,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
       </div>
 
       <div className="mb-3 flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-white/80">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="radio"
             className="accent-blue-500"
@@ -292,7 +292,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           />
           Edit Current Term
         </label>
-        <label className="flex items-center gap-2 text-sm text-white/80">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="radio"
             className="accent-blue-500"
@@ -302,7 +302,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           Edit Next Term
         </label>
         {currentTerm && (
-          <span className="text-sm text-white/60">
+          <span className="text-sm text-gray-500">
             Current: Term {currentTerm.term}, {currentTerm.year} (
             {currentTerm.start_date
               ? new Date(currentTerm.start_date).toLocaleDateString()
@@ -317,14 +317,14 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           type="number"
           min={2020}
           max={2099}
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={year}
           onChange={(e) =>
             setYear(parseInt((e.target.value || '').slice(0, 4) || String(new Date().getFullYear()), 10))
           }
         />
         <select
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={term}
           onChange={(e) => setTerm(parseInt(e.target.value, 10))}
         >
@@ -334,13 +334,13 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         </select>
         <input
           type="date"
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={start}
           onChange={(e) => setStart(e.target.value)}
         />
         <input
           type="date"
-          className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           value={end}
           onChange={(e) => setEnd(e.target.value)}
         />
@@ -360,21 +360,21 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         </div>
       )}
 
-      <div className="mt-4 text-sm text-white/80">Configured terms</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-white/10">
+      <div className="mt-4 text-sm text-gray-700">Configured terms</div>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/5">
+          <thead className="bg-gray-50">
             <tr className="text-left">
-              <th className="px-4 py-2 text-white/80">Year</th>
-              <th className="px-4 py-2 text-white/80">Term</th>
-              <th className="px-4 py-2 text-white/80">Start</th>
-              <th className="px-4 py-2 text-white/80">End</th>
+              <th className="px-4 py-2 text-gray-700">Year</th>
+              <th className="px-4 py-2 text-gray-700">Term</th>
+              <th className="px-4 py-2 text-gray-700">Start</th>
+              <th className="px-4 py-2 text-gray-700">End</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
             {displayRows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-3 text-white/70">
+                <td colSpan={4} className="px-4 py-3 text-gray-700">
                   No terms set yet.
                 </td>
               </tr>
@@ -382,21 +382,21 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
               displayRows.map((r) => {
                 const isCurrent = r === currentTermRow;
                 return (
-                  <tr key={`${r.year}-${r.term}`} className="border-t border-white/10">
-                    <td className="px-4 py-2 text-white">{r.year}</td>
-                    <td className="px-4 py-2 text-white/90">
+                  <tr key={`${r.year}-${r.term}`} className="border-t border-gray-200">
+                    <td className="px-4 py-2 text-gray-900">{r.year}</td>
+                    <td className="px-4 py-2 text-gray-800">
                       <span
                         className={`rounded px-2 py-1 text-xs ${
-                          isCurrent ? 'bg-green-600/20 text-green-300' : 'bg-blue-600/20 text-blue-300'
+                          isCurrent ? 'bg-green-600/20 text-green-300' : 'bg-blue-600/20 text-blue-700'
                         }`}
                       >
                         {isCurrent ? 'Current' : 'Next'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-white/90">
+                    <td className="px-4 py-2 text-gray-800">
                       {r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}
                     </td>
-                    <td className="px-4 py-2 text-white/90">
+                    <td className="px-4 py-2 text-gray-800">
                       {new Date(r.end_date).toLocaleDateString()}
                     </td>
                   </tr>
@@ -408,8 +408,8 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
       </div>
 
       <div className="mt-6 rounded-lg border border-green-500/30 bg-green-600/10 p-4">
-        <h3 className="mb-3 font-medium text-green-300">📅 Next Term Begins Date</h3>
-        <p className="mb-3 text-sm text-white/60">
+        <h3 className="mb-3 font-medium text-green-800">📅 Next Term Begins Date</h3>
+        <p className="mb-3 text-sm text-gray-500">
           Set the date when the next term begins. This will appear on student report cards.
         </p>
         <div className="flex items-center gap-3">
@@ -417,7 +417,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
             type="date"
             value={nextTermBeginsDate}
             onChange={(e) => setNextTermBeginsDate(e.target.value)}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           />
           <button
             type="button"

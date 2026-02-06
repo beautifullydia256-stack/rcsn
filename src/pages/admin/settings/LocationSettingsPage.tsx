@@ -116,7 +116,7 @@ export default function LocationSettingsPage() {
   if (loading) {
     return (
       <AdminPageWrapper title="School Location Settings">
-        <div className="text-white/80">Loading...</div>
+        <div className="text-gray-500">Loading...</div>
       </AdminPageWrapper>
     );
   }
@@ -127,7 +127,7 @@ export default function LocationSettingsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/settings')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20"
+          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Back to Settings
         </button>
@@ -146,18 +146,18 @@ export default function LocationSettingsPage() {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-white/80">Location Name</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Location Name</label>
           <input
             type="text"
             value={location.name}
             onChange={(e) => setLocation((prev) => ({ ...prev, name: e.target.value }))}
-            className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/50"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white placeholder-gray-400"
             placeholder="School Location"
           />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-white/80">Latitude</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Latitude</label>
             <input
               type="number"
               step="any"
@@ -165,11 +165,11 @@ export default function LocationSettingsPage() {
               onChange={(e) =>
                 setLocation((prev) => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))
               }
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-white/80">Longitude</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Longitude</label>
             <input
               type="number"
               step="any"
@@ -177,12 +177,12 @@ export default function LocationSettingsPage() {
               onChange={(e) =>
                 setLocation((prev) => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))
               }
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-white/80">Radius (meters)</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Radius (meters)</label>
           <input
             type="number"
             min={50}
@@ -191,7 +191,7 @@ export default function LocationSettingsPage() {
             onChange={(e) =>
               setLocation((prev) => ({ ...prev, radius: parseInt(e.target.value, 10) || 100 }))
             }
-            className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
           />
           <p className="mt-1 text-xs text-white/60">
             Teachers must be within this radius to punch in/out.
@@ -202,7 +202,7 @@ export default function LocationSettingsPage() {
           <button
             type="button"
             onClick={getCurrentLocation}
-            className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
           >
             Use Current Location
           </button>

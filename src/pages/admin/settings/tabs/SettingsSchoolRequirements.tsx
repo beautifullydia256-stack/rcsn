@@ -210,7 +210,7 @@ export default function SettingsSchoolRequirements({
           title="School Requirements"
           desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
         />
-        <div className="text-white/60">Loading requirements...</div>
+        <div className="text-gray-500">Loading requirements...</div>
       </div>
     );
   }
@@ -223,51 +223,51 @@ export default function SettingsSchoolRequirements({
       />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-600/20 p-3 text-sm text-red-300">
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 rounded-lg border border-green-500/30 bg-green-600/20 p-3 text-sm text-green-300">
+        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
           {success}
         </div>
       )}
 
-      <div className="mb-6 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
-        <h3 className="mb-3 font-medium text-blue-300">
+      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <h3 className="mb-3 font-medium text-gray-900">
           {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm text-white/80">Requirement Name *</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Requirement Name *</label>
             <input
               type="text"
               value={requirementName}
               onChange={(e) => setRequirementName(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
               placeholder="e.g., School Uniform"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white/80">Cost (UGX) *</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Cost (UGX) *</label>
             <input
               type="number"
               min={0}
               step={0.01}
               value={cost}
               onChange={(e) => setCost(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
               placeholder="e.g., 50000"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white/80">Boarding Type *</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Boarding Type *</label>
             <select
               value={boardingType}
               onChange={(e) =>
                 setBoardingType(e.target.value as 'Day Scholar' | 'Boarding' | 'Both')
               }
-              className="w-full rounded-lg border border-white/20 bg-white px-3 py-2 text-black"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
             >
               <option value="Day Scholar">Day Scholar</option>
               <option value="Boarding">Boarding</option>
@@ -275,11 +275,11 @@ export default function SettingsSchoolRequirements({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white/80">Class (Optional)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Class (Optional)</label>
             <select
               value={className}
               onChange={(e) => setClassName(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white px-3 py-2 text-black"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
             >
               <option value="">All Classes</option>
               {classOptions.map((cls) => (
@@ -290,23 +290,23 @@ export default function SettingsSchoolRequirements({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white/80">Status</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')}
-              className="w-full rounded-lg border border-white/20 bg-white px-3 py-2 text-black"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm text-white/80">Description (Optional)</label>
+            <label className="mb-1 block text-sm font-medium text-gray-700">Description (Optional)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
               placeholder="Brief description"
             />
           </div>
@@ -338,13 +338,13 @@ export default function SettingsSchoolRequirements({
           placeholder="Search requirements..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white placeholder-white/50"
+          className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
         />
         <div className="flex gap-2">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="rounded-lg border border-white/20 bg-white px-3 py-2 text-black"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
           >
             <option value="name">Sort by Name</option>
             <option value="cost">Sort by Cost</option>
@@ -356,51 +356,51 @@ export default function SettingsSchoolRequirements({
           <button
             type="button"
             onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white hover:bg-white/15"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
           >
             {sortOrder === 'asc' ? '↑' : '↓'}
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
+      <div className="overflow-x-auto rounded-xl border border-gray-200">
         <table className="min-w-full text-sm">
-          <thead className="bg-white/5">
+          <thead className="bg-gray-50">
             <tr className="text-left">
-              <th className="px-4 py-3 text-white/80">Requirement Name</th>
-              <th className="px-4 py-3 text-white/80">Boarding Type</th>
-              <th className="px-4 py-3 text-white/80">Class</th>
-              <th className="px-4 py-3 text-white/80">Description</th>
-              <th className="px-4 py-3 text-white/80">Cost (UGX)</th>
-              <th className="px-4 py-3 text-white/80">Status</th>
-              <th className="px-4 py-3 text-white/80">Actions</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Requirement Name</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Boarding Type</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Class</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Description</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Cost (UGX)</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Status</th>
+              <th className="px-4 py-3 font-medium text-gray-700">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-white/70">
+                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
                   {searchTerm ? 'No requirements found.' : 'No requirements added yet.'}
                 </td>
               </tr>
             ) : (
               filteredAndSorted.map((req) => (
-                <tr key={req.id} className="border-t border-white/10">
-                  <td className="px-4 py-3 font-medium text-white">{req.requirement_name}</td>
+                <tr key={req.id} className="border-t border-gray-100">
+                  <td className="px-4 py-3 font-medium text-gray-900">{req.requirement_name}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded px-2 py-1 text-xs ${
                         req.boarding_type === 'Boarding'
-                          ? 'bg-blue-500/20 text-blue-300'
-                          : 'bg-green-500/20 text-green-300'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
                       }`}
                     >
                       {req.boarding_type || 'Day Scholar'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-white/80">{req.class_name || 'All Classes'}</td>
-                  <td className="px-4 py-3 text-white/80">{req.description || '-'}</td>
-                  <td className="px-4 py-3 text-white">
+                  <td className="px-4 py-3 text-gray-700">{req.class_name || 'All Classes'}</td>
+                  <td className="px-4 py-3 text-gray-700">{req.description || '-'}</td>
+                  <td className="px-4 py-3 text-gray-900">
                     {new Intl.NumberFormat('en-UG', {
                       style: 'currency',
                       currency: 'UGX',
@@ -411,8 +411,8 @@ export default function SettingsSchoolRequirements({
                     <span
                       className={`rounded px-2 py-1 text-xs ${
                         req.status === 'Active'
-                          ? 'bg-green-500/20 text-green-300'
-                          : 'bg-red-500/20 text-red-300'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
                       }`}
                     >
                       {req.status}
@@ -423,14 +423,14 @@ export default function SettingsSchoolRequirements({
                       <button
                         type="button"
                         onClick={() => handleEdit(req)}
-                        className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-400"
+                        className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDelete(req.id)}
-                        className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-400"
+                        className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
                       >
                         Delete
                       </button>
@@ -444,8 +444,8 @@ export default function SettingsSchoolRequirements({
       </div>
 
       {requirements.length > 0 && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-3">
-          <div className="text-sm text-white/80">
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+          <div className="text-sm text-gray-700">
             <strong>Total Requirements:</strong> {requirements.length} |{' '}
             <strong>Active:</strong> {requirements.filter((r) => r.status === 'Active').length} |{' '}
             <strong>Total Value:</strong>{' '}

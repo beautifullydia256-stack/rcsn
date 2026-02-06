@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           Back to Dashboard
         </button>
@@ -93,8 +93,8 @@ export default function SettingsPage() {
             onClick={() => setTab(k)}
             className={`rounded-lg px-4 py-2 text-sm transition-colors ${
               tab === k
-                ? 'border border-white/20 bg-white/20 text-white'
-                : 'border border-white/10 bg-white/10 text-white/80 hover:bg-white/15'
+                ? 'border border-green-500 bg-green-600 text-white'
+                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
             }`}
           >
             {label}
@@ -128,14 +128,16 @@ export default function SettingsPage() {
           />
         )}
         {tab === 'branding' && <SettingsBranding schoolId={schoolId} />}
+          </>
+        )}
       </div>
 
       <LocationSettingsWidget />
 
       <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium text-white">Classes</div>
+        <div className="mb-2 font-medium text-gray-900">Classes</div>
         {classOptions.length === 0 ? (
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-gray-500">
             Classes will appear here after your school type is set.
           </p>
         ) : (
@@ -147,7 +149,7 @@ export default function SettingsPage() {
                 onClick={() =>
                   navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(c)}`)
                 }
-                className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
               >
                 {c}
               </button>
@@ -157,33 +159,33 @@ export default function SettingsPage() {
       </div>
 
       <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium text-white">Quick Management</div>
+        <div className="mb-2 font-medium text-gray-900">Quick Management</div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/exam-sets')}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Exam Sets
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/attendance')}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Attendance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/outstanding')}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Finance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-sm text-white hover:bg-white/20"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
           >
             Report Records
           </button>
