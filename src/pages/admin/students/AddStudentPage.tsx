@@ -287,6 +287,15 @@ export default function AddStudentPage() {
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
+      if (guardianName.trim()) {
+        await supabase.from('parents').insert({
+          school_id: schoolId,
+          student_id: studentId,
+          name: guardianName.trim(),
+          ...(guardianPhone.trim() ? { phone: guardianPhone.trim() } : {}),
+        });
+      }
+
       if (initialNum > 0) {
         await supabase.from('payments').insert({
           student_id: studentId,
