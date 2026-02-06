@@ -90,7 +90,6 @@ export default function AddStudentPage() {
   const [previousSchool, setPreviousSchool] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
-  const [admissionNumber, setAdmissionNumber] = useState('');
   const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
   const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
 
@@ -111,8 +110,8 @@ export default function AddStudentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Collapsible sections
-  const [openSection, setOpenSection] = useState<string>('personal');
+  // Collapsible sections: multiple can be open; user closes when they want
+  const [openSections, setOpenSections] = useState<string[]>(['personal']);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'add-student', 'school', user?.id ?? ''],
@@ -188,21 +187,19 @@ export default function AddStudentPage() {
     }
     setSubmitting(true);
     try {
-      let admission_number = admissionNumber.trim() || null;
-      let student_email: string | null = null;
+      // Admission number is always auto-generated (generate_admission_number RPC)
+      const { data: admData, error: admErr } = await supabase.rpc('generate_admission_number', {
+        p_school_id: schoolId,
+        p_first_name: trimFirst,
+        p_middle_name: middleName.trim() || null,
+        p_last_name: trimLast,
+        p_admission_date: admissionDate,
+      });
+      if (admErr) throw admErr;
+      const admission_number = admData as string;
+      setGeneratedAdmNo(admission_number);
 
-      if (!admission_number) {
-        const { data: admData, error: admErr } = await supabase.rpc('generate_admission_number', {
-          p_school_id: schoolId,
-          p_first_name: trimFirst,
-          p_middle_name: middleName.trim() || null,
-          p_last_name: trimLast,
-          p_admission_date: admissionDate,
-        });
-        if (admErr) throw admErr;
-        admission_number = admData as string;
-        setGeneratedAdmNo(admission_number);
-      }
+      let student_email: string | null = null;
 
       const { data: emailData, error: emailErr } = await supabase.rpc('generate_unique_school_email', {
         p_first_name: trimFirst,
@@ -363,7 +360,7 @@ export default function AddStudentPage() {
 
   return (
     <AdminPageWrapper title="Add Student">
-      <div className="max-w-2xl space-y-6">
+      <div className="max-w-5xl w-full space-y-6">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -615,17 +612,15 @@ export default function AddStudentPage() {
                 required
               />
             </div>
-            <div>
-              <label className={labelClass}>Admission number</label>
-              <input
-                type="text"
-                value={admissionNumber}
-                onChange={(e) => setAdmissionNumber(e.target.value)}
-                className={inputClass}
-                placeholder="Leave blank to auto-generate"
-              />
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+              <p className="text-sm font-medium text-gray-700">Admission number</p>
+              <p className="mt-1 text-xs text-gray-600">
+                Auto-generated when you save. Format: <strong>SCHOOL-YEAR-MONTH-NUMBER</strong> (e.g. KPS-2026-02-001).
+                The database function <code className="bg-gray-200 px-1 rounded">generate_admission_number</code> uses
+                school abbreviation, admission date, and the next sequence for that school/month.
+              </p>
               {generatedAdmNo && (
-                <p className="mt-1 text-xs text-green-700">Will use: {generatedAdmNo}</p>
+                <p className="mt-2 text-sm text-green-700 font-medium">Generated: {generatedAdmNo}</p>
               )}
             </div>
           </Section>
