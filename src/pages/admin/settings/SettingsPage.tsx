@@ -128,8 +128,6 @@ export default function SettingsPage() {
           />
         )}
         {tab === 'branding' && <SettingsBranding schoolId={schoolId} />}
-          </>
-        )}
       </div>
 
       <LocationSettingsWidget />
