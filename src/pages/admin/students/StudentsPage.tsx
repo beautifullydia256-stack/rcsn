@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
@@ -51,7 +51,6 @@ async function fetchStudentsList(userId: string) {
 
 export default function StudentsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
@@ -61,6 +60,7 @@ export default function StudentsPage() {
   const [groupByOpen, setGroupByOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
+  const [expandedParent, setExpandedParent] = useState<{ studentId: string; parentIndex: number } | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'students', user?.id ?? ''],
@@ -119,16 +119,6 @@ export default function StudentsPage() {
     });
     return arr;
   }, [filtered, sortKey, sortOrder, parentsByStudent]);
-
-  const remove = async (id: string, admission_number: string) => {
-    if (!confirm('Delete this student? This may require additional cleanup for login credentials.')) return;
-    try {
-      await supabase.from('students').delete().eq('student_id', id);
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
-    } catch (err: any) {
-      alert(err?.message || 'Delete failed');
-    }
-  };
 
   const loading = isLoading && !data;
 
@@ -266,10 +256,9 @@ export default function StudentsPage() {
                   <ThSort column="parents" label="Parents Names" />
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 whitespace-nowrap border-r border-teal-200/60">Address</th>
                   <ThSort column="teacher" label="Teacher" />
-                  <ThSort column="class" label="Class group" />
+                  <ThSort column="class" label="Class" />
                   <ThSort column="email" label="Email" />
                   <ThSort column="phone" label="Phone" />
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 whitespace-nowrap pl-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,79 +276,136 @@ export default function StudentsPage() {
                     </tr>
                   ))
                 ) : sorted.length === 0 ? (
-                  <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-500">No students found.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No students found.</td></tr>
                 ) : (
                   sorted.map((r, idx) => {
                     const parentsList = parentsByStudent[r.student_id] || [];
                     const firstParent = parentsList[0];
+                    const isExpanded = expandedParent?.studentId === r.student_id && expandedParent?.parentIndex !== undefined;
+                    const clickedParent = isExpanded && parentsList[expandedParent.parentIndex] ? parentsList[expandedParent.parentIndex] : null;
+                    const otherParents = clickedParent ? parentsList.filter((_, i) => i !== expandedParent!.parentIndex) : [];
                     return (
-                      <tr
-                        key={r.student_id}
-                        className={`border-b border-gray-100 hover:bg-teal-50/30 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'}`}
-                      >
-                        <td className="px-4 py-3 border-r border-gray-100">
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              className="font-semibold text-gray-900 hover:text-green-600 hover:underline text-left"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                            >
-                              {r.name || '—'}
-                            </button>
-                            <button type="button" className="p-0.5 text-gray-400 hover:text-gray-600" aria-label="More"><MoreHorizontal className="w-4 h-4" /></button>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 border-r border-gray-100 text-gray-700">
-                          {parentsList.length > 0 ? (
-                            <span className="hover:text-green-600 cursor-default">
-                              {parentsList.map((p) => p.name).join(', ')}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
-                        <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
-                        <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{r.current_class || '—'}</td>
-                        <td className="px-4 py-3 border-r border-gray-100">
-                          {firstParent?.email ? (
-                            <span className="flex items-center gap-1 text-gray-700 truncate max-w-[180px]" title={firstParent.email}>
-                              <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-                              {firstParent.email}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 border-r border-gray-100">
-                          {firstParent?.phone ? (
-                            <span className="flex items-center gap-1 text-gray-700 truncate max-w-[140px]" title={firstParent.phone}>
-                              <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-                              {firstParent.phone}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              className="rounded bg-green-600 px-2 py-1 text-xs text-white hover:bg-green-700"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                            >
-                              View
-                            </button>
-                            <button
-                              type="button"
-                              className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-700"
-                              onClick={() => remove(r.student_id, r.admission_number)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                      <Fragment key={r.student_id}>
+                        <tr
+                          className={`border-b border-gray-100 hover:bg-teal-50/30 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'}`}
+                        >
+                          <td className="px-4 py-3 border-r border-gray-100">
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                className="font-semibold text-gray-900 hover:text-green-600 hover:underline text-left"
+                                onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                              >
+                                {r.name || '—'}
+                              </button>
+                              <button type="button" className="p-0.5 text-gray-400 hover:text-gray-600" aria-label="More"><MoreHorizontal className="w-4 h-4" /></button>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">
+                            {parentsList.length > 0 ? (
+                              <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                                {parentsList.map((p, pIdx) => (
+                                  <button
+                                    key={pIdx}
+                                    type="button"
+                                    className="hover:text-green-600 hover:underline cursor-pointer text-left"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setExpandedParent((prev) =>
+                                        prev?.studentId === r.student_id && prev?.parentIndex === pIdx
+                                          ? null
+                                          : { studentId: r.student_id, parentIndex: pIdx }
+                                      );
+                                    }}
+                                  >
+                                    {p.name || '—'}
+                                  </button>
+                                ))}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{r.current_class || '—'}</td>
+                          <td className="px-4 py-3 border-r border-gray-100">
+                            {firstParent?.email ? (
+                              <span className="flex items-center gap-1 text-gray-700 truncate max-w-[180px]" title={firstParent.email}>
+                                <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                                {firstParent.email}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 border-r border-gray-100">
+                            {firstParent?.phone ? (
+                              <span className="flex items-center gap-1 text-gray-700 truncate max-w-[140px]" title={firstParent.phone}>
+                                <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                                {firstParent.phone}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
+                        </tr>
+                        {isExpanded && clickedParent && (
+                          <tr key={`${r.student_id}-parent-${expandedParent.parentIndex}`} className="bg-blue-50/80">
+                            <td colSpan={7} className="px-4 py-4 border-b border-gray-100 align-top">
+                              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
+                                <div className="flex flex-wrap items-start gap-4">
+                                  <div>
+                                    <h4 className="text-lg font-bold text-gray-900">{clickedParent.name || '—'}</h4>
+                                    <div className="mt-2 flex items-center gap-2">
+                                      {clickedParent.phone && (
+                                        <a
+                                          href={`tel:${clickedParent.phone.replace(/\s/g, '')}`}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                                          aria-label="Call"
+                                        >
+                                          <Phone className="h-4 w-4" />
+                                        </a>
+                                      )}
+                                      {clickedParent.email && (
+                                        <a
+                                          href={`mailto:${clickedParent.email}`}
+                                          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                                          aria-label="Email"
+                                        >
+                                          <Mail className="h-4 w-4" />
+                                        </a>
+                                      )}
+                                    </div>
+                                    {clickedParent.phone && (
+                                      <p className="mt-1 text-sm text-gray-700">
+                                        Phone number: {clickedParent.phone}
+                                      </p>
+                                    )}
+                                    {clickedParent.email && (
+                                      <p className="text-sm text-gray-700">
+                                        {clickedParent.name}: {clickedParent.email}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0 space-y-1 text-sm text-gray-700">
+                                    <p><span className="font-medium text-gray-500">Pupil&apos;s name:</span> {r.name || '—'}</p>
+                                    {otherParents.length > 0 && (
+                                      otherParents.map((op, i) => (
+                                        <p key={i}>
+                                          <span className="font-medium text-gray-500">Other parent:</span> {op.name}{op.email ? ` — ${op.email}` : ''}
+                                        </p>
+                                      ))
+                                    )}
+                                    <p><span className="font-medium text-gray-500">Teacher:</span> — {(r.current_class && `(${r.current_class})`) || ''}</p>
+                                    <p><span className="font-medium text-gray-500">Address:</span> —</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
                     );
                   })
                 )}
