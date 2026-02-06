@@ -42,6 +42,7 @@ export default function AddStudentPage() {
   const [name, setName] = useState('');
   const [currentClass, setCurrentClass] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,7 +76,12 @@ export default function AddStudentPage() {
     }
     setSubmitting(true);
     try {
-      const expectedFee = feeByClass[currentClass] || null;
+      const baseFee = feeByClass[currentClass] ?? 0;
+      const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+      const expectedFee =
+        baseFee > 0
+          ? Math.round(baseFee * (1 - percent / 100))
+          : null;
       const { data: inserted, error: insertError } = await supabase
         .from('students')
         .insert({
@@ -84,7 +90,8 @@ export default function AddStudentPage() {
           current_class: currentClass || classOptions[0],
           status: 'active',
           ...(admissionNumber.trim() ? { admission_number: admissionNumber.trim() } : {}),
-          ...(expectedFee != null && expectedFee > 0 ? { expected_fee_amount: expectedFee } : {}),
+          ...(expectedFee != null && expectedFee >= 0 ? { expected_fee_amount: expectedFee } : {}),
+          ...(percent > 0 ? { fee_discount_percent: percent } : {}),
         })
         .select('student_id')
         .single();
@@ -179,6 +186,59 @@ export default function AddStudentPage() {
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 placeholder="Leave blank to auto-generate later"
               />
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">
+                Discount / Bursary
+              </label>
+              <p className="mb-3 text-xs text-gray-500">
+                Some students pay reduced tuition. Set the percentage discount (0 = full fee, 100 = full bursary).
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {[0, 10, 25, 50, 75, 100].map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setDiscountPercent(p)}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                      discountPercent === p
+                        ? 'bg-green-600 text-white'
+                        : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p === 0 ? 'No discount' : p === 100 ? 'Full bursary (100%)' : `${p}%`}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <label htmlFor="discount_percent" className="text-sm text-gray-600">Custom %:</label>
+                <input
+                  id="discount_percent"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  value={discountPercent}
+                  onChange={(e) => setDiscountPercent(Math.min(100, Math.max(0, Number(e.target.value) || 0)))}
+                  className="w-20 rounded-lg border border-gray-300 px-2 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+              {(() => {
+                const base = feeByClass[currentClass] ?? 0;
+                const payable = base > 0 ? Math.round(base * (1 - discountPercent / 100)) : 0;
+                if (base > 0) {
+                  return (
+                    <p className="mt-3 text-sm text-gray-700">
+                      Class fee: UGX {base.toLocaleString()}
+                      {discountPercent > 0 && (
+                        <> → After {discountPercent}% discount: <strong>UGX {payable.toLocaleString()}</strong></>
+                      )}
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
 

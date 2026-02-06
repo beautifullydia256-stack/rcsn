@@ -1,16 +1,16 @@
-import { Fragment, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import AddStudentModal from './AddStudentModal';
 import {
   Settings,
   ChevronDown,
   UserPlus,
   Users,
   ArrowUpDown,
-  LayoutGrid,
   Search,
   ChevronUp,
   ChevronDown as ChevronDownIcon,
@@ -51,6 +51,7 @@ async function fetchStudentsList(userId: string) {
 
 export default function StudentsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
@@ -59,8 +60,15 @@ export default function StudentsPage() {
   const [displayOpen, setDisplayOpen] = useState(false);
   const [groupByOpen, setGroupByOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
-  const [columnsOpen, setColumnsOpen] = useState(false);
   const [expandedParent, setExpandedParent] = useState<{ studentId: string; parentIndex: number } | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    if ((location.state as { openAddModal?: boolean })?.openAddModal) {
+      setAddModalOpen(true);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.pathname, location.state, navigate]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'students', user?.id ?? ''],
@@ -165,7 +173,7 @@ export default function StudentsPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/admin/students/add')}
+            onClick={() => setAddModalOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
             <UserPlus className="w-4 h-4" />
@@ -255,7 +263,7 @@ export default function StudentsPage() {
                   <ThSort column="name" label="Student Name" />
                   <ThSort column="parents" label="Parents Names" />
                   <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 whitespace-nowrap border-r border-teal-200/60">Address</th>
-                  <ThSort column="teacher" label="Teacher" />
+                  <ThSort column="teacher" label="Class Teacher" />
                   <ThSort column="class" label="Class" />
                   <ThSort column="email" label="Email" />
                   <ThSort column="phone" label="Phone" />
@@ -397,7 +405,7 @@ export default function StudentsPage() {
                                         </p>
                                       ))
                                     )}
-                                    <p><span className="font-medium text-gray-500">Teacher:</span> — {(r.current_class && `(${r.current_class})`) || ''}</p>
+                                    <p><span className="font-medium text-gray-500">Class Teacher:</span> — {(r.current_class && `(${r.current_class})`) || ''}</p>
                                     <p><span className="font-medium text-gray-500">Address:</span> —</p>
                                   </div>
                                 </div>
@@ -414,31 +422,7 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        {/* Class filter – keep for filtering */}
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="text-gray-500">Filter by class:</span>
-          <select
-            className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            value={klass}
-            onChange={(e) => setKlass(e.target.value)}
-          >
-            <option value="">All Classes</option>
-            {schoolType === 'Nursery/Primary' && (
-              <>
-                <option value="Baby Class">Baby Class</option>
-                <option value="Middle Class">Middle Class</option>
-                <option value="Top Class">Top Class</option>
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <option key={`P-${i}`} value={`Primary ${i + 1}`}>{`Primary ${i + 1}`}</option>
-                ))}
-              </>
-            )}
-            {schoolType === 'Secondary' &&
-              Array.from({ length: 6 }).map((_, i) => (
-                <option key={`S-${i}`} value={`Senior ${i + 1}`}>{`Senior ${i + 1}`}</option>
-              ))}
-          </select>
-        </div>
+        <AddStudentModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
       </div>
     </AdminPageWrapper>
   );

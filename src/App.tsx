@@ -21,7 +21,6 @@ const ReportRecordsPage = lazy(() => import('./pages/admin/reports/ReportRecords
 const BulkGenerator = lazy(() => import('./pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazy(() => import('./pages/admin/reports/ReportViewer'));
 const StudentsPage = lazy(() => import('./pages/admin/students/StudentsPage'));
-const AddStudentPage = lazy(() => import('./pages/admin/students/AddStudentPage'));
 const TeachersPage = lazy(() => import('./pages/admin/teachers/TeachersPage'));
 const ParentsPage = lazy(() => import('./pages/admin/parents/ParentsPage'));
 const AccountsPage = lazy(() => import('./pages/admin/accounts/AccountsPage'));
@@ -82,7 +81,7 @@ function App() {
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="students" element={<StudentsPage />} />
-                  <Route path="students/add" element={<AddStudentPage />} />
+                  <Route path="students/add" element={<Navigate to="/dashboard/admin/students" replace state={{ openAddModal: true }} />} />
                   <Route path="teachers" element={<TeachersPage />} />
                   <Route path="parents" element={<ParentsPage />} />
                   <Route path="accounts" element={<AccountsPage />} />
