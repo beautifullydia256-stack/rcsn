@@ -163,7 +163,7 @@ export default function StudentsPage() {
           </div>
           <button
             type="button"
-            onClick={() => setAddModalOpen(true)}
+            onClick={() => navigate('/dashboard/admin/students/add')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
           >
             <UserPlus className="w-4 h-4" />
