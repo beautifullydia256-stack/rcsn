@@ -30,7 +30,7 @@ async function fetchStudentsList(userId: string) {
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
     supabase
       .from('students')
-      .select('student_id, name, current_class, status, created_at, admission_number')
+      .select('student_id, name, current_class, status, created_at, admission_number, address, guardian_address')
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
     supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
@@ -331,7 +331,15 @@ export default function StudentsPage() {
                               <span className="text-gray-400">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">
+                            {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) ? (
+                              <span className="truncate max-w-[200px] block" title={(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || ''}>
+                                {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '—'}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
                           <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{r.current_class || '—'}</td>
                           <td className="px-4 py-3 border-r border-gray-100">
@@ -356,54 +364,83 @@ export default function StudentsPage() {
                           </td>
                         </tr>
                         {isExpanded && clickedParent && (
-                          <tr key={`${r.student_id}-parent-${expandedParent.parentIndex}`} className="bg-blue-50/80">
-                            <td colSpan={7} className="px-4 py-4 border-b border-gray-100 align-top">
-                              <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm">
-                                <div className="flex flex-wrap items-start gap-4">
-                                  <div>
-                                    <h4 className="text-lg font-bold text-gray-900">{clickedParent.name || '—'}</h4>
-                                    <div className="mt-2 flex items-center gap-2">
-                                      {clickedParent.phone && (
-                                        <a
-                                          href={`tel:${clickedParent.phone.replace(/\s/g, '')}`}
-                                          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
-                                          aria-label="Call"
-                                        >
-                                          <Phone className="h-4 w-4" />
-                                        </a>
-                                      )}
-                                      {clickedParent.email && (
-                                        <a
-                                          href={`mailto:${clickedParent.email}`}
-                                          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
-                                          aria-label="Email"
-                                        >
-                                          <Mail className="h-4 w-4" />
-                                        </a>
-                                      )}
-                                    </div>
-                                    {clickedParent.phone && (
-                                      <p className="mt-1 text-sm text-gray-700">
-                                        Phone number: {clickedParent.phone}
-                                      </p>
-                                    )}
-                                    {clickedParent.email && (
-                                      <p className="text-sm text-gray-700">
-                                        {clickedParent.name}: {clickedParent.email}
-                                      </p>
-                                    )}
-                                  </div>
-                                  <div className="flex-1 min-w-0 space-y-1 text-sm text-gray-700">
-                                    <p><span className="font-medium text-gray-500">Pupil&apos;s name:</span> {r.name || '—'}</p>
-                                    {otherParents.length > 0 && (
-                                      otherParents.map((op, i) => (
-                                        <p key={i}>
-                                          <span className="font-medium text-gray-500">Other parent:</span> {op.name}{op.email ? ` — ${op.email}` : ''}
+                          <tr key={`${r.student_id}-parent-${expandedParent.parentIndex}`}>
+                            <td colSpan={7} className="p-0 border-b border-gray-200 align-top bg-gradient-to-b from-slate-50 to-white">
+                              <div className="px-6 py-6">
+                                {/* Card container – fills width, modern shadow & radius */}
+                                <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
+                                  <div className="p-6 sm:p-8">
+                                    {/* Top row: Primary guardian (name + actions) | Phone number | Pupil | Teacher */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-6">
+                                      {/* Primary guardian – large name + call/email buttons */}
+                                      <div className="lg:col-span-1">
+                                        <h3 className="text-2xl font-bold text-blue-900 tracking-tight">{clickedParent.name || '—'}</h3>
+                                        <div className="mt-3 flex items-center gap-3">
+                                          {clickedParent.phone && (
+                                            <a
+                                              href={`tel:${clickedParent.phone.replace(/\s/g, '')}`}
+                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
+                                              aria-label="Call"
+                                            >
+                                              <Phone className="h-5 w-5" />
+                                            </a>
+                                          )}
+                                          {clickedParent.email && (
+                                            <a
+                                              href={`mailto:${clickedParent.email}`}
+                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
+                                              aria-label="Email"
+                                            >
+                                              <Mail className="h-5 w-5" />
+                                            </a>
+                                          )}
+                                        </div>
+                                        {clickedParent.email && (
+                                          <p className="mt-3 text-base text-slate-600 break-all">{clickedParent.email}</p>
+                                        )}
+                                      </div>
+                                      {/* Phone number – large and bold */}
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Phone number</p>
+                                        <p className="text-xl font-bold text-blue-900">
+                                          {clickedParent.phone || '—'}
                                         </p>
-                                      ))
-                                    )}
-                                    <p><span className="font-medium text-gray-500">Class Teacher:</span> — {(r.current_class && `(${r.current_class})`) || ''}</p>
-                                    <p><span className="font-medium text-gray-500">Address:</span> —</p>
+                                      </div>
+                                      {/* Pupil's name */}
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Pupil&apos;s name</p>
+                                        <p className="text-lg font-semibold text-slate-800">{r.name || '—'}</p>
+                                      </div>
+                                      {/* Teacher */}
+                                      <div>
+                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Teacher</p>
+                                        <p className="text-lg font-semibold text-slate-800">
+                                          — {r.current_class ? `(${r.current_class})` : ''}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {/* Bottom row: Other guardian(s) + Address */}
+                                    <div className="pt-5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                      {otherParents.length > 0 && (
+                                        <div>
+                                          <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">Other guardian(s)</p>
+                                          <div className="space-y-2">
+                                            {otherParents.map((op, i) => (
+                                              <div key={i} className="flex flex-wrap items-baseline gap-2">
+                                                <span className="text-base font-semibold text-slate-800">{op.name}</span>
+                                                {op.email && <span className="text-base text-slate-600">{op.email}</span>}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      )}
+                                      <div className={otherParents.length > 0 ? '' : 'md:col-span-2'}>
+                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Address</p>
+                                        <p className="text-base text-slate-700 leading-relaxed">
+                                          {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '—'}
+                                        </p>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>

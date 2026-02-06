@@ -109,6 +109,7 @@ export default function AddStudentPage() {
   const [guardianName, setGuardianName] = useState('');
   const [guardianRelationship, setGuardianRelationship] = useState('');
   const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianEmail, setGuardianEmail] = useState('');
   const [guardianOccupation, setGuardianOccupation] = useState('');
   const [guardianAddress, setGuardianAddress] = useState('');
 
@@ -245,6 +246,9 @@ export default function AddStudentPage() {
       const expectedFeeAmount =
         baseFee > 0 ? Math.round(baseFee * (1 - percent / 100)) : expectedFee ? Number(expectedFee) : null;
 
+      // Student address = guardian address unless a different student address is given
+      const studentAddress = (address && address.trim()) ? address.trim() : (guardianAddress && guardianAddress.trim()) ? guardianAddress.trim() : null;
+
       const { data: inserted, error: insertError } = await supabase
         .from('students')
         .insert({
@@ -259,7 +263,7 @@ export default function AddStudentPage() {
           date_of_birth: dob || null,
           nationality: nationality || null,
           religion: religion || null,
-          address: address || null,
+          address: studentAddress,
           city: city || null,
           country: country || null,
           student_phone: studentPhone || null,
@@ -293,6 +297,7 @@ export default function AddStudentPage() {
           student_id: studentId,
           name: guardianName.trim(),
           ...(guardianPhone.trim() ? { phone: guardianPhone.trim() } : {}),
+          ...(guardianEmail.trim() ? { email: guardianEmail.trim() } : {}),
         });
       }
 
@@ -472,8 +477,9 @@ export default function AddStudentPage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 className={inputClass}
-                placeholder="Home address"
+                placeholder="Home address (or leave blank to use guardian address)"
               />
+              <p className="mt-1 text-xs text-gray-500">Student address defaults to guardian address if left blank.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -544,6 +550,16 @@ export default function AddStudentPage() {
                   placeholder="e.g. 0700123456"
                 />
               </div>
+            </div>
+            <div>
+              <label className={labelClass}>Email <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input
+                type="email"
+                value={guardianEmail}
+                onChange={(e) => setGuardianEmail(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. guardian@example.com"
+              />
             </div>
             <div>
               <label className={labelClass}>Occupation</label>

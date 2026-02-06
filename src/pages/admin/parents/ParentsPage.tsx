@@ -24,19 +24,35 @@ async function fetchParentsList(userId: string): Promise<Parent[]> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!userData?.school_id) return [];
 
-  const { data: parentsData } = await supabase
+  const { data: parentsData, error: parentsError } = await supabase
     .from('parents')
-    .select(`
-      id, user_id, name, email, phone, student_id, created_at,
-      students ( name, current_class )
-    `)
+    .select('id, user_id, name, email, phone, student_id, created_at')
     .eq('school_id', userData.school_id)
     .order('created_at', { ascending: false });
 
-  return (parentsData || []).map((p: any) => ({
+  if (parentsError) {
+    console.warn('Parents fetch error:', parentsError);
+    return [];
+  }
+  const parents = parentsData || [];
+  if (parents.length === 0) return [];
+
+  const studentIds = [...new Set(parents.map((p: any) => p.student_id).filter(Boolean))];
+  const studentMap: Record<string, { name: string; current_class: string }> = {};
+  if (studentIds.length > 0) {
+    const { data: studentsData } = await supabase
+      .from('students')
+      .select('student_id, name, current_class')
+      .in('student_id', studentIds);
+    (studentsData || []).forEach((s: any) => {
+      studentMap[s.student_id] = { name: s.name || 'Unknown', current_class: s.current_class || 'N/A' };
+    });
+  }
+
+  return parents.map((p: any) => ({
     ...p,
-    student_name: p.students?.name || 'Unknown',
-    student_class: p.students?.current_class || 'N/A',
+    student_name: studentMap[p.student_id]?.name ?? 'Unknown',
+    student_class: studentMap[p.student_id]?.current_class ?? 'N/A',
   })) as Parent[];
 }
 
