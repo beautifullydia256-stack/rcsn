@@ -308,7 +308,9 @@ export default function AddStudentPage() {
   };
 
   const toggleSection = (key: string) => {
-    setOpenSection((s) => (s === key ? '' : key));
+    setOpenSections((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
   };
 
   const Section = ({
@@ -320,7 +322,7 @@ export default function AddStudentPage() {
     title: string;
     children: React.ReactNode;
   }) => {
-    const isOpen = openSection === id;
+    const isOpen = openSections.includes(id);
     return (
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <button
