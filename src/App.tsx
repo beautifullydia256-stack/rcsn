@@ -81,6 +81,7 @@ function App() {
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="students" element={<StudentsPage />} />
+                  <Route path="students/add" element={<AddStudentPage />} />
                   <Route path="teachers" element={<TeachersPage />} />
                   <Route path="parents" element={<ParentsPage />} />
                   <Route path="accounts" element={<AccountsPage />} />
