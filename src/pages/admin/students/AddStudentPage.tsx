@@ -19,6 +19,34 @@ const NURSERY_PRIMARY_CLASSES = [
 
 const SECONDARY_CLASSES = Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
 
+function Section({
+  id,
+  title,
+  isOpen,
+  onToggle,
+  children,
+}: {
+  id: string;
+  title: string;
+  isOpen: boolean;
+  onToggle: (key: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="border border-gray-200 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onToggle(id)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
+      >
+        {title}
+        {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+      </button>
+      {isOpen && <div className="p-4 space-y-3 bg-white">{children}</div>}
+    </div>
+  );
+}
+
 type FeeStructure = {
   feeByClass: Record<string, number>;
   boardingByClass: Record<string, number>;
@@ -313,31 +341,6 @@ export default function AddStudentPage() {
     );
   };
 
-  const Section = ({
-    id,
-    title,
-    children,
-  }: {
-    id: string;
-    title: string;
-    children: React.ReactNode;
-  }) => {
-    const isOpen = openSections.includes(id);
-    return (
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <button
-          type="button"
-          onClick={() => toggleSection(id)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 text-left text-sm font-medium text-gray-700 hover:bg-gray-100"
-        >
-          {title}
-          {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </button>
-        {isOpen && <div className="p-4 space-y-3 bg-white">{children}</div>}
-      </div>
-    );
-  };
-
   const inputClass =
     'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500';
   const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
@@ -379,7 +382,7 @@ export default function AddStudentPage() {
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
 
-          <Section id="personal" title="Personal information">
+          <Section id="personal" title="Personal information" isOpen={openSections.includes('personal')} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className={labelClass}>First name <span className="text-red-500">*</span></label>
@@ -497,7 +500,7 @@ export default function AddStudentPage() {
             </div>
           </Section>
 
-          <Section id="guardian" title="Parent / Guardian">
+          <Section id="guardian" title="Parent / Guardian" isOpen={openSections.includes('guardian')} onToggle={toggleSection}>
             <div>
               <label className={labelClass}>Full name</label>
               <input
@@ -555,7 +558,7 @@ export default function AddStudentPage() {
             </div>
           </Section>
 
-          <Section id="academic" title="Academic information">
+          <Section id="academic" title="Academic information" isOpen={openSections.includes('academic')} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Class <span className="text-red-500">*</span></label>
@@ -627,7 +630,7 @@ export default function AddStudentPage() {
             </div>
           </Section>
 
-          <Section id="fees" title="Fees & finance">
+          <Section id="fees" title="Fees & finance" isOpen={openSections.includes('fees')} onToggle={toggleSection}>
             <p className="text-xs text-gray-500 mb-2">
               Tuition is auto-filled from Financial Settings when class and boarding type are set. You can add a discount/bursary and optional initial payment.
             </p>
@@ -716,7 +719,7 @@ export default function AddStudentPage() {
             />
           </Section>
 
-          <Section id="photo" title="Student photo (passport)">
+          <Section id="photo" title="Student photo (passport)" isOpen={openSections.includes('photo')} onToggle={toggleSection}>
             <p className="text-xs text-gray-500 mb-2">
               Upload a passport-style photo. It will be compressed and stored like the old system (used in reports and profile).
             </p>
