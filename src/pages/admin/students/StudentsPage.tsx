@@ -223,22 +223,29 @@ export default function StudentsPage() {
               </div>
             )}
           </div>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setColumnsOpen(!columnsOpen)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">Filter by class:</span>
+            <select
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              value={klass}
+              onChange={(e) => setKlass(e.target.value)}
             >
-              <LayoutGrid className="w-4 h-4" />
-              Columns
-              <ChevronDown className="w-4 h-4" />
-            </button>
-            {columnsOpen && (
-              <div className="absolute left-0 top-full mt-1 w-52 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-10">
-                <div className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Show columns</div>
-                <div className="px-3 py-1 text-sm text-gray-600">All columns visible</div>
-              </div>
-            )}
+              <option value="">All Classes</option>
+              {schoolType === 'Nursery/Primary' && (
+                <>
+                  <option value="Baby Class">Baby Class</option>
+                  <option value="Middle Class">Middle Class</option>
+                  <option value="Top Class">Top Class</option>
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <option key={`P-${i}`} value={`Primary ${i + 1}`}>{`Primary ${i + 1}`}</option>
+                  ))}
+                </>
+              )}
+              {schoolType === 'Secondary' &&
+                Array.from({ length: 6 }).map((_, i) => (
+                  <option key={`S-${i}`} value={`Senior ${i + 1}`}>{`Senior ${i + 1}`}</option>
+                ))}
+            </select>
           </div>
           <div className="flex-1 min-w-[180px] max-w-md">
             <div className="relative">
