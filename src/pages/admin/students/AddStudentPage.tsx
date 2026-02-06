@@ -455,7 +455,7 @@ export default function AddStudentPage() {
             </div>
           </Section>
 
-          <Section id="contact" title="Contact & address">
+          <Section id="contact" title="Contact & address" isOpen={openSections.includes('contact')} onToggle={toggleSection}>
             <div>
               <label className={labelClass}>Address</label>
               <input
@@ -708,7 +708,7 @@ export default function AddStudentPage() {
             </div>
           </Section>
 
-          <Section id="medical" title="Medical">
+          <Section id="medical" title="Medical" isOpen={openSections.includes('medical')} onToggle={toggleSection}>
             <label className={labelClass}>Medical condition / allergies / notes</label>
             <textarea
               value={medicalCondition}
