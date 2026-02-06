@@ -137,7 +137,7 @@ export default function AdminDashboard() {
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
-            onClick={() => navigate('/dashboard/admin/students')}
+            onClick={() => navigate('/dashboard/admin/students/add')}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
           >
             + Add Student

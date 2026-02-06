@@ -1,10 +1,9 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
-import AddStudentModal from './AddStudentModal';
 import {
   Settings,
   ChevronDown,
@@ -51,7 +50,6 @@ async function fetchStudentsList(userId: string) {
 
 export default function StudentsPage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const [q, setQ] = useState('');
   const [klass, setKlass] = useState('');
@@ -61,14 +59,6 @@ export default function StudentsPage() {
   const [groupByOpen, setGroupByOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [expandedParent, setExpandedParent] = useState<{ studentId: string; parentIndex: number } | null>(null);
-  const [addModalOpen, setAddModalOpen] = useState(false);
-
-  useEffect(() => {
-    if ((location.state as { openAddModal?: boolean })?.openAddModal) {
-      setAddModalOpen(true);
-      navigate(location.pathname, { replace: true, state: {} });
-    }
-  }, [location.pathname, location.state, navigate]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'students', user?.id ?? ''],
@@ -429,7 +419,6 @@ export default function StudentsPage() {
           </div>
         </div>
 
-        <AddStudentModal open={addModalOpen} onClose={() => setAddModalOpen(false)} />
       </div>
     </AdminPageWrapper>
   );
