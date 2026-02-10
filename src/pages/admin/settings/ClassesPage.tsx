@@ -33,12 +33,16 @@ async function fetchClassesPage(userId: string): Promise<ClassItem[]> {
     if (s.current_class) classCounts[s.current_class] = (classCounts[s.current_class] || 0) + 1;
   });
 
-  const { data: classTeachers } = await supabase.from('classes').select('class_name, class_teacher_id').eq('school_id', data.school_id);
+  const { data: classTeachers, error: ctError } = await supabase
+    .from('class_teachers')
+    .select('class_name, teacher_id')
+    .eq('school_id', data.school_id);
   const teacherMap: Record<string, string> = {};
-  (classTeachers || []).forEach((ct: any) => {
-    if (ct.class_name && ct.class_teacher_id) teacherMap[ct.class_name] = ct.class_teacher_id;
-  });
-
+  if (!ctError && classTeachers?.length) {
+    classTeachers.forEach((ct: any) => {
+      if (ct.class_name && ct.teacher_id) teacherMap[ct.class_name] = ct.teacher_id;
+    });
+  }
   const teacherIds = Object.values(teacherMap);
   const { data: teachers } =
     teacherIds.length > 0

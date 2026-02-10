@@ -24,9 +24,9 @@ type SortKey = 'name' | 'parents' | 'teacher' | 'class' | 'email' | 'phone';
 
 async function fetchStudentsList(userId: string) {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolType: null as 'Nursery/Primary' | 'Secondary' | null, rows: [] as any[], parentsByStudent: {} as Record<string, { name: string; email?: string; phone?: string }[]> };
+  if (!u?.school_id) return { schoolType: null as 'Nursery/Primary' | 'Secondary' | null, rows: [] as any[], parentsByStudent: {} as Record<string, { name: string; email?: string; phone?: string }[]>, classTeacherNameByClass: {} as Record<string, string> };
 
-  const [schoolRes, studentsRes, parentsRes] = await Promise.all([
+  const [schoolRes, studentsRes, parentsRes, classTeachersRes] = await Promise.all([
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
     supabase
       .from('students')
@@ -34,6 +34,7 @@ async function fetchStudentsList(userId: string) {
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
     supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
+    supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', u.school_id),
   ]);
   const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
   const rows = studentsRes.data || [];
@@ -45,7 +46,22 @@ async function fetchStudentsList(userId: string) {
     if (!parentsByStudent[sid]) parentsByStudent[sid] = [];
     parentsByStudent[sid].push({ name: p.name || '', email: p.email, phone: p.phone });
   });
-  return { schoolType, rows, parentsByStudent };
+
+  let classTeacherNameByClass: Record<string, string> = {};
+  if (!classTeachersRes.error && classTeachersRes.data?.length) {
+    const classTeachers = classTeachersRes.data;
+    const teacherIds = [...new Set(classTeachers.map((ct: any) => ct.teacher_id).filter(Boolean))];
+    const teacherNameMap: Record<string, string> = {};
+    if (teacherIds.length > 0) {
+      const { data: teachers } = await supabase.from('teachers').select('teacher_id, name').eq('school_id', u.school_id).in('teacher_id', teacherIds);
+      (teachers || []).forEach((t: any) => { teacherNameMap[t.teacher_id] = t.name || ''; });
+    }
+    classTeachers.forEach((ct: any) => {
+      if (ct.class_name && ct.teacher_id) classTeacherNameByClass[ct.class_name] = teacherNameMap[ct.teacher_id] || '';
+    });
+  }
+
+  return { schoolType, rows, parentsByStudent, classTeacherNameByClass };
 }
 
 export default function StudentsPage() {
@@ -70,6 +86,7 @@ export default function StudentsPage() {
   const rows = data?.rows ?? [];
   const schoolType = data?.schoolType ?? null;
   const parentsByStudent = data?.parentsByStudent ?? {};
+  const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
 
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -116,7 +133,7 @@ export default function StudentsPage() {
       return 0;
     });
     return arr;
-  }, [filtered, sortKey, sortOrder, parentsByStudent]);
+  }, [filtered, sortKey, sortOrder, parentsByStudent, classTeacherNameByClass]);
 
   const loading = isLoading && !data;
 
@@ -340,7 +357,7 @@ export default function StudentsPage() {
                               <span className="text-gray-400">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-500">—</td>
+                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{classTeacherNameByClass[r.current_class] || '—'}</td>
                           <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{r.current_class || '—'}</td>
                           <td className="px-4 py-3 border-r border-gray-100">
                             {firstParent?.email ? (
@@ -415,7 +432,7 @@ export default function StudentsPage() {
                                       <div>
                                         <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Teacher</p>
                                         <p className="text-lg font-semibold text-slate-800">
-                                          — {r.current_class ? `(${r.current_class})` : ''}
+                                          {classTeacherNameByClass[r.current_class] || '—'} {r.current_class ? `(${r.current_class})` : ''}
                                         </p>
                                       </div>
                                     </div>

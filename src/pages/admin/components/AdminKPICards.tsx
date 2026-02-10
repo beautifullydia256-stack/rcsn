@@ -123,30 +123,50 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-      {cards.map((c) => {
+      {cards.map((c, index) => {
         const Icon = c.icon;
+        const isFirstCard = index === 0;
+        
         return (
           <div
             key={c.label}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+            className={`rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md ${
+              isFirstCard 
+                ? 'bg-gradient-to-br from-green-500 to-green-600' 
+                : 'bg-white border border-gray-200'
+            }`}
           >
             <button
               type="button"
               onClick={() => c.href && navigate(c.href)}
-              className="w-full p-4 sm:p-5 text-left hover:bg-gray-50/50 transition-colors"
+              className={`w-full p-5 sm:p-6 text-left transition-all ${
+                isFirstCard ? 'hover:from-green-600 hover:to-green-700' : 'hover:bg-gray-50'
+              }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="p-2 rounded-lg flex-shrink-0 bg-green-100">
-                  <Icon className="w-5 h-5 text-green-600" style={{ color: c.color }} />
+              <div className="space-y-3">
+                <div className={`text-xs font-medium uppercase tracking-wide ${
+                  isFirstCard ? 'text-green-100' : 'text-gray-500'
+                }`}>
+                  {c.label}
                 </div>
-                {c.href && <ArrowUpRight className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden />}
-              </div>
-              <div className="mt-3">
-                <div className="text-xs sm:text-sm text-gray-500 mb-0.5">{c.label}</div>
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">
-                  {isLoading ? <div className="animate-pulse bg-gray-200 rounded h-7 w-16" /> : c.value}
+                
+                <div className={`text-3xl sm:text-4xl font-bold ${
+                  isFirstCard ? 'text-white' : 'text-gray-900'
+                }`}>
+                  {isLoading ? (
+                    <div className={`animate-pulse rounded h-9 w-20 ${
+                      isFirstCard ? 'bg-white/20' : 'bg-gray-200'
+                    }`} />
+                  ) : (
+                    c.value
+                  )}
                 </div>
-                <div className="mt-1 text-xs text-green-600 font-medium">{c.trend}</div>
+                
+                <div className={`text-sm ${
+                  isFirstCard ? 'text-green-50' : 'text-gray-500'
+                }`}>
+                  {c.trend}
+                </div>
               </div>
             </button>
           </div>
