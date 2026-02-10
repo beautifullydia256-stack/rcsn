@@ -8,7 +8,7 @@ import AdminPageWrapper, { adminCardClass } from "@/components/layout/AdminPageW
 
 export default function IdentityPage() {
   const navigate = useNavigate();
-  const { schoolId } = useAuthStore();
+  const { user, schoolId, setSchoolId } = useAuthStore();
   const [students, setStudents] = useState<any[]>([]);
   const [schoolData, setSchoolData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,13 +17,31 @@ export default function IdentityPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!schoolId) return;
+      // If schoolId is not in store, fetch it
+      let currentSchoolId = schoolId;
+      if (!currentSchoolId && user) {
+        const { data: userData } = await supabase
+          .from("users")
+          .select("school_id")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (userData?.school_id) {
+          currentSchoolId = userData.school_id;
+          setSchoolId(currentSchoolId);
+        }
+      }
+
+      if (!currentSchoolId) {
+        setLoading(false);
+        return;
+      }
 
       // Fetch school data
       const { data: school } = await supabase
         .from("schools")
         .select("*")
-        .eq("school_id", schoolId)
+        .eq("school_id", currentSchoolId)
         .single();
 
       setSchoolData(school);
@@ -32,7 +50,7 @@ export default function IdentityPage() {
       const { data: studentsData } = await supabase
         .from("students")
         .select("*")
-        .eq("school_id", schoolId)
+        .eq("school_id", currentSchoolId)
         .eq("status", "active")
         .order("name", { ascending: true });
 
@@ -41,7 +59,7 @@ export default function IdentityPage() {
     };
 
     fetchData();
-  }, [schoolId]);
+  }, [schoolId, user, setSchoolId]);
 
   const filteredStudents = useMemo(() => {
     let result = students;

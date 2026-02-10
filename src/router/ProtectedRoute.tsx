@@ -7,7 +7,7 @@ import ThemedLoadingView from '../components/ui/ThemedLoadingView';
 export default function ProtectedRoute() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const { user, setUser, setRole } = useAuthStore();
+  const { user, setUser, setRole, setSchoolId } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -29,6 +29,7 @@ export default function ProtectedRoute() {
         if (userData) {
           setUser(session.user);
           setRole(userData.role);
+          setSchoolId(userData.school_id); // Set schoolId in store
         } else {
           // Fallback to metadata
           const role = session.user.user_metadata?.role || 
@@ -60,7 +61,7 @@ export default function ProtectedRoute() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, setUser, setRole]);
+  }, [navigate, setUser, setRole, setSchoolId]);
 
   if (loading) {
     return <ThemedLoadingView />;
