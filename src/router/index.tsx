@@ -21,6 +21,8 @@ const AccountsPage = lazy(() => import('../pages/admin/accounts/AccountsPage'));
 const ExamSetsPage = lazy(() => import('../pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazy(() => import('../pages/admin/attendance/AttendanceRecordsPage'));
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
+const IdentityPage = lazy(() => import('../pages/admin/identity/IdentityPage'));
+const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCardPage'));
 
 // Teacher routes
 const TeacherDashboard = lazy(() => import('../pages/teacher/Dashboard'));
@@ -44,6 +46,7 @@ const OwnerDashboard = lazy(() => import('../pages/owner/Dashboard'));
 
 // Public routes
 const HomePage = lazy(() => import('../pages/Home'));
+const VerifyPage = lazy(() => import('../pages/VerifyPage'));
 
 export const router: RouteObject[] = [
   {
@@ -57,6 +60,10 @@ export const router: RouteObject[] = [
   {
     path: '/register',
     element: <RegisterPage />,
+  },
+  {
+    path: '/verify/:id',
+    element: <VerifyPage />,
   },
   {
     path: '/dashboard',
@@ -77,6 +84,8 @@ export const router: RouteObject[] = [
           { path: 'accounts', element: <AccountsPage /> },
           { path: 'exam-sets', element: <ExamSetsPage /> },
           { path: 'attendance', element: <AttendanceRecordsPage /> },
+          { path: 'identity', element: <IdentityPage /> },
+          { path: 'identity/:id', element: <StudentIDCardPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'reports/snapshots', element: <Navigate to="/dashboard/admin/reports" replace /> },
           { path: 'reports/bulk', element: <BulkGenerator /> },

@@ -17,6 +17,7 @@ import {
   LogOut,
   Search,
   Smartphone,
+  IdCard,
 } from 'lucide-react';
 import GlassBackground from './GlassBackground';
 import AdminContentSkeleton from './AdminContentSkeleton';
@@ -200,6 +201,7 @@ export default function AdminLayout() {
           <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText}>Reports</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList}>Attendance</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen}>Exam Sets</NavLinkStyle>
+          <NavLinkStyle to="/dashboard/admin/identity" icon={IdCard}>Identity</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2}>Classes</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard}>Job Vacancies</NavLinkStyle>
           <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>System Settings</NavLinkStyle>
