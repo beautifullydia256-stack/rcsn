@@ -14,6 +14,7 @@ export default function IDCard({ student, school }: IDCardProps) {
       if (!barcodeRef.current) return;
 
       try {
+        // Dynamic import to handle missing dependency gracefully
         const JsBarcode = (await import("jsbarcode")).default;
         const canvas = document.createElement("canvas");
         JsBarcode(canvas, student.admission_number || student.student_id, {
@@ -26,6 +27,10 @@ export default function IDCard({ student, school }: IDCardProps) {
         barcodeRef.current.appendChild(canvas);
       } catch (error) {
         console.error("Error generating barcode:", error);
+        // Fallback: show text if barcode generation fails
+        if (barcodeRef.current) {
+          barcodeRef.current.innerHTML = `<div style="text-align: center; padding: 10px; font-size: 14px; color: #666;">Barcode: ${student.admission_number || student.student_id}</div>`;
+        }
       }
     };
 

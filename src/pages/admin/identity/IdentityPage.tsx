@@ -8,7 +8,7 @@ import AdminPageWrapper, { adminCardClass } from "@/components/layout/AdminPageW
 
 export default function IdentityPage() {
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { schoolId } = useAuthStore();
   const [students, setStudents] = useState<any[]>([]);
   const [schoolData, setSchoolData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,13 +17,13 @@ export default function IdentityPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.school_id) return;
+      if (!schoolId) return;
 
       // Fetch school data
       const { data: school } = await supabase
         .from("schools")
         .select("*")
-        .eq("school_id", user.school_id)
+        .eq("school_id", schoolId)
         .single();
 
       setSchoolData(school);
@@ -32,7 +32,7 @@ export default function IdentityPage() {
       const { data: studentsData } = await supabase
         .from("students")
         .select("*")
-        .eq("school_id", user.school_id)
+        .eq("school_id", schoolId)
         .eq("status", "active")
         .order("name", { ascending: true });
 
@@ -41,7 +41,7 @@ export default function IdentityPage() {
     };
 
     fetchData();
-  }, [user]);
+  }, [schoolId]);
 
   const filteredStudents = useMemo(() => {
     let result = students;

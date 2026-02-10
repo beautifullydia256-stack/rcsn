@@ -33,6 +33,8 @@
     "grapesjs-style-bg": "^2.0.2",
     "grapesjs-tabs": "^1.0.6",
     "grapesjs-touch": "^0.1.1",
+    "html2canvas": "^1.4.1",
+    "jsbarcode": "^3.11.6",
     "jspdf": "^3.0.3",
     "jszip": "^3.10.1",
     "liquid-glass-react": "^1.1.1",
@@ -50,6 +52,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@types/jsbarcode": "^3.12.2",
     "@types/node": "22.18.11",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",

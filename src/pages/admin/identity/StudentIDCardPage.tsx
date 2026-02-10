@@ -10,7 +10,7 @@ import IDCard from "./components/IDCard";
 export default function StudentIDCardPage() {
   const navigate = useNavigate();
   const { id: studentId } = useParams<{ id: string }>();
-  const { user } = useAuthStore();
+  const { schoolId } = useAuthStore();
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [student, setStudent] = useState<any>(null);
@@ -19,13 +19,13 @@ export default function StudentIDCardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.school_id || !studentId) return;
+      if (!schoolId || !studentId) return;
 
       // Fetch school data
       const { data: schoolData } = await supabase
         .from("schools")
         .select("*")
-        .eq("school_id", user.school_id)
+        .eq("school_id", schoolId)
         .single();
 
       setSchool(schoolData);
@@ -42,7 +42,7 @@ export default function StudentIDCardPage() {
     };
 
     fetchData();
-  }, [user, studentId]);
+  }, [schoolId, studentId]);
 
   const handleDownloadPNG = async () => {
     if (!cardRef.current) return;
