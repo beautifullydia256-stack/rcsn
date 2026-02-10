@@ -10,7 +10,7 @@ import IDCard from "./components/IDCard";
 export default function StudentIDCardPage() {
   const navigate = useNavigate();
   const { id: studentId } = useParams<{ id: string }>();
-  const { user, schoolId, setSchoolId } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [student, setStudent] = useState<any>(null);
@@ -19,22 +19,16 @@ export default function StudentIDCardPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // If schoolId is not in store, fetch it
-      let currentSchoolId = schoolId;
-      if (!currentSchoolId && user) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("school_id")
-          .eq("user_id", user.id)
-          .single();
-        
-        if (userData?.school_id) {
-          currentSchoolId = userData.school_id;
-          setSchoolId(currentSchoolId);
-        }
-      }
+      if (!user?.id || !studentId) return;
 
-      if (!currentSchoolId || !studentId) {
+      // Fetch school_id from users table
+      const { data: userData } = await supabase
+        .from("users")
+        .select("school_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!userData?.school_id) {
         setLoading(false);
         return;
       }
@@ -43,7 +37,7 @@ export default function StudentIDCardPage() {
       const { data: schoolData } = await supabase
         .from("schools")
         .select("*")
-        .eq("school_id", currentSchoolId)
+        .eq("school_id", userData.school_id)
         .single();
 
       setSchool(schoolData);
@@ -60,7 +54,7 @@ export default function StudentIDCardPage() {
     };
 
     fetchData();
-  }, [schoolId, studentId, user, setSchoolId]);
+  }, [user, studentId]);
 
   const handleDownloadPNG = async () => {
     if (!cardRef.current) return;

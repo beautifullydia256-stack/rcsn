@@ -8,7 +8,7 @@ import AdminPageWrapper, { adminCardClass } from "@/components/layout/AdminPageW
 
 export default function IdentityPage() {
   const navigate = useNavigate();
-  const { user, schoolId, setSchoolId } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const [students, setStudents] = useState<any[]>([]);
   const [schoolData, setSchoolData] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,22 +17,16 @@ export default function IdentityPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // If schoolId is not in store, fetch it
-      let currentSchoolId = schoolId;
-      if (!currentSchoolId && user) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("school_id")
-          .eq("user_id", user.id)
-          .single();
-        
-        if (userData?.school_id) {
-          currentSchoolId = userData.school_id;
-          setSchoolId(currentSchoolId);
-        }
-      }
+      if (!user?.id) return;
 
-      if (!currentSchoolId) {
+      // Fetch school_id from users table
+      const { data: userData } = await supabase
+        .from("users")
+        .select("school_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!userData?.school_id) {
         setLoading(false);
         return;
       }
@@ -41,7 +35,7 @@ export default function IdentityPage() {
       const { data: school } = await supabase
         .from("schools")
         .select("*")
-        .eq("school_id", currentSchoolId)
+        .eq("school_id", userData.school_id)
         .single();
 
       setSchoolData(school);
@@ -50,7 +44,7 @@ export default function IdentityPage() {
       const { data: studentsData } = await supabase
         .from("students")
         .select("*")
-        .eq("school_id", currentSchoolId)
+        .eq("school_id", userData.school_id)
         .eq("status", "active")
         .order("name", { ascending: true });
 
@@ -59,7 +53,7 @@ export default function IdentityPage() {
     };
 
     fetchData();
-  }, [schoolId, user, setSchoolId]);
+  }, [user]);
 
   const filteredStudents = useMemo(() => {
     let result = students;
