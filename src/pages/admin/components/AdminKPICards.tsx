@@ -99,15 +99,14 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
 
   const cards = kpis
     ? [
-        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students', trend: 'All hotspot accounts' },
-        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers', trend: 'Currently active' },
+        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students' },
+        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers' },
         {
           label: 'Fees Collected',
           value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected),
           icon: DollarSign,
           color: '#16a34a',
           href: '/dashboard/admin/outstanding',
-          trend: 'From vouchers & mobile money',
         },
         {
           label: 'Outstanding Balances',
@@ -115,12 +114,11 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
           icon: DollarSign,
           color: '#dc2626',
           href: '/dashboard/admin/outstanding',
-          trend: 'Tickets used, not yet expired',
         },
-        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined, trend: 'Present students' },
-        { label: 'Placeholder 1', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
-        { label: 'Placeholder 2', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
-        { label: 'Placeholder 3', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
+        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined },
+        { label: 'Placeholder 1', value: '---', icon: Users, color: '#6b7280', href: undefined },
+        { label: 'Placeholder 2', value: '---', icon: Users, color: '#6b7280', href: undefined },
+        { label: 'Placeholder 3', value: '---', icon: Users, color: '#6b7280', href: undefined },
       ]
     : [];
 
@@ -171,12 +169,6 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
                   ) : (
                     c.value
                   )}
-                </div>
-                
-                <div className={`text-sm ${
-                  isFirstCard ? 'text-green-50' : isPlaceholder ? 'text-gray-400' : 'text-gray-500'
-                }`}>
-                  {c.trend}
                 </div>
               </div>
             </button>
