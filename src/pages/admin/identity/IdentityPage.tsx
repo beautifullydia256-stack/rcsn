@@ -14,42 +14,78 @@ export default function IdentityPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [classFilter, setClassFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.id) return;
+      try {
+        if (!user?.id) {
+          console.log('Identity: No user ID found');
+          setError('No user ID found');
+          setLoading(false);
+          return;
+        }
 
-      // Fetch school_id from users table
-      const { data: userData } = await supabase
-        .from("users")
-        .select("school_id")
-        .eq("user_id", user.id)
-        .single();
+        console.log('Identity: Fetching data for user:', user.id);
 
-      if (!userData?.school_id) {
+        // Fetch school_id from users table
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("school_id")
+          .eq("user_id", user.id)
+          .single();
+
+        if (userError) {
+          console.error('Identity: Error fetching user data:', userError);
+          setError(`Error fetching user data: ${userError.message}`);
+          setLoading(false);
+          return;
+        }
+
+        if (!userData?.school_id) {
+          console.log('Identity: No school_id found for user');
+          setError('No school ID found for user');
+          setLoading(false);
+          return;
+        }
+
+        console.log('Identity: Found school_id:', userData.school_id);
+
+        // Fetch school data
+        const { data: school, error: schoolError } = await supabase
+          .from("schools")
+          .select("*")
+          .eq("school_id", userData.school_id)
+          .single();
+
+        if (schoolError) {
+          console.error('Identity: Error fetching school:', schoolError);
+        }
+
+        setSchoolData(school);
+
+        // Fetch students
+        const { data: studentsData, error: studentsError } = await supabase
+          .from("students")
+          .select("*")
+          .eq("school_id", userData.school_id)
+          .eq("status", "active")
+          .order("name", { ascending: true });
+
+        if (studentsError) {
+          console.error('Identity: Error fetching students:', studentsError);
+          setError(`Error fetching students: ${studentsError.message}`);
+        } else {
+          console.log('Identity: Loaded', studentsData?.length || 0, 'students');
+          setStudents(studentsData || []);
+        }
+
         setLoading(false);
-        return;
+      } catch (err: any) {
+        console.error('Identity: Unexpected error:', err);
+        setError(`Unexpected error: ${err.message}`);
+        setLoading(false);
       }
-
-      // Fetch school data
-      const { data: school } = await supabase
-        .from("schools")
-        .select("*")
-        .eq("school_id", userData.school_id)
-        .single();
-
-      setSchoolData(school);
-
-      // Fetch students
-      const { data: studentsData } = await supabase
-        .from("students")
-        .select("*")
-        .eq("school_id", userData.school_id)
-        .eq("status", "active")
-        .order("name", { ascending: true });
-
-      setStudents(studentsData || []);
-      setLoading(false);
     };
 
     fetchData();
@@ -128,7 +164,14 @@ export default function IdentityPage() {
           animate={{ opacity: 1, y: 0 }}
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
         >
-          {loading ? (
+          {error ? (
+            <div className="col-span-full text-center py-12">
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                <p className="font-bold">Error</p>
+                <p>{error}</p>
+              </div>
+            </div>
+          ) : loading ? (
             <div className="col-span-full text-center py-12 text-white/70">
               Loading students...
             </div>
