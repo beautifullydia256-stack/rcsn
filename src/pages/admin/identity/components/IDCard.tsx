@@ -15,6 +15,7 @@ export default function IDCard({ student, school }: IDCardProps) {
 
       try {
         // Dynamic import to handle missing dependency gracefully
+        // @ts-ignore - jsbarcode types may not be available
         const JsBarcode = (await import("jsbarcode")).default;
         const canvas = document.createElement("canvas");
         JsBarcode(canvas, student.admission_number || student.student_id, {
