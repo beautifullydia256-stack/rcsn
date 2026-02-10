@@ -99,15 +99,15 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
 
   const cards = kpis
     ? [
-        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students', trend: 'vs last term' },
-        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers', trend: 'vs last term' },
+        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students', trend: 'All hotspot accounts' },
+        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers', trend: 'Currently active' },
         {
           label: 'Fees Collected',
           value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected),
           icon: DollarSign,
           color: '#16a34a',
           href: '/dashboard/admin/outstanding',
-          trend: 'this term',
+          trend: 'From vouchers & mobile money',
         },
         {
           label: 'Outstanding Balances',
@@ -115,17 +115,21 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
           icon: DollarSign,
           color: '#dc2626',
           href: '/dashboard/admin/outstanding',
-          trend: 'to recover',
+          trend: 'Tickets used, not yet expired',
         },
-        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined, trend: 'present' },
+        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined, trend: 'Present students' },
+        { label: 'Placeholder 1', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
+        { label: 'Placeholder 2', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
+        { label: 'Placeholder 3', value: '---', icon: Users, color: '#6b7280', href: undefined, trend: 'Coming soon' },
       ]
     : [];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {cards.map((c, index) => {
         const Icon = c.icon;
         const isFirstCard = index === 0;
+        const isPlaceholder = c.label.startsWith('Placeholder');
         
         return (
           <div
@@ -133,27 +137,34 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
             className={`rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md ${
               isFirstCard 
                 ? 'bg-gradient-to-br from-green-500 to-green-600' 
+                : isPlaceholder
+                ? 'bg-gray-100 border border-gray-200 opacity-60'
                 : 'bg-white border border-gray-200'
             }`}
           >
             <button
               type="button"
-              onClick={() => c.href && navigate(c.href)}
+              onClick={() => !isPlaceholder && c.href && navigate(c.href)}
+              disabled={isPlaceholder}
               className={`w-full p-5 sm:p-6 text-left transition-all ${
-                isFirstCard ? 'hover:from-green-600 hover:to-green-700' : 'hover:bg-gray-50'
+                isFirstCard 
+                  ? 'hover:from-green-600 hover:to-green-700' 
+                  : isPlaceholder
+                  ? 'cursor-default'
+                  : 'hover:bg-gray-50'
               }`}
             >
               <div className="space-y-3">
                 <div className={`text-xs font-medium uppercase tracking-wide ${
-                  isFirstCard ? 'text-green-100' : 'text-gray-500'
+                  isFirstCard ? 'text-green-100' : isPlaceholder ? 'text-gray-400' : 'text-gray-500'
                 }`}>
                   {c.label}
                 </div>
                 
                 <div className={`text-3xl sm:text-4xl font-bold ${
-                  isFirstCard ? 'text-white' : 'text-gray-900'
+                  isFirstCard ? 'text-white' : isPlaceholder ? 'text-gray-400' : 'text-gray-900'
                 }`}>
-                  {isLoading ? (
+                  {isLoading && !isPlaceholder ? (
                     <div className={`animate-pulse rounded h-9 w-20 ${
                       isFirstCard ? 'bg-white/20' : 'bg-gray-200'
                     }`} />
@@ -163,7 +174,7 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
                 </div>
                 
                 <div className={`text-sm ${
-                  isFirstCard ? 'text-green-50' : 'text-gray-500'
+                  isFirstCard ? 'text-green-50' : isPlaceholder ? 'text-gray-400' : 'text-gray-500'
                 }`}>
                   {c.trend}
                 </div>
