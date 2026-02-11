@@ -1,613 +1,624 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { X } from "lucide-react";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  PiggyBank, 
+  TrendingUpIcon,
+  CreditCard,
+  MoreVertical,
+  Plus,
+  Settings
+} from "lucide-react";
 
-interface StudentBalance {
-  balance_id: string;
-  student_id: string;
-  term_id: string;
-  class_id: string;
-  total_fees: number;
-  total_paid: number;
-  balance: number;
-  last_payment_date: string | null;
-  students: {
-    name: string;
-    admission_number: string;
-  };
-  classes?: {
-    class_name: string;
-  } | null;
-  school_terms: {
-    year: number;
-    term: number;
-    academic_year: string;
-  };
+interface DashboardData {
+  income: number;
+  expense: number;
+  savings: number;
+  investment: number;
+  incomeChange: number;
+  expenseChange: number;
+  savingsChange: number;
+  investmentChange: number;
+  totalBalance: number;
 }
 
-interface Payment {
-  payment_id: string;
-  student_id: string;
-  amount_paid: number;
-  payment_method: string;
-  payment_date: string;
-  transaction_ref: string;
-  notes: string;
-  students: {
-    name: string;
-    admission_number: string;
-  };
-  classes?: {
-    class_name: string;
-  } | null;
-}
-
-interface Student {
-  student_id: string;
-  name: string;
-  admission_number: string;
-  class_id: string;
-  classes?: {
-    class_name: string;
-  } | null;
-}
-
-interface Expense {
-  expense_id: string;
-  category_name: string;
-  description: string;
-  amount: number;
-  payment_method: string;
-  expense_date: string;
-  reference_number: string;
-  status: string;
-  recorded_by: string;
-  approved_by: string | null;
-  approved_at: string | null;
-}
-
-interface ExpenseCategory {
-  category_id: string;
-  category_name: string;
-  description: string;
-}
-
-export default function AccountantDashboardPage() {
+export default function AccountantDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [userName, setUserName] = useState<string>("");
-  const [schoolName, setSchoolName] = useState<string>("");
-  const [userId, setUserId] = useState<string>("");
-
-  // KPIs
-  const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
-  const [kpiCollectedThisTerm, setKpiCollectedThisTerm] = useState<number>(0);
-  const [kpiOutstanding, setKpiOutstanding] = useState<number>(0);
-  const [kpiOutstandingAllTime, setKpiOutstandingAllTime] = useState<number>(0);
-  const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
-  const [kpiExpensesThisTerm, setKpiExpensesThisTerm] = useState<number>(0);
-  const [kpiNetBalance, setKpiNetBalance] = useState<number>(0);
-
-  // Data
-  const [balances, setBalances] = useState<StudentBalance[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
-  const [currentTermId, setCurrentTermId] = useState<string | null>(null);
-  
-  // Filters
-  const [search, setSearch] = useState<string>("");
-  const [selectedClass, setSelectedClass] = useState<string>("");
-  const [classes, setClasses] = useState<string[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>("");
-  const [expenseStatusFilter, setExpenseStatusFilter] = useState<string>("");
-  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState<string>("");
-
-  const loadData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/login");
-        return;
-      }
-
-      const { data: userRow } = await supabase
-        .from("users")
-        .select("school_id, role, name, user_id")
-        .eq("user_id", user.id)
-        .single();
-      if (!userRow?.school_id) {
-        setError("School not found for user");
-        return;
-      }
-      setSchoolId(userRow.school_id);
-      setRole(userRow.role || null);
-      setUserName(userRow.name || "User");
-      setUserId(userRow.user_id);
-
-      // Load school name
-      const { data: schoolData } = await supabase
-        .from("schools")
-        .select("name")
-        .eq("school_id", userRow.school_id)
-        .single();
-      setSchoolName(schoolData?.name || "School");
-
-      // Role guard
-      if (userRow.role !== "accountant" && userRow.role !== "admin") {
-        setError("Access denied. Accountant or Admin only.");
-        return;
-      }
-
-      // Get current term
-      const today = new Date().toISOString().slice(0, 10);
-      const { data: allTerms, error: termsError } = await supabase
-        .from('school_terms')
-        .select('id, start_date, end_date, year, term')
-        .eq('school_id', userRow.school_id)
-        .order('year', { ascending: false })
-        .order('term', { ascending: false });
-      
-      if (termsError) {
-        console.error('Error loading terms:', termsError);
-      }
-      
-      // Try to find current term by date range first, then fallback to most recent
-      let currentTerm = (allTerms || []).find((t: any) => 
-        t.start_date && t.end_date &&
-        t.start_date <= today && t.end_date >= today
-      );
-      
-      // If no current term by date, use the most recent term
-      if (!currentTerm && allTerms && allTerms.length > 0) {
-        currentTerm = allTerms[0];
-      }
-
-      if (currentTerm) {
-        setCurrentTermId(currentTerm.id);
-      } else {
-        console.warn('No terms found for school:', userRow.school_id);
-        // Still set a placeholder so queries don't fail
-        setCurrentTermId("");
-      }
-
-      // Load students
-      const { data: studentsData, error: studentsError } = await supabase
-        .from("students")
-        .select("student_id, name, admission_number, current_class")
-        .eq("school_id", userRow.school_id)
-        .eq("status", "active")
-        .order("name");
-      
-      if (studentsError) {
-        console.error('Error loading students:', studentsError);
-      }
-      
-      // Map current_class to classes.class_name for compatibility
-      const mappedStudents = (studentsData || []).map(s => ({
-        ...s,
-        class_id: null,
-        classes: s.current_class ? { class_name: s.current_class } : null
-      }));
-      setStudents(mappedStudents as any);
-
-      // Load classes
-      const { data: classesData } = await supabase
-        .from("classes")
-        .select("class_name")
-        .eq("school_id", userRow.school_id)
-        .order("class_name");
-      const uniqueClasses = (classesData || []).map(c => c.class_name);
-      setClasses(uniqueClasses);
-
-      // Fetch student balances
-      let balancesQuery = supabase
-        .from("student_balances")
-        .select(`
-          balance_id,
-          student_id,
-          term_id,
-          class_id,
-          total_fees,
-          total_paid,
-          balance,
-          last_payment_date,
-          students!inner(name, admission_number),
-          classes(class_name),
-          school_terms!inner(year, term, academic_year)
-        `)
-        .eq("school_id", userRow.school_id);
-      
-      // Only filter by term if we have a current term
-      if (currentTerm?.id) {
-        balancesQuery = balancesQuery.eq("term_id", currentTerm.id);
-      }
-      
-      const { data: balancesData, error: balancesError } = await balancesQuery
-        .order("balance", { ascending: false });
-
-      if (balancesError) {
-        console.error('Error loading balances:', balancesError);
-      }
-      setBalances(balancesData as any || []);
-
-      // Fetch payments
-      let paymentsQuery = supabase
-        .from("student_payments")
-        .select(`
-          payment_id,
-          student_id,
-          amount_paid,
-          payment_method,
-          payment_date,
-          transaction_ref,
-          notes,
-          students!inner(name, admission_number),
-          classes(class_name)
-        `)
-        .eq("school_id", userRow.school_id);
-      
-      // Only filter by term if we have a current term
-      if (currentTerm?.id) {
-        paymentsQuery = paymentsQuery.eq("term_id", currentTerm.id);
-      }
-      
-      const { data: paymentsData, error: paymentsError } = await paymentsQuery
-        .order("payment_date", { ascending: false });
-
-      if (paymentsError) {
-        console.error('Error loading payments:', paymentsError);
-      }
-      setPayments(paymentsData as any || []);
-
-      // Calculate KPIs
-      const todayISO = today;
-      const collectedToday = (paymentsData || [])
-        .filter(p => p.payment_date === todayISO)
-        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-      setKpiCollectedToday(collectedToday);
-
-      const collectedThisTerm = (paymentsData || [])
-        .reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-      setKpiCollectedThisTerm(collectedThisTerm);
-
-      // Current Term Outstanding: only positive balances where fees were set
-      const outstanding = (balancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
-        .reduce((sum, b: any) => sum + Number(b.balance || 0), 0);
-      const debtors = (balancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0).length;
-      
-      setKpiOutstanding(outstanding);
-      setKpiDebtorsCount(debtors);
-
-      // Fetch ALL TIME balances (across all terms)
-      const { data: allTimeBalancesData } = await supabase
-        .from("student_balances")
-        .select("total_fees, balance")
-        .eq("school_id", userRow.school_id);
-      
-      const outstandingAllTime = (allTimeBalancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
-        .reduce((sum, b: any) => sum + Math.max(0, Number(b.balance || 0)), 0);
-      
-      setKpiOutstandingAllTime(outstandingAllTime);
-
-      // Load expense categories
-      const { data: categoriesData } = await supabase
-        .from("expense_categories")
-        .select("category_id, category_name, description")
-        .eq("school_id", userRow.school_id)
-        .eq("is_active", true)
-        .order("category_name");
-      setExpenseCategories(categoriesData as any || []);
-
-      // Load expenses
-      let expensesQuery = supabase
-        .from("school_expenses")
-        .select("*")
-        .eq("school_id", userRow.school_id);
-      
-      // Only filter by term if we have a current term
-      if (currentTerm?.id) {
-        expensesQuery = expensesQuery.eq("term_id", currentTerm.id);
-      }
-      
-      const { data: expensesData, error: expensesError } = await expensesQuery
-        .order("expense_date", { ascending: false });
-      
-      if (expensesError) {
-        console.error('Error loading expenses:', expensesError);
-      }
-      setExpenses(expensesData as any || []);
-
-      // Calculate expense KPIs
-      const approvedExpenses = (expensesData || [])
-        .filter((e: any) => e.status === 'approved' || e.status === 'paid')
-        .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-      setKpiExpensesThisTerm(approvedExpenses);
-
-      // Calculate net balance (income - expenses)
-      const netBalance = collectedThisTerm - approvedExpenses;
-      setKpiNetBalance(netBalance);
-
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [data, setData] = useState<DashboardData>({
+    income: 8500,
+    expense: 4900,
+    savings: 2000,
+    investment: 1600,
+    incomeChange: 1.7,
+    expenseChange: -2.4,
+    savingsChange: 9.1,
+    investmentChange: 3.8,
+    totalBalance: 1377000
+  });
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          navigate("/login");
+          return;
+        }
+
+        // Load actual data here when ready
+        setLoading(false);
+      } catch (e) {
+        console.error(e);
+        setLoading(false);
+      }
+    };
     loadData();
-  }, []);
-
-  // Real-time sync across accountants for the same school
-  useEffect(() => {
-    if (!schoolId) return;
-    let reloadTimer: any = null;
-    const scheduleReload = () => {
-      if (reloadTimer) return;
-      reloadTimer = setTimeout(() => {
-        reloadTimer = null;
-        loadData();
-      }, 500);
-    };
-
-    const channel = (supabase as any)
-      .channel(`accountant-sync-${schoolId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_balances', filter: `school_id=eq.${schoolId}` }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'student_payments', filter: `school_id=eq.${schoolId}` }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'school_expenses', filter: `school_id=eq.${schoolId}` }, scheduleReload)
-      .subscribe();
-
-    return () => {
-      try { (supabase as any).removeChannel(channel); } catch {}
-      if (reloadTimer) { clearTimeout(reloadTimer); reloadTimer = null; }
-    };
-  }, [schoolId]);
-
-  const filteredBalances = useMemo(() => {
-    const q = search.toLowerCase();
-    return balances.filter(b => {
-      const matchClass = selectedClass ? (b.classes?.class_name === selectedClass) : true;
-      const matchSearch = !q || 
-        b.students.name.toLowerCase().includes(q) || 
-        (b.students.admission_number || "").toLowerCase().includes(q);
-      
-      let matchStatus = true;
-      if (statusFilter === "fully_paid") {
-        matchStatus = b.balance <= 0 && b.total_fees > 0;
-      } else if (statusFilter === "partial") {
-        matchStatus = b.total_paid > 0 && b.balance > 0;
-      } else if (statusFilter === "not_paid") {
-        matchStatus = b.total_paid === 0 && b.total_fees > 0;
-      }
-      
-      return matchClass && matchSearch && matchStatus;
-    });
-  }, [balances, search, selectedClass, statusFilter]);
-
-  const filteredPayments = useMemo(() => {
-    const q = search.toLowerCase();
-    return payments.filter(p => {
-      const matchClass = selectedClass ? (p.classes?.class_name === selectedClass) : true;
-      const matchSearch = !q || 
-        p.students.name.toLowerCase().includes(q) || 
-        (p.students.admission_number || "").toLowerCase().includes(q);
-      return matchClass && matchSearch;
-    });
-  }, [payments, search, selectedClass]);
-
-  const filteredExpenses = useMemo(() => {
-    const q = search.toLowerCase();
-    return expenses.filter(e => {
-      const matchCategory = expenseCategoryFilter ? (e.category_name === expenseCategoryFilter) : true;
-      const matchStatus = expenseStatusFilter ? (e.status === expenseStatusFilter) : true;
-      const matchSearch = !q || 
-        e.description.toLowerCase().includes(q) || 
-        e.category_name.toLowerCase().includes(q) ||
-        (e.reference_number || "").toLowerCase().includes(q);
-      return matchCategory && matchStatus && matchSearch;
-    });
-  }, [expenses, search, expenseStatusFilter, expenseCategoryFilter]);
-
+  }, [navigate]);
 
   if (loading) {
     return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
-        <div className="text-red-400 bg-red-500/10 border border-red-400/30 rounded-lg px-6 py-4">
-          {error}
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
+              <div className="grid grid-cols-2 gap-0.5">
+                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
+                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
+                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
+                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
+              </div>
+            </div>
+            <span className="text-xl font-bold text-gray-900">COINEST</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3">
+          <NavItem icon="📊" label="Dashboard" active />
+          <NavItem icon="💳" label="Payments" />
+          <NavItem icon="↔️" label="Transactions" />
+          <NavItem icon="📄" label="Invoices" />
+          <NavItem icon="💳" label="Cards" />
+          <NavItem icon="🏦" label="Saving Plans" />
+          <NavItem icon="📈" label="Investments" />
+          <NavItem icon="📥" label="Inbox" badge={2} />
+          <NavItem icon="🎁" label="Promos" />
+          <NavItem icon="💡" label="Insights" />
+        </nav>
+
+        {/* Pro Upgrade Card */}
+        <div className="m-3 p-4 bg-gradient-to-br from-teal-700 to-teal-900 rounded-2xl text-white">
+          <div className="mb-3">
+            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-3">
+              <span className="text-2xl">📊</span>
+            </div>
+            <p className="text-sm mb-1">Gain full access to your</p>
+            <p className="text-sm">finances with detailed</p>
+            <p className="text-sm">analytics and graphs</p>
+          </div>
+          <button className="w-full bg-emerald-400 hover:bg-emerald-500 text-teal-900 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
+            Get Pro
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-8 py-4">
+          <div className="flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search placeholder"
+                  className="w-80 pl-4 pr-10 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
+                />
+                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+                  🔍
+                </button>
+              </div>
+              <button className="p-2 hover:bg-gray-50 rounded-lg relative">
+                <span className="text-xl">💬</span>
+              </button>
+              <button className="p-2 hover:bg-gray-50 rounded-lg relative">
+                <span className="text-xl">🔔</span>
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">Andrew Forbist</span>
+                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Dashboard Content */}
+        <div className="p-8">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-4 gap-6 mb-6">
+            <KPICard
+              icon="💰"
+              label="Income"
+              value={`$${data.income.toLocaleString()}`}
+              change={data.incomeChange}
+              changeText={`+$${Math.abs(data.incomeChange * 500).toFixed(0)} than last week`}
+              positive={data.incomeChange > 0}
+            />
+            <KPICard
+              icon="💸"
+              label="Expense"
+              value={`$${data.expense.toLocaleString()}`}
+              change={data.expenseChange}
+              changeText={`-$${Math.abs(data.expenseChange * 200).toFixed(0)} than last week`}
+              positive={data.expenseChange < 0}
+            />
+            <KPICard
+              icon="🏦"
+              label="Savings"
+              value={`$${data.savings.toLocaleString()}`}
+              change={data.savingsChange}
+              changeText={`+$${Math.abs(data.savingsChange * 20).toFixed(0)} than last week`}
+              positive={data.savingsChange > 0}
+            />
+            <KPICard
+              icon="📈"
+              label="Investment"
+              value={`$${data.investment.toLocaleString()}`}
+              change={data.investmentChange}
+              changeText={`+$${Math.abs(data.investmentChange * 15).toFixed(0)} than last week`}
+              positive={data.investmentChange > 0}
+            />
+          </div>
+
+          {/* Middle Section */}
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            {/* Cashflow Chart */}
+            <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Cashflow</h3>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-gray-900">$12,000</span>
+                    <span className="text-sm text-gray-500">Total Balance</span>
+                  </div>
+                </div>
+                <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                  <option>Last 7 Days</option>
+                </select>
+              </div>
+              <div className="h-64 flex items-end justify-between gap-4">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+                  <div key={day} className="flex-1 flex flex-col items-center">
+                    <div className="w-full relative h-48 mb-2">
+                      <div 
+                        className="absolute bottom-0 w-full bg-gradient-to-t from-emerald-200 to-emerald-100 rounded-t-lg"
+                        style={{ height: `${40 + Math.random() * 60}%` }}
+                      ></div>
+                      <div 
+                        className="absolute bottom-0 w-full bg-gradient-to-t from-gray-200 to-gray-100 rounded-t-lg opacity-50"
+                        style={{ height: `${30 + Math.random() * 50}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500">{day}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-center gap-6 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Income</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Expense</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column */}
+            <div className="col-span-5 space-y-6">
+              {/* Expense Breakdown */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
+                  <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                    <option>Today</option>
+                  </select>
+                </div>
+                <div className="flex items-center justify-center mb-4">
+                  <div className="relative w-40 h-40">
+                    <svg className="w-full h-full transform -rotate-90">
+                      <circle cx="80" cy="80" r="70" fill="none" stroke="#e5e7eb" strokeWidth="20" />
+                      <circle cx="80" cy="80" r="70" fill="none" stroke="#10b981" strokeWidth="20" strokeDasharray="220 440" />
+                      <circle cx="80" cy="80" r="70" fill="none" stroke="#d1d5db" strokeWidth="20" strokeDasharray="132 440" strokeDashoffset="-220" />
+                      <circle cx="80" cy="80" r="70" fill="none" stroke="#6b7280" strokeWidth="20" strokeDasharray="88 440" strokeDashoffset="-352" />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xs text-gray-500">Total Expenses</span>
+                      <span className="text-xl font-bold text-gray-900">$1,000</span>
+                      <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+9.15%</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <ExpenseItem label="Food & Dining" amount="$500" percentage={50} color="bg-emerald-500" />
+                  <ExpenseItem label="Utilities" amount="$300" percentage={30} color="bg-gray-300" />
+                  <ExpenseItem label="Investment" amount="$200" percentage={20} color="bg-gray-400" />
+                </div>
+              </div>
+
+              {/* Finance Score */}
+              <div className="bg-white rounded-2xl p-6 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Finance Score</h3>
+                  <button className="text-gray-400 hover:text-gray-600">
+                    <MoreVertical className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="mb-4">
+                  <span className="text-xs text-gray-500">Finance Quality</span>
+                  <div className="flex items-baseline gap-2 mb-2">
+                    <span className="text-3xl font-bold text-gray-900">Excellent</span>
+                    <span className="text-2xl font-semibold text-gray-900">92%</span>
+                  </div>
+                  <div className="flex gap-1">
+                    <div className="flex-1 h-2 bg-teal-800 rounded-full"></div>
+                    <div className="flex-1 h-2 bg-emerald-300 rounded-full"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Balance Section */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Balance</h3>
+                <span className="text-xs text-gray-500">Total Balance</span>
+                <div className="text-3xl font-bold text-gray-900">$1,377,000</div>
+              </div>
+              <button className="text-gray-400 hover:text-gray-600">
+                <MoreVertical className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <CardItem
+                type="VISA"
+                name="Platinum Plus Visa"
+                balance="$415,000"
+                number="4321 8723 XXXX 9908"
+                color="bg-gradient-to-br from-teal-700 to-teal-900"
+              />
+              <CardItem
+                type="Mastercard"
+                name="Freedom Unlimited Mastercard"
+                balance="$532,000"
+                number="5832 5578 8376 5487"
+                color="bg-gradient-to-br from-emerald-600 to-teal-700"
+              />
+            </div>
+          </div>
+
+          {/* Bottom Section */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* Recent Transactions */}
+            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                <div className="flex items-center gap-2">
+                  <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                    <option>This Month</option>
+                  </select>
+                  <button className="p-1.5 hover:bg-gray-50 rounded-lg">
+                    <Settings className="w-4 h-4 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <TransactionItem
+                  name="Dividend Payout"
+                  category="Investments"
+                  date="2024-09-25"
+                  amount="+$250.00"
+                  status="Completed"
+                  positive
+                  icon="💳"
+                  card="Platinum Plus Visa"
+                />
+                <TransactionItem
+                  name="Grocery Shopping"
+                  category="Food & Dining"
+                  date="2024-09-24"
+                  amount="-$124.20"
+                  status="Completed"
+                  icon="💳"
+                  card="Platinum Plus Visa"
+                />
+                <TransactionItem
+                  name="Freelance Payment"
+                  category="Income"
+                  date="2024-09-23"
+                  amount="+$850.00"
+                  status="Completed"
+                  positive
+                  icon="💳"
+                  card="Freedom Unlimited Mastercard"
+                />
+                <TransactionItem
+                  name="Electricity Bill"
+                  category="Utilities"
+                  date="2024-09-22"
+                  amount="-$120.75"
+                  status="Completed"
+                  icon="💳"
+                  card="Freedom Unlimited Mastercard"
+                />
+                <TransactionItem
+                  name="Online Subscription"
+                  category="Services"
+                  date="2024-09-18"
+                  amount="-$12.99"
+                  status="Pending"
+                  icon="💳"
+                  card="Platinum Plus Visa"
+                />
+              </div>
+            </div>
+
+            {/* Saving Plans */}
+            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Saving Plans</h3>
+                <button className="text-sm text-teal-600 hover:text-teal-700 font-medium">
+                  + Add Plans
+                </button>
+              </div>
+              <div className="mb-4">
+                <span className="text-xs text-gray-500">Total Savings</span>
+                <div className="text-2xl font-bold text-gray-900">$12,000</div>
+              </div>
+              <div className="space-y-4">
+                <SavingPlanItem
+                  name="Emergency Fund"
+                  current={4800}
+                  target={30000}
+                  percentage={45}
+                />
+                <SavingPlanItem
+                  name="Retirement Fund"
+                  current={5000}
+                  target={50000}
+                  percentage={28}
+                />
+                <SavingPlanItem
+                  name="Vacation Fund"
+                  current={2200}
+                  target={8000}
+                  percentage={50}
+                />
+              </div>
+            </div>
+
+            {/* Recent Activities */}
+            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
+                <button className="text-gray-400 hover:text-gray-600">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 mb-3">Today</div>
+                  <ActivityItem
+                    time="14:25 AM"
+                    text="Reviewed alerts for low balance"
+                    icon="🔔"
+                    color="bg-emerald-100"
+                  />
+                  <ActivityItem
+                    time="09:22 AM"
+                    text="Checked account balance"
+                    icon="💰"
+                    color="bg-emerald-100"
+                  />
+                  <ActivityItem
+                    time="07:15 AM"
+                    text="Logged in from mobile device"
+                    icon="📱"
+                    color="bg-emerald-100"
+                  />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-gray-900 mb-3">Yesterday</div>
+                  <ActivityItem
+                    time="03:00 PM"
+                    text="Scheduled a recurring utility payment"
+                    icon="📅"
+                    color="bg-emerald-100"
+                  />
+                  <ActivityItem
+                    time="10:30 PM"
+                    text="Updated payment method"
+                    icon="💳"
+                    color="bg-emerald-100"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <footer className="bg-white border-t border-gray-200 px-8 py-4 mt-8">
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <span>Copyright © 2024 Referarow</span>
+            <div className="flex items-center gap-4">
+              <a href="#" className="hover:text-gray-700">Privacy Policy</a>
+              <a href="#" className="hover:text-gray-700">Term and conditions</a>
+              <a href="#" className="hover:text-gray-700">Contact</a>
+            </div>
+            <div className="flex items-center gap-3">
+              <a href="#" className="text-gray-400 hover:text-gray-600">f</a>
+              <a href="#" className="text-gray-400 hover:text-gray-600">𝕏</a>
+              <a href="#" className="text-gray-400 hover:text-gray-600">📷</a>
+              <a href="#" className="text-gray-400 hover:text-gray-600">▶️</a>
+              <a href="#" className="text-gray-400 hover:text-gray-600">in</a>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+}
+
+// Component helpers
+function NavItem({ icon, label, active, badge }: { icon: string; label: string; active?: boolean; badge?: number }) {
+  return (
+    <button
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
+        active ? 'bg-emerald-50 text-emerald-600' : 'text-gray-600 hover:bg-gray-50'
+      }`}
+    >
+      <span className="text-lg">{icon}</span>
+      <span className="text-sm font-medium flex-1">{label}</span>
+      {badge && (
+        <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
+          {badge}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function KPICard({ icon, label, value, change, changeText, positive }: any) {
+  return (
+    <div className="bg-white rounded-2xl p-6 border border-gray-200">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xl">{icon}</span>
+        <span className="text-sm text-gray-500">{label}</span>
+      </div>
+      <div className="text-3xl font-bold text-gray-900 mb-2">{value}</div>
+      <div className="flex items-center gap-2">
+        <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+          positive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
+        }`}>
+          {positive ? '+' : ''}{change}%
+        </span>
+        <span className="text-xs text-gray-500">{changeText}</span>
+      </div>
+    </div>
+  );
+}
+
+function ExpenseItem({ label, amount, percentage, color }: any) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <div className={`w-2 h-2 rounded-full ${color}`}></div>
+          <span className="text-sm text-gray-700">{label}</span>
+        </div>
+        <span className="text-sm font-semibold text-gray-900">{percentage}%</span>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">{amount}</span>
+      </div>
+    </div>
+  );
+}
+
+function CardItem({ type, name, balance, number, color }: any) {
+  return (
+    <div className={`${color} rounded-xl p-4 text-white`}>
+      <div className="flex items-center justify-between mb-8">
+        <span className="text-xs font-semibold">{type}</span>
+        <button className="text-white/80 hover:text-white">
+          <MoreVertical className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="mb-2">
+        <div className="text-xs text-white/70 mb-1">{name}</div>
+        <div className="text-2xl font-bold">{balance}</div>
+      </div>
+      <div className="text-xs text-white/70">{number}</div>
+    </div>
+  );
+}
+
+function TransactionItem({ name, category, date, amount, status, positive, icon, card }: any) {
+  return (
+    <div className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
+      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-gray-900">{name}</div>
+        <div className="text-xs text-gray-500">{category}</div>
+      </div>
+      <div className="text-right">
+        <div className="text-xs text-gray-500 mb-0.5">{card}</div>
+        <div className="text-xs text-gray-400">{date}</div>
+      </div>
+      <div className="text-right">
+        <div className={`text-sm font-semibold ${positive ? 'text-emerald-600' : 'text-gray-900'}`}>
+          {amount}
+        </div>
+        <div className={`text-xs px-2 py-0.5 rounded-full ${
+          status === 'Completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'
+        }`}>
+          {status}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
+function SavingPlanItem({ name, current, target, percentage }: any) {
   return (
-    <div className="relative">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Accountant Dashboard</h1>
-        <p className="text-white/85">Manage payments, expenses, and financial records</p>
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-900">{name}</span>
+        <span className="text-sm font-semibold text-emerald-600">{percentage}%</span>
       </div>
-
-      <div className="relative">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <h2 className="text-white text-2xl font-semibold mb-2">Student Accounting System</h2>
-          <p className="text-white/70 text-sm">Multi-payment tracking with automatic balance calculation</p>
-        </motion.div>
-
-        {/* KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-        >
-          <KpiCard title="Collected Today" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
-          <KpiCard title="Collected This Term" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
-          <KpiCard title="Expenses This Term" value={formatCurrency(kpiExpensesThisTerm)} accent="bg-red-500" />
-          <KpiCard title="Net Balance (Income - Expenses)" value={formatCurrency(kpiNetBalance)} accent={kpiNetBalance >= 0 ? "bg-emerald-500" : "bg-red-500"} />
-        </motion.div>
-
-        {/* Secondary KPIs */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
-        >
-          <KpiCard title="Outstanding This Term" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
-          <KpiCard title="Outstanding All Time" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
-          <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
-        >
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/dashboard/accountant/payments')}
-            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
-          >
-            <div className="text-2xl mb-2">💳</div>
-            <div className="text-white font-semibold mb-1">Payments</div>
-            <div className="text-white/60 text-sm">View and record payments</div>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/dashboard/accountant/expenses')}
-            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
-          >
-            <div className="text-2xl mb-2">💸</div>
-            <div className="text-white font-semibold mb-1">Expenses</div>
-            <div className="text-white/60 text-sm">Track school expenses</div>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/dashboard/accountant/balances')}
-            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
-          >
-            <div className="text-2xl mb-2">📊</div>
-            <div className="text-white font-semibold mb-1">Balances</div>
-            <div className="text-white/60 text-sm">View student balances</div>
-          </motion.button>
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => navigate('/dashboard/accountant/reports')}
-            className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6 text-left hover:bg-white/15 transition-colors"
-          >
-            <div className="text-2xl mb-2">📄</div>
-            <div className="text-white font-semibold mb-1">Reports</div>
-            <div className="text-white/60 text-sm">Generate reports</div>
-          </motion.button>
-        </motion.div>
-
-        {/* Recent Activity Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6"
-        >
-          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6">
-            <h3 className="text-white font-semibold mb-4">Recent Payments</h3>
-            {payments.slice(0, 5).length === 0 ? (
-              <p className="text-white/60 text-sm">No recent payments</p>
-            ) : (
-              <div className="space-y-3">
-                {payments.slice(0, 5).map((payment) => (
-                  <div key={payment.payment_id} className="flex items-center justify-between pb-3 border-b border-white/5">
-                    <div>
-                      <div className="text-white text-sm font-medium">{payment.students.name}</div>
-                      <div className="text-white/60 text-xs">{new Date(payment.payment_date).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-white font-medium">
-                      {formatCurrency(payment.amount_paid)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/dashboard/accountant/payments')}
-              className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
-            >
-              View All Payments →
-            </button>
-          </div>
-
-          <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-6">
-            <h3 className="text-white font-semibold mb-4">Recent Expenses</h3>
-            {expenses.slice(0, 5).length === 0 ? (
-              <p className="text-white/60 text-sm">No recent expenses</p>
-            ) : (
-              <div className="space-y-3">
-                {expenses.slice(0, 5).map((expense) => (
-                  <div key={expense.expense_id} className="flex items-center justify-between pb-3 border-b border-white/5">
-                    <div>
-                      <div className="text-white text-sm font-medium">{expense.description}</div>
-                      <div className="text-white/60 text-xs">{expense.category_name} • {new Date(expense.expense_date).toLocaleDateString()}</div>
-                    </div>
-                    <div className="text-white font-medium">
-                      {formatCurrency(expense.amount)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <button
-              onClick={() => navigate('/dashboard/accountant/expenses')}
-              className="mt-4 text-blue-400 hover:text-blue-300 text-sm font-medium"
-            >
-              View All Expenses →
-            </button>
-          </div>
-        </motion.div>
+      <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+        <div
+          className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-2 rounded-full"
+          style={{ width: `${percentage}%` }}
+        ></div>
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">${current.toLocaleString()} / ${target.toLocaleString()}</span>
       </div>
     </div>
   );
 }
 
-function KpiCard({ title, value, accent }: { title: string; value: string; accent: string }) {
+function ActivityItem({ time, text, icon, color }: any) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg p-4">
-      <div className="text-white/60 text-xs uppercase tracking-wide mb-2">{title}</div>
-      <div className="flex items-end justify-between">
-        <div className="text-2xl font-semibold text-white">{value}</div>
-        <div className={`w-2 h-8 rounded ${accent}`} />
+    <div className="flex items-start gap-3 mb-3">
+      <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-sm flex-shrink-0`}>
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="text-xs text-gray-500 mb-0.5">{time}</div>
+        <div className="text-sm text-gray-700">{text}</div>
       </div>
     </div>
   );
-}
-
-function formatCurrency(amount: number | null | undefined): string {
-  const n = Number(amount || 0);
-  return new Intl.NumberFormat(undefined, { style: "currency", currency: "UGX", maximumFractionDigits: 0 }).format(n);
 }
