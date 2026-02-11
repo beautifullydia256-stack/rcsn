@@ -137,8 +137,8 @@ export default function AccountantDashboard() {
         <div className="p-8 min-h-full">
           {/* Top Row: 4 KPI Cards (2x2 grid) + Expense Breakdown + Finance Score */}
           <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* 4 KPI Cards in 2x2 grid - 4 columns */}
-            <div className="col-span-4 grid grid-cols-2 gap-4">
+            {/* 4 KPI Cards in 2x2 grid - 5 columns */}
+            <div className="col-span-5 grid grid-cols-2 gap-4">
               <KPICard
                 icon="💰"
                 label="Income"
@@ -173,8 +173,8 @@ export default function AccountantDashboard() {
               />
             </div>
 
-            {/* Expense Breakdown - 4 columns */}
-            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
+            {/* Expense Breakdown - 3 columns */}
+            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
                 <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
@@ -517,12 +517,12 @@ function NavItem({ icon, label, active, badge }: { icon: string; label: string; 
 
 function KPICard({ icon, label, value, change, changeText, positive }: any) {
   return (
-    <div className="bg-white rounded-xl p-5 border border-gray-200">
-      <div className="flex items-center gap-2 mb-3">
+    <div className="bg-white rounded-xl p-4 border border-gray-200 min-h-[120px] flex flex-col justify-between">
+      <div className="flex items-center gap-2 mb-2">
         <span className="text-lg">{icon}</span>
         <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-gray-900 mb-3">{value}</div>
+      <div className="text-2xl font-bold text-gray-900 mb-2">{value}</div>
       <div className="flex items-center gap-2">
         <span className={`text-xs font-semibold px-2 py-1 rounded ${
           positive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
