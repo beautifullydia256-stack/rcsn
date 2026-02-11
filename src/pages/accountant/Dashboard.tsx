@@ -174,25 +174,25 @@ export default function AccountantDashboard() {
             </div>
 
             {/* Expense Breakdown - 3 columns */}
-            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
-                <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+            <div className="col-span-3 bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-900">Expense Breakdown</h3>
+                <select className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs">
                   <option>Today</option>
                 </select>
               </div>
-              <div className="flex items-center justify-center mb-4">
-                <div className="relative w-32 h-32">
+              <div className="flex items-center justify-center mb-3">
+                <div className="relative w-28 h-28">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="64" cy="64" r="56" fill="none" stroke="#e5e7eb" strokeWidth="16" />
-                    <circle cx="64" cy="64" r="56" fill="none" stroke="#10b981" strokeWidth="16" strokeDasharray="176 352" />
-                    <circle cx="64" cy="64" r="56" fill="none" stroke="#d1d5db" strokeWidth="16" strokeDasharray="106 352" strokeDashoffset="-176" />
-                    <circle cx="64" cy="64" r="56" fill="none" stroke="#6b7280" strokeWidth="16" strokeDasharray="70 352" strokeDashoffset="-282" />
+                    <circle cx="56" cy="56" r="48" fill="none" stroke="#e5e7eb" strokeWidth="14" />
+                    <circle cx="56" cy="56" r="48" fill="none" stroke="#10b981" strokeWidth="14" strokeDasharray="151 302" />
+                    <circle cx="56" cy="56" r="48" fill="none" stroke="#d1d5db" strokeWidth="14" strokeDasharray="91 302" strokeDashoffset="-151" />
+                    <circle cx="56" cy="56" r="48" fill="none" stroke="#6b7280" strokeWidth="14" strokeDasharray="60 302" strokeDashoffset="-242" />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-xs text-gray-500">Total Expenses</span>
-                    <span className="text-lg font-bold text-gray-900">$1,000</span>
-                    <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+9.15%</span>
+                    <span className="text-base font-bold text-gray-900">$1,000</span>
+                    <span className="text-xs text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">+9.15%</span>
                   </div>
                 </div>
               </div>
@@ -204,18 +204,18 @@ export default function AccountantDashboard() {
             </div>
 
             {/* Finance Score - 4 columns */}
-            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Finance Score</h3>
+            <div className="col-span-4 bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-900">Finance Score</h3>
                 <button className="text-gray-400 hover:text-gray-600">
-                  <MoreVertical className="w-5 h-5" />
+                  <MoreVertical className="w-4 h-4" />
                 </button>
               </div>
-              <div className="mb-4">
+              <div>
                 <span className="text-xs text-gray-500">Finance Quality</span>
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-3xl font-bold text-gray-900">Excellent</span>
-                  <span className="text-2xl font-semibold text-gray-900">92%</span>
+                  <span className="text-2xl font-bold text-gray-900">Excellent</span>
+                  <span className="text-xl font-semibold text-gray-900">92%</span>
                 </div>
                 <div className="flex gap-1">
                   <div className="flex-1 h-2 bg-teal-800 rounded-full"></div>
@@ -293,18 +293,18 @@ export default function AccountantDashboard() {
             </div>
 
             {/* Balance - 5 columns */}
-            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-4">
+            <div className="col-span-5 bg-white rounded-2xl p-4 border border-gray-200">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Balance</h3>
+                  <h3 className="text-base font-semibold text-gray-900 mb-1">Balance</h3>
                   <span className="text-xs text-gray-500">Total Balance</span>
-                  <div className="text-3xl font-bold text-gray-900">$1,377,000</div>
+                  <div className="text-2xl font-bold text-gray-900">$1,377,000</div>
                 </div>
                 <button className="text-gray-400 hover:text-gray-600">
-                  <MoreVertical className="w-5 h-5" />
+                  <MoreVertical className="w-4 h-4" />
                 </button>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <CardItem
                   type="VISA"
                   name="Platinum Plus Visa"
@@ -554,16 +554,16 @@ function ExpenseItem({ label, amount, percentage, color }: any) {
 
 function CardItem({ type, name, balance, number, color }: any) {
   return (
-    <div className={`${color} rounded-xl p-4 text-white`}>
-      <div className="flex items-center justify-between mb-8">
+    <div className={`${color} rounded-xl p-3 text-white`}>
+      <div className="flex items-center justify-between mb-4">
         <span className="text-xs font-semibold">{type}</span>
         <button className="text-white/80 hover:text-white">
-          <MoreVertical className="w-4 h-4" />
+          <MoreVertical className="w-3 h-3" />
         </button>
       </div>
-      <div className="mb-2">
+      <div className="mb-1">
         <div className="text-xs text-white/70 mb-1">{name}</div>
-        <div className="text-2xl font-bold">{balance}</div>
+        <div className="text-xl font-bold">{balance}</div>
       </div>
       <div className="text-xs text-white/70">{number}</div>
     </div>
