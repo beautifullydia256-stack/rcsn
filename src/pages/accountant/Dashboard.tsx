@@ -135,46 +135,100 @@ export default function AccountantDashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8 min-h-full">
-          {/* KPI Cards Row */}
-          <div className="grid grid-cols-4 gap-6 mb-6">
-            <KPICard
-              icon="💰"
-              label="Income"
-              value={`$${data.income.toLocaleString()}`}
-              change={data.incomeChange}
-              changeText={`+$${Math.abs(data.incomeChange * 500).toFixed(0)} than last week`}
-              positive={data.incomeChange > 0}
-            />
-            <KPICard
-              icon="💸"
-              label="Expense"
-              value={`$${data.expense.toLocaleString()}`}
-              change={data.expenseChange}
-              changeText={`-$${Math.abs(data.expenseChange * 200).toFixed(0)} than last week`}
-              positive={data.expenseChange < 0}
-            />
-            <KPICard
-              icon="🏦"
-              label="Savings"
-              value={`$${data.savings.toLocaleString()}`}
-              change={data.savingsChange}
-              changeText={`+$${Math.abs(data.savingsChange * 20).toFixed(0)} than last week`}
-              positive={data.savingsChange > 0}
-            />
-            <KPICard
-              icon="📈"
-              label="Investment"
-              value={`$${data.investment.toLocaleString()}`}
-              change={data.investmentChange}
-              changeText={`+$${Math.abs(data.investmentChange * 15).toFixed(0)} than last week`}
-              positive={data.investmentChange > 0}
-            />
+          {/* Top Row: 4 KPI Cards + Expense Breakdown + Finance Score */}
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            {/* 4 KPI Cards - 8 columns */}
+            <div className="col-span-8 grid grid-cols-4 gap-6">
+              <KPICard
+                icon="💰"
+                label="Income"
+                value={`$${data.income.toLocaleString()}`}
+                change={data.incomeChange}
+                changeText={`+$${Math.abs(data.incomeChange * 500).toFixed(0)} than last week`}
+                positive={data.incomeChange > 0}
+              />
+              <KPICard
+                icon="💸"
+                label="Expense"
+                value={`$${data.expense.toLocaleString()}`}
+                change={data.expenseChange}
+                changeText={`-$${Math.abs(data.expenseChange * 200).toFixed(0)} than last week`}
+                positive={data.expenseChange < 0}
+              />
+              <KPICard
+                icon="🏦"
+                label="Savings"
+                value={`$${data.savings.toLocaleString()}`}
+                change={data.savingsChange}
+                changeText={`+$${Math.abs(data.savingsChange * 20).toFixed(0)} than last week`}
+                positive={data.savingsChange > 0}
+              />
+              <KPICard
+                icon="📈"
+                label="Investment"
+                value={`$${data.investment.toLocaleString()}`}
+                change={data.investmentChange}
+                changeText={`+$${Math.abs(data.investmentChange * 15).toFixed(0)} than last week`}
+                positive={data.investmentChange > 0}
+              />
+            </div>
+
+            {/* Expense Breakdown - 2 columns */}
+            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
+                <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                  <option>Today</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-center mb-4">
+                <div className="relative w-32 h-32">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="64" cy="64" r="56" fill="none" stroke="#e5e7eb" strokeWidth="16" />
+                    <circle cx="64" cy="64" r="56" fill="none" stroke="#10b981" strokeWidth="16" strokeDasharray="176 352" />
+                    <circle cx="64" cy="64" r="56" fill="none" stroke="#d1d5db" strokeWidth="16" strokeDasharray="106 352" strokeDashoffset="-176" />
+                    <circle cx="64" cy="64" r="56" fill="none" stroke="#6b7280" strokeWidth="16" strokeDasharray="70 352" strokeDashoffset="-282" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xs text-gray-500">Total Expenses</span>
+                    <span className="text-lg font-bold text-gray-900">$1,000</span>
+                    <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+9.15%</span>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <ExpenseItem label="Food & Dining" amount="$500" percentage={50} color="bg-emerald-500" />
+                <ExpenseItem label="Utilities" amount="$300" percentage={30} color="bg-gray-300" />
+                <ExpenseItem label="Investment" amount="$200" percentage={20} color="bg-gray-400" />
+              </div>
+            </div>
+
+            {/* Finance Score - 2 columns */}
+            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Finance Score</h3>
+                <button className="text-gray-400 hover:text-gray-600">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="mb-4">
+                <span className="text-xs text-gray-500">Finance Quality</span>
+                <div className="flex items-baseline gap-2 mb-2">
+                  <span className="text-3xl font-bold text-gray-900">Excellent</span>
+                  <span className="text-2xl font-semibold text-gray-900">92%</span>
+                </div>
+                <div className="flex gap-1">
+                  <div className="flex-1 h-2 bg-teal-800 rounded-full"></div>
+                  <div className="flex-1 h-2 bg-emerald-300 rounded-full"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Cashflow and Right Panels Row */}
-          <div className="grid grid-cols-5 gap-6 mb-6">
-            {/* Cashflow Chart - 3 columns */}
-            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
+          {/* Middle Row: Cashflow + Balance */}
+          <div className="grid grid-cols-12 gap-6 mb-6">
+            {/* Cashflow Chart - 7 columns */}
+            <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Cashflow</h3>
@@ -238,92 +292,38 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Right Column - 2 columns */}
-            <div className="col-span-2 space-y-6">
-              {/* Expense Breakdown */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
-                  <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
-                    <option>Today</option>
-                  </select>
+            {/* Balance - 5 columns */}
+            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Balance</h3>
+                  <span className="text-xs text-gray-500">Total Balance</span>
+                  <div className="text-3xl font-bold text-gray-900">$1,377,000</div>
                 </div>
-                <div className="flex items-center justify-center mb-4">
-                  <div className="relative w-40 h-40">
-                    <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="80" cy="80" r="70" fill="none" stroke="#e5e7eb" strokeWidth="20" />
-                      <circle cx="80" cy="80" r="70" fill="none" stroke="#10b981" strokeWidth="20" strokeDasharray="220 440" />
-                      <circle cx="80" cy="80" r="70" fill="none" stroke="#d1d5db" strokeWidth="20" strokeDasharray="132 440" strokeDashoffset="-220" />
-                      <circle cx="80" cy="80" r="70" fill="none" stroke="#6b7280" strokeWidth="20" strokeDasharray="88 440" strokeDashoffset="-352" />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center">
-                      <span className="text-xs text-gray-500">Total Expenses</span>
-                      <span className="text-xl font-bold text-gray-900">$1,000</span>
-                      <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">+9.15%</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <ExpenseItem label="Food & Dining" amount="$500" percentage={50} color="bg-emerald-500" />
-                  <ExpenseItem label="Utilities" amount="$300" percentage={30} color="bg-gray-300" />
-                  <ExpenseItem label="Investment" amount="$200" percentage={20} color="bg-gray-400" />
-                </div>
+                <button className="text-gray-400 hover:text-gray-600">
+                  <MoreVertical className="w-5 h-5" />
+                </button>
               </div>
-
-              {/* Finance Score */}
-              <div className="bg-white rounded-2xl p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Finance Score</h3>
-                  <button className="text-gray-400 hover:text-gray-600">
-                    <MoreVertical className="w-5 h-5" />
-                  </button>
-                </div>
-                <div className="mb-4">
-                  <span className="text-xs text-gray-500">Finance Quality</span>
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className="text-3xl font-bold text-gray-900">Excellent</span>
-                    <span className="text-2xl font-semibold text-gray-900">92%</span>
-                  </div>
-                  <div className="flex gap-1">
-                    <div className="flex-1 h-2 bg-teal-800 rounded-full"></div>
-                    <div className="flex-1 h-2 bg-emerald-300 rounded-full"></div>
-                  </div>
-                </div>
+              <div className="space-y-4">
+                <CardItem
+                  type="VISA"
+                  name="Platinum Plus Visa"
+                  balance="$415,000"
+                  number="4321 8723 XXXX 9908"
+                  color="bg-gradient-to-br from-teal-700 to-teal-900"
+                />
+                <CardItem
+                  type="Mastercard"
+                  name="Freedom Unlimited Mastercard"
+                  balance="$532,000"
+                  number="5832 5578 8376 5487"
+                  color="bg-gradient-to-br from-emerald-600 to-teal-700"
+                />
               </div>
             </div>
           </div>
 
-          {/* Balance Section - Full Width */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Balance</h3>
-                <span className="text-xs text-gray-500">Total Balance</span>
-                <div className="text-3xl font-bold text-gray-900">$1,377,000</div>
-              </div>
-              <button className="text-gray-400 hover:text-gray-600">
-                <MoreVertical className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <CardItem
-                type="VISA"
-                name="Platinum Plus Visa"
-                balance="$415,000"
-                number="4321 8723 XXXX 9908"
-                color="bg-gradient-to-br from-teal-700 to-teal-900"
-              />
-              <CardItem
-                type="Mastercard"
-                name="Freedom Unlimited Mastercard"
-                balance="$532,000"
-                number="5832 5578 8376 5487"
-                color="bg-gradient-to-br from-emerald-600 to-teal-700"
-              />
-            </div>
-          </div>
-
-          {/* Bottom Section - Transactions, Saving Plans, Activities */}
+          {/* Bottom Row: Recent Transactions + Saving Plans + Recent Activities */}
           <div className="grid grid-cols-10 gap-6">
             {/* Recent Transactions - 4 columns */}
             <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
