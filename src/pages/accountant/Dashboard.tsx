@@ -31,6 +31,20 @@ export default function AccountantDashboard() {
   });
 
   useEffect(() => {
+    // Override body styles for this page
+    document.body.style.margin = '0';
+    document.body.style.padding = '0';
+    document.body.style.overflow = 'hidden';
+    
+    return () => {
+      // Cleanup on unmount
+      document.body.style.margin = '';
+      document.body.style.padding = '';
+      document.body.style.overflow = '';
+    };
+  }, []);
+
+  useEffect(() => {
     const loadData = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -56,7 +70,7 @@ export default function AccountantDashboard() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="fixed inset-0 flex bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
         <div className="p-6">
