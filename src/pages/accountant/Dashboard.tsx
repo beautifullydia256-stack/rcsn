@@ -517,23 +517,19 @@ function NavItem({ icon, label, active, badge }: { icon: string; label: string; 
 
 function KPICard({ icon, label, value, change, changeText, positive }: any) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center text-xl">
-          {icon}
-        </div>
-        <div>
-          <div className="text-xs text-gray-500 mb-1">{label}</div>
-          <div className="text-xl font-bold text-gray-900">{value}</div>
-        </div>
+    <div className="bg-white rounded-xl p-5 border border-gray-200">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-lg">{icon}</span>
+        <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <div className="text-right">
-        <div className={`text-xs font-semibold px-2 py-1 rounded-md inline-block mb-1 ${
+      <div className="text-2xl font-bold text-gray-900 mb-3">{value}</div>
+      <div className="flex items-center gap-2">
+        <span className={`text-xs font-semibold px-2 py-1 rounded ${
           positive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
         }`}>
           {positive ? '+' : ''}{change}%
-        </div>
-        <div className="text-xs text-gray-500 whitespace-nowrap">{changeText}</div>
+        </span>
+        <span className="text-xs text-gray-500">{changeText}</span>
       </div>
     </div>
   );
