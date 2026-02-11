@@ -1,17 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useNavigate } from "react-router-dom";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  DollarSign, 
-  PiggyBank, 
-  TrendingUpIcon,
-  CreditCard,
-  MoreVertical,
-  Plus,
-  Settings
-} from "lucide-react";
+import { MoreVertical, Settings } from "lucide-react";
 
 interface DashboardData {
   income: number;
@@ -48,8 +38,6 @@ export default function AccountantDashboard() {
           navigate("/login");
           return;
         }
-
-        // Load actual data here when ready
         setLoading(false);
       } catch (e) {
         console.error(e);
@@ -61,16 +49,16 @@ export default function AccountantDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
         <div className="p-6">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
@@ -85,7 +73,7 @@ export default function AccountantDashboard() {
           </div>
         </div>
 
-        <nav className="flex-1 px-3">
+        <nav className="flex-1 px-3 overflow-y-auto">
           <NavItem icon="📊" label="Dashboard" active />
           <NavItem icon="💳" label="Payments" />
           <NavItem icon="↔️" label="Transactions" />
@@ -102,7 +90,7 @@ export default function AccountantDashboard() {
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4">
+        <header className="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
             <div className="flex items-center gap-4">
@@ -133,7 +121,7 @@ export default function AccountantDashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8">
-          {/* KPI Cards */}
+          {/* KPI Cards Row */}
           <div className="grid grid-cols-4 gap-6 mb-6">
             <KPICard
               icon="💰"
@@ -169,9 +157,9 @@ export default function AccountantDashboard() {
             />
           </div>
 
-          {/* Middle Section - Cashflow and Right Panels */}
+          {/* Cashflow and Right Panels Row */}
           <div className="grid grid-cols-5 gap-6 mb-6">
-            {/* Cashflow Chart - Takes 3 columns */}
+            {/* Cashflow Chart - 3 columns */}
             <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -185,23 +173,45 @@ export default function AccountantDashboard() {
                   <option>Last 7 Days</option>
                 </select>
               </div>
-              <div className="h-64 flex items-end justify-between gap-4">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
-                  <div key={day} className="flex-1 flex flex-col items-center">
-                    <div className="w-full relative h-48 mb-2">
-                      <div 
-                        className="absolute bottom-0 w-full bg-gradient-to-t from-emerald-200 to-emerald-100 rounded-t-lg"
-                        style={{ height: `${40 + Math.random() * 60}%` }}
-                      ></div>
-                      <div 
-                        className="absolute bottom-0 w-full bg-gradient-to-t from-gray-200 to-gray-100 rounded-t-lg opacity-50"
-                        style={{ height: `${30 + Math.random() * 50}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-xs text-gray-500">{day}</span>
-                  </div>
-                ))}
+              
+              {/* Line Chart */}
+              <div className="h-64 relative">
+                <svg className="w-full h-full" viewBox="0 0 700 250">
+                  {/* Grid lines */}
+                  <line x1="0" y1="50" x2="700" y2="50" stroke="#e5e7eb" strokeWidth="1" />
+                  <line x1="0" y1="100" x2="700" y2="100" stroke="#e5e7eb" strokeWidth="1" />
+                  <line x1="0" y1="150" x2="700" y2="150" stroke="#e5e7eb" strokeWidth="1" />
+                  <line x1="0" y1="200" x2="700" y2="200" stroke="#e5e7eb" strokeWidth="1" />
+                  
+                  {/* Income line (green) */}
+                  <path
+                    d="M 0,120 L 100,100 L 200,110 L 300,80 L 400,90 L 500,70 L 600,85 L 700,75"
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  
+                  {/* Expense line (gray) */}
+                  <path
+                    d="M 0,150 L 100,140 L 200,145 L 300,130 L 400,135 L 500,125 L 600,130 L 700,120"
+                    fill="none"
+                    stroke="#9ca3af"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  
+                  {/* Day labels */}
+                  <text x="50" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Sun</text>
+                  <text x="150" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Mon</text>
+                  <text x="250" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Tue</text>
+                  <text x="350" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Wed</text>
+                  <text x="450" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Thu</text>
+                  <text x="550" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Fri</text>
+                  <text x="650" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Sat</text>
+                </svg>
               </div>
+              
               <div className="flex items-center justify-center gap-6 mt-4">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
@@ -214,7 +224,7 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Right Column - Takes 2 columns */}
+            {/* Right Column - 2 columns */}
             <div className="col-span-2 space-y-6">
               {/* Expense Breakdown */}
               <div className="bg-white rounded-2xl p-6 border border-gray-200">
@@ -269,7 +279,7 @@ export default function AccountantDashboard() {
             </div>
           </div>
 
-          {/* Balance Section */}
+          {/* Balance Section - Full Width */}
           <div className="bg-white rounded-2xl p-6 border border-gray-200 mb-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -299,9 +309,9 @@ export default function AccountantDashboard() {
             </div>
           </div>
 
-          {/* Bottom Section */}
+          {/* Bottom Section - Transactions, Saving Plans, Activities */}
           <div className="grid grid-cols-10 gap-6">
-            {/* Recent Transactions */}
+            {/* Recent Transactions - 4 columns */}
             <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
@@ -365,7 +375,7 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Saving Plans */}
+            {/* Saving Plans - 2 columns */}
             <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Saving Plans</h3>
@@ -399,7 +409,7 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Recent Activities */}
+            {/* Recent Activities - 4 columns */}
             <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
@@ -450,7 +460,7 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 px-8 py-4 mt-8">
+        <footer className="bg-white border-t border-gray-200 px-8 py-4 mt-8 flex-shrink-0">
           <div className="flex items-center justify-between text-sm text-gray-500">
             <span>Copyright © 2024 Referarow</span>
             <div className="flex items-center gap-4">
