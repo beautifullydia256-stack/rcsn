@@ -102,7 +102,7 @@ export default function AccountantDashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -134,7 +134,7 @@ export default function AccountantDashboard() {
         </header>
 
         {/* Dashboard Content */}
-        <div className="p-8">
+        <div className="p-8 min-h-full">
           {/* KPI Cards Row */}
           <div className="grid grid-cols-4 gap-6 mb-6">
             <KPICard
