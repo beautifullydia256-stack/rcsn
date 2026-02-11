@@ -97,21 +97,6 @@ export default function AccountantDashboard() {
           <NavItem icon="🎁" label="Promos" />
           <NavItem icon="💡" label="Insights" />
         </nav>
-
-        {/* Pro Upgrade Card */}
-        <div className="m-3 p-4 bg-gradient-to-br from-teal-700 to-teal-900 rounded-2xl text-white">
-          <div className="mb-3">
-            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center mb-3">
-              <span className="text-2xl">📊</span>
-            </div>
-            <p className="text-sm mb-1">Gain full access to your</p>
-            <p className="text-sm">finances with detailed</p>
-            <p className="text-sm">analytics and graphs</p>
-          </div>
-          <button className="w-full bg-emerald-400 hover:bg-emerald-500 text-teal-900 font-semibold py-2 px-4 rounded-lg text-sm transition-colors">
-            Get Pro
-          </button>
-        </div>
       </aside>
 
       {/* Main Content */}
@@ -184,10 +169,10 @@ export default function AccountantDashboard() {
             />
           </div>
 
-          {/* Middle Section */}
-          <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* Cashflow Chart */}
-            <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200">
+          {/* Middle Section - Cashflow and Right Panels */}
+          <div className="grid grid-cols-5 gap-6 mb-6">
+            {/* Cashflow Chart - Takes 3 columns */}
+            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">Cashflow</h3>
@@ -229,8 +214,8 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Right Column */}
-            <div className="col-span-5 space-y-6">
+            {/* Right Column - Takes 2 columns */}
+            <div className="col-span-2 space-y-6">
               {/* Expense Breakdown */}
               <div className="bg-white rounded-2xl p-6 border border-gray-200">
                 <div className="flex items-center justify-between mb-4">
@@ -315,9 +300,9 @@ export default function AccountantDashboard() {
           </div>
 
           {/* Bottom Section */}
-          <div className="grid grid-cols-12 gap-6">
+          <div className="grid grid-cols-10 gap-6">
             {/* Recent Transactions */}
-            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
                 <div className="flex items-center gap-2">
@@ -381,7 +366,7 @@ export default function AccountantDashboard() {
             </div>
 
             {/* Saving Plans */}
-            <div className="col-span-3 bg-white rounded-2xl p-6 border border-gray-200">
+            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Saving Plans</h3>
                 <button className="text-sm text-teal-600 hover:text-teal-700 font-medium">
