@@ -135,10 +135,10 @@ export default function AccountantDashboard() {
 
         {/* Dashboard Content */}
         <div className="p-8 min-h-full">
-          {/* Top Row: 4 KPI Cards + Expense Breakdown + Finance Score */}
+          {/* Top Row: 4 KPI Cards (2x2 grid) + Expense Breakdown + Finance Score */}
           <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* 4 KPI Cards - 8 columns */}
-            <div className="col-span-8 grid grid-cols-4 gap-6">
+            {/* 4 KPI Cards in 2x2 grid - 4 columns */}
+            <div className="col-span-4 grid grid-cols-2 gap-4">
               <KPICard
                 icon="💰"
                 label="Income"
@@ -173,8 +173,8 @@ export default function AccountantDashboard() {
               />
             </div>
 
-            {/* Expense Breakdown - 2 columns */}
-            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
+            {/* Expense Breakdown - 4 columns */}
+            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Expense Breakdown</h3>
                 <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
@@ -203,8 +203,8 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Finance Score - 2 columns */}
-            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
+            {/* Finance Score - 4 columns */}
+            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Finance Score</h3>
                 <button className="text-gray-400 hover:text-gray-600">
@@ -517,14 +517,14 @@ function NavItem({ icon, label, active, badge }: { icon: string; label: string; 
 
 function KPICard({ icon, label, value, change, changeText, positive }: any) {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-xl">{icon}</span>
+    <div className="bg-white rounded-2xl p-4 border border-gray-200">
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">{icon}</span>
         <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <div className="text-3xl font-bold text-gray-900 mb-2">{value}</div>
-      <div className="flex items-center gap-2">
-        <span className={`text-sm font-semibold px-2 py-0.5 rounded-full ${
+      <div className="text-2xl font-bold text-gray-900 mb-2">{value}</div>
+      <div className="flex flex-col gap-1">
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block w-fit ${
           positive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
         }`}>
           {positive ? '+' : ''}{change}%
