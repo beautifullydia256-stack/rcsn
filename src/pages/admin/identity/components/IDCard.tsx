@@ -125,10 +125,10 @@ export default function IDCard({ student, school }: IDCardProps) {
             <span
               style={{
                 color: "#1e40af",
-                fontSize: "22px",
-                fontWeight: 700,
-                letterSpacing: "0.02em",
-                lineHeight: 1.2,
+                fontSize: "28px",
+                fontWeight: 800,
+                letterSpacing: "0.04em",
+                lineHeight: 1.25,
                 textAlign: "center",
                 textTransform: "uppercase",
               }}
