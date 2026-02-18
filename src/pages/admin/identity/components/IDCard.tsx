@@ -1,13 +1,15 @@
 interface IDCardProps {
   student: any;
   school: any;
+  /** When true, render at CR80 size for print; when false, render in fixed container for screen */
+  forPrint?: boolean;
 }
 
 /**
  * Production-ready ID card — CR80 (85.60mm × 53.98mm).
  * Locked system style per spec; optimized for print and PDF.
  */
-export default function IDCard({ student, school }: IDCardProps) {
+export default function IDCard({ student, school, forPrint = false }: IDCardProps) {
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
@@ -154,17 +156,76 @@ export default function IDCard({ student, school }: IDCardProps) {
         }
       `}</style>
 
-      {/* Screen: scale up for preview. Print: actual CR80 size via @page */}
-      <div
-        className="id-card-print-wrap"
-        style={{
-          transform: "scale(2.8)",
-          transformOrigin: "top left",
-          width: "85.60mm",
-          height: "53.98mm",
-        }}
-      >
-        <div className="id-card">
+      {forPrint ? (
+        /* Print: card at actual CR80 size, no wrapper */
+        <div className="id-card" style={{ width: "85.60mm", height: "53.98mm" }}>
+          <div className="header">
+            {school.logo_url ? (
+              <img src={school.logo_url} alt="" className="logo" />
+            ) : (
+              <div className="logo-placeholder" />
+            )}
+            <div className="school">
+              <div className="name">{schoolName}</div>
+              <div className="meta">
+                {schoolMetaLine1}
+                {schoolMetaLine2 ? <><br />{schoolMetaLine2}</> : null}
+              </div>
+            </div>
+          </div>
+          <div className="body">
+            <div className="photo-wrap">
+              {student.profile_picture_url ? (
+                <img src={student.profile_picture_url} alt={student.name} />
+              ) : (
+                <span className="photo-initial">{studentInitial}</span>
+              )}
+            </div>
+            <div className="details">
+              <div className="student-name">{student.name || "—"}</div>
+              <div className="info-row">
+                <span>ID Number</span>
+                <span>{cardId}</span>
+              </div>
+              {student.current_class && (
+                <div className="info-row">
+                  <span>Class</span>
+                  <span>{student.current_class}</span>
+                </div>
+              )}
+              <div className="info-row">
+                <span>Date of Birth</span>
+                <span>{dob}</span>
+              </div>
+              <div className="info-row">
+                <span>Valid Until</span>
+                <span>{validUntil}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Screen: fixed 420×265px container so card is contained, centered, and visible */
+        <div
+          className="id-card-print-wrap"
+          style={{
+            width: "420px",
+            height: "265px",
+            overflow: "hidden",
+            borderRadius: "8px",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.12)",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            className="id-card"
+            style={{
+              width: "85.60mm",
+              height: "53.98mm",
+              transform: "scale(1.3)",
+              transformOrigin: "top left",
+            }}
+          >
           <div className="header">
             {school.logo_url ? (
               <img src={school.logo_url} alt="" className="logo" />
@@ -214,6 +275,7 @@ export default function IDCard({ student, school }: IDCardProps) {
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }

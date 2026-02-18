@@ -147,13 +147,13 @@ export default function StudentIDCardPage() {
               </div>
             </div>
 
-            {/* ID Card Preview */}
+            {/* ID Card Preview – contained so it displays like a card in the middle */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center"
+              className="flex justify-center items-start p-6 bg-gray-100/50 rounded-xl min-h-[320px]"
             >
-              <div ref={cardRef} className="inline-block">
+              <div ref={cardRef} className="inline-block rounded-lg overflow-hidden">
                 <IDCard student={student} school={school} />
               </div>
             </motion.div>
@@ -161,9 +161,9 @@ export default function StudentIDCardPage() {
         </AdminPageWrapper>
       </div>
 
-      {/* Print View */}
-      <div className="hidden print:block">
-        <IDCard student={student} school={school} />
+      {/* Print View – card at CR80 size for print */}
+      <div className="hidden print:block print:p-0">
+        <IDCard student={student} school={school} forPrint />
       </div>
 
       <style>{`
