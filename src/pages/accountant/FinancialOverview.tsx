@@ -96,10 +96,10 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
 
   const balances = balancesRes.data || [];
   const paymentsRaw = paymentsRes.data || [];
-  const payments = paymentsRaw.filter((p: { reversed_at?: unknown }) => !p.reversed_at);
+  const payments = paymentsRaw.filter((p: Record<string, unknown>) => !p.reversed_at);
   const expenses = expensesRes.data || [];
   const discounts = discountsRes.data || [];
-  const recentPaymentsRows = (recentPaymentsRes.data || []).filter((p: { reversed_at?: unknown }) => !p.reversed_at);
+  const recentPaymentsRows = (recentPaymentsRes.data || []).filter((p: Record<string, unknown>) => !p.reversed_at);
 
   type Bal = { total_fees?: number; total_paid?: number; balance?: number };
   type Pay = { payment_date: string; amount_paid?: number };
