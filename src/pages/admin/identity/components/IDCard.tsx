@@ -137,6 +137,47 @@ export default function IDCard({ student, school }: IDCardProps) {
             </span>
           </div>
         </div>
+        {/* School information from database – only show fields that have values */}
+        {(school.address || school.pobox || school.location || school.contact_phone || school.contact_email || school.website || school.motto || school.subtitle) && (
+          <div
+            style={{
+              marginTop: "10px",
+              paddingTop: "12px",
+              borderTop: "1px solid #e2e8f0",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "12px 24px",
+              justifyContent: "center",
+              fontSize: "12px",
+              color: "#475569",
+              lineHeight: 1.5,
+            }}
+          >
+            {school.address && (
+              <span><strong style={{ color: "#334155" }}>Address:</strong> {school.address}</span>
+            )}
+            {school.pobox && (
+              <span><strong style={{ color: "#334155" }}>P.O. Box:</strong> {school.pobox}</span>
+            )}
+            {school.location && !school.address && (
+              <span><strong style={{ color: "#334155" }}>Location:</strong> {school.location}</span>
+            )}
+            {school.contact_phone && (
+              <span><strong style={{ color: "#334155" }}>Tel:</strong> {school.contact_phone}</span>
+            )}
+            {school.contact_email && (
+              <span><strong style={{ color: "#334155" }}>Email:</strong> {school.contact_email}</span>
+            )}
+            {school.website && (
+              <span><strong style={{ color: "#334155" }}>Web:</strong> {school.website}</span>
+            )}
+            {(school.motto || school.subtitle) && (
+              <span style={{ fontStyle: "italic", width: "100%", textAlign: "center" }}>
+                {school.motto || school.subtitle}
+              </span>
+            )}
+          </div>
+        )}
         <div
           style={{
             background: "#1e40af",
@@ -147,6 +188,7 @@ export default function IDCard({ student, school }: IDCardProps) {
             textAlign: "center",
             padding: "8px 16px",
             textTransform: "uppercase",
+            marginTop: "14px",
           }}
         >
           STUDENT ID CARD
