@@ -9,19 +9,14 @@ import {
   Wallet,
   PiggyBank,
   TrendingUp,
-  Inbox,
-  Gift,
-  Lightbulb,
-  Lock,
+  Receipt,
+  BarChart3,
+  Users,
   Search,
   MessageCircle,
   Bell,
   MoreVertical,
-  Copy,
 } from "lucide-react";
-
-const SIDEBAR_BG = "#0d9488";
-const SIDEBAR_ACTIVE = "rgba(255,255,255,0.15)";
 
 export default function AccountantDashboard() {
   const navigate = useNavigate();
@@ -36,55 +31,27 @@ export default function AccountantDashboard() {
 
   return (
     <div className="fixed inset-0 flex bg-[#f1f5f9] overflow-hidden">
-      {/* Sidebar - dark green */}
-      <aside
-        className="w-[260px] flex flex-col flex-shrink-0 text-white"
-        style={{ background: SIDEBAR_BG }}
-      >
-        <div className="p-6 flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
-            <div className="grid grid-cols-2 gap-0.5">
-              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
-              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
-              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
-              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
-            </div>
+      {/* Sidebar - white, same style as admin */}
+      <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
+          <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
+            <CreditCard className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold">COINEST</span>
+          <span className="font-bold text-lg text-gray-900">PwezaCore</span>
         </div>
 
-        <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
+        <div className="px-4 pt-2 pb-1">
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">MENU</span>
+        </div>
+        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavItem icon={LayoutDashboard} label="Dashboard" active />
           <NavItem icon={CreditCard} label="Payments" />
-          <NavItem icon={ArrowLeftRight} label="Transactions" />
-          <NavItem icon={FileText} label="Invoices" />
-          <NavItem icon={Wallet} label="Cards" />
-          <NavItem icon={PiggyBank} label="Saving Plans" />
-          <NavItem icon={TrendingUp} label="Investments" />
-          <NavItem icon={Inbox} label="Inbox" badge={99} />
-          <NavItem icon={Gift} label="Promos" />
-          <NavItem icon={Lightbulb} label="Insights" />
+          <NavItem icon={FileText} label="Invoices & Billing" />
+          <NavItem icon={Wallet} label="Outstanding Fees" />
+          <NavItem icon={Receipt} label="Receipts" />
+          <NavItem icon={TrendingUp} label="Expenses" />
+          <NavItem icon={BarChart3} label="Reports" />
         </nav>
-
-        <div className="p-3">
-          <div
-            className="rounded-xl p-4 text-white"
-            style={{ background: "rgba(0,0,0,0.2)" }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Lock className="w-4 h-4 opacity-90" />
-              <span className="text-sm font-semibold">Get Pro</span>
-            </div>
-            <p className="text-xs text-white/80 mb-3 leading-relaxed">
-              Gain full access to your finances with detailed analytics and graphs
-            </p>
-            <button
-              className="w-full py-2 rounded-lg text-sm font-medium text-[#0d9488] bg-white hover:bg-white/95 transition-colors"
-            >
-              Get Pro
-            </button>
-          </div>
-        </div>
       </aside>
 
       {/* Main */}
@@ -95,7 +62,7 @@ export default function AccountantDashboard() {
             <div className="relative flex-1 max-w-md">
               <input
                 type="text"
-                placeholder="Search placeholder"
+                placeholder="Search students, receipts, invoices..."
                 className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
               />
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -115,59 +82,60 @@ export default function AccountantDashboard() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
-          {/* Row 1: 4 KPI cards */}
+          {/* Row 1: School finance KPIs */}
           <div className="grid grid-cols-4 gap-4 mb-6">
             <KPICard
-              icon={CreditCard}
-              label="Income"
-              value="$8,500"
-              trend="+$355 than last week"
-              change="↑ 1.78%"
+              icon={Wallet}
+              label="Total Fees Expected"
+              value="—"
+              trend="This term"
+              change="—"
               positive
             />
             <KPICard
-              icon={Wallet}
-              label="Expense"
-              value="$4,900"
-              trend="-$126 than last week"
-              change="↓ 2.45%"
+              icon={CreditCard}
+              label="Total Fees Collected"
+              value="—"
+              trend="This term"
+              change="—"
+              positive
+            />
+            <KPICard
+              icon={FileText}
+              label="Outstanding Balances"
+              value="—"
+              trend="Students with balance due"
+              change="—"
               positive={false}
             />
             <KPICard
-              icon={PiggyBank}
-              label="Savings"
-              value="$2,000"
-              trend="+$30 than last week"
-              change="↑ 1.5%"
-              positive
-            />
-            <KPICard
               icon={TrendingUp}
-              label="Investment"
-              value="$1,600"
-              trend="+$64 than last week"
-              change="↑ 3.85%"
+              label="Today's Collections"
+              value="—"
+              trend="Payments received today"
+              change="—"
               positive
             />
           </div>
 
           {/* Row 2: Cashflow | Expense Breakdown | Finance Score + Balance */}
           <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* Cashflow - 7 cols */}
+            {/* Fee collections chart - 7 cols */}
             <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Cashflow</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Fee Collections</h3>
                 <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
+                  <option>This Term</option>
                   <option>Last 7 Days</option>
                 </select>
               </div>
-              <p className="text-2xl font-bold text-gray-900 mb-6">$12,000</p>
+              <p className="text-2xl font-bold text-gray-900 mb-6">Collections vs Expected</p>
               <div className="flex gap-4 mb-4">
                 <span className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="w-3 h-3 rounded-full bg-teal-600" /> Income
+                  <span className="w-3 h-3 rounded-full bg-teal-600" /> Fees collected
                 </span>
                 <span className="flex items-center gap-2 text-sm text-gray-600">
-                  <span className="w-3 h-3 rounded-full bg-gray-400" /> Expense
+                  <span className="w-3 h-3 rounded-full bg-gray-400" /> Expected
                 </span>
               </div>
               <div className="h-52 flex items-end gap-2">
@@ -185,85 +153,76 @@ export default function AccountantDashboard() {
               </div>
             </div>
 
-            {/* Expense Breakdown - 2 cols */}
+            {/* School expense breakdown - 2 cols */}
             <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-base font-semibold text-gray-900">Expense Breakdown</h3>
                 <select className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
-                  <option>Today</option>
+                  <option>This Term</option>
                 </select>
               </div>
               <div className="flex justify-center my-4">
                 <div className="relative w-28 h-28">
                   <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#0d9488" strokeWidth="3" strokeDasharray="50 100" />
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#5eead4" strokeWidth="3" strokeDasharray="30 100" strokeDashoffset="-50" />
-                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="20 100" strokeDashoffset="-80" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#0d9488" strokeWidth="3" strokeDasharray="45 100" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#5eead4" strokeWidth="3" strokeDasharray="25 100" strokeDashoffset="-45" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="20 100" strokeDashoffset="-70" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#64748b" strokeWidth="3" strokeDasharray="10 100" strokeDashoffset="-90" />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className="text-[10px] text-gray-500">Total</span>
-                    <span className="text-lg font-bold text-gray-900">$1,000</span>
+                    <span className="text-lg font-bold text-gray-900">—</span>
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-teal-600 font-medium mb-3">↑ 1.5%</p>
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-600" /> Food & Dining</span>
-                  <span className="font-medium text-gray-900">$500</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-600" /> Salaries</span>
+                  <span className="font-medium text-gray-900">—</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-300" /> Utilities</span>
-                  <span className="font-medium text-gray-900">$300</span>
+                  <span className="font-medium text-gray-900">—</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400" /> Investment</span>
-                  <span className="font-medium text-gray-900">$200</span>
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400" /> Maintenance</span>
+                  <span className="font-medium text-gray-900">—</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-slate-500" /> Supplies</span>
+                  <span className="font-medium text-gray-900">—</span>
                 </div>
               </div>
             </div>
 
-            {/* Finance Score + Balance - 3 cols */}
+            {/* Collection rate + Payment methods - 3 cols */}
             <div className="col-span-3 space-y-4">
               <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-900">Finance Score</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Collection Rate</h3>
                   <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
                 </div>
-                <p className="text-xs text-gray-500 mb-1">Finance Quality</p>
-                <p className="text-xl font-bold text-gray-900">Excellent</p>
-                <p className="text-lg font-semibold text-gray-900 mb-2">92%</p>
+                <p className="text-xs text-gray-500 mb-1">Fees collected vs expected this term</p>
+                <p className="text-xl font-bold text-gray-900 mb-2">—%</p>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-teal-500" style={{ width: "92%" }} />
+                  <div className="h-full rounded-full bg-teal-500" style={{ width: "0%" }} />
                 </div>
               </div>
               <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-base font-semibold text-gray-900">Balance</h3>
+                  <h3 className="text-base font-semibold text-gray-900">Collections by Method</h3>
                   <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
                 </div>
-                <p className="text-2xl font-bold text-gray-900 mb-4">$1,377,000</p>
+                <p className="text-sm text-gray-500 mb-4">This term</p>
                 <div className="space-y-3">
-                  <div className="rounded-xl p-4 text-white bg-gradient-to-br from-teal-700 to-teal-900">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-semibold opacity-90">VISA</span>
-                    </div>
-                    <p className="text-[10px] opacity-80 mb-1">Visa Platinum Plus</p>
-                    <p className="text-lg font-bold">$415,000</p>
-                    <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
-                      4532 8723 0045 9967 <button type="button" className="p-0.5 hover:bg-white/20 rounded"><Copy className="w-3 h-3" /></button>
-                    </p>
+                  <div className="rounded-xl p-4 bg-teal-50 border border-teal-100">
+                    <p className="text-xs font-medium text-teal-700 mb-1">Cash</p>
+                    <p className="text-lg font-bold text-gray-900">—</p>
                   </div>
-                  <div className="rounded-xl p-4 text-white bg-gradient-to-br from-teal-700 to-teal-900">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="text-xs font-semibold opacity-90">Mastercard</span>
-                    </div>
-                    <p className="text-[10px] opacity-80 mb-1">Freedom Unlimited Mastercard</p>
-                    <p className="text-lg font-bold">$532,000</p>
-                    <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
-                      5582 5574 8376 5487 <button type="button" className="p-0.5 hover:bg-white/20 rounded"><Copy className="w-3 h-3" /></button>
-                    </p>
+                  <div className="rounded-xl p-4 bg-teal-50 border border-teal-100">
+                    <p className="text-xs font-medium text-teal-700 mb-1">Bank / Mobile Money</p>
+                    <p className="text-lg font-bold text-gray-900">—</p>
                   </div>
                 </div>
               </div>
@@ -272,119 +231,71 @@ export default function AccountantDashboard() {
 
           {/* Row 3: Recent Transactions | Saving Plans | Recent Activities */}
           <div className="grid grid-cols-12 gap-6">
-            {/* Recent Transactions - 5 cols */}
+            {/* Recent Fee Payments - 5 cols */}
             <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Recent Fee Payments</h3>
                 <div className="flex items-center gap-2">
                   <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
-                    <option>This Month</option>
+                    <option>This Term</option>
                   </select>
-                  <button className="p-2 hover:bg-gray-50 rounded-lg text-gray-500"><ArrowLeftRight className="w-4 h-4" /></button>
+                  <button className="p-2 hover:bg-gray-50 rounded-lg text-gray-500"><Receipt className="w-4 h-4" /></button>
                 </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
-                      <th className="pb-3 pr-4">Transaction Name</th>
-                      <th className="pb-3 pr-4">Account</th>
-                      <th className="pb-3 pr-4">Date & Time</th>
+                      <th className="pb-3 pr-4">Student / Class</th>
+                      <th className="pb-3 pr-4">Receipt No</th>
+                      <th className="pb-3 pr-4">Date</th>
                       <th className="pb-3 text-right">Amount</th>
-                      <th className="pb-3 pl-2">Status</th>
+                      <th className="pb-3 pl-2">Method</th>
                     </tr>
                   </thead>
                   <tbody className="text-gray-700">
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-medium">Dividend Payout</td>
-                      <td className="py-3 pr-4">Platinum Plus Visa</td>
-                      <td className="py-3 pr-4">2024-09-25 10:00</td>
-                      <td className="py-3 text-right font-semibold text-teal-600">+$200.00</td>
-                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
-                    </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-medium">Grocery Shopping</td>
-                      <td className="py-3 pr-4">Platinum Plus Visa</td>
-                      <td className="py-3 pr-4">2024-09-24 14:30</td>
-                      <td className="py-3 text-right font-semibold">-$154.20</td>
-                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
-                    </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-medium">Freelance Payment</td>
-                      <td className="py-3 pr-4">Freedom Unlimited Mastercard</td>
-                      <td className="py-3 pr-4">2024-09-23 15:00</td>
-                      <td className="py-3 text-right font-semibold text-teal-600">+$850.00</td>
-                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
-                    </tr>
-                    <tr className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-medium">Electricity Bill</td>
-                      <td className="py-3 pr-4">Freedom Unlimited Mastercard</td>
-                      <td className="py-3 pr-4">2024-09-22 09:15</td>
-                      <td className="py-3 text-right font-semibold">-$120.75</td>
-                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
-                    </tr>
                     <tr>
-                      <td className="py-3 pr-4 font-medium">Online Subscription</td>
-                      <td className="py-3 pr-4">Platinum Plus Visa</td>
-                      <td className="py-3 pr-4">2024-09-18 08:00</td>
-                      <td className="py-3 text-right font-semibold">-$12.99</td>
-                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Pending</span></td>
+                      <td className="py-6 text-gray-400 text-center" colSpan={5}>No payments recorded yet. Data will appear when fees are collected.</td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             </div>
 
-            {/* Saving Plans - 2 cols */}
+            {/* Student payment status - 2 cols */}
             <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Saving Plans</h3>
-                <button className="text-sm font-medium text-teal-600 hover:text-teal-700">+ Add Plans</button>
+                <h3 className="text-lg font-semibold text-gray-900">Payment Status</h3>
+                <button className="text-sm font-medium text-teal-600 hover:text-teal-700">View all</button>
               </div>
-              <p className="text-2xl font-bold text-gray-900 mb-6">$12,000</p>
-              <div className="space-y-5">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">Emergency Fund</p>
-                  <p className="text-xs text-gray-500 mb-2">$4,500 / $10,000</p>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-teal-400" style={{ width: "45%" }} />
-                  </div>
+              <p className="text-sm text-gray-500 mb-4">Students by fee status this term</p>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-xl bg-teal-50 border border-teal-100">
+                  <span className="text-sm font-medium text-gray-900">Fully paid</span>
+                  <span className="text-lg font-bold text-teal-700"><Users className="w-4 h-4 inline mr-1" />—</span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">Retirement Fund</p>
-                  <p className="text-xs text-gray-500 mb-2">$5,000 / $20,000</p>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-teal-400" style={{ width: "25%" }} />
-                  </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100">
+                  <span className="text-sm font-medium text-gray-900">Partially paid</span>
+                  <span className="text-lg font-bold text-amber-700">—</span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-1">Vacation Fund</p>
-                  <p className="text-xs text-gray-500 mb-2">$2,500 / $5,000</p>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-teal-400" style={{ width: "50%" }} />
-                  </div>
+                <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-100">
+                  <span className="text-sm font-medium text-gray-900">Not paid</span>
+                  <span className="text-lg font-bold text-red-700">—</span>
                 </div>
               </div>
             </div>
 
-            {/* Recent Activities - 5 cols */}
+            {/* Recent activity - 5 cols */}
             <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
+                <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
                 <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
               </div>
               <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-3">Today</p>
-                  <ActivityRow time="11:45 AM" text="Reviewed alerts for low balance" icon="clock" />
-                  <ActivityRow time="09:22 AM" text="Checked account balance" icon="doc" />
-                  <ActivityRow time="07:15 AM" text="Logged in from mobile device" icon="mobile" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900 mb-3">Yesterday</p>
-                  <ActivityRow time="05:50 PM" text="Scheduled a recurring utility payment" icon="calendar" />
-                  <ActivityRow time="03:30 PM" text="Updated payment method" icon="doc" />
-                </div>
+                <ActivityRow time="—" text="Fee payment recorded" icon="doc" />
+                <ActivityRow time="—" text="Receipt issued" icon="doc" />
+                <ActivityRow time="—" text="Expense logged" icon="doc" />
+                <p className="text-sm text-gray-400 pt-2">Activity will appear here as you record payments and expenses.</p>
               </div>
             </div>
           </div>
@@ -393,7 +304,7 @@ export default function AccountantDashboard() {
         {/* Footer */}
         <footer className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between text-sm text-gray-500">
-            <span>Copyright © 2024 Peterdraw</span>
+            <span>Copyright © 2025 PwezaCore</span>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-gray-700">Privacy Policy</a>
               <a href="#" className="hover:text-gray-700">Term and conditions</a>
@@ -425,13 +336,13 @@ function NavItem({
 }) {
   return (
     <button
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
-        active ? "text-white" : "text-white/85 hover:bg-white/10"
+      type="button"
+      className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
+        active ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
       }`}
-      style={active ? { background: SIDEBAR_ACTIVE } : {}}
     >
-      <Icon className="w-5 h-5 flex-shrink-0" />
-      <span className="text-sm font-medium flex-1">{label}</span>
+      <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
+      <span className="flex-1 text-left">{label}</span>
       {badge != null && (
         <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
           {badge}
