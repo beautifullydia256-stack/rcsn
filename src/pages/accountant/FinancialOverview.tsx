@@ -6,18 +6,17 @@ import {
   CreditCard,
   FileText,
   TrendingUp,
-  ArrowUpRight,
-  ArrowDownRight,
   Receipt,
-  Users,
-  Banknote,
-  Smartphone,
+  DollarSign,
+  FilePlus,
+  Send,
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useAuthStore } from "../../store/authStore";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
 const fmt = (n: number) =>
-  n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  n == null || Number.isNaN(n) ? "â€”" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 interface OverviewData {
   termId: string | null;
@@ -181,12 +180,12 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
     }) => {
       const st = studentMap.get(r.student_id);
       return {
-        student_name: st?.name ?? "—",
-        class: st?.current_class ?? "—",
+        student_name: st?.name ?? "â€”",
+        class: st?.current_class ?? "â€”",
         receipt_number: r.receipt_number ?? null,
         payment_date: r.payment_date,
         amount_paid: Number(r.amount_paid || 0),
-        payment_method: r.payment_method ?? "—",
+        payment_method: r.payment_method ?? "â€”",
       };
     }
   );
@@ -261,7 +260,7 @@ export default function FinancialOverview() {
   if (!schoolId) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
-        Loading your school…
+        Loading your schoolâ€¦
       </div>
     );
   }
@@ -274,64 +273,43 @@ export default function FinancialOverview() {
             <div key={i} className="h-32 rounded-xl border border-slate-200 bg-white animate-pulse" />
           ))}
         </div>
-        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overview…</div>
+        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overviewâ€¦</div>
       </div>
     );
   }
 
   const collectionRate =
     data.totalFeesExpected > 0 ? Math.round((data.totalFeesCollected / data.totalFeesExpected) * 100) : 0;
-  const maxMethod = Math.max(
-    data.cashTotal,
-    data.bankTotal,
-    data.mobileTotal,
-    data.otherTotal,
-    1
-  );
+  const lastPayment = data.recentPayments[0];
+  const studentsOwing = data.notPaidCount + data.partiallyPaidCount;
+  const paymentMethodData = [
+    { name: "Cash", value: data.cashTotal, color: "#10b981" },
+    { name: "Bank / Card", value: data.bankTotal, color: "#059669" },
+    { name: "Mobile Money", value: data.mobileTotal, color: "#34d399" },
+    { name: "Other", value: data.otherTotal, color: "#6b7280" },
+  ].filter((d) => d.value > 0);
+  const totalCollectedMethods = paymentMethodData.reduce((s, d) => s + d.value, 0);
+  const chartData =
+    paymentMethodData.length > 0
+      ? paymentMethodData
+      : [{ name: "No data", value: 1, color: "#e5e7eb" }];
+  const cardClass =
+    "rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]";
 
   return (
-    <div className="min-h-full bg-slate-50/60">
+    <div className="min-h-full" style={{ backgroundColor: "#f7f9fb" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Page header */}
-        <div className="mb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
-              <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+        <div className="mb-7">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
+          <p className="mt-1 flex items-center gap-2 text-[13px] text-[#6b7280]">
                 <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
                   {data.termLabel}
                 </span>
               </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/accountant/payments")}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
-              >
-                <Receipt className="h-4 w-4" />
-                Record payment
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/accountant/outstanding")}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                View outstanding
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/accountant/expenses")}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-              >
-                Record expense
-              </button>
-            </div>
-          </div>
         </div>
 
-        {/* KPI row */}
-        <section className="mb-8">
+        {/* ROW 1 — KPI cards (unchanged) */}
+        <section className="mb-7" style={{ marginBottom: 28 }}>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Key figures</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KPICard
@@ -365,187 +343,166 @@ export default function FinancialOverview() {
           </div>
         </section>
 
-        {/* Summary row: Collections + Rate + Methods */}
-        <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">Fee collections</h3>
-              <p className="mt-1 text-sm text-slate-500">Collected vs expected this term</p>
-              <div className="mt-4 flex flex-wrap gap-6">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-semibold text-slate-900">{fmt(data.totalFeesCollected)}</span>
-                  <span className="text-sm text-slate-500">collected</span>
-                </div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-xl font-medium text-slate-400">{fmt(data.totalFeesExpected)}</span>
-                  <span className="text-sm text-slate-500">expected</span>
-                </div>
+        {/* ROW 2 â€” Collection Progress (8 cols) + Payment Methods Donut (4 cols) */}
+        <section className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-12" style={{ marginBottom: 28, gap: 24 }}>
+          <div className="lg:col-span-8">
+            <div className={cardClass}>
+              <h3 className="text-[18px] font-semibold text-[#1f2933]">Term Collection Progress</h3>
+              <p className="mt-1 text-[13px] text-[#6b7280]">
+                UGX {fmt(data.totalFeesCollected)} of UGX {fmt(data.totalFeesExpected)}
+              </p>
+              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
+                  style={{ width: `${Math.min(100, collectionRate)}%` }}
+                />
               </div>
-              <div className="mt-4 space-y-1 text-sm text-slate-500">
-                <p>This week: <span className="font-medium text-slate-700">{fmt(data.weekCollections)}</span></p>
-                <p>This month: <span className="font-medium text-slate-700">{fmt(data.monthCollections)}</span></p>
-              </div>
+              <p className="mt-2 text-[13px] text-[#6b7280]">{collectionRate}% collected</p>
+              {lastPayment && (
+                <p className="mt-3 text-[13px] text-[#6b7280]">
+                  Last: <span className="font-medium text-slate-800">{lastPayment.student_name}</span> paid UGX{" "}
+                  {fmt(lastPayment.amount_paid)} via {lastPayment.payment_method} Â· {lastPayment.payment_date}
+                </p>
+              )}
             </div>
           </div>
-          <div className="lg:col-span-5 space-y-6">
-            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">Collection rate</h3>
-              <div className="mt-3 flex items-end gap-3">
-                <span className="text-3xl font-bold text-slate-900">{collectionRate}%</span>
-                <div className="flex-1 rounded-full bg-slate-100 p-1">
-                  <div
-                    className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, collectionRate)}%` }}
-                  />
-                </div>
+          <div className="lg:col-span-4">
+            <div className={cardClass}>
+              <h3 className="text-[18px] font-semibold text-[#1f2933]">Payment method distribution</h3>
+              <div className="mt-4 h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={chartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={56}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {chartData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
               </div>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">By payment method</h3>
-              <div className="mt-4 space-y-3">
-                {[
-                  { label: "Cash", value: data.cashTotal, icon: Banknote },
-                  { label: "Bank / Card", value: data.bankTotal, icon: CreditCard },
-                  { label: "Mobile money", value: data.mobileTotal, icon: Smartphone },
-                  { label: "Other", value: data.otherTotal, icon: Receipt },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="flex items-center gap-3">
-                    <Icon className="h-4 w-4 text-slate-400" />
-                    <div className="flex-1">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-slate-600">{label}</span>
-                        <span className="font-medium text-slate-900">{fmt(value)}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 w-full rounded-full bg-slate-100">
-                        <div
-                          className="h-full rounded-full bg-emerald-500/70"
-                          style={{ width: `${(value / maxMethod) * 100}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+              <p className="mt-2 text-center text-[13px] text-[#6b7280]">
+                Total collected <span className="text-[18px] font-bold text-[#1f2933]">{fmt(totalCollectedMethods)}</span>
+              </p>
+              <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-[#6b7280]">
+                {chartData.filter((d) => d.value > 0).map((d) => (
+                  <span key={d.name}>
+                    {d.name}: {fmt(d.value)}
+                  </span>
                 ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* Secondary stats: Expenses, Net, Discounts, Payment status */}
-        <section className="mb-8">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Summary</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Expenses (term)</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{fmt(data.totalExpensesThisTerm)}</p>
-              <p className="mt-0.5 text-xs text-slate-500">Approved / paid</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Net position</p>
-              <p className={`mt-1 flex items-center gap-1 text-xl font-semibold ${data.netPosition >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {data.netPosition >= 0 ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
-                {data.netPosition >= 0 ? "Surplus" : "Deficit"} {fmt(Math.abs(data.netPosition))}
-              </p>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Scholarships / discounts</p>
-              <p className="mt-1 text-xl font-semibold text-slate-900">{fmt(data.scholarshipsDiscounts)}</p>
-            </div>
-            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
-              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Payment status</p>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                  <Users className="h-3.5 w-3" /> {data.fullyPaidCount} fully paid
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700">
-                  {data.partiallyPaidCount} partial
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-700">
-                  {data.notPaidCount} not paid
-                </span>
+        {/* ROW 3 â€” Financial Activity Feed (6 cols) + Outstanding Insights (6 cols) */}
+        <section className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-12" style={{ marginBottom: 28, gap: 24 }}>
+          <div className="lg:col-span-6">
+            <div className={cardClass}>
+              <h3 className="text-[18px] font-semibold text-[#1f2933]">Recent financial activity</h3>
+              <p className="mt-1 text-[13px] text-[#6b7280]">Live feed of payments and activity</p>
+              <div className="mt-4 max-h-[280px] overflow-y-auto">
+                {data.recentPayments.length === 0 ? (
+                  <p className="py-6 text-center text-[13px] text-[#6b7280]">No payments recorded yet.</p>
+                ) : (
+                  <ul className="space-y-0">
+                    {data.recentPayments.map((row, i) => (
+                      <li key={i} className="flex gap-3 border-b border-slate-100 py-3 last:border-0">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                          <Receipt className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-[#1f2933]">
+                            {row.student_name} paid UGX {fmt(row.amount_paid)} via {row.payment_method}
+                          </p>
+                          <p className="text-[13px] text-[#6b7280]">{row.payment_date}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
+            </div>
+          </div>
+          <div className="lg:col-span-6">
+            <div className={`${cardClass} border-amber-200/60 bg-amber-50/30`}>
+              <h3 className="text-[18px] font-semibold text-[#1f2933]">Outstanding insights</h3>
+              <p className="mt-1 text-[13px] text-[#6b7280]">Summary of balances due</p>
+              <div className="mt-4 space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[#6b7280]">Students owing</span>
+                  <span className="text-[18px] font-semibold text-[#1f2933]">{studentsOwing}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[#6b7280]">Total outstanding</span>
+                  <span className="text-[18px] font-bold text-amber-700">{fmt(data.outstandingBalances)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[13px] text-[#6b7280]">Most affected class</span>
+                  <span className="text-[13px] font-medium text-slate-700">See Reports for breakdown</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/accountant/outstanding")}
+                className="mt-4 w-full rounded-xl border border-amber-300 bg-white py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition-[transform] duration-200 hover:-translate-y-0.5 hover:bg-amber-50"
+              >
+                View defaulters
+              </button>
             </div>
           </div>
         </section>
 
-        {/* Recent payments + Payment status breakdown */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-8">
-            <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-                <h3 className="text-base font-semibold text-slate-900">Recent fee payments</h3>
-                <button
-                  type="button"
-                  onClick={() => navigate("/dashboard/accountant/payments")}
-                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
-                >
-                  View all →
-                </button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-100 bg-slate-50/50">
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Student / Class
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Receipt
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Date
-                      </th>
-                      <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                        Method
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {data.recentPayments.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                          No payments recorded yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      data.recentPayments.map((row, i) => (
-                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-6 py-4 font-medium text-slate-900">
-                            {row.student_name} <span className="text-slate-400">/ {row.class}</span>
-                          </td>
-                          <td className="px-6 py-4 text-slate-600">{row.receipt_number ?? "—"}</td>
-                          <td className="px-6 py-4 text-slate-600">{row.payment_date}</td>
-                          <td className="px-6 py-4 text-right font-semibold text-emerald-600">{fmt(row.amount_paid)}</td>
-                          <td className="px-6 py-4 text-slate-600">{row.payment_method}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-4">
-            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">Payment status (this term)</h3>
-              <p className="mt-1 text-sm text-slate-500">Students by fee status</p>
-              <div className="mt-6 space-y-4">
-                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
-                  <span className="text-sm font-medium text-slate-700">Fully paid</span>
-                  <span className="text-lg font-bold text-emerald-700">{data.fullyPaidCount}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-amber-50 px-4 py-3">
-                  <span className="text-sm font-medium text-slate-700">Partially paid</span>
-                  <span className="text-lg font-bold text-amber-700">{data.partiallyPaidCount}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
-                  <span className="text-sm font-medium text-slate-700">Not paid</span>
-                  <span className="text-lg font-bold text-red-700">{data.notPaidCount}</span>
-                </div>
-              </div>
-            </div>
+        {/* ROW 4 â€” Quick Actions Bar (full width) */}
+        <section style={{ marginBottom: 28 }}>
+          <h3 className="mb-4 text-[18px] font-semibold text-[#1f2933]">Quick actions</h3>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" style={{ gap: 24 }}>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/payments")}
+              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                <Receipt className="h-6 w-6" />
+              </span>
+              <span className="text-sm font-semibold text-[#1f2933]">Record payment</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/billing")}
+              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <FilePlus className="h-6 w-6" />
+              </span>
+              <span className="text-sm font-semibold text-[#1f2933]">Generate invoice</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/expenses")}
+              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <DollarSign className="h-6 w-6" />
+              </span>
+              <span className="text-sm font-semibold text-[#1f2933]">Record expense</span>
+            </button>
+            <button
+              type="button"
+              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                <Send className="h-6 w-6" />
+              </span>
+              <span className="text-sm font-semibold text-[#1f2933]">Send reminder</span>
+            </button>
           </div>
         </section>
       </div>
