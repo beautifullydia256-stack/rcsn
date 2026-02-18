@@ -50,7 +50,13 @@ export default function PaymentsPage() {
         recorded_by: userId,
         notes: notes || null,
       };
-      const { data: receiptNum } = await supabase.rpc("get_next_receipt_number", { p_school_id: schoolId }).catch(() => ({ data: null }));
+      let receiptNum: string | null = null;
+      try {
+        const res = await supabase.rpc("get_next_receipt_number", { p_school_id: schoolId });
+        receiptNum = res.data ?? null;
+      } catch {
+        receiptNum = null;
+      }
       const receipt_number = receiptNum ?? "REC-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
       payload.receipt_number = receipt_number;
       let { error } = await supabase.from("student_payments").insert(payload);

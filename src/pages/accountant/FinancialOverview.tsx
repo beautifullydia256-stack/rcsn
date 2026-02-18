@@ -82,11 +82,9 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
           .eq("school_id", schoolId)
           .eq("term_id", termId)
       : { data: [] as { amount: number; status: string }[] },
-    supabase
-      .from("student_discounts")
-      .select("amount")
-      .eq("school_id", schoolId)
-      .catch(() => ({ data: [] as { amount: number }[] })),
+    Promise.resolve(
+      supabase.from("student_discounts").select("amount").eq("school_id", schoolId)
+    ).then((r) => r, () => ({ data: [] as { amount: number }[] })),
     supabase
       .from("student_payments")
       .select("amount_paid, payment_date, payment_method, receipt_number, student_id")
@@ -103,27 +101,32 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   const discounts = discountsRes.data || [];
   const recentPaymentsRows = (recentPaymentsRes.data || []).filter((p: { reversed_at?: unknown }) => !p.reversed_at);
 
-  const totalFeesExpected = balances.reduce((s, b) => s + Number(b.total_fees || 0), 0);
-  const totalFeesCollected = balances.reduce((s, b) => s + Number(b.total_paid || 0), 0);
-  const outstandingBalances = balances.reduce((s, b) => s + Math.max(0, Number(b.balance ?? 0)), 0);
+  type Bal = { total_fees?: number; total_paid?: number; balance?: number };
+  type Pay = { payment_date: string; amount_paid?: number };
+  type Disc = { amount?: number };
+  type Exp = { status: string; amount?: number };
+
+  const totalFeesExpected = balances.reduce((s: number, b: Bal) => s + Number(b.total_fees || 0), 0);
+  const totalFeesCollected = balances.reduce((s: number, b: Bal) => s + Number(b.total_paid || 0), 0);
+  const outstandingBalances = balances.reduce((s: number, b: Bal) => s + Math.max(0, Number(b.balance ?? 0)), 0);
 
   const paymentsInTerm = payments.filter(
-    (p: { payment_date: string }) => p.payment_date >= termStart && p.payment_date <= termEnd
+    (p: Pay) => p.payment_date >= termStart && p.payment_date <= termEnd
   );
   const todayCollections = payments
-    .filter((p: { payment_date: string }) => p.payment_date === today)
-    .reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+    .filter((p: Pay) => p.payment_date === today)
+    .reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);
   const weekCollections = payments
-    .filter((p: { payment_date: string }) => p.payment_date >= weekStartStr && p.payment_date <= today)
-    .reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+    .filter((p: Pay) => p.payment_date >= weekStartStr && p.payment_date <= today)
+    .reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);
   const monthCollections = payments
-    .filter((p: { payment_date: string }) => p.payment_date >= monthStartStr && p.payment_date <= today)
-    .reduce((s, p) => s + Number(p.amount_paid || 0), 0);
+    .filter((p: Pay) => p.payment_date >= monthStartStr && p.payment_date <= today)
+    .reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);
 
-  const scholarshipsDiscounts = discounts.reduce((s, d) => s + Number(d.amount || 0), 0);
+  const scholarshipsDiscounts = discounts.reduce((s: number, d: Disc) => s + Number(d.amount || 0), 0);
   const totalExpensesThisTerm = expenses
-    .filter((e: { status: string }) => ["approved", "paid"].includes(e.status))
-    .reduce((s, e) => s + Number(e.amount || 0), 0);
+    .filter((e: Exp) => ["approved", "paid"].includes(e.status))
+    .reduce((s: number, e: Exp) => s + Number(e.amount || 0), 0);
   const netPosition = totalFeesCollected - totalExpensesThisTerm;
 
   const byMethod = { cash: 0, bank: 0, mobile_money: 0, other: 0 };
