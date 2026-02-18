@@ -74,25 +74,29 @@ export default function IDCard({ student, school }: IDCardProps) {
         boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Top strip – school badge + name (larger), then title */}
+      {/* Top: light background – school badge left, school name in blue (like reference ID) */}
       <div
         style={{
-          minHeight: "110px",
           width: "100%",
-          background: "linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 36px",
+          background: "#fafaf9",
+          borderBottom: "1px solid #e2e8f0",
+          padding: "24px 36px 16px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "20px",
+            marginBottom: "12px",
+          }}
+        >
           <div
             style={{
               width: "78px",
               height: "78px",
               borderRadius: "12px",
-              border: "3px solid rgba(255,255,255,0.6)",
+              border: "2px solid #e2e8f0",
               overflow: "hidden",
               background: "white",
               display: "flex",
@@ -112,33 +116,41 @@ export default function IDCard({ student, school }: IDCardProps) {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "linear-gradient(145deg, #0d9488, #14b8a6)",
+                  background: "#1e40af",
                 }}
               />
             )}
           </div>
-          <span
-            style={{
-              color: "white",
-              fontSize: "24px",
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-              lineHeight: 1.2,
-            }}
-          >
-            {school.name || "School Name"}
-          </span>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minWidth: 0 }}>
+            <span
+              style={{
+                color: "#1e40af",
+                fontSize: "22px",
+                fontWeight: 700,
+                letterSpacing: "0.02em",
+                lineHeight: 1.2,
+                textAlign: "center",
+                textTransform: "uppercase",
+              }}
+            >
+              {(school.name || "School Name").toUpperCase()}
+            </span>
+          </div>
         </div>
-        <span
+        <div
           style={{
+            background: "#1e40af",
             color: "white",
-            fontSize: "17px",
-            fontWeight: 800,
+            fontSize: "13px",
+            fontWeight: 700,
             letterSpacing: "0.08em",
+            textAlign: "center",
+            padding: "8px 16px",
+            textTransform: "uppercase",
           }}
         >
           STUDENT ID CARD
-        </span>
+        </div>
       </div>
 
       {/* Main content row: photo + details (pushed down for real-ID spacing) */}
