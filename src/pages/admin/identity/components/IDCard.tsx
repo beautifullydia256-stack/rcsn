@@ -8,6 +8,14 @@ interface IDCardProps {
 const CARD_WIDTH = 1011;
 const CARD_HEIGHT = 638;
 
+const FONT_FAMILY = "'Inter', 'Segoe UI', system-ui, sans-serif";
+const COLOR_TEXT = "#1F2937";
+const COLOR_LABEL = "#6B7280";
+const COLOR_ACCENT = "#2F5DA8";
+const BG_CARD = "#F9FAFB";
+const BG_WHITE = "#FFFFFF";
+const BORDER = "#E5E7EB";
+
 export default function IDCard({ student, school }: IDCardProps) {
   const barcodeRef = useRef<HTMLDivElement>(null);
 
@@ -18,27 +26,26 @@ export default function IDCard({ student, school }: IDCardProps) {
       if (!idValue) return;
 
       try {
-        // @ts-ignore - jsbarcode types may not be available
+        // @ts-ignore
         const JsBarcode = (await import("jsbarcode")).default;
         const canvas = document.createElement("canvas");
         JsBarcode(canvas, idValue, {
           format: "CODE128",
-          width: 1.8,
-          height: 50,
+          width: 1.5,
+          height: 40,
           displayValue: false,
-          margin: 8,
+          margin: 4,
         });
         barcodeRef.current.innerHTML = "";
         const wrapper = document.createElement("div");
         wrapper.style.textAlign = "center";
         wrapper.style.width = "100%";
-        wrapper.style.minHeight = "60px";
         wrapper.appendChild(canvas);
         barcodeRef.current.appendChild(wrapper);
       } catch (error) {
         console.error("Error generating barcode:", error);
         if (barcodeRef.current) {
-          barcodeRef.current.innerHTML = `<div style="text-align: center; padding: 12px; font-size: 14px; color: #64748b; font-family: monospace;">${idValue}</div>`;
+          barcodeRef.current.innerHTML = `<div style="text-align: center; padding: 8px; font-size: 12px; color: #6B7280; font-family: monospace;">${idValue}</div>`;
         }
       }
     };
@@ -48,6 +55,7 @@ export default function IDCard({ student, school }: IDCardProps) {
 
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+  const issueDate = new Date();
 
   const formatDate = (d: Date) =>
     d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -56,8 +64,21 @@ export default function IDCard({ student, school }: IDCardProps) {
     ? formatDate(new Date(student.date_of_birth))
     : "—";
   const expiry = formatDate(expiryDate);
+  const issued = formatDate(issueDate);
   const cardId = student.admission_number || student.student_id;
   const studentInitial = (student.name && student.name.charAt(0)) || "?";
+  const schoolName = school.name || "School Name";
+
+  const DataRow = ({ label, value }: { label: string; value: string }) => (
+    <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "6px" }}>
+      <span style={{ fontFamily: FONT_FAMILY, fontSize: "11px", color: COLOR_LABEL, fontWeight: 500, minWidth: "100px", textTransform: "uppercase", letterSpacing: "0.03em" }}>
+        {label}
+      </span>
+      <span style={{ fontFamily: FONT_FAMILY, fontSize: "13px", color: COLOR_TEXT, fontWeight: 400 }}>
+        {value}
+      </span>
+    </div>
+  );
 
   return (
     <div
@@ -66,40 +87,86 @@ export default function IDCard({ student, school }: IDCardProps) {
         width: `${CARD_WIDTH}px`,
         height: `${CARD_HEIGHT}px`,
         position: "relative",
-        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-        background: "#ffffff",
-        borderRadius: "12px",
-        border: "1px solid #e2e8f0",
+        fontFamily: FONT_FAMILY,
+        background: BG_CARD,
+        borderRadius: "8px",
+        border: `1px solid ${BORDER}`,
         overflow: "hidden",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
       }}
     >
-      {/* Top: light background – school badge left, school name in blue (like reference ID) */}
+      {/* Background watermark – school logo 5% opacity */}
+      {school.logo_url && (
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "280px",
+            height: "280px",
+            opacity: 0.05,
+            pointerEvents: "none",
+            backgroundImage: `url(${school.logo_url})`,
+            backgroundSize: "contain",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+          }}
+        />
+      )}
+
+      {/* Micro-text security line – school name repeated */}
       <div
         style={{
-          width: "100%",
-          background: "#fafaf9",
-          borderBottom: "1px solid #e2e8f0",
-          padding: "24px 36px 16px",
+          position: "absolute",
+          bottom: "72px",
+          left: 0,
+          right: 0,
+          height: "8px",
+          overflow: "hidden",
+          opacity: 0.25,
+          fontFamily: FONT_FAMILY,
+          fontSize: "6px",
+          color: COLOR_TEXT,
+          letterSpacing: "0.2em",
+          whiteSpace: "nowrap",
+          display: "flex",
+          alignItems: "center",
         }}
       >
+        {(schoolName + " • ").repeat(80)}
+      </div>
+
+      {/* Thin accent stripe (3–5mm equivalent) */}
+      <div
+        style={{
+          height: "6px",
+          width: "100%",
+          background: COLOR_ACCENT,
+        }}
+      />
+
+      <div style={{ padding: "20px 28px 16px", position: "relative", zIndex: 1 }}>
+        {/* Top row: logo left, school name + contact right */}
         <div
           style={{
             display: "flex",
             alignItems: "flex-start",
-            gap: "20px",
-            marginBottom: "0",
+            justifyContent: "space-between",
+            gap: "16px",
+            marginBottom: "18px",
+            paddingBottom: "14px",
+            borderBottom: `1px solid ${BORDER}`,
           }}
         >
-          {/* Left: school badge only */}
           <div
             style={{
-              width: "156px",
-              height: "156px",
-              borderRadius: "16px",
-              border: "2px solid #e2e8f0",
+              width: "64px",
+              height: "64px",
+              borderRadius: "6px",
+              border: `1px solid ${BORDER}`,
               overflow: "hidden",
-              background: "white",
+              background: BG_WHITE,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -113,230 +180,167 @@ export default function IDCard({ student, school }: IDCardProps) {
                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "#1e40af",
-                }}
-              />
+              <div style={{ width: "100%", height: "100%", background: COLOR_ACCENT }} />
             )}
           </div>
-          {/* Right: school name + School Information in the circled area (below name, right of badge) */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
-            <span
+          <div style={{ flex: 1, minWidth: 0, textAlign: "right" }}>
+            <p
               style={{
-                color: "#1e40af",
-                fontSize: "28px",
-                fontWeight: 800,
-                letterSpacing: "0.04em",
-                lineHeight: 1.25,
-                textAlign: "left",
-                textTransform: "uppercase",
+                margin: 0,
+                fontSize: "15px",
+                fontWeight: 600,
+                color: COLOR_TEXT,
+                lineHeight: 1.3,
+                letterSpacing: "0.01em",
               }}
             >
-              {(school.name || "School Name").toUpperCase()}
-            </span>
-            {/* School information from database – exactly below school name, in the area right of badge */}
-            {(school.address || school.pobox || school.location || school.contact_phone || school.contact_email || school.website || school.motto || school.subtitle) ? (
-              <div
+              {schoolName}
+            </p>
+            {(school.contact_phone || school.contact_email) && (
+              <p
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  fontSize: "12px",
-                  color: "#475569",
-                  lineHeight: 1.5,
-                  textAlign: "left",
+                  margin: "4px 0 0",
+                  fontSize: "11px",
+                  color: COLOR_LABEL,
+                  fontWeight: 400,
                 }}
               >
-                {school.address && (
-                  <span><strong style={{ color: "#334155" }}>Address:</strong> {school.address}</span>
-                )}
-                {school.pobox && (
-                  <span><strong style={{ color: "#334155" }}>P.O. Box:</strong> {school.pobox}</span>
-                )}
-                {school.location && !school.address && (
-                  <span><strong style={{ color: "#334155" }}>Location:</strong> {school.location}</span>
-                )}
-                {school.contact_phone && (
-                  <span><strong style={{ color: "#334155" }}>Tel:</strong> {school.contact_phone}</span>
-                )}
-                {school.contact_email && (
-                  <span><strong style={{ color: "#334155" }}>Email:</strong> {school.contact_email}</span>
-                )}
-                {school.website && (
-                  <span><strong style={{ color: "#334155" }}>Web:</strong> {school.website}</span>
-                )}
-                {(school.motto || school.subtitle) && (
-                  <span style={{ fontStyle: "italic", marginTop: "2px" }}>
-                    {school.motto || school.subtitle}
-                  </span>
-                )}
-              </div>
-            ) : null}
+                {[school.contact_phone, school.contact_email].filter(Boolean).join(" · ")}
+              </p>
+            )}
           </div>
         </div>
-        <div
-          style={{
-            background: "#1e40af",
-            color: "white",
-            fontSize: "13px",
-            fontWeight: 700,
-            letterSpacing: "0.08em",
-            textAlign: "center",
-            padding: "8px 16px",
-            textTransform: "uppercase",
-            marginTop: "14px",
-          }}
-        >
-          STUDENT ID CARD
-        </div>
-      </div>
 
-      {/* Main content row: photo + details (pushed down for real-ID spacing) */}
-      <div
-        style={{
-          display: "flex",
-          padding: "44px 36px 24px 36px",
-          gap: "36px",
-          alignItems: "flex-start",
-        }}
-      >
-        {/* Photo */}
+        {/* Two-column: photo left, student details right */}
         <div
           style={{
-            width: "200px",
-            height: "200px",
-            borderRadius: "12px",
-            overflow: "hidden",
-            flexShrink: 0,
-            border: "3px solid #e2e8f0",
-            background: "#f8fafc",
+            display: "grid",
+            gridTemplateColumns: "auto 1fr",
+            gap: "24px",
+            alignItems: "start",
+            marginBottom: "18px",
           }}
         >
-          {student.profile_picture_url ? (
-            <img
-              src={student.profile_picture_url}
-              alt={student.name}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          ) : (
+          {/* Passport-size photo (3:4 ratio) */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
             <div
               style={{
-                width: "100%",
-                height: "100%",
+                width: "140px",
+                height: "187px",
+                borderRadius: "6px",
+                border: `1px solid ${BORDER}`,
+                overflow: "hidden",
+                background: "#E5E7EB",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                background: "linear-gradient(145deg, #0f766e 0%, #14b8a6 100%)",
-                color: "white",
-                fontSize: "72px",
-                fontWeight: 700,
               }}
             >
-              {studentInitial}
+              {student.profile_picture_url ? (
+                <img
+                  src={student.profile_picture_url}
+                  alt={student.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                <span
+                  style={{
+                    fontFamily: FONT_FAMILY,
+                    fontSize: "48px",
+                    fontWeight: 600,
+                    color: "#9CA3AF",
+                  }}
+                >
+                  {studentInitial}
+                </span>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Details */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2
-            style={{
-              margin: "0 0 8px",
-              fontSize: "28px",
-              fontWeight: 700,
-              color: "#0f172a",
-              lineHeight: 1.2,
-            }}
-          >
-            {student.name || "—"}
-          </h2>
-          <p
-            style={{
-              margin: "0 0 20px",
-              fontSize: "14px",
-              color: "#64748b",
-              fontWeight: 500,
-            }}
-          >
-            Student
-          </p>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "20px 32px",
-              marginTop: "24px",
-            }}
-          >
-            <div>
-              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Card ID
-              </p>
-              <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace", letterSpacing: "0.02em" }}>
-                {cardId}
-              </p>
-            </div>
-            <div>
-              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Date of Birth
-              </p>
-              <p style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#0f172a" }}>
-                {dob}
-              </p>
-            </div>
-            <div>
-              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Valid Until
-              </p>
-              <p style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#0f172a" }}>
-                {expiry}
-              </p>
-            </div>
+            <span
+              style={{
+                fontFamily: FONT_FAMILY,
+                fontSize: "9px",
+                color: COLOR_LABEL,
+                fontWeight: 500,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
+              Student Photo
+            </span>
           </div>
 
-          {student.current_class && (
-            <div style={{ marginTop: "16px" }}>
-              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                Class
-              </p>
-              <p style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "#0f172a" }}>
-                {student.current_class}
-              </p>
+          {/* Student details – form-style aligned rows */}
+          <div style={{ minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontFamily: FONT_FAMILY,
+                  fontSize: "18px",
+                  fontWeight: 700,
+                  color: COLOR_TEXT,
+                  lineHeight: 1.2,
+                  letterSpacing: "0.01em",
+                }}
+              >
+                {student.name || "—"}
+              </h2>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontFamily: FONT_FAMILY,
+                  fontSize: "9px",
+                  fontWeight: 600,
+                  color: "#059669",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }} />
+                Active
+              </span>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Bottom bar: barcode only (school name + badge are in header above) */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: "100px",
-          borderTop: "1px solid #e2e8f0",
-          background: "#f8fafc",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "0 36px",
-        }}
-      >
+            <div style={{ marginTop: "8px" }}>
+              <DataRow label="ID Number" value={cardId} />
+              <DataRow label="Date of Birth" value={dob} />
+              {student.current_class && <DataRow label="Class" value={student.current_class} />}
+              <DataRow label="Valid Until" value={expiry} />
+            </div>
+          </div>
+        </div>
+
+        {/* Barcode area – framed, with caption and reduced width */}
         <div
           style={{
-            width: "380px",
-            textAlign: "center",
+            border: `1px solid ${BORDER}`,
+            borderRadius: "6px",
+            background: BG_WHITE,
+            padding: "12px 20px 10px",
+            maxWidth: "85%",
+            margin: "0 auto",
           }}
         >
+          <p
+            style={{
+              margin: "0 0 6px",
+              fontFamily: FONT_FAMILY,
+              fontSize: "9px",
+              color: COLOR_LABEL,
+              fontWeight: 600,
+              textTransform: "uppercase",
+              letterSpacing: "0.06em",
+              textAlign: "center",
+            }}
+          >
+            Scan for Verification
+          </p>
           <div
             ref={barcodeRef}
             style={{
-              minHeight: "52px",
+              minHeight: "40px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -345,15 +349,33 @@ export default function IDCard({ student, school }: IDCardProps) {
           <p
             style={{
               margin: "4px 0 0",
-              fontSize: "14px",
-              fontWeight: 700,
-              letterSpacing: "0.12em",
-              color: "#0f172a",
-              fontFamily: "monospace",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: "12px",
+              fontWeight: 600,
+              letterSpacing: "0.08em",
+              color: COLOR_TEXT,
+              textAlign: "center",
             }}
           >
             {cardId}
           </p>
+        </div>
+
+        {/* Footer: issue date, card version */}
+        <div
+          style={{
+            marginTop: "10px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            fontFamily: FONT_FAMILY,
+            fontSize: "9px",
+            color: COLOR_LABEL,
+            fontWeight: 400,
+          }}
+        >
+          <span>Issued: {issued}</span>
+          <span>Card v1.0</span>
         </div>
       </div>
     </div>
