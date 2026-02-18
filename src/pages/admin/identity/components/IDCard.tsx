@@ -93,9 +93,9 @@ export default function IDCard({ student, school }: IDCardProps) {
         >
           <div
             style={{
-              width: "78px",
-              height: "78px",
-              borderRadius: "12px",
+              width: "156px",
+              height: "156px",
+              borderRadius: "16px",
               border: "2px solid #e2e8f0",
               overflow: "hidden",
               background: "white",
