@@ -5,32 +5,40 @@ interface IDCardProps {
   school: any;
 }
 
+const CARD_WIDTH = 1011;
+const CARD_HEIGHT = 638;
+
 export default function IDCard({ student, school }: IDCardProps) {
   const barcodeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Generate barcode
     const generateBarcode = async () => {
       if (!barcodeRef.current) return;
+      const idValue = student.admission_number || student.student_id;
+      if (!idValue) return;
 
       try {
-        // Dynamic import to handle missing dependency gracefully
         // @ts-ignore - jsbarcode types may not be available
         const JsBarcode = (await import("jsbarcode")).default;
         const canvas = document.createElement("canvas");
-        JsBarcode(canvas, student.admission_number || student.student_id, {
+        JsBarcode(canvas, idValue, {
           format: "CODE128",
-          width: 2,
-          height: 60,
+          width: 1.8,
+          height: 50,
           displayValue: false,
+          margin: 8,
         });
         barcodeRef.current.innerHTML = "";
-        barcodeRef.current.appendChild(canvas);
+        const wrapper = document.createElement("div");
+        wrapper.style.textAlign = "center";
+        wrapper.style.width = "100%";
+        wrapper.style.minHeight = "60px";
+        wrapper.appendChild(canvas);
+        barcodeRef.current.appendChild(wrapper);
       } catch (error) {
         console.error("Error generating barcode:", error);
-        // Fallback: show text if barcode generation fails
         if (barcodeRef.current) {
-          barcodeRef.current.innerHTML = `<div style="text-align: center; padding: 10px; font-size: 14px; color: #666;">Barcode: ${student.admission_number || student.student_id}</div>`;
+          barcodeRef.current.innerHTML = `<div style="text-align: center; padding: 12px; font-size: 14px; color: #64748b; font-family: monospace;">${idValue}</div>`;
         }
       }
     };
@@ -38,216 +46,210 @@ export default function IDCard({ student, school }: IDCardProps) {
     generateBarcode();
   }, [student]);
 
-  // Calculate expiry date (1 year from now)
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
-  // Format dates
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  };
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
   const dob = student.date_of_birth
     ? formatDate(new Date(student.date_of_birth))
-    : "N/A";
+    : "—";
   const expiry = formatDate(expiryDate);
-
-  // Verification URL
-  const verificationUrl = `${window.location.origin}/verify/${student.student_id}`;
+  const cardId = student.admission_number || student.student_id;
+  const studentInitial = (student.name && student.name.charAt(0)) || "?";
 
   return (
     <div
       className="id-card-wrapper"
       style={{
-        width: "1011px",
-        height: "638px",
+        width: `${CARD_WIDTH}px`,
+        height: `${CARD_HEIGHT}px`,
         position: "relative",
-        fontFamily: "'Arial', sans-serif",
-        background: "white",
-        border: "1px solid #ddd",
+        fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+        background: "#ffffff",
+        borderRadius: "12px",
+        border: "1px solid #e2e8f0",
         overflow: "hidden",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Header Background */}
+      {/* Top strip – compact header */}
       <div
-        className="header-bg"
         style={{
-          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-          height: "40%",
+          height: "72px",
           width: "100%",
-          position: "absolute",
-          top: 0,
+          background: "linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 32px",
         }}
       >
-        <h1
+        <span
           style={{
-            color: "white",
-            float: "right",
-            margin: "40px 60px",
-            fontSize: "48px",
-            fontWeight: 900,
-            textShadow: "2px 2px 4px rgba(0,0,0,0.2)",
-          }}
-        >
-          STUDENT ID CARD
-        </h1>
-      </div>
-
-      {/* Student Photo */}
-      <div
-        className="student-photo"
-        style={{
-          position: "absolute",
-          top: "15%",
-          left: "5%",
-          width: "280px",
-          height: "280px",
-          borderRadius: "50%",
-          border: "15px solid #5D8EB4",
-          overflow: "hidden",
-          zIndex: 10,
-          background: "#f0f0f0",
-        }}
-      >
-        {student.profile_picture_url ? (
-          <img
-            src={student.profile_picture_url}
-            alt={student.name}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: "100%",
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              color: "white",
-              fontSize: "120px",
-              fontWeight: "bold",
-            }}
-          >
-            {student.name?.charAt(0) || "?"}
-          </div>
-        )}
-      </div>
-
-      {/* Card Body */}
-      <div
-        className="card-body"
-        style={{
-          position: "absolute",
-          top: "45%",
-          left: "40%",
-          width: "55%",
-        }}
-      >
-        <h2
-          className="school-name"
-          style={{
-            color: "#002147",
-            fontSize: "36px",
-            marginBottom: "30px",
-            fontWeight: "bold",
+            color: "rgba(255,255,255,0.9)",
+            fontSize: "13px",
+            fontWeight: 600,
+            letterSpacing: "0.05em",
           }}
         >
           {school.name || "School Name"}
-        </h2>
-
-        <div
-          className="student-name"
+        </span>
+        <span
           style={{
-            marginBottom: "30px",
+            color: "white",
+            fontSize: "18px",
+            fontWeight: 800,
+            letterSpacing: "0.08em",
           }}
         >
-          <p style={{ color: "#666", margin: 0, fontSize: "18px" }}>
-            Student Name:
-          </p>
-          <p
-            style={{
-              fontWeight: "bold",
-              fontSize: "28px",
-              margin: "5px 0",
-              color: "#002147",
-            }}
-          >
-            {student.name}
-          </p>
+          STUDENT ID CARD
+        </span>
+        <span style={{ width: "120px" }} />
+      </div>
+
+      {/* Main content row: photo + details */}
+      <div
+        style={{
+          display: "flex",
+          padding: "32px 36px 24px",
+          gap: "36px",
+          alignItems: "flex-start",
+        }}
+      >
+        {/* Photo */}
+        <div
+          style={{
+            width: "200px",
+            height: "200px",
+            borderRadius: "12px",
+            overflow: "hidden",
+            flexShrink: 0,
+            border: "3px solid #e2e8f0",
+            background: "#f8fafc",
+          }}
+        >
+          {student.profile_picture_url ? (
+            <img
+              src={student.profile_picture_url}
+              alt={student.name}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "linear-gradient(145deg, #0f766e 0%, #14b8a6 100%)",
+                color: "white",
+                fontSize: "72px",
+                fontWeight: 700,
+              }}
+            >
+              {studentInitial}
+            </div>
+          )}
         </div>
 
-        <div
-          className="info-grid"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            width: "90%",
-          }}
-        >
-          <div>
-            <p style={{ color: "#666", margin: 0, fontSize: "14px" }}>
-              Card ID:
-            </p>
-            <p style={{ fontWeight: "bold", fontSize: "20px", margin: "5px 0" }}>
-              {student.admission_number || student.student_id.slice(0, 8)}
-            </p>
+        {/* Details */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h2
+            style={{
+              margin: "0 0 8px",
+              fontSize: "28px",
+              fontWeight: 700,
+              color: "#0f172a",
+              lineHeight: 1.2,
+            }}
+          >
+            {student.name || "—"}
+          </h2>
+          <p
+            style={{
+              margin: "0 0 20px",
+              fontSize: "14px",
+              color: "#64748b",
+              fontWeight: 500,
+            }}
+          >
+            Student
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "20px 32px",
+              marginTop: "24px",
+            }}
+          >
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Card ID
+              </p>
+              <p style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "#0f172a", fontFamily: "monospace", letterSpacing: "0.02em" }}>
+                {cardId}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Date of Birth
+              </p>
+              <p style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#0f172a" }}>
+                {dob}
+              </p>
+            </div>
+            <div>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Valid Until
+              </p>
+              <p style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#0f172a" }}>
+                {expiry}
+              </p>
+            </div>
           </div>
-          <div>
-            <p style={{ color: "#666", margin: 0, fontSize: "14px" }}>
-              Date of Birth:
-            </p>
-            <p style={{ fontWeight: "bold", fontSize: "20px", margin: "5px 0" }}>
-              {dob}
-            </p>
-          </div>
-          <div>
-            <p style={{ color: "#666", margin: 0, fontSize: "14px" }}>
-              Expiry Date:
-            </p>
-            <p style={{ fontWeight: "bold", fontSize: "20px", margin: "5px 0" }}>
-              {expiry}
-            </p>
-          </div>
+
+          {student.current_class && (
+            <div style={{ marginTop: "16px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: "11px", color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                Class
+              </p>
+              <p style={{ margin: 0, fontSize: "16px", fontWeight: 600, color: "#0f172a" }}>
+                {student.current_class}
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Bottom bar: logo + barcode */}
       <div
-        className="footer"
         style={{
           position: "absolute",
-          bottom: "5%",
-          width: "100%",
-          padding: "0 5%",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: "120px",
+          borderTop: "1px solid #e2e8f0",
+          background: "#f8fafc",
           display: "flex",
-          justifyContent: "space-between",
           alignItems: "center",
+          justifyContent: "space-between",
+          padding: "0 36px",
         }}
       >
-        {/* School Logo */}
-        <div
-          className="school-logo"
-          style={{
-            display: "flex",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <div
             style={{
-              width: "80px",
-              height: "80px",
-              border: "4px solid #5D8EB4",
-              borderRadius: "50%",
-              padding: "5px",
+              width: "56px",
+              height: "56px",
+              borderRadius: "8px",
+              border: "2px solid #e2e8f0",
+              overflow: "hidden",
               background: "white",
               display: "flex",
               alignItems: "center",
@@ -257,7 +259,7 @@ export default function IDCard({ student, school }: IDCardProps) {
             {school.logo_url ? (
               <img
                 src={school.logo_url}
-                alt="School Logo"
+                alt=""
                 style={{ width: "100%", height: "100%", objectFit: "contain" }}
               />
             ) : (
@@ -265,41 +267,42 @@ export default function IDCard({ student, school }: IDCardProps) {
                 style={{
                   width: "100%",
                   height: "100%",
-                  background: "#5D8EB4",
-                  borderRadius: "50%",
+                  background: "linear-gradient(145deg, #0f766e, #14b8a6)",
                 }}
               />
             )}
           </div>
-          <span
-            style={{
-              fontSize: "28px",
-              fontWeight: "bold",
-              marginLeft: "15px",
-              color: "#333",
-            }}
-          >
+          <span style={{ fontSize: "16px", fontWeight: 700, color: "#334155" }}>
             {school.name || "PwezaCore"}
           </span>
         </div>
 
-        {/* Barcode Area */}
         <div
-          className="barcode-area"
           style={{
+            width: "380px",
             textAlign: "center",
           }}
         >
-          <div ref={barcodeRef} id="barcode-generator" />
+          <div
+            ref={barcodeRef}
+            style={{
+              minHeight: "52px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          />
           <p
             style={{
-              fontSize: "16px",
-              letterSpacing: "3px",
-              marginTop: "5px",
-              fontWeight: "600",
+              margin: "4px 0 0",
+              fontSize: "14px",
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              color: "#0f172a",
+              fontFamily: "monospace",
             }}
           >
-            {student.admission_number || student.student_id.slice(0, 8)}
+            {cardId}
           </p>
         </div>
       </div>

@@ -90,8 +90,8 @@ export default function StudentIDCardPage() {
   if (loading) {
     return (
       <AdminPageWrapper title="Loading...">
-        <div className="text-center py-12 text-white/70">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <div className="text-center py-12 text-gray-500">
+          <div className="w-12 h-12 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mx-auto mb-4" />
           <p>Loading ID card...</p>
         </div>
       </AdminPageWrapper>
@@ -101,11 +101,11 @@ export default function StudentIDCardPage() {
   if (!student || !school) {
     return (
       <AdminPageWrapper title="Not Found">
-        <div className="text-center py-12">
-          <p className="text-white/70 mb-4">Student not found</p>
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-8 text-center">
+          <p className="text-gray-600 mb-4">Student not found</p>
           <button
             onClick={() => navigate("/dashboard/admin/identity")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 font-medium transition-colors"
           >
             Back to Identity
           </button>
@@ -121,25 +121,25 @@ export default function StudentIDCardPage() {
         <AdminPageWrapper title={`ID Card - ${student.name}`}>
           <div className="space-y-6">
             {/* Actions */}
-            <div className="flex items-center justify-between">
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 onClick={() => navigate("/dashboard/admin/identity")}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/10 hover:bg-white/20 text-white transition-colors"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium transition-colors"
               >
                 <ArrowLeft className="w-4 h-4" />
-                Back
+                Back to list
               </button>
               <div className="flex gap-2">
                 <button
                   onClick={handleDownloadPNG}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/10 border border-white/10 hover:bg-white/20 text-white transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 font-medium transition-colors"
                 >
                   <Download className="w-4 h-4" />
                   Download PNG
                 </button>
                 <button
                   onClick={handlePrint}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-500 font-medium transition-colors"
                 >
                   <Printer className="w-4 h-4" />
                   Print
