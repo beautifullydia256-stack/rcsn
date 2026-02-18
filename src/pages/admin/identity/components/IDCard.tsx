@@ -1,5 +1,3 @@
-import { useEffect, useRef } from "react";
-
 interface IDCardProps {
   student: any;
   school: any;
@@ -10,47 +8,6 @@ interface IDCardProps {
  * Locked system style per spec; optimized for print and PDF.
  */
 export default function IDCard({ student, school }: IDCardProps) {
-  const barcodeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const generateBarcode = async () => {
-      if (!barcodeRef.current) return;
-      const idValue = student.admission_number || student.student_id;
-      if (!idValue) return;
-
-      try {
-        // @ts-ignore
-        const JsBarcode = (await import("jsbarcode")).default;
-        const canvas = document.createElement("canvas");
-        JsBarcode(canvas, idValue, {
-          format: "CODE128",
-          width: 1.2,
-          height: 28,
-          displayValue: false,
-          margin: 2,
-        });
-        barcodeRef.current.innerHTML = "";
-        const wrapper = document.createElement("div");
-        wrapper.className = "barcode-inner";
-        wrapper.style.textAlign = "center";
-        wrapper.style.width = "100%";
-        wrapper.style.height = "10mm";
-        wrapper.style.display = "flex";
-        wrapper.style.alignItems = "center";
-        wrapper.style.justifyContent = "center";
-        wrapper.appendChild(canvas);
-        barcodeRef.current.appendChild(wrapper);
-      } catch (error) {
-        console.error("Error generating barcode:", error);
-        if (barcodeRef.current) {
-          barcodeRef.current.innerHTML = `<div class="barcode-fallback">${idValue}</div>`;
-        }
-      }
-    };
-
-    generateBarcode();
-  }, [student]);
-
   const expiryDate = new Date();
   expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
@@ -99,18 +56,6 @@ export default function IDCard({ student, school }: IDCardProps) {
           font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
-        }
-        .id-card-watermark {
-          position: absolute;
-          font-size: 22pt;
-          font-weight: 600;
-          color: rgba(47,93,168,0.05);
-          transform: rotate(-20deg);
-          top: 40%;
-          left: 5%;
-          pointer-events: none;
-          white-space: nowrap;
-          font-family: inherit;
         }
         .id-card .header {
           display: flex;
@@ -207,26 +152,6 @@ export default function IDCard({ student, school }: IDCardProps) {
           overflow: hidden;
           text-overflow: ellipsis;
         }
-        .id-card .footer {
-          border-top: 0.4mm solid #E5E7EB;
-          padding-top: 2mm;
-          text-align: center;
-        }
-        .id-card .footer .barcode {
-          height: 10mm;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .id-card .barcode-inner canvas { max-height: 10mm; width: auto !important; }
-        .id-card .barcode-fallback { font-size: 6pt; color: #6B7280; font-family: monospace; }
-        .id-card .barcode-text {
-          font-size: 7pt;
-          letter-spacing: 2px;
-          color: #374151;
-          margin-top: 0.5mm;
-          font-weight: 500;
-        }
       `}</style>
 
       {/* Screen: scale up for preview. Print: actual CR80 size via @page */}
@@ -240,10 +165,6 @@ export default function IDCard({ student, school }: IDCardProps) {
         }}
       >
         <div className="id-card">
-          <div className="id-card-watermark" aria-hidden>
-            {schoolName}
-          </div>
-
           <div className="header">
             {school.logo_url ? (
               <img src={school.logo_url} alt="" className="logo" />
@@ -290,11 +211,6 @@ export default function IDCard({ student, school }: IDCardProps) {
                 <span>{validUntil}</span>
               </div>
             </div>
-          </div>
-
-          <div className="footer">
-            <div ref={barcodeRef} className="barcode" />
-            <div className="barcode-text">{cardId}</div>
           </div>
         </div>
       </div>
