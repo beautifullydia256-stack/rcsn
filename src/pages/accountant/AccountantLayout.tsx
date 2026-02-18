@@ -34,7 +34,7 @@ function NavLinkStyle({
       {({ isActive }) => (
         <span
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            isActive ? "bg-green-600 text-white" : "text-gray-700 hover:bg-gray-100"
+            isActive ? "bg-emerald-600 text-white" : "text-slate-700 hover:bg-slate-100"
           }`}
         >
           <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
@@ -107,16 +107,16 @@ export default function AccountantLayout() {
   }, [navigate, setUser, setRole, setSchoolId]);
 
   return (
-    <div className="fixed inset-0 flex bg-[#f1f5f9] overflow-hidden">
-      <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
-        <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
-          <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
-            <CreditCard className="w-5 h-5 text-white" />
+    <div className="fixed inset-0 flex bg-slate-50 overflow-hidden">
+      <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-6 border-b border-slate-200">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
+            <CreditCard className="h-5 w-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-gray-900">PwezaCore</span>
+          <span className="font-bold text-lg text-slate-900">PwezaCore</span>
         </div>
         <div className="px-4 pt-2 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">MENU</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Menu</span>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard}>
@@ -145,8 +145,8 @@ export default function AccountantLayout() {
           </NavLinkStyle>
         </nav>
       </aside>
-      <main className="flex-1 flex flex-col overflow-hidden bg-[#f1f5f9]">
-        <header className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        <header className="flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-sm px-6 py-4">
           <div className="flex items-center justify-end gap-4">
             <div ref={searchRef} className="relative flex-1 max-w-md">
               <input
@@ -155,26 +155,26 @@ export default function AccountantLayout() {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-                className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               {searchOpen && searchResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden max-h-64 overflow-y-auto">
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
                   {searchResults.map((st) => (
-                    <div key={st.student_id} className="border-b border-gray-50 last:border-0">
-                      <div className="px-3 py-2 text-sm font-medium text-gray-900">{st.name} ({st.current_class})</div>
+                    <div key={st.student_id} className="border-b border-slate-50 last:border-0">
+                      <div className="px-3 py-2 text-sm font-medium text-slate-900">{st.name} ({st.current_class})</div>
                       <div className="flex gap-2 px-3 pb-2">
                         <button
                           type="button"
                           onClick={() => { navigate("/dashboard/accountant/payments"); setSearchOpen(false); setSearchQ(""); }}
-                          className="text-xs font-medium text-teal-600 hover:text-teal-700"
+                          className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                         >
                           Record payment
                         </button>
                         <button
                           type="button"
                           onClick={() => { navigate("/dashboard/accountant/outstanding"); setSearchOpen(false); setSearchQ(""); }}
-                          className="text-xs font-medium text-gray-600 hover:text-gray-700"
+                          className="text-xs font-medium text-slate-600 hover:text-slate-700"
                         >
                           View balance
                         </button>
@@ -186,36 +186,36 @@ export default function AccountantLayout() {
             </div>
             <button
               type="button"
-              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <MessageCircle className="w-5 h-5" />
+              <MessageCircle className="h-5 w-5" />
             </button>
             <button
               type="button"
-              className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors relative"
+              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
             >
-              <Bell className="w-5 h-5" />
+              <Bell className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 pl-2">
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm font-medium text-slate-800">
                 {user?.user_metadata?.name ?? user?.email ?? "Accountant"}
               </span>
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600 flex-shrink-0" />
+              <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
             </div>
           </div>
         </header>
         <div className="flex-1 overflow-y-auto min-h-0">
           <Outlet />
         </div>
-        <footer className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between text-sm text-gray-500">
+        <footer className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4">
+          <div className="flex items-center justify-between text-sm text-slate-500">
             <span>Copyright © 2025 PwezaCore</span>
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-gray-700">Privacy Policy</a>
-              <a href="#" className="hover:text-gray-700">Terms and conditions</a>
-              <a href="#" className="hover:text-gray-700">Contact</a>
+              <a href="#" className="hover:text-slate-700">Privacy Policy</a>
+              <a href="#" className="hover:text-slate-700">Terms and conditions</a>
+              <a href="#" className="hover:text-slate-700">Contact</a>
             </div>
-            <div className="flex items-center gap-3 text-gray-400">
+            <div className="flex items-center gap-3 text-slate-400">
               <span className="font-bold">f</span>
               <span>𝕏</span>
               <span className="font-bold">in</span>

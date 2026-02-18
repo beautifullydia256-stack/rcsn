@@ -25,39 +25,39 @@ export default function BillingPage() {
   }, [schoolId]);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Invoices & Billing</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Invoices & Billing</h1>
+        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
           Back to Dashboard
         </button>
       </div>
 
-      <div className="mb-6 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-sm font-semibold text-gray-700">Fee structure (per class)</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Managed in Admin → Settings → Financial. Used for expected fees and billing.</p>
+      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-800">Fee structure (per class)</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Managed in Admin → Settings → Financial. Used for expected fees and billing.</p>
         </div>
         {loading ? (
-          <div className="p-6 text-gray-500">Loading…</div>
+          <div className="p-6 text-slate-500">Loading…</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 font-medium border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
                   <th className="px-4 py-3">Class</th>
                   <th className="px-4 py-3">Tuition amount</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-700">
+              <tbody className="text-slate-700">
                 {fees.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center text-gray-400">No fee structure. Add in Admin settings.</td>
+                    <td colSpan={2} className="px-4 py-6 text-center text-slate-400">No fee structure. Add in Admin settings.</td>
                   </tr>
                 ) : (
                   fees.map((r) => (
-                    <tr key={r.id} className="border-b border-gray-50">
-                      <td className="px-4 py-3 font-medium">{r.class_name}</td>
+                    <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-900">{r.class_name}</td>
                       <td className="px-4 py-3">{Number(r.tuition_amount).toLocaleString()}</td>
                     </tr>
                   ))
@@ -68,7 +68,7 @@ export default function BillingPage() {
         )}
       </div>
 
-      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-800 text-sm">
+      <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-800">
         <strong>Coming next:</strong> Generate student invoices, bulk billing by class, extra charges (uniform, transport, meals), discounts/waivers, and student ledger. Use Payments to record fees until then.
       </div>
     </div>

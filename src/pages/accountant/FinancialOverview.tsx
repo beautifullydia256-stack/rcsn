@@ -1,11 +1,23 @@
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
-import { Wallet, CreditCard, FileText, TrendingUp } from "lucide-react";
+import {
+  Wallet,
+  CreditCard,
+  FileText,
+  TrendingUp,
+  ArrowUpRight,
+  ArrowDownRight,
+  Receipt,
+  Users,
+  Banknote,
+  Smartphone,
+} from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
-const fmt = (n: number) => (n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 }));
+const fmt = (n: number) =>
+  n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 interface OverviewData {
   termId: string | null;
@@ -26,7 +38,14 @@ interface OverviewData {
   fullyPaidCount: number;
   partiallyPaidCount: number;
   notPaidCount: number;
-  recentPayments: { student_name: string; class: string; receipt_number: string | null; payment_date: string; amount_paid: number; payment_method: string }[];
+  recentPayments: {
+    student_name: string;
+    class: string;
+    receipt_number: string | null;
+    payment_date: string;
+    amount_paid: number;
+    payment_method: string;
+  }[];
 }
 
 async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
@@ -57,13 +76,7 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   const termStart = (currentTerm as { start_date?: string })?.start_date ?? "1900-01-01";
   const termEnd = (currentTerm as { end_date: string })?.end_date ?? "2100-12-31";
 
-  const [
-    balancesRes,
-    paymentsRes,
-    expensesRes,
-    discountsRes,
-    recentPaymentsRes,
-  ] = await Promise.all([
+  const [balancesRes, paymentsRes, expensesRes, discountsRes, recentPaymentsRes] = await Promise.all([
     termId
       ? supabase
           .from("student_balances")
@@ -71,10 +84,7 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
           .eq("school_id", schoolId)
           .eq("term_id", termId)
       : { data: [] as { total_fees: number; total_paid: number; balance: number }[] },
-    supabase
-      .from("student_payments")
-      .select("amount_paid, payment_date, payment_method")
-      .eq("school_id", schoolId),
+    supabase.from("student_payments").select("amount_paid, payment_date, payment_method").eq("school_id", schoolId),
     termId
       ? supabase
           .from("school_expenses")
@@ -110,9 +120,7 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   const totalFeesCollected = balances.reduce((s: number, b: Bal) => s + Number(b.total_paid || 0), 0);
   const outstandingBalances = balances.reduce((s: number, b: Bal) => s + Math.max(0, Number(b.balance ?? 0)), 0);
 
-  const paymentsInTerm = payments.filter(
-    (p: Pay) => p.payment_date >= termStart && p.payment_date <= termEnd
-  );
+  const paymentsInTerm = payments.filter((p: Pay) => p.payment_date >= termStart && p.payment_date <= termEnd);
   const todayCollections = payments
     .filter((p: Pay) => p.payment_date === today)
     .reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);
@@ -142,7 +150,7 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   let fullyPaidCount = 0,
     partiallyPaidCount = 0,
     notPaidCount = 0;
-  balances.forEach((b: { total_fees: number; total_paid: number; balance: number }) => {
+  balances.forEach((b: Bal) => {
     const tf = Number(b.total_fees || 0);
     const bal = Number(b.balance ?? 0);
     if (tf <= 0) return;
@@ -163,17 +171,25 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
     ])
   );
 
-  const recentPayments = recentPaymentsRows.map((r: { student_id: string; amount_paid: number; payment_date: string; payment_method: string; receipt_number: string | null }) => {
-    const st = studentMap.get(r.student_id);
-    return {
-      student_name: st?.name ?? "—",
-      class: st?.current_class ?? "—",
-      receipt_number: r.receipt_number ?? null,
-      payment_date: r.payment_date,
-      amount_paid: Number(r.amount_paid || 0),
-      payment_method: r.payment_method ?? "—",
-    };
-  });
+  const recentPayments = recentPaymentsRows.map(
+    (r: {
+      student_id: string;
+      amount_paid: number;
+      payment_date: string;
+      payment_method: string;
+      receipt_number: string | null;
+    }) => {
+      const st = studentMap.get(r.student_id);
+      return {
+        student_name: st?.name ?? "—",
+        class: st?.current_class ?? "—",
+        receipt_number: r.receipt_number ?? null,
+        payment_date: r.payment_date,
+        amount_paid: Number(r.amount_paid || 0),
+        payment_method: r.payment_method ?? "—",
+      };
+    }
+  );
 
   return {
     termId,
@@ -202,25 +218,31 @@ function KPICard({
   icon: Icon,
   label,
   value,
-  trend,
-  positive,
+  subline,
+  accent = "emerald",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  trend: string;
-  positive: boolean;
+  subline: string;
+  accent?: "emerald" | "amber" | "red" | "slate";
 }) {
+  const accentClasses = {
+    emerald: "bg-emerald-500/10 text-emerald-600",
+    amber: "bg-amber-500/10 text-amber-600",
+    red: "bg-red-500/10 text-red-600",
+    slate: "bg-slate-500/10 text-slate-600",
+  };
   return (
-    <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-      <div className="flex items-center gap-2 mb-3">
-        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-teal-600">
-          <Icon className="w-5 h-5" />
+    <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+      <div className="flex items-start justify-between">
+        <div className={`rounded-lg p-2.5 ${accentClasses[accent]}`}>
+          <Icon className="h-5 w-5" />
         </div>
-        <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
-      <span className="text-xs text-gray-500">{trend}</span>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className="mt-0.5 text-sm font-medium text-slate-600">{label}</p>
+      <p className="mt-1 text-xs text-slate-400">{subline}</p>
     </div>
   );
 }
@@ -238,7 +260,7 @@ export default function FinancialOverview() {
 
   if (!schoolId) {
     return (
-      <div className="p-6 text-gray-500">
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
         Loading your school…
       </div>
     );
@@ -246,227 +268,286 @@ export default function FinancialOverview() {
 
   if (isLoading || !data) {
     return (
-      <div className="p-6">
-        <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 border border-gray-200 h-28 animate-pulse" />
+            <div key={i} className="h-32 rounded-xl border border-slate-200 bg-white animate-pulse" />
           ))}
         </div>
-        <div className="text-gray-500">Loading financial overview…</div>
+        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overview…</div>
       </div>
     );
   }
 
   const collectionRate =
-    data.totalFeesExpected > 0
-      ? Math.round((data.totalFeesCollected / data.totalFeesExpected) * 100)
-      : 0;
+    data.totalFeesExpected > 0 ? Math.round((data.totalFeesCollected / data.totalFeesExpected) * 100) : 0;
+  const maxMethod = Math.max(
+    data.cashTotal,
+    data.bankTotal,
+    data.mobileTotal,
+    data.otherTotal,
+    1
+  );
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Financial Overview</h1>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/accountant/payments")}
-            className="rounded-xl border border-teal-600 bg-white px-4 py-2 text-sm font-medium text-teal-600 hover:bg-teal-50"
-          >
-            Record payment
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/accountant/outstanding")}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            View outstanding
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/accountant/expenses")}
-            className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Record expense
-          </button>
-        </div>
-      </div>
-
-      <p className="text-sm text-gray-500 mb-4">{data.termLabel}</p>
-
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <KPICard
-          icon={Wallet}
-          label="Total Fees Expected"
-          value={fmt(data.totalFeesExpected)}
-          trend="This term"
-          positive
-        />
-        <KPICard
-          icon={CreditCard}
-          label="Total Fees Collected"
-          value={fmt(data.totalFeesCollected)}
-          trend="This term"
-          positive
-        />
-        <KPICard
-          icon={FileText}
-          label="Outstanding Balances"
-          value={fmt(data.outstandingBalances)}
-          trend="Students with balance due"
-          positive={false}
-        />
-        <KPICard
-          icon={TrendingUp}
-          label="Today's Collections"
-          value={fmt(data.todayCollections)}
-          trend="Payments received today"
-          positive
-        />
-      </div>
-
-      <div className="grid grid-cols-12 gap-6 mb-6">
-        <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Fee Collections</h3>
-          <p className="text-2xl font-bold text-gray-900 mb-2">{data.termLabel}</p>
-          <div className="flex gap-4 mb-4">
-            <span className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="w-3 h-3 rounded-full bg-teal-600" /> Collected: {fmt(data.totalFeesCollected)}
-            </span>
-            <span className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="w-3 h-3 rounded-full bg-gray-400" /> Expected: {fmt(data.totalFeesExpected)}
-            </span>
-          </div>
-          <p className="text-sm text-gray-500">
-            This week: {fmt(data.weekCollections)} · This month: {fmt(data.monthCollections)}
-          </p>
-        </div>
-
-        <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-900 mb-3">Expense Breakdown</h3>
-          <p className="text-lg font-bold text-gray-900 mb-4">{fmt(data.totalExpensesThisTerm)}</p>
-          <p className="text-xs text-gray-500">This term (approved/paid)</p>
-        </div>
-
-        <div className="col-span-3 space-y-4">
-          <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Collection Rate</h3>
-            <p className="text-xl font-bold text-gray-900">{collectionRate}%</p>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full rounded-full bg-teal-500 transition-all"
-                style={{ width: `${Math.min(100, collectionRate)}%` }}
-              />
+    <div className="min-h-full bg-slate-50/60">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Page header */}
+        <div className="mb-8">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
+              <p className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                  {data.termLabel}
+                </span>
+              </p>
             </div>
-          </div>
-          <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-            <h3 className="text-base font-semibold text-gray-900 mb-3">Collections by Method</h3>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Cash</span>
-                <span className="font-medium">{fmt(data.cashTotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Bank / Card</span>
-                <span className="font-medium">{fmt(data.bankTotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Mobile Money</span>
-                <span className="font-medium">{fmt(data.mobileTotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Other</span>
-                <span className="font-medium">{fmt(data.otherTotal)}</span>
-              </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/accountant/payments")}
+                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+              >
+                <Receipt className="h-4 w-4" />
+                Record payment
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/accountant/outstanding")}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                View outstanding
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard/accountant/expenses")}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                Record expense
+              </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-12 gap-6 mb-6">
-        <div className="col-span-4 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-900 mb-2">Scholarships / Discounts</h3>
-          <p className="text-2xl font-bold text-gray-900">{fmt(data.scholarshipsDiscounts)}</p>
-        </div>
-        <div className="col-span-4 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-900 mb-2">Net Position</h3>
-          <p className={`text-2xl font-bold ${data.netPosition >= 0 ? "text-teal-600" : "text-red-600"}`}>
-            {data.netPosition >= 0 ? "Surplus " : "Deficit "}
-            {fmt(Math.abs(data.netPosition))}
-          </p>
-        </div>
-        <div className="col-span-4 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-          <h3 className="text-base font-semibold text-gray-900 mb-2">Payment Status</h3>
-          <div className="flex gap-4 text-sm">
-            <span className="text-teal-600 font-medium">Fully paid: {data.fullyPaidCount}</span>
-            <span className="text-amber-600 font-medium">Partial: {data.partiallyPaidCount}</span>
-            <span className="text-red-600 font-medium">Not paid: {data.notPaidCount}</span>
+        {/* KPI row */}
+        <section className="mb-8">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Key figures</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <KPICard
+              icon={Wallet}
+              label="Total fees expected"
+              value={fmt(data.totalFeesExpected)}
+              subline="This term"
+              accent="slate"
+            />
+            <KPICard
+              icon={CreditCard}
+              label="Total fees collected"
+              value={fmt(data.totalFeesCollected)}
+              subline="This term"
+              accent="emerald"
+            />
+            <KPICard
+              icon={FileText}
+              label="Outstanding balances"
+              value={fmt(data.outstandingBalances)}
+              subline="Balance due"
+              accent="red"
+            />
+            <KPICard
+              icon={TrendingUp}
+              label="Today's collections"
+              value={fmt(data.todayCollections)}
+              subline="Payments today"
+              accent="emerald"
+            />
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Fee Payments</h3>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/accountant/payments")}
-              className="text-sm font-medium text-teal-600 hover:text-teal-700"
-            >
-              View all
-            </button>
+        {/* Summary row: Collections + Rate + Methods */}
+        <section className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-slate-900">Fee collections</h3>
+              <p className="mt-1 text-sm text-slate-500">Collected vs expected this term</p>
+              <div className="mt-4 flex flex-wrap gap-6">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-semibold text-slate-900">{fmt(data.totalFeesCollected)}</span>
+                  <span className="text-sm text-slate-500">collected</span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-xl font-medium text-slate-400">{fmt(data.totalFeesExpected)}</span>
+                  <span className="text-sm text-slate-500">expected</span>
+                </div>
+              </div>
+              <div className="mt-4 space-y-1 text-sm text-slate-500">
+                <p>This week: <span className="font-medium text-slate-700">{fmt(data.weekCollections)}</span></p>
+                <p>This month: <span className="font-medium text-slate-700">{fmt(data.monthCollections)}</span></p>
+              </div>
+            </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
-                  <th className="pb-3 pr-4">Student / Class</th>
-                  <th className="pb-3 pr-4">Receipt No</th>
-                  <th className="pb-3 pr-4">Date</th>
-                  <th className="pb-3 text-right">Amount</th>
-                  <th className="pb-3 pl-2">Method</th>
-                </tr>
-              </thead>
-              <tbody className="text-gray-700">
-                {data.recentPayments.length === 0 ? (
-                  <tr>
-                    <td className="py-6 text-gray-400 text-center" colSpan={5}>
-                      No payments recorded yet.
-                    </td>
-                  </tr>
-                ) : (
-                  data.recentPayments.map((row, i) => (
-                    <tr key={i} className="border-b border-gray-50">
-                      <td className="py-3 pr-4 font-medium">{row.student_name} / {row.class}</td>
-                      <td className="py-3 pr-4">{row.receipt_number ?? "—"}</td>
-                      <td className="py-3 pr-4">{row.payment_date}</td>
-                      <td className="py-3 text-right font-semibold text-teal-600">{fmt(row.amount_paid)}</td>
-                      <td className="py-3 pl-2">{row.payment_method}</td>
+          <div className="lg:col-span-5 space-y-6">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-slate-900">Collection rate</h3>
+              <div className="mt-3 flex items-end gap-3">
+                <span className="text-3xl font-bold text-slate-900">{collectionRate}%</span>
+                <div className="flex-1 rounded-full bg-slate-100 p-1">
+                  <div
+                    className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${Math.min(100, collectionRate)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-slate-900">By payment method</h3>
+              <div className="mt-4 space-y-3">
+                {[
+                  { label: "Cash", value: data.cashTotal, icon: Banknote },
+                  { label: "Bank / Card", value: data.bankTotal, icon: CreditCard },
+                  { label: "Mobile money", value: data.mobileTotal, icon: Smartphone },
+                  { label: "Other", value: data.otherTotal, icon: Receipt },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <Icon className="h-4 w-4 text-slate-400" />
+                    <div className="flex-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">{label}</span>
+                        <span className="font-medium text-slate-900">{fmt(value)}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full rounded-full bg-slate-100">
+                        <div
+                          className="h-full rounded-full bg-emerald-500/70"
+                          style={{ width: `${(value / maxMethod) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Secondary stats: Expenses, Net, Discounts, Payment status */}
+        <section className="mb-8">
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Summary</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Expenses (term)</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900">{fmt(data.totalExpensesThisTerm)}</p>
+              <p className="mt-0.5 text-xs text-slate-500">Approved / paid</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Net position</p>
+              <p className={`mt-1 flex items-center gap-1 text-xl font-semibold ${data.netPosition >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {data.netPosition >= 0 ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownRight className="h-5 w-5" />}
+                {data.netPosition >= 0 ? "Surplus" : "Deficit"} {fmt(Math.abs(data.netPosition))}
+              </p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Scholarships / discounts</p>
+              <p className="mt-1 text-xl font-semibold text-slate-900">{fmt(data.scholarshipsDiscounts)}</p>
+            </div>
+            <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+              <p className="text-xs font-medium uppercase tracking-wider text-slate-400">Payment status</p>
+              <div className="mt-3 flex flex-wrap gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                  <Users className="h-3.5 w-3" /> {data.fullyPaidCount} fully paid
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700">
+                  {data.partiallyPaidCount} partial
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-medium text-red-700">
+                  {data.notPaidCount} not paid
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Recent payments + Payment status breakdown */}
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="lg:col-span-8">
+            <div className="rounded-xl border border-slate-200/80 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+                <h3 className="text-base font-semibold text-slate-900">Recent fee payments</h3>
+                <button
+                  type="button"
+                  onClick={() => navigate("/dashboard/accountant/payments")}
+                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                >
+                  View all →
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/50">
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Student / Class
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Receipt
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Date
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                        Method
+                      </th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {data.recentPayments.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                          No payments recorded yet.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.recentPayments.map((row, i) => (
+                        <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-slate-900">
+                            {row.student_name} <span className="text-slate-400">/ {row.class}</span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-600">{row.receipt_number ?? "—"}</td>
+                          <td className="px-6 py-4 text-slate-600">{row.payment_date}</td>
+                          <td className="px-6 py-4 text-right font-semibold text-emerald-600">{fmt(row.amount_paid)}</td>
+                          <td className="px-6 py-4 text-slate-600">{row.payment_method}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Payment Status (This Term)</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-xl bg-teal-50 border border-teal-100">
-              <span className="text-sm font-medium text-gray-900">Fully paid</span>
-              <span className="text-lg font-bold text-teal-700">{data.fullyPaidCount}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-100">
-              <span className="text-sm font-medium text-gray-900">Partially paid</span>
-              <span className="text-lg font-bold text-amber-700">{data.partiallyPaidCount}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-xl bg-red-50 border border-red-100">
-              <span className="text-sm font-medium text-gray-900">Not paid</span>
-              <span className="text-lg font-bold text-red-700">{data.notPaidCount}</span>
+          <div className="lg:col-span-4">
+            <div className="rounded-xl border border-slate-200/80 bg-white p-6 shadow-sm">
+              <h3 className="text-base font-semibold text-slate-900">Payment status (this term)</h3>
+              <p className="mt-1 text-sm text-slate-500">Students by fee status</p>
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">Fully paid</span>
+                  <span className="text-lg font-bold text-emerald-700">{data.fullyPaidCount}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-amber-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">Partially paid</span>
+                  <span className="text-lg font-bold text-amber-700">{data.partiallyPaidCount}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-red-50 px-4 py-3">
+                  <span className="text-sm font-medium text-slate-700">Not paid</span>
+                  <span className="text-lg font-bold text-red-700">{data.notPaidCount}</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

@@ -62,57 +62,57 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Financial Reports</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Financial Reports</h1>
+        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">
           Back to Dashboard
         </button>
       </div>
 
-      <div className="mb-4 flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700">Report type</label>
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <label className="text-sm font-medium text-slate-700">Report type</label>
         <select
           value={reportType}
           onChange={(e) => setReportType(e.target.value as "fee_collection" | "outstanding")}
-          className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
         >
           <option value="fee_collection">Fee collection by class</option>
           <option value="outstanding">Outstanding (use Outstanding page for list)</option>
         </select>
         {reportType === "fee_collection" && (
-          <button type="button" onClick={exportCsv} className="rounded-xl bg-green-600 text-white px-4 py-2 text-sm font-medium hover:bg-green-700">
+          <button type="button" onClick={exportCsv} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700">
             Export CSV
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {loading ? (
-          <div className="p-8 text-gray-500">Loading report…</div>
+          <div className="p-8 text-slate-500">Loading report…</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 font-medium border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
                   <th className="px-4 py-3">Class</th>
                   <th className="px-4 py-3">Expected</th>
                   <th className="px-4 py-3">Collected</th>
                   <th className="px-4 py-3">Outstanding</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-700">
+              <tbody className="text-slate-700">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-gray-400">No data for current term.</td>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400">No data for current term.</td>
                   </tr>
                 ) : (
                   rows.map((r) => (
-                    <tr key={r.class_name} className="border-b border-gray-50">
-                      <td className="px-4 py-3 font-medium">{r.class_name}</td>
+                    <tr key={r.class_name} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-900">{r.class_name}</td>
                       <td className="px-4 py-3">{r.expected.toLocaleString()}</td>
                       <td className="px-4 py-3">{r.collected.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-red-600">{r.outstanding.toLocaleString()}</td>
+                      <td className="px-4 py-3 font-medium text-amber-600">{r.outstanding.toLocaleString()}</td>
                     </tr>
                   ))
                 )}
@@ -122,7 +122,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      <p className="mt-4 text-sm text-gray-500">More reports (Income Statement, Daily Cash, PDF export) coming in Phase 4.</p>
+      <p className="mt-4 text-sm text-slate-500">More reports (Income Statement, Daily Cash, PDF export) coming in Phase 4.</p>
     </div>
   );
 }

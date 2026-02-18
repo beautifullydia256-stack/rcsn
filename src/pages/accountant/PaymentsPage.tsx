@@ -78,44 +78,45 @@ export default function PaymentsPage() {
     }
   }
 
+  const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Record Payment</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Back to Dashboard</button>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Record Payment</h1>
+        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Back to Dashboard</button>
       </div>
-      <div className="max-w-lg bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-            <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" required>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
+            <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className={inputClass} required>
               <option value="">Select student</option>
               {students.map((s) => <option key={s.student_id} value={s.student_id}>{s.name} ({s.current_class})</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Term</label>
-            <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" required>
+            <label className="mb-1 block text-sm font-medium text-slate-700">Term</label>
+            <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className={inputClass} required>
               <option value="">Select term</option>
               {terms.map((t) => <option key={t.id} value={t.id}>Term {t.term}, {t.year}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-            <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" required />
+            <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
+            <input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} className={inputClass} required />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Payment method</label>
-            <select value={method} onChange={(e) => setMethod(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Payment method</label>
+            <select value={method} onChange={(e) => setMethod(e.target.value)} className={inputClass}>
               <option value="cash">Cash</option><option value="bank">Bank</option><option value="mobile_money">Mobile Money</option><option value="cheque">Cheque</option><option value="pos">POS / Card</option><option value="online">Online</option><option value="other">Other</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+            <label className="mb-1 block text-sm font-medium text-slate-700">Notes (optional)</label>
+            <input type="text" value={notes} onChange={(e) => setNotes(e.target.value)} className={inputClass} />
           </div>
-          {message && <p className={"text-sm " + (message.startsWith("Payment") ? "text-teal-600" : "text-red-600")}>{message}</p>}
-          <button type="submit" disabled={submitting} className="w-full rounded-xl bg-green-600 text-white py-2.5 text-sm font-medium hover:bg-green-700 disabled:opacity-50">{submitting ? "Recording…" : "Record payment"}</button>
+          {message && <p className={"text-sm " + (message.startsWith("Payment") ? "text-emerald-600" : "text-red-600")}>{message}</p>}
+          <button type="submit" disabled={submitting} className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50">{submitting ? "Recording…" : "Record payment"}</button>
         </form>
       </div>
     </div>

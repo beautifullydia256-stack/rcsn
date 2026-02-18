@@ -40,31 +40,31 @@ export default function AccountantOutstandingPage() {
   }, [q, rows]);
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Outstanding Fees</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Back to Dashboard</button>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-900">Outstanding Fees</h1>
+        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Back to Dashboard</button>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <input type="text" placeholder="Search by student or class..." value={q} onChange={(e) => setQ(e.target.value)} className="w-full max-w-md rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
+          <input type="text" placeholder="Search by student or class…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
         </div>
-        {isLoading ? <div className="p-8 text-gray-500">Loading…</div> : (
+        {isLoading ? <div className="p-8 text-slate-500">Loading…</div> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-gray-500 font-medium border-b border-gray-200 bg-gray-50">
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
                   <th className="px-4 py-3">Student</th><th className="px-4 py-3">Class</th><th className="px-4 py-3">Expected</th><th className="px-4 py-3">Paid</th><th className="px-4 py-3">Balance</th>
                 </tr>
               </thead>
-              <tbody className="text-gray-700">
-                {filtered.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No outstanding balances.</td></tr> : filtered.map((r) => (
-                  <tr key={r.student_id} className="border-b border-gray-50">
-                    <td className="px-4 py-3 font-medium">{r.student_name}</td>
+              <tbody className="text-slate-700">
+                {filtered.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-slate-400">No outstanding balances.</td></tr> : filtered.map((r) => (
+                  <tr key={r.student_id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
+                    <td className="px-4 py-3 font-medium text-slate-900">{r.student_name}</td>
                     <td className="px-4 py-3">{r.current_class}</td>
                     <td className="px-4 py-3">{r.total_fees.toLocaleString()}</td>
                     <td className="px-4 py-3">{r.amount_paid.toLocaleString()}</td>
-                    <td className="px-4 py-3 font-semibold text-red-600">{r.balance.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-amber-600">{r.balance.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
