@@ -74,25 +74,25 @@ export default function IDCard({ student, school }: IDCardProps) {
         boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Top strip – school badge + name above, then title */}
+      {/* Top strip – school badge + name (larger), then title */}
       <div
         style={{
-          minHeight: "88px",
+          minHeight: "110px",
           width: "100%",
           background: "linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 32px",
+          padding: "0 36px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "18px" }}>
           <div
             style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "10px",
-              border: "3px solid rgba(255,255,255,0.5)",
+              width: "78px",
+              height: "78px",
+              borderRadius: "12px",
+              border: "3px solid rgba(255,255,255,0.6)",
               overflow: "hidden",
               background: "white",
               display: "flex",
@@ -120,7 +120,7 @@ export default function IDCard({ student, school }: IDCardProps) {
           <span
             style={{
               color: "white",
-              fontSize: "18px",
+              fontSize: "24px",
               fontWeight: 700,
               letterSpacing: "0.02em",
               lineHeight: 1.2,
@@ -132,7 +132,7 @@ export default function IDCard({ student, school }: IDCardProps) {
         <span
           style={{
             color: "white",
-            fontSize: "16px",
+            fontSize: "17px",
             fontWeight: 800,
             letterSpacing: "0.08em",
           }}
@@ -141,11 +141,11 @@ export default function IDCard({ student, school }: IDCardProps) {
         </span>
       </div>
 
-      {/* Main content row: photo + details */}
+      {/* Main content row: photo + details (pushed down for real-ID spacing) */}
       <div
         style={{
           display: "flex",
-          padding: "32px 36px 24px",
+          padding: "44px 36px 24px 36px",
           gap: "36px",
           alignItems: "flex-start",
         }}
