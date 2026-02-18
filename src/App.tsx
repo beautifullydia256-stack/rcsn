@@ -46,7 +46,15 @@ const TeacherSettingsPage = lazy(() => import('./pages/teacher/settings/Settings
 const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
 const StudentFeesPage = lazy(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazy(() => import('./pages/parent/Dashboard'));
+const AccountantLayout = lazy(() => import('./pages/accountant/AccountantLayout'));
 const AccountantDashboard = lazy(() => import('./pages/accountant/Dashboard'));
+const AccountantPaymentsPage = lazy(() => import('./pages/accountant/PaymentsPage'));
+const AccountantBillingPage = lazy(() => import('./pages/accountant/BillingPage'));
+const AccountantOutstandingPage = lazy(() => import('./pages/accountant/OutstandingPage'));
+const AccountantReceiptsPage = lazy(() => import('./pages/accountant/ReceiptsPage'));
+const AccountantExpensesPage = lazy(() => import('./pages/accountant/ExpensesPage'));
+const AccountantReportsPage = lazy(() => import('./pages/accountant/ReportsPage'));
+const AccountantBankPage = lazy(() => import('./pages/accountant/BankPage'));
 const LibrarianDashboard = lazy(() => import('./pages/librarian/Dashboard'));
 const HeadTeacherDashboard = lazy(() => import('./pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazy(() => import('./pages/owner/Dashboard'));
@@ -120,7 +128,16 @@ function App() {
                   <Route path="fees" element={<StudentFeesPage />} />
                 </Route>
                 <Route path="parent" element={<ParentDashboard />} />
-                <Route path="accountant" element={<AccountantDashboard />} />
+                <Route path="accountant" element={<AccountantLayout />}>
+                  <Route index element={<AccountantDashboard />} />
+                  <Route path="payments" element={<AccountantPaymentsPage />} />
+                  <Route path="billing" element={<AccountantBillingPage />} />
+                  <Route path="outstanding" element={<AccountantOutstandingPage />} />
+                  <Route path="receipts" element={<AccountantReceiptsPage />} />
+                  <Route path="expenses" element={<AccountantExpensesPage />} />
+                  <Route path="reports" element={<AccountantReportsPage />} />
+                  <Route path="bank" element={<AccountantBankPage />} />
+                </Route>
                 <Route path="librarian" element={<LibrarianDashboard />} />
                 <Route path="head-teacher" element={<HeadTeacherDashboard />} />
                 <Route path="owner" element={<OwnerDashboard />} />
