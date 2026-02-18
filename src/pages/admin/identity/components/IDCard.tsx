@@ -88,9 +88,10 @@ export default function IDCard({ student, school }: IDCardProps) {
             display: "flex",
             alignItems: "flex-start",
             gap: "20px",
-            marginBottom: "12px",
+            marginBottom: "0",
           }}
         >
+          {/* Left: school badge only */}
           <div
             style={{
               width: "156px",
@@ -121,7 +122,8 @@ export default function IDCard({ student, school }: IDCardProps) {
               />
             )}
           </div>
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minWidth: 0 }}>
+          {/* Right: school name + School Information in the circled area (below name, right of badge) */}
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: "10px" }}>
             <span
               style={{
                 color: "#1e40af",
@@ -129,55 +131,52 @@ export default function IDCard({ student, school }: IDCardProps) {
                 fontWeight: 800,
                 letterSpacing: "0.04em",
                 lineHeight: 1.25,
-                textAlign: "center",
+                textAlign: "left",
                 textTransform: "uppercase",
               }}
             >
               {(school.name || "School Name").toUpperCase()}
             </span>
+            {/* School information from database – exactly below school name, in the area right of badge */}
+            {(school.address || school.pobox || school.location || school.contact_phone || school.contact_email || school.website || school.motto || school.subtitle) ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  fontSize: "12px",
+                  color: "#475569",
+                  lineHeight: 1.5,
+                  textAlign: "left",
+                }}
+              >
+                {school.address && (
+                  <span><strong style={{ color: "#334155" }}>Address:</strong> {school.address}</span>
+                )}
+                {school.pobox && (
+                  <span><strong style={{ color: "#334155" }}>P.O. Box:</strong> {school.pobox}</span>
+                )}
+                {school.location && !school.address && (
+                  <span><strong style={{ color: "#334155" }}>Location:</strong> {school.location}</span>
+                )}
+                {school.contact_phone && (
+                  <span><strong style={{ color: "#334155" }}>Tel:</strong> {school.contact_phone}</span>
+                )}
+                {school.contact_email && (
+                  <span><strong style={{ color: "#334155" }}>Email:</strong> {school.contact_email}</span>
+                )}
+                {school.website && (
+                  <span><strong style={{ color: "#334155" }}>Web:</strong> {school.website}</span>
+                )}
+                {(school.motto || school.subtitle) && (
+                  <span style={{ fontStyle: "italic", marginTop: "2px" }}>
+                    {school.motto || school.subtitle}
+                  </span>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
-        {/* School information from database – only show fields that have values */}
-        {(school.address || school.pobox || school.location || school.contact_phone || school.contact_email || school.website || school.motto || school.subtitle) && (
-          <div
-            style={{
-              marginTop: "10px",
-              paddingTop: "12px",
-              borderTop: "1px solid #e2e8f0",
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "12px 24px",
-              justifyContent: "center",
-              fontSize: "12px",
-              color: "#475569",
-              lineHeight: 1.5,
-            }}
-          >
-            {school.address && (
-              <span><strong style={{ color: "#334155" }}>Address:</strong> {school.address}</span>
-            )}
-            {school.pobox && (
-              <span><strong style={{ color: "#334155" }}>P.O. Box:</strong> {school.pobox}</span>
-            )}
-            {school.location && !school.address && (
-              <span><strong style={{ color: "#334155" }}>Location:</strong> {school.location}</span>
-            )}
-            {school.contact_phone && (
-              <span><strong style={{ color: "#334155" }}>Tel:</strong> {school.contact_phone}</span>
-            )}
-            {school.contact_email && (
-              <span><strong style={{ color: "#334155" }}>Email:</strong> {school.contact_email}</span>
-            )}
-            {school.website && (
-              <span><strong style={{ color: "#334155" }}>Web:</strong> {school.website}</span>
-            )}
-            {(school.motto || school.subtitle) && (
-              <span style={{ fontStyle: "italic", width: "100%", textAlign: "center" }}>
-                {school.motto || school.subtitle}
-              </span>
-            )}
-          </div>
-        )}
         <div
           style={{
             background: "#1e40af",
