@@ -1,472 +1,389 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { MoreVertical, Settings } from "lucide-react";
+import { supabase } from "../../lib/supabase";
+import {
+  LayoutDashboard,
+  CreditCard,
+  ArrowLeftRight,
+  FileText,
+  Wallet,
+  PiggyBank,
+  TrendingUp,
+  Inbox,
+  Gift,
+  Lightbulb,
+  Lock,
+  Search,
+  MessageCircle,
+  Bell,
+  MoreVertical,
+  Copy,
+} from "lucide-react";
 
-interface DashboardData {
-  income: number;
-  expense: number;
-  savings: number;
-  investment: number;
-  incomeChange: number;
-  expenseChange: number;
-  savingsChange: number;
-  investmentChange: number;
-  totalBalance: number;
-}
+const SIDEBAR_BG = "#0d9488";
+const SIDEBAR_ACTIVE = "rgba(255,255,255,0.15)";
 
 export default function AccountantDashboard() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<DashboardData>({
-    income: 8500,
-    expense: 4900,
-    savings: 2000,
-    investment: 1600,
-    incomeChange: 1.7,
-    expenseChange: -2.4,
-    savingsChange: 9.1,
-    investmentChange: 3.8,
-    totalBalance: 1377000
-  });
 
   useEffect(() => {
-    // Override body styles for this page
-    document.body.style.margin = '0';
-    document.body.style.padding = '0';
-    document.body.style.overflow = 'hidden';
-    
-    return () => {
-      // Cleanup on unmount
-      document.body.style.margin = '';
-      document.body.style.padding = '';
-      document.body.style.overflow = '';
+    const check = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) navigate("/login");
     };
-  }, []);
-
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          navigate("/login");
-          return;
-        }
-        setLoading(false);
-      } catch (e) {
-        console.error(e);
-        setLoading(false);
-      }
-    };
-    loadData();
+    check();
   }, [navigate]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 flex bg-gray-50 overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-        <div className="p-6">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center">
-              <div className="grid grid-cols-2 gap-0.5">
-                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
-                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
-                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
-                <div className="w-1.5 h-1.5 bg-white rounded-sm"></div>
-              </div>
+    <div className="fixed inset-0 flex bg-[#f1f5f9] overflow-hidden">
+      {/* Sidebar - dark green */}
+      <aside
+        className="w-[260px] flex flex-col flex-shrink-0 text-white"
+        style={{ background: SIDEBAR_BG }}
+      >
+        <div className="p-6 flex items-center gap-2">
+          <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center">
+            <div className="grid grid-cols-2 gap-0.5">
+              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
+              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
+              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
+              <div className="w-1.5 h-1.5 bg-white rounded-sm" />
             </div>
-            <span className="text-xl font-bold text-gray-900">COINEST</span>
           </div>
+          <span className="text-xl font-bold">COINEST</span>
         </div>
 
-        <nav className="flex-1 px-3 overflow-y-auto">
-          <NavItem icon="📊" label="Dashboard" active />
-          <NavItem icon="💳" label="Payments" />
-          <NavItem icon="↔️" label="Transactions" />
-          <NavItem icon="📄" label="Invoices" />
-          <NavItem icon="💳" label="Cards" />
-          <NavItem icon="🏦" label="Saving Plans" />
-          <NavItem icon="📈" label="Investments" />
-          <NavItem icon="📥" label="Inbox" badge={2} />
-          <NavItem icon="🎁" label="Promos" />
-          <NavItem icon="💡" label="Insights" />
+        <nav className="flex-1 px-3 overflow-y-auto space-y-0.5">
+          <NavItem icon={LayoutDashboard} label="Dashboard" active />
+          <NavItem icon={CreditCard} label="Payments" />
+          <NavItem icon={ArrowLeftRight} label="Transactions" />
+          <NavItem icon={FileText} label="Invoices" />
+          <NavItem icon={Wallet} label="Cards" />
+          <NavItem icon={PiggyBank} label="Saving Plans" />
+          <NavItem icon={TrendingUp} label="Investments" />
+          <NavItem icon={Inbox} label="Inbox" badge={99} />
+          <NavItem icon={Gift} label="Promos" />
+          <NavItem icon={Lightbulb} label="Insights" />
         </nav>
+
+        <div className="p-3">
+          <div
+            className="rounded-xl p-4 text-white"
+            style={{ background: "rgba(0,0,0,0.2)" }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="w-4 h-4 opacity-90" />
+              <span className="text-sm font-semibold">Get Pro</span>
+            </div>
+            <p className="text-xs text-white/80 mb-3 leading-relaxed">
+              Gain full access to your finances with detailed analytics and graphs
+            </p>
+            <button
+              className="w-full py-2 rounded-lg text-sm font-medium text-[#0d9488] bg-white hover:bg-white/95 transition-colors"
+            >
+              Get Pro
+            </button>
+          </div>
+        </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* Main */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-[#f1f5f9]">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search placeholder"
-                  className="w-80 pl-4 pr-10 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-200"
-                />
-                <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  🔍
-                </button>
-              </div>
-              <button className="p-2 hover:bg-gray-50 rounded-lg relative">
-                <span className="text-xl">💬</span>
-              </button>
-              <button className="p-2 hover:bg-gray-50 rounded-lg relative">
-                <span className="text-xl">🔔</span>
-                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">Andrew Forbist</span>
-                <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full"></div>
-              </div>
+        <header className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-end gap-4">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search placeholder"
+                className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500"
+              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            </div>
+            <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
+              <MessageCircle className="w-5 h-5" />
+            </button>
+            <button className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors relative">
+              <Bell className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2 pl-2">
+              <span className="text-sm font-medium text-gray-800">Andrew Forbist</span>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-400 to-emerald-600 flex-shrink-0" />
             </div>
           </div>
         </header>
 
-        {/* Dashboard Content */}
-        <div className="p-8 min-h-full">
-          {/* Top Row: 4 KPI Cards (2x2 grid) + Expense Breakdown + Finance Score */}
-          <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* 4 KPI Cards in 2x2 grid - 5 columns */}
-            <div className="col-span-5 grid grid-cols-2 gap-4">
-              <KPICard
-                icon="💰"
-                label="Income"
-                value={`$${data.income.toLocaleString()}`}
-                change={data.incomeChange}
-                changeText={`+$${Math.abs(data.incomeChange * 500).toFixed(0)} than last week`}
-                positive={data.incomeChange > 0}
-              />
-              <KPICard
-                icon="💸"
-                label="Expense"
-                value={`$${data.expense.toLocaleString()}`}
-                change={data.expenseChange}
-                changeText={`-$${Math.abs(data.expenseChange * 200).toFixed(0)} than last week`}
-                positive={data.expenseChange < 0}
-              />
-              <KPICard
-                icon="🏦"
-                label="Savings"
-                value={`$${data.savings.toLocaleString()}`}
-                change={data.savingsChange}
-                changeText={`+$${Math.abs(data.savingsChange * 20).toFixed(0)} than last week`}
-                positive={data.savingsChange > 0}
-              />
-              <KPICard
-                icon="📈"
-                label="Investment"
-                value={`$${data.investment.toLocaleString()}`}
-                change={data.investmentChange}
-                changeText={`+$${Math.abs(data.investmentChange * 15).toFixed(0)} than last week`}
-                positive={data.investmentChange > 0}
-              />
-            </div>
-
-            {/* Expense Breakdown - 3 columns */}
-            <div className="col-span-3 bg-white rounded-2xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-gray-900">Expense Breakdown</h3>
-                <select className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs">
-                  <option>Today</option>
-                </select>
-              </div>
-              <div className="flex items-center justify-center mb-3">
-                <div className="relative w-28 h-28">
-                  <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="56" cy="56" r="48" fill="none" stroke="#e5e7eb" strokeWidth="14" />
-                    <circle cx="56" cy="56" r="48" fill="none" stroke="#10b981" strokeWidth="14" strokeDasharray="151 302" />
-                    <circle cx="56" cy="56" r="48" fill="none" stroke="#d1d5db" strokeWidth="14" strokeDasharray="91 302" strokeDashoffset="-151" />
-                    <circle cx="56" cy="56" r="48" fill="none" stroke="#6b7280" strokeWidth="14" strokeDasharray="60 302" strokeDashoffset="-242" />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-xs text-gray-500">Total Expenses</span>
-                    <span className="text-base font-bold text-gray-900">$1,000</span>
-                    <span className="text-xs text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">+9.15%</span>
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <ExpenseItem label="Food & Dining" amount="$500" percentage={50} color="bg-emerald-500" />
-                <ExpenseItem label="Utilities" amount="$300" percentage={30} color="bg-gray-300" />
-                <ExpenseItem label="Investment" amount="$200" percentage={20} color="bg-gray-400" />
-              </div>
-            </div>
-
-            {/* Finance Score - 4 columns */}
-            <div className="col-span-4 bg-white rounded-2xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-base font-semibold text-gray-900">Finance Score</h3>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-              </div>
-              <div>
-                <span className="text-xs text-gray-500">Finance Quality</span>
-                <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-2xl font-bold text-gray-900">Excellent</span>
-                  <span className="text-xl font-semibold text-gray-900">92%</span>
-                </div>
-                <div className="flex gap-1">
-                  <div className="flex-1 h-2 bg-teal-800 rounded-full"></div>
-                  <div className="flex-1 h-2 bg-emerald-300 rounded-full"></div>
-                </div>
-              </div>
-            </div>
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Row 1: 4 KPI cards */}
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <KPICard
+              icon={CreditCard}
+              label="Income"
+              value="$8,500"
+              trend="+$355 than last week"
+              change="↑ 1.78%"
+              positive
+            />
+            <KPICard
+              icon={Wallet}
+              label="Expense"
+              value="$4,900"
+              trend="-$126 than last week"
+              change="↓ 2.45%"
+              positive={false}
+            />
+            <KPICard
+              icon={PiggyBank}
+              label="Savings"
+              value="$2,000"
+              trend="+$30 than last week"
+              change="↑ 1.5%"
+              positive
+            />
+            <KPICard
+              icon={TrendingUp}
+              label="Investment"
+              value="$1,600"
+              trend="+$64 than last week"
+              change="↑ 3.85%"
+              positive
+            />
           </div>
 
-          {/* Middle Row: Cashflow + Balance */}
+          {/* Row 2: Cashflow | Expense Breakdown | Finance Score + Balance */}
           <div className="grid grid-cols-12 gap-6 mb-6">
-            {/* Cashflow Chart - 7 columns */}
-            <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">Cashflow</h3>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-gray-900">$12,000</span>
-                    <span className="text-sm text-gray-500">Total Balance</span>
-                  </div>
-                </div>
-                <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+            {/* Cashflow - 7 cols */}
+            <div className="col-span-7 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Cashflow</h3>
+                <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
                   <option>Last 7 Days</option>
                 </select>
               </div>
-              
-              {/* Line Chart */}
-              <div className="h-64 relative">
-                <svg className="w-full h-full" viewBox="0 0 700 250">
-                  {/* Grid lines */}
-                  <line x1="0" y1="50" x2="700" y2="50" stroke="#e5e7eb" strokeWidth="1" />
-                  <line x1="0" y1="100" x2="700" y2="100" stroke="#e5e7eb" strokeWidth="1" />
-                  <line x1="0" y1="150" x2="700" y2="150" stroke="#e5e7eb" strokeWidth="1" />
-                  <line x1="0" y1="200" x2="700" y2="200" stroke="#e5e7eb" strokeWidth="1" />
-                  
-                  {/* Income line (green) */}
-                  <path
-                    d="M 0,120 L 100,100 L 200,110 L 300,80 L 400,90 L 500,70 L 600,85 L 700,75"
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                  
-                  {/* Expense line (gray) */}
-                  <path
-                    d="M 0,150 L 100,140 L 200,145 L 300,130 L 400,135 L 500,125 L 600,130 L 700,120"
-                    fill="none"
-                    stroke="#9ca3af"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                  />
-                  
-                  {/* Day labels */}
-                  <text x="50" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Sun</text>
-                  <text x="150" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Mon</text>
-                  <text x="250" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Tue</text>
-                  <text x="350" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Wed</text>
-                  <text x="450" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Thu</text>
-                  <text x="550" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Fri</text>
-                  <text x="650" y="240" fontSize="12" fill="#6b7280" textAnchor="middle">Sat</text>
-                </svg>
+              <p className="text-2xl font-bold text-gray-900 mb-6">$12,000</p>
+              <div className="flex gap-4 mb-4">
+                <span className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="w-3 h-3 rounded-full bg-teal-600" /> Income
+                </span>
+                <span className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className="w-3 h-3 rounded-full bg-gray-400" /> Expense
+                </span>
               </div>
-              
-              <div className="flex items-center justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Income</span>
+              <div className="h-52 flex items-end gap-2">
+                {[60, 45, 70, 50, 80, 55, 75].map((h, i) => (
+                  <div key={i} className="flex-1 flex flex-col gap-1">
+                    <div className="flex-1 flex items-end gap-0.5">
+                      <div className="flex-1 rounded-t bg-teal-600/80 min-h-[4px]" style={{ height: `${h}%` }} />
+                      <div className="flex-1 rounded-t bg-gray-300/60 min-h-[4px]" style={{ height: `${Math.max(20, h - 15)}%` }} />
+                    </div>
+                    <span className="text-xs text-gray-500 text-center">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][i]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Expense Breakdown - 2 cols */}
+            <div className="col-span-2 bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-900">Expense Breakdown</h3>
+                <select className="px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
+                  <option>Today</option>
+                </select>
+              </div>
+              <div className="flex justify-center my-4">
+                <div className="relative w-28 h-28">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" strokeWidth="3" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#0d9488" strokeWidth="3" strokeDasharray="50 100" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#5eead4" strokeWidth="3" strokeDasharray="30 100" strokeDashoffset="-50" />
+                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#94a3b8" strokeWidth="3" strokeDasharray="20 100" strokeDashoffset="-80" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-[10px] text-gray-500">Total</span>
+                    <span className="text-lg font-bold text-gray-900">$1,000</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Expense</span>
+              </div>
+              <p className="text-center text-xs text-teal-600 font-medium mb-3">↑ 1.5%</p>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-600" /> Food & Dining</span>
+                  <span className="font-medium text-gray-900">$500</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-teal-300" /> Utilities</span>
+                  <span className="font-medium text-gray-900">$300</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-gray-400" /> Investment</span>
+                  <span className="font-medium text-gray-900">$200</span>
                 </div>
               </div>
             </div>
 
-            {/* Balance - 5 columns */}
-            <div className="col-span-5 bg-white rounded-2xl p-4 border border-gray-200">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <h3 className="text-base font-semibold text-gray-900 mb-1">Balance</h3>
-                  <span className="text-xs text-gray-500">Total Balance</span>
-                  <div className="text-2xl font-bold text-gray-900">$1,377,000</div>
+            {/* Finance Score + Balance - 3 cols */}
+            <div className="col-span-3 space-y-4">
+              <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900">Finance Score</h3>
+                  <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
                 </div>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <MoreVertical className="w-4 h-4" />
-                </button>
+                <p className="text-xs text-gray-500 mb-1">Finance Quality</p>
+                <p className="text-xl font-bold text-gray-900">Excellent</p>
+                <p className="text-lg font-semibold text-gray-900 mb-2">92%</p>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-500" style={{ width: "92%" }} />
+                </div>
               </div>
-              <div className="space-y-3">
-                <CardItem
-                  type="VISA"
-                  name="Platinum Plus Visa"
-                  balance="$415,000"
-                  number="4321 8723 XXXX 9908"
-                  color="bg-gradient-to-br from-teal-700 to-teal-900"
-                />
-                <CardItem
-                  type="Mastercard"
-                  name="Freedom Unlimited Mastercard"
-                  balance="$532,000"
-                  number="5832 5578 8376 5487"
-                  color="bg-gradient-to-br from-emerald-600 to-teal-700"
-                />
+              <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-base font-semibold text-gray-900">Balance</h3>
+                  <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
+                </div>
+                <p className="text-2xl font-bold text-gray-900 mb-4">$1,377,000</p>
+                <div className="space-y-3">
+                  <div className="rounded-xl p-4 text-white bg-gradient-to-br from-teal-700 to-teal-900">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-semibold opacity-90">VISA</span>
+                    </div>
+                    <p className="text-[10px] opacity-80 mb-1">Visa Platinum Plus</p>
+                    <p className="text-lg font-bold">$415,000</p>
+                    <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
+                      4532 8723 0045 9967 <button type="button" className="p-0.5 hover:bg-white/20 rounded"><Copy className="w-3 h-3" /></button>
+                    </p>
+                  </div>
+                  <div className="rounded-xl p-4 text-white bg-gradient-to-br from-teal-700 to-teal-900">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="text-xs font-semibold opacity-90">Mastercard</span>
+                    </div>
+                    <p className="text-[10px] opacity-80 mb-1">Freedom Unlimited Mastercard</p>
+                    <p className="text-lg font-bold">$532,000</p>
+                    <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
+                      5582 5574 8376 5487 <button type="button" className="p-0.5 hover:bg-white/20 rounded"><Copy className="w-3 h-3" /></button>
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Bottom Row: Recent Transactions + Saving Plans + Recent Activities */}
-          <div className="grid grid-cols-10 gap-6">
-            {/* Recent Transactions - 4 columns */}
-            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
+          {/* Row 3: Recent Transactions | Saving Plans | Recent Activities */}
+          <div className="grid grid-cols-12 gap-6">
+            {/* Recent Transactions - 5 cols */}
+            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
                 <div className="flex items-center gap-2">
-                  <select className="px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-sm">
+                  <select className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700">
                     <option>This Month</option>
                   </select>
-                  <button className="p-1.5 hover:bg-gray-50 rounded-lg">
-                    <Settings className="w-4 h-4 text-gray-400" />
-                  </button>
+                  <button className="p-2 hover:bg-gray-50 rounded-lg text-gray-500"><ArrowLeftRight className="w-4 h-4" /></button>
                 </div>
               </div>
-              <div className="space-y-3">
-                <TransactionItem
-                  name="Dividend Payout"
-                  category="Investments"
-                  date="2024-09-25"
-                  amount="+$250.00"
-                  status="Completed"
-                  positive
-                  icon="💳"
-                  card="Platinum Plus Visa"
-                />
-                <TransactionItem
-                  name="Grocery Shopping"
-                  category="Food & Dining"
-                  date="2024-09-24"
-                  amount="-$124.20"
-                  status="Completed"
-                  icon="💳"
-                  card="Platinum Plus Visa"
-                />
-                <TransactionItem
-                  name="Freelance Payment"
-                  category="Income"
-                  date="2024-09-23"
-                  amount="+$850.00"
-                  status="Completed"
-                  positive
-                  icon="💳"
-                  card="Freedom Unlimited Mastercard"
-                />
-                <TransactionItem
-                  name="Electricity Bill"
-                  category="Utilities"
-                  date="2024-09-22"
-                  amount="-$120.75"
-                  status="Completed"
-                  icon="💳"
-                  card="Freedom Unlimited Mastercard"
-                />
-                <TransactionItem
-                  name="Online Subscription"
-                  category="Services"
-                  date="2024-09-18"
-                  amount="-$12.99"
-                  status="Pending"
-                  icon="💳"
-                  card="Platinum Plus Visa"
-                />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
+                      <th className="pb-3 pr-4">Transaction Name</th>
+                      <th className="pb-3 pr-4">Account</th>
+                      <th className="pb-3 pr-4">Date & Time</th>
+                      <th className="pb-3 text-right">Amount</th>
+                      <th className="pb-3 pl-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-gray-700">
+                    <tr className="border-b border-gray-50">
+                      <td className="py-3 pr-4 font-medium">Dividend Payout</td>
+                      <td className="py-3 pr-4">Platinum Plus Visa</td>
+                      <td className="py-3 pr-4">2024-09-25 10:00</td>
+                      <td className="py-3 text-right font-semibold text-teal-600">+$200.00</td>
+                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
+                    </tr>
+                    <tr className="border-b border-gray-50">
+                      <td className="py-3 pr-4 font-medium">Grocery Shopping</td>
+                      <td className="py-3 pr-4">Platinum Plus Visa</td>
+                      <td className="py-3 pr-4">2024-09-24 14:30</td>
+                      <td className="py-3 text-right font-semibold">-$154.20</td>
+                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
+                    </tr>
+                    <tr className="border-b border-gray-50">
+                      <td className="py-3 pr-4 font-medium">Freelance Payment</td>
+                      <td className="py-3 pr-4">Freedom Unlimited Mastercard</td>
+                      <td className="py-3 pr-4">2024-09-23 15:00</td>
+                      <td className="py-3 text-right font-semibold text-teal-600">+$850.00</td>
+                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
+                    </tr>
+                    <tr className="border-b border-gray-50">
+                      <td className="py-3 pr-4 font-medium">Electricity Bill</td>
+                      <td className="py-3 pr-4">Freedom Unlimited Mastercard</td>
+                      <td className="py-3 pr-4">2024-09-22 09:15</td>
+                      <td className="py-3 text-right font-semibold">-$120.75</td>
+                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-50 text-teal-700">Completed</span></td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 pr-4 font-medium">Online Subscription</td>
+                      <td className="py-3 pr-4">Platinum Plus Visa</td>
+                      <td className="py-3 pr-4">2024-09-18 08:00</td>
+                      <td className="py-3 text-right font-semibold">-$12.99</td>
+                      <td className="py-3 pl-2"><span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Pending</span></td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Saving Plans - 2 columns */}
-            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200">
+            {/* Saving Plans - 2 cols */}
+            <div className="col-span-2 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Saving Plans</h3>
-                <button className="text-sm text-teal-600 hover:text-teal-700 font-medium">
-                  + Add Plans
-                </button>
+                <button className="text-sm font-medium text-teal-600 hover:text-teal-700">+ Add Plans</button>
               </div>
-              <div className="mb-4">
-                <span className="text-xs text-gray-500">Total Savings</span>
-                <div className="text-2xl font-bold text-gray-900">$12,000</div>
-              </div>
-              <div className="space-y-4">
-                <SavingPlanItem
-                  name="Emergency Fund"
-                  current={4800}
-                  target={30000}
-                  percentage={45}
-                />
-                <SavingPlanItem
-                  name="Retirement Fund"
-                  current={5000}
-                  target={50000}
-                  percentage={28}
-                />
-                <SavingPlanItem
-                  name="Vacation Fund"
-                  current={2200}
-                  target={8000}
-                  percentage={50}
-                />
+              <p className="text-2xl font-bold text-gray-900 mb-6">$12,000</p>
+              <div className="space-y-5">
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">Emergency Fund</p>
+                  <p className="text-xs text-gray-500 mb-2">$4,500 / $10,000</p>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-teal-400" style={{ width: "45%" }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">Retirement Fund</p>
+                  <p className="text-xs text-gray-500 mb-2">$5,000 / $20,000</p>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-teal-400" style={{ width: "25%" }} />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">Vacation Fund</p>
+                  <p className="text-xs text-gray-500 mb-2">$2,500 / $5,000</p>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-teal-400" style={{ width: "50%" }} />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Recent Activities - 4 columns */}
-            <div className="col-span-4 bg-white rounded-2xl p-6 border border-gray-200">
+            {/* Recent Activities - 5 cols */}
+            <div className="col-span-5 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Recent Activities</h3>
-                <button className="text-gray-400 hover:text-gray-600">
-                  <MoreVertical className="w-5 h-5" />
-                </button>
+                <button className="p-1 text-gray-400 hover:text-gray-600"><MoreVertical className="w-4 h-4" /></button>
               </div>
               <div className="space-y-4">
                 <div>
-                  <div className="text-sm font-medium text-gray-900 mb-3">Today</div>
-                  <ActivityItem
-                    time="14:25 AM"
-                    text="Reviewed alerts for low balance"
-                    icon="🔔"
-                    color="bg-emerald-100"
-                  />
-                  <ActivityItem
-                    time="09:22 AM"
-                    text="Checked account balance"
-                    icon="💰"
-                    color="bg-emerald-100"
-                  />
-                  <ActivityItem
-                    time="07:15 AM"
-                    text="Logged in from mobile device"
-                    icon="📱"
-                    color="bg-emerald-100"
-                  />
+                  <p className="text-sm font-medium text-gray-900 mb-3">Today</p>
+                  <ActivityRow time="11:45 AM" text="Reviewed alerts for low balance" icon="clock" />
+                  <ActivityRow time="09:22 AM" text="Checked account balance" icon="doc" />
+                  <ActivityRow time="07:15 AM" text="Logged in from mobile device" icon="mobile" />
                 </div>
                 <div>
-                  <div className="text-sm font-medium text-gray-900 mb-3">Yesterday</div>
-                  <ActivityItem
-                    time="03:00 PM"
-                    text="Scheduled a recurring utility payment"
-                    icon="📅"
-                    color="bg-emerald-100"
-                  />
-                  <ActivityItem
-                    time="10:30 PM"
-                    text="Updated payment method"
-                    icon="💳"
-                    color="bg-emerald-100"
-                  />
+                  <p className="text-sm font-medium text-gray-900 mb-3">Yesterday</p>
+                  <ActivityRow time="05:50 PM" text="Scheduled a recurring utility payment" icon="calendar" />
+                  <ActivityRow time="03:30 PM" text="Updated payment method" icon="doc" />
                 </div>
               </div>
             </div>
@@ -474,20 +391,19 @@ export default function AccountantDashboard() {
         </div>
 
         {/* Footer */}
-        <footer className="bg-white border-t border-gray-200 px-8 py-4 mt-8 flex-shrink-0">
+        <footer className="flex-shrink-0 bg-white border-t border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between text-sm text-gray-500">
-            <span>Copyright © 2024 Referarow</span>
-            <div className="flex items-center gap-4">
+            <span>Copyright © 2024 Peterdraw</span>
+            <div className="flex items-center gap-6">
               <a href="#" className="hover:text-gray-700">Privacy Policy</a>
               <a href="#" className="hover:text-gray-700">Term and conditions</a>
               <a href="#" className="hover:text-gray-700">Contact</a>
             </div>
-            <div className="flex items-center gap-3">
-              <a href="#" className="text-gray-400 hover:text-gray-600">f</a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">𝕏</a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">📷</a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">▶️</a>
-              <a href="#" className="text-gray-400 hover:text-gray-600">in</a>
+            <div className="flex items-center gap-3 text-gray-400">
+              <span className="font-bold">f</span>
+              <span>𝕏</span>
+              <span>📷</span>
+              <span className="font-bold">in</span>
             </div>
           </div>
         </footer>
@@ -496,17 +412,27 @@ export default function AccountantDashboard() {
   );
 }
 
-// Component helpers
-function NavItem({ icon, label, active, badge }: { icon: string; label: string; active?: boolean; badge?: number }) {
+function NavItem({
+  icon: Icon,
+  label,
+  active,
+  badge,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  active?: boolean;
+  badge?: number;
+}) {
   return (
     <button
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-colors ${
-        active ? 'bg-emerald-50 text-emerald-600' : 'text-gray-600 hover:bg-gray-50'
+        active ? "text-white" : "text-white/85 hover:bg-white/10"
       }`}
+      style={active ? { background: SIDEBAR_ACTIVE } : {}}
     >
-      <span className="text-lg">{icon}</span>
+      <Icon className="w-5 h-5 flex-shrink-0" />
       <span className="text-sm font-medium flex-1">{label}</span>
-      {badge && (
+      {badge != null && (
         <span className="bg-red-500 text-white text-xs font-semibold px-2 py-0.5 rounded-full">
           {badge}
         </span>
@@ -515,118 +441,62 @@ function NavItem({ icon, label, active, badge }: { icon: string; label: string; 
   );
 }
 
-function KPICard({ icon, label, value, change, changeText, positive }: any) {
+function KPICard({
+  icon: Icon,
+  label,
+  value,
+  trend,
+  change,
+  positive,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  trend: string;
+  change: string;
+  positive: boolean;
+}) {
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200 min-h-[120px] flex flex-col justify-between">
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-lg">{icon}</span>
+    <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-teal-600">
+          <Icon className="w-5 h-5" />
+        </div>
         <span className="text-sm text-gray-500">{label}</span>
       </div>
-      <div className="text-2xl font-bold text-gray-900 mb-2">{value}</div>
-      <div className="flex items-center gap-2">
-        <span className={`text-xs font-semibold px-2 py-1 rounded ${
-          positive ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
-        }`}>
-          {positive ? '+' : ''}{change}%
+      <p className="text-2xl font-bold text-gray-900 mb-1">{value}</p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-gray-500">{trend}</span>
+        <span
+          className={`text-xs font-semibold px-2 py-0.5 rounded ${
+            positive ? "text-teal-700 bg-teal-50" : "text-red-700 bg-red-50"
+          }`}
+        >
+          {change}
         </span>
-        <span className="text-xs text-gray-500">{changeText}</span>
       </div>
     </div>
   );
 }
 
-function ExpenseItem({ label, amount, percentage, color }: any) {
+function ActivityRow({
+  time,
+  text,
+  icon,
+}: {
+  time: string;
+  text: string;
+  icon: "clock" | "doc" | "mobile" | "calendar";
+}) {
+  const Icon = icon === "clock" ? Bell : FileText;
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${color}`}></div>
-          <span className="text-sm text-gray-700">{label}</span>
-        </div>
-        <span className="text-sm font-semibold text-gray-900">{percentage}%</span>
+    <div className="flex items-start gap-3 py-2">
+      <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center text-teal-600 flex-shrink-0">
+        <Icon className="w-4 h-4" />
       </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{amount}</span>
-      </div>
-    </div>
-  );
-}
-
-function CardItem({ type, name, balance, number, color }: any) {
-  return (
-    <div className={`${color} rounded-xl p-3 text-white`}>
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-xs font-semibold">{type}</span>
-        <button className="text-white/80 hover:text-white">
-          <MoreVertical className="w-3 h-3" />
-        </button>
-      </div>
-      <div className="mb-1">
-        <div className="text-xs text-white/70 mb-1">{name}</div>
-        <div className="text-xl font-bold">{balance}</div>
-      </div>
-      <div className="text-xs text-white/70">{number}</div>
-    </div>
-  );
-}
-
-function TransactionItem({ name, category, date, amount, status, positive, icon, card }: any) {
-  return (
-    <div className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
-      <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-gray-900">{name}</div>
-        <div className="text-xs text-gray-500">{category}</div>
-      </div>
-      <div className="text-right">
-        <div className="text-xs text-gray-500 mb-0.5">{card}</div>
-        <div className="text-xs text-gray-400">{date}</div>
-      </div>
-      <div className="text-right">
-        <div className={`text-sm font-semibold ${positive ? 'text-emerald-600' : 'text-gray-900'}`}>
-          {amount}
-        </div>
-        <div className={`text-xs px-2 py-0.5 rounded-full ${
-          status === 'Completed' ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'
-        }`}>
-          {status}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SavingPlanItem({ name, current, target, percentage }: any) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-900">{name}</span>
-        <span className="text-sm font-semibold text-emerald-600">{percentage}%</span>
-      </div>
-      <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
-        <div
-          className="bg-gradient-to-r from-emerald-400 to-emerald-500 h-2 rounded-full"
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">${current.toLocaleString()} / ${target.toLocaleString()}</span>
-      </div>
-    </div>
-  );
-}
-
-function ActivityItem({ time, text, icon, color }: any) {
-  return (
-    <div className="flex items-start gap-3 mb-3">
-      <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-sm flex-shrink-0`}>
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-xs text-gray-500 mb-0.5">{time}</div>
-        <div className="text-sm text-gray-700">{text}</div>
+      <div>
+        <p className="text-xs text-gray-500">{time}</p>
+        <p className="text-sm text-gray-800">{text}</p>
       </div>
     </div>
   );
