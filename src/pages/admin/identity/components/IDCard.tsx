@@ -74,10 +74,10 @@ export default function IDCard({ student, school }: IDCardProps) {
         boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
       }}
     >
-      {/* Top strip – compact header */}
+      {/* Top strip – school badge + name above, then title */}
       <div
         style={{
-          height: "72px",
+          minHeight: "88px",
           width: "100%",
           background: "linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%)",
           display: "flex",
@@ -86,27 +86,59 @@ export default function IDCard({ student, school }: IDCardProps) {
           padding: "0 32px",
         }}
       >
-        <span
-          style={{
-            color: "rgba(255,255,255,0.9)",
-            fontSize: "13px",
-            fontWeight: 600,
-            letterSpacing: "0.05em",
-          }}
-        >
-          {school.name || "School Name"}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+          <div
+            style={{
+              width: "52px",
+              height: "52px",
+              borderRadius: "10px",
+              border: "3px solid rgba(255,255,255,0.5)",
+              overflow: "hidden",
+              background: "white",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}
+          >
+            {school.logo_url ? (
+              <img
+                src={school.logo_url}
+                alt=""
+                style={{ width: "100%", height: "100%", objectFit: "contain" }}
+              />
+            ) : (
+              <div
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  background: "linear-gradient(145deg, #0d9488, #14b8a6)",
+                }}
+              />
+            )}
+          </div>
+          <span
+            style={{
+              color: "white",
+              fontSize: "18px",
+              fontWeight: 700,
+              letterSpacing: "0.02em",
+              lineHeight: 1.2,
+            }}
+          >
+            {school.name || "School Name"}
+          </span>
+        </div>
         <span
           style={{
             color: "white",
-            fontSize: "18px",
+            fontSize: "16px",
             fontWeight: 800,
             letterSpacing: "0.08em",
           }}
         >
           STUDENT ID CARD
         </span>
-        <span style={{ width: "120px" }} />
       </div>
 
       {/* Main content row: photo + details */}
@@ -226,57 +258,22 @@ export default function IDCard({ student, school }: IDCardProps) {
         </div>
       </div>
 
-      {/* Bottom bar: logo + barcode */}
+      {/* Bottom bar: barcode only (school name + badge are in header above) */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
-          height: "120px",
+          height: "100px",
           borderTop: "1px solid #e2e8f0",
           background: "#f8fafc",
           display: "flex",
           alignItems: "center",
-          justifyContent: "space-between",
+          justifyContent: "center",
           padding: "0 36px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div
-            style={{
-              width: "56px",
-              height: "56px",
-              borderRadius: "8px",
-              border: "2px solid #e2e8f0",
-              overflow: "hidden",
-              background: "white",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {school.logo_url ? (
-              <img
-                src={school.logo_url}
-                alt=""
-                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-              />
-            ) : (
-              <div
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  background: "linear-gradient(145deg, #0f766e, #14b8a6)",
-                }}
-              />
-            )}
-          </div>
-          <span style={{ fontSize: "16px", fontWeight: 700, color: "#334155" }}>
-            {school.name || "PwezaCore"}
-          </span>
-        </div>
-
         <div
           style={{
             width: "380px",
