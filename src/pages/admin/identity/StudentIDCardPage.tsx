@@ -21,7 +21,6 @@ export default function StudentIDCardPage() {
     const fetchData = async () => {
       if (!user?.id || !studentId) return;
 
-      // Fetch school_id from users table
       const { data: userData } = await supabase
         .from("users")
         .select("school_id")
@@ -33,7 +32,6 @@ export default function StudentIDCardPage() {
         return;
       }
 
-      // Fetch school data
       const { data: schoolData } = await supabase
         .from("schools")
         .select("*")
@@ -42,7 +40,6 @@ export default function StudentIDCardPage() {
 
       setSchool(schoolData);
 
-      // Fetch student data
       const { data: studentData } = await supabase
         .from("students")
         .select("*")
@@ -116,11 +113,9 @@ export default function StudentIDCardPage() {
 
   return (
     <>
-      {/* Screen View */}
       <div className="print:hidden">
         <AdminPageWrapper title={`ID Card - ${student.name}`}>
           <div className="space-y-6">
-            {/* Actions */}
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
               <button
                 onClick={() => navigate("/dashboard/admin/identity")}
@@ -147,13 +142,12 @@ export default function StudentIDCardPage() {
               </div>
             </div>
 
-            {/* ID Card Preview – contained so it displays like a card in the middle */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex justify-center items-start p-6 bg-gray-100/50 rounded-xl min-h-[320px]"
+              className="flex justify-center"
             >
-              <div ref={cardRef} className="inline-block rounded-lg overflow-hidden">
+              <div ref={cardRef} className="inline-block">
                 <IDCard student={student} school={school} />
               </div>
             </motion.div>
@@ -161,9 +155,8 @@ export default function StudentIDCardPage() {
         </AdminPageWrapper>
       </div>
 
-      {/* Print View – card at CR80 size for print */}
-      <div className="hidden print:block print:p-0">
-        <IDCard student={student} school={school} forPrint />
+      <div className="hidden print:block">
+        <IDCard student={student} school={school} />
       </div>
 
       <style>{`
