@@ -34,6 +34,8 @@ const LocationSettingsPage = lazy(() => import('./pages/admin/settings/LocationS
 const OutstandingPage = lazy(() => import('./pages/admin/outstanding/OutstandingPage'));
 const AdminJobsPage = lazy(() => import('./pages/admin/jobs/AdminJobsPage'));
 const NotificationsPage = lazy(() => import('./pages/admin/notifications/NotificationsPage'));
+const IdentityPage = lazy(() => import('./pages/admin/identity/IdentityPage'));
+const StudentIDCardPage = lazy(() => import('./pages/admin/identity/StudentIDCardPage'));
 const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'));
 const TeacherStudentsPage = lazy(() => import('./pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazy(() => import('./pages/teacher/classes/ClassesPage'));
@@ -88,6 +90,8 @@ function App() {
                   <Route path="accounts" element={<AccountsPage />} />
                   <Route path="exam-sets" element={<ExamSetsPage />} />
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
+                  <Route path="identity" element={<IdentityPage />} />
+                  <Route path="identity/:id" element={<StudentIDCardPage />} />
                   <Route path="outstanding" element={<OutstandingPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="settings/classes" element={<SettingsClassesPage />} />
