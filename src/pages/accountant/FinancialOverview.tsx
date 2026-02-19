@@ -11,6 +11,7 @@ import {
   DollarSign,
   FilePlus,
   Send,
+  Filter,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -176,6 +177,124 @@ async function fetchStatisticData(
   if (cashInDonut.length === 0) cashInDonut.push({ name: "No data", value: 1, color: "#e5e7eb" });
 
   return { cashInTotal, expenseTotal, top5Expenses, expenseDonut, cashInDonut };
+}
+
+export type RecentTransaction = {
+  id: string;
+  type: "payment" | "expense";
+  name: string;
+  sub: string;
+  account: string;
+  date: string;
+  time: string;
+  amount: number;
+  status: "Completed" | "Pending";
+};
+
+async function fetchRecentTransactions(
+  schoolId: string,
+  period: "month" | "year"
+): Promise<RecentTransaction[]> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const monthEnd = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const start = period === "month" ? monthStart : yearStart;
+  const end = period === "month" ? monthEnd : yearEnd;
+
+  const [paymentsRes, expensesRes] = await Promise.all([
+    supabase
+      .from("student_payments")
+      .select("payment_id, student_id, amount_paid, payment_date, payment_method, created_at")
+      .eq("school_id", schoolId)
+      .gte("payment_date", start)
+      .lte("payment_date", end)
+      .order("payment_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
+    supabase
+      .from("school_expenses")
+      .select("expense_id, amount, expense_date, status, category_name, description, created_at")
+      .eq("school_id", schoolId)
+      .gte("expense_date", start)
+      .lte("expense_date", end)
+      .order("expense_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ]);
+
+  const paymentsRaw = (paymentsRes.data || []).filter((p: Record<string, unknown>) => !(p as { reversed_at?: string }).reversed_at);
+  const expensesRaw = expensesRes.data || [];
+
+  const studentIds = [...new Set((paymentsRaw as { student_id: string }[]).map((p) => p.student_id))];
+  const { data: studentsData } =
+    studentIds.length > 0
+      ? await supabase.from("students").select("student_id, name").in("student_id", studentIds)
+      : { data: [] };
+  const studentMap = new Map(
+    (studentsData || []).map((s: { student_id: string; name: string }) => [s.student_id, s.name])
+  );
+
+  const paymentRows: RecentTransaction[] = (paymentsRaw as {
+    payment_id: string;
+    student_id: string;
+    amount_paid: number;
+    payment_date: string;
+    payment_method: string;
+    created_at: string;
+  }[]).map((p) => {
+    const created = p.created_at ? new Date(p.created_at) : new Date(p.payment_date);
+    const method = (p.payment_method || "").toLowerCase();
+    let account = "Other";
+    if (method === "cash") account = "Cash";
+    else if (["bank", "cheque", "pos", "online"].includes(method)) account = "Bank / Card";
+    else if (method === "mobile_money") account = "Mobile Money";
+    const studentName = studentMap.get(p.student_id);
+    return {
+      id: p.payment_id,
+      type: "payment",
+      name: "Fee payment",
+      sub: "Income",
+      account: studentName ? `${account} · ${studentName}` : account,
+      date: p.payment_date,
+      time: created.toTimeString().slice(0, 5),
+      amount: Number(p.amount_paid || 0),
+      status: "Completed" as const,
+    };
+  });
+
+  const expenseRows: RecentTransaction[] = (expensesRaw as {
+    expense_id: string;
+    amount: number;
+    expense_date: string;
+    status: string;
+    category_name: string;
+    description: string;
+    created_at: string;
+  }[]).map((e) => {
+    const created = e.created_at ? new Date(e.created_at) : new Date(e.expense_date);
+    return {
+      id: e.expense_id,
+      type: "expense",
+      name: e.category_name || "Expense",
+      sub: "Expense",
+      account: "School",
+      date: e.expense_date,
+      time: created.toTimeString().slice(0, 5),
+      amount: -Number(e.amount || 0),
+      status: ["approved", "paid"].includes(e.status || "") ? ("Completed" as const) : ("Pending" as const),
+    };
+  });
+
+  const merged = [...paymentRows, ...expenseRows].sort((a, b) => {
+    const d = b.date.localeCompare(a.date);
+    if (d !== 0) return d;
+    return b.time.localeCompare(a.time);
+  });
+  return merged.slice(0, 5);
 }
 
 const fmt = (n: number) =>
@@ -432,6 +551,14 @@ export default function FinancialOverview() {
   const { data: statisticData } = useQuery({
     queryKey: ["accountant", "statistic", schoolId, statPeriod],
     queryFn: () => fetchStatisticData(schoolId!, statPeriod),
+    enabled: !!schoolId,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const [recentPeriod, setRecentPeriod] = useState<"month" | "year">("month");
+  const { data: recentTransactions = [] } = useQuery({
+    queryKey: ["accountant", "recent-transactions", schoolId, recentPeriod],
+    queryFn: () => fetchRecentTransactions(schoolId!, recentPeriod),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
   });
@@ -718,12 +845,88 @@ export default function FinancialOverview() {
                         </li>
                       ))
                     )}
-                  </ul>
-                </div>
+                </ul>
               </div>
-            </section>
+            </div>
+          </section>
           )}
         </div>
+
+        {/* Recent Transactions — full width below Cashflow/Statistic */}
+        <section className="w-full">
+          <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <h3 className="text-lg font-semibold text-[#1f2933]">Recent Transactions</h3>
+              <div className="flex items-center gap-2">
+                <select
+                  value={recentPeriod}
+                  onChange={(e) => setRecentPeriod(e.target.value as "month" | "year")}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                >
+                  <option value="month">This month</option>
+                  <option value="year">This year</option>
+                </select>
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-2 text-slate-600 transition-colors hover:bg-slate-100"
+                  title="Filter"
+                >
+                  <Filter className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wider text-slate-500">
+                    <th className="pb-3 pt-1">Transaction Name</th>
+                    <th className="pb-3 pt-1">Account</th>
+                    <th className="pb-3 pt-1">Date & Time</th>
+                    <th className="pb-3 pt-1 text-right">Amount</th>
+                    <th className="pb-3 pt-1">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentTransactions.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                        No transactions in this period.
+                      </td>
+                    </tr>
+                  ) : (
+                    recentTransactions.map((tx) => (
+                      <tr key={tx.id} className="border-b border-slate-100 last:border-0">
+                        <td className="py-3">
+                          <p className="font-medium text-slate-800">{tx.name}</p>
+                          <p className="text-xs text-slate-500">{tx.sub}</p>
+                        </td>
+                        <td className="py-3 text-slate-600">{tx.account}</td>
+                        <td className="py-3 text-slate-600">
+                          <p>{tx.date}</p>
+                          <p className="text-xs text-slate-500">{tx.time}</p>
+                        </td>
+                        <td className="py-3 text-right">
+                          <span className={tx.amount >= 0 ? "font-medium text-emerald-600" : "font-medium text-red-600"}>
+                            {tx.amount >= 0 ? "+" : ""}{fmt(tx.amount)}
+                          </span>
+                        </td>
+                        <td className="py-3">
+                          <span
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${
+                              tx.status === "Completed" ? "bg-emerald-600" : "bg-emerald-400"
+                            }`}
+                          >
+                            {tx.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );
