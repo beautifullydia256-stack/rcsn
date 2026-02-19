@@ -300,7 +300,7 @@ export default function BillingPage() {
                     </p>
                     {students.length > 0 && studentsInClass.length === 0 && (
                       <p className="text-sm text-amber-700 mt-1">
-                        No students match this class name. Fee structure uses: {classNames.join(", ")}. Student classes in use: {[...new Set(students.map((s) => s.current_class).filter(Boolean))].join(", ") || "—"}.
+                        No students in this class. Select a class that has students: {[...new Set(students.map((s) => s.current_class).filter(Boolean))].sort().join(", ") || "—"}.
                       </p>
                     )}
                   </>
