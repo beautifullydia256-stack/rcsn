@@ -384,8 +384,8 @@ export default function PaymentsPage() {
       )}
       {formOverlayOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.55)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.28)" }}
           role="dialog"
           aria-modal="true"
           aria-label="Record payment"

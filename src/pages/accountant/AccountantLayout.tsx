@@ -122,9 +122,6 @@ export default function AccountantLayout() {
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard}>
             Dashboard
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/payments" icon={CreditCard}>
-            Payments
-          </NavLinkStyle>
           <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText}>
             Invoices & Billing
           </NavLinkStyle>
