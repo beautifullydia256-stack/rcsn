@@ -48,17 +48,14 @@ export default function BillingPage() {
   const feeForStudent = selectedStudentRow ? fees.find((f) => f.class_name === selectedStudentRow.current_class) : null;
   const suggestedAmount = feeForStudent != null ? Number(feeForStudent.tuition_amount) : 0;
   const q = studentSearchQuery.trim().toLowerCase();
-  const filteredStudentsForSingle = q
-    ? students.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.current_class.toLowerCase().includes(q)
-      )
-    : students;
   const studentOptions =
-    selectedStudentRow && !filteredStudentsForSingle.some((s) => s.student_id === selectedStudent)
-      ? [selectedStudentRow, ...filteredStudentsForSingle]
-      : filteredStudentsForSingle;
+    q === ""
+      ? []
+      : students.filter(
+          (s) =>
+            s.name.toLowerCase().includes(q) ||
+            s.current_class.toLowerCase().includes(q)
+        );
 
   async function handleGenerateBulk() {
     if (!schoolId || !userId || !selectedTerm || !selectedClass || studentsInClass.length === 0) {
@@ -289,26 +286,50 @@ export default function BillingPage() {
                   <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
                   <input
                     type="text"
-                    value={studentSearchQuery}
-                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    value={selectedStudent ? (selectedStudentRow ? `${selectedStudentRow.name} (${selectedStudentRow.current_class})` : "") : studentSearchQuery}
+                    onChange={(e) => {
+                      setSelectedStudent("");
+                      setStudentSearchQuery(e.target.value);
+                    }}
                     placeholder="Search by name or class…"
                     className={inputClass}
                     aria-label="Search students"
                   />
-                  <select
-                    value={selectedStudent}
-                    onChange={(e) => setSelectedStudent(e.target.value)}
-                    className={`mt-2 ${inputClass}`}
-                  >
-                    <option value="">Select student</option>
-                    {studentOptions.map((s) => (
-                      <option key={s.student_id} value={s.student_id}>
-                        {s.name} ({s.current_class})
-                      </option>
-                    ))}
-                  </select>
-                  {studentSearchQuery.trim() && studentOptions.length === 0 && (
-                    <p className="mt-1 text-xs text-slate-500">No students match your search.</p>
+                  {!selectedStudent && studentSearchQuery.trim() !== "" && (
+                    <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                      {studentOptions.length === 0 ? (
+                        <p className="px-3 py-3 text-sm text-slate-500">No students match your search.</p>
+                      ) : (
+                        <ul className="py-1">
+                          {studentOptions.map((s) => (
+                            <li key={s.student_id}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedStudent(s.student_id);
+                                  setStudentSearchQuery("");
+                                }}
+                                className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                              >
+                                {s.name} ({s.current_class})
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+                  {selectedStudent && selectedStudentRow && (
+                    <p className="mt-1 text-xs text-slate-600">
+                      Selected: {selectedStudentRow.name} ({selectedStudentRow.current_class}){" "}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedStudent("")}
+                        className="text-emerald-600 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    </p>
                   )}
                 </div>
                 <div>
