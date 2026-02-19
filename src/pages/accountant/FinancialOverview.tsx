@@ -258,7 +258,7 @@ async function fetchRecentTransactions(
       id: p.payment_id,
       type: "payment",
       name: "Fee payment",
-      sub: "Income",
+      sub: "Cash In",
       account: studentName ? `${account} · ${studentName}` : account,
       date: p.payment_date,
       time: created.toTimeString().slice(0, 5),

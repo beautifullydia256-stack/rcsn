@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -18,19 +18,37 @@ import { useAuthStore } from "../../store/authStore";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
+// Prefetch route chunks on hover/idle so navigation feels instant
+const prefetchChunk = (importFn: () => Promise<unknown>) => {
+  importFn().catch(() => {});
+};
+
+const ACCOUNTANT_ROUTE_CHUNKS = [
+  () => import("./Dashboard"),
+  () => import("./BillingPage"),
+  () => import("./OutstandingPage"),
+  () => import("./ReceiptsPage"),
+  () => import("./ExpensesPage"),
+  () => import("./ReportsPage"),
+  () => import("./BankPage"),
+  () => import("./PaymentsPage"),
+];
+
 function NavLinkStyle({
   to,
   end,
   icon: Icon,
   children,
+  onPrefetch,
 }: {
   to: string;
   end?: boolean;
   icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
+  onPrefetch?: () => void;
 }) {
   return (
-    <NavLink to={to} end={end} className="block">
+    <NavLink to={to} end={end} className="block" onMouseEnter={onPrefetch}>
       {({ isActive }) => (
         <span
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
@@ -106,6 +124,12 @@ export default function AccountantLayout() {
     check();
   }, [navigate, setUser, setRole, setSchoolId]);
 
+  // Prefetch all accountant route chunks after mount (idle) so navigation is instant
+  useEffect(() => {
+    const t = setTimeout(() => { ACCOUNTANT_ROUTE_CHUNKS.forEach((fn) => prefetchChunk(fn)); }, 800);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="fixed inset-0 flex bg-slate-50 overflow-hidden">
       <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-slate-200 shadow-sm">
@@ -119,25 +143,25 @@ export default function AccountantLayout() {
           <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Menu</span>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-          <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard}>
+          <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}>
             Dashboard
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText}>
+          <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}>
             Invoices & Billing
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/outstanding" icon={Wallet}>
+          <NavLinkStyle to="/dashboard/accountant/outstanding" icon={Wallet} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])}>
             Outstanding Fees
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/receipts" icon={Receipt}>
+          <NavLinkStyle to="/dashboard/accountant/receipts" icon={Receipt} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])}>
             Receipts
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/expenses" icon={TrendingUp}>
+          <NavLinkStyle to="/dashboard/accountant/expenses" icon={TrendingUp} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])}>
             Expenses
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/reports" icon={BarChart3}>
+          <NavLinkStyle to="/dashboard/accountant/reports" icon={BarChart3} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])}>
             Reports
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/bank" icon={Building2}>
+          <NavLinkStyle to="/dashboard/accountant/bank" icon={Building2} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])}>
             Bank & Cash
           </NavLinkStyle>
         </nav>
@@ -202,7 +226,23 @@ export default function AccountantLayout() {
           </div>
         </header>
         <div className="flex-1 overflow-y-auto min-h-0">
-          <Outlet />
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+                <div className="animate-pulse space-y-6">
+                  <div className="h-8 w-56 rounded bg-slate-200" />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-28 rounded-xl bg-slate-200" />
+                    ))}
+                  </div>
+                  <div className="h-64 rounded-xl bg-slate-200" />
+                </div>
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </div>
         <footer className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4">
           <div className="flex items-center justify-between text-sm text-slate-500">

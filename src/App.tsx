@@ -7,6 +7,7 @@ import ProtectedRoute from './router/ProtectedRoute';
 import AdminLayout from './components/layout/AdminLayout';
 import TeacherLayout from './components/layout/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
+import AccountantLayout from './pages/accountant/AccountantLayout';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
 
 // Retry once on chunk load failure (e.g. after deploy or network blip)
@@ -64,7 +65,6 @@ const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/Dashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazyWithRetry(() => import('./pages/parent/Dashboard'));
-const AccountantLayout = lazyWithRetry(() => import('./pages/accountant/AccountantLayout'));
 const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
 const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));

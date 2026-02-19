@@ -122,7 +122,7 @@ export default function ReportsPage() {
         )}
       </div>
 
-      <p className="mt-4 text-sm text-slate-500">More reports (Income Statement, Daily Cash, PDF export) coming in Phase 4.</p>
+      <p className="mt-4 text-sm text-slate-500">More reports (Cash In Statement, Daily Cash, PDF export) coming in Phase 4.</p>
     </div>
   );
 }
