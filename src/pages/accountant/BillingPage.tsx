@@ -19,6 +19,7 @@ export default function BillingPage() {
   const [selectedTerm, setSelectedTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -46,6 +47,18 @@ export default function BillingPage() {
   const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
   const feeForStudent = selectedStudentRow ? fees.find((f) => f.class_name === selectedStudentRow.current_class) : null;
   const suggestedAmount = feeForStudent != null ? Number(feeForStudent.tuition_amount) : 0;
+  const q = studentSearchQuery.trim().toLowerCase();
+  const filteredStudentsForSingle = q
+    ? students.filter(
+        (s) =>
+          s.name.toLowerCase().includes(q) ||
+          s.current_class.toLowerCase().includes(q)
+      )
+    : students;
+  const studentOptions =
+    selectedStudentRow && !filteredStudentsForSingle.some((s) => s.student_id === selectedStudent)
+      ? [selectedStudentRow, ...filteredStudentsForSingle]
+      : filteredStudentsForSingle;
 
   async function handleGenerateBulk() {
     if (!schoolId || !userId || !selectedTerm || !selectedClass || studentsInClass.length === 0) {
@@ -184,6 +197,7 @@ export default function BillingPage() {
       if (balErr) throw balErr;
       setMessage({ type: "ok", text: `Invoice generated for ${st.name}. You can now record payments.` });
       setSelectedStudent("");
+      setStudentSearchQuery("");
       setSingleAmount("");
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Failed to generate invoice." });
@@ -273,14 +287,29 @@ export default function BillingPage() {
               <>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
-                  <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className={inputClass}>
+                  <input
+                    type="text"
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    placeholder="Search by name or class…"
+                    className={inputClass}
+                    aria-label="Search students"
+                  />
+                  <select
+                    value={selectedStudent}
+                    onChange={(e) => setSelectedStudent(e.target.value)}
+                    className={`mt-2 ${inputClass}`}
+                  >
                     <option value="">Select student</option>
-                    {students.map((s) => (
+                    {studentOptions.map((s) => (
                       <option key={s.student_id} value={s.student_id}>
                         {s.name} ({s.current_class})
                       </option>
                     ))}
                   </select>
+                  {studentSearchQuery.trim() && studentOptions.length === 0 && (
+                    <p className="mt-1 text-xs text-slate-500">No students match your search.</p>
+                  )}
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
