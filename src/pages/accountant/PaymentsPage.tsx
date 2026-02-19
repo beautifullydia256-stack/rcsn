@@ -41,19 +41,21 @@ export default function PaymentsPage() {
     }
     setInvoiceLoading(true);
     setInvoice(null);
-    supabase
-      .from("student_invoices")
-      .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
-      .eq("school_id", schoolId)
-      .eq("student_id", selectedStudent)
-      .eq("term_id", selectedTerm)
-      .in("status", ["issued", "partial"])
-      .maybeSingle()
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("student_invoices")
+          .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
+          .eq("school_id", schoolId)
+          .eq("student_id", selectedStudent)
+          .eq("term_id", selectedTerm)
+          .in("status", ["issued", "partial"])
+          .maybeSingle();
         setInvoice((data as InvoiceRow | null) ?? null);
+      } finally {
         setInvoiceLoading(false);
-      })
-      .catch(() => setInvoiceLoading(false));
+      }
+    })();
   }, [schoolId, selectedStudent, selectedTerm]);
 
   const balanceValue = invoice ? Number(invoice.balance ?? invoice.total_amount - invoice.amount_paid) : 0;
@@ -112,19 +114,19 @@ export default function PaymentsPage() {
       setNotes("");
       setInvoice(null);
       setInvoiceLoading(true);
-      supabase
-        .from("student_invoices")
-        .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
-        .eq("school_id", schoolId)
-        .eq("student_id", selectedStudent)
-        .eq("term_id", selectedTerm)
-        .in("status", ["issued", "partial"])
-        .maybeSingle()
-        .then(({ data }) => {
-          setInvoice((data as InvoiceRow | null) ?? null);
-          setInvoiceLoading(false);
-        })
-        .catch(() => setInvoiceLoading(false));
+      try {
+        const { data } = await supabase
+          .from("student_invoices")
+          .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
+          .eq("school_id", schoolId)
+          .eq("student_id", selectedStudent)
+          .eq("term_id", selectedTerm)
+          .in("status", ["issued", "partial"])
+          .maybeSingle();
+        setInvoice((data as InvoiceRow | null) ?? null);
+      } finally {
+        setInvoiceLoading(false);
+      }
     } catch (err: unknown) {
       setMessage((err as Error).message || "Failed to record payment.");
     } finally {
