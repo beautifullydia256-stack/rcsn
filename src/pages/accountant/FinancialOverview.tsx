@@ -280,13 +280,48 @@ export default function FinancialOverview() {
   return (
     <div className="min-h-full" style={{ backgroundColor: "#f7f9fb" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-7">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
-          <p className="mt-1 flex items-center gap-2 text-[13px] text-[#6b7280]">
-                <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                  {data.termLabel}
-                </span>
-              </p>
+        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
+            <p className="mt-1 flex items-center gap-2 text-[13px] text-[#6b7280]">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+                {data.termLabel}
+              </span>
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/payments")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+            >
+              <Receipt className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+              Record payment
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/billing")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              <FilePlus className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              Generate invoice
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/expenses")}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              <DollarSign className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              Record expense
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+            >
+              <Send className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              Send reminder
+            </button>
+          </div>
         </div>
 
         {/* ROW 1 â€” KPI cards (unchanged) */}
@@ -321,52 +356,6 @@ export default function FinancialOverview() {
               subline="Payments today"
               accent="emerald"
             />
-          </div>
-        </section>
-
-        {/* Quick actions */}
-        <section style={{ marginBottom: 28 }}>
-          <h3 className="mb-4 text-[18px] font-semibold text-[#1f2933]">Quick actions</h3>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" style={{ gap: 24 }}>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/accountant/payments")}
-              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
-                <Receipt className="h-6 w-6" />
-              </span>
-              <span className="text-sm font-semibold text-[#1f2933]">Record payment</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/accountant/billing")}
-              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <FilePlus className="h-6 w-6" />
-              </span>
-              <span className="text-sm font-semibold text-[#1f2933]">Generate invoice</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/dashboard/accountant/expenses")}
-              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <DollarSign className="h-6 w-6" />
-              </span>
-              <span className="text-sm font-semibold text-[#1f2933]">Record expense</span>
-            </button>
-            <button
-              type="button"
-              className="flex flex-col items-center justify-center gap-3 rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                <Send className="h-6 w-6" />
-              </span>
-              <span className="text-sm font-semibold text-[#1f2933]">Send reminder</span>
-            </button>
           </div>
         </section>
       </div>
