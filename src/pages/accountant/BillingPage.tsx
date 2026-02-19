@@ -5,7 +5,7 @@ import { useAuthStore } from "../../store/authStore";
 
 type FeeRow = { id: string; class_name: string; tuition_amount: number };
 type TermRow = { id: string; term: number; year: number };
-type StudentRow = { student_id: string; name: string; current_class: string; class_id: string | null };
+type StudentRow = { student_id: string; name: string; current_class: string };
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ export default function BillingPage() {
         supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase
           .from("students")
-          .select("student_id, name, current_class, class_id")
+          .select("student_id, name, current_class")
           .eq("school_id", schoolId)
           .neq("status", "graduated")
           .order("name"),
