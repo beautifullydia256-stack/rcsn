@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import {
@@ -546,6 +546,7 @@ function KPICard({
 type AccountantOutletContext = { openRecordPayment?: () => void };
 
 export default function FinancialOverview() {
+  const navigate = useNavigate();
   const { openRecordPayment } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
 
