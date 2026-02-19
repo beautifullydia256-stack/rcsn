@@ -109,18 +109,23 @@ export default function PaymentsPage() {
       };
       let receiptNum: string | null = null;
       try {
-        const res = await supabase.rpc("get_next_receipt_number", { p_school_id: schoolId });
+        const res = await supabase.rpc("get_next_receipt_number", {
+          p_school_id: schoolId,
+          p_term_id: selectedTerm,
+        });
         receiptNum = res.data ?? null;
       } catch {
         receiptNum = null;
       }
-      payload.receipt_number = receiptNum ?? "REC-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
+      const year = new Date().getFullYear();
+      payload.receipt_number =
+        receiptNum ?? "RCT-" + year + "-T1-" + Date.now().toString().slice(-4).padStart(4, "0");
       let { error } = await supabase.from("student_payments").insert(payload);
       if (error && (error.message?.includes("receipt_number") || error.message?.includes("column"))) {
         delete payload.receipt_number;
         const res = await supabase.from("student_payments").insert(payload);
         error = res.error;
-        if (!error) setMessage("Payment recorded. (Run DB migration for receipt numbers.)");
+        if (!error) setMessage("Payment recorded (receipt number not stored).");
       } else if (!error) {
         setMessage("Payment recorded. Receipt: " + (payload.receipt_number as string));
       }
