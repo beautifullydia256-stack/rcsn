@@ -26,18 +26,34 @@ export default function BillingPage() {
 
   useEffect(() => {
     if (!schoolId) return;
-    Promise.all([
-      supabase.from("school_fee_structure").select("id, class_name, tuition_amount").eq("school_id", schoolId).order("class_name"),
-      supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
-      supabase.from("students").select("student_id, name, current_class, class_id").eq("school_id", schoolId).eq("status", "active").order("name"),
-    ]).then(([f, t, s]) => {
-      setFees((f.data || []) as FeeRow[]);
-      const termList = (t.data || []) as TermRow[];
+    void (async () => {
+      const [fRes, tRes, sRes, balRes] = await Promise.all([
+        supabase.from("school_fee_structure").select("id, class_name, tuition_amount").eq("school_id", schoolId).order("class_name"),
+        supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
+        supabase.from("students").select("student_id, name, current_class, class_id").eq("school_id", schoolId).eq("status", "active").order("name"),
+        supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
+      ]);
+      setFees((fRes.data || []) as FeeRow[]);
+      const termList = (tRes.data || []) as TermRow[];
       setTerms(termList);
       if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
-      setStudents((s.data || []) as StudentRow[]);
+      const active = (sRes.data || []) as StudentRow[];
+      const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
+        (id) => !active.some((s) => s.student_id === id)
+      );
+      if (debtorIds.length > 0) {
+        const { data: debtors } = await supabase
+          .from("students")
+          .select("student_id, name, current_class, class_id")
+          .eq("school_id", schoolId)
+          .in("student_id", debtorIds);
+        const merged = [...active, ...((debtors || []) as StudentRow[])].sort((a, b) => a.name.localeCompare(b.name));
+        setStudents(merged);
+      } else {
+        setStudents(active);
+      }
       setLoading(false);
-    });
+    })();
   }, [schoolId]);
 
   const classNames = fees.map((r) => r.class_name);

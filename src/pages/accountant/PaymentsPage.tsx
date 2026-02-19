@@ -23,15 +23,30 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!schoolId) return;
-    Promise.all([
-      supabase.from("students").select("student_id, name, current_class").eq("school_id", schoolId).eq("status", "active").order("name"),
-      supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
-    ]).then(([s, t]) => {
-      setStudents(s.data || []);
-      const termList = (t.data || []) as { id: string; term: number; year: number }[];
+    void (async () => {
+      const [sRes, tRes, balRes] = await Promise.all([
+        supabase.from("students").select("student_id, name, current_class").eq("school_id", schoolId).eq("status", "active").order("name"),
+        supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
+        supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
+      ]);
+      const active = (sRes.data || []) as { student_id: string; name: string; current_class: string }[];
+      const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
       if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
-    });
+      const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
+        (id) => !active.some((s) => s.student_id === id)
+      );
+      if (debtorIds.length > 0) {
+        const { data: debtors } = await supabase
+          .from("students")
+          .select("student_id, name, current_class")
+          .eq("school_id", schoolId)
+          .in("student_id", debtorIds);
+        setStudents([...active, ...(debtors || [])].sort((a, b) => a.name.localeCompare(b.name)));
+      } else {
+        setStudents(active);
+      }
+    })();
   }, [schoolId]);
 
   useEffect(() => {
