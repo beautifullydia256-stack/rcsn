@@ -23,9 +23,11 @@ export default function BillingPage() {
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!schoolId) return;
+    setStudentsError(null);
     void (async () => {
       const [fRes, tRes, sRes] = await Promise.all([
         supabase.from("school_fee_structure").select("id, class_name, tuition_amount").eq("school_id", schoolId).order("class_name"),
@@ -41,8 +43,13 @@ export default function BillingPage() {
       const termList = (tRes.data || []) as TermRow[];
       setTerms(termList);
       if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
-      const list = (sRes.data || []) as StudentRow[];
-      setStudents(list.sort((a, b) => a.name.localeCompare(b.name)));
+      if (sRes.error) {
+        setStudentsError(sRes.error.message || "Failed to load students");
+        setStudents([]);
+      } else {
+        const list = (sRes.data || []) as StudentRow[];
+        setStudents(list.sort((a, b) => a.name.localeCompare(b.name)));
+      }
       setLoading(false);
     })();
   }, [schoolId]);
@@ -267,9 +274,13 @@ export default function BillingPage() {
             {generateMode === "bulk" ? (
               <>
                 {!loading && students.length === 0 && (
-                  <p className="text-sm text-amber-700 rounded-lg bg-amber-50 p-3">
-                    No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.
-                  </p>
+                  <div className="rounded-lg bg-amber-50 p-3 space-y-1">
+                    {studentsError ? (
+                      <p className="text-sm text-red-700 font-medium">Error loading students (Supabase): {studentsError}</p>
+                    ) : (
+                      <p className="text-sm text-amber-700">No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.</p>
+                    )}
+                  </div>
                 )}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
