@@ -63,6 +63,9 @@ export default function AdminDashboard() {
     rolloverFired.current = true;
     void (async () => {
       try {
+        const nextYear = new Date().getFullYear() + 1;
+        const { ensureAcademicYearExists } = await import('@/lib/ensureAcademicYear');
+        await ensureAcademicYearExists(nextYear); // Rollover integration: next year must exist
         const { error } = await supabase.rpc('automatic_term3_rollover');
         if (error) throw error;
       } catch {

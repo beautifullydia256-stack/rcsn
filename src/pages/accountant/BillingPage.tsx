@@ -38,20 +38,29 @@ export default function BillingPage() {
       setTerms(termList);
       if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
       const active = (sRes.data || []) as StudentRow[];
-      const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
-        (id) => !active.some((s) => s.student_id === id)
-      );
+      const balanceStudentIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))];
+      const activeIds = new Set(active.map((s) => s.student_id));
+      const debtorIds = balanceStudentIds.filter((id) => !activeIds.has(id));
+      let merged: StudentRow[] = [...active];
       if (debtorIds.length > 0) {
         const { data: debtors } = await supabase
           .from("students")
           .select("student_id, name, current_class, class_id")
           .eq("school_id", schoolId)
           .in("student_id", debtorIds);
-        const merged = [...active, ...((debtors || []) as StudentRow[])].sort((a, b) => a.name.localeCompare(b.name));
-        setStudents(merged);
-      } else {
-        setStudents(active);
+        merged = [...active, ...((debtors || []) as StudentRow[])];
       }
+      if (merged.length === 0 && balanceStudentIds.length > 0) {
+        const { data: fromBalances } = await supabase
+          .from("students")
+          .select("student_id, name, current_class, class_id")
+          .eq("school_id", schoolId)
+          .in("student_id", balanceStudentIds);
+        merged = ((fromBalances || []) as StudentRow[]).sort((a, b) => a.name.localeCompare(b.name));
+      } else {
+        merged.sort((a, b) => a.name.localeCompare(b.name));
+      }
+      setStudents(merged);
       setLoading(false);
     })();
   }, [schoolId]);

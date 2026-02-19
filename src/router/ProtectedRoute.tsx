@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
 import ThemedLoadingView from '../components/ui/ThemedLoadingView';
 
 export default function ProtectedRoute() {
@@ -30,6 +31,7 @@ export default function ProtectedRoute() {
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id); // Set schoolId in store
+          void ensureCurrentAndNextAcademicYears(); // Keep academic calendar ahead
         } else {
           // Fallback to metadata
           const role = session.user.user_metadata?.role || 
