@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ComponentType } from 'react';
 import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
@@ -9,64 +9,82 @@ import TeacherLayout from './components/layout/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
 
-// Lazy load pages
-const HomePage = lazy(() => import('./pages/Home'));
-const LoginPage = lazy(() => import('./pages/auth/Login'));
-const RegisterPage = lazy(() => import('./pages/auth/Register'));
-const DashboardEntry = lazy(() => import('./pages/dashboard/DashboardEntry'));
-const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
-const ReportsHub = lazy(() => import('./pages/admin/reports/ReportsHub'));
-const GenerateReportsPage = lazy(() => import('./pages/admin/reports/GenerateReportsPage'));
-const ReportRecordsPage = lazy(() => import('./pages/admin/reports/ReportRecordsPage'));
-const BulkGenerator = lazy(() => import('./pages/admin/reports/BulkGenerator'));
-const ReportViewer = lazy(() => import('./pages/admin/reports/ReportViewer'));
-const StudentsPage = lazy(() => import('./pages/admin/students/StudentsPage'));
-const AddStudentPage = lazy(() => import('./pages/admin/students/AddStudentPage'));
-const TeachersPage = lazy(() => import('./pages/admin/teachers/TeachersPage'));
-const ParentsPage = lazy(() => import('./pages/admin/parents/ParentsPage'));
-const AccountsPage = lazy(() => import('./pages/admin/accounts/AccountsPage'));
-const ExamSetsPage = lazy(() => import('./pages/admin/exam-sets/ExamSetsPage'));
-const AttendanceRecordsPage = lazy(() => import('./pages/admin/attendance/AttendanceRecordsPage'));
-const SettingsPage = lazy(() => import('./pages/admin/settings/SettingsPage'));
-const SettingsClassesPage = lazy(() => import('./pages/admin/settings/ClassesPage'));
-const ClassDetailPage = lazy(() => import('./pages/admin/settings/ClassDetailPage'));
-const LocationSettingsPage = lazy(() => import('./pages/admin/settings/LocationSettingsPage'));
-const OutstandingPage = lazy(() => import('./pages/admin/outstanding/OutstandingPage'));
-const AdminJobsPage = lazy(() => import('./pages/admin/jobs/AdminJobsPage'));
-const NotificationsPage = lazy(() => import('./pages/admin/notifications/NotificationsPage'));
-const IdentityPage = lazy(() => import('./pages/admin/identity/IdentityPage'));
-const StudentIDCardPage = lazy(() => import('./pages/admin/identity/StudentIDCardPage'));
-const TeacherDashboard = lazy(() => import('./pages/teacher/Dashboard'));
-const TeacherStudentsPage = lazy(() => import('./pages/teacher/students/StudentsPage'));
-const TeacherClassesPage = lazy(() => import('./pages/teacher/classes/ClassesPage'));
-const TeacherExamResultsPage = lazy(() => import('./pages/teacher/exam-results/ExamResultsPage'));
-const TeacherAttendancePage = lazy(() => import('./pages/teacher/attendance/AttendancePage'));
-const TeacherTimetablePage = lazy(() => import('./pages/teacher/timetable/TimetablePage'));
-const TeacherSettingsPage = lazy(() => import('./pages/teacher/settings/SettingsPage'));
-const StudentDashboard = lazy(() => import('./pages/student/Dashboard'));
-const StudentFeesPage = lazy(() => import('./pages/student/fees/FeesPage'));
-const ParentDashboard = lazy(() => import('./pages/parent/Dashboard'));
-const AccountantLayout = lazy(() => import('./pages/accountant/AccountantLayout'));
-const AccountantDashboard = lazy(() => import('./pages/accountant/Dashboard'));
-const AccountantPaymentsPage = lazy(() => import('./pages/accountant/PaymentsPage'));
-const AccountantBillingPage = lazy(() => import('./pages/accountant/BillingPage'));
-const AccountantOutstandingPage = lazy(() => import('./pages/accountant/OutstandingPage'));
-const AccountantReceiptsPage = lazy(() => import('./pages/accountant/ReceiptsPage'));
-const AccountantExpensesPage = lazy(() => import('./pages/accountant/ExpensesPage'));
-const AccountantReportsPage = lazy(() => import('./pages/accountant/ReportsPage'));
-const AccountantBankPage = lazy(() => import('./pages/accountant/BankPage'));
-const LibrarianDashboard = lazy(() => import('./pages/librarian/Dashboard'));
-const HeadTeacherDashboard = lazy(() => import('./pages/head-teacher/Dashboard'));
-const OwnerDashboard = lazy(() => import('./pages/owner/Dashboard'));
-const LibraryPage = lazy(() => import('./pages/Library'));
-const JobsPage = lazy(() => import('./pages/Jobs'));
-const AffiliatePage = lazy(() => import('./pages/Affiliate'));
-const ContactPage = lazy(() => import('./pages/Contact'));
-const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPassword'));
-const AuthCallbackPage = lazy(() => import('./pages/auth/Callback'));
-const PrivacyPolicyPage = lazy(() => import('./pages/PrivacyPolicy'));
-const SecurityLetterPage = lazy(() => import('./pages/SecurityLetter'));
-const AffiliateTermsPage = lazy(() => import('./pages/AffiliateTerms'));
+// Retry once on chunk load failure (e.g. after deploy or network blip)
+function lazyWithRetry<T extends { default: ComponentType<unknown> }>(
+  importFn: () => Promise<T>,
+  retries = 1
+): React.LazyExoticComponent<ComponentType<unknown>> {
+  return lazy(async () => {
+    for (let i = 0; i <= retries; i++) {
+      try {
+        return await importFn();
+      } catch (e) {
+        if (i === retries) throw e;
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      }
+    }
+    throw new Error('Unreachable');
+  });
+}
+
+// Lazy load pages (with retry to avoid chunk-load errors after deploy)
+const HomePage = lazyWithRetry(() => import('./pages/Home'));
+const LoginPage = lazyWithRetry(() => import('./pages/auth/Login'));
+const RegisterPage = lazyWithRetry(() => import('./pages/auth/Register'));
+const DashboardEntry = lazyWithRetry(() => import('./pages/dashboard/DashboardEntry'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/Dashboard'));
+const ReportsHub = lazyWithRetry(() => import('./pages/admin/reports/ReportsHub'));
+const GenerateReportsPage = lazyWithRetry(() => import('./pages/admin/reports/GenerateReportsPage'));
+const ReportRecordsPage = lazyWithRetry(() => import('./pages/admin/reports/ReportRecordsPage'));
+const BulkGenerator = lazyWithRetry(() => import('./pages/admin/reports/BulkGenerator'));
+const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportViewer'));
+const StudentsPage = lazyWithRetry(() => import('./pages/admin/students/StudentsPage'));
+const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
+const TeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/TeachersPage'));
+const ParentsPage = lazyWithRetry(() => import('./pages/admin/parents/ParentsPage'));
+const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
+const ExamSetsPage = lazyWithRetry(() => import('./pages/admin/exam-sets/ExamSetsPage'));
+const AttendanceRecordsPage = lazyWithRetry(() => import('./pages/admin/attendance/AttendanceRecordsPage'));
+const SettingsPage = lazyWithRetry(() => import('./pages/admin/settings/SettingsPage'));
+const SettingsClassesPage = lazyWithRetry(() => import('./pages/admin/settings/ClassesPage'));
+const ClassDetailPage = lazyWithRetry(() => import('./pages/admin/settings/ClassDetailPage'));
+const LocationSettingsPage = lazyWithRetry(() => import('./pages/admin/settings/LocationSettingsPage'));
+const OutstandingPage = lazyWithRetry(() => import('./pages/admin/outstanding/OutstandingPage'));
+const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPage'));
+const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
+const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
+const StudentIDCardPage = lazyWithRetry(() => import('./pages/admin/identity/StudentIDCardPage'));
+const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/Dashboard'));
+const TeacherStudentsPage = lazyWithRetry(() => import('./pages/teacher/students/StudentsPage'));
+const TeacherClassesPage = lazyWithRetry(() => import('./pages/teacher/classes/ClassesPage'));
+const TeacherExamResultsPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsPage'));
+const TeacherAttendancePage = lazyWithRetry(() => import('./pages/teacher/attendance/AttendancePage'));
+const TeacherTimetablePage = lazyWithRetry(() => import('./pages/teacher/timetable/TimetablePage'));
+const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
+const StudentDashboard = lazyWithRetry(() => import('./pages/student/Dashboard'));
+const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
+const ParentDashboard = lazyWithRetry(() => import('./pages/parent/Dashboard'));
+const AccountantLayout = lazyWithRetry(() => import('./pages/accountant/AccountantLayout'));
+const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
+const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
+const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
+const AccountantOutstandingPage = lazyWithRetry(() => import('./pages/accountant/OutstandingPage'));
+const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/ReceiptsPage'));
+const AccountantExpensesPage = lazyWithRetry(() => import('./pages/accountant/ExpensesPage'));
+const AccountantReportsPage = lazyWithRetry(() => import('./pages/accountant/ReportsPage'));
+const AccountantBankPage = lazyWithRetry(() => import('./pages/accountant/BankPage'));
+const LibrarianDashboard = lazyWithRetry(() => import('./pages/librarian/Dashboard'));
+const HeadTeacherDashboard = lazyWithRetry(() => import('./pages/head-teacher/Dashboard'));
+const OwnerDashboard = lazyWithRetry(() => import('./pages/owner/Dashboard'));
+const LibraryPage = lazyWithRetry(() => import('./pages/Library'));
+const JobsPage = lazyWithRetry(() => import('./pages/Jobs'));
+const AffiliatePage = lazyWithRetry(() => import('./pages/Affiliate'));
+const ContactPage = lazyWithRetry(() => import('./pages/Contact'));
+const ForgotPasswordPage = lazyWithRetry(() => import('./pages/auth/ForgotPassword'));
+const AuthCallbackPage = lazyWithRetry(() => import('./pages/auth/Callback'));
+const PrivacyPolicyPage = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
+const SecurityLetterPage = lazyWithRetry(() => import('./pages/SecurityLetter'));
+const AffiliateTermsPage = lazyWithRetry(() => import('./pages/AffiliateTerms'));
 
 function App() {
   return (

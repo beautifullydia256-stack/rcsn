@@ -2,13 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { PaymentReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
 
 type InvoiceRow = { invoice_id: string; total_amount: number; amount_paid: number; balance: number; status: string; invoice_number: string | null };
+
+function formatReceiptTime(d: Date): string {
+  const day = String(d.getDate()).padStart(2, "0");
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  const year = d.getFullYear();
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  const s = String(d.getSeconds()).padStart(2, "0");
+  return `${day}-${mon}-${year} ${h}:${m}:${s}`;
+}
 
 export default function PaymentsPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
+  const userEmail = useAuthStore((s) => s.user?.email ?? "");
+  const userName = useAuthStore((s) => (s.user?.user_metadata as { full_name?: string })?.full_name ?? "");
   const [students, setStudents] = useState<{ student_id: string; name: string; current_class: string }[]>([]);
   const [terms, setTerms] = useState<{ id: string; term: number; year: number }[]>([]);
   const [selectedStudent, setSelectedStudent] = useState("");
@@ -20,6 +33,7 @@ export default function PaymentsPage() {
   const [message, setMessage] = useState("");
   const [invoice, setInvoice] = useState<InvoiceRow | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -126,10 +140,26 @@ export default function PaymentsPage() {
         const res = await supabase.from("student_payments").insert(payload);
         error = res.error;
         if (!error) setMessage("Payment recorded (receipt number not stored).");
-      } else if (!error) {
-        setMessage("Payment recorded. Receipt: " + (payload.receipt_number as string));
       }
       if (error) throw error;
+
+      const receiptNum = (payload.receipt_number as string) ?? "";
+      const studentRow = students.find((s) => s.student_id === selectedStudent);
+      const termRow = terms.find((t) => t.id === selectedTerm);
+      const termLabel = termRow ? `Term ${termRow.term} (T${termRow.term}), ${termRow.year}` : "";
+      const now = new Date();
+      setReceiptData({
+        receiptNumber: receiptNum,
+        studentName: studentRow?.name ?? "—",
+        studentClass: studentRow?.current_class ?? "—",
+        termLabel,
+        amountPaid: amt,
+        paymentMethod: method,
+        transactionTime: formatReceiptTime(now),
+        recordedBy: userName || userEmail || "Staff",
+        description: notes || undefined,
+      });
+      setMessage("Payment recorded.");
       setAmount("");
       setNotes("");
       setInvoice(null);
@@ -158,6 +188,20 @@ export default function PaymentsPage() {
     "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      {receiptData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
+          <div className="relative">
+            <PaymentReceipt data={receiptData} autoPrint />
+            <button
+              type="button"
+              onClick={() => setReceiptData(null)}
+              className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              Close — record next payment
+            </button>
+          </div>
+        </div>
+      )}
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">Record Payment</h1>
         <button
