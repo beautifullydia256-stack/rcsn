@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import RecordPaymentModal from "../../components/accountant/RecordPaymentModal";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -31,7 +32,6 @@ const ACCOUNTANT_ROUTE_CHUNKS = [
   () => import("./ExpensesPage"),
   () => import("./ReportsPage"),
   () => import("./BankPage"),
-  () => import("./PaymentsPage"),
 ];
 
 function NavLinkStyle({
@@ -69,6 +69,7 @@ export default function AccountantLayout() {
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -132,6 +133,7 @@ export default function AccountantLayout() {
 
   return (
     <div className="fixed inset-0 flex bg-slate-50 overflow-hidden">
+      <RecordPaymentModal open={recordPaymentOpen} onClose={() => setRecordPaymentOpen(false)} />
       <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-slate-200 shadow-sm">
         <div className="flex items-center gap-2 px-4 py-6 border-b border-slate-200">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
@@ -187,7 +189,7 @@ export default function AccountantLayout() {
                       <div className="flex gap-2 px-3 pb-2">
                         <button
                           type="button"
-                          onClick={() => { navigate("/dashboard/accountant/payments"); setSearchOpen(false); setSearchQ(""); }}
+                          onClick={() => { setRecordPaymentOpen(true); setSearchOpen(false); setSearchQ(""); }}
                           className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                         >
                           Record payment
@@ -241,7 +243,7 @@ export default function AccountantLayout() {
               </div>
             }
           >
-            <Outlet />
+            <Outlet context={{ openRecordPayment: () => setRecordPaymentOpen(true) }} />
           </Suspense>
         </div>
         <footer className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4">

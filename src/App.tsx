@@ -66,7 +66,6 @@ const StudentDashboard = lazyWithRetry(() => import('./pages/student/Dashboard')
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazyWithRetry(() => import('./pages/parent/Dashboard'));
 const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
-const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
 const AccountantOutstandingPage = lazyWithRetry(() => import('./pages/accountant/OutstandingPage'));
 const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/ReceiptsPage'));
@@ -148,7 +147,7 @@ function App() {
                 <Route path="parent" element={<ParentDashboard />} />
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
-                  <Route path="payments" element={<AccountantPaymentsPage />} />
+                  <Route path="payments" element={<Navigate to="/dashboard/accountant" replace />} />
                   <Route path="billing" element={<AccountantBillingPage />} />
                   <Route path="outstanding" element={<AccountantOutstandingPage />} />
                   <Route path="receipts" element={<AccountantReceiptsPage />} />

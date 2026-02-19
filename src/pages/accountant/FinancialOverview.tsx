@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import {
@@ -543,8 +543,10 @@ function KPICard({
   );
 }
 
+type AccountantOutletContext = { openRecordPayment?: () => void };
+
 export default function FinancialOverview() {
-  const navigate = useNavigate();
+  const { openRecordPayment } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
 
   const { data, isLoading } = useQuery({
@@ -612,7 +614,7 @@ export default function FinancialOverview() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
-              onClick={() => navigate("/dashboard/accountant/payments")}
+              onClick={() => openRecordPayment?.()}
               className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
             >
               <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
