@@ -11,12 +11,11 @@ import {
   FilePlus,
   Send,
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useAuthStore } from "../../store/authStore";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
 const fmt = (n: number) =>
-  n == null || Number.isNaN(n) ? "â€”" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  n == null || Number.isNaN(n) ? "Ã¢â‚¬â€" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 interface OverviewData {
   termId: string | null;
@@ -180,12 +179,12 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
     }) => {
       const st = studentMap.get(r.student_id);
       return {
-        student_name: st?.name ?? "â€”",
-        class: st?.current_class ?? "â€”",
+        student_name: st?.name ?? "Ã¢â‚¬â€",
+        class: st?.current_class ?? "Ã¢â‚¬â€",
         receipt_number: r.receipt_number ?? null,
         payment_date: r.payment_date,
         amount_paid: Number(r.amount_paid || 0),
-        payment_method: r.payment_method ?? "â€”",
+        payment_method: r.payment_method ?? "Ã¢â‚¬â€",
       };
     }
   );
@@ -260,7 +259,7 @@ export default function FinancialOverview() {
   if (!schoolId) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
-        Loading your schoolâ€¦
+        Loading your schoolÃ¢â‚¬Â¦
       </div>
     );
   }
@@ -273,28 +272,10 @@ export default function FinancialOverview() {
             <div key={i} className="h-32 rounded-xl border border-slate-200 bg-white animate-pulse" />
           ))}
         </div>
-        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overviewâ€¦</div>
+        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overviewÃ¢â‚¬Â¦</div>
       </div>
     );
   }
-
-  const collectionRate =
-    data.totalFeesExpected > 0 ? Math.round((data.totalFeesCollected / data.totalFeesExpected) * 100) : 0;
-  const lastPayment = data.recentPayments[0];
-  const studentsOwing = data.notPaidCount + data.partiallyPaidCount;
-  const paymentMethodData = [
-    { name: "Cash", value: data.cashTotal, color: "#10b981" },
-    { name: "Bank / Card", value: data.bankTotal, color: "#059669" },
-    { name: "Mobile Money", value: data.mobileTotal, color: "#34d399" },
-    { name: "Other", value: data.otherTotal, color: "#6b7280" },
-  ].filter((d) => d.value > 0);
-  const totalCollectedMethods = paymentMethodData.reduce((s, d) => s + d.value, 0);
-  const chartData =
-    paymentMethodData.length > 0
-      ? paymentMethodData
-      : [{ name: "No data", value: 1, color: "#e5e7eb" }];
-  const cardClass =
-    "rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]";
 
   return (
     <div className="min-h-full" style={{ backgroundColor: "#f7f9fb" }}>
@@ -308,7 +289,7 @@ export default function FinancialOverview() {
               </p>
         </div>
 
-        {/* ROW 1 — KPI cards (unchanged) */}
+        {/* ROW 1 â€” KPI cards (unchanged) */}
         <section className="mb-7" style={{ marginBottom: 28 }}>
           <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Key figures</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -343,124 +324,7 @@ export default function FinancialOverview() {
           </div>
         </section>
 
-        {/* ROW 2 â€” Collection Progress (8 cols) + Payment Methods Donut (4 cols) */}
-        <section className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-12" style={{ marginBottom: 28, gap: 24 }}>
-          <div className="lg:col-span-8">
-            <div className={cardClass}>
-              <h3 className="text-[18px] font-semibold text-[#1f2933]">Term Collection Progress</h3>
-              <p className="mt-1 text-[13px] text-[#6b7280]">
-                UGX {fmt(data.totalFeesCollected)} of UGX {fmt(data.totalFeesExpected)}
-              </p>
-              <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out"
-                  style={{ width: `${Math.min(100, collectionRate)}%` }}
-                />
-              </div>
-              <p className="mt-2 text-[13px] text-[#6b7280]">{collectionRate}% collected</p>
-              {lastPayment && (
-                <p className="mt-3 text-[13px] text-[#6b7280]">
-                  Last: <span className="font-medium text-slate-800">{lastPayment.student_name}</span> paid UGX{" "}
-                  {fmt(lastPayment.amount_paid)} via {lastPayment.payment_method} Â· {lastPayment.payment_date}
-                </p>
-              )}
-            </div>
-          </div>
-          <div className="lg:col-span-4">
-            <div className={cardClass}>
-              <h3 className="text-[18px] font-semibold text-[#1f2933]">Payment method distribution</h3>
-              <div className="mt-4 h-[200px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={chartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={56}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {chartData.map((entry, i) => (
-                        <Cell key={i} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              <p className="mt-2 text-center text-[13px] text-[#6b7280]">
-                Total collected <span className="text-[18px] font-bold text-[#1f2933]">{fmt(totalCollectedMethods)}</span>
-              </p>
-              <div className="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[13px] text-[#6b7280]">
-                {chartData.filter((d) => d.value > 0).map((d) => (
-                  <span key={d.name}>
-                    {d.name}: {fmt(d.value)}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ROW 3 â€” Financial Activity Feed (6 cols) + Outstanding Insights (6 cols) */}
-        <section className="mb-7 grid grid-cols-1 gap-6 lg:grid-cols-12" style={{ marginBottom: 28, gap: 24 }}>
-          <div className="lg:col-span-6">
-            <div className={cardClass}>
-              <h3 className="text-[18px] font-semibold text-[#1f2933]">Recent financial activity</h3>
-              <p className="mt-1 text-[13px] text-[#6b7280]">Live feed of payments and activity</p>
-              <div className="mt-4 max-h-[280px] overflow-y-auto">
-                {data.recentPayments.length === 0 ? (
-                  <p className="py-6 text-center text-[13px] text-[#6b7280]">No payments recorded yet.</p>
-                ) : (
-                  <ul className="space-y-0">
-                    {data.recentPayments.map((row, i) => (
-                      <li key={i} className="flex gap-3 border-b border-slate-100 py-3 last:border-0">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
-                          <Receipt className="h-4 w-4" />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-[#1f2933]">
-                            {row.student_name} paid UGX {fmt(row.amount_paid)} via {row.payment_method}
-                          </p>
-                          <p className="text-[13px] text-[#6b7280]">{row.payment_date}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="lg:col-span-6">
-            <div className={`${cardClass} border-amber-200/60 bg-amber-50/30`}>
-              <h3 className="text-[18px] font-semibold text-[#1f2933]">Outstanding insights</h3>
-              <p className="mt-1 text-[13px] text-[#6b7280]">Summary of balances due</p>
-              <div className="mt-4 space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-[13px] text-[#6b7280]">Students owing</span>
-                  <span className="text-[18px] font-semibold text-[#1f2933]">{studentsOwing}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[13px] text-[#6b7280]">Total outstanding</span>
-                  <span className="text-[18px] font-bold text-amber-700">{fmt(data.outstandingBalances)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-[13px] text-[#6b7280]">Most affected class</span>
-                  <span className="text-[13px] font-medium text-slate-700">See Reports for breakdown</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => navigate("/dashboard/accountant/outstanding")}
-                className="mt-4 w-full rounded-xl border border-amber-300 bg-white py-2.5 text-sm font-semibold text-amber-800 shadow-sm transition-[transform] duration-200 hover:-translate-y-0.5 hover:bg-amber-50"
-              >
-                View defaulters
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* ROW 4 â€” Quick Actions Bar (full width) */}
+        {/* Quick actions */}
         <section style={{ marginBottom: 28 }}>
           <h3 className="mb-4 text-[18px] font-semibold text-[#1f2933]">Quick actions</h3>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4" style={{ gap: 24 }}>
