@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
+import { CreditCard, X } from "lucide-react";
 
-type InvoiceRow = { invoice_id: string; total_amount: number; amount_paid: number; balance: number; status: string; invoice_number: string | null };
+type OutstandingBalanceRow = { term_id: string; term: number; year: number; balance: number };
 
 function formatReceiptTime(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
@@ -17,7 +17,6 @@ function formatReceiptTime(d: Date): string {
 }
 
 export default function PaymentsPage() {
-  const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const userEmail = useAuthStore((s) => s.user?.email ?? "");
@@ -25,17 +24,17 @@ export default function PaymentsPage() {
   const [students, setStudents] = useState<{ student_id: string; name: string; current_class: string }[]>([]);
   const [terms, setTerms] = useState<{ id: string; term: number; year: number }[]>([]);
   const [selectedStudent, setSelectedStudent] = useState("");
-  const [selectedTerm, setSelectedTerm] = useState("");
   const [amount, setAmount] = useState("");
   const [method, setMethod] = useState("cash");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const [invoice, setInvoice] = useState<InvoiceRow | null>(null);
-  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [outstandingBalances, setOutstandingBalances] = useState<OutstandingBalanceRow[]>([]);
+  const [balancesLoading, setBalancesLoading] = useState(false);
   const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentSearchFocused, setStudentSearchFocused] = useState(false);
+  const [formOverlayOpen, setFormOverlayOpen] = useState(true);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -48,7 +47,6 @@ export default function PaymentsPage() {
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
-      if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
       const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
         (id) => !active.some((s) => s.student_id === id)
       );
@@ -66,32 +64,37 @@ export default function PaymentsPage() {
   }, [schoolId]);
 
   useEffect(() => {
-    if (!schoolId || !selectedStudent || !selectedTerm) {
-      setInvoice(null);
+    if (!schoolId || !selectedStudent) {
+      setOutstandingBalances([]);
       return;
     }
-    setInvoiceLoading(true);
-    setInvoice(null);
+    setBalancesLoading(true);
+    setOutstandingBalances([]);
     void (async () => {
       try {
         const { data } = await supabase
-          .from("student_invoices")
-          .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
+          .from("student_balances")
+          .select("term_id, term, year, balance")
           .eq("school_id", schoolId)
           .eq("student_id", selectedStudent)
-          .eq("term_id", selectedTerm)
-          .in("status", ["issued", "partial"])
-          .maybeSingle();
-        setInvoice((data as InvoiceRow | null) ?? null);
+          .gt("balance", 0)
+          .order("year", { ascending: true })
+          .order("term", { ascending: true });
+        const rows = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
+          term_id: r.term_id,
+          term: r.term,
+          year: r.year,
+          balance: Number(r.balance),
+        }));
+        setOutstandingBalances(rows);
       } finally {
-        setInvoiceLoading(false);
+        setBalancesLoading(false);
       }
     })();
-  }, [schoolId, selectedStudent, selectedTerm]);
+  }, [schoolId, selectedStudent]);
 
-  const balanceValue = invoice ? Number(invoice.balance ?? invoice.total_amount - invoice.amount_paid) : 0;
-  const canRecordPayment = invoice && balanceValue > 0;
-  const balanceDisplay = balanceValue;
+  const totalDue = outstandingBalances.reduce((sum, b) => sum + b.balance, 0);
+  const canRecordPayment = totalDue > 0 && Number(amount) > 0;
 
   const q = studentSearchQuery.trim().toLowerCase();
   const studentMatches =
@@ -106,94 +109,112 @@ export default function PaymentsPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!schoolId || !userId || !selectedStudent || !selectedTerm || !amount || Number(amount) <= 0) {
-      setMessage("Please fill student, term, and amount.");
+    if (!schoolId || !userId || !selectedStudent || !amount || Number(amount) <= 0) {
+      setMessage("Please select a student and enter an amount.");
       return;
     }
-    if (!invoice || !canRecordPayment) {
-      setMessage("No invoice for this student/term, or balance is zero. Generate an invoice first (Invoices & Billing).");
+    if (outstandingBalances.length === 0) {
+      setMessage("This student has no outstanding balance.");
       return;
     }
     const amt = Number(amount);
-    if (amt > balanceDisplay) {
-      setMessage("Amount cannot exceed outstanding balance (" + balanceDisplay.toLocaleString() + ").");
+    if (amt > totalDue) {
+      setMessage("Amount cannot exceed total due (" + totalDue.toLocaleString() + ").");
       return;
     }
     setSubmitting(true);
     setMessage("");
     try {
-      const payload: Record<string, unknown> = {
-        school_id: schoolId,
-        student_id: selectedStudent,
-        term_id: selectedTerm,
-        amount: amt,
-        amount_paid: amt,
-        payment_method: method,
-        payment_date: new Date().toISOString().slice(0, 10),
-        recorded_by: userId,
-        notes: notes || null,
-        invoice_id: invoice.invoice_id,
-      };
+      let remaining = amt;
+      const allocations: { term_id: string; term: number; year: number; amount: number }[] = [];
+      for (const row of outstandingBalances) {
+        if (remaining <= 0) break;
+        const apply = Math.min(remaining, row.balance);
+        if (apply <= 0) continue;
+        allocations.push({ term_id: row.term_id, term: row.term, year: row.year, amount: apply });
+        remaining -= apply;
+      }
+      if (allocations.length === 0) {
+        setMessage("No amount to apply to outstanding balances.");
+        setSubmitting(false);
+        return;
+      }
+
       let receiptNum: string | null = null;
       try {
         const res = await supabase.rpc("get_next_receipt_number", {
           p_school_id: schoolId,
-          p_term_id: selectedTerm,
+          p_term_id: allocations[0].term_id,
         });
         receiptNum = res.data ?? null;
       } catch {
         receiptNum = null;
       }
       const year = new Date().getFullYear();
-      payload.receipt_number =
+      const receiptNumberForPayments =
         receiptNum ?? "RCT-" + year + "-T1-" + Date.now().toString().slice(-4).padStart(4, "0");
-      let { error } = await supabase.from("student_payments").insert(payload);
-      if (error && (error.message?.includes("receipt_number") || error.message?.includes("column"))) {
-        delete payload.receipt_number;
-        const res = await supabase.from("student_payments").insert(payload);
-        error = res.error;
-        if (!error) setMessage("Payment recorded (receipt number not stored).");
-      }
-      if (error) throw error;
 
-      const receiptNumberForReceipt = String(payload.receipt_number ?? "");
+      const termIds = allocations.map((a) => a.term_id);
+      const { data: invoices } = await supabase
+        .from("student_invoices")
+        .select("term_id, invoice_id")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .in("term_id", termIds)
+        .in("status", ["issued", "partial", "paid"]);
+      const invoiceByTerm = new Map<string, string>();
+      for (const inv of invoices || []) {
+        invoiceByTerm.set((inv as { term_id: string; invoice_id: string }).term_id, (inv as { term_id: string; invoice_id: string }).invoice_id);
+      }
+
+      const paymentDate = new Date().toISOString().slice(0, 10);
+      for (const a of allocations) {
+        const payload: Record<string, unknown> = {
+          school_id: schoolId,
+          student_id: selectedStudent,
+          term_id: a.term_id,
+          amount: a.amount,
+          amount_paid: a.amount,
+          payment_method: method,
+          payment_date: paymentDate,
+          recorded_by: userId,
+          notes: notes || null,
+          receipt_number: receiptNumberForPayments,
+        };
+        const invId = invoiceByTerm.get(a.term_id);
+        if (invId) payload.invoice_id = invId;
+        const { error } = await supabase.from("student_payments").insert(payload);
+        if (error) throw error;
+      }
+
+      const totalRemaining = totalDue - amt;
+      const allocationLines = allocations.map((a) => ({
+        termLabel: `Term ${a.term}, ${a.year}`,
+        amountApplied: a.amount,
+      }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
-      const termRow = terms.find((t) => t.id === selectedTerm);
-      const termLabel = termRow ? `Term ${termRow.term} (T${termRow.term}), ${termRow.year}` : "";
       const now = new Date();
       setReceiptData({
-        receiptNumber: receiptNumberForReceipt,
+        receiptNumber: receiptNumberForPayments,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
-        termLabel,
+        termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",
         amountPaid: amt,
         paymentMethod: method,
         transactionTime: formatReceiptTime(now),
         recordedBy: userName || userEmail || "Staff",
         description: notes || undefined,
+        allocations: allocationLines,
+        totalRemainingBalance: totalRemaining,
       });
       setMessage("Payment recorded.");
       setAmount("");
       setNotes("");
       setStudentSearchQuery("");
       setSelectedStudent("");
-      setInvoice(null);
-      setInvoiceLoading(true);
-      try {
-        const { data } = await supabase
-          .from("student_invoices")
-          .select("invoice_id, total_amount, amount_paid, balance, status, invoice_number")
-          .eq("school_id", schoolId)
-          .eq("student_id", selectedStudent)
-          .eq("term_id", selectedTerm)
-          .in("status", ["issued", "partial"])
-          .maybeSingle();
-        setInvoice((data as InvoiceRow | null) ?? null);
-      } finally {
-        setInvoiceLoading(false);
-      }
+      setOutstandingBalances([]);
     } catch (err: unknown) {
-      setMessage((err as Error).message || "Failed to record payment.");
+      setMessage(err instanceof Error ? err.message : "Failed to record payment.");
     } finally {
       setSubmitting(false);
     }
@@ -201,34 +222,21 @@ export default function PaymentsPage() {
 
   const inputClass =
     "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
-  return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      {receiptData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
-          <div className="relative">
-            <PaymentReceipt data={receiptData} autoPrint />
-            <button
-              type="button"
-              onClick={() => setReceiptData(null)}
-              className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-            >
-              Close — record next payment
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Record Payment</h1>
+
+  const formContent = (
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-xl font-semibold text-slate-900">Record Payment</h2>
         <button
           type="button"
-          onClick={() => navigate("/dashboard/accountant")}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          onClick={() => setFormOverlayOpen(false)}
+          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          aria-label="Close"
         >
-          Back to Dashboard
+          <X className="h-5 w-5" />
         </button>
       </div>
-      <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
             <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
             {selectedStudentRow ? (
@@ -284,37 +292,25 @@ export default function PaymentsPage() {
               </>
             )}
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Term</label>
-            <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className={inputClass} required>
-              <option value="">Select term</option>
-              {terms.map((t) => (
-                <option key={t.id} value={t.id}>
-                  Term {t.term}, {t.year}
-                </option>
-              ))}
-            </select>
-          </div>
-          {selectedStudent && selectedTerm && (
+          {selectedStudent && (
             <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-sm">
-              {invoiceLoading ? (
-                <span className="text-slate-500">Checking invoice…</span>
-              ) : invoice ? (
+              {balancesLoading ? (
+                <span className="text-slate-500">Loading balances…</span>
+              ) : outstandingBalances.length > 0 ? (
                 <>
-                  <p className="font-medium text-slate-800">
-                    Invoice {invoice.invoice_number ?? "—"} · Balance due: {balanceDisplay.toLocaleString()}
-                  </p>
-                  <p className="mt-0.5 text-slate-600">
-                    Total: {Number(invoice.total_amount).toLocaleString()} · Paid: {Number(invoice.amount_paid).toLocaleString()}
-                  </p>
-                  {balanceDisplay <= 0 && (
-                    <p className="mt-1 text-amber-700">This invoice is fully paid. No payment needed.</p>
-                  )}
+                  <p className="font-medium text-slate-800">Outstanding balances (oldest first)</p>
+                  <ul className="mt-1 list-inside list-disc text-slate-700">
+                    {outstandingBalances.map((b) => (
+                      <li key={b.term_id}>
+                        Term {b.term}, {b.year}: {b.balance.toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
+                  <p className="mt-0.5 text-slate-600">Payments are applied to the oldest term first, then the next, and so on.</p>
                 </>
               ) : (
-                <p className="text-amber-700">
-                  No invoice for this student/term. Generate an invoice first in <strong>Invoices & Billing</strong> before recording payment.
-                </p>
+                <p className="text-slate-600">No outstanding balance for this student.</p>
               )}
             </div>
           )}
@@ -343,13 +339,59 @@ export default function PaymentsPage() {
           )}
           <button
             type="submit"
-            disabled={submitting || !canRecordPayment || invoiceLoading}
+            disabled={submitting || !canRecordPayment || balancesLoading}
             className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
           >
             {submitting ? "Recording…" : "Record payment"}
           </button>
         </form>
-      </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {receiptData && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Payment receipt">
+          <div className="relative">
+            <PaymentReceipt data={receiptData} autoPrint />
+            <button
+              type="button"
+              onClick={() => setReceiptData(null)}
+              className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+            >
+              Close — record next payment
+            </button>
+          </div>
+        </div>
+      )}
+      {formOverlayOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.45)" }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Record payment"
+          onClick={() => setFormOverlayOpen(false)}
+        >
+          <div
+            className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {formContent}
+          </div>
+        </div>
+      ) : (
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          <button
+            type="button"
+            onClick={() => setFormOverlayOpen(true)}
+            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            <CreditCard className="h-5 w-5" />
+            Record payment
+          </button>
+        </div>
+      )}
+    </>
   );
 }

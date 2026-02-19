@@ -13,6 +13,10 @@ export type PaymentReceiptData = {
   transactionTime: string;
   recordedBy: string;
   description?: string;
+  /** When payment is split across terms (oldest first) */
+  allocations?: { termLabel: string; amountApplied: number }[];
+  /** Total outstanding balance after this payment */
+  totalRemainingBalance?: number;
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -55,6 +59,8 @@ export function printReceipt(data: PaymentReceiptData): void {
   <div class="row"><span class="label">Class</span><span>${data.studentClass}</span></div>
   <div class="row"><span class="label">Term</span><span>${data.termLabel}</span></div>
   <div class="row amount"><span class="label">Amount Paid</span><span>${data.amountPaid.toLocaleString()} UGX</span></div>
+  ${(data.allocations && data.allocations.length > 0) ? data.allocations.map(a => `<div class="row"><span class="label">Applied to ${a.termLabel}</span><span>${a.amountApplied.toLocaleString()} UGX</span></div>`).join("") : ""}
+  ${data.totalRemainingBalance !== undefined && data.totalRemainingBalance >= 0 ? `<div class="row amount"><span class="label">Remaining balance</span><span>${data.totalRemainingBalance.toLocaleString()} UGX</span></div>` : ""}
   <div class="row"><span class="label">Payment Method</span><span>${methodLabel}</span></div>
   <div class="row"><span class="label">Date & Time</span><span>${data.transactionTime}</span></div>
   <div class="row"><span class="label">Recorded by</span><span>${data.recordedBy}</span></div>
@@ -117,6 +123,22 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
           <span className="text-slate-500">Amount Paid</span>
           <span className="font-bold">{data.amountPaid.toLocaleString()} UGX</span>
         </div>
+        {data.allocations && data.allocations.length > 0 && (
+          <>
+            {data.allocations.map((a, i) => (
+              <div key={i} className="flex justify-between">
+                <span className="text-slate-500">Applied to {a.termLabel}</span>
+                <span>{a.amountApplied.toLocaleString()} UGX</span>
+              </div>
+            ))}
+          </>
+        )}
+        {data.totalRemainingBalance !== undefined && data.totalRemainingBalance >= 0 && (
+          <div className="flex justify-between border-t border-slate-200 pt-2">
+            <span className="text-slate-500">Remaining balance</span>
+            <span className="font-semibold">{data.totalRemainingBalance.toLocaleString()} UGX</span>
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-slate-500">Payment Method</span>
           <span>{formatMethod(data.paymentMethod)}</span>

@@ -22,6 +22,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
   PieChart,
   Pie,
   Cell,
@@ -495,33 +496,47 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   };
 }
 
+type KPIVariant = "blue" | "green" | "orange" | "teal";
+
 function KPICard({
   icon: Icon,
   label,
   value,
   subline,
-  accent = "emerald",
+  variant = "green",
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
   subline: string;
-  accent?: "emerald" | "amber" | "red" | "slate";
+  variant?: KPIVariant;
 }) {
-  const accentClasses = {
-    emerald: "bg-emerald-500/10 text-emerald-600",
-    amber: "bg-amber-500/10 text-amber-600",
-    red: "bg-red-500/10 text-red-600",
-    slate: "bg-slate-500/10 text-slate-600",
+  const borderTopClass: Record<KPIVariant, string> = {
+    blue: "border-t-[3px] border-t-blue-400/90",
+    green: "border-t-[3px] border-t-emerald-500/90",
+    orange: "border-t-[3px] border-t-amber-500/90",
+    teal: "border-t-[3px] border-t-teal-500/90",
+  };
+  const iconBgClass: Record<KPIVariant, string> = {
+    blue: "bg-blue-500/10 text-blue-600",
+    green: "bg-emerald-500/10 text-emerald-600",
+    orange: "bg-amber-500/10 text-amber-600",
+    teal: "bg-teal-500/10 text-teal-600",
+  };
+  const valueColorClass: Record<KPIVariant, string> = {
+    blue: "text-slate-900",
+    green: "text-emerald-700",
+    orange: "text-amber-700",
+    teal: "text-teal-700",
   };
   return (
-    <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div className={`rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${borderTopClass[variant]}`}>
       <div className="flex items-start justify-between">
-        <div className={`rounded-lg p-2.5 ${accentClasses[accent]}`}>
+        <div className={`rounded-lg p-2.5 ${iconBgClass[variant]}`}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">{value}</p>
+      <p className={`mt-3 text-2xl font-semibold tracking-tight ${valueColorClass[variant]}`}>{value}</p>
       <p className="mt-0.5 text-sm font-medium text-slate-600">{label}</p>
       <p className="mt-1 text-xs text-slate-400">{subline}</p>
     </div>
@@ -573,16 +588,19 @@ export default function FinancialOverview() {
 
   if (isLoading || !data) {
     return (
-      <div className="min-h-full flex items-center justify-center" style={{ backgroundColor: "#f7f9fb" }}>
+      <div className="min-h-full flex items-center justify-center" style={{ backgroundColor: "#F6F8FB" }}>
         <p className="text-sm text-slate-500">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full" style={{ backgroundColor: "#f7f9fb" }}>
+    <div className="min-h-full" style={{ backgroundColor: "#F6F8FB" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div
+          className="mb-7 flex flex-col gap-4 rounded-xl px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5"
+          style={{ background: "linear-gradient(135deg, #f7fafc, #eef6ff)" }}
+        >
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
             <p className="mt-1 flex items-center gap-2 text-[13px] text-[#6b7280]">
@@ -595,7 +613,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/payments")}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
             >
               <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
               Record payment
@@ -603,22 +621,22 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/billing")}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
             >
-              <FilePlus className="h-4 w-4 shrink-0 text-slate-500" />
+              <FilePlus className="h-4 w-4 shrink-0 text-blue-600" />
               Generate invoice
             </button>
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/expenses")}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
             >
-              <DollarSign className="h-4 w-4 shrink-0 text-slate-500" />
+              <DollarSign className="h-4 w-4 shrink-0 text-amber-600" />
               Record expense
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
             >
               <Send className="h-4 w-4 shrink-0 text-slate-500" />
               Send reminder
@@ -635,28 +653,28 @@ export default function FinancialOverview() {
               label="Total fees expected"
               value={fmt(data.totalFeesExpected)}
               subline="This term"
-              accent="slate"
+              variant="blue"
             />
             <KPICard
               icon={CreditCard}
               label="Total fees collected"
               value={fmt(data.totalFeesCollected)}
               subline="This term"
-              accent="emerald"
+              variant="green"
             />
             <KPICard
               icon={FileText}
               label="Outstanding balances"
               value={fmt(data.outstandingBalances)}
               subline="Balance due"
-              accent="red"
+              variant="orange"
             />
             <KPICard
               icon={TrendingUp}
               label="Today's collections"
               value={fmt(data.todayCollections)}
               subline="Payments today"
-              accent="emerald"
+              variant="teal"
             />
           </div>
         </section>
@@ -673,17 +691,17 @@ export default function FinancialOverview() {
                   <span className="text-xs font-medium text-slate-500">This year</span>
                 </div>
               </div>
-              <p className="text-[13px] text-[#6b7280]">Total balance</p>
-              <p className={`text-2xl font-bold ${cashflowData.totalBalance >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+              <p className="text-[13px] font-medium text-[#6b7280]">Total Balance</p>
+              <p className={`mt-0.5 text-3xl font-bold tracking-tight ${cashflowData.totalBalance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
                 {fmt(cashflowData.totalBalance)}
               </p>
               <div className="mt-4 flex flex-wrap gap-4 text-[13px] text-[#6b7280]">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600" />
-                  Cash in
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#047857" }} />
+                  Cash In
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-300" />
+                  <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#86efac" }} />
                   Expense
                 </span>
               </div>
@@ -695,8 +713,11 @@ export default function FinancialOverview() {
                       expenseNeg: -m.expense,
                     }))}
                     margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                    barCategoryGap="12%"
+                    barGap={4}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
                     <XAxis
                       dataKey="monthLabel"
                       tick={{ fontSize: 11, fill: "#64748b" }}
@@ -715,18 +736,19 @@ export default function FinancialOverview() {
                         if (!active || !payload?.length) return null;
                         const d = payload[0].payload;
                         return (
-                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-md">
-                            <p className="font-medium text-slate-800">
+                          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-lg">
+                            <p className="mb-2 font-semibold text-slate-800">
                               {MONTHS[Number(d.month) - 1]} {new Date().getFullYear()}
                             </p>
-                            <p className="text-emerald-600">Cash in {fmt(d.cashIn)}</p>
-                            <p className="text-emerald-500">Expense {fmt(d.expense)}</p>
+                            <p className="text-slate-600" style={{ color: "#047857" }}>Cash In {fmt(d.cashIn)}</p>
+                            <p className="text-slate-600" style={{ color: "#0d9488" }}>Expense {fmt(d.expense)}</p>
                           </div>
                         );
                       }}
+                      cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
                     />
-                    <Bar dataKey="cashIn" fill="#059669" radius={[2, 2, 0, 0]} name="Cash in" />
-                    <Bar dataKey="expenseNeg" fill="#6ee7b7" radius={[0, 0, 2, 2]} name="Expense" />
+                    <Bar dataKey="cashIn" fill="#047857" radius={[2, 2, 0, 0]} name="Cash In" />
+                    <Bar dataKey="expenseNeg" fill="#86efac" radius={[0, 0, 2, 2]} name="Expense" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
