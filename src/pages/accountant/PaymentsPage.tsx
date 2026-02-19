@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
-import { CreditCard, X } from "lucide-react";
+import { CreditCard, Receipt, X } from "lucide-react";
 
 type OutstandingBalanceRow = { term_id: string; term: number; year: number; balance: number };
 
@@ -225,18 +225,25 @@ export default function PaymentsPage() {
 
   const formContent = (
     <>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-slate-900">Record Payment</h2>
+      <div className="flex items-start gap-3 rounded-t-2xl bg-emerald-700 px-5 py-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
+          <Receipt className="h-5 w-5 text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-bold text-white">Record Payment</h2>
+          <p className="mt-0.5 text-sm text-white/90">Record a student payment and allocate to outstanding balances.</p>
+        </div>
         <button
           type="button"
           onClick={() => setFormOverlayOpen(false)}
-          className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="shrink-0 rounded-lg p-1.5 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
           aria-label="Close"
         >
           <X className="h-5 w-5" />
         </button>
       </div>
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="flex flex-col">
+      <div className="space-y-4 p-5">
           <div className="relative">
             <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
             {selectedStudentRow ? (
@@ -337,13 +344,24 @@ export default function PaymentsPage() {
           {message && (
             <p className={"text-sm " + (message.startsWith("Payment") ? "text-emerald-600" : "text-red-600")}>{message}</p>
           )}
-          <button
-            type="submit"
-            disabled={submitting || !canRecordPayment || balancesLoading}
-            className="w-full rounded-xl bg-emerald-600 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
-          >
-            {submitting ? "Recording…" : "Record payment"}
-          </button>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-5 py-4 rounded-b-2xl">
+        <button
+          type="button"
+          onClick={() => setFormOverlayOpen(false)}
+          className="rounded-xl border-2 border-emerald-600 bg-white px-4 py-2.5 text-sm font-medium text-emerald-600 shadow-sm hover:bg-emerald-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={submitting || !canRecordPayment || balancesLoading}
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+        >
+          <Receipt className="h-4 w-4" />
+          {submitting ? "Recording…" : "Record payment"}
+        </button>
+      </div>
         </form>
     </>
   );
@@ -366,18 +384,20 @@ export default function PaymentsPage() {
       )}
       {formOverlayOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(15, 23, 42, 0.45)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+          style={{ backgroundColor: "rgba(15, 23, 42, 0.55)" }}
           role="dialog"
           aria-modal="true"
           aria-label="Record payment"
           onClick={() => setFormOverlayOpen(false)}
         >
           <div
-            className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-xl"
+            className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {formContent}
+            <div className="overflow-y-auto max-h-[90vh]">
+              {formContent}
+            </div>
           </div>
         </div>
       ) : (
