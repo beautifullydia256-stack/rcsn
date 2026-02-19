@@ -34,6 +34,8 @@ export default function PaymentsPage() {
   const [invoice, setInvoice] = useState<InvoiceRow | null>(null);
   const [invoiceLoading, setInvoiceLoading] = useState(false);
   const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [studentSearchFocused, setStudentSearchFocused] = useState(false);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -90,6 +92,17 @@ export default function PaymentsPage() {
   const balanceValue = invoice ? Number(invoice.balance ?? invoice.total_amount - invoice.amount_paid) : 0;
   const canRecordPayment = invoice && balanceValue > 0;
   const balanceDisplay = balanceValue;
+
+  const q = studentSearchQuery.trim().toLowerCase();
+  const studentMatches =
+    selectedStudent && !q
+      ? []
+      : students.filter(
+          (s) =>
+            s.name.toLowerCase().includes(q) ||
+            (s.current_class && s.current_class.toLowerCase().includes(q))
+        ).slice(0, 12);
+  const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -162,6 +175,8 @@ export default function PaymentsPage() {
       setMessage("Payment recorded.");
       setAmount("");
       setNotes("");
+      setStudentSearchQuery("");
+      setSelectedStudent("");
       setInvoice(null);
       setInvoiceLoading(true);
       try {
@@ -214,16 +229,60 @@ export default function PaymentsPage() {
       </div>
       <div className="max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
+          <div className="relative">
             <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
-            <select value={selectedStudent} onChange={(e) => setSelectedStudent(e.target.value)} className={inputClass} required>
-              <option value="">Select student</option>
-              {students.map((s) => (
-                <option key={s.student_id} value={s.student_id}>
-                  {s.name} ({s.current_class})
-                </option>
-              ))}
-            </select>
+            {selectedStudentRow ? (
+              <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2.5">
+                <span className="flex-1 text-sm font-medium text-slate-800">
+                  {selectedStudentRow.name} <span className="text-slate-500">({selectedStudentRow.current_class})</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedStudent("");
+                    setStudentSearchQuery("");
+                  }}
+                  className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  value={studentSearchQuery}
+                  onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  onFocus={() => setStudentSearchFocused(true)}
+                  onBlur={() => setTimeout(() => setStudentSearchFocused(false), 150)}
+                  placeholder="Search by name or class…"
+                  className={inputClass}
+                  autoComplete="off"
+                />
+                {studentSearchFocused && studentMatches.length > 0 && (
+                  <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                    {studentMatches.map((s) => (
+                      <li key={s.student_id}>
+                        <button
+                          type="button"
+                          className="w-full px-3 py-2.5 text-left text-sm text-slate-800 hover:bg-slate-100"
+                          onClick={() => {
+                            setSelectedStudent(s.student_id);
+                            setStudentSearchQuery("");
+                            setStudentSearchFocused(false);
+                          }}
+                        >
+                          {s.name} <span className="text-slate-500">({s.current_class})</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {studentSearchQuery.trim() && studentMatches.length === 0 && (
+                  <p className="mt-1 text-sm text-slate-500">No students match. Try a different search.</p>
+                )}
+              </>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">Term</label>
