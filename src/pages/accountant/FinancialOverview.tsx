@@ -289,36 +289,36 @@ export default function FinancialOverview() {
               </span>
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/payments")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
             >
-              <Receipt className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+              <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
               Record payment
             </button>
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/billing")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
             >
-              <FilePlus className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              <FilePlus className="h-4 w-4 shrink-0 text-slate-500" />
               Generate invoice
             </button>
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/expenses")}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
             >
-              <DollarSign className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              <DollarSign className="h-4 w-4 shrink-0 text-slate-500" />
               Record expense
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
             >
-              <Send className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+              <Send className="h-4 w-4 shrink-0 text-slate-500" />
               Send reminder
             </button>
           </div>
