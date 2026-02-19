@@ -41,11 +41,11 @@ export default function BillingPage() {
 
   const classNames = fees.map((r) => r.class_name);
   const studentsInClass = selectedClass ? students.filter((s) => s.current_class === selectedClass) : [];
-  const tuitionForClass = selectedClass ? fees.find((f) => f.class_name === selectedClass)?.tuition_amount ?? 0;
+  const feeForClass = selectedClass ? fees.find((f) => f.class_name === selectedClass) : null;
+  const tuitionForClass = feeForClass != null ? Number(feeForClass.tuition_amount) : 0;
   const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
-  const suggestedAmount = selectedStudentRow
-    ? fees.find((f) => f.class_name === selectedStudentRow.current_class)?.tuition_amount ?? 0
-    : 0;
+  const feeForStudent = selectedStudentRow ? fees.find((f) => f.class_name === selectedStudentRow.current_class) : null;
+  const suggestedAmount = feeForStudent != null ? Number(feeForStudent.tuition_amount) : 0;
 
   async function handleGenerateBulk() {
     if (!schoolId || !userId || !selectedTerm || !selectedClass || studentsInClass.length === 0) {
