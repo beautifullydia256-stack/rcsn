@@ -210,43 +210,6 @@ export default function BillingPage() {
 
       <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-800">Fee structure (per class)</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Used to create invoices. Managed in Admin → Settings → Financial.</p>
-        </div>
-        {loading ? (
-          <div className="p-6 text-slate-500">Loading…</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
-                  <th className="px-4 py-3">Class</th>
-                  <th className="px-4 py-3">Tuition amount</th>
-                </tr>
-              </thead>
-              <tbody className="text-slate-700">
-                {fees.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center text-slate-400">
-                      No fee structure. Add in Admin settings.
-                    </td>
-                  </tr>
-                ) : (
-                  fees.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-medium text-slate-900">{r.class_name}</td>
-                      <td className="px-4 py-3">{Number(r.tuition_amount).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
           <h2 className="text-sm font-semibold text-slate-800">Generate invoice</h2>
           <p className="mt-0.5 text-xs text-slate-500">Create a bill so the student has a balance. Record payment only after an invoice exists.</p>
         </div>
@@ -349,6 +312,43 @@ export default function BillingPage() {
             <p className={`mt-4 text-sm ${message.type === "ok" ? "text-emerald-600" : "text-red-600"}`}>{message.text}</p>
           )}
         </div>
+      </div>
+
+      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-800">Fee structure (per class)</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Used to create invoices. Managed in Admin → Settings → Financial.</p>
+        </div>
+        {loading ? (
+          <div className="p-6 text-slate-500">Loading…</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
+                  <th className="px-4 py-3">Class</th>
+                  <th className="px-4 py-3">Tuition amount</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-700">
+                {fees.length === 0 ? (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-6 text-center text-slate-400">
+                      No fee structure. Add in Admin settings.
+                    </td>
+                  </tr>
+                ) : (
+                  fees.map((r) => (
+                    <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-900">{r.class_name}</td>
+                      <td className="px-4 py-3">{Number(r.tuition_amount).toLocaleString()}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
