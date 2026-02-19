@@ -27,40 +27,22 @@ export default function BillingPage() {
   useEffect(() => {
     if (!schoolId) return;
     void (async () => {
-      const [fRes, tRes, sRes, balRes] = await Promise.all([
+      const [fRes, tRes, sRes] = await Promise.all([
         supabase.from("school_fee_structure").select("id, class_name, tuition_amount").eq("school_id", schoolId).order("class_name"),
         supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
-        supabase.from("students").select("student_id, name, current_class, class_id").eq("school_id", schoolId).eq("status", "active").order("name"),
-        supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
+        supabase
+          .from("students")
+          .select("student_id, name, current_class, class_id")
+          .eq("school_id", schoolId)
+          .neq("status", "graduated")
+          .order("name"),
       ]);
       setFees((fRes.data || []) as FeeRow[]);
       const termList = (tRes.data || []) as TermRow[];
       setTerms(termList);
       if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
-      const active = (sRes.data || []) as StudentRow[];
-      const balanceStudentIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))];
-      const activeIds = new Set(active.map((s) => s.student_id));
-      const debtorIds = balanceStudentIds.filter((id) => !activeIds.has(id));
-      let merged: StudentRow[] = [...active];
-      if (debtorIds.length > 0) {
-        const { data: debtors } = await supabase
-          .from("students")
-          .select("student_id, name, current_class, class_id")
-          .eq("school_id", schoolId)
-          .in("student_id", debtorIds);
-        merged = [...active, ...((debtors || []) as StudentRow[])];
-      }
-      if (merged.length === 0 && balanceStudentIds.length > 0) {
-        const { data: fromBalances } = await supabase
-          .from("students")
-          .select("student_id, name, current_class, class_id")
-          .eq("school_id", schoolId)
-          .in("student_id", balanceStudentIds);
-        merged = ((fromBalances || []) as StudentRow[]).sort((a, b) => a.name.localeCompare(b.name));
-      } else {
-        merged.sort((a, b) => a.name.localeCompare(b.name));
-      }
-      setStudents(merged);
+      const list = (sRes.data || []) as StudentRow[];
+      setStudents(list.sort((a, b) => a.name.localeCompare(b.name)));
       setLoading(false);
     })();
   }, [schoolId]);
@@ -284,6 +266,11 @@ export default function BillingPage() {
             </div>
             {generateMode === "bulk" ? (
               <>
+                {!loading && students.length === 0 && (
+                  <p className="text-sm text-amber-700 rounded-lg bg-amber-50 p-3">
+                    No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.
+                  </p>
+                )}
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
                   <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className={inputClass}>
@@ -296,9 +283,16 @@ export default function BillingPage() {
                   </select>
                 </div>
                 {selectedClass && (
-                  <p className="text-sm text-slate-600">
-                    {studentsInClass.length} student(s) in {selectedClass}. Tuition: {Number(tuitionForClass).toLocaleString()}.
-                  </p>
+                  <>
+                    <p className="text-sm text-slate-600">
+                      {studentsInClass.length} student(s) in {selectedClass}. Tuition: {Number(tuitionForClass).toLocaleString()}.
+                    </p>
+                    {students.length > 0 && studentsInClass.length === 0 && (
+                      <p className="text-sm text-amber-700 mt-1">
+                        No students match this class name. Fee structure uses: {classNames.join(", ")}. Student classes in use: {[...new Set(students.map((s) => s.current_class).filter(Boolean))].join(", ") || "—"}.
+                      </p>
+                    )}
+                  </>
                 )}
                 <button
                   type="button"
