@@ -66,7 +66,11 @@ export default function BillingPage() {
   }, [schoolId]);
 
   const classNames = fees.map((r) => r.class_name);
-  const studentsInClass = selectedClass ? students.filter((s) => s.current_class === selectedClass) : [];
+  const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
+  const studentsInClass =
+    selectedClass
+      ? students.filter((s) => normalizeClass(s.current_class) === normalizeClass(selectedClass))
+      : [];
   const feeForClass = selectedClass ? fees.find((f) => f.class_name === selectedClass) : null;
   const tuitionForClass = feeForClass != null ? Number(feeForClass.tuition_amount) : 0;
   const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
