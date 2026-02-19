@@ -143,13 +143,13 @@ export default function PaymentsPage() {
       }
       if (error) throw error;
 
-      const receiptNum = (payload.receipt_number as string) ?? "";
+      const receiptNumberForReceipt = String(payload.receipt_number ?? "");
       const studentRow = students.find((s) => s.student_id === selectedStudent);
       const termRow = terms.find((t) => t.id === selectedTerm);
       const termLabel = termRow ? `Term ${termRow.term} (T${termRow.term}), ${termRow.year}` : "";
       const now = new Date();
       setReceiptData({
-        receiptNumber: receiptNum,
+        receiptNumber: receiptNumberForReceipt,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
         termLabel,
