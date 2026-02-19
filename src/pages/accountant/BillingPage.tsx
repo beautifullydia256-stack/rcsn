@@ -314,7 +314,11 @@ export default function BillingPage() {
                   {!selectedStudent && studentSearchQuery.trim() !== "" && (
                     <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
                       {studentOptions.length === 0 ? (
-                        <p className="px-3 py-3 text-sm text-slate-500">No students match your search.</p>
+                        <p className="px-3 py-3 text-sm text-slate-500">
+                          {students.length === 0
+                            ? "No students found for this school."
+                            : "No students match your search. Try another letter or class name."}
+                        </p>
                       ) : (
                         <ul className="py-1">
                           {studentOptions.map((s) => (
