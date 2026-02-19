@@ -12,10 +12,78 @@ import {
   Send,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export type CashflowMonth = { month: string; monthLabel: string; cashIn: number; expense: number };
+
+async function fetchCashflowYear(schoolId: string): Promise<{ months: CashflowMonth[]; totalBalance: number }> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+
+  const [paymentsRes, expensesRes] = await Promise.all([
+    supabase
+      .from("student_payments")
+      .select("amount_paid, payment_date")
+      .eq("school_id", schoolId)
+      .gte("payment_date", yearStart)
+      .lte("payment_date", yearEnd),
+    supabase
+      .from("school_expenses")
+      .select("amount, expense_date, status")
+      .eq("school_id", schoolId)
+      .gte("expense_date", yearStart)
+      .lte("expense_date", yearEnd),
+  ]);
+
+  const paymentsRaw = (paymentsRes.data || []).filter((p: Record<string, unknown>) => !p.reversed_at);
+  const expensesRaw = expensesRes.data || [];
+
+  const cashInByMonth: number[] = new Array(12).fill(0);
+  const expenseByMonth: number[] = new Array(12).fill(0);
+
+  paymentsRaw.forEach((p: { payment_date?: string; amount_paid?: number }) => {
+    const d = p.payment_date;
+    if (!d) return;
+    const monthIndex = parseInt(d.slice(5, 7), 10) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) cashInByMonth[monthIndex] += Number(p.amount_paid || 0);
+  });
+
+  expensesRaw.forEach((e: { expense_date?: string; amount?: number; status?: string }) => {
+    if (!["approved", "paid"].includes((e.status || "") as string)) return;
+    const d = e.expense_date;
+    if (!d) return;
+    const monthIndex = parseInt(d.slice(5, 7), 10) - 1;
+    if (monthIndex >= 0 && monthIndex < 12) expenseByMonth[monthIndex] += Number(e.amount || 0);
+  });
+
+  const months: CashflowMonth[] = MONTHS.map((label, i) => ({
+    month: String(i + 1),
+    monthLabel: label,
+    cashIn: Math.round(cashInByMonth[i]),
+    expense: Math.round(expenseByMonth[i]),
+  }));
+
+  const totalCashIn = cashInByMonth.reduce((a, b) => a + b, 0);
+  const totalExpense = expenseByMonth.reduce((a, b) => a + b, 0);
+  const totalBalance = totalCashIn - totalExpense;
+
+  return { months, totalBalance };
+}
 const fmt = (n: number) =>
-  n == null || Number.isNaN(n) ? "Ã¢â‚¬â€" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 interface OverviewData {
   termId: string | null;
@@ -179,12 +247,12 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
     }) => {
       const st = studentMap.get(r.student_id);
       return {
-        student_name: st?.name ?? "Ã¢â‚¬â€",
-        class: st?.current_class ?? "Ã¢â‚¬â€",
+        student_name: st?.name ?? "—",
+        class: st?.current_class ?? "—",
         receipt_number: r.receipt_number ?? null,
         payment_date: r.payment_date,
         amount_paid: Number(r.amount_paid || 0),
-        payment_method: r.payment_method ?? "Ã¢â‚¬â€",
+        payment_method: r.payment_method ?? "—",
       };
     }
   );
@@ -256,23 +324,25 @@ export default function FinancialOverview() {
     staleTime: STALE_TIME_MS,
   });
 
+  const { data: cashflowData } = useQuery({
+    queryKey: ["accountant", "cashflow", schoolId],
+    queryFn: () => fetchCashflowYear(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_TIME_MS,
+  });
+
   if (!schoolId) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-slate-500">
-        Loading your schoolÃ¢â‚¬Â¦
+      <div className="flex min-h-[40vh] items-center justify-center text-slate-500 text-sm">
+        Loading your school...
       </div>
     );
   }
 
   if (isLoading || !data) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 rounded-xl border border-slate-200 bg-white animate-pulse" />
-          ))}
-        </div>
-        <div className="mt-6 text-center text-sm text-slate-500">Loading financial overviewÃ¢â‚¬Â¦</div>
+      <div className="min-h-full flex items-center justify-center" style={{ backgroundColor: "#f7f9fb" }}>
+        <p className="text-sm text-slate-500">Loading...</p>
       </div>
     );
   }
@@ -358,6 +428,77 @@ export default function FinancialOverview() {
             />
           </div>
         </section>
+
+        {/* Cashflow — left / center on desktop, full width on small screens */}
+        {cashflowData && (
+          <section className="mb-7 w-full lg:max-w-[56%]" style={{ marginBottom: 28 }}>
+            <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-lg font-semibold text-[#1f2933]">Cashflow</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-slate-500">This year</span>
+                </div>
+              </div>
+              <p className="text-[13px] text-[#6b7280]">Total balance</p>
+              <p className={`text-2xl font-bold ${cashflowData.totalBalance >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {fmt(cashflowData.totalBalance)}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-4 text-[13px] text-[#6b7280]">
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600" />
+                  Cash in
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-300" />
+                  Expense
+                </span>
+              </div>
+              <div className="mt-4 h-[260px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={cashflowData.months.map((m) => ({
+                      ...m,
+                      expenseNeg: -m.expense,
+                    }))}
+                    margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis
+                      dataKey="monthLabel"
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      axisLine={{ stroke: "#e2e8f0" }}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(v) => (Math.abs(v) >= 1000 ? (v / 1000) + "K" : String(v))}
+                      domain={["auto", "auto"]}
+                    />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload?.length) return null;
+                        const d = payload[0].payload;
+                        return (
+                          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-md">
+                            <p className="font-medium text-slate-800">
+                              {MONTHS[Number(d.month) - 1]} {new Date().getFullYear()}
+                            </p>
+                            <p className="text-emerald-600">Cash in {fmt(d.cashIn)}</p>
+                            <p className="text-emerald-500">Expense {fmt(d.expense)}</p>
+                          </div>
+                        );
+                      }}
+                    />
+                    <Bar dataKey="cashIn" fill="#059669" radius={[2, 2, 0, 0]} name="Cash in" />
+                    <Bar dataKey="expenseNeg" fill="#6ee7b7" radius={[0, 0, 2, 2]} name="Expense" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );
