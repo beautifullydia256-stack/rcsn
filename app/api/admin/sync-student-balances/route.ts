@@ -54,84 +54,77 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    // Some schemas use id, others use term_id; support both
     const termId = (currentTerm as any)?.id || (currentTerm as any)?.term_id;
+    const termYear = (currentTerm as any)?.year ?? new Date().getFullYear();
+    const termNum = (currentTerm as any)?.term ?? 1;
 
-    // Create a map of class to tuition
-    const feeMap = new Map();
-    feeStructure.forEach(fee => {
-      feeMap.set(fee.class_name, fee.tuition_amount || 0);
+    // Map class_name -> tuition_amount (day tuition from fee structure)
+    const feeMap = new Map<string, number>();
+    feeStructure.forEach((fee: { class_name: string; tuition_amount?: number }) => {
+      feeMap.set(fee.class_name, Number(fee.tuition_amount || 0));
     });
 
     let updatedCount = 0;
     let balancesCreated = 0;
 
-    // Update each student
     for (const student of students) {
-      const tuitionAmount = feeMap.get(student.current_class) || 0;
-      
-      // Update expected_fee_amount in students table
+      const tuitionAmount = feeMap.get(student.current_class) ?? 0;
+
+      // Update students.expected_fee_amount when fee structure has a value
       if (tuitionAmount > 0 && student.expected_fee_amount !== tuitionAmount) {
         const { error: updateError } = await supabase
           .from('students')
           .update({ expected_fee_amount: tuitionAmount })
           .eq('student_id', student.student_id);
-
-        if (!updateError) {
-          updatedCount++;
-        }
+        if (!updateError) updatedCount++;
       }
 
-      // Update or create balance record for current term
-      if (termId && student.class_id) {
-        // Get total paid for this student in this term
-        const { data: payments } = await supabase
-          .from('student_payments')
-          .select('amount_paid')
-          .eq('student_id', student.student_id)
-          .eq('term_id', termId);
+      // Sync student_balances for current term (schema: student_id, term_id, school_id, year, term, total_fees, total_paid, balance, updated_at — no class_id, no last_payment_date)
+      if (!termId) continue;
 
-        const totalPaid = payments?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
-        const balance = tuitionAmount - totalPaid;
+      const { data: payments } = await supabase
+        .from('student_payments')
+        .select('amount_paid')
+        .eq('student_id', student.student_id)
+        .eq('term_id', termId);
 
-        // Check if balance record exists
-        const { data: existingBalance } = await supabase
+      const totalPaid = payments?.reduce((sum: number, p: { amount_paid?: number }) => sum + Number(p?.amount_paid || 0), 0) ?? 0;
+      const balance = tuitionAmount - totalPaid;
+
+      const { data: existingBalance } = await supabase
+        .from('student_balances')
+        .select('balance_id')
+        .eq('student_id', student.student_id)
+        .eq('term_id', termId)
+        .maybeSingle();
+
+      const row = {
+        student_id: student.student_id,
+        school_id: schoolId,
+        term_id: termId,
+        year: termYear,
+        term: termNum,
+        total_fees: tuitionAmount,
+        total_paid: totalPaid,
+        balance,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (existingBalance) {
+        await supabase
           .from('student_balances')
-          .select('balance_id')
-          .eq('student_id', student.student_id)
-          .eq('term_id', termId)
-          .single();
-
-        if (existingBalance) {
-          // Update existing balance
-          await supabase
-            .from('student_balances')
-            .update({
-              total_fees: tuitionAmount,
-              total_paid: totalPaid,
-              balance: balance,
-              last_payment_date: payments && payments.length > 0 ? new Date().toISOString() : null
-            })
-            .eq('balance_id', existingBalance.balance_id);
-        } else {
-          // Create new balance record
-          const { error: balanceError } = await supabase
-            .from('student_balances')
-            .insert({
-              student_id: student.student_id,
-              school_id: schoolId,
-              term_id: termId,
-              class_id: student.class_id,
-              total_fees: tuitionAmount,
-              total_paid: totalPaid,
-              balance: balance,
-              last_payment_date: payments && payments.length > 0 ? new Date().toISOString() : null
-            });
-
-          if (!balanceError) {
-            balancesCreated++;
-          }
-        }
+          .update({
+            total_fees: row.total_fees,
+            total_paid: row.total_paid,
+            balance: row.balance,
+            updated_at: row.updated_at,
+          })
+          .eq('balance_id', existingBalance.balance_id);
+      } else {
+        const { error: balanceError } = await supabase
+          .from('student_balances')
+          .insert(row);
+        if (!balanceError) balancesCreated++;
       }
     }
 
