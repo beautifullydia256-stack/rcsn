@@ -10,6 +10,7 @@ import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
 import { Receipt, X } from "lucide-react";
 
 type OutstandingBalanceRow = { term_id: string; term: number; year: number; balance: number };
+type CurrentTermRow = { id: string; term: number; year: number; start_date?: string; end_date?: string };
 
 function formatReceiptTime(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
@@ -31,7 +32,7 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
   const userId = useAuthStore((s) => s.user?.id);
   const userEmail = useAuthStore((s) => s.user?.email ?? "");
   const userName = useAuthStore((s) => (s.user?.user_metadata as { full_name?: string })?.full_name ?? "");
-  const [students, setStudents] = useState<{ student_id: string; name: string; current_class: string }[]>([]);
+  const [students, setStudents] = useState<{ student_id: string; name: string; current_class: string; status?: string }[]>([]);
   const [terms, setTerms] = useState<{ id: string; term: number; year: number }[]>([]);
   const [selectedStudent, setSelectedStudent] = useState("");
   const [amount, setAmount] = useState("");
@@ -44,25 +45,35 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
   const [receiptData, setReceiptData] = useState<PaymentReceiptData | null>(null);
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentSearchFocused, setStudentSearchFocused] = useState(false);
+  const [currentTerm, setCurrentTerm] = useState<CurrentTermRow | null>(null);
+  const [hasCurrentTermInvoice, setHasCurrentTermInvoice] = useState<boolean | null>(null);
+  const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
+  const [activatingInvoice, setActivatingInvoice] = useState(false);
 
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
       const [sRes, tRes, balRes] = await Promise.all([
-        supabase.from("students").select("student_id, name, current_class").eq("school_id", schoolId).eq("status", "active").order("name"),
-        supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
+        supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
+        supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
       ]);
-      const active = (sRes.data || []) as { student_id: string; name: string; current_class: string }[];
+      const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
+      const termsWithDates = (tRes.data || []) as CurrentTermRow[];
+      const today = new Date().toISOString().slice(0, 10);
+      const current = termsWithDates.find(
+        (t) => t.start_date && t.end_date && t.start_date <= today && t.end_date >= today
+      ) ?? termsWithDates[0] ?? null;
+      setCurrentTerm(current);
       const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
         (id) => !active.some((s) => s.student_id === id)
       );
       if (debtorIds.length > 0) {
         const { data: debtors } = await supabase
           .from("students")
-          .select("student_id, name, current_class")
+          .select("student_id, name, current_class, status")
           .eq("school_id", schoolId)
           .in("student_id", debtorIds);
         setStudents([...active, ...(debtors || [])].sort((a, b) => a.name.localeCompare(b.name)));
@@ -75,35 +86,147 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
   useEffect(() => {
     if (!schoolId || !selectedStudent) {
       setOutstandingBalances([]);
+      setHasCurrentTermInvoice(null);
+      setCurrentTermFee(null);
       return;
     }
     setBalancesLoading(true);
     setOutstandingBalances([]);
+    setHasCurrentTermInvoice(null);
+    setCurrentTermFee(null);
     void (async () => {
       try {
-        const { data } = await supabase
-          .from("student_balances")
-          .select("term_id, term, year, balance")
-          .eq("school_id", schoolId)
-          .eq("student_id", selectedStudent)
-          .gt("balance", 0)
-          .order("year", { ascending: true })
-          .order("term", { ascending: true });
-        const rows = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
+        const [balRes, invRes, feeRes] = await Promise.all([
+          supabase
+            .from("student_balances")
+            .select("term_id, term, year, balance")
+            .eq("school_id", schoolId)
+            .eq("student_id", selectedStudent)
+            .gt("balance", 0)
+            .order("year", { ascending: true })
+            .order("term", { ascending: true }),
+          currentTerm
+            ? supabase
+                .from("student_invoices")
+                .select("invoice_id")
+                .eq("school_id", schoolId)
+                .eq("student_id", selectedStudent)
+                .eq("term_id", currentTerm.id)
+                .maybeSingle()
+            : Promise.resolve({ data: null }),
+          (() => {
+            const studentRow = students.find((s) => s.student_id === selectedStudent);
+            const currentClass = studentRow?.current_class;
+            if (!currentClass) return Promise.resolve({ data: [] });
+            return supabase
+              .from("school_fee_structure")
+              .select("tuition_amount")
+              .eq("school_id", schoolId)
+              .eq("class_name", currentClass)
+              .maybeSingle();
+          })(),
+        ]);
+        const rows = ((balRes.data || []) as { term_id: string; term: number; year: number; balance: number }[]).map((r) => ({
           term_id: r.term_id,
           term: r.term,
           year: r.year,
           balance: Number(r.balance),
         }));
         setOutstandingBalances(rows);
+        if (currentTerm) {
+          setHasCurrentTermInvoice(!!invRes.data);
+          const feeRow = feeRes.data as { tuition_amount?: number } | null;
+          setCurrentTermFee(feeRow?.tuition_amount != null ? Number(feeRow.tuition_amount) : null);
+        }
       } finally {
         setBalancesLoading(false);
       }
     })();
-  }, [schoolId, selectedStudent]);
+  }, [schoolId, selectedStudent, currentTerm, students]);
 
   const totalDue = outstandingBalances.reduce((sum, b) => sum + b.balance, 0);
   const canRecordPayment = totalDue > 0 && Number(amount) > 0;
+
+  const isGraduated = selectedStudentRow?.status === "graduated";
+  const showActivateCurrentTerm =
+    !!currentTerm && hasCurrentTermInvoice === false && !!selectedStudent && !isGraduated;
+
+  async function handleActivateCurrentTermInvoice() {
+    if (!schoolId || !userId || !selectedStudent || !currentTerm || !selectedStudentRow) return;
+    const feeAmount = currentTermFee ?? 0;
+    if (!feeAmount || feeAmount <= 0) {
+      setMessage("No fee set for this class. Add it in Invoices & Billing or Admin → Settings → Financial.");
+      return;
+    }
+    setActivatingInvoice(true);
+    setMessage("");
+    try {
+      let invNum: string | null = null;
+      try {
+        const res = await supabase.rpc("get_next_invoice_number", { p_school_id: schoolId });
+        invNum = res.data ?? null;
+      } catch {
+        invNum = "INV-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
+      }
+      const { error: invErr } = await supabase.from("student_invoices").upsert(
+        {
+          school_id: schoolId,
+          student_id: selectedStudent,
+          term_id: currentTerm.id,
+          total_amount: feeAmount,
+          status: "issued",
+          invoice_number: invNum,
+          created_by: userId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "school_id,student_id,term_id" }
+      );
+      if (invErr) throw invErr;
+      const { data: existing } = await supabase
+        .from("student_balances")
+        .select("total_paid")
+        .eq("student_id", selectedStudent)
+        .eq("term_id", currentTerm.id)
+        .maybeSingle();
+      const totalPaid = (existing as { total_paid?: number } | null)?.total_paid ?? 0;
+      const { error: balErr } = await supabase.from("student_balances").upsert(
+        {
+          student_id: selectedStudent,
+          school_id: schoolId,
+          term_id: currentTerm.id,
+          year: currentTerm.year,
+          term: currentTerm.term,
+          total_fees: feeAmount,
+          total_paid: Number(totalPaid),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "student_id,term_id" }
+      );
+      if (balErr) throw balErr;
+      setHasCurrentTermInvoice(true);
+      setMessage("Current term invoice activated. Refreshing balances…");
+      const { data } = await supabase
+        .from("student_balances")
+        .select("term_id, term, year, balance")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .gt("balance", 0)
+        .order("year", { ascending: true })
+        .order("term", { ascending: true });
+      const rows = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
+        term_id: r.term_id,
+        term: r.term,
+        year: r.year,
+        balance: Number(r.balance),
+      }));
+      setOutstandingBalances(rows);
+      setMessage("Current term invoice activated. Total due now includes Term " + currentTerm.term + ", " + currentTerm.year + ".");
+    } catch (err: unknown) {
+      setMessage(err instanceof Error ? err.message : "Failed to activate invoice.");
+    } finally {
+      setActivatingInvoice(false);
+    }
+  }
 
   const q = studentSearchQuery.trim().toLowerCase();
   const studentMatches =
@@ -358,24 +481,48 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
                   )}
                 </div>
                 {selectedStudent && (
-                  <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-sm">
-                    {balancesLoading ? (
-                      <span className="text-slate-500">Loading balances…</span>
-                    ) : outstandingBalances.length > 0 ? (
-                      <>
-                        <p className="font-medium text-slate-800">Outstanding balances (oldest first)</p>
-                        <ul className="mt-1 list-inside list-disc text-slate-700">
-                          {outstandingBalances.map((b) => (
-                            <li key={b.term_id}>
-                              Term {b.term}, {b.year}: {b.balance.toLocaleString()}
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
-                        <p className="mt-0.5 text-slate-600">Payments are applied to the oldest term first, then the next, and so on.</p>
-                      </>
-                    ) : (
-                      <p className="text-slate-600">No outstanding balance for this student.</p>
+                  <div className="space-y-3">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-sm">
+                      {balancesLoading ? (
+                        <span className="text-slate-500">Loading balances…</span>
+                      ) : outstandingBalances.length > 0 ? (
+                        <>
+                          <p className="font-medium text-slate-800">Outstanding balances (oldest first)</p>
+                          <ul className="mt-1 list-inside list-disc text-slate-700">
+                            {outstandingBalances.map((b) => (
+                              <li key={b.term_id}>
+                                Term {b.term}, {b.year}: {b.balance.toLocaleString()}
+                              </li>
+                            ))}
+                          </ul>
+                          <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
+                          <p className="mt-0.5 text-slate-600">Payments are applied to the oldest term first, then the next, and so on.</p>
+                        </>
+                      ) : (
+                        <p className="text-slate-600">No outstanding balance for this student.</p>
+                      )}
+                    </div>
+                    {showActivateCurrentTerm && currentTerm && (
+                      <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3 text-sm">
+                        <p className="font-medium text-slate-800">No invoice for current term (Term {currentTerm.term}, {currentTerm.year})</p>
+                        <p className="mt-0.5 text-slate-600">
+                          Activate the current term invoice so this student is expected in school for this term. The term fee will be added to their total due.
+                          {currentTermFee != null && currentTermFee > 0 && (
+                            <span className="mt-1 block font-medium text-slate-700">Fee for this term: {currentTermFee.toLocaleString()}</span>
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleActivateCurrentTermInvoice}
+                          disabled={activatingInvoice || (currentTermFee != null && currentTermFee <= 0)}
+                          className="mt-2 rounded-lg border border-amber-600 bg-amber-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+                        >
+                          {activatingInvoice ? "Activating…" : "Activate invoice for current term"}
+                        </button>
+                        {(currentTermFee == null || currentTermFee <= 0) && (
+                          <p className="mt-1 text-xs text-amber-700">Set the fee for this class in Invoices & Billing or Settings.</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
