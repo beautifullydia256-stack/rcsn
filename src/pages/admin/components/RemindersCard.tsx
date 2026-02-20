@@ -45,25 +45,25 @@ export default function RemindersCard() {
   }, []);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="ac-glass-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-green-600" />
+        <h3 className="text-lg font-semibold ac-text-primary flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-emerald-600" />
           Reminders
         </h3>
       </div>
       {loading ? (
         <div className="h-24 flex items-center justify-center">
-          <div className="text-gray-500 text-sm">Loading...</div>
+          <div className="ac-text-muted text-sm">Loading...</div>
         </div>
       ) : reminder ? (
         <>
           <div className="mb-3">
-            <p className="text-gray-900 font-medium">{reminder.title}</p>
+            <p className="ac-text-primary font-medium">{reminder.title}</p>
             {reminder.message && (
-              <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{reminder.message}</p>
+              <p className="text-sm ac-text-secondary mt-0.5 line-clamp-2">{reminder.message}</p>
             )}
-            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+            <p className="text-xs ac-text-muted mt-2 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
               {new Date(reminder.created_at).toLocaleString()}
             </p>
@@ -71,18 +71,18 @@ export default function RemindersCard() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/notifications')}
-            className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
           >
             View calendar
           </button>
         </>
       ) : (
         <>
-          <p className="text-gray-500 text-sm mb-4">No upcoming reminders.</p>
+          <p className="ac-text-muted text-sm mb-4">No upcoming reminders.</p>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/notifications')}
-            className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
           >
             View notifications
           </button>

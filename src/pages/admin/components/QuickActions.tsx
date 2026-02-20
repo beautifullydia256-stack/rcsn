@@ -33,8 +33,8 @@ export default function AdminQuickActions() {
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+    <div className="ac-glass-card p-6 mb-6">
+      <h2 className="text-lg font-semibold ac-text-primary mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
@@ -44,8 +44,8 @@ export default function AdminQuickActions() {
               key={action.label}
               type="button"
               onClick={() => navigate(action.path)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
-                isGreen ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100' : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ac-glass-btn-secondary ${
+                isGreen ? '!bg-emerald-500/15 !border-emerald-400/30 ac-text-primary hover:!bg-emerald-500/25' : ''
               }`}
             >
               <Icon className="w-4 h-4" style={{ color: action.color }} />

@@ -95,24 +95,24 @@ export default function PendingExpensesCard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="ac-glass-card p-6 mb-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-2/3" />
+          <div className="h-6 ac-skeleton-block w-1/3" />
+          <div className="h-4 ac-skeleton-block w-2/3" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div className="ac-glass-card p-6 mb-6">
       <div className="flex items-center gap-3 mb-4">
         <div className="p-3 rounded-xl bg-amber-100">
           <Clock className="w-6 h-6 text-amber-600" />
         </div>
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Pending Expense Approvals</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-semibold ac-text-primary">Pending Expense Approvals</h2>
+          <p className="text-sm ac-text-muted">
             {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
           </p>
         </div>
@@ -120,23 +120,23 @@ export default function PendingExpensesCard() {
 
       {expenses.length === 0 ? (
         <div className="py-8 text-center">
-          <CheckCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-gray-500">No pending expenses to approve</p>
+          <CheckCircle className="w-12 h-12 mx-auto mb-2 ac-text-muted" />
+          <p className="ac-text-muted">No pending expenses to approve</p>
         </div>
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto">
           {expenses.map((expense) => (
-            <div key={expense.expense_id} className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+            <div key={expense.expense_id} className="p-4 rounded-xl bg-white/5 border border-white/10">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-5 h-5 text-red-500" />
-                    <span className="font-medium text-gray-900">{expense.category_name}</span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-600">{expense.reference_number}</span>
+                    <span className="font-medium ac-text-primary">{expense.category_name}</span>
+                    <span className="text-xs ac-text-muted">•</span>
+                    <span className="text-xs ac-text-secondary">{expense.reference_number}</span>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{expense.description}</p>
-                  <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                  <p className="text-sm ac-text-secondary mb-2">{expense.description}</p>
+                  <div className="flex flex-wrap gap-3 text-xs ac-text-muted">
                     <span>Amount: <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span></span>
                     <span>•</span>
                     <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
@@ -151,7 +151,7 @@ export default function PendingExpensesCard() {
                     type="button"
                     onClick={() => handleApproval(expense.expense_id, 'approve')}
                     disabled={processing === expense.expense_id}
-                    className="flex items-center gap-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Approve

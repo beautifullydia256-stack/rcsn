@@ -18,34 +18,66 @@ import {
   Search,
   Smartphone,
   IdCard,
+  Sun,
+  Moon,
+  ChevronRight,
 } from 'lucide-react';
-import GlassBackground from './GlassBackground';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
+import { useUIStore } from '../../store/uiStore';
+
+// Prefetch route chunks on hover/idle so navigation feels instant (same pattern as accountant)
+const prefetchChunk = (importFn: () => Promise<unknown>) => {
+  importFn().catch(() => {});
+};
+
+const ADMIN_ROUTE_CHUNKS = [
+  () => import('../../pages/admin/Dashboard'),
+  () => import('../../pages/admin/students/StudentsPage'),
+  () => import('../../pages/admin/students/AddStudentPage'),
+  () => import('../../pages/admin/teachers/TeachersPage'),
+  () => import('../../pages/admin/parents/ParentsPage'),
+  () => import('../../pages/admin/accounts/AccountsPage'),
+  () => import('../../pages/admin/outstanding/OutstandingPage'),
+  () => import('../../pages/admin/reports/ReportsHub'),
+  () => import('../../pages/admin/reports/GenerateReportsPage'),
+  () => import('../../pages/admin/reports/ReportRecordsPage'),
+  () => import('../../pages/admin/reports/BulkGenerator'),
+  () => import('../../pages/admin/reports/ReportViewer'),
+  () => import('../../pages/admin/attendance/AttendanceRecordsPage'),
+  () => import('../../pages/admin/exam-sets/ExamSetsPage'),
+  () => import('../../pages/admin/identity/IdentityPage'),
+  () => import('../../pages/admin/identity/StudentIDCardPage'),
+  () => import('../../pages/admin/settings/SettingsPage'),
+  () => import('../../pages/admin/settings/ClassesPage'),
+  () => import('../../pages/admin/settings/ClassDetailPage'),
+  () => import('../../pages/admin/settings/LocationSettingsPage'),
+  () => import('../../pages/admin/jobs/AdminJobsPage'),
+  () => import('../../pages/admin/notifications/NotificationsPage'),
+];
 
 function NavLinkStyle({
   to,
   end,
   icon: Icon,
   children,
+  onPrefetch,
 }: {
   to: string;
   end?: boolean;
   icon: React.ComponentType<{ className?: string }>;
   children: React.ReactNode;
+  onPrefetch?: () => void;
 }) {
   return (
-    <NavLink to={to} end={end} className="block">
+    <NavLink to={to} end={end} className="block" onMouseEnter={onPrefetch}>
       {({ isActive }) => (
         <span
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            isActive
-              ? 'bg-green-600 text-white'
-              : 'text-gray-700 hover:bg-gray-100'
-          }`}
+          className={`ac-sidebar-nav-item ${isActive ? 'ac-sidebar-nav-item-active' : ''}`}
         >
-          <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
-          {children}
+          <Icon className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+          <span className="flex-1">{children}</span>
+          {isActive && <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />}
         </span>
       )}
     </NavLink>
@@ -55,6 +87,8 @@ function NavLinkStyle({
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const isAdminSection = location.pathname.startsWith('/dashboard/admin');
 
   const [adminName, setAdminName] = useState('Admin');
@@ -87,8 +121,8 @@ export default function AdminLayout() {
       if (user) {
         const { data } = await supabase.from('users').select('name, email, school_id').eq('user_id', user.id).single();
         if (data) {
-          setAdminName(data.name || 'Admin');
-          setAdminEmail(data.email || '');
+          setAdminName((data as { name?: string }).name || 'Admin');
+          setAdminEmail((data as { email?: string }).email || '');
           setSchoolId((data as { school_id?: string }).school_id ?? null);
         }
       }
@@ -152,7 +186,7 @@ export default function AdminLayout() {
           report_id: r.report_id,
           template_name: r.template_name,
           created_at: r.created_at,
-          student_name: Array.isArray(r.students) ? r.students[0]?.name : (r.students as { name?: string })?.name,
+          student_name: Array.isArray(r.students) ? (r.students[0] as { name?: string })?.name : (r.students as { name?: string })?.name,
         }));
         setSearchResults({ students, teachers, reports });
       } catch {
@@ -163,6 +197,14 @@ export default function AdminLayout() {
     }, 300);
     return () => clearTimeout(t);
   }, [searchQuery, schoolId]);
+
+  // Prefetch all admin route chunks on idle so navigation is instant (same as accountant)
+  useEffect(() => {
+    const run = () => ADMIN_ROUTE_CHUNKS.forEach((fn) => prefetchChunk(fn));
+    const useIdle = typeof requestIdleCallback !== 'undefined';
+    const id = useIdle ? requestIdleCallback(run, { timeout: 200 }) : window.setTimeout(run, 120);
+    return () => (useIdle ? cancelIdleCallback(id as number) : clearTimeout(id));
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -176,10 +218,299 @@ export default function AdminLayout() {
     return 'Good evening';
   };
 
+  // Glass layout (same as accountant): only when we're in admin dashboard routes
+  if (isAdminSection) {
+    return (
+      <div
+        className="accountant-glass fixed inset-0 flex overflow-hidden"
+        data-theme={theme}
+        style={{ background: 'var(--ac-page-bg)', backgroundColor: 'var(--ac-page-bg)' }}
+      >
+        <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
+          <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/10">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <span className="ac-text-primary font-semibold text-base truncate">PwezaCore</span>
+            </div>
+          </div>
+          <div className="px-4 pt-4 pb-2">
+            <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Menu</span>
+          </div>
+          <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+            <NavLinkStyle to="/dashboard/admin" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[0])}>
+              Dashboard
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/students" icon={Users} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[1])}>
+              Students
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/teachers" icon={GraduationCap} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[3])}>
+              Teachers
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/parents" icon={UserPlus} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[4])}>
+              Parents
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/accounts" icon={Briefcase} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
+              Staff
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[6])}>
+              Finance
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[7])}>
+              Reports
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[12])}>
+              Attendance
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[13])}>
+              Exam Sets
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/identity" icon={IdCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[14])}>
+              Identity
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[17])}>
+              Classes
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[19])}>
+              Job Vacancies
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/settings" icon={Settings} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[16])}>
+              System Settings
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[20])}>
+              Notifications
+            </NavLinkStyle>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="ac-sidebar-nav-item w-full text-left"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+              <span className="flex-1">Logout</span>
+            </button>
+          </nav>
+          {isMobileDevice && (
+            <div className="mx-3 mb-4 p-4 rounded-xl ac-glass-card">
+              <div className="flex items-center gap-2 mb-2 ac-text-primary">
+                <Smartphone className="w-5 h-5" />
+                <span className="text-sm font-semibold">Download our Mobile App</span>
+              </div>
+              <p className="text-xs ac-text-secondary mb-3">Get easy in another way.</p>
+              <a
+                href="#"
+                className="block w-full py-2 rounded-lg text-center text-sm font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+              >
+                Download
+              </a>
+            </div>
+          )}
+        </aside>
+
+        <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: 'transparent' }}>
+          <header className="ac-glass-header flex-shrink-0 px-6 py-4">
+            <div className="flex items-center justify-end gap-4">
+              <div ref={searchRef} className="relative flex-1 max-w-md">
+                <input
+                  type="text"
+                  placeholder="Search students, fees, reports..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => searchQuery.trim().length >= 2 && setSearchOpen(true)}
+                  className="ac-glass-card w-full rounded-xl py-2.5 pl-4 pr-10 text-sm ac-text-primary placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                />
+                <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                {searchOpen && (
+                  <div className="ac-glass-card absolute left-0 right-0 top-full z-50 mt-1 max-h-[min(400px,70vh)] overflow-hidden overflow-y-auto rounded-xl shadow-lg">
+                    {searchLoading ? (
+                      <div className="p-4 text-center ac-text-secondary text-sm">Searching...</div>
+                    ) : (
+                      <>
+                        {searchResults.students.length > 0 && (
+                          <div className="border-b border-slate-200/50">
+                            <div className="px-3 py-2 text-xs font-semibold ac-text-muted uppercase tracking-wider flex items-center gap-2">
+                              <Users className="w-4 h-4" /> Students
+                            </div>
+                            {searchResults.students.map((s) => (
+                              <button
+                                key={s.student_id}
+                                type="button"
+                                onClick={() => {
+                                  navigate(`/dashboard/admin/students?highlight=${s.student_id}`);
+                                  setSearchQuery('');
+                                  setSearchOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 ac-text-primary text-sm"
+                              >
+                                <span className="font-medium truncate">{s.name}</span>
+                                <span className="ac-text-muted shrink-0">{s.current_class || '—'}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.teachers.length > 0 && (
+                          <div className="border-b border-slate-200/50">
+                            <div className="px-3 py-2 text-xs font-semibold ac-text-muted uppercase tracking-wider flex items-center gap-2">
+                              <GraduationCap className="w-4 h-4" /> Teachers
+                            </div>
+                            {searchResults.teachers.map((t) => (
+                              <button
+                                key={t.teacher_id}
+                                type="button"
+                                onClick={() => {
+                                  navigate(`/dashboard/admin/teachers`);
+                                  setSearchQuery('');
+                                  setSearchOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 ac-text-primary text-sm"
+                              >
+                                <span className="font-medium truncate">{t.name}</span>
+                                {t.email && <span className="ac-text-muted text-xs truncate max-w-[180px]">{t.email}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {searchResults.reports.length > 0 && (
+                          <div className="border-b border-slate-200/50">
+                            <div className="px-3 py-2 text-xs font-semibold ac-text-muted uppercase tracking-wider flex items-center gap-2">
+                              <FileText className="w-4 h-4" /> Reports
+                            </div>
+                            {searchResults.reports.map((r) => (
+                              <button
+                                key={r.report_id}
+                                type="button"
+                                onClick={() => {
+                                  navigate('/dashboard/admin/report-records');
+                                  setSearchQuery('');
+                                  setSearchOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 ac-text-primary text-sm"
+                              >
+                                <span className="font-medium truncate">{r.template_name || 'Report'}</span>
+                                {r.student_name && <span className="ac-text-muted shrink-0 truncate max-w-[120px]">{r.student_name}</span>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {!searchLoading && searchQuery.trim().length >= 2 && searchResults.students.length === 0 && searchResults.teachers.length === 0 && searchResults.reports.length === 0 && (
+                          <div className="p-4 text-center ac-text-muted text-sm">No results found.</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              <select className="ac-glass-card rounded-xl px-3 py-2 text-sm ac-text-primary border-0 min-w-[100px]">
+                <option value="">Term</option>
+                <option value="1">Term 1</option>
+                <option value="2">Term 2</option>
+                <option value="3">Term 3</option>
+              </select>
+              <select className="ac-glass-card rounded-xl px-3 py-2 text-sm ac-text-primary border-0 min-w-[100px]">
+                <option value="">Class</option>
+                <option value="P1">Primary 1</option>
+                <option value="P2">Primary 2</option>
+              </select>
+              <select className="ac-glass-card rounded-xl px-3 py-2 text-sm ac-text-primary border-0 min-w-[100px]">
+                <option value="">Academic Year</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+              </select>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+                title={theme === 'light' ? 'Switch to dark' : 'Switch to light'}
+              >
+                {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/admin/notifications')}
+                className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+              >
+                <Bell className="h-5 w-5" />
+              </button>
+              <div className="relative" ref={profileRef}>
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen(!profileOpen)}
+                  className="flex items-center gap-2 p-1.5 rounded-xl ac-glass-card border-0 hover:opacity-90"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center text-white font-semibold text-sm">
+                    {adminName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden md:block text-left max-w-[140px]">
+                    <div className="text-sm font-medium ac-text-primary truncate">{adminName}</div>
+                    <div className="text-xs ac-text-muted truncate">{adminEmail}</div>
+                  </div>
+                </button>
+                {profileOpen && (
+                  <div className="ac-glass-card absolute right-0 mt-2 w-56 rounded-xl overflow-hidden z-50 shadow-lg border">
+                    <div className="p-4 border-b border-white/10">
+                      <div className="font-medium ac-text-primary">{adminName}</div>
+                      <div className="text-sm ac-text-muted truncate">{adminEmail}</div>
+                    </div>
+                    <div className="p-1">
+                      <button
+                        type="button"
+                        onClick={() => { navigate('/dashboard/admin/settings'); setProfileOpen(false); }}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm ac-text-secondary hover:bg-white/10"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-500/10"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+              <Suspense
+                fallback={
+                  <div className="animate-pulse space-y-6">
+                    <div className="h-8 w-56 rounded ac-skeleton-block" />
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="h-28 rounded-xl ac-skeleton-block" />
+                      ))}
+                    </div>
+                    <div className="h-64 rounded-xl ac-skeleton-block" />
+                  </div>
+                }
+              >
+                <Outlet />
+              </Suspense>
+            </div>
+          </div>
+          <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">
+            <div className="ac-text-secondary flex items-center justify-between text-sm">
+              <span>Copyright © 2025 PwezaCore</span>
+              <div className="flex items-center gap-6">
+                <a href="#" className="hover:opacity-100 opacity-80">Privacy Policy</a>
+                <a href="#" className="hover:opacity-100 opacity-80">Terms and conditions</a>
+                <a href="#" className="hover:opacity-100 opacity-80">Contact</a>
+              </div>
+            </div>
+          </footer>
+        </main>
+      </div>
+    );
+  }
+
+  // Non-admin section (e.g. redirect): minimal wrapper without glass
   return (
     <div className="min-h-screen relative">
-      {!isAdminSection && <GlassBackground />}
-
       <aside className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
         <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
           <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
@@ -187,224 +518,18 @@ export default function AdminLayout() {
           </div>
           <span className="font-bold text-lg text-gray-900">PwezaCore</span>
         </div>
-
-        <div className="px-4 pt-2 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">MENU</span>
-        </div>
-        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
-          <NavLinkStyle to="/dashboard/admin" end icon={LayoutDashboard}>Dashboard</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/students" icon={Users}>Students</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/teachers" icon={GraduationCap}>Teachers</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/parents" icon={UserPlus}>Parents</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/accounts" icon={Briefcase}>Staff</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign}>Finance</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText}>Reports</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList}>Attendance</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen}>Exam Sets</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/identity" icon={IdCard}>Identity</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2}>Classes</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard}>Job Vacancies</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/settings" icon={Settings}>System Settings</NavLinkStyle>
-          <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell}>Notifications</NavLinkStyle>
+        <nav className="flex-1 px-3 py-2">
           <button
             type="button"
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 transition-all"
+            onClick={() => navigate('/dashboard/admin')}
+            className="flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100"
           >
-            <LogOut className="w-5 h-5 flex-shrink-0 text-gray-600" />
-            Logout
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            Dashboard
           </button>
         </nav>
-
-        {isMobileDevice && (
-          <div className="mx-3 mb-4 p-4 rounded-xl bg-green-600 text-white">
-            <div className="flex items-center gap-2 mb-2">
-              <Smartphone className="w-5 h-5 text-white" />
-              <span className="text-sm font-semibold">Download our Mobile App</span>
-            </div>
-            <p className="text-xs text-white/90 mb-3">Get easy in another way.</p>
-            <a
-              href="#"
-              className="block w-full py-2 rounded-lg text-center text-sm font-medium bg-white text-green-600 hover:bg-green-50 transition-colors"
-            >
-              Download
-            </a>
-          </div>
-        )}
       </aside>
-
-      <div className={`relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 ${isAdminSection ? 'bg-gray-50' : ''}`}>
-        {isAdminSection && (
-          <nav className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-            <div className="px-4 sm:px-6 lg:px-8 py-4">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-1 flex-wrap items-center gap-3 max-w-4xl">
-                  <div ref={searchRef} className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="Search students, fees, reports..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onFocus={() => searchQuery.trim().length >= 2 && setSearchOpen(true)}
-                      className="w-full pl-10 pr-12 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium">⌘F</span>
-                    {searchOpen && (
-                      <div className="absolute left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden max-h-[min(400px,70vh)] overflow-y-auto">
-                        {searchLoading ? (
-                          <div className="p-4 text-center text-gray-500 text-sm">Searching...</div>
-                        ) : (
-                          <>
-                            {searchResults.students.length > 0 && (
-                              <div className="border-b border-gray-100">
-                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
-                                  <Users className="w-4 h-4" /> Students
-                                </div>
-                                {searchResults.students.map((s) => (
-                                  <button
-                                    key={s.student_id}
-                                    type="button"
-                                    onClick={() => {
-                                      navigate(`/dashboard/admin/students/${s.student_id}`);
-                                      setSearchQuery('');
-                                      setSearchOpen(false);
-                                    }}
-                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
-                                  >
-                                    <span className="font-medium text-gray-900 truncate">{s.name}</span>
-                                    <span className="text-gray-500 shrink-0">{s.current_class || '—'}</span>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {searchResults.teachers.length > 0 && (
-                              <div className="border-b border-gray-100">
-                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
-                                  <GraduationCap className="w-4 h-4" /> Teachers
-                                </div>
-                                {searchResults.teachers.map((t) => (
-                                  <button
-                                    key={t.teacher_id}
-                                    type="button"
-                                    onClick={() => {
-                                      navigate(`/dashboard/admin/teachers/${t.teacher_id}`);
-                                      setSearchQuery('');
-                                      setSearchOpen(false);
-                                    }}
-                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
-                                  >
-                                    <span className="font-medium text-gray-900 truncate">{t.name}</span>
-                                    {t.email && <span className="text-gray-500 text-xs truncate max-w-[180px]">{t.email}</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {searchResults.reports.length > 0 && (
-                              <div className="border-b border-gray-100">
-                                <div className="px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 flex items-center gap-2">
-                                  <FileText className="w-4 h-4" /> Reports
-                                </div>
-                                {searchResults.reports.map((r) => (
-                                  <button
-                                    key={r.report_id}
-                                    type="button"
-                                    onClick={() => {
-                                      navigate('/dashboard/admin/report-records');
-                                      setSearchQuery('');
-                                      setSearchOpen(false);
-                                    }}
-                                    className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-gray-50 text-sm"
-                                  >
-                                    <span className="font-medium text-gray-900 truncate">{r.template_name || 'Report'}</span>
-                                    {r.student_name && <span className="text-gray-500 shrink-0 truncate max-w-[120px]">{r.student_name}</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                            {!searchLoading && searchQuery.trim().length >= 2 && searchResults.students.length === 0 && searchResults.teachers.length === 0 && searchResults.reports.length === 0 && (
-                              <div className="p-4 text-center text-gray-500 text-sm">No results found.</div>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
-                    <option value="">Term</option>
-                    <option value="1">Term 1</option>
-                    <option value="2">Term 2</option>
-                    <option value="3">Term 3</option>
-                  </select>
-                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
-                    <option value="">Class</option>
-                    <option value="P1">Primary 1</option>
-                    <option value="P2">Primary 2</option>
-                  </select>
-                  <select className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500/30">
-                    <option value="">Academic Year</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="hidden sm:block text-sm text-gray-600">
-                    {greeting()}, <span className="font-medium text-gray-900">{adminName}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/dashboard/admin/notifications')}
-                    className="relative p-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-                  >
-                    <Bell className="w-5 h-5" />
-                  </button>
-                  <div className="relative" ref={profileRef}>
-                    <button
-                      type="button"
-                      onClick={() => setProfileOpen(!profileOpen)}
-                      className="flex items-center gap-2 p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center text-white font-semibold text-sm">
-                        {adminName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="hidden md:block text-left max-w-[140px]">
-                        <div className="text-sm font-medium text-gray-900 truncate">{adminName}</div>
-                        <div className="text-xs text-gray-500 truncate">{adminEmail}</div>
-                      </div>
-                    </button>
-                    {profileOpen && (
-                      <div className="absolute right-0 mt-2 w-56 rounded-xl bg-white border border-gray-200 shadow-lg overflow-hidden z-50">
-                        <div className="p-4 border-b border-gray-100">
-                          <div className="font-medium text-gray-900">{adminName}</div>
-                          <div className="text-sm text-gray-500 truncate">{adminEmail}</div>
-                        </div>
-                        <div className="p-1">
-                          <button
-                            type="button"
-                            onClick={() => { navigate('/dashboard/admin/settings'); setProfileOpen(false); }}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
-                          >
-                            <Settings className="w-4 h-4" />
-                            Settings
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleLogout}
-                            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Logout
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </nav>
-        )}
-
+      <div className="relative min-w-0 flex-1 ml-52 flex flex-col min-h-screen z-0 bg-gray-50">
         <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
           <Suspense fallback={<AdminContentSkeleton />}>
             <Outlet />

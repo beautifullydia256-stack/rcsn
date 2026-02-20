@@ -1,13 +1,10 @@
 /**
  * Skeleton for admin content area while lazy page loads.
- * Matches dashboard layout (header, KPI row, quick actions, content blocks).
+ * Theme-aware via .ac-skeleton-block (glass dashboard).
  */
 function SkeletonBlock({ className = '' }: { className?: string }) {
   return (
-    <div
-      className={`animate-pulse rounded-xl bg-white/10 ${className}`}
-      style={{ border: '1px solid rgba(255, 255, 255, 0.12)' }}
-    />
+    <div className={`animate-pulse rounded-xl ac-skeleton-block ${className}`} />
   );
 }
 

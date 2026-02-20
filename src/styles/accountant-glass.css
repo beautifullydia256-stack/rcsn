@@ -238,6 +238,12 @@
 .ac-text-secondary { color: var(--ac-text-secondary); }
 .ac-text-muted { color: var(--ac-text-muted); }
 
+/* Skeleton blocks (theme-aware, for loading states) */
+.ac-skeleton-block {
+  background: var(--ac-border);
+  border-radius: 16px;
+}
+
 /* ----------------------------------------------------------------------------
    Page content wrapper (main content area only — sidebar unchanged)
    ---------------------------------------------------------------------------- */

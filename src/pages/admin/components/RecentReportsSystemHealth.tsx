@@ -42,36 +42,36 @@ export default function RecentReportsSystemHealth() {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="ac-glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-green-100">
-              <FileText className="w-5 h-5 text-green-600" />
+            <div className="p-2 rounded-xl bg-emerald-100">
+              <FileText className="w-5 h-5 text-emerald-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Recent Reports</h2>
+            <h2 className="text-lg font-semibold ac-text-primary">Recent Reports</h2>
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
           >
             View all →
           </button>
         </div>
         <div className="space-y-2">
           {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
+            <div className="text-sm ac-text-muted">Loading...</div>
           ) : reports.length === 0 ? (
-            <div className="text-sm text-gray-500">No recent reports</div>
+            <div className="text-sm ac-text-muted">No recent reports</div>
           ) : (
             reports.map((report) => (
               <div
                 key={report.report_id}
-                className="p-3 rounded-xl flex items-center justify-between bg-gray-50 border border-gray-100"
+                className="p-3 rounded-xl flex items-center justify-between bg-white/5 border border-white/10"
               >
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900 text-sm">{report.template_name || 'Student Report'}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="font-medium ac-text-primary text-sm">{report.template_name || 'Student Report'}</div>
+                  <div className="text-xs ac-text-muted">
                     {report.students?.name || 'Student'} • {new Date(report.created_at).toLocaleDateString()}
                   </div>
                 </div>
@@ -81,7 +81,7 @@ export default function RecentReportsSystemHealth() {
                     if (report.file_url) window.open(report.file_url, '_blank');
                     else navigate('/dashboard/admin/reports');
                   }}
-                  className="text-xs font-medium text-green-600 hover:text-green-700 transition-colors"
+                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
                 >
                   {report.file_url ? 'Open →' : 'View →'}
                 </button>
@@ -91,52 +91,52 @@ export default function RecentReportsSystemHealth() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="ac-glass-card p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-xl bg-green-100">
-            <Activity className="w-5 h-5 text-green-600" />
+          <div className="p-2 rounded-xl bg-emerald-100">
+            <Activity className="w-5 h-5 text-emerald-600" />
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">System Health</h2>
+          <h2 className="text-lg font-semibold ac-text-primary">System Health</h2>
         </div>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-gray-700">Database</span>
+              <Database className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm ac-text-secondary">Database</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-green-600 font-medium">{systemHealth.database.status}</span>
-              <div className="text-xs text-gray-500">{systemHealth.database.responseTime}</div>
+              <span className="text-xs text-emerald-600 font-medium">{systemHealth.database.status}</span>
+              <div className="text-xs ac-text-muted">{systemHealth.database.responseTime}</div>
             </div>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-gray-700">Storage</span>
+              <HardDrive className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm ac-text-secondary">Storage</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-gray-900 font-medium">{systemHealth.storage.used} / {systemHealth.storage.total}</span>
-              <div className="text-xs text-gray-500">{systemHealth.storage.percentage}% used</div>
+              <span className="text-xs ac-text-primary font-medium">{systemHealth.storage.used} / {systemHealth.storage.total}</span>
+              <div className="text-xs ac-text-muted">{systemHealth.storage.percentage}% used</div>
             </div>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-gray-700">API</span>
+              <Zap className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm ac-text-secondary">API</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-green-600 font-medium">{systemHealth.api.status}</span>
-              <div className="text-xs text-gray-500">{systemHealth.api.responseTime}</div>
+              <span className="text-xs text-emerald-600 font-medium">{systemHealth.api.status}</span>
+              <div className="text-xs ac-text-muted">{systemHealth.api.responseTime}</div>
             </div>
           </div>
-          <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-gray-700">Background Jobs</span>
+              <Activity className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm ac-text-secondary">Background Jobs</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-green-600 font-medium">{systemHealth.jobs.status}</span>
-              <div className="text-xs text-gray-500">{systemHealth.jobs.active} active</div>
+              <span className="text-xs text-emerald-600 font-medium">{systemHealth.jobs.status}</span>
+              <div className="text-xs ac-text-muted">{systemHealth.jobs.active} active</div>
             </div>
           </div>
         </div>

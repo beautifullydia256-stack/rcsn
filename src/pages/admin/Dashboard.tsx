@@ -78,8 +78,8 @@ export default function AdminDashboard() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-green-600" />
-          <p className="text-gray-600">Loading dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
+          <p className="ac-text-secondary">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -105,13 +105,13 @@ export default function AdminDashboard() {
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="flex max-w-md flex-col items-center gap-4 text-center">
           <div className="mb-4 text-4xl text-red-500">⚠️</div>
-          <h2 className="mb-2 text-xl font-bold text-gray-900">Account Setup Required</h2>
-          <p className="mb-6 text-gray-600">{displayMessage}</p>
+          <h2 className="mb-2 text-xl font-bold ac-text-primary">Account Setup Required</h2>
+          <p className="mb-6 ac-text-secondary">{displayMessage}</p>
           {missingSchoolId && (
             <button
               type="button"
               onClick={() => navigate('/login')}
-              className="rounded-lg bg-green-600 px-6 py-3 text-white transition-colors hover:bg-green-700"
+              className="rounded-lg bg-emerald-600 px-6 py-3 text-white transition-colors hover:bg-emerald-700"
             >
               Complete School Setup
             </button>
@@ -119,7 +119,7 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => navigate('/login')}
-            className="text-gray-600 hover:text-gray-900 transition-colors"
+            className="ac-text-secondary hover:opacity-100 opacity-80 transition-colors"
           >
             Back to Login
           </button>
@@ -134,21 +134,21 @@ export default function AdminDashboard() {
     <>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
-          <p className="text-gray-600">Plan, prioritize, and manage your school with ease.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary mb-1">Dashboard</h1>
+          <p className="ac-text-secondary">Plan, prioritize, and manage your school with ease.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/students/add')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
           >
             + Add Student
           </button>
           <button
             type="button"
             onClick={() => {}}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+            className="ac-glass-btn-secondary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ac-text-primary transition-colors"
           >
             Import Data
           </button>
@@ -176,7 +176,7 @@ export default function AdminDashboard() {
         <RecentReportsSystemHealth />
       </div>
 
-      <footer className="mt-12 py-6 text-center text-sm text-gray-500">
+      <footer className="mt-12 py-6 text-center text-sm ac-text-muted">
         <p>© 2025 PwezaCore School Management System.</p>
       </footer>
     </>

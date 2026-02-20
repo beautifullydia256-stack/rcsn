@@ -128,16 +128,16 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
         const Icon = c.icon;
         const isFirstCard = index === 0;
         const isPlaceholder = c.label.startsWith('Placeholder');
-        
+
         return (
           <div
             key={c.label}
             className={`rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md ${
-              isFirstCard 
-                ? 'bg-gradient-to-br from-green-500 to-green-600' 
+              isFirstCard
+                ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
                 : isPlaceholder
-                ? 'bg-gray-100 border border-gray-200 opacity-60'
-                : 'bg-white border border-gray-200'
+                  ? 'ac-glass-card opacity-60'
+                  : 'ac-glass-card'
             }`}
           >
             <button
@@ -145,27 +145,25 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
               onClick={() => !isPlaceholder && c.href && navigate(c.href)}
               disabled={isPlaceholder}
               className={`w-full p-5 sm:p-6 text-left transition-all ${
-                isFirstCard 
-                  ? 'hover:from-green-600 hover:to-green-700' 
+                isFirstCard
+                  ? 'hover:from-emerald-600 hover:to-emerald-700'
                   : isPlaceholder
-                  ? 'cursor-default'
-                  : 'hover:bg-gray-50'
+                    ? 'cursor-default'
+                    : 'hover:bg-white/5'
               }`}
             >
               <div className="space-y-3">
                 <div className={`text-xs font-medium uppercase tracking-wide ${
-                  isFirstCard ? 'text-green-100' : isPlaceholder ? 'text-gray-400' : 'text-gray-500'
+                  isFirstCard ? 'text-emerald-100' : isPlaceholder ? 'ac-text-muted' : 'ac-text-muted'
                 }`}>
                   {c.label}
                 </div>
-                
+
                 <div className={`text-3xl sm:text-4xl font-bold ${
-                  isFirstCard ? 'text-white' : isPlaceholder ? 'text-gray-400' : 'text-gray-900'
+                  isFirstCard ? 'text-white' : isPlaceholder ? 'ac-text-muted' : 'ac-text-primary'
                 }`}>
                   {isLoading && !isPlaceholder ? (
-                    <div className={`animate-pulse rounded h-9 w-20 ${
-                      isFirstCard ? 'bg-white/20' : 'bg-gray-200'
-                    }`} />
+                    <div className={`animate-pulse rounded h-9 w-20 ac-skeleton-block`} />
                   ) : (
                     c.value
                   )}

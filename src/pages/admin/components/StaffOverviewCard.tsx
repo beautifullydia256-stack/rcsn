@@ -50,26 +50,26 @@ export default function StaffOverviewCard() {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div className="ac-glass-card p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <Users className="w-5 h-5 text-green-600" />
+        <h3 className="text-lg font-semibold ac-text-primary flex items-center gap-2">
+          <Users className="w-5 h-5 text-emerald-600" />
           Staff Overview
         </h3>
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/teachers')}
-          className="text-sm font-medium text-green-600 hover:text-green-700"
+          className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
         >
           View all
         </button>
       </div>
       {loading ? (
         <div className="h-32 flex items-center justify-center">
-          <div className="text-gray-500 text-sm">Loading...</div>
+          <div className="ac-text-muted text-sm">Loading...</div>
         </div>
       ) : staff.length === 0 ? (
-        <p className="text-gray-500 text-sm">No staff listed.</p>
+        <p className="ac-text-muted text-sm">No staff listed.</p>
       ) : (
         <ul className="space-y-3">
           {staff.map((s) => (
@@ -77,14 +77,14 @@ export default function StaffOverviewCard() {
               <button
                 type="button"
                 onClick={() => navigate(`/dashboard/admin/teachers/${s.teacher_id}`)}
-                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm flex-shrink-0">
                   {s.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
-                  <p className="text-xs text-gray-500 truncate">Current class</p>
+                  <p className="text-sm font-medium ac-text-primary truncate">{s.name}</p>
+                  <p className="text-xs ac-text-muted truncate">Current class</p>
                 </div>
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[s.status]}`}>
                   {s.status}

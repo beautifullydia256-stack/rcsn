@@ -47,16 +47,16 @@ export default function UpcomingDueCard() {
   }, []);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+    <div className="ac-glass-card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-          <FileText className="w-5 h-5 text-green-600" />
+        <h3 className="text-lg font-semibold ac-text-primary flex items-center gap-2">
+          <FileText className="w-5 h-5 text-emerald-600" />
           Upcoming
         </h3>
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/exam-sets')}
-          className="text-sm font-medium text-green-600 hover:text-green-700 flex items-center gap-1"
+          className="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
         >
           View all
           <ChevronRight className="w-4 h-4" />
@@ -64,10 +64,10 @@ export default function UpcomingDueCard() {
       </div>
       {loading ? (
         <div className="h-24 flex items-center justify-center">
-          <div className="text-gray-500 text-sm">Loading...</div>
+          <div className="ac-text-muted text-sm">Loading...</div>
         </div>
       ) : items.length === 0 ? (
-        <p className="text-gray-500 text-sm">No upcoming exams or deadlines.</p>
+        <p className="ac-text-muted text-sm">No upcoming exams or deadlines.</p>
       ) : (
         <ul className="space-y-3">
           {items.slice(0, 4).map((item) => (
@@ -75,13 +75,13 @@ export default function UpcomingDueCard() {
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/admin/exam-sets')}
-                className="w-full text-left flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full text-left flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-white/5 transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">{item.title}</p>
-                  <p className="text-xs text-gray-500">Due: {item.dueInfo}</p>
+                  <p className="text-sm font-medium ac-text-primary truncate">{item.title}</p>
+                  <p className="text-xs ac-text-muted">Due: {item.dueInfo}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 ac-text-muted flex-shrink-0" />
               </button>
             </li>
           ))}
