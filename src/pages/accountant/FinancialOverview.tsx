@@ -23,6 +23,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
@@ -722,7 +725,7 @@ export default function FinancialOverview() {
           </section>
           )}
 
-          {/* Statistic — Total expected (all terms) vs Total overall balance (all terms) */}
+          {/* Statistic — Total expected vs Total overall balance + donut by term */}
           {statisticData && (
             <section className="w-full">
               <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -739,34 +742,60 @@ export default function FinancialOverview() {
                     <p className="text-xl font-bold text-amber-800">{fmt(statisticData.totalOverallBalance)}</p>
                   </div>
                 </div>
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">By term</p>
-                  {statisticData.terms.length === 0 ? (
-                    <p className="text-sm text-slate-400">No term data yet.</p>
-                  ) : (
-                    <>
-                      <div className="mb-2 grid grid-cols-4 gap-2 px-1 text-xs font-medium text-slate-500">
-                        <span>Term</span>
-                        <span className="text-blue-600 text-right">Expected</span>
-                        <span className="text-emerald-600 text-right">Paid this term</span>
-                        <span className="text-amber-600 text-right">Overall balance</span>
+                {/* Donut: outstanding balance by term (replaces BY TERM table) */}
+                {statisticData.terms.length > 0 ? (
+                  <div className="border-t border-slate-100 pt-4">
+                    <div className="flex flex-col items-center sm:flex-row sm:items-start sm:justify-center gap-4">
+                      <div className="relative h-[200px] w-[200px] shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={statisticData.terms.map((t) => ({ name: t.termLabel, value: Math.max(0, t.overallBalance) }))}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={56}
+                              outerRadius={80}
+                              paddingAngle={1}
+                              stroke="none"
+                            >
+                              {statisticData.terms.map((_, i) => (
+                                <Cell
+                                  key={i}
+                                  fill={["#166534", "#22c55e", "#bbf7d0", "#d1d5db"][i % 4]}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(v: number) => [fmt(v), "Balance"]}
+                              contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding</span>
+                          <span className="text-lg font-bold text-slate-800">{fmt(statisticData.totalOverallBalance)}</span>
+                        </div>
                       </div>
-                      <ul className="space-y-2 max-h-[220px] overflow-y-auto">
-                        {statisticData.terms.map((row) => (
-                          <li
-                            key={row.termId}
-                            className="grid grid-cols-4 gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-sm items-center"
-                          >
-                            <span className="font-medium text-slate-800">{row.termLabel}</span>
-                            <span className="text-blue-700 text-right">{fmt(row.expected)}</span>
-                            <span className="text-emerald-700 text-right">{fmt(row.paidThisTerm)}</span>
-                            <span className="text-amber-700 text-right">{fmt(row.overallBalance)}</span>
+                      <ul className="flex flex-col gap-1.5 text-xs text-slate-600">
+                        {statisticData.terms.map((t, i) => (
+                          <li key={t.termId} className="flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                              style={{ backgroundColor: ["#166534", "#22c55e", "#bbf7d0", "#d1d5db"][i % 4] }}
+                            />
+                            {t.termLabel}
                           </li>
                         ))}
                       </ul>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="border-t border-slate-100 pt-4">
+                    <p className="text-sm text-slate-400">No term data yet.</p>
+                  </div>
+                )}
               </div>
             </section>
           )}
