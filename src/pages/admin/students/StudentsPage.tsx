@@ -139,7 +139,7 @@ export default function StudentsPage() {
 
   const ThSort = ({ column, label }: { column: SortKey; label: string }) => (
     <th
-      className="px-4 py-3 text-left text-sm font-semibold text-gray-800 whitespace-nowrap cursor-pointer hover:bg-teal-100/80 transition-colors border-r border-teal-200/60 last:border-r-0"
+      className="px-4 py-3 text-left text-sm font-semibold ac-text-muted whitespace-nowrap cursor-pointer hover:bg-white/5 transition-colors border-r border-[var(--ac-border)] last:border-r-0"
       onClick={() => {
         setSortKey(column);
         setSortOrder((prev) => (sortKey === column ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
@@ -150,7 +150,7 @@ export default function StudentsPage() {
         {sortKey === column ? (
           sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDownIcon className="w-4 h-4" />
         ) : (
-          <span className="text-teal-300"><ArrowUpDown className="w-4 h-4" /></span>
+          <span className="opacity-70"><ArrowUpDown className="w-4 h-4" /></span>
         )}
       </span>
     </th>
@@ -165,23 +165,23 @@ export default function StudentsPage() {
             <button
               type="button"
               onClick={() => setDisplayOpen(!displayOpen)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="ac-glass-btn-secondary inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
             >
               <Settings className="w-4 h-4" />
               Display / Print
               <ChevronDown className="w-4 h-4" />
             </button>
             {displayOpen && (
-              <div className="absolute left-0 top-full mt-1 w-48 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-10">
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => { window.print(); setDisplayOpen(false); }}>Print table</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-500 hover:bg-gray-50" onClick={() => setDisplayOpen(false)}>Export (coming soon)</button>
+              <div className="ac-glass-card absolute left-0 top-full mt-1 w-48 rounded-xl py-1 shadow-lg z-10 border">
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { window.print(); setDisplayOpen(false); }}>Print table</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-muted hover:bg-white/10" onClick={() => setDisplayOpen(false)}>Export (coming soon)</button>
               </div>
             )}
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/students/add')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             <UserPlus className="w-4 h-4" />
             + Add New
@@ -189,7 +189,7 @@ export default function StudentsPage() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/parents')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             <Users className="w-4 h-4" />
             + Add Family
@@ -198,16 +198,16 @@ export default function StudentsPage() {
             <button
               type="button"
               onClick={() => setGroupByOpen(!groupByOpen)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="ac-glass-btn-secondary inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
             >
               Group By
               <ChevronDown className="w-4 h-4" />
             </button>
             {groupByOpen && (
-              <div className="absolute left-0 top-full mt-1 w-40 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-10">
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => setGroupByOpen(false)}>None</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => setGroupByOpen(false)}>Class</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => setGroupByOpen(false)}>Status</button>
+              <div className="ac-glass-card absolute left-0 top-full mt-1 w-40 rounded-xl py-1 shadow-lg z-10 border">
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => setGroupByOpen(false)}>None</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => setGroupByOpen(false)}>Class</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => setGroupByOpen(false)}>Status</button>
               </div>
             )}
           </div>
@@ -215,25 +215,25 @@ export default function StudentsPage() {
             <button
               type="button"
               onClick={() => setSortOpen(!sortOpen)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="ac-glass-btn-secondary inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium ac-text-primary hover:opacity-90"
             >
               <ArrowUpDown className="w-4 h-4" />
               Sorting
               <ChevronDown className="w-4 h-4" />
             </button>
             {sortOpen && (
-              <div className="absolute left-0 top-full mt-1 w-44 rounded-lg border border-gray-200 bg-white py-1 shadow-lg z-10">
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setSortKey('name'); setSortOrder('asc'); setSortOpen(false); }}>Name A–Z</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setSortKey('name'); setSortOrder('desc'); setSortOpen(false); }}>Name Z–A</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setSortKey('class'); setSortOrder('asc'); setSortOpen(false); }}>Class</button>
-                <button type="button" className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50" onClick={() => { setSortKey('name'); setSortOrder('desc'); setSortOpen(false); }}>Date enrolled</button>
+              <div className="ac-glass-card absolute left-0 top-full mt-1 w-44 rounded-xl py-1 shadow-lg z-10 border">
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { setSortKey('name'); setSortOrder('asc'); setSortOpen(false); }}>Name A–Z</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { setSortKey('name'); setSortOrder('desc'); setSortOpen(false); }}>Name Z–A</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { setSortKey('class'); setSortOrder('asc'); setSortOpen(false); }}>Class</button>
+                <button type="button" className="w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10" onClick={() => { setSortKey('name'); setSortOrder('desc'); setSortOpen(false); }}>Date enrolled</button>
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">Filter by class:</span>
+            <span className="text-sm font-medium ac-text-secondary">Filter by class:</span>
             <select
-              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="ac-input rounded-xl px-3 py-2 text-sm min-h-0"
               value={klass}
               onChange={(e) => setKlass(e.target.value)}
             >
@@ -256,27 +256,27 @@ export default function StudentsPage() {
           </div>
           <div className="flex-1 min-w-[180px] max-w-md">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ac-text-muted" />
               <input
                 type="text"
                 placeholder="Q Search"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white pl-9 pr-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="ac-glass-card ac-input w-full rounded-xl pl-9 pr-3 py-2 text-sm border min-h-0 placeholder:ac-text-muted"
               />
             </div>
           </div>
         </div>
 
-        {/* Table – teal header, alternating rows, grid borders */}
-        <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        {/* Table – glass panel, theme-aware (no white in dark mode) */}
+        <div className="ac-glass-card overflow-hidden rounded-xl">
           <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+            <table className="min-w-full text-sm ac-table-wrap">
               <thead>
-                <tr className="bg-teal-50 border-b-2 border-teal-100">
+                <tr>
                   <ThSort column="name" label="Student Name" />
                   <ThSort column="parents" label="Parents Names" />
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800 whitespace-nowrap border-r border-teal-200/60">Address</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold ac-text-muted whitespace-nowrap border-r border-[var(--ac-border)] last:border-r-0">Address</th>
                   <ThSort column="teacher" label="Class Teacher" />
                   <ThSort column="class" label="Class" />
                   <ThSort column="email" label="Email" />
@@ -286,19 +286,19 @@ export default function StudentsPage() {
               <tbody>
                 {loading ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`} className={`border-b border-gray-100 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'}`}>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-32 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-28 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-20 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-16 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-28 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3 border-r border-gray-100"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-8 w-20 rounded bg-gray-200 animate-pulse" /></td>
+                    <tr key={`skeleton-${i}`} className="border-b border-[var(--ac-border)]">
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-32 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-20 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-16 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3 border-r border-[var(--ac-border)]"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-8 w-20 rounded ac-skeleton-block animate-pulse" /></td>
                     </tr>
                   ))
                 ) : sorted.length === 0 ? (
-                  <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-500">No students found.</td></tr>
+                  <tr><td colSpan={7} className="px-4 py-8 text-center ac-text-muted">No students found.</td></tr>
                 ) : (
                   sorted.map((r, idx) => {
                     const parentsList = parentsByStudent[r.student_id] || [];
@@ -308,29 +308,27 @@ export default function StudentsPage() {
                     const otherParents = clickedParent ? parentsList.filter((_, i) => i !== expandedParent!.parentIndex) : [];
                     return (
                       <Fragment key={r.student_id}>
-                        <tr
-                          className={`border-b border-gray-100 hover:bg-teal-50/30 ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/80'}`}
-                        >
-                          <td className="px-4 py-3 border-r border-gray-100">
+                        <tr className="border-b border-[var(--ac-border)] hover:bg-white/5 transition-colors">
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-cell-primary">
                             <div className="flex items-center gap-1">
                               <button
                                 type="button"
-                                className="font-semibold text-gray-900 hover:text-green-600 hover:underline text-left"
+                                className="font-semibold ac-text-primary hover:text-emerald-500 hover:underline text-left"
                                 onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
                               >
                                 {r.name || '—'}
                               </button>
-                              <button type="button" className="p-0.5 text-gray-400 hover:text-gray-600" aria-label="More"><MoreHorizontal className="w-4 h-4" /></button>
+                              <button type="button" className="p-0.5 ac-text-muted hover:opacity-100" aria-label="More"><MoreHorizontal className="w-4 h-4" /></button>
                             </div>
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">
                             {parentsList.length > 0 ? (
                               <span className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
                                 {parentsList.map((p, pIdx) => (
                                   <button
                                     key={pIdx}
                                     type="button"
-                                    className="hover:text-green-600 hover:underline cursor-pointer text-left"
+                                    className="hover:text-emerald-400 hover:underline cursor-pointer text-left ac-text-secondary"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       setExpandedParent((prev) =>
@@ -345,58 +343,55 @@ export default function StudentsPage() {
                                 ))}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="ac-text-muted">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">
                             {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) ? (
                               <span className="truncate max-w-[200px] block" title={(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || ''}>
                                 {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '—'}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="ac-text-muted">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{classTeacherNameByClass[r.current_class] || '—'}</td>
-                          <td className="px-4 py-3 border-r border-gray-100 text-gray-700">{r.current_class || '—'}</td>
-                          <td className="px-4 py-3 border-r border-gray-100">
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">{classTeacherNameByClass[r.current_class] || '—'}</td>
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)] ac-text-secondary">{r.current_class || '—'}</td>
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)]">
                             {firstParent?.email ? (
-                              <span className="flex items-center gap-1 text-gray-700 truncate max-w-[180px]" title={firstParent.email}>
-                                <Mail className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                              <span className="flex items-center gap-1 ac-text-secondary truncate max-w-[180px]" title={firstParent.email}>
+                                <Mail className="w-3.5 h-3.5 flex-shrink-0 ac-text-muted" />
                                 {firstParent.email}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="ac-text-muted">—</span>
                             )}
                           </td>
-                          <td className="px-4 py-3 border-r border-gray-100">
+                          <td className="px-4 py-3 border-r border-[var(--ac-border)]">
                             {firstParent?.phone ? (
-                              <span className="flex items-center gap-1 text-gray-700 truncate max-w-[140px]" title={firstParent.phone}>
-                                <Phone className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                              <span className="flex items-center gap-1 ac-text-secondary truncate max-w-[140px]" title={firstParent.phone}>
+                                <Phone className="w-3.5 h-3.5 flex-shrink-0 ac-text-muted" />
                                 {firstParent.phone}
                               </span>
                             ) : (
-                              <span className="text-gray-400">—</span>
+                              <span className="ac-text-muted">—</span>
                             )}
                           </td>
                         </tr>
                         {isExpanded && clickedParent && (
                           <tr key={`${r.student_id}-parent-${expandedParent.parentIndex}`}>
-                            <td colSpan={7} className="p-0 border-b border-gray-200 align-top bg-gradient-to-b from-slate-50 to-white">
+                            <td colSpan={7} className="p-0 border-b border-[var(--ac-border)] align-top bg-white/5">
                               <div className="px-6 py-6">
-                                {/* Card container – fills width, modern shadow & radius */}
-                                <div className="rounded-2xl border border-slate-200 bg-white shadow-lg shadow-slate-200/50 overflow-hidden">
+                                <div className="ac-glass-card rounded-2xl overflow-hidden border">
                                   <div className="p-6 sm:p-8">
-                                    {/* Top row: Primary guardian (name + actions) | Phone number | Pupil | Teacher */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-6">
-                                      {/* Primary guardian – large name + call/email buttons */}
                                       <div className="lg:col-span-1">
-                                        <h3 className="text-2xl font-bold text-blue-900 tracking-tight">{clickedParent.name || '—'}</h3>
+                                        <h3 className="text-2xl font-bold ac-text-primary tracking-tight">{clickedParent.name || '—'}</h3>
                                         <div className="mt-3 flex items-center gap-3">
                                           {clickedParent.phone && (
                                             <a
                                               href={`tel:${clickedParent.phone.replace(/\s/g, '')}`}
-                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
+                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-md"
                                               aria-label="Call"
                                             >
                                               <Phone className="h-5 w-5" />
@@ -405,7 +400,7 @@ export default function StudentsPage() {
                                           {clickedParent.email && (
                                             <a
                                               href={`mailto:${clickedParent.email}`}
-                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md"
+                                              className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white hover:bg-emerald-700 transition-colors shadow-md"
                                               aria-label="Email"
                                             >
                                               <Mail className="h-5 w-5" />
@@ -413,47 +408,43 @@ export default function StudentsPage() {
                                           )}
                                         </div>
                                         {clickedParent.email && (
-                                          <p className="mt-3 text-base text-slate-600 break-all">{clickedParent.email}</p>
+                                          <p className="mt-3 text-base ac-text-secondary break-all">{clickedParent.email}</p>
                                         )}
                                       </div>
-                                      {/* Phone number – large and bold */}
                                       <div>
-                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Phone number</p>
-                                        <p className="text-xl font-bold text-blue-900">
+                                        <p className="text-sm font-medium ac-text-muted uppercase tracking-wider mb-1">Phone number</p>
+                                        <p className="text-xl font-bold ac-text-primary">
                                           {clickedParent.phone || '—'}
                                         </p>
                                       </div>
-                                      {/* Pupil's name */}
                                       <div>
-                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Pupil&apos;s name</p>
-                                        <p className="text-lg font-semibold text-slate-800">{r.name || '—'}</p>
+                                        <p className="text-sm font-medium ac-text-muted uppercase tracking-wider mb-1">Pupil&apos;s name</p>
+                                        <p className="text-lg font-semibold ac-text-primary">{r.name || '—'}</p>
                                       </div>
-                                      {/* Teacher */}
                                       <div>
-                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Teacher</p>
-                                        <p className="text-lg font-semibold text-slate-800">
+                                        <p className="text-sm font-medium ac-text-muted uppercase tracking-wider mb-1">Teacher</p>
+                                        <p className="text-lg font-semibold ac-text-primary">
                                           {classTeacherNameByClass[r.current_class] || '—'} {r.current_class ? `(${r.current_class})` : ''}
                                         </p>
                                       </div>
                                     </div>
-                                    {/* Bottom row: Other guardian(s) + Address */}
-                                    <div className="pt-5 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="pt-5 border-t border-[var(--ac-border)] grid grid-cols-1 md:grid-cols-2 gap-6">
                                       {otherParents.length > 0 && (
                                         <div>
-                                          <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-2">Other guardian(s)</p>
+                                          <p className="text-sm font-medium ac-text-muted uppercase tracking-wider mb-2">Other guardian(s)</p>
                                           <div className="space-y-2">
                                             {otherParents.map((op, i) => (
                                               <div key={i} className="flex flex-wrap items-baseline gap-2">
-                                                <span className="text-base font-semibold text-slate-800">{op.name}</span>
-                                                {op.email && <span className="text-base text-slate-600">{op.email}</span>}
+                                                <span className="text-base font-semibold ac-text-primary">{op.name}</span>
+                                                {op.email && <span className="text-base ac-text-secondary">{op.email}</span>}
                                               </div>
                                             ))}
                                           </div>
                                         </div>
                                       )}
                                       <div className={otherParents.length > 0 ? '' : 'md:col-span-2'}>
-                                        <p className="text-sm font-medium text-slate-500 uppercase tracking-wider mb-1">Address</p>
-                                        <p className="text-base text-slate-700 leading-relaxed">
+                                        <p className="text-sm font-medium ac-text-muted uppercase tracking-wider mb-1">Address</p>
+                                        <p className="text-base ac-text-secondary leading-relaxed">
                                           {(r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '—'}
                                         </p>
                                       </div>
