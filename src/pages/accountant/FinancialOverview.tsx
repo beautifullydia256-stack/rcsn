@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import {
@@ -6,6 +7,10 @@ import {
   CreditCard,
   FileText,
   TrendingUp,
+  Receipt,
+  FilePlus,
+  DollarSign,
+  Send,
   Filter,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
@@ -506,8 +511,12 @@ function KPICard({
   );
 }
 
+type AccountantOutletContext = { openRecordPayment?: () => void };
+
 export default function FinancialOverview() {
+  const navigate = useNavigate();
   const theme = useUIStore((s) => s.theme);
+  const { openRecordPayment } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
   const chartColors = CHART_THEME[theme];
 
@@ -567,6 +576,39 @@ export default function FinancialOverview() {
                 {data.termLabel}
               </span>
             </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => openRecordPayment?.()}
+              className="ac-glass-btn inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium ac-text-primary"
+            >
+              <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
+              Record payment
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/billing")}
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-primary"
+            >
+              <FilePlus className="h-4 w-4 shrink-0 text-blue-600" />
+              Generate invoice
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/dashboard/accountant/expenses")}
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-primary"
+            >
+              <DollarSign className="h-4 w-4 shrink-0 text-amber-600" />
+              Record expense
+            </button>
+            <button
+              type="button"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-secondary"
+            >
+              <Send className="h-4 w-4 shrink-0 text-slate-500" />
+              Send reminder
+            </button>
           </div>
         </div>
 

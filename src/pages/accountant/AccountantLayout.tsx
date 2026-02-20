@@ -16,9 +16,6 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
-  FilePlus,
-  DollarSign,
-  Send,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -162,57 +159,12 @@ export default function AccountantLayout() {
           </button>
         </div>
         <div className="px-4 pt-4 pb-2">
-          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Dashboard</span>
+          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Menu</span>
         </div>
-        <nav className="px-3 py-2 space-y-0.5">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}>
             Dashboard
           </NavLinkStyle>
-        </nav>
-        <div className="px-4 pt-4 pb-2">
-          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Quick actions</span>
-        </div>
-        <nav className="px-3 py-2 space-y-0.5">
-          <button
-            type="button"
-            onClick={() => setRecordPaymentOpen(true)}
-            className="ac-sidebar-nav-item w-full text-left"
-          >
-            <Receipt className="h-5 w-5 flex-shrink-0 text-emerald-400" />
-            <span className="flex-1">Record payment</span>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/accountant/billing")}
-            className="ac-sidebar-nav-item w-full text-left"
-          >
-            <FilePlus className="h-5 w-5 flex-shrink-0 text-blue-400" />
-            <span className="flex-1">Generate invoice</span>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/dashboard/accountant/expenses")}
-            className="ac-sidebar-nav-item w-full text-left"
-          >
-            <DollarSign className="h-5 w-5 flex-shrink-0 text-amber-400" />
-            <span className="flex-1">Record expense</span>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />
-          </button>
-          <button
-            type="button"
-            className="ac-sidebar-nav-item w-full text-left"
-          >
-            <Send className="h-5 w-5 flex-shrink-0 text-slate-400" />
-            <span className="flex-1">Send reminder</span>
-            <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />
-          </button>
-        </nav>
-        <div className="px-4 pt-4 pb-2">
-          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Finance</span>
-        </div>
-        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}>
             Invoices & Billing
           </NavLinkStyle>
