@@ -159,7 +159,7 @@ BEGIN
   IF v_total_fees IS NULL THEN
     SELECT c.total_fees INTO v_total_fees
     FROM public.classes c
-    JOIN public.students s ON s.class_id = c.class_id
+    JOIN public.students s ON s.current_class = c.class_name AND s.school_id = c.school_id
     WHERE s.student_id = NEW.student_id;
   END IF;
   IF v_total_fees IS NULL THEN

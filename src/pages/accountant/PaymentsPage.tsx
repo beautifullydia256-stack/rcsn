@@ -6,6 +6,14 @@ import { CreditCard, Receipt, X } from "lucide-react";
 
 type OutstandingBalanceRow = { term_id: string; term: number; year: number; balance: number };
 
+/** Sort outstanding balances oldest term first so payment is applied to oldest debt first */
+function sortOutstandingOldestFirst(rows: OutstandingBalanceRow[]): OutstandingBalanceRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.term - b.term;
+  });
+}
+
 function formatReceiptTime(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
@@ -35,15 +43,19 @@ export default function PaymentsPage() {
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentSearchFocused, setStudentSearchFocused] = useState(false);
   const [formOverlayOpen, setFormOverlayOpen] = useState(true);
+  const [schoolName, setSchoolName] = useState("");
 
   useEffect(() => {
     if (!schoolId) return;
     void (async () => {
-      const [sRes, tRes, balRes] = await Promise.all([
+      const [sRes, tRes, balRes, schoolRes] = await Promise.all([
         supabase.from("students").select("student_id, name, current_class").eq("school_id", schoolId).eq("status", "active").order("name"),
         supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
+        supabase.from("schools").select("name").eq("school_id", schoolId).single(),
       ]);
+      const school = (schoolRes.data as { name?: string } | null) ?? null;
+      setSchoolName(school?.name ?? "");
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
@@ -77,16 +89,14 @@ export default function PaymentsPage() {
           .select("term_id, term, year, balance")
           .eq("school_id", schoolId)
           .eq("student_id", selectedStudent)
-          .gt("balance", 0)
-          .order("year", { ascending: true })
-          .order("term", { ascending: true });
-        const rows = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
+          .gt("balance", 0);
+        const raw = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
           term_id: r.term_id,
           term: r.term,
           year: r.year,
           balance: Number(r.balance),
         }));
-        setOutstandingBalances(rows);
+        setOutstandingBalances(sortOutstandingOldestFirst(raw));
       } finally {
         setBalancesLoading(false);
       }
@@ -194,15 +204,18 @@ export default function PaymentsPage() {
       }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
       const now = new Date();
+      const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
+      const recordedByName = (userRow as { name?: string } | null)?.name?.trim() || userName || userEmail || "Staff";
       setReceiptData({
         receiptNumber: receiptNumberForPayments,
+        schoolName: schoolName || undefined,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
         termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",
         amountPaid: amt,
         paymentMethod: method,
         transactionTime: formatReceiptTime(now),
-        recordedBy: userName || userEmail || "Staff",
+        recordedBy: recordedByName,
         description: notes || undefined,
         allocations: allocationLines,
         totalRemainingBalance: totalRemaining,

@@ -12,6 +12,16 @@ import { Receipt, X } from "lucide-react";
 type OutstandingBalanceRow = { term_id: string; term: number; year: number; balance: number };
 type CurrentTermRow = { id: string; term: number; year: number; start_date?: string; end_date?: string };
 
+/** Sort outstanding balances oldest term first so payment is applied to oldest debt first */
+function sortOutstandingOldestFirst(
+  rows: OutstandingBalanceRow[]
+): OutstandingBalanceRow[] {
+  return [...rows].sort((a, b) => {
+    if (a.year !== b.year) return a.year - b.year;
+    return a.term - b.term;
+  });
+}
+
 function formatReceiptTime(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
@@ -49,15 +59,19 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
   const [hasCurrentTermInvoice, setHasCurrentTermInvoice] = useState<boolean | null>(null);
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [activatingInvoice, setActivatingInvoice] = useState(false);
+  const [schoolName, setSchoolName] = useState("");
 
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
-      const [sRes, tRes, balRes] = await Promise.all([
+      const [sRes, tRes, balRes, schoolRes] = await Promise.all([
         supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
         supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
+        supabase.from("schools").select("name").eq("school_id", schoolId).single(),
       ]);
+      const school = (schoolRes.data as { name?: string } | null) ?? null;
+      setSchoolName(school?.name ?? "");
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
@@ -126,13 +140,13 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
               .maybeSingle();
           })(),
         ]);
-        const rows = ((balRes.data || []) as { term_id: string; term: number; year: number; balance: number }[]).map((r) => ({
+        const raw = ((balRes.data || []) as { term_id: string; term: number; year: number; balance: number }[]).map((r) => ({
           term_id: r.term_id,
           term: r.term,
           year: r.year,
           balance: Number(r.balance),
         }));
-        setOutstandingBalances(rows);
+        setOutstandingBalances(sortOutstandingOldestFirst(raw));
         if (currentTerm) {
           setHasCurrentTermInvoice(!!invRes.data);
           const feeRow = feeRes.data as { tuition_amount?: number } | null;
@@ -211,19 +225,23 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
         .select("term_id, term, year, balance")
         .eq("school_id", schoolId)
         .eq("student_id", selectedStudent)
-        .gt("balance", 0)
-        .order("year", { ascending: true })
-        .order("term", { ascending: true });
-      const rows = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
+        .gt("balance", 0);
+      const raw = (data || []).map((r: { term_id: string; term: number; year: number; balance: number }) => ({
         term_id: r.term_id,
         term: r.term,
         year: r.year,
         balance: Number(r.balance),
       }));
-      setOutstandingBalances(rows);
+      setOutstandingBalances(sortOutstandingOldestFirst(raw));
       setMessage("Current term invoice activated. Total due now includes Term " + currentTerm.term + ", " + currentTerm.year + ".");
     } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : "Failed to activate invoice.");
+      const msg =
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : err instanceof Error
+            ? err.message
+            : "Failed to activate invoice.";
+      setMessage(msg);
     } finally {
       setActivatingInvoice(false);
     }
@@ -346,15 +364,18 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
       }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
       const now = new Date();
+      const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
+      const recordedByName = (userRow as { name?: string } | null)?.name?.trim() || userName || userEmail || "Staff";
       setReceiptData({
         receiptNumber: receiptNumberForPayments,
+        schoolName: schoolName || undefined,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
         termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",
         amountPaid: amt,
         paymentMethod: method,
         transactionTime: formatReceiptTime(now),
-        recordedBy: userName || userEmail || "Staff",
+        recordedBy: recordedByName,
         description: notes || undefined,
         allocations: allocationLines,
         totalRemainingBalance: totalRemaining,

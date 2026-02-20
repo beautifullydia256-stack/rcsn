@@ -5,12 +5,15 @@ import { useEffect } from "react";
 
 export type PaymentReceiptData = {
   receiptNumber: string;
+  /** School name shown at top of receipt */
+  schoolName?: string;
   studentName: string;
   studentClass: string;
   termLabel: string;
   amountPaid: number;
   paymentMethod: string;
   transactionTime: string;
+  /** Display name of staff who recorded (not email) */
   recordedBy: string;
   description?: string;
   /** When payment is split across terms (oldest first) */
@@ -54,6 +57,7 @@ export function printReceipt(data: PaymentReceiptData): void {
 </head>
 <body>
   <h1>Payment Receipt</h1>
+  ${data.schoolName ? `<div class="row" style="margin-bottom:8px;font-weight:600;font-size:15px;">${data.schoolName}</div>` : ""}
   <div class="row"><span class="label">Receipt No</span><span class="value">${data.receiptNumber}</span></div>
   <div class="row"><span class="label">Student</span><span class="value">${data.studentName}</span></div>
   <div class="row"><span class="label">Class</span><span>${data.studentClass}</span></div>
@@ -101,6 +105,9 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
     >
       <div className="mb-4 border-b-2 border-dashed border-slate-300 pb-3">
         <h2 className="text-center text-lg font-bold uppercase tracking-wide text-slate-800">Payment Receipt</h2>
+        {data.schoolName && (
+          <p className="mt-2 text-center text-sm font-semibold text-slate-700">{data.schoolName}</p>
+        )}
       </div>
       <div className="space-y-1.5 text-sm">
         <div className="flex justify-between">

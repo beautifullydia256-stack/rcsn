@@ -23,9 +23,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
 
 const STALE_TIME_MS = 2 * 60 * 1000;
@@ -89,95 +86,63 @@ async function fetchCashflowYear(schoolId: string): Promise<{ months: CashflowMo
   return { months, totalBalance };
 }
 
-export type TopExpense = { category_name: string; amount: number; percentage: number };
+/** Per-term: expected (invoices), paid this term (cash in), overall balance for current + all older terms */
+export type TermStatRow = {
+  termLabel: string;
+  term: number;
+  year: number;
+  termId: string;
+  expected: number;
+  paidThisTerm: number;
+  overallBalance: number;
+};
 export type StatisticData = {
-  cashInTotal: number;
-  expenseTotal: number;
-  top5Expenses: TopExpense[];
-  expenseDonut: { name: string; value: number; color: string }[];
-  cashInDonut: { name: string; value: number; color: string }[];
+  terms: TermStatRow[];
+  /** Total expected from older unpaid + current term invoices (all terms) */
+  totalExpected: number;
+  /** Total overall balance according to paid this term (all terms) */
+  totalOverallBalance: number;
 };
 
-const DONUT_COLORS = ["#059669", "#34d399", "#6ee7b7", "#a7f3d0", "#d1fae5", "#e5e7eb"];
+async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
+  const { data: terms } = await supabase
+    .from("school_terms")
+    .select("id, term, year")
+    .eq("school_id", schoolId)
+    .order("year", { ascending: false })
+    .order("term", { ascending: false });
 
-async function fetchStatisticData(
-  schoolId: string,
-  period: "month" | "year"
-): Promise<StatisticData> {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth();
-  const yearStart = `${year}-01-01`;
-  const yearEnd = `${year}-12-31`;
-  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-  const monthEnd = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const { data: balances } = await supabase
+    .from("student_balances")
+    .select("term_id, total_fees, total_paid, balance")
+    .eq("school_id", schoolId);
 
-  const isMonth = period === "month";
-  const start = isMonth ? monthStart : yearStart;
-  const end = isMonth ? monthEnd : yearEnd;
-
-  const [paymentsRes, expensesRes] = await Promise.all([
-    supabase
-      .from("student_payments")
-      .select("amount_paid, payment_date, payment_method")
-      .eq("school_id", schoolId)
-      .gte("payment_date", start)
-      .lte("payment_date", end),
-    supabase
-      .from("school_expenses")
-      .select("amount, expense_date, status, category_name")
-      .eq("school_id", schoolId)
-      .gte("expense_date", start)
-      .lte("expense_date", end),
-  ]);
-
-  const paymentsRaw = (paymentsRes.data || []).filter((p: Record<string, unknown>) => !p.reversed_at);
-  const expensesRaw = (expensesRes.data || []) as { amount: number; status: string; category_name: string }[];
-
-  const approvedExpenses = expensesRaw.filter((e) => ["approved", "paid"].includes(e.status));
-  const expenseTotal = approvedExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-
-  const byCategory: Record<string, number> = {};
-  approvedExpenses.forEach((e) => {
-    const cat = e.category_name || "Other";
-    byCategory[cat] = (byCategory[cat] || 0) + Number(e.amount || 0);
+  const byTerm: Record<string, { expected: number; paidThisTerm: number; overallBalance: number }> = {};
+  (balances || []).forEach((b: { term_id: string; total_fees?: number; total_paid?: number; balance?: number }) => {
+    const tid = b.term_id;
+    if (!tid) return;
+    if (!byTerm[tid]) byTerm[tid] = { expected: 0, paidThisTerm: 0, overallBalance: 0 };
+    byTerm[tid].expected += Number(b.total_fees ?? 0);
+    byTerm[tid].paidThisTerm += Number(b.total_paid ?? 0);
+    byTerm[tid].overallBalance += Math.max(0, Number(b.balance ?? 0));
   });
-  const sortedCategories = Object.entries(byCategory)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-  const top5Expenses: TopExpense[] = sortedCategories.map(([name, amount]) => ({
-    category_name: name,
-    amount,
-    percentage: expenseTotal > 0 ? Math.round((amount / expenseTotal) * 100) : 0,
-  }));
 
-  const expenseDonut = sortedCategories.length
-    ? sortedCategories.map(([name, value], i) => ({
-        name,
-        value,
-        color: DONUT_COLORS[i] ?? DONUT_COLORS[5],
-      }))
-    : [{ name: "No data", value: 1, color: "#e5e7eb" }];
+  const termsList: TermStatRow[] = (terms || [])
+    .filter((t: { id: string }) => byTerm[t.id])
+    .map((t: { id: string; term: number; year: number }) => ({
+      termId: t.id,
+      term: t.term,
+      year: t.year,
+      termLabel: `Term ${t.term}, ${t.year}`,
+      expected: byTerm[t.id].expected,
+      paidThisTerm: byTerm[t.id].paidThisTerm,
+      overallBalance: byTerm[t.id].overallBalance,
+    }));
 
-  const cashInTotal = paymentsRaw.reduce((s, p: { amount_paid?: number }) => s + Number(p.amount_paid || 0), 0);
-  const byMethod: Record<string, number> = { cash: 0, bank: 0, mobile_money: 0, other: 0 };
-  paymentsRaw.forEach((p: { payment_method?: string; amount_paid?: number }) => {
-    const m = (p.payment_method || "").toLowerCase();
-    const amt = Number(p.amount_paid || 0);
-    if (m === "cash") byMethod.cash += amt;
-    else if (m === "bank" || m === "cheque" || m === "pos" || m === "online") byMethod.bank += amt;
-    else if (m === "mobile_money") byMethod.mobile_money += amt;
-    else byMethod.other += amt;
-  });
-  const cashInDonut = [
-    { name: "Cash", value: byMethod.cash, color: "#059669" },
-    { name: "Bank / Card", value: byMethod.bank, color: "#34d399" },
-    { name: "Mobile Money", value: byMethod.mobile_money, color: "#6ee7b7" },
-    { name: "Other", value: byMethod.other, color: "#a7f3d0" },
-  ].filter((d) => d.value > 0);
-  if (cashInDonut.length === 0) cashInDonut.push({ name: "No data", value: 1, color: "#e5e7eb" });
+  const totalExpected = termsList.reduce((s, r) => s + r.expected, 0);
+  const totalOverallBalance = termsList.reduce((s, r) => s + r.overallBalance, 0);
 
-  return { cashInTotal, expenseTotal, top5Expenses, expenseDonut, cashInDonut };
+  return { terms: termsList, totalExpected, totalOverallBalance };
 }
 
 export type RecentTransaction = {
@@ -564,11 +529,9 @@ export default function FinancialOverview() {
     staleTime: STALE_TIME_MS,
   });
 
-  const [statPeriod, setStatPeriod] = useState<"month" | "year">("month");
-  const [statTab, setStatTab] = useState<"cashIn" | "expense">("expense");
   const { data: statisticData } = useQuery({
-    queryKey: ["accountant", "statistic", schoolId, statPeriod],
-    queryFn: () => fetchStatisticData(schoolId!, statPeriod),
+    queryKey: ["accountant", "statistic", schoolId],
+    queryFn: () => fetchStatisticData(schoolId!),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
   });
@@ -759,121 +722,53 @@ export default function FinancialOverview() {
           </section>
           )}
 
-          {/* Statistic KPI — right (donut, Cash in / Expense tabs, five biggest expenses) */}
+          {/* Statistic — Total expected (all terms) vs Total overall balance (all terms) */}
           {statisticData && (
             <section className="w-full">
               <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h3 className="text-lg font-semibold text-[#1f2933]">Statistic</h3>
-                  <select
-                    value={statPeriod}
-                    onChange={(e) => setStatPeriod(e.target.value as "month" | "year")}
-                    className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                  >
-                    <option value="month">This month</option>
-                    <option value="year">This year</option>
-                  </select>
-                </div>
-                {/* Tabs: Cash in / Expense */}
-                <div className="mb-4 flex gap-6 border-b border-slate-200">
-                  <button
-                    type="button"
-                    onClick={() => setStatTab("cashIn")}
-                    className={`pb-2 text-sm font-medium transition-colors ${
-                      statTab === "cashIn"
-                        ? "border-b-2 border-emerald-600 text-emerald-600"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Cash in ({fmt(statisticData.cashInTotal)})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStatTab("expense")}
-                    className={`pb-2 text-sm font-medium transition-colors ${
-                      statTab === "expense"
-                        ? "border-b-2 border-emerald-600 text-emerald-600"
-                        : "text-slate-500 hover:text-slate-700"
-                    }`}
-                  >
-                    Expense ({fmt(statisticData.expenseTotal)})
-                  </button>
-                </div>
-                {/* Donut + center total */}
-                <div className="relative flex justify-center">
-                  <div className="h-[200px] w-full max-w-[240px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statTab === "expense" ? statisticData.expenseDonut : statisticData.cashInDonut}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={56}
-                          outerRadius={72}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {(statTab === "expense" ? statisticData.expenseDonut : statisticData.cashInDonut).map(
-                            (entry, i) => (
-                              <Cell key={i} fill={entry.color} />
-                            )
-                          )}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value: number) => fmt(value)}
-                          content={({ active, payload }) =>
-                            active && payload?.[0] ? (
-                              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-md">
-                                {payload[0].name}: {fmt(Number(payload[0].value))}
-                              </div>
-                            ) : null
-                          }
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
+                <h3 className="mb-4 text-lg font-semibold text-[#1f2933]">Statistic</h3>
+                <div className="mb-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg bg-blue-50 p-3">
+                    <p className="text-xs font-medium text-blue-700">Total expected (all terms)</p>
+                    <p className="mt-0.5 text-[11px] text-blue-600/90">From older unpaid + current term invoices</p>
+                    <p className="text-xl font-bold text-blue-800">{fmt(statisticData.totalExpected)}</p>
                   </div>
-                  <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-                    <span className="text-xs font-medium text-slate-500">
-                      {statTab === "expense" ? "Total expense" : "Total cash in"}
-                    </span>
-                    <span className="text-xl font-bold text-[#1f2933]">
-                      {statTab === "expense"
-                        ? fmt(statisticData.expenseTotal)
-                        : fmt(statisticData.cashInTotal)}
-                    </span>
+                  <div className="rounded-lg bg-amber-50 p-3">
+                    <p className="text-xs font-medium text-amber-700">Total overall balance (all terms)</p>
+                    <p className="mt-0.5 text-[11px] text-amber-600/90">According to paid this term</p>
+                    <p className="text-xl font-bold text-amber-800">{fmt(statisticData.totalOverallBalance)}</p>
                   </div>
                 </div>
-                {/* Five biggest expenses */}
-                <div className="mt-4 border-t border-slate-100 pt-4">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Five biggest expenses
-                  </p>
-                  <ul className="space-y-2">
-                    {statisticData.top5Expenses.length === 0 ? (
-                      <li className="text-sm text-slate-400">No expenses in this period.</li>
-                    ) : (
-                      statisticData.top5Expenses.map((row, i) => (
-                        <li
-                          key={row.category_name}
-                          className="flex items-center justify-between gap-2 text-sm"
-                        >
-                          <span className="inline-flex items-center gap-2">
-                            <span
-                              className="rounded px-1.5 py-0.5 text-xs font-medium text-white"
-                              style={{ backgroundColor: DONUT_COLORS[i] ?? DONUT_COLORS[5] }}
-                            >
-                              {row.percentage}%
-                            </span>
-                            <span className="text-slate-700">{row.category_name}</span>
-                          </span>
-                          <span className="font-medium text-slate-900">{fmt(row.amount)}</span>
-                        </li>
-                      ))
-                    )}
-                </ul>
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">By term</p>
+                  {statisticData.terms.length === 0 ? (
+                    <p className="text-sm text-slate-400">No term data yet.</p>
+                  ) : (
+                    <>
+                      <div className="mb-2 grid grid-cols-4 gap-2 px-1 text-xs font-medium text-slate-500">
+                        <span>Term</span>
+                        <span className="text-blue-600 text-right">Expected</span>
+                        <span className="text-emerald-600 text-right">Paid this term</span>
+                        <span className="text-amber-600 text-right">Overall balance</span>
+                      </div>
+                      <ul className="space-y-2 max-h-[220px] overflow-y-auto">
+                        {statisticData.terms.map((row) => (
+                          <li
+                            key={row.termId}
+                            className="grid grid-cols-4 gap-2 rounded-lg border border-slate-100 bg-slate-50/50 px-3 py-2 text-sm items-center"
+                          >
+                            <span className="font-medium text-slate-800">{row.termLabel}</span>
+                            <span className="text-blue-700 text-right">{fmt(row.expected)}</span>
+                            <span className="text-emerald-700 text-right">{fmt(row.paidThisTerm)}</span>
+                            <span className="text-amber-700 text-right">{fmt(row.overallBalance)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
           )}
         </div>
 
