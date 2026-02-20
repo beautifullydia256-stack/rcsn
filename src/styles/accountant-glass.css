@@ -1,7 +1,13 @@
 /* ============================================================================
    PwezaCore Accountant Dashboard — Glassmorphism dual theme (CSS Variables)
    Apply to wrapper: .accountant-glass with data-theme="light" | "dark"
+   Reference: real glassmorphic design with translucent frosted panels.
    ============================================================================ */
+
+/* Typography: match reference dashboard (Inter) */
+.accountant-glass {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
 
 /* ----------------------------------------------------------------------------
    Mode B: "Frosted" Light Glass (default)
@@ -17,40 +23,38 @@
   --ac-border: rgba(0, 0, 0, 0.06);
   --ac-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --ac-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.08);
-  /* Chart axis/grid (light) */
   --ac-chart-grid: #f1f5f9;
   --ac-chart-axis: #64748b;
   --ac-chart-ref-line: #94a3b8;
-  /* Accent (keep color-coding, use for icons/borders) */
   --ac-accent-blue: #3b82f6;
   --ac-accent-green: #059669;
   --ac-accent-orange: #d97706;
   --ac-accent-teal: #0d9488;
-  /* Sidebar/header (slightly more opaque for hierarchy) */
-  --ac-sidebar-bg: rgba(255, 255, 255, 0.85);
+  --ac-sidebar-bg: rgba(255, 255, 255, 0.75);
   --ac-sidebar-bg-fallback: #ffffff;
   --ac-sidebar-border: rgba(0, 0, 0, 0.08);
+  --ac-sidebar-active-bg: rgba(0, 0, 0, 0.06);
   --ac-header-bg: rgba(255, 255, 255, 0.8);
   --ac-header-bg-fallback: #ffffff;
   --ac-header-border: rgba(0, 0, 0, 0.06);
 }
 
 /* ----------------------------------------------------------------------------
-   Mode A: "Deep Space" Dark Glass
+   Mode A: "Deep Space" Dark Glass — strong gradient, truly translucent panels
    ---------------------------------------------------------------------------- */
 .accountant-glass[data-theme="dark"] {
-  --ac-page-bg: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(30, 58, 138, 0.25) 0%, transparent 50%),
-    radial-gradient(ellipse 80% 60% at 80% 60%, rgba(20, 184, 166, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 80% at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-    #0f172a;
+  --ac-page-bg: radial-gradient(ellipse 140% 100% at 50% -20%, rgba(59, 130, 246, 0.18) 0%, transparent 45%),
+    radial-gradient(ellipse 100% 70% at 90% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 80% at 10% 80%, rgba(20, 184, 166, 0.12) 0%, transparent 50%),
+    linear-gradient(180deg, #0f172a 0%, #0c1222 50%, #080d18 100%);
   --ac-card-bg: rgba(255, 255, 255, 0.05);
-  --ac-card-bg-fallback: #1e293b;
+  --ac-card-bg-fallback: rgba(30, 41, 59, 0.6);
   --ac-text-primary: #FFFFFF;
-  --ac-text-secondary: rgba(255, 255, 255, 0.6);
-  --ac-text-muted: rgba(255, 255, 255, 0.4);
-  --ac-border: rgba(255, 255, 255, 0.08);
-  --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-  --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.55);
+  --ac-text-secondary: rgba(255, 255, 255, 0.65);
+  --ac-text-muted: rgba(255, 255, 255, 0.45);
+  --ac-border: rgba(255, 255, 255, 0.1);
+  --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
   --ac-chart-grid: rgba(255, 255, 255, 0.08);
   --ac-chart-axis: rgba(255, 255, 255, 0.6);
   --ac-chart-ref-line: rgba(255, 255, 255, 0.35);
@@ -58,46 +62,80 @@
   --ac-accent-green: #34d399;
   --ac-accent-orange: #fbbf24;
   --ac-accent-teal: #2dd4bf;
-  --ac-sidebar-bg: rgba(255, 255, 255, 0.06);
-  --ac-sidebar-bg-fallback: #1e293b;
-  --ac-sidebar-border: rgba(255, 255, 255, 0.08);
-  --ac-header-bg: rgba(255, 255, 255, 0.07);
-  --ac-header-bg-fallback: #1e293b;
+  --ac-sidebar-bg: rgba(255, 255, 255, 0.05);
+  --ac-sidebar-bg-fallback: rgba(15, 23, 42, 0.85);
+  --ac-sidebar-border: rgba(255, 255, 255, 0.1);
+  --ac-sidebar-active-bg: rgba(255, 255, 255, 0.1);
+  --ac-header-bg: rgba(255, 255, 255, 0.06);
+  --ac-header-bg-fallback: rgba(15, 23, 42, 0.9);
   --ac-header-border: rgba(255, 255, 255, 0.08);
 }
 
 /* ----------------------------------------------------------------------------
-   Core glass card (all dashboard cards/containers)
+   Core glass card (reference: translucent frosted pane, thin edge)
    ---------------------------------------------------------------------------- */
 .ac-glass-card {
   will-change: transform;
   background: var(--ac-card-bg);
   background-color: var(--ac-card-bg-fallback);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
   border: 1px solid var(--ac-border);
-  border-radius: 18px;
+  border-radius: 16px;
   box-shadow: var(--ac-shadow);
 }
 
 /* ----------------------------------------------------------------------------
-   Sidebar & header glass (higher blur for z-axis depth)
+   Sidebar & header glass (reference: frosted panel, thin light border)
    ---------------------------------------------------------------------------- */
 .ac-glass-sidebar {
   will-change: transform;
   background: var(--ac-sidebar-bg);
   background-color: var(--ac-sidebar-bg-fallback);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
   border-right: 1px solid var(--ac-sidebar-border);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-sidebar {
+  box-shadow: 4px 0 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Sidebar nav item — reference: rounded, hover = subtle glass */
+.ac-sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--ac-text-secondary);
+  transition: background 0.2s ease, color 0.2s ease;
+  border: 1px solid transparent;
+}
+.ac-sidebar-nav-item:hover {
+  background: var(--ac-sidebar-active-bg);
+  color: var(--ac-text-primary);
+}
+.ac-sidebar-nav-item-active {
+  background: var(--ac-sidebar-active-bg);
+  color: var(--ac-text-primary);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+.accountant-glass[data-theme="dark"] .ac-sidebar-nav-item-active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .ac-glass-header {
   will-change: transform;
   background: var(--ac-header-bg);
   background-color: var(--ac-header-bg-fallback);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   border-bottom: 1px solid var(--ac-header-border);
 }
 

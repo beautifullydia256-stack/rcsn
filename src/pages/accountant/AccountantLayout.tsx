@@ -14,6 +14,8 @@ import {
   Bell,
   Sun,
   Moon,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -54,12 +56,11 @@ function NavLinkStyle({
     <NavLink to={to} end={end} className="block" onMouseEnter={onPrefetch}>
       {({ isActive }) => (
         <span
-          className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            isActive ? "bg-emerald-600 text-white" : "ac-text-secondary hover:bg-white/10"
-          }`}
+          className={`ac-sidebar-nav-item ${isActive ? "ac-sidebar-nav-item-active" : ""}`}
         >
-          <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
-          {children}
+          <Icon className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+          <span className="flex-1">{children}</span>
+          {isActive && <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />}
         </span>
       )}
     </NavLink>
@@ -139,20 +140,36 @@ export default function AccountantLayout() {
   return (
     <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
       <RecordPaymentModal open={recordPaymentOpen} onClose={() => setRecordPaymentOpen(false)} />
-      <aside className="ac-glass-sidebar w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto shadow-sm">
-        <div className="flex items-center gap-2 px-4 py-6 border-b border-slate-200/50">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
-            <CreditCard className="h-5 w-5 text-white" />
+      <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
+        {/* Logo row: icon in glass circle + name + collapse (reference style) */}
+        <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/10">
+              <CreditCard className="h-5 w-5 text-white" />
+            </div>
+            <span className="ac-text-primary font-semibold text-base truncate">PwezaCore</span>
           </div>
-          <span className="ac-text-primary font-bold text-lg">PwezaCore</span>
+          <button
+            type="button"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ac-text-muted hover:bg-white/10 transition-colors"
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
         </div>
-        <div className="px-4 pt-2 pb-1">
-          <span className="ac-text-muted text-xs font-semibold uppercase tracking-wider">Menu</span>
+        <div className="px-4 pt-4 pb-2">
+          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Dashboard</span>
         </div>
-        <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}>
             Dashboard
           </NavLinkStyle>
+        </nav>
+        <div className="px-4 pt-4 pb-2">
+          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Finance</span>
+        </div>
+        <nav className="px-3 py-2 space-y-0.5">
           <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}>
             Invoices & Billing
           </NavLinkStyle>
@@ -173,7 +190,7 @@ export default function AccountantLayout() {
           </NavLinkStyle>
         </nav>
       </aside>
-      <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "transparent" }}>
         <header className="ac-glass-header flex-shrink-0 px-6 py-4">
           <div className="flex items-center justify-end gap-4">
             <div ref={searchRef} className="relative flex-1 max-w-md">
@@ -263,9 +280,9 @@ export default function AccountantLayout() {
           <div className="ac-text-secondary flex items-center justify-between text-sm">
             <span>Copyright © 2025 PwezaCore</span>
             <div className="flex items-center gap-6">
-              <a href="#" className="hover:text-slate-700">Privacy Policy</a>
-              <a href="#" className="hover:text-slate-700">Terms and conditions</a>
-              <a href="#" className="hover:text-slate-700">Contact</a>
+              <a href="#" className="hover:opacity-100 opacity-80">Privacy Policy</a>
+              <a href="#" className="hover:opacity-100 opacity-80">Terms and conditions</a>
+              <a href="#" className="hover:opacity-100 opacity-80">Contact</a>
             </div>
             <div className="flex items-center gap-3 text-slate-400">
               <span className="font-bold">f</span>
