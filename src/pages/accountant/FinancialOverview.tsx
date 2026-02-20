@@ -14,6 +14,7 @@ import {
   Filter,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
+import { useUIStore } from "../../store/uiStore";
 import {
   BarChart,
   Bar,
@@ -27,6 +28,11 @@ import {
   Pie,
   Cell,
 } from "recharts";
+
+const CHART_THEME = {
+  light: { grid: "#f1f5f9", axis: "#64748b", refLine: "#94a3b8" },
+  dark: { grid: "rgba(255,255,255,0.08)", axis: "rgba(255,255,255,0.6)", refLine: "rgba(255,255,255,0.35)" },
+} as const;
 
 const STALE_TIME_MS = 2 * 60 * 1000;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -485,28 +491,22 @@ function KPICard({
     orange: "border-t-[3px] border-t-amber-500/90",
     teal: "border-t-[3px] border-t-teal-500/90",
   };
-  const iconBgClass: Record<KPIVariant, string> = {
-    blue: "bg-blue-500/10 text-blue-600",
-    green: "bg-emerald-500/10 text-emerald-600",
-    orange: "bg-amber-500/10 text-amber-600",
-    teal: "bg-teal-500/10 text-teal-600",
-  };
-  const valueColorClass: Record<KPIVariant, string> = {
-    blue: "text-slate-900",
-    green: "text-emerald-700",
-    orange: "text-amber-700",
-    teal: "text-teal-700",
+  const iconClass: Record<KPIVariant, string> = {
+    blue: "ac-glass-icon ac-icon-blue",
+    green: "ac-glass-icon ac-icon-green",
+    orange: "ac-glass-icon ac-icon-orange",
+    teal: "ac-glass-icon ac-icon-teal",
   };
   return (
-    <div className={`rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${borderTopClass[variant]}`}>
+    <div className={`ac-glass-card will-change-transform rounded-[18px] p-5 transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]}`}>
       <div className="flex items-start justify-between">
-        <div className={`rounded-lg p-2.5 ${iconBgClass[variant]}`}>
+        <div className={iconClass[variant]}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className={`mt-3 text-2xl font-semibold tracking-tight ${valueColorClass[variant]}`}>{value}</p>
-      <p className="mt-0.5 text-sm font-medium text-slate-600">{label}</p>
-      <p className="mt-1 text-xs text-slate-400">{subline}</p>
+      <p className="ac-text-primary mt-3 text-2xl font-semibold tracking-tight">{value}</p>
+      <p className="ac-text-secondary mt-0.5 text-sm font-medium">{label}</p>
+      <p className="ac-text-muted mt-1 text-xs">{subline}</p>
     </div>
   );
 }
@@ -515,8 +515,10 @@ type AccountantOutletContext = { openRecordPayment?: () => void };
 
 export default function FinancialOverview() {
   const navigate = useNavigate();
+  const theme = useUIStore((s) => s.theme);
   const { openRecordPayment } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
+  const chartColors = CHART_THEME[theme];
 
   const { data, isLoading } = useQuery({
     queryKey: ["accountant", "financial-overview", schoolId],
@@ -549,7 +551,7 @@ export default function FinancialOverview() {
 
   if (!schoolId) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center text-slate-500 text-sm">
+      <div className="ac-text-secondary flex min-h-[40vh] items-center justify-center text-sm">
         Loading your school...
       </div>
     );
@@ -557,23 +559,20 @@ export default function FinancialOverview() {
 
   if (isLoading || !data) {
     return (
-      <div className="min-h-full flex items-center justify-center" style={{ backgroundColor: "#F6F8FB" }}>
-        <p className="text-sm text-slate-500">Loading...</p>
+      <div className="min-h-full flex items-center justify-center" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
+        <p className="ac-text-secondary text-sm">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-full" style={{ backgroundColor: "#F6F8FB" }}>
+    <div className="min-h-full" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div
-          className="mb-7 flex flex-col gap-4 rounded-xl px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5"
-          style={{ background: "linear-gradient(135deg, #f7fafc, #eef6ff)" }}
-        >
+        <div className="ac-glass-card mb-7 flex flex-col gap-4 rounded-[18px] px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Financial Overview</h1>
-            <p className="mt-1 flex items-center gap-2 text-[13px] text-[#6b7280]">
-              <span className="inline-flex items-center rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
+            <h1 className="ac-text-primary text-2xl font-bold tracking-tight">Financial Overview</h1>
+            <p className="ac-text-secondary mt-1 flex items-center gap-2 text-[13px]">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-xs font-medium text-emerald-600">
                 {data.termLabel}
               </span>
             </p>
@@ -582,7 +581,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => openRecordPayment?.()}
-              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
+              className="ac-glass-btn inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
               <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
               Record payment
@@ -590,7 +589,7 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/billing")}
-              className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
               <FilePlus className="h-4 w-4 shrink-0 text-blue-600" />
               Generate invoice
@@ -598,14 +597,14 @@ export default function FinancialOverview() {
             <button
               type="button"
               onClick={() => navigate("/dashboard/accountant/expenses")}
-              className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
               <DollarSign className="h-4 w-4 shrink-0 text-amber-600" />
               Record expense
             </button>
             <button
               type="button"
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
+              className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-secondary"
             >
               <Send className="h-4 w-4 shrink-0 text-slate-500" />
               Send reminder
@@ -615,7 +614,7 @@ export default function FinancialOverview() {
 
         {/* ROW 1 â€” KPI cards (unchanged) */}
         <section className="mb-7" style={{ marginBottom: 28 }}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-400">Key figures</h2>
+          <h2 className="ac-text-muted mb-4 text-sm font-semibold uppercase tracking-wider">Key figures</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <KPICard
               icon={Wallet}
@@ -653,18 +652,18 @@ export default function FinancialOverview() {
           {/* Cashflow — left */}
           {cashflowData && (
             <section className="w-full">
-              <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+              <div className="ac-glass-card rounded-[18px] p-6">
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="text-lg font-semibold text-[#1f2933]">Cashflow</h3>
+                <h3 className="ac-text-primary text-lg font-semibold">Cashflow</h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-slate-500">This year</span>
+                  <span className="ac-text-muted text-xs font-medium">This year</span>
                 </div>
               </div>
-              <p className="text-[13px] font-medium text-[#6b7280]">Total Balance</p>
-              <p className={`mt-0.5 text-3xl font-bold tracking-tight ${cashflowData.totalBalance >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+              <p className="ac-text-secondary text-[13px] font-medium">Total Balance</p>
+              <p className={`mt-0.5 text-3xl font-bold tracking-tight ${cashflowData.totalBalance >= 0 ? "text-emerald-600" : "text-red-500"}`}>
                 {fmt(cashflowData.totalBalance)}
               </p>
-              <div className="mt-4 flex flex-wrap gap-4 text-[13px] text-[#6b7280]">
+              <div className="ac-text-secondary mt-4 flex flex-wrap gap-4 text-[13px]">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: "#047857" }} />
                   Cash In
@@ -685,16 +684,16 @@ export default function FinancialOverview() {
                     barCategoryGap="12%"
                     barGap={4}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
+                    <ReferenceLine y={0} stroke={chartColors.refLine} strokeWidth={1} />
                     <XAxis
                       dataKey="monthLabel"
-                      tick={{ fontSize: 11, fill: "#64748b" }}
-                      axisLine={{ stroke: "#e2e8f0" }}
+                      tick={{ fontSize: 11, fill: chartColors.axis }}
+                      axisLine={{ stroke: chartColors.grid }}
                       tickLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#64748b" }}
+                      tick={{ fontSize: 11, fill: chartColors.axis }}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(v) => (Math.abs(v) >= 1000 ? (v / 1000) + "K" : String(v))}
@@ -705,16 +704,16 @@ export default function FinancialOverview() {
                         if (!active || !payload?.length) return null;
                         const d = payload[0].payload;
                         return (
-                          <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-lg">
-                            <p className="mb-2 font-semibold text-slate-800">
+                          <div className="ac-glass-card rounded-xl px-4 py-3 text-sm shadow-lg">
+                            <p className="ac-text-primary mb-2 font-semibold">
                               {MONTHS[Number(d.month) - 1]} {new Date().getFullYear()}
                             </p>
-                            <p className="text-slate-600" style={{ color: "#047857" }}>Cash In {fmt(d.cashIn)}</p>
-                            <p className="text-slate-600" style={{ color: "#0d9488" }}>Expense {fmt(d.expense)}</p>
+                            <p className="text-emerald-600">Cash In {fmt(d.cashIn)}</p>
+                            <p className="text-teal-600">Expense {fmt(d.expense)}</p>
                           </div>
                         );
                       }}
-                      cursor={{ fill: "rgba(148, 163, 184, 0.08)" }}
+                      cursor={{ fill: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(148, 163, 184, 0.08)" }}
                     />
                     <Bar dataKey="cashIn" fill="#047857" radius={[2, 2, 0, 0]} name="Cash In" />
                     <Bar dataKey="expenseNeg" fill="#86efac" radius={[0, 0, 2, 2]} name="Expense" />
@@ -728,18 +727,18 @@ export default function FinancialOverview() {
           {/* Statistic — Total expected vs Total overall balance + donut by term */}
           {statisticData && (
             <section className="w-full">
-              <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-                <h3 className="mb-4 text-lg font-semibold text-[#1f2933]">Statistic</h3>
+              <div className="ac-glass-card rounded-[18px] p-6">
+                <h3 className="ac-text-primary mb-4 text-lg font-semibold">Statistic</h3>
                 <div className="mb-4 grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-blue-50 p-3">
-                    <p className="text-xs font-medium text-blue-700">Total expected (all terms)</p>
-                    <p className="mt-0.5 text-[11px] text-blue-600/90">From older unpaid + current term invoices</p>
-                    <p className="text-xl font-bold text-blue-800">{fmt(statisticData.totalExpected)}</p>
+                  <div className="ac-glass-card rounded-xl p-3">
+                    <p className="ac-text-secondary text-xs font-medium">Total expected (all terms)</p>
+                    <p className="ac-text-muted mt-0.5 text-[11px]">From older unpaid + current term invoices</p>
+                    <p className="ac-text-primary text-xl font-bold">{fmt(statisticData.totalExpected)}</p>
                   </div>
-                  <div className="rounded-lg bg-amber-50 p-3">
-                    <p className="text-xs font-medium text-amber-700">Total overall balance (all terms)</p>
-                    <p className="mt-0.5 text-[11px] text-amber-600/90">According to paid this term</p>
-                    <p className="text-xl font-bold text-amber-800">{fmt(statisticData.totalOverallBalance)}</p>
+                  <div className="ac-glass-card rounded-xl p-3">
+                    <p className="ac-text-secondary text-xs font-medium">Total overall balance (all terms)</p>
+                    <p className="ac-text-muted mt-0.5 text-[11px]">According to paid this term</p>
+                    <p className="ac-text-primary text-xl font-bold">{fmt(statisticData.totalOverallBalance)}</p>
                   </div>
                 </div>
                 {/* Donut: outstanding balance by term (replaces BY TERM table) */}
@@ -769,16 +768,16 @@ export default function FinancialOverview() {
                             </Pie>
                             <Tooltip
                               formatter={(v: number) => [fmt(v), "Balance"]}
-                              contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
+                              contentStyle={{ borderRadius: 8, border: "1px solid var(--ac-border)", background: "var(--ac-card-bg)", color: "var(--ac-text-primary)" }}
                             />
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                          <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Outstanding</span>
-                          <span className="text-lg font-bold text-slate-800">{fmt(statisticData.totalOverallBalance)}</span>
+                          <span className="ac-text-muted text-[11px] font-medium uppercase tracking-wider">Outstanding</span>
+                          <span className="ac-text-primary text-lg font-bold">{fmt(statisticData.totalOverallBalance)}</span>
                         </div>
                       </div>
-                      <ul className="flex flex-col gap-1.5 text-xs text-slate-600">
+                      <ul className="ac-text-secondary flex flex-col gap-1.5 text-xs">
                         {statisticData.terms.map((t, i) => (
                           <li key={t.termId} className="flex items-center gap-2">
                             <span
@@ -792,8 +791,8 @@ export default function FinancialOverview() {
                     </div>
                   </div>
                 ) : (
-                  <div className="border-t border-slate-100 pt-4">
-                    <p className="text-sm text-slate-400">No term data yet.</p>
+                  <div className="border-t border-slate-200/50 pt-4">
+                    <p className="ac-text-muted text-sm">No term data yet.</p>
                   </div>
                 )}
               </div>
@@ -803,21 +802,21 @@ export default function FinancialOverview() {
 
         {/* Recent Transactions — full width below Cashflow/Statistic */}
         <section className="w-full">
-          <div className="rounded-[14px] border border-[#eef1f4] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+          <div className="ac-glass-card rounded-[18px] p-6">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-semibold text-[#1f2933]">Recent Transactions</h3>
+              <h3 className="ac-text-primary text-lg font-semibold">Recent Transactions</h3>
               <div className="flex items-center gap-2">
                 <select
                   value={recentPeriod}
                   onChange={(e) => setRecentPeriod(e.target.value as "month" | "year")}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2 text-sm font-medium text-slate-700 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="ac-glass-card ac-text-primary inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
                   <option value="month">This month</option>
                   <option value="year">This year</option>
                 </select>
                 <button
                   type="button"
-                  className="rounded-lg border border-slate-200 bg-slate-50/80 p-2 text-slate-600 transition-colors hover:bg-slate-100"
+                  className="ac-glass-btn-secondary rounded-lg p-2 ac-text-secondary transition-colors hover:opacity-90"
                   title="Filter"
                 >
                   <Filter className="h-4 w-4" />
@@ -827,7 +826,7 @@ export default function FinancialOverview() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-xs font-medium uppercase tracking-wider text-slate-500">
+                  <tr className="ac-text-muted border-b border-slate-200/80 text-xs font-medium uppercase tracking-wider">
                     <th className="pb-3 pt-1">Transaction Name</th>
                     <th className="pb-3 pt-1">Account</th>
                     <th className="pb-3 pt-1">Date & Time</th>
@@ -838,21 +837,21 @@ export default function FinancialOverview() {
                 <tbody>
                   {recentTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                      <td colSpan={5} className="ac-text-muted py-8 text-center">
                         No transactions in this period.
                       </td>
                     </tr>
                   ) : (
                     recentTransactions.map((tx) => (
-                      <tr key={tx.id} className="border-b border-slate-100 last:border-0">
+                      <tr key={tx.id} className="border-b border-slate-200/50 last:border-0">
                         <td className="py-3">
-                          <p className="font-medium text-slate-800">{tx.name}</p>
-                          <p className="text-xs text-slate-500">{tx.sub}</p>
+                          <p className="ac-text-primary font-medium">{tx.name}</p>
+                          <p className="ac-text-muted text-xs">{tx.sub}</p>
                         </td>
-                        <td className="py-3 text-slate-600">{tx.account}</td>
-                        <td className="py-3 text-slate-600">
+                        <td className="ac-text-secondary py-3">{tx.account}</td>
+                        <td className="ac-text-secondary py-3">
                           <p>{tx.date}</p>
-                          <p className="text-xs text-slate-500">{tx.time}</p>
+                          <p className="ac-text-muted text-xs">{tx.time}</p>
                         </td>
                         <td className="py-3 text-right">
                           <span className={tx.amount >= 0 ? "font-medium text-emerald-600" : "font-medium text-red-600"}>

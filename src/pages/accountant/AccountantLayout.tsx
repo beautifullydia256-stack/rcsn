@@ -12,9 +12,12 @@ import {
   Search,
   MessageCircle,
   Bell,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { useUIStore } from "../../store/uiStore";
 import RecordPaymentModal from "../../components/accountant/RecordPaymentModal";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
@@ -52,7 +55,7 @@ function NavLinkStyle({
       {({ isActive }) => (
         <span
           className={`flex items-center gap-3 w-full rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-            isActive ? "bg-emerald-600 text-white" : "text-slate-700 hover:bg-slate-100"
+            isActive ? "bg-emerald-600 text-white" : "ac-text-secondary hover:bg-white/10"
           }`}
         >
           <Icon className="w-5 h-5 flex-shrink-0 [color:inherit]" />
@@ -65,6 +68,8 @@ function NavLinkStyle({
 
 export default function AccountantLayout() {
   const navigate = useNavigate();
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
   const { user, schoolId, setUser, setRole, setSchoolId } = useAuthStore();
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
@@ -132,17 +137,17 @@ export default function AccountantLayout() {
   }, []);
 
   return (
-    <div className="fixed inset-0 flex bg-slate-50 overflow-hidden">
+    <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
       <RecordPaymentModal open={recordPaymentOpen} onClose={() => setRecordPaymentOpen(false)} />
-      <aside className="w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto bg-white border-r border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2 px-4 py-6 border-b border-slate-200">
+      <aside className="ac-glass-sidebar w-52 flex flex-col flex-shrink-0 z-10 overflow-y-auto shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-6 border-b border-slate-200/50">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600">
             <CreditCard className="h-5 w-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-slate-900">PwezaCore</span>
+          <span className="ac-text-primary font-bold text-lg">PwezaCore</span>
         </div>
         <div className="px-4 pt-2 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">Menu</span>
+          <span className="ac-text-muted text-xs font-semibold uppercase tracking-wider">Menu</span>
         </div>
         <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}>
@@ -168,8 +173,8 @@ export default function AccountantLayout() {
           </NavLinkStyle>
         </nav>
       </aside>
-      <main className="flex-1 flex flex-col overflow-hidden bg-slate-50">
-        <header className="flex-shrink-0 border-b border-slate-200 bg-white/80 backdrop-blur-sm px-6 py-4">
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
+        <header className="ac-glass-header flex-shrink-0 px-6 py-4">
           <div className="flex items-center justify-end gap-4">
             <div ref={searchRef} className="relative flex-1 max-w-md">
               <input
@@ -178,14 +183,14 @@ export default function AccountantLayout() {
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
                 onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-4 pr-10 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                className="ac-glass-card w-full rounded-xl py-2.5 pl-4 pr-10 text-sm ac-text-primary placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               />
               <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               {searchOpen && searchResults.length > 0 && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-hidden overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                <div className="ac-glass-card absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-hidden overflow-y-auto rounded-xl shadow-lg">
                   {searchResults.map((st) => (
-                    <div key={st.student_id} className="border-b border-slate-50 last:border-0">
-                      <div className="px-3 py-2 text-sm font-medium text-slate-900">{st.name} ({st.current_class})</div>
+                    <div key={st.student_id} className="border-b border-slate-200/50 last:border-0">
+                      <div className="ac-text-primary px-3 py-2 text-sm font-medium">{st.name} ({st.current_class})</div>
                       <div className="flex gap-2 px-3 pb-2">
                         <button
                           type="button"
@@ -209,18 +214,26 @@ export default function AccountantLayout() {
             </div>
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+              onClick={toggleTheme}
+              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+              title={theme === "light" ? "Switch to dark" : "Switch to light"}
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
             >
               <MessageCircle className="h-5 w-5" />
             </button>
             <button
               type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+              className="ac-glass-card relative flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
             >
               <Bell className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 pl-2">
-              <span className="text-sm font-medium text-slate-800">
+              <span className="ac-text-primary text-sm font-medium">
                 {user?.user_metadata?.name ?? user?.email ?? "Accountant"}
               </span>
               <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
@@ -246,8 +259,8 @@ export default function AccountantLayout() {
             <Outlet context={{ openRecordPayment: () => setRecordPaymentOpen(true) }} />
           </Suspense>
         </div>
-        <footer className="flex-shrink-0 border-t border-slate-200 bg-white px-6 py-4">
-          <div className="flex items-center justify-between text-sm text-slate-500">
+        <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">
+          <div className="ac-text-secondary flex items-center justify-between text-sm">
             <span>Copyright © 2025 PwezaCore</span>
             <div className="flex items-center gap-6">
               <a href="#" className="hover:text-slate-700">Privacy Policy</a>

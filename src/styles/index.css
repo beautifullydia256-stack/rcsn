@@ -1,5 +1,6 @@
 @import './glass-variables.css';
 @import './liquid-glass.css';
+@import './accountant-glass.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

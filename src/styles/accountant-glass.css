@@ -1,0 +1,201 @@
+/* ============================================================================
+   PwezaCore Accountant Dashboard — Glassmorphism dual theme (CSS Variables)
+   Apply to wrapper: .accountant-glass with data-theme="light" | "dark"
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   Mode B: "Frosted" Light Glass (default)
+   ---------------------------------------------------------------------------- */
+.accountant-glass[data-theme="light"],
+.accountant-glass:not([data-theme]) {
+  --ac-page-bg: #F8FAFC;
+  --ac-card-bg: rgba(255, 255, 255, 0.7);
+  --ac-card-bg-fallback: #ffffff;
+  --ac-text-primary: #1F2937;
+  --ac-text-secondary: rgba(31, 41, 55, 0.7);
+  --ac-text-muted: rgba(31, 41, 55, 0.5);
+  --ac-border: rgba(0, 0, 0, 0.06);
+  --ac-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --ac-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.08);
+  /* Chart axis/grid (light) */
+  --ac-chart-grid: #f1f5f9;
+  --ac-chart-axis: #64748b;
+  --ac-chart-ref-line: #94a3b8;
+  /* Accent (keep color-coding, use for icons/borders) */
+  --ac-accent-blue: #3b82f6;
+  --ac-accent-green: #059669;
+  --ac-accent-orange: #d97706;
+  --ac-accent-teal: #0d9488;
+  /* Sidebar/header (slightly more opaque for hierarchy) */
+  --ac-sidebar-bg: rgba(255, 255, 255, 0.85);
+  --ac-sidebar-bg-fallback: #ffffff;
+  --ac-sidebar-border: rgba(0, 0, 0, 0.08);
+  --ac-header-bg: rgba(255, 255, 255, 0.8);
+  --ac-header-bg-fallback: #ffffff;
+  --ac-header-border: rgba(0, 0, 0, 0.06);
+}
+
+/* ----------------------------------------------------------------------------
+   Mode A: "Deep Space" Dark Glass
+   ---------------------------------------------------------------------------- */
+.accountant-glass[data-theme="dark"] {
+  --ac-page-bg: radial-gradient(ellipse 120% 80% at 50% 0%, rgba(30, 58, 138, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse 80% 60% at 80% 60%, rgba(20, 184, 166, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    #0f172a;
+  --ac-card-bg: rgba(255, 255, 255, 0.05);
+  --ac-card-bg-fallback: #1e293b;
+  --ac-text-primary: #FFFFFF;
+  --ac-text-secondary: rgba(255, 255, 255, 0.6);
+  --ac-text-muted: rgba(255, 255, 255, 0.4);
+  --ac-border: rgba(255, 255, 255, 0.08);
+  --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.55);
+  --ac-chart-grid: rgba(255, 255, 255, 0.08);
+  --ac-chart-axis: rgba(255, 255, 255, 0.6);
+  --ac-chart-ref-line: rgba(255, 255, 255, 0.35);
+  --ac-accent-blue: #60a5fa;
+  --ac-accent-green: #34d399;
+  --ac-accent-orange: #fbbf24;
+  --ac-accent-teal: #2dd4bf;
+  --ac-sidebar-bg: rgba(255, 255, 255, 0.06);
+  --ac-sidebar-bg-fallback: #1e293b;
+  --ac-sidebar-border: rgba(255, 255, 255, 0.08);
+  --ac-header-bg: rgba(255, 255, 255, 0.07);
+  --ac-header-bg-fallback: #1e293b;
+  --ac-header-border: rgba(255, 255, 255, 0.08);
+}
+
+/* ----------------------------------------------------------------------------
+   Core glass card (all dashboard cards/containers)
+   ---------------------------------------------------------------------------- */
+.ac-glass-card {
+  will-change: transform;
+  background: var(--ac-card-bg);
+  background-color: var(--ac-card-bg-fallback);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--ac-border);
+  border-radius: 18px;
+  box-shadow: var(--ac-shadow);
+}
+
+/* ----------------------------------------------------------------------------
+   Sidebar & header glass (higher blur for z-axis depth)
+   ---------------------------------------------------------------------------- */
+.ac-glass-sidebar {
+  will-change: transform;
+  background: var(--ac-sidebar-bg);
+  background-color: var(--ac-sidebar-bg-fallback);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-right: 1px solid var(--ac-sidebar-border);
+}
+
+.ac-glass-header {
+  will-change: transform;
+  background: var(--ac-header-bg);
+  background-color: var(--ac-header-bg-fallback);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--ac-header-border);
+}
+
+.ac-glass-footer {
+  will-change: transform;
+  background: var(--ac-header-bg);
+  background-color: var(--ac-header-bg-fallback);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--ac-header-border);
+}
+
+/* ----------------------------------------------------------------------------
+   Glass action buttons (semi-transparent green + inner border + glow on hover)
+   ---------------------------------------------------------------------------- */
+.ac-glass-btn {
+  will-change: transform;
+  background: rgba(5, 150, 105, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(5, 150, 105, 0.15);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+.accountant-glass[data-theme="dark"] .ac-glass-btn {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 16px rgba(52, 211, 153, 0.2);
+}
+.ac-glass-btn:hover {
+  background: rgba(5, 150, 105, 0.3);
+  box-shadow: 0 4px 24px rgba(5, 150, 105, 0.35);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-btn:hover {
+  background: rgba(52, 211, 153, 0.25);
+  box-shadow: 0 4px 28px rgba(52, 211, 153, 0.4);
+}
+
+.ac-glass-btn-secondary {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--ac-border);
+  box-shadow: var(--ac-shadow);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--ac-border);
+}
+.ac-glass-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: var(--ac-shadow-strong);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ----------------------------------------------------------------------------
+   Icon containers (glass circles with soft inner glow) — color-coded
+   ---------------------------------------------------------------------------- */
+.ac-glass-icon {
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset, 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+.ac-glass-icon.ac-icon-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--ac-accent-blue);
+}
+.ac-glass-icon.ac-icon-green {
+  background: rgba(5, 150, 105, 0.15);
+  color: var(--ac-accent-green);
+}
+.ac-glass-icon.ac-icon-orange {
+  background: rgba(217, 119, 6, 0.15);
+  color: var(--ac-accent-orange);
+}
+.ac-glass-icon.ac-icon-teal {
+  background: rgba(13, 148, 136, 0.15);
+  color: var(--ac-accent-teal);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-icon.ac-icon-blue {
+  background: rgba(96, 165, 250, 0.2);
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.15);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-icon.ac-icon-green {
+  background: rgba(52, 211, 153, 0.2);
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.15);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-icon.ac-icon-orange {
+  background: rgba(251, 191, 36, 0.2);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.15);
+}
+.accountant-glass[data-theme="dark"] .ac-glass-icon.ac-icon-teal {
+  background: rgba(45, 212, 191, 0.2);
+  box-shadow: 0 0 12px rgba(45, 212, 191, 0.15);
+}
+
+/* ----------------------------------------------------------------------------
+   Typography and section labels (use variables)
+   ---------------------------------------------------------------------------- */
+.ac-text-primary { color: var(--ac-text-primary); }
+.ac-text-secondary { color: var(--ac-text-secondary); }
+.ac-text-muted { color: var(--ac-text-muted); }
