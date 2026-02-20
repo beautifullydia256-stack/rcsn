@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { fetchDebtors, OUTSTANDING_QUERY_KEY } from "./api/outstanding";
 
 const STALE_MS = 2 * 60 * 1000;
 
+type OutletContext = { openRecordPayment: (initialStudentId?: string) => void };
+
 export default function AccountantOutstandingPage() {
   const navigate = useNavigate();
+  const { openRecordPayment } = useOutletContext() as OutletContext;
   const schoolId = useAuthStore((s) => s.schoolId);
   const [q, setQ] = useState("");
   const { data: rows = [], isLoading } = useQuery({
@@ -22,7 +25,7 @@ export default function AccountantOutstandingPage() {
     return !t ? rows : rows.filter((r) => r.student_name.toLowerCase().includes(t) || r.current_class.toLowerCase().includes(t) || r.term_label.toLowerCase().includes(t) || (r.invoice_number && r.invoice_number.toLowerCase().includes(t)));
   }, [q, rows]);
 
-  const colSpan = 7;
+  const colSpan = 9;
 
   return (
     <div className="ac-page-content mx-auto max-w-7xl">
@@ -46,6 +49,8 @@ export default function AccountantOutstandingPage() {
                   <th className="px-4 py-3">Expected</th>
                   <th className="px-4 py-3">Paid</th>
                   <th className="px-4 py-3">Balance</th>
+                  <th className="px-4 py-3">Aging</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -58,6 +63,16 @@ export default function AccountantOutstandingPage() {
                     <td className="px-4 py-3">{r.total_fees.toLocaleString()}</td>
                     <td className="px-4 py-3">{r.amount_paid.toLocaleString()}</td>
                     <td className="px-4 py-3 font-semibold text-amber-400">{r.balance.toLocaleString()}</td>
+                    <td className="px-4 py-3">{r.days_overdue > 0 ? <span className="text-amber-400">{r.days_overdue} days overdue</span> : "—"}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/dashboard/accountant/payments?student=${r.student_id}`)}
+                        className="text-emerald-500 hover:underline text-sm font-medium"
+                      >
+                        Record Payment
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

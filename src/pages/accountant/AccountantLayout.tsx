@@ -17,6 +17,9 @@ import {
   Moon,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
+  Banknote,
+  RotateCcw,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -37,12 +40,15 @@ const prefetchChunk = (importFn: () => Promise<unknown>) => {
 
 const ACCOUNTANT_ROUTE_CHUNKS = [
   () => import("./Dashboard"),
+  () => import("./FeeStructurePage"),
   () => import("./BillingPage"),
-  () => import("./OutstandingPage"),
+  () => import("./PaymentsPage"),
   () => import("./ReceiptsPage"),
+  () => import("./OutstandingPage"),
   () => import("./ExpensesPage"),
-  () => import("./ReportsPage"),
   () => import("./BankPage"),
+  () => import("./ReportsPage"),
+  () => import("./AdjustmentsPage"),
 ];
 
 function NavLinkStyle({
@@ -83,7 +89,13 @@ export default function AccountantLayout() {
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
+  const [recordPaymentInitialStudentId, setRecordPaymentInitialStudentId] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+
+  const openRecordPayment = (initialStudentId?: string) => {
+    setRecordPaymentInitialStudentId(initialStudentId ?? null);
+    setRecordPaymentOpen(true);
+  };
 
   useEffect(() => {
     if (!searchQ.trim() || searchQ.length < 2) {
@@ -159,7 +171,11 @@ export default function AccountantLayout() {
 
   return (
     <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
-      <RecordPaymentModal open={recordPaymentOpen} onClose={() => setRecordPaymentOpen(false)} />
+      <RecordPaymentModal
+        open={recordPaymentOpen}
+        onClose={() => { setRecordPaymentOpen(false); setRecordPaymentInitialStudentId(null); }}
+        initialStudentId={recordPaymentInitialStudentId ?? undefined}
+      />
       <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
         {/* Logo row: icon in glass circle + name + collapse (reference style) */}
         <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
@@ -185,23 +201,32 @@ export default function AccountantLayout() {
           <NavLinkStyle to="/dashboard/accountant" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}>
             Dashboard
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}>
+          <NavLinkStyle to="/dashboard/accountant/fee-structure" icon={DollarSign} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[1])}>
+            Fee Structure
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/accountant/billing" icon={FileText} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])}>
             Invoices & Billing
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/outstanding" icon={Wallet} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[2])}>
-            Outstanding Fees
+          <NavLinkStyle to="/dashboard/accountant/payments" icon={Banknote} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])}>
+            Payments
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/receipts" icon={Receipt} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[3])}>
+          <NavLinkStyle to="/dashboard/accountant/receipts" icon={Receipt} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])}>
             Receipts
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/expenses" icon={TrendingUp} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[4])}>
+          <NavLinkStyle to="/dashboard/accountant/outstanding" icon={Wallet} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])}>
+            Outstanding Fees
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/accountant/expenses" icon={TrendingUp} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])}>
             Expenses
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/reports" icon={BarChart3} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[5])}>
+          <NavLinkStyle to="/dashboard/accountant/bank" icon={Building2} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])}>
+            Bank & Cash
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/accountant/reports" icon={BarChart3} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])}>
             Reports
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/accountant/bank" icon={Building2} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[6])}>
-            Bank & Cash
+          <NavLinkStyle to="/dashboard/accountant/adjustments" icon={RotateCcw} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])}>
+            Adjustments
           </NavLinkStyle>
         </nav>
       </aside>
@@ -226,7 +251,7 @@ export default function AccountantLayout() {
                       <div className="flex gap-2 px-3 pb-2">
                         <button
                           type="button"
-                          onClick={() => { setRecordPaymentOpen(true); setSearchOpen(false); setSearchQ(""); }}
+                          onClick={() => { openRecordPayment(st.student_id); setSearchOpen(false); setSearchQ(""); }}
                           className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
                         >
                           Record payment
@@ -288,7 +313,7 @@ export default function AccountantLayout() {
               </div>
             }
           >
-            <Outlet context={{ openRecordPayment: () => setRecordPaymentOpen(true) }} />
+            <Outlet context={{ openRecordPayment }} />
           </Suspense>
         </div>
         <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">

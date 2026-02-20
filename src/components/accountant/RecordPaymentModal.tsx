@@ -36,9 +36,10 @@ function formatReceiptTime(d: Date): string {
 export type RecordPaymentModalProps = {
   open: boolean;
   onClose: () => void;
+  initialStudentId?: string;
 };
 
-export default function RecordPaymentModal({ open, onClose }: RecordPaymentModalProps) {
+export default function RecordPaymentModal({ open, onClose, initialStudentId }: RecordPaymentModalProps) {
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
@@ -62,6 +63,10 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [activatingInvoice, setActivatingInvoice] = useState(false);
   const [schoolName, setSchoolName] = useState("");
+
+  useEffect(() => {
+    if (open && initialStudentId) setSelectedStudent(initialStudentId);
+  }, [open, initialStudentId]);
 
   useEffect(() => {
     if (!open || !schoolId) return;

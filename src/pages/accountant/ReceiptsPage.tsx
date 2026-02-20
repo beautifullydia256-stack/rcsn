@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
+import { printReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
 
 const STALE_MS = 2 * 60 * 1000;
 
@@ -35,6 +36,40 @@ export default function ReceiptsPage() {
       })
     : payments;
 
+  const paymentsByReceipt = useMemo(() => {
+    const map = new Map<string, typeof filtered>();
+    filtered.forEach((p) => {
+      const key = p.receipt_number || p.payment_id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    });
+    return map;
+  }, [filtered]);
+
+  function handleReprint(receiptNumber: string) {
+    const group = paymentsByReceipt.get(receiptNumber) || [];
+    if (group.length === 0) return;
+    const first = group[0];
+    const s = studentMap[first.student_id];
+    const total = group.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+    const allocations = group.map((p) => ({
+      termLabel: termMap[p.term_id] ?? "—",
+      amountApplied: Number(p.amount_paid || 0),
+    }));
+    const receiptData: PaymentReceiptData = {
+      receiptNumber: first.receipt_number || first.payment_id,
+      studentName: s?.name ?? "—",
+      studentClass: s?.current_class ?? "—",
+      termLabel: allocations.length === 1 ? allocations[0].termLabel : "Multiple terms",
+      amountPaid: total,
+      paymentMethod: first.payment_method ?? "cash",
+      transactionTime: first.payment_date ? new Date(first.payment_date).toLocaleString() : "—",
+      recordedBy: "—",
+      allocations: allocations.length > 1 ? allocations : undefined,
+    };
+    printReceipt(receiptData);
+  }
+
   return (
     <div className="ac-page-content mx-auto max-w-7xl">
       <div className="mb-6 flex items-center justify-between">
@@ -48,7 +83,7 @@ export default function ReceiptsPage() {
         </button>
       </div>
       <p className="ac-text-secondary mb-4 text-sm">
-        Payments recorded on the Payments page appear here. Reversed payments are hidden.
+        Read-only archive. Payments recorded on the Payments page appear here. Reversed payments are hidden. Use Reprint to print again.
       </p>
       <div className="mb-4">
         <input
@@ -80,11 +115,13 @@ export default function ReceiptsPage() {
                   <th className="px-4 py-3">Amount</th>
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Method</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((p) => {
                   const s = studentMap[p.student_id];
+                  const receiptNum = p.receipt_number || p.payment_id;
                   return (
                     <tr key={p.payment_id}>
                       <td className="px-4 py-3 font-mono">{p.receipt_number || "—"}</td>
@@ -94,6 +131,11 @@ export default function ReceiptsPage() {
                       <td className="ac-cell-primary px-4 py-3">{Number(p.amount_paid).toLocaleString()}</td>
                       <td className="px-4 py-3">{p.payment_date ?? "—"}</td>
                       <td className="px-4 py-3 capitalize">{p.payment_method ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => handleReprint(receiptNum)} className="text-emerald-500 hover:underline text-sm font-medium">
+                          Reprint
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}

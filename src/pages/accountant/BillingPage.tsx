@@ -381,42 +381,9 @@ export default function BillingPage() {
         </div>
       </div>
 
-      <div className="ac-glass-card mb-6 overflow-hidden rounded-[18px]">
-        <div className="border-b border-[var(--ac-border)] px-4 py-3">
-          <h2 className="ac-text-primary text-sm font-semibold">Fee structure (per class)</h2>
-          <p className="ac-text-muted mt-0.5 text-xs">Used to create invoices. Managed in Admin → Settings → Financial.</p>
-        </div>
-        {isLoading ? (
-          <div className="ac-text-muted p-6">Loading…</div>
-        ) : (
-          <div className="overflow-x-auto ac-table-wrap">
-            <table className="w-full text-sm">
-              <thead>
-                <tr>
-                  <th className="px-4 py-3">Class</th>
-                  <th className="px-4 py-3">Tuition amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fees.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center ac-text-muted">
-                      No fee structure. Add in Admin settings.
-                    </td>
-                  </tr>
-                ) : (
-                  fees.map((r) => (
-                    <tr key={r.id}>
-                      <td className="ac-cell-primary px-4 py-3">{r.class_name}</td>
-                      <td className="px-4 py-3">{Number(r.tuition_amount).toLocaleString()}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <p className="ac-text-muted text-sm mt-4">
+        Fee amounts per class are defined under <strong>Fee Structure</strong>. Here you only generate and view invoices.
+      </p>
     </div>
   );
 }

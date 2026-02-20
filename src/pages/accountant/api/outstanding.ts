@@ -10,6 +10,10 @@ export type OutstandingRow = {
   balance: number;
   total_fees: number;
   invoice_number: string | null;
+  /** Term end_date (YYYY-MM-DD) for aging */
+  term_end_date: string | null;
+  /** Days overdue (0 if not past end_date) */
+  days_overdue: number;
 };
 
 export const OUTSTANDING_QUERY_KEY = ["accountant", "outstanding"] as const;
@@ -24,7 +28,7 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
   const termIds = [...new Set((balances as { term_id: string }[]).map((b) => b.term_id))];
   const studentIds = [...new Set((balances as { student_id: string }[]).map((b) => b.student_id))];
   const [termsRes, studentsRes, invoicesRes] = await Promise.all([
-    supabase.from("school_terms").select("id, term, year").in("id", termIds),
+    supabase.from("school_terms").select("id, term, year, end_date").in("id", termIds),
     supabase.from("students").select("student_id, name, current_class").in("student_id", studentIds),
     supabase
       .from("student_invoices")
@@ -33,7 +37,12 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
       .in("student_id", studentIds)
       .in("term_id", termIds),
   ]);
-  const termMap = new Map((termsRes.data || []).map((t: { id: string; term: number; year: number }) => [t.id, `Term ${t.term}, ${t.year}`]));
+  const termMap = new Map(
+    (termsRes.data || []).map((t: { id: string; term: number; year: number; end_date?: string | null }) => [
+      t.id,
+      { label: `Term ${t.term}, ${t.year}`, end_date: t.end_date ?? null },
+    ])
+  );
   const studentMap = new Map((studentsRes.data || []).map((s: { student_id: string; name: string; current_class: string }) => [s.student_id, { name: s.name, current_class: s.current_class }]));
   const invoiceMap = new Map(
     (invoicesRes.data || []).map((i: { student_id: string; term_id: string; invoice_number: string | null }) => [
@@ -41,18 +50,31 @@ export async function fetchDebtors(schoolId: string): Promise<OutstandingRow[]> 
       i.invoice_number ?? null,
     ])
   );
-  return balances.map((b) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const rows: OutstandingRow[] = balances.map((b) => {
     const bb = b as { student_id: string; term_id: string; total_fees: number; total_paid: number; balance: number };
+    const termInfo = termMap.get(bb.term_id);
+    const termLabel = termInfo ? (typeof termInfo === "string" ? termInfo : termInfo.label) : "—";
+    const endDate = termInfo && typeof termInfo === "object" ? termInfo.end_date : null;
+    let days_overdue = 0;
+    if (endDate && endDate < today) {
+      const end = new Date(endDate);
+      const t = new Date(today);
+      days_overdue = Math.floor((t.getTime() - end.getTime()) / (24 * 60 * 60 * 1000));
+    }
     return {
       student_id: bb.student_id,
       term_id: bb.term_id,
-      term_label: termMap.get(bb.term_id) ?? "—",
+      term_label: termLabel,
       student_name: studentMap.get(bb.student_id)?.name ?? "—",
       current_class: studentMap.get(bb.student_id)?.current_class ?? "—",
       amount_paid: Number(bb.total_paid || 0),
       balance: Number(bb.balance ?? 0),
       total_fees: Number(bb.total_fees || 0),
       invoice_number: invoiceMap.get(`${bb.student_id}:${bb.term_id}`) ?? null,
+      term_end_date: endDate,
+      days_overdue,
     };
   });
+  return rows.sort((a, b) => b.balance - a.balance);
 }

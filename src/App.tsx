@@ -72,6 +72,9 @@ const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/Re
 const AccountantExpensesPage = lazyWithRetry(() => import('./pages/accountant/ExpensesPage'));
 const AccountantReportsPage = lazyWithRetry(() => import('./pages/accountant/ReportsPage'));
 const AccountantBankPage = lazyWithRetry(() => import('./pages/accountant/BankPage'));
+const AccountantFeeStructurePage = lazyWithRetry(() => import('./pages/accountant/FeeStructurePage'));
+const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
+const AccountantAdjustmentsPage = lazyWithRetry(() => import('./pages/accountant/AdjustmentsPage'));
 const LibrarianDashboard = lazyWithRetry(() => import('./pages/librarian/Dashboard'));
 const HeadTeacherDashboard = lazyWithRetry(() => import('./pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazyWithRetry(() => import('./pages/owner/Dashboard'));
@@ -147,13 +150,15 @@ function App() {
                 <Route path="parent" element={<ParentDashboard />} />
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
-                  <Route path="payments" element={<Navigate to="/dashboard/accountant" replace />} />
+                  <Route path="fee-structure" element={<AccountantFeeStructurePage />} />
                   <Route path="billing" element={<AccountantBillingPage />} />
-                  <Route path="outstanding" element={<AccountantOutstandingPage />} />
+                  <Route path="payments" element={<AccountantPaymentsPage />} />
                   <Route path="receipts" element={<AccountantReceiptsPage />} />
+                  <Route path="outstanding" element={<AccountantOutstandingPage />} />
                   <Route path="expenses" element={<AccountantExpensesPage />} />
-                  <Route path="reports" element={<AccountantReportsPage />} />
                   <Route path="bank" element={<AccountantBankPage />} />
+                  <Route path="reports" element={<AccountantReportsPage />} />
+                  <Route path="adjustments" element={<AccountantAdjustmentsPage />} />
                 </Route>
                 <Route path="librarian" element={<LibrarianDashboard />} />
                 <Route path="head-teacher" element={<HeadTeacherDashboard />} />
