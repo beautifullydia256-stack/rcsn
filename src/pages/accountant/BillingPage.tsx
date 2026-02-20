@@ -1,20 +1,28 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 
-type FeeRow = { id: string; class_name: string; tuition_amount: number };
-type TermRow = { id: string; term: number; year: number };
-type StudentRow = { student_id: string; name: string; current_class: string };
+const STALE_MS = 2 * 60 * 1000;
 
 export default function BillingPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
-  const [fees, setFees] = useState<FeeRow[]>([]);
-  const [terms, setTerms] = useState<TermRow[]>([]);
-  const [students, setStudents] = useState<StudentRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useQuery({
+    queryKey: [...BILLING_QUERY_KEY, schoolId],
+    queryFn: () => fetchBillingData(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: true,
+  });
+  const fees = data?.fees ?? [];
+  const terms = data?.terms ?? [];
+  const students = data?.students ?? [];
+  const studentsError = data?.studentsError ?? null;
+
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
   const [selectedTerm, setSelectedTerm] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
@@ -23,36 +31,10 @@ export default function BillingPage() {
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [studentsError, setStudentsError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!schoolId) return;
-    setStudentsError(null);
-    void (async () => {
-      const [fRes, tRes, sRes] = await Promise.all([
-        supabase.from("school_fee_structure").select("id, class_name, tuition_amount").eq("school_id", schoolId).order("class_name"),
-        supabase.from("school_terms").select("id, term, year").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
-        supabase
-          .from("students")
-          .select("student_id, name, current_class")
-          .eq("school_id", schoolId)
-          .neq("status", "graduated")
-          .order("name"),
-      ]);
-      setFees((fRes.data || []) as FeeRow[]);
-      const termList = (tRes.data || []) as TermRow[];
-      setTerms(termList);
-      if (termList.length && !selectedTerm) setSelectedTerm(termList[0].id);
-      if (sRes.error) {
-        setStudentsError(sRes.error.message || "Failed to load students");
-        setStudents([]);
-      } else {
-        const list = (sRes.data || []) as StudentRow[];
-        setStudents(list.sort((a, b) => a.name.localeCompare(b.name)));
-      }
-      setLoading(false);
-    })();
-  }, [schoolId]);
+    if (terms.length > 0 && !selectedTerm) setSelectedTerm(terms[0].id);
+  }, [terms, selectedTerm]);
 
   const classNames = fees.map((r) => r.class_name);
   const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
@@ -270,7 +252,7 @@ export default function BillingPage() {
             </div>
             {generateMode === "bulk" ? (
               <>
-                {!loading && students.length === 0 && (
+                {!isLoading && students.length === 0 && (
                   <div className="ac-glass-card rounded-xl bg-amber-500/10 border-amber-500/30 p-3 space-y-1">
                     {studentsError ? (
                       <p className="ac-text-primary text-sm font-medium text-red-400">Error loading students (Supabase): {studentsError}</p>
@@ -404,7 +386,7 @@ export default function BillingPage() {
           <h2 className="ac-text-primary text-sm font-semibold">Fee structure (per class)</h2>
           <p className="ac-text-muted mt-0.5 text-xs">Used to create invoices. Managed in Admin → Settings → Financial.</p>
         </div>
-        {loading ? (
+        {isLoading ? (
           <div className="ac-text-muted p-6">Loading…</div>
         ) : (
           <div className="overflow-x-auto ac-table-wrap">

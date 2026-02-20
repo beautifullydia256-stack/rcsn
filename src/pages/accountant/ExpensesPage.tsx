@@ -1,23 +1,20 @@
-import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
+import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 
-type ExpenseRow = { expense_id: string; description: string; amount: number; expense_date: string; category_name: string; status: string };
+const STALE_MS = 2 * 60 * 1000;
 
 export default function ExpensesPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
-  const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!schoolId) return;
-    supabase.from("school_expenses").select("expense_id, description, amount, expense_date, category_name, status").eq("school_id", schoolId).order("expense_date", { ascending: false }).limit(50).then(({ data }) => {
-      setExpenses((data || []) as ExpenseRow[]);
-      setLoading(false);
-    });
-  }, [schoolId]);
+  const { data: expenses = [], isLoading } = useQuery({
+    queryKey: [...EXPENSES_QUERY_KEY, schoolId],
+    queryFn: () => fetchExpenses(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: true,
+  });
 
   return (
     <div className="ac-page-content mx-auto max-w-7xl">
@@ -26,7 +23,9 @@ export default function ExpensesPage() {
         <button type="button" onClick={() => navigate("/dashboard/accountant")} className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium">Back to Dashboard</button>
       </div>
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
-        {loading ? <div className="ac-text-muted p-8">Loading…</div> : (
+        {isLoading ? (
+          <div className="ac-text-muted p-8">Loading…</div>
+        ) : (
           <div className="overflow-x-auto ac-table-wrap">
             <table className="w-full text-sm">
               <thead>

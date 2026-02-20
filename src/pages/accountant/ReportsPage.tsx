@@ -1,54 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
+import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./api/reports";
 
-type ReportRow = { class_name: string; expected: number; collected: number; outstanding: number };
+const STALE_MS = 2 * 60 * 1000;
 
 export default function ReportsPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const [reportType, setReportType] = useState<"fee_collection" | "outstanding">("fee_collection");
-  const [rows, setRows] = useState<ReportRow[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!schoolId || reportType !== "fee_collection") return;
-    setLoading(true);
-    const today = new Date().toISOString().slice(0, 10);
-    Promise.all([
-      supabase.from("school_terms").select("id, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
-      supabase.from("student_balances").select("student_id, total_fees, total_paid, balance").eq("school_id", schoolId),
-      supabase.from("students").select("student_id, current_class").eq("school_id", schoolId),
-    ])
-      .then(([t, b, s]) => {
-        const terms = t.data || [];
-        const current = (terms as { start_date?: string; end_date: string }[]).find(
-          (x) => x.start_date && x.end_date && x.start_date <= today && x.end_date >= today
-        ) ?? terms[0];
-        const termId = (current as { id: string })?.id;
-        const balances = (b.data || []) as { student_id: string; total_fees: number; total_paid: number; balance: number }[];
-        const studentClass = new Map(((s.data || []) as { student_id: string; current_class: string }[]).map((x) => [x.student_id, x.current_class]));
-
-        const byClass: Record<string, { expected: number; collected: number; outstanding: number }> = {};
-        balances.forEach((row) => {
-          const c = studentClass.get(row.student_id) ?? "Other";
-          if (!byClass[c]) byClass[c] = { expected: 0, collected: 0, outstanding: 0 };
-          byClass[c].expected += Number(row.total_fees || 0);
-          byClass[c].collected += Number(row.total_paid || 0);
-          byClass[c].outstanding += Math.max(0, Number(row.balance ?? 0));
-        });
-        setRows(
-          Object.entries(byClass).map(([class_name, v]) => ({
-            class_name,
-            expected: v.expected,
-            collected: v.collected,
-            outstanding: v.outstanding,
-          }))
-        );
-      })
-      .finally(() => setLoading(false));
-  }, [schoolId, reportType]);
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: [...REPORTS_FEE_COLLECTION_QUERY_KEY, schoolId],
+    queryFn: () => fetchFeeCollectionReport(schoolId!),
+    enabled: !!schoolId && reportType === "fee_collection",
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: true,
+  });
 
   function exportCsv() {
     const headers = ["Class", "Expected", "Collected", "Outstanding"];
@@ -88,7 +56,7 @@ export default function ReportsPage() {
       </div>
 
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
-        {loading ? (
+        {isLoading ? (
           <div className="ac-text-muted p-8">Loading report…</div>
         ) : (
           <div className="overflow-x-auto ac-table-wrap">

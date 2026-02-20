@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useState, useRef } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
   CreditCard,
@@ -21,6 +22,11 @@ import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
 import RecordPaymentModal from "../../components/accountant/RecordPaymentModal";
+import { fetchDebtors, OUTSTANDING_QUERY_KEY } from "./api/outstanding";
+import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
+import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
+import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
+import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./api/reports";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -69,6 +75,7 @@ function NavLinkStyle({
 
 export default function AccountantLayout() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const { user, schoolId, setUser, setRole, setSchoolId } = useAuthStore();
@@ -131,11 +138,24 @@ export default function AccountantLayout() {
     check();
   }, [navigate, setUser, setRole, setSchoolId]);
 
-  // Prefetch all accountant route chunks after mount (idle) so navigation is instant
+  // Prefetch all accountant route chunks as soon as possible (idle or short delay) so navigation is instant
   useEffect(() => {
-    const t = setTimeout(() => { ACCOUNTANT_ROUTE_CHUNKS.forEach((fn) => prefetchChunk(fn)); }, 800);
-    return () => clearTimeout(t);
+    const run = () => ACCOUNTANT_ROUTE_CHUNKS.forEach((fn) => prefetchChunk(fn));
+    const useIdle = typeof requestIdleCallback !== "undefined";
+    const id = useIdle ? requestIdleCallback(run, { timeout: 200 }) : window.setTimeout(run, 120);
+    return () => (useIdle ? cancelIdleCallback(id as number) : clearTimeout(id));
   }, []);
+
+  // Prefetch accountant page data in background when schoolId is ready so pages open with data
+  useEffect(() => {
+    if (!schoolId) return;
+    const stale = 60 * 1000;
+    queryClient.prefetchQuery({ queryKey: [...OUTSTANDING_QUERY_KEY, schoolId], queryFn: () => fetchDebtors(schoolId), staleTime: stale }).catch(() => {});
+    queryClient.prefetchQuery({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId], queryFn: () => fetchReceipts(schoolId), staleTime: stale }).catch(() => {});
+    queryClient.prefetchQuery({ queryKey: [...BILLING_QUERY_KEY, schoolId], queryFn: () => fetchBillingData(schoolId), staleTime: stale }).catch(() => {});
+    queryClient.prefetchQuery({ queryKey: [...EXPENSES_QUERY_KEY, schoolId], queryFn: () => fetchExpenses(schoolId), staleTime: stale }).catch(() => {});
+    queryClient.prefetchQuery({ queryKey: [...REPORTS_FEE_COLLECTION_QUERY_KEY, schoolId], queryFn: () => fetchFeeCollectionReport(schoolId), staleTime: stale }).catch(() => {});
+  }, [schoolId, queryClient]);
 
   return (
     <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>

@@ -1,72 +1,26 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
+import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
+import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
 
-type PaymentRow = {
-  payment_id: string;
-  student_id: string;
-  term_id: string;
-  amount_paid: number;
-  receipt_number: string | null;
-  payment_date: string | null;
-  payment_method: string | null;
-  reversed_at: string | null;
-};
-
-type StudentMap = Record<string, { name: string; current_class: string }>;
-type TermMap = Record<string, string>;
+const STALE_MS = 2 * 60 * 1000;
 
 export default function ReceiptsPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
-  const [payments, setPayments] = useState<PaymentRow[]>([]);
-  const [studentMap, setStudentMap] = useState<StudentMap>({});
-  const [termMap, setTermMap] = useState<TermMap>({});
-  const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
+  const { data, isLoading } = useQuery({
+    queryKey: [...RECEIPTS_QUERY_KEY, schoolId],
+    queryFn: () => fetchReceipts(schoolId!),
+    enabled: !!schoolId,
+    staleTime: STALE_MS,
+    refetchOnWindowFocus: true,
+  });
 
-  useEffect(() => {
-    if (!schoolId) return;
-    void (async () => {
-      const { data: payData } = await supabase
-        .from("student_payments")
-        .select("payment_id, student_id, term_id, amount_paid, receipt_number, payment_date, payment_method, reversed_at")
-        .eq("school_id", schoolId)
-        .is("reversed_at", null)
-        .order("payment_date", { ascending: false })
-        .order("payment_id", { ascending: false })
-        .limit(200);
-      const rows = (payData || []) as PaymentRow[];
-      setPayments(rows);
-      const studentIds = [...new Set(rows.map((r) => r.student_id))];
-      const termIds = [...new Set(rows.map((r) => r.term_id))];
-      if (studentIds.length > 0) {
-        const { data: students } = await supabase
-          .from("students")
-          .select("student_id, name, current_class")
-          .in("student_id", studentIds);
-        const map: StudentMap = {};
-        (students || []).forEach((s: { student_id: string; name: string; current_class: string }) => {
-          map[s.student_id] = { name: s.name, current_class: s.current_class || "—" };
-        });
-        setStudentMap(map);
-      } else setStudentMap({});
-      if (termIds.length > 0) {
-        const { data: terms } = await supabase
-          .from("school_terms")
-          .select("id, term, year")
-          .in("id", termIds);
-        const map: TermMap = {};
-        (terms || []).forEach((t: { id: string; term: number; year: number }) => {
-          map[t.id] = `Term ${t.term}, ${t.year}`;
-        });
-        setTermMap(map);
-      } else setTermMap({});
-      setLoading(false);
-    })();
-  }, [schoolId]);
-
+  const payments = data?.payments ?? [];
+  const studentMap = data?.studentMap ?? {};
+  const termMap = data?.termMap ?? {};
   const filtered = q.trim()
     ? payments.filter((p) => {
         const s = studentMap[p.student_id];
@@ -106,7 +60,7 @@ export default function ReceiptsPage() {
         />
       </div>
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
-        {loading ? (
+        {isLoading ? (
           <div className="ac-text-muted p-8 text-center">Loading receipts…</div>
         ) : filtered.length === 0 ? (
           <div className="ac-text-muted p-8 text-center">
