@@ -221,48 +221,45 @@ export default function BillingPage() {
     }
   }
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500";
-
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="ac-page-content mx-auto max-w-7xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Invoices & Billing</h1>
+        <h1 className="ac-text-primary text-2xl font-semibold">Invoices & Billing</h1>
         <button
           type="button"
           onClick={() => navigate("/dashboard/accountant")}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium"
         >
           Back to Dashboard
         </button>
       </div>
 
-      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-800">Generate invoice</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Create a bill so the student has a balance. Record payment only after an invoice exists.</p>
+      <div className="ac-glass-card mb-6 overflow-hidden rounded-[18px]">
+        <div className="border-b border-[var(--ac-border)] px-4 py-3">
+          <h2 className="ac-text-primary text-sm font-semibold">Generate invoice</h2>
+          <p className="ac-text-muted mt-0.5 text-xs">Create a bill so the student has a balance. Record payment only after an invoice exists.</p>
         </div>
         <div className="p-4">
-          <div className="mb-4 flex gap-2 border-b border-slate-200">
+          <div className="mb-4 flex gap-2 border-b border-[var(--ac-border)]">
             <button
               type="button"
               onClick={() => setGenerateMode("bulk")}
-              className={`pb-2 text-sm font-medium ${generateMode === "bulk" ? "border-b-2 border-emerald-600 text-emerald-600" : "text-slate-500"}`}
+              className={`pb-2 text-sm font-medium ${generateMode === "bulk" ? "border-b-2 border-emerald-500 text-emerald-500" : "ac-text-muted"}`}
             >
               Bulk by class
             </button>
             <button
               type="button"
               onClick={() => setGenerateMode("single")}
-              className={`pb-2 text-sm font-medium ${generateMode === "single" ? "border-b-2 border-emerald-600 text-emerald-600" : "text-slate-500"}`}
+              className={`pb-2 text-sm font-medium ${generateMode === "single" ? "border-b-2 border-emerald-500 text-emerald-500" : "ac-text-muted"}`}
             >
               Single student
             </button>
           </div>
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Term</label>
-              <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className={inputClass}>
+              <label className="ac-text-secondary mb-1 block text-sm font-medium">Term</label>
+              <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className="ac-input">
                 <option value="">Select term</option>
                 {terms.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -274,17 +271,17 @@ export default function BillingPage() {
             {generateMode === "bulk" ? (
               <>
                 {!loading && students.length === 0 && (
-                  <div className="rounded-lg bg-amber-50 p-3 space-y-1">
+                  <div className="ac-glass-card rounded-xl bg-amber-500/10 border-amber-500/30 p-3 space-y-1">
                     {studentsError ? (
-                      <p className="text-sm text-red-700 font-medium">Error loading students (Supabase): {studentsError}</p>
+                      <p className="ac-text-primary text-sm font-medium text-red-400">Error loading students (Supabase): {studentsError}</p>
                     ) : (
-                      <p className="text-sm text-amber-700">No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.</p>
+                      <p className="ac-text-secondary text-sm">No students loaded for this school. Add students in Admin → Students, or ensure they are not marked as graduated.</p>
                     )}
                   </div>
                 )}
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Class</label>
-                  <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className={inputClass}>
+                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Class</label>
+                  <select value={selectedClass} onChange={(e) => setSelectedClass(e.target.value)} className="ac-input">
                     <option value="">Select class</option>
                     {classNames.map((c) => (
                       <option key={c} value={c}>
@@ -295,11 +292,11 @@ export default function BillingPage() {
                 </div>
                 {selectedClass && (
                   <>
-                    <p className="text-sm text-slate-600">
+                    <p className="ac-text-secondary text-sm">
                       {studentsInClass.length} student(s) in {selectedClass}. Tuition: {Number(tuitionForClass).toLocaleString()}.
                     </p>
                     {students.length > 0 && studentsInClass.length === 0 && (
-                      <p className="text-sm text-amber-700 mt-1">
+                      <p className="text-sm text-amber-400 mt-1">
                         No students in this class. Select a class that has students: {[...new Set(students.map((s) => s.current_class).filter(Boolean))].sort().join(", ") || "—"}.
                       </p>
                     )}
@@ -309,7 +306,7 @@ export default function BillingPage() {
                   type="button"
                   onClick={handleGenerateBulk}
                   disabled={generating || !selectedTerm || !selectedClass || studentsInClass.length === 0}
-                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
                 >
                   {generating ? "Generating…" : `Generate invoices for ${selectedClass || "class"}`}
                 </button>
@@ -317,7 +314,7 @@ export default function BillingPage() {
             ) : (
               <>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Student</label>
+                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Student</label>
                   <input
                     type="text"
                     value={selectedStudent ? (selectedStudentRow ? `${selectedStudentRow.name} (${selectedStudentRow.current_class})` : "") : studentSearchQuery}
@@ -326,13 +323,13 @@ export default function BillingPage() {
                       setStudentSearchQuery(e.target.value);
                     }}
                     placeholder="Search by name or class…"
-                    className={inputClass}
+                    className="ac-input"
                     aria-label="Search students"
                   />
                   {!selectedStudent && studentSearchQuery.trim() !== "" && (
-                    <div className="mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm">
+                    <div className="ac-glass-card mt-1 max-h-48 overflow-y-auto rounded-xl shadow-lg">
                       {studentOptions.length === 0 ? (
-                        <p className="px-3 py-3 text-sm text-slate-500">
+                        <p className="ac-text-muted px-3 py-3 text-sm">
                           {students.length === 0
                             ? "No students found for this school."
                             : "No students match your search. Try another letter or class name."}
@@ -347,7 +344,7 @@ export default function BillingPage() {
                                   setSelectedStudent(s.student_id);
                                   setStudentSearchQuery("");
                                 }}
-                                className="w-full px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none"
+                                className="ac-text-primary w-full px-3 py-2 text-left text-sm hover:bg-white/10 focus:bg-white/10 focus:outline-none rounded-lg"
                               >
                                 {s.name} ({s.current_class})
                               </button>
@@ -358,12 +355,12 @@ export default function BillingPage() {
                     </div>
                   )}
                   {selectedStudent && selectedStudentRow && (
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="ac-text-secondary mt-1 text-xs">
                       Selected: {selectedStudentRow.name} ({selectedStudentRow.current_class}){" "}
                       <button
                         type="button"
                         onClick={() => setSelectedStudent("")}
-                        className="text-emerald-600 hover:underline"
+                        className="text-emerald-400 hover:underline"
                       >
                         Clear
                       </button>
@@ -371,25 +368,25 @@ export default function BillingPage() {
                   )}
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Amount</label>
+                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
                   <input
                     type="number"
                     min="0"
                     step="0.01"
                     value={singleAmount || (selectedStudent ? suggestedAmount : "")}
                     onChange={(e) => setSingleAmount(e.target.value)}
-                    className={inputClass}
+                    className="ac-input"
                     placeholder={selectedStudent ? String(suggestedAmount) : ""}
                   />
                   {selectedStudent && suggestedAmount > 0 && (
-                    <p className="mt-1 text-xs text-slate-500">Suggested from fee structure: {suggestedAmount.toLocaleString()}</p>
+                    <p className="ac-text-muted mt-1 text-xs">Suggested from fee structure: {suggestedAmount.toLocaleString()}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={handleGenerateSingle}
                   disabled={generating || !selectedTerm || !selectedStudent}
-                  className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50"
+                  className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
                 >
                   {generating ? "Generating…" : "Generate invoice"}
                 </button>
@@ -397,38 +394,38 @@ export default function BillingPage() {
             )}
           </div>
           {message && (
-            <p className={`mt-4 text-sm ${message.type === "ok" ? "text-emerald-600" : "text-red-600"}`}>{message.text}</p>
+            <p className={`mt-4 text-sm ${message.type === "ok" ? "text-emerald-400" : "text-red-400"}`}>{message.text}</p>
           )}
         </div>
       </div>
 
-      <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-800">Fee structure (per class)</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Used to create invoices. Managed in Admin → Settings → Financial.</p>
+      <div className="ac-glass-card mb-6 overflow-hidden rounded-[18px]">
+        <div className="border-b border-[var(--ac-border)] px-4 py-3">
+          <h2 className="ac-text-primary text-sm font-semibold">Fee structure (per class)</h2>
+          <p className="ac-text-muted mt-0.5 text-xs">Used to create invoices. Managed in Admin → Settings → Financial.</p>
         </div>
         {loading ? (
-          <div className="p-6 text-slate-500">Loading…</div>
+          <div className="ac-text-muted p-6">Loading…</div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto ac-table-wrap">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
+                <tr>
                   <th className="px-4 py-3">Class</th>
                   <th className="px-4 py-3">Tuition amount</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-700">
+              <tbody>
                 {fees.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center text-slate-400">
+                    <td colSpan={2} className="px-4 py-6 text-center ac-text-muted">
                       No fee structure. Add in Admin settings.
                     </td>
                   </tr>
                 ) : (
                   fees.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-medium text-slate-900">{r.class_name}</td>
+                    <tr key={r.id}>
+                      <td className="ac-cell-primary px-4 py-3">{r.class_name}</td>
                       <td className="px-4 py-3">{Number(r.tuition_amount).toLocaleString()}</td>
                     </tr>
                   ))

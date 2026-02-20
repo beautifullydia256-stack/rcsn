@@ -64,20 +64,20 @@ export default function AccountantOutstandingPage() {
   const colSpan = 7;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="ac-page-content mx-auto max-w-7xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Outstanding Fees</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">Back to Dashboard</button>
+        <h1 className="ac-text-primary text-2xl font-semibold">Outstanding Fees</h1>
+        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium">Back to Dashboard</button>
       </div>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 bg-slate-50/50 px-4 py-3">
-          <input type="text" placeholder="Search by student or class…" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+      <div className="ac-glass-card overflow-hidden rounded-[18px]">
+        <div className="border-b border-[var(--ac-border)] px-4 py-3">
+          <input type="text" placeholder="Search by student or class…" value={q} onChange={(e) => setQ(e.target.value)} className="ac-input max-w-md" />
         </div>
-        {isLoading ? <div className="p-8 text-slate-500">Loading…</div> : (
-          <div className="overflow-x-auto">
+        {isLoading ? <div className="ac-text-muted p-8">Loading…</div> : (
+          <div className="overflow-x-auto ac-table-wrap">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
+                <tr>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">Class</th>
                   <th className="px-4 py-3">Term</th>
@@ -87,16 +87,16 @@ export default function AccountantOutstandingPage() {
                   <th className="px-4 py-3">Balance</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-700">
-                {filtered.length === 0 ? <tr><td colSpan={colSpan} className="px-4 py-8 text-center text-slate-400">No outstanding balances.</td></tr> : filtered.map((r) => (
-                  <tr key={`${r.student_id}-${r.term_id}`} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{r.student_name}</td>
+              <tbody>
+                {filtered.length === 0 ? <tr><td colSpan={colSpan} className="px-4 py-8 text-center ac-text-muted">No outstanding balances.</td></tr> : filtered.map((r) => (
+                  <tr key={`${r.student_id}-${r.term_id}`}>
+                    <td className="ac-cell-primary px-4 py-3">{r.student_name}</td>
                     <td className="px-4 py-3">{r.current_class}</td>
-                    <td className="px-4 py-3 text-slate-600">{r.term_label}</td>
-                    <td className="px-4 py-3 font-mono text-slate-600">{r.invoice_number ?? "—"}</td>
+                    <td className="px-4 py-3">{r.term_label}</td>
+                    <td className="px-4 py-3 font-mono">{r.invoice_number ?? "—"}</td>
                     <td className="px-4 py-3">{r.total_fees.toLocaleString()}</td>
                     <td className="px-4 py-3">{r.amount_paid.toLocaleString()}</td>
-                    <td className="px-4 py-3 font-semibold text-amber-600">{r.balance.toLocaleString()}</td>
+                    <td className="px-4 py-3 font-semibold text-amber-400">{r.balance.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>

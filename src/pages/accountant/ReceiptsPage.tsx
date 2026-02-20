@@ -82,18 +82,18 @@ export default function ReceiptsPage() {
     : payments;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="ac-page-content mx-auto max-w-7xl">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">Receipts</h1>
+        <h1 className="ac-text-primary text-2xl font-semibold">Receipts</h1>
         <button
           type="button"
           onClick={() => navigate("/dashboard/accountant")}
-          className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium"
         >
           Back to Dashboard
         </button>
       </div>
-      <p className="mb-4 text-sm text-slate-600">
+      <p className="ac-text-secondary mb-4 text-sm">
         Payments recorded on the Payments page appear here. Reversed payments are hidden.
       </p>
       <div className="mb-4">
@@ -102,23 +102,23 @@ export default function ReceiptsPage() {
           placeholder="Search by student, class, term, or receipt number…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          className="ac-input max-w-md"
         />
       </div>
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="ac-glass-card overflow-hidden rounded-[18px]">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Loading receipts…</div>
+          <div className="ac-text-muted p-8 text-center">Loading receipts…</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-slate-500">
+          <div className="ac-text-muted p-8 text-center">
             {payments.length === 0
               ? "No receipts yet. Record a payment on Payments to see it here."
               : "No receipts match your search."}
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto ac-table-wrap">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/80 text-left font-medium text-slate-600">
+                <tr>
                   <th className="px-4 py-3">Receipt #</th>
                   <th className="px-4 py-3">Student</th>
                   <th className="px-4 py-3">Class</th>
@@ -128,18 +128,18 @@ export default function ReceiptsPage() {
                   <th className="px-4 py-3">Method</th>
                 </tr>
               </thead>
-              <tbody className="text-slate-700">
+              <tbody>
                 {filtered.map((p) => {
                   const s = studentMap[p.student_id];
                   return (
-                    <tr key={p.payment_id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                      <td className="px-4 py-3 font-mono text-slate-600">{p.receipt_number || "—"}</td>
-                      <td className="px-4 py-3 font-medium text-slate-900">{s?.name ?? "—"}</td>
+                    <tr key={p.payment_id}>
+                      <td className="px-4 py-3 font-mono">{p.receipt_number || "—"}</td>
+                      <td className="ac-cell-primary px-4 py-3">{s?.name ?? "—"}</td>
                       <td className="px-4 py-3">{s?.current_class ?? "—"}</td>
-                      <td className="px-4 py-3 text-slate-600">{termMap[p.term_id] ?? "—"}</td>
-                      <td className="px-4 py-3 font-medium">{Number(p.amount_paid).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-slate-600">{p.payment_date ?? "—"}</td>
-                      <td className="px-4 py-3 capitalize text-slate-600">{p.payment_method ?? "—"}</td>
+                      <td className="px-4 py-3">{termMap[p.term_id] ?? "—"}</td>
+                      <td className="ac-cell-primary px-4 py-3">{Number(p.amount_paid).toLocaleString()}</td>
+                      <td className="px-4 py-3">{p.payment_date ?? "—"}</td>
+                      <td className="px-4 py-3 capitalize">{p.payment_method ?? "—"}</td>
                     </tr>
                   );
                 })}

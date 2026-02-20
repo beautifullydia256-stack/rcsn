@@ -237,3 +237,78 @@
 .ac-text-primary { color: var(--ac-text-primary); }
 .ac-text-secondary { color: var(--ac-text-secondary); }
 .ac-text-muted { color: var(--ac-text-muted); }
+
+/* ----------------------------------------------------------------------------
+   Page content wrapper (main content area only — sidebar unchanged)
+   ---------------------------------------------------------------------------- */
+.ac-page-content {
+  min-height: 100%;
+  padding: 1.5rem 1rem;
+}
+@media (min-width: 640px) {
+  .ac-page-content { padding-left: 1.5rem; padding-right: 1.5rem; }
+}
+@media (min-width: 1024px) {
+  .ac-page-content { padding-left: 2rem; padding-right: 2rem; }
+}
+
+/* ----------------------------------------------------------------------------
+   Glass inputs and selects (frosted, rounded, thin border)
+   ---------------------------------------------------------------------------- */
+.ac-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--ac-text-primary);
+  background: var(--ac-card-bg);
+  background-color: var(--ac-card-bg-fallback);
+  border: 1px solid var(--ac-border);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.ac-input::placeholder {
+  color: var(--ac-text-muted);
+}
+.ac-input:focus {
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+.ac-input option {
+  background: var(--ac-card-bg-fallback);
+  color: var(--ac-text-primary);
+}
+
+/* Table inside glass panels */
+.ac-table-wrap thead tr {
+  border-bottom: 1px solid var(--ac-border);
+}
+.ac-table-wrap thead th {
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ac-text-muted);
+  text-align: left;
+}
+.ac-table-wrap tbody tr {
+  border-bottom: 1px solid var(--ac-border);
+  transition: background 0.15s;
+}
+.ac-table-wrap tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.accountant-glass[data-theme="light"] .ac-table-wrap tbody tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+.ac-table-wrap tbody td {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: var(--ac-text-secondary);
+}
+.ac-table-wrap tbody td.ac-cell-primary {
+  font-weight: 500;
+  color: var(--ac-text-primary);
+}
