@@ -366,7 +366,13 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
       setSelectedStudent("");
       setOutstandingBalances([]);
     } catch (err: unknown) {
-      setMessage(err instanceof Error ? err.message : "Failed to record payment.");
+      const msg =
+        err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
+          ? (err as { message: string }).message
+          : err instanceof Error
+            ? err.message
+            : "Failed to record payment.";
+      setMessage(msg);
     } finally {
       setSubmitting(false);
     }
