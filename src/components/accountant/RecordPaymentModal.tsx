@@ -146,6 +146,7 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
 
   const totalDue = outstandingBalances.reduce((sum, b) => sum + b.balance, 0);
   const canRecordPayment = totalDue > 0 && Number(amount) > 0;
+  const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
 
   const isGraduated = selectedStudentRow?.status === "graduated";
   const showActivateCurrentTerm =
@@ -237,7 +238,6 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
             s.name.toLowerCase().includes(q) ||
             (s.current_class && s.current_class.toLowerCase().includes(q))
         ).slice(0, 12);
-  const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
 
   const handleClose = useCallback(() => {
     setReceiptData(null);
