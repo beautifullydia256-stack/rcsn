@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
@@ -38,6 +39,7 @@ export type RecordPaymentModalProps = {
 };
 
 export default function RecordPaymentModal({ open, onClose }: RecordPaymentModalProps) {
+  const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const userEmail = useAuthStore((s) => s.user?.email ?? "");
@@ -197,6 +199,14 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
         { onConflict: "school_id,student_id,term_id" }
       );
       if (invErr) throw invErr;
+      const { data: invVerify } = await supabase
+        .from("student_invoices")
+        .select("invoice_id, invoice_number")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .eq("term_id", currentTerm.id)
+        .maybeSingle();
+      if (!invVerify) throw new Error("Invoice was not created. Please try again.");
       const { data: existing } = await supabase
         .from("student_balances")
         .select("total_paid")
@@ -234,6 +244,7 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
       }));
       setOutstandingBalances(sortOutstandingOldestFirst(raw));
       setMessage("Current term invoice activated. Total due now includes Term " + currentTerm.term + ", " + currentTerm.year + ".");
+      queryClient.invalidateQueries({ queryKey: ["accountant"] });
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
@@ -295,9 +306,10 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
     setSubmitting(true);
     setMessage("");
     try {
+      const sortedBalances = sortOutstandingOldestFirst(outstandingBalances);
       let remaining = amt;
       const allocations: { term_id: string; term: number; year: number; amount: number }[] = [];
-      for (const row of outstandingBalances) {
+      for (const row of sortedBalances) {
         if (remaining <= 0) break;
         const apply = Math.min(remaining, row.balance);
         if (apply <= 0) continue;
@@ -386,6 +398,7 @@ export default function RecordPaymentModal({ open, onClose }: RecordPaymentModal
       setStudentSearchQuery("");
       setSelectedStudent("");
       setOutstandingBalances([]);
+      queryClient.invalidateQueries({ queryKey: ["accountant"] });
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"

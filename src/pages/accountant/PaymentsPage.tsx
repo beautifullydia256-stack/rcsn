@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
@@ -25,6 +26,7 @@ function formatReceiptTime(d: Date): string {
 }
 
 export default function PaymentsPage() {
+  const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const userEmail = useAuthStore((s) => s.user?.email ?? "");
@@ -135,9 +137,10 @@ export default function PaymentsPage() {
     setSubmitting(true);
     setMessage("");
     try {
+      const sortedBalances = sortOutstandingOldestFirst(outstandingBalances);
       let remaining = amt;
       const allocations: { term_id: string; term: number; year: number; amount: number }[] = [];
-      for (const row of outstandingBalances) {
+      for (const row of sortedBalances) {
         if (remaining <= 0) break;
         const apply = Math.min(remaining, row.balance);
         if (apply <= 0) continue;
@@ -226,6 +229,7 @@ export default function PaymentsPage() {
       setStudentSearchQuery("");
       setSelectedStudent("");
       setOutstandingBalances([]);
+      queryClient.invalidateQueries({ queryKey: ["accountant"] });
     } catch (err: unknown) {
       setMessage(err instanceof Error ? err.message : "Failed to record payment.");
     } finally {
