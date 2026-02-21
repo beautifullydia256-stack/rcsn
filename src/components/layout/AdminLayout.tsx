@@ -21,6 +21,8 @@ import {
   Sun,
   Moon,
   ChevronRight,
+  UserCog,
+  UsersRound,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import AdminContentSkeleton from './AdminContentSkeleton';
@@ -40,6 +42,7 @@ const ADMIN_ROUTE_CHUNKS = [
   () => import('../../pages/admin/teachers/TeachersPage'),
   () => import('../../pages/admin/parents/ParentsPage'),
   () => import('../../pages/admin/accounts/AccountsPage'),
+  () => import('../../pages/admin/staff/StaffPage'),
   () => import('../../pages/admin/outstanding/OutstandingPage'),
   () => import('../../pages/admin/reports/ReportsHub'),
   () => import('../../pages/admin/reports/GenerateReportsPage'),
@@ -265,34 +268,37 @@ export default function AdminLayout() {
             <NavLinkStyle to="/dashboard/admin/parents" icon={UserPlus} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[4])}>
               Parents
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/accounts" icon={Briefcase} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
+            <NavLinkStyle to="/dashboard/admin/accounts" icon={UserCog} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
+              User Management
+            </NavLinkStyle>
+            <NavLinkStyle to="/dashboard/admin/staff" icon={UsersRound} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[6])}>
               Staff
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[6])}>
+            <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[7])}>
               Finance
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[7])}>
+            <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[8])}>
               Reports
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[12])}>
+            <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[13])}>
               Attendance
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[13])}>
+            <NavLinkStyle to="/dashboard/admin/exam-sets" icon={BookOpen} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[14])}>
               Exam Sets
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/identity" icon={IdCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[14])}>
+            <NavLinkStyle to="/dashboard/admin/identity" icon={IdCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[15])}>
               Identity
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[17])}>
+            <NavLinkStyle to="/dashboard/admin/settings/classes" icon={Building2} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[18])}>
               Classes
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[19])}>
+            <NavLinkStyle to="/dashboard/admin/jobs" icon={CreditCard} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[21])}>
               Job Vacancies
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/settings" icon={Settings} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[16])}>
+            <NavLinkStyle to="/dashboard/admin/settings" icon={Settings} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[17])}>
               System Settings
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[20])}>
+            <NavLinkStyle to="/dashboard/admin/notifications" icon={Bell} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[22])}>
               Notifications
             </NavLinkStyle>
             <button
