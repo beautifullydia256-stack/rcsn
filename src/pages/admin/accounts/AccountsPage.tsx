@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { UserPlus, Key, UserX, UserCheck } from 'lucide-react';
+import { Key, UserX, UserCheck } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -56,7 +55,6 @@ async function fetchAccounts(userId: string): Promise<UserAccount[]> {
 }
 
 export default function AccountsPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
   const [searchQuery, setSearchQuery] = useState('');
@@ -177,20 +175,8 @@ export default function AccountsPage() {
   return (
     <AdminPageWrapper
       title="User Management"
-      subtitle="View all users, filter by role, reset password, activate or deactivate. Create staff from Create Staff."
+      subtitle="View all users, filter by role, reset password, activate or deactivate."
     >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div />
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin/accounts/add')}
-          className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
-        >
-          <UserPlus className="w-5 h-5" />
-          Create Staff
-        </button>
-      </div>
-
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {['admin', 'head_teacher', 'accountant', 'teacher', 'librarian', 'student', 'parent'].map((r) => (
           <div key={r} className="ac-glass-card flex items-center gap-2 rounded-[18px] p-4">
