@@ -52,13 +52,13 @@ async function fetchTeacherDashboardStats(
 
   let studentsCount = 0;
   if (classNames.length > 0) {
-    const { count } = await supabase
+    const { data: students, count } = await supabase
       .from('students')
-      .select('*', { count: 'exact', head: true })
+      .select('student_id', { count: 'exact', head: false })
       .eq('school_id', schoolId)
       .eq('status', 'active')
       .in('current_class', classNames);
-    studentsCount = count ?? 0;
+    studentsCount = count ?? (students?.length ?? 0);
   }
 
   return { teacherId, classesCount, studentsCount };
