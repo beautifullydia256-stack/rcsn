@@ -21,6 +21,7 @@ import {
   Sun,
   Moon,
   ChevronRight,
+  ChevronDown,
   UserCog,
   UsersRound,
 } from 'lucide-react';
@@ -111,6 +112,11 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [userManagementOpen, setUserManagementOpen] = useState(false);
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/admin/accounts')) setUserManagementOpen(true);
+  }, [location.pathname]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -268,9 +274,36 @@ export default function AdminLayout() {
             <NavLinkStyle to="/dashboard/admin/parents" icon={UserPlus} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[4])}>
               Parents
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/accounts" icon={UserCog} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
-              User Management
-            </NavLinkStyle>
+            <div className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => setUserManagementOpen((o) => !o)}
+                onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}
+                className={`ac-sidebar-nav-item w-full text-left flex items-center gap-3 ${location.pathname.startsWith('/dashboard/admin/accounts') ? 'ac-sidebar-nav-item-active' : ''}`}
+              >
+                <UserCog className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+                <span className="flex-1">User Management</span>
+                <ChevronDown className={`h-4 w-4 flex-shrink-0 opacity-80 transition-transform ${userManagementOpen ? '' : '-rotate-90'}`} />
+              </button>
+              {userManagementOpen && (
+                <div className="pl-4 ml-2 border-l border-[var(--ac-border)] space-y-0.5">
+                  <NavLink to="/dashboard/admin/accounts" className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        All users
+                      </span>
+                    )}
+                  </NavLink>
+                  <NavLink to="/dashboard/admin/accounts/add" className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[5])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        Create Staff
+                      </span>
+                    )}
+                  </NavLink>
+                </div>
+              )}
+            </div>
             <NavLinkStyle to="/dashboard/admin/staff" icon={UsersRound} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[6])}>
               Staff
             </NavLinkStyle>
