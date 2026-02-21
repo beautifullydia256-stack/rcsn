@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -7,12 +7,28 @@ import { useTeacherContext } from '../useTeacherContext';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ExamSet = { id: string; name: string; term?: number; year?: number };
+type CurrentTerm = { year: number; term: number } | null;
 
 async function fetchSchoolType(schoolId: string): Promise<SchoolType> {
   const { data } = await supabase.from('schools').select('type').eq('school_id', schoolId).single();
   const t = (data as { type?: string } | null)?.type;
   if (t === 'Nursery/Primary' || t === 'Secondary') return t;
   return null;
+}
+
+async function fetchCurrentTerm(schoolId: string): Promise<CurrentTerm> {
+  const { data } = await supabase
+    .from('school_terms')
+    .select('year, term, start_date, end_date')
+    .eq('school_id', schoolId)
+    .order('year', { ascending: false })
+    .order('term', { ascending: true });
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const current = (data || []).find(
+    (r: { start_date?: string; end_date: string }) =>
+      r.end_date >= todayStr && (r.start_date == null || r.start_date <= todayStr)
+  );
+  return current ? { year: current.year, term: current.term } : null;
 }
 
 export default function TeacherExamResultsPage() {
@@ -28,7 +44,13 @@ export default function TeacherExamResultsPage() {
     enabled: !!schoolId,
   });
 
-  const { data: examSets = [] } = useQuery({
+  const { data: currentTerm } = useQuery({
+    queryKey: ['teacher', 'current-term', schoolId ?? ''],
+    queryFn: () => fetchCurrentTerm(schoolId!),
+    enabled: !!schoolId,
+  });
+
+  const { data: allExamSets = [] } = useQuery({
     queryKey: ['teacher', 'exam-sets', schoolId ?? ''],
     queryFn: async (): Promise<ExamSet[]> => {
       if (!schoolId) return [];
@@ -42,6 +64,23 @@ export default function TeacherExamResultsPage() {
     },
     enabled: !!schoolId,
   });
+
+  // Teachers only see exam sets for the current term (no editing past terms)
+  const examSets =
+    currentTerm != null
+      ? allExamSets.filter((es) => es.term === currentTerm.term && es.year === currentTerm.year)
+      : [];
+
+  // Reset exam set selection if it's no longer in the filtered list
+  useEffect(() => {
+    if (
+      selectedExamSetId &&
+      examSets.length > 0 &&
+      !examSets.some((es) => es.id === selectedExamSetId)
+    ) {
+      setSelectedExamSetId('');
+    }
+  }, [examSets, selectedExamSetId]);
 
   const isLoading = ctxLoading || typeLoading;
 
@@ -83,7 +122,11 @@ export default function TeacherExamResultsPage() {
           <h2 className="ac-text-primary font-medium">
             {schoolType === 'Nursery/Primary' ? 'Primary / Nursery' : 'Secondary'} exam results
           </h2>
-          <p className="ac-text-muted text-sm">Select a class and exam set to enter or view marks.</p>
+          <p className="ac-text-muted text-sm">Select a class and exam set to enter or view marks. Only the current term is available for editing.</p>
+
+          {currentTerm == null && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">No current term is set. Ask your admin to set the current term in school settings so you can enter marks.</p>
+          )}
 
           <div className="flex flex-wrap gap-4">
             <label className="flex flex-col gap-1">
@@ -102,14 +145,24 @@ export default function TeacherExamResultsPage() {
             <label className="flex flex-col gap-1">
               <span className="text-sm ac-text-muted">Exam set</span>
               <select
-                className="rounded-lg border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary min-w-[180px]"
+                className="teacher-exam-set-select rounded-lg border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary min-w-[180px] appearance-none"
+                style={{
+                  backgroundColor: 'var(--ac-bg)',
+                  color: 'var(--ac-text-primary)',
+                }}
                 value={selectedExamSetId}
                 onChange={(e) => setSelectedExamSetId(e.target.value)}
               >
-                <option value="">Select exam set</option>
+                <option value="" style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}>
+                  Select exam set
+                </option>
                 {examSets.map((es) => (
-                  <option key={es.id} value={es.id}>
-                    {es.name} {es.year != null ? `(${es.year})` : ''}
+                  <option
+                    key={es.id}
+                    value={es.id}
+                    style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}
+                  >
+                    {es.name ?? 'Unnamed'} {es.year != null ? `(${es.year})` : ''}
                   </option>
                 ))}
               </select>

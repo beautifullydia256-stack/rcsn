@@ -46,6 +46,12 @@
   .input-glass {
     @apply px-4 py-2 w-full outline-none;
   }
+
+  /* Teacher exam set dropdown: ensure options are visible (native select often renders white list) */
+  .teacher-exam-set-select option {
+    background: #1e293b;
+    color: #f1f5f9;
+  }
 }
 
 /* Report preview: when printing, show only the report cards */
