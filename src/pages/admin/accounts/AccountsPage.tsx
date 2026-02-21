@@ -52,7 +52,7 @@ async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   } else {
     rows = (result.data || []).map((r: Record<string, unknown>) => ({ ...r, is_active: r.is_active ?? true }));
   }
-  return rows as UserAccount[];
+  return rows as unknown as UserAccount[];
 }
 
 export default function AccountsPage() {
