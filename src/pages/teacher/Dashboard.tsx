@@ -73,7 +73,6 @@ export default function TeacherDashboard() {
   const schoolId =
     schoolIdFromStore ??
     (user?.user_metadata?.school_id as string | undefined) ??
-    (user?.raw_user_meta_data?.school_id as string | undefined) ??
     null;
 
   const { data: stats, isLoading } = useQuery({
