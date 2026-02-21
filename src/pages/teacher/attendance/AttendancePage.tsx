@@ -116,11 +116,18 @@ export default function TeacherAttendancePage() {
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary min-w-[160px]"
+                className="teacher-dropdown rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary min-w-[160px]"
+                style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}
               >
-                <option value="">Select class</option>
+                <option value="" style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}>
+                  Select class
+                </option>
                 {classNames.map((c) => (
-                  <option key={c} value={c}>
+                  <option
+                    key={c}
+                    value={c}
+                    style={{ backgroundColor: 'var(--ac-bg)', color: 'var(--ac-text-primary)' }}
+                  >
                     {c}
                   </option>
                 ))}

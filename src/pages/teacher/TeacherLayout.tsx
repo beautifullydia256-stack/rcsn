@@ -15,6 +15,7 @@ import {
   ChevronRight,
   GraduationCap,
   ChevronLeft,
+  LogOut,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -70,6 +71,14 @@ export default function TeacherLayout() {
   const user = useAuthStore((s) => s.user);
   const { setUser, setRole, setSchoolId } = useAuthStore();
   const [searchQ, setSearchQ] = useState("");
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setRole(null);
+    setSchoolId(null);
+    navigate("/");
+  };
 
   useEffect(() => {
     const check = async () => {
@@ -149,6 +158,16 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/settings" icon={Settings} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}>
             Settings
           </NavLinkStyle>
+          <div className="pt-4 mt-4 border-t border-white/10">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="ac-sidebar-nav-item w-full text-left"
+            >
+              <LogOut className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+              <span className="flex-1">Logout</span>
+            </button>
+          </div>
         </nav>
       </aside>
       <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "transparent" }}>

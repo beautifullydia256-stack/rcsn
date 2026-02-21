@@ -47,7 +47,8 @@
     @apply px-4 py-2 w-full outline-none;
   }
 
-  /* Teacher exam set dropdown: ensure options are visible (native select often renders white list) */
+  /* Teacher dropdowns (Class, Exam set): dark option list so text is visible when open */
+  .teacher-dropdown option,
   .teacher-exam-set-select option {
     background: #1e293b;
     color: #f1f5f9;
