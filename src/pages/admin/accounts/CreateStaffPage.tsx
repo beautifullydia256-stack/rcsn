@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, ChevronDown } from 'lucide-react';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 const STAFF_ROLES = [
@@ -34,6 +34,18 @@ export default function CreateStaffPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createdPassword, setCreatedPassword] = useState<string | null>(null);
+  const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setRoleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleGeneratePassword = () => {
     const pwd = generatePassword();
@@ -171,18 +183,40 @@ export default function CreateStaffPage() {
                   className={inputClass}
                 />
               </div>
-              <div>
+              <div ref={roleDropdownRef} className="relative">
                 <label className={labelClass}>Role <span className="text-red-500">*</span></label>
-                <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
-                  className={inputClass}
-                  required
+                <button
+                  type="button"
+                  onClick={() => setRoleDropdownOpen((o) => !o)}
+                  className={`${inputClass} flex items-center justify-between w-full text-left`}
+                  aria-haspopup="listbox"
+                  aria-expanded={roleDropdownOpen}
                 >
-                  {STAFF_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
+                  <span>{STAFF_ROLES.find((r) => r.value === role)?.label ?? role}</span>
+                  <ChevronDown className={`h-4 w-4 opacity-70 transition-transform ${roleDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {roleDropdownOpen && (
+                  <div
+                    className="absolute left-0 right-0 top-full z-50 mt-1 ac-glass-card border border-[var(--ac-border)] rounded-lg shadow-lg py-1 max-h-48 overflow-y-auto"
+                    role="listbox"
+                  >
+                    {STAFF_ROLES.map((r) => (
+                      <button
+                        key={r.value}
+                        type="button"
+                        role="option"
+                        aria-selected={role === r.value}
+                        onClick={() => {
+                          setRole(r.value);
+                          setRoleDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm ac-text-primary hover:bg-white/10 focus:bg-white/10 focus:outline-none ${role === r.value ? 'bg-white/10' : ''}`}
+                      >
+                        {r.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>Department (optional, mainly for teachers)</label>

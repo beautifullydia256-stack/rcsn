@@ -20,6 +20,7 @@ import {
   DollarSign,
   Banknote,
   RotateCcw,
+  LogOut,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -169,6 +170,11 @@ export default function AccountantLayout() {
     queryClient.prefetchQuery({ queryKey: [...REPORTS_FEE_COLLECTION_QUERY_KEY, schoolId], queryFn: () => fetchFeeCollectionReport(schoolId), staleTime: stale }).catch(() => {});
   }, [schoolId, queryClient]);
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
   return (
     <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
       <RecordPaymentModal
@@ -228,6 +234,14 @@ export default function AccountantLayout() {
           <NavLinkStyle to="/dashboard/accountant/adjustments" icon={RotateCcw} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])}>
             Adjustments
           </NavLinkStyle>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="ac-sidebar-nav-item w-full text-left"
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+            <span className="flex-1">Logout</span>
+          </button>
         </nav>
       </aside>
       <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "transparent" }}>
