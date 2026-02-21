@@ -37,7 +37,7 @@ export default function ExamSetsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Dashboard
         </button>
@@ -46,37 +46,39 @@ export default function ExamSetsPage() {
       <div className={`${adminCardClass} overflow-x-auto`}>
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/30 border-t-white" />
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--ac-border)] border-t-[var(--ac-text-primary)]" />
           </div>
         ) : examSets.length === 0 ? (
-          <div className="py-12 text-center text-gray-500">No exam sets yet. Create one from your school settings or legacy admin.</div>
+          <div className="py-12 text-center ac-text-muted">No exam sets yet. Create one from your school settings or legacy admin.</div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                <th className="px-4 py-2 font-medium text-gray-700">Name</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Term</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Year</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Active</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {examSets.map((es) => (
-                <tr key={es.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="px-4 py-2 text-gray-900 font-medium">{es.name || '—'}</td>
-                  <td className="px-4 py-2 text-gray-700">{es.term}</td>
-                  <td className="px-4 py-2 text-gray-700">{es.year}</td>
-                  <td className="px-4 py-2">
-                    <span className={`px-2 py-1 rounded text-xs ${es.is_active ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>
-                      {es.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-gray-700">{es.created_at ? new Date(es.created_at).toLocaleString() : '—'}</td>
+          <div className="ac-table-wrap rounded-xl border border-[var(--ac-border)] overflow-hidden">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
+                  <th className="px-4 py-2 font-medium ac-text-muted">Name</th>
+                  <th className="px-4 py-2 font-medium ac-text-muted">Term</th>
+                  <th className="px-4 py-2 font-medium ac-text-muted">Year</th>
+                  <th className="px-4 py-2 font-medium ac-text-muted">Active</th>
+                  <th className="px-4 py-2 font-medium ac-text-muted">Created</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {examSets.map((es) => (
+                  <tr key={es.id} className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-sidebar-active-bg)]">
+                    <td className="px-4 py-2 ac-text-primary font-medium">{es.name || '—'}</td>
+                    <td className="px-4 py-2 ac-text-secondary">{es.term}</td>
+                    <td className="px-4 py-2 ac-text-secondary">{es.year}</td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-1 rounded text-xs border ${es.is_active ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40' : 'bg-[var(--ac-border)]/50 ac-text-muted border-[var(--ac-border)]'}`}>
+                        {es.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 ac-text-secondary">{es.created_at ? new Date(es.created_at).toLocaleString() : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </AdminPageWrapper>

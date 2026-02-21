@@ -190,12 +190,22 @@ export default function SettingsExamSets({
         return;
       }
     }
-    const { error: err } = await supabase
+    setError(null);
+    const { data: updatedRows, error: err } = await supabase
       .from('exam_sets')
       .update({ is_active: !currentActive })
-      .eq('id', id);
-    if (err) setError(err.message);
-    else setExamSets((prev) => prev.map((es) => (es.id === id ? { ...es, is_active: !currentActive } : es)));
+      .eq('id', id)
+      .select('id, is_active');
+    if (err) {
+      setError(err.message);
+      return;
+    }
+    if (!updatedRows?.length) {
+      setError('Update failed. You may not have permission to change this exam set, or it was deleted.');
+      return;
+    }
+    setExamSets((prev) => prev.map((es) => (es.id === id ? { ...es, is_active: !currentActive } : es)));
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
   };
 
   const toggleActiveForInput = async (id: string, currentActive: boolean) => {
@@ -221,11 +231,13 @@ export default function SettingsExamSets({
         return;
       }
     }
-    const { error: err } = await supabase
+    const { data: updatedRows, error: err } = await supabase
       .from('exam_sets')
       .update({ active_for_input: !currentActive })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id');
     if (err) setError(err.message);
+    else if (!updatedRows?.length) setError('Update failed. You may not have permission.');
     else await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
   };
 
