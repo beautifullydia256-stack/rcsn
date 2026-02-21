@@ -48,9 +48,12 @@ async function fetchDashboardAuth(userId: string) {
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
   const rolloverFired = useRef(false);
 
-  const { data, isLoading, isError, error } = useQuery({
+  const schoolId = schoolIdFromStore ?? undefined;
+
+  const { data: authData, isError, error } = useQuery({
     queryKey: ['dashboard', 'admin', 'auth', user?.id ?? ''],
     queryFn: () => fetchDashboardAuth(user!.id),
     enabled: !!user?.id,
@@ -59,22 +62,23 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    if (!data?.schoolId || rolloverFired.current) return;
+    const sid = schoolId ?? authData?.schoolId;
+    if (!sid || rolloverFired.current) return;
     rolloverFired.current = true;
     void (async () => {
       try {
         const nextYear = new Date().getFullYear() + 1;
         const { ensureAcademicYearExists } = await import('@/lib/ensureAcademicYear');
-        await ensureAcademicYearExists(nextYear); // Rollover integration: next year must exist
-        const { error } = await supabase.rpc('automatic_term3_rollover');
-        if (error) throw error;
+        await ensureAcademicYearExists(nextYear);
+        const { error: rpcError } = await supabase.rpc('automatic_term3_rollover');
+        if (rpcError) throw rpcError;
       } catch {
         // Silent fail
       }
     })();
-  }, [data?.schoolId]);
+  }, [schoolId, authData?.schoolId]);
 
-  if ((!user?.id || isLoading) && !data) {
+  if (!user?.id) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
@@ -128,7 +132,17 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!data) return null;
+  const effectiveSchoolId = schoolId ?? authData?.schoolId;
+  if (!effectiveSchoolId) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
+          <p className="ac-text-secondary">Loading your school...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -156,7 +170,7 @@ export default function AdminDashboard() {
       </div>
 
       <div className="space-y-6">
-        <AdminKPICards schoolId={data.schoolId} />
+        <AdminKPICards schoolId={effectiveSchoolId} />
 
         <QuickActions />
 

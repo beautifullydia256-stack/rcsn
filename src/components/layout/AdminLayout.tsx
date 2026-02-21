@@ -22,9 +22,11 @@ import {
   Moon,
   ChevronRight,
 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
 import { useUIStore } from '../../store/uiStore';
+import { fetchAdminKpis, ADMIN_KPIS_QUERY_KEY } from '../../pages/admin/components/AdminKPICards';
 
 // Prefetch route chunks on hover/idle so navigation feels instant (same pattern as accountant)
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
@@ -115,6 +117,8 @@ export default function AdminLayout() {
     checkMobile();
   }, []);
 
+  const queryClient = useQueryClient();
+
   useEffect(() => {
     const loadUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -129,6 +133,16 @@ export default function AdminLayout() {
     };
     loadUser();
   }, []);
+
+  useEffect(() => {
+    if (!schoolId || !isAdminSection) return;
+    const stale = 60 * 1000;
+    queryClient.prefetchQuery({
+      queryKey: [...ADMIN_KPIS_QUERY_KEY, schoolId],
+      queryFn: () => fetchAdminKpis(schoolId),
+      staleTime: stale,
+    }).catch(() => {});
+  }, [schoolId, isAdminSection, queryClient]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

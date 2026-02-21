@@ -5,6 +5,8 @@ import { Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
+export const ADMIN_KPIS_QUERY_KEY = ['dashboard', 'admin', 'kpis'] as const;
+
 type Kpis = {
   students: number;
   teachers: number;
@@ -13,32 +15,32 @@ type Kpis = {
   attendance: number;
 };
 
-async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
+export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = new Date().toISOString().slice(0, 10);
-  const { data: allTerms } = await supabase
-    .from('school_terms')
-    .select('id, start_date, end_date, year, term')
-    .eq('school_id', schoolId)
-    .order('year', { ascending: false })
-    .order('term', { ascending: false });
 
-  const currentTermData =
-    (allTerms || []).find(
-      (t: { start_date?: string; end_date: string }) =>
-        t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
-    ) || (allTerms?.[0] as { start_date?: string; end_date: string }) || null;
-
-  const [
-    studentsResult,
-    teachersResult,
-    attendanceResult,
-    balancesResult,
-    feesCollectedResult,
-  ] = await Promise.all([
+  const [termsResult, studentsResult, teachersResult, attendanceResult, balancesResult] = await Promise.all([
+    supabase
+      .from('school_terms')
+      .select('id, start_date, end_date, year, term')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: false }),
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase.from('student_attendance').select('student_id').eq('school_id', schoolId).eq('date', today).eq('present', true),
     supabase.from('students').select('student_id, expected_fee_amount').eq('school_id', schoolId).eq('status', 'active'),
+  ]);
+
+  const allTerms = termsResult.data || [];
+  const currentTermData =
+    allTerms.find(
+      (t: { start_date?: string; end_date: string }) =>
+        t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
+    ) || (allTerms[0] as { start_date?: string; end_date: string }) || null;
+
+  const studentIds = (balancesResult.data || []).map((s: { student_id: string }) => s.student_id);
+
+  const [feesCollectedResult, paymentsResult] = await Promise.all([
     currentTermData
       ? supabase
           .from('student_payments')
@@ -47,17 +49,18 @@ async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
           .gte('payment_date', currentTermData.start_date || '1900-01-01')
           .lte('payment_date', currentTermData.end_date || '2100-12-31')
       : supabase.from('student_payments').select('amount_paid').eq('school_id', schoolId),
+    studentIds.length > 0
+      ? supabase
+          .from('student_payments')
+          .select('student_id, amount_paid')
+          .in('student_id', studentIds)
+          .eq('school_id', schoolId)
+      : Promise.resolve({ data: [] as { student_id: string; amount_paid: number }[] }),
   ]);
 
-  const studentIds = (balancesResult.data || []).map((s: { student_id: string }) => s.student_id);
-  const { data: payments } = await supabase
-    .from('student_payments')
-    .select('student_id, amount_paid')
-    .in('student_id', studentIds)
-    .eq('school_id', schoolId);
-
+  const payments = paymentsResult.data || [];
   const paidByStudent: Record<string, number> = {};
-  (payments || []).forEach((p: { student_id: string; amount_paid: number }) => {
+  payments.forEach((p: { student_id: string; amount_paid: number }) => {
     if (studentIds.includes(p.student_id)) {
       paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
     }
@@ -156,7 +159,7 @@ interface AdminKPICardsProps {
 
 export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
   const { data: kpis, isLoading } = useQuery({
-    queryKey: ['dashboard', 'admin', 'kpis', schoolId],
+    queryKey: [...ADMIN_KPIS_QUERY_KEY, schoolId],
     queryFn: () => fetchAdminKpis(schoolId),
     enabled: !!schoolId,
     staleTime: STALE_TIME_MS,
