@@ -1,0 +1,221 @@
+import { Suspense, useEffect, useState } from "react";
+import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  FileCheck,
+  ClipboardList,
+  Calendar,
+  Settings,
+  Search,
+  Bell,
+  Sun,
+  Moon,
+  ChevronRight,
+  GraduationCap,
+  ChevronLeft,
+} from "lucide-react";
+import { supabase } from "../../lib/supabase";
+import { useAuthStore } from "../../store/authStore";
+import { useUIStore } from "../../store/uiStore";
+
+// Prefetch route chunks on hover so navigation feels instant
+const prefetchChunk = (importFn: () => Promise<unknown>) => {
+  importFn().catch(() => {});
+};
+
+const TEACHER_ROUTE_CHUNKS = [
+  () => import("./Dashboard"),
+  () => import("./students/StudentsPage"),
+  () => import("./classes/ClassesPage"),
+  () => import("./exam-results/ExamResultsPage"),
+  () => import("./attendance/AttendancePage"),
+  () => import("./timetable/TimetablePage"),
+  () => import("./settings/SettingsPage"),
+];
+
+function NavLinkStyle({
+  to,
+  end,
+  icon: Icon,
+  children,
+  onPrefetch,
+}: {
+  to: string;
+  end?: boolean;
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  onPrefetch?: () => void;
+}) {
+  return (
+    <NavLink to={to} end={end} className="block" onMouseEnter={onPrefetch}>
+      {({ isActive }) => (
+        <span
+          className={`ac-sidebar-nav-item ${isActive ? "ac-sidebar-nav-item-active" : ""}`}
+        >
+          <Icon className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+          <span className="flex-1">{children}</span>
+          {isActive && <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />}
+        </span>
+      )}
+    </NavLink>
+  );
+}
+
+export default function TeacherLayout() {
+  const navigate = useNavigate();
+  const theme = useUIStore((s) => s.theme);
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const user = useAuthStore((s) => s.user);
+  const { setUser, setRole, setSchoolId } = useAuthStore();
+  const [searchQ, setSearchQ] = useState("");
+
+  useEffect(() => {
+    const check = async () => {
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser();
+      if (!u) {
+        navigate("/login");
+        return;
+      }
+      setUser(u);
+      const { data: profile } = await supabase
+        .from("users")
+        .select("role, school_id")
+        .eq("user_id", u.id)
+        .single();
+      if (profile) {
+        setRole((profile as { role?: string }).role ?? null);
+        setSchoolId((profile as { school_id?: string }).school_id ?? null);
+      }
+    };
+    check();
+  }, [navigate, setUser, setRole, setSchoolId]);
+
+  useEffect(() => {
+    const run = () => TEACHER_ROUTE_CHUNKS.forEach((fn) => prefetchChunk(fn));
+    const useIdle = typeof requestIdleCallback !== "undefined";
+    const id = useIdle ? requestIdleCallback(run, { timeout: 200 }) : window.setTimeout(run, 120);
+    return () => (useIdle ? cancelIdleCallback(id as number) : clearTimeout(id));
+  }, []);
+
+  return (
+    <div
+      className="accountant-glass fixed inset-0 flex overflow-hidden"
+      data-theme={theme}
+      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
+    >
+      <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
+        <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 backdrop-blur-sm border border-white/10">
+              <GraduationCap className="h-5 w-5 text-white" />
+            </div>
+            <span className="ac-text-primary font-semibold text-base truncate">PwezaCore</span>
+          </div>
+          <button
+            type="button"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ac-text-muted hover:bg-white/10 transition-colors"
+            title="Collapse sidebar"
+            aria-label="Collapse sidebar"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="px-4 pt-4 pb-2">
+          <span className="ac-text-muted text-[11px] font-semibold uppercase tracking-widest">Menu</span>
+        </div>
+        <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
+          <NavLinkStyle to="/dashboard/teacher" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[0])}>
+            Dashboard
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/students" icon={Users} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}>
+            Students
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/classes" icon={BookOpen} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[2])}>
+            Classes
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/exam-results" icon={FileCheck} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[3])}>
+            Exam Results
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}>
+            Attendance
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/timetable" icon={Calendar} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}>
+            Timetable
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/settings" icon={Settings} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}>
+            Settings
+          </NavLinkStyle>
+        </nav>
+      </aside>
+      <main className="flex-1 flex flex-col overflow-hidden min-h-0" style={{ background: "transparent" }}>
+        <header className="ac-glass-header flex-shrink-0 px-6 py-4">
+          <div className="flex items-center justify-end gap-4">
+            <div className="relative flex-1 max-w-md">
+              <input
+                type="text"
+                placeholder="Search students, classes..."
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                className="ac-input w-full rounded-xl py-2.5 pl-4 pr-10 text-sm min-h-0"
+              />
+              <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 ac-text-muted" />
+            </div>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+              title={theme === "light" ? "Switch to dark" : "Switch to light"}
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
+            <button
+              type="button"
+              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+            >
+              <Bell className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-2 pl-2">
+              <span className="ac-text-primary text-sm font-medium truncate max-w-[120px]">
+                {user?.user_metadata?.name ?? user?.email ?? "Teacher"}
+              </span>
+              <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
+            </div>
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            <Suspense
+              fallback={
+                <div className="animate-pulse space-y-6">
+                  <div className="h-8 w-56 rounded ac-skeleton-block" />
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-28 rounded-xl ac-skeleton-block" />
+                    ))}
+                  </div>
+                  <div className="h-64 rounded-xl ac-skeleton-block" />
+                </div>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </div>
+        </div>
+        <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">
+          <div className="ac-text-secondary flex items-center justify-between text-sm">
+            <span>Copyright © 2025 PwezaCore</span>
+            <div className="flex items-center gap-6">
+              <a href="#" className="hover:opacity-100 opacity-80">Privacy Policy</a>
+              <a href="#" className="hover:opacity-100 opacity-80">Terms and conditions</a>
+              <a href="#" className="hover:opacity-100 opacity-80">Contact</a>
+            </div>
+          </div>
+        </footer>
+      </main>
+    </div>
+  );
+}

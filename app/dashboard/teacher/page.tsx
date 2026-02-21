@@ -29,7 +29,6 @@ interface TodayClass {
 export default function TeacherDashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [teacherId, setTeacherId] = useState<string | null>(null);
   const [teacherRowId, setTeacherRowId] = useState<string | null>(null);
@@ -94,26 +93,14 @@ export default function TeacherDashboard() {
         return;
       }
 
-      // Get school_id from users table (more reliable than metadata)
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('school_id, role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (userError || !userData) {
-        setError('Unable to load user data. Please contact support.');
-        setLoading(false);
-        return;
-      }
-
-      const schoolId = userData.school_id;
+      // Get school_id from user metadata
       const userMetadata = (user as any).user_metadata || (user as any).raw_user_meta_data || {};
+      const schoolId = userMetadata.school_id;
       const teacherName = userMetadata.name || userMetadata.teacher_name || 'Teacher';
 
       if (!schoolId) {
-        setError('Your account is not linked to a school. Please contact support to complete your account setup.');
-        setLoading(false);
+        const returnUrl = encodeURIComponent('/dashboard/teacher');
+        router.push(`/login?returnUrl=${returnUrl}`);
         return;
       }
 
@@ -458,24 +445,6 @@ export default function TeacherDashboard() {
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30"></div>
           <p className="text-white/85">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="flex flex-col items-center gap-4 max-w-md text-center">
-          <div className="text-red-400 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-white mb-2">Account Setup Required</h2>
-          <p className="text-white/85 mb-6">{error}</p>
-          <button
-            onClick={() => router.push('/login')}
-            className="px-6 py-2 text-white/70 hover:text-white transition-colors"
-          >
-            Back to Login
-          </button>
         </div>
       </div>
     );

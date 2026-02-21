@@ -113,9 +113,13 @@ export default function AdminLayout() {
   const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [userManagementOpen, setUserManagementOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
 
   useEffect(() => {
     if (location.pathname.startsWith('/dashboard/admin/accounts')) setUserManagementOpen(true);
+  }, [location.pathname]);
+  useEffect(() => {
+    if (location.pathname.startsWith('/dashboard/admin/reports') || location.pathname.startsWith('/dashboard/admin/report-records')) setReportsOpen(true);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -310,9 +314,50 @@ export default function AdminLayout() {
             <NavLinkStyle to="/dashboard/admin/outstanding" icon={DollarSign} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[7])}>
               Finance
             </NavLinkStyle>
-            <NavLinkStyle to="/dashboard/admin/reports" end icon={FileText} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[8])}>
-              Reports
-            </NavLinkStyle>
+            <div className="space-y-0.5">
+              <button
+                type="button"
+                onClick={() => setReportsOpen((o) => !o)}
+                onMouseEnter={() => { prefetchChunk(ADMIN_ROUTE_CHUNKS[8]); prefetchChunk(ADMIN_ROUTE_CHUNKS[9]); prefetchChunk(ADMIN_ROUTE_CHUNKS[10]); }}
+                className={`ac-sidebar-nav-item w-full text-left flex items-center gap-3 ${(location.pathname.startsWith('/dashboard/admin/reports') || location.pathname.startsWith('/dashboard/admin/report-records')) ? 'ac-sidebar-nav-item-active' : ''}`}
+              >
+                <FileText className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+                <span className="flex-1">Reports</span>
+                <ChevronDown className={`h-4 w-4 flex-shrink-0 opacity-80 transition-transform ${reportsOpen ? '' : '-rotate-90'}`} />
+              </button>
+              {reportsOpen && (
+                <div className="pl-4 ml-2 border-l border-[var(--ac-border)] space-y-0.5">
+                  <NavLink to="/dashboard/admin/reports" end className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[8])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        Overview
+                      </span>
+                    )}
+                  </NavLink>
+                  <NavLink to="/dashboard/admin/reports/generate" className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[9])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        Generate Reports
+                      </span>
+                    )}
+                  </NavLink>
+                  <NavLink to="/dashboard/admin/report-records" className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[10])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        Report Records
+                      </span>
+                    )}
+                  </NavLink>
+                  <NavLink to="/dashboard/admin/settings" className="block" onMouseEnter={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[17])}>
+                    {({ isActive }) => (
+                      <span className={`block px-3 py-2 rounded-lg text-sm ${isActive ? 'ac-sidebar-nav-item-active' : 'ac-text-secondary hover:ac-text-primary hover:bg-white/5'}`}>
+                        Report Templates
+                      </span>
+                    )}
+                  </NavLink>
+                </div>
+              )}
+            </div>
             <NavLinkStyle to="/dashboard/admin/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(ADMIN_ROUTE_CHUNKS[13])}>
               Attendance
             </NavLinkStyle>

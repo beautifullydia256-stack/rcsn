@@ -92,7 +92,7 @@ export default function OutstandingPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Dashboard
         </button>
@@ -100,34 +100,34 @@ export default function OutstandingPage() {
 
       <div className={`${adminCardClass} space-y-4`}>
         <input
-          className="w-full md:max-w-md rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          className="ac-input w-full md:max-w-md rounded-xl px-3 py-2 text-sm min-h-0"
           placeholder="Search by student, class, parent name/email"
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white overflow-hidden">
-          <table className="min-w-full text-sm">
+        <div className="overflow-x-auto rounded-xl overflow-hidden ac-glass-card border border-[var(--ac-border)]">
+          <table className="min-w-full text-sm ac-table-wrap">
             <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                <th className="px-4 py-2 font-medium text-gray-700">Student</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Class</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Amount Paid</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Balance</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Parent Name</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Parent Email</th>
-                <th className="px-4 py-2 font-medium text-gray-700">Status</th>
+              <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
+                <th className="px-4 py-2 font-medium">Student</th>
+                <th className="px-4 py-2 font-medium">Class</th>
+                <th className="px-4 py-2 font-medium">Amount Paid</th>
+                <th className="px-4 py-2 font-medium">Balance</th>
+                <th className="px-4 py-2 font-medium">Parent Name</th>
+                <th className="px-4 py-2 font-medium">Parent Email</th>
+                <th className="px-4 py-2 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr key={`sk-${i}`}>
-                    <td colSpan={7} className="px-4 py-3"><div className="h-5 rounded bg-gray-200 animate-pulse" /></td>
+                  <tr key={`sk-${i}`} className="border-b border-[var(--ac-border)]">
+                    <td colSpan={7} className="px-4 py-3"><div className="h-5 rounded ac-skeleton-block animate-pulse" /></td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan={7} className="px-4 py-6 text-center ac-text-muted">
                     No pending balances found.
                   </td>
                 </tr>
@@ -136,15 +136,15 @@ export default function OutstandingPage() {
                   const total = r.amount_paid + r.balance;
                   const pct = total > 0 ? Math.round((r.amount_paid / total) * 100) : 0;
                   return (
-                    <tr key={r.student_id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-900 font-medium">{r.student_name}</td>
-                      <td className="px-4 py-2 text-gray-700">{r.current_class}</td>
-                      <td className="px-4 py-2 text-gray-700">{new Intl.NumberFormat().format(r.amount_paid)}</td>
-                      <td className="px-4 py-2 text-gray-700">{new Intl.NumberFormat().format(r.balance)}</td>
-                      <td className="px-4 py-2 text-gray-700">{r.parent_name || '-'}</td>
-                      <td className="px-4 py-2 text-gray-700">{r.parent_email || '-'}</td>
+                    <tr key={r.student_id} className="border-b border-[var(--ac-border)]">
+                      <td className="px-4 py-2 font-medium ac-text-primary">{r.student_name}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{r.current_class}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{new Intl.NumberFormat().format(r.amount_paid)}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{new Intl.NumberFormat().format(r.balance)}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{r.parent_name || '-'}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{r.parent_email || '-'}</td>
                       <td className="px-4 py-2">
-                        <span className="px-2 py-1 text-xs rounded bg-amber-100 border border-amber-200 text-amber-800">
+                        <span className="px-2 py-1 text-xs rounded border bg-amber-500/20 border-amber-500/40 text-amber-700 dark:text-amber-300">
                           {pct}% paid
                         </span>
                       </td>

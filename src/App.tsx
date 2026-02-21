@@ -5,7 +5,7 @@ import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
 import AdminLayout from './components/layout/AdminLayout';
-import TeacherLayout from './components/layout/TeacherLayout';
+import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
 import AccountantLayout from './pages/accountant/AccountantLayout';
 import ThemedLoadingView from './components/ui/ThemedLoadingView';
