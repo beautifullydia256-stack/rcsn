@@ -37,18 +37,16 @@ async function fetchTeacherDashboardStats(
     .eq('school_id', schoolId)
     .eq('teacher_id', teacherId);
 
-  let classNames: string[] = (classRows || []).map((r: { class_name: string }) => r.class_name);
+  const { data: tcsRows } = await supabase
+    .from('teacher_class_subjects')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId);
 
-  if (classNames.length === 0) {
-    const { data: tcsRows } = await supabase
-      .from('teacher_class_subjects')
-      .select('class_name')
-      .eq('school_id', schoolId)
-      .eq('teacher_id', teacherId);
-    const set = new Set<string>();
-    (tcsRows || []).forEach((r: { class_name: string }) => set.add(r.class_name));
-    classNames = Array.from(set);
-  }
+  const classSet = new Set<string>();
+  (classRows || []).forEach((r: { class_name: string }) => classSet.add(r.class_name));
+  (tcsRows || []).forEach((r: { class_name: string }) => classSet.add(r.class_name));
+  const classNames = Array.from(classSet);
 
   const classesCount = classNames.length;
 
