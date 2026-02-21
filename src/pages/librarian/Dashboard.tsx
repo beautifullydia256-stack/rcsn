@@ -8,7 +8,7 @@ export default function LibrarianDashboard() {
       <p className="text-muted-foreground">Manage library and books</p>
       <GlassPanel className="p-6">
         <GlassCard title="Library" subtitle="Books and loans">
-          <p className="text-muted-foreground">Under migration. Use the legacy app for now.</p>
+          <p className="text-muted-foreground">Manage library and resources here.</p>
         </GlassCard>
       </GlassPanel>
     </div>

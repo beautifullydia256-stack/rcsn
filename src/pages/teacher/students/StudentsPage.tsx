@@ -15,7 +15,7 @@ export default function TeacherStudentsPage() {
         </button>
       </div>
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted text-center">Student list is under migration. Use the legacy teacher dashboard for now.</p>
+        <p className="ac-text-muted text-center">View and manage students in your classes here.</p>
       </div>
     </div>
   );

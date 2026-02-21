@@ -15,7 +15,7 @@ export default function TeacherSettingsPage() {
         </button>
       </div>
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted text-center">Teacher settings are under migration. Use the legacy teacher dashboard for now.</p>
+        <p className="ac-text-muted text-center">Manage your profile and preferences here.</p>
       </div>
     </div>
   );

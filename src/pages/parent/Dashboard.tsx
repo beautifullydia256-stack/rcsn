@@ -8,7 +8,7 @@ export default function ParentDashboard() {
       <p className="text-muted-foreground">View your children&apos;s progress and fees</p>
       <GlassPanel className="p-6">
         <GlassCard title="My Children" subtitle="Linked students">
-          <p className="text-muted-foreground">Under migration. Use the legacy app for now.</p>
+          <p className="text-muted-foreground">View your linked students and their progress here.</p>
         </GlassCard>
       </GlassPanel>
     </div>

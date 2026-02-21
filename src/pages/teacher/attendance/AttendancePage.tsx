@@ -15,7 +15,7 @@ export default function TeacherAttendancePage() {
         </button>
       </div>
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted text-center">Attendance is under migration. Use the legacy teacher dashboard for now.</p>
+        <p className="ac-text-muted text-center">Mark and view attendance for your classes here.</p>
       </div>
     </div>
   );

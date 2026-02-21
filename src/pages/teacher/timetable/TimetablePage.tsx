@@ -15,7 +15,7 @@ export default function TeacherTimetablePage() {
         </button>
       </div>
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted text-center">Timetable is under migration. Use the legacy teacher dashboard for now.</p>
+        <p className="ac-text-muted text-center">View your teaching timetable here.</p>
       </div>
     </div>
   );

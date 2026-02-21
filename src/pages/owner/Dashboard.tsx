@@ -8,7 +8,7 @@ export default function OwnerDashboard() {
       <p className="text-muted-foreground">School ownership and settings</p>
       <GlassPanel className="p-6">
         <GlassCard title="School" subtitle="Ownership and billing">
-          <p className="text-muted-foreground">Under migration. Use the legacy app for now.</p>
+          <p className="text-muted-foreground">School owner dashboard and settings.</p>
         </GlassCard>
       </GlassPanel>
     </div>

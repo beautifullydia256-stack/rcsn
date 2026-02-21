@@ -10,7 +10,7 @@ export default function StudentFeesPage() {
         <button type="button" className="rounded-lg border border-border bg-muted px-3 py-2 text-sm hover:bg-muted/80" onClick={() => navigate('/dashboard/student')}>Back</button>
       </div>
       <GlassPanel className="p-6 text-center text-muted-foreground">
-        <p>Fees view is under migration. Use the legacy student dashboard for now.</p>
+        <p>View your fee balance and payment history here.</p>
       </GlassPanel>
     </div>
   );

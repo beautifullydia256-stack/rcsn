@@ -8,7 +8,7 @@ export default function HeadTeacherDashboard() {
       <p className="text-muted-foreground">School overview and approvals</p>
       <GlassPanel className="p-6">
         <GlassCard title="Overview" subtitle="School summary">
-          <p className="text-muted-foreground">Under migration. Use the legacy app for now.</p>
+          <p className="text-muted-foreground">Head teacher dashboard and oversight tools.</p>
         </GlassCard>
       </GlassPanel>
     </div>

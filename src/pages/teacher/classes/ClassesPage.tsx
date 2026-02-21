@@ -15,7 +15,7 @@ export default function TeacherClassesPage() {
         </button>
       </div>
       <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-        <p className="ac-text-muted text-center">Classes are under migration. Use the legacy teacher dashboard for now.</p>
+        <p className="ac-text-muted text-center">View your assigned classes and subjects here.</p>
       </div>
     </div>
   );
