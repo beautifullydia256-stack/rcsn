@@ -286,6 +286,18 @@
   color: var(--ac-text-primary);
 }
 
+/* Teacher dropdowns: in dark mode options must be dark bg + light text (browser often draws white list) */
+.accountant-glass[data-theme="dark"] .teacher-dropdown option,
+.accountant-glass[data-theme="dark"] .teacher-exam-set-select option {
+  background: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+.accountant-glass[data-theme="dark"] .teacher-dropdown,
+.accountant-glass[data-theme="dark"] .teacher-exam-set-select {
+  background-color: #1e293b !important;
+  color: #f1f5f9 !important;
+}
+
 /* Table inside glass panels (no white in dark mode) */
 .ac-table-wrap thead tr {
   border-bottom: 1px solid var(--ac-border);
