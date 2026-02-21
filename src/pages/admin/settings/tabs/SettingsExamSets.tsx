@@ -190,12 +190,24 @@ export default function SettingsExamSets({
         return;
       }
     }
+    const newActive = !currentActive;
+    if (!newActive && examSet.active_for_input) {
+      const { data: results } = await supabase
+        .from('exam_results')
+        .select('id')
+        .eq('exam_set_id', id)
+        .limit(1);
+      if (results?.length) {
+        setError('Cannot turn off exam set. Teachers have already input results.');
+        return;
+      }
+    }
     setError(null);
     const { data: updatedRows, error: err } = await supabase
       .from('exam_sets')
-      .update({ is_active: !currentActive })
+      .update({ is_active: newActive, active_for_input: newActive })
       .eq('id', id)
-      .select('id, is_active');
+      .select('id, is_active, active_for_input');
     if (err) {
       setError(err.message);
       return;
@@ -204,7 +216,9 @@ export default function SettingsExamSets({
       setError('Update failed. You may not have permission to change this exam set, or it was deleted.');
       return;
     }
-    setExamSets((prev) => prev.map((es) => (es.id === id ? { ...es, is_active: !currentActive } : es)));
+    setExamSets((prev) =>
+      prev.map((es) => (es.id === id ? { ...es, is_active: newActive, active_for_input: newActive } : es))
+    );
     await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
   };
 
@@ -220,6 +234,7 @@ export default function SettingsExamSets({
         return;
       }
     }
+    const newActive = !currentActive;
     if (currentActive) {
       const { data: results } = await supabase
         .from('exam_results')
@@ -233,12 +248,17 @@ export default function SettingsExamSets({
     }
     const { data: updatedRows, error: err } = await supabase
       .from('exam_sets')
-      .update({ active_for_input: !currentActive })
+      .update({ active_for_input: newActive, is_active: newActive })
       .eq('id', id)
-      .select('id');
+      .select('id, is_active, active_for_input');
     if (err) setError(err.message);
     else if (!updatedRows?.length) setError('Update failed. You may not have permission.');
-    else await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
+    else {
+      setExamSets((prev) =>
+        prev.map((es) => (es.id === id ? { ...es, active_for_input: newActive, is_active: newActive } : es))
+      );
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'examSets', schoolId] });
+    }
   };
 
   const filteredSets = currentTerm
@@ -254,29 +274,29 @@ export default function SettingsExamSets({
         desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
       />
 
-      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <h3 className="mb-3 font-medium text-gray-900">Create New Exam Set</h3>
+      <div className="ac-glass-card mb-6 rounded-lg border border-[var(--ac-border)] p-4">
+        <h3 className="ac-text-primary mb-3 font-medium">Create New Exam Set</h3>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Exam Set Name (e.g., Beginning of Term)"
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 placeholder-gray-400"
+            className="ac-input rounded-lg px-3 py-2"
           />
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description (optional)"
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 placeholder-gray-400"
+            className="ac-input rounded-lg px-3 py-2"
           />
           <select
             value={term}
             onChange={(e) => setTerm(parseInt(e.target.value, 10))}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
+            className="ac-input rounded-lg px-3 py-2"
           >
-            <option value={1} className="bg-slate-900">Term 1</option>
-            <option value={2} className="bg-slate-900">Term 2</option>
-            <option value={3} className="bg-slate-900">Term 3</option>
+            <option value={1}>Term 1</option>
+            <option value={2}>Term 2</option>
+            <option value={3}>Term 3</option>
           </select>
           <input
             type="number"
@@ -284,11 +304,11 @@ export default function SettingsExamSets({
             max={2099}
             value={year}
             onChange={(e) => setYear(parseInt(e.target.value, 10))}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
+            className="ac-input rounded-lg px-3 py-2"
           />
         </div>
         <div className="mt-3">
-          <label className="mb-2 flex items-center gap-2 text-sm text-gray-700">
+          <label className="ac-text-secondary mb-2 flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={allClasses}
@@ -310,7 +330,7 @@ export default function SettingsExamSets({
                   className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
                     targetClasses.includes(className)
                       ? 'border-blue-400 bg-blue-600/80 text-white'
-                      : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
+                      : 'border-[var(--ac-border)] bg-[var(--ac-card-bg)] ac-text-primary hover:bg-[var(--ac-sidebar-active-bg)]'
                   }`}
                 >
                   {className}
@@ -332,53 +352,53 @@ export default function SettingsExamSets({
       </div>
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-700 dark:text-red-300">
           {error}
         </div>
       )}
 
-      <div className="mb-3 text-sm text-gray-700">
+      <div className="ac-text-secondary mb-3 text-sm">
         Current Exam Sets ({currentTerm?.year ?? 'Current Year'})
       </div>
-      <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-lg shadow-black/20 backdrop-blur-md">
+      <div className="ac-glass-card overflow-x-auto rounded-xl border border-[var(--ac-border)]">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-left">
-              <th className="px-4 py-2 text-gray-700">Name</th>
-              <th className="px-4 py-2 text-gray-700">Description</th>
-              <th className="px-4 py-2 text-gray-700">Term</th>
-              <th className="px-4 py-2 text-gray-700">Year</th>
-              <th className="px-4 py-2 text-gray-700">Classes</th>
-              <th className="px-4 py-2 text-gray-700">Status</th>
-              <th className="px-4 py-2 text-gray-700">Active for Input</th>
-              <th className="px-4 py-2 text-gray-700">Actions</th>
+            <tr className="border-b border-[var(--ac-border)] text-left">
+              <th className="ac-text-muted px-4 py-2">Name</th>
+              <th className="ac-text-muted px-4 py-2">Description</th>
+              <th className="ac-text-muted px-4 py-2">Term</th>
+              <th className="ac-text-muted px-4 py-2">Year</th>
+              <th className="ac-text-muted px-4 py-2">Classes</th>
+              <th className="ac-text-muted px-4 py-2">Status</th>
+              <th className="ac-text-muted px-4 py-2">Active for Input</th>
+              <th className="ac-text-muted px-4 py-2">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+          <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
             {loading ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
                   Loading...
                 </td>
               </tr>
             ) : filteredSets.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={8} className="ac-text-muted px-4 py-6 text-center">
                   No exam sets created for {currentTerm?.year ?? 'this year'} yet.
                 </td>
               </tr>
             ) : (
               filteredSets.map((es) => (
-                <tr key={es.id} className="border-t border-gray-100">
-                  <td className="px-4 py-2 font-medium text-gray-900">{es.name}</td>
-                  <td className="px-4 py-2 text-gray-800">{es.description || '-'}</td>
-                  <td className="px-4 py-2 text-gray-800">Term {es.term}</td>
-                  <td className="px-4 py-2 text-gray-800">{es.year}</td>
-                  <td className="px-4 py-2 text-gray-800">
+                <tr key={es.id} className="border-t border-[var(--ac-border)]">
+                  <td className="ac-text-primary px-4 py-2 font-medium">{es.name}</td>
+                  <td className="ac-text-secondary px-4 py-2">{es.description || '-'}</td>
+                  <td className="ac-text-secondary px-4 py-2">Term {es.term}</td>
+                  <td className="ac-text-secondary px-4 py-2">{es.year}</td>
+                  <td className="ac-text-secondary px-4 py-2">
                     {targetClassesArr(es).length === 0 ? (
-                      <span className="text-green-700">All Classes</span>
+                      <span className="text-emerald-600 dark:text-emerald-400">All Classes</span>
                     ) : (
-                      <span className="text-blue-700">
+                      <span className="text-blue-600 dark:text-blue-400">
                         {targetClassesArr(es).length} class
                         {targetClassesArr(es).length !== 1 ? 'es' : ''}
                       </span>
