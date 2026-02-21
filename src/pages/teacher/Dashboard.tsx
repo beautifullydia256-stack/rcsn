@@ -1,7 +1,85 @@
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
+
+type DashboardStats = {
+  teacherId: string | null;
+  classesCount: number;
+  studentsCount: number;
+};
+
+async function fetchTeacherDashboardStats(
+  schoolId: string | null,
+  userEmail: string | undefined
+): Promise<DashboardStats> {
+  if (!schoolId || !userEmail?.trim()) {
+    return { teacherId: null, classesCount: 0, studentsCount: 0 };
+  }
+
+  const email = userEmail.trim().toLowerCase();
+
+  const { data: teacher } = await supabase
+    .from('teachers')
+    .select('teacher_id')
+    .eq('school_id', schoolId)
+    .ilike('email', email)
+    .maybeSingle();
+
+  const teacherId = (teacher as { teacher_id?: string } | null)?.teacher_id ?? null;
+  if (!teacherId) {
+    return { teacherId: null, classesCount: 0, studentsCount: 0 };
+  }
+
+  const { data: classRows } = await supabase
+    .from('class_teachers')
+    .select('class_name')
+    .eq('school_id', schoolId)
+    .eq('teacher_id', teacherId);
+
+  let classNames: string[] = (classRows || []).map((r: { class_name: string }) => r.class_name);
+
+  if (classNames.length === 0) {
+    const { data: tcsRows } = await supabase
+      .from('teacher_class_subjects')
+      .select('class_name')
+      .eq('school_id', schoolId)
+      .eq('teacher_id', teacherId);
+    const set = new Set<string>();
+    (tcsRows || []).forEach((r: { class_name: string }) => set.add(r.class_name));
+    classNames = Array.from(set);
+  }
+
+  const classesCount = classNames.length;
+
+  let studentsCount = 0;
+  if (classNames.length > 0) {
+    const { count } = await supabase
+      .from('students')
+      .select('*', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('status', 'active')
+      .in('current_class', classNames);
+    studentsCount = count ?? 0;
+  }
+
+  return { teacherId, classesCount, studentsCount };
+}
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const schoolId = useAuthStore((s) => s.schoolId);
+  const userEmail = useAuthStore((s) => s.user?.email);
+
+  const { data: stats, isLoading } = useQuery({
+    queryKey: ['teacher', 'dashboard-stats', schoolId ?? '', userEmail ?? ''],
+    queryFn: () => fetchTeacherDashboardStats(schoolId, userEmail),
+    enabled: !!schoolId && !!userEmail,
+  });
+
+  const classesCount = stats?.classesCount ?? 0;
+  const studentsCount = stats?.studentsCount ?? 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -17,7 +95,11 @@ export default function TeacherDashboard() {
         >
           <h3 className="ac-text-primary text-lg font-medium mb-1">My Classes</h3>
           <p className="ac-text-muted text-sm mb-3">Assigned classes</p>
-          <p className="text-2xl font-bold ac-text-primary">—</p>
+          {isLoading ? (
+            <div className="h-8 w-12 rounded ac-skeleton-block animate-pulse" />
+          ) : (
+            <p className="text-2xl font-bold ac-text-primary">{classesCount}</p>
+          )}
         </button>
         <button
           type="button"
@@ -25,8 +107,12 @@ export default function TeacherDashboard() {
           onClick={() => navigate('/dashboard/teacher/students')}
         >
           <h3 className="ac-text-primary text-lg font-medium mb-1">Students</h3>
-          <p className="ac-text-muted text-sm mb-3">Total students</p>
-          <p className="text-2xl font-bold ac-text-primary">—</p>
+          <p className="ac-text-muted text-sm mb-3">Total students in your classes</p>
+          {isLoading ? (
+            <div className="h-8 w-12 rounded ac-skeleton-block animate-pulse" />
+          ) : (
+            <p className="text-2xl font-bold ac-text-primary">{studentsCount}</p>
+          )}
         </button>
       </div>
 
