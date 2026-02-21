@@ -130,13 +130,13 @@ export default function IdentityPage() {
                 placeholder="Search by name, admission number, or class..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-900 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+                className="ac-input w-full pl-10 pr-4 py-2.5 rounded-xl min-h-0"
               />
             </div>
             <select
               value={classFilter}
               onChange={(e) => setClassFilter(e.target.value)}
-              className="sm:w-44 px-4 py-2.5 rounded-xl border border-gray-200 bg-white text-gray-700 outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-400 transition-colors"
+              className="ac-input sm:w-44 px-4 py-2.5 rounded-xl min-h-0"
             >
               <option value="">All classes</option>
               {uniqueClasses.map((cls) => (

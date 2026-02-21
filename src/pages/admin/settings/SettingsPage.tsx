@@ -79,7 +79,7 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Dashboard
         </button>
@@ -94,7 +94,7 @@ export default function SettingsPage() {
             className={`rounded-lg px-4 py-2 text-sm transition-colors ${
               tab === k
                 ? 'border border-green-500 bg-green-600 text-white'
-                : 'border border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                : 'ac-glass-btn-secondary ac-text-primary'
             }`}
           >
             {label}
@@ -133,9 +133,9 @@ export default function SettingsPage() {
       <LocationSettingsWidget />
 
       <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium text-gray-900">Classes</div>
+        <div className="mb-2 font-medium ac-text-primary">Classes</div>
         {classOptions.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm ac-text-muted">
             Classes will appear here after your school type is set.
           </p>
         ) : (
@@ -147,7 +147,7 @@ export default function SettingsPage() {
                 onClick={() =>
                   navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(c)}`)
                 }
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
               >
                 {c}
               </button>
@@ -157,33 +157,33 @@ export default function SettingsPage() {
       </div>
 
       <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium text-gray-900">Quick Management</div>
+        <div className="mb-2 font-medium ac-text-primary">Quick Management</div>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/exam-sets')}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
           >
             Exam Sets
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/attendance')}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
           >
             Attendance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/outstanding')}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
           >
             Finance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
           >
             Report Records
           </button>

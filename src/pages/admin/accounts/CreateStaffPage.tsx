@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 const STAFF_ROLES = [
@@ -115,17 +115,6 @@ export default function CreateStaffPage() {
       subtitle="Add Head Teacher, Accountant, Teacher, or Librarian. They will log in with their email."
     >
       <div className="space-y-6">
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/accounts')}
-            className="inline-flex items-center gap-1 rounded-lg border border-[var(--ac-border)] ac-glass-btn-secondary px-3 py-2 text-sm font-medium ac-text-secondary hover:opacity-90"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to User Management
-          </button>
-        </div>
-
         <form onSubmit={handleSubmit} className={`${adminCardClass} space-y-6`}>
           {error && (
             <div className="rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-3 text-sm text-red-700 dark:text-red-300">

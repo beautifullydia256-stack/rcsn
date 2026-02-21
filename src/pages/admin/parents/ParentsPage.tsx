@@ -108,20 +108,20 @@ export default function ParentsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/parents/add')}
-          className="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
         >
           <UserPlus className="w-5 h-5" />
           Add Parent
         </button>
       </div>
 
-      <div className={`${adminCardClass} mb-6 flex items-center gap-3 bg-blue-50 border-blue-100`}>
-        <div className="p-2 rounded-lg bg-blue-100">
-          <Users className="w-5 h-5 text-blue-600" />
+      <div className={`${adminCardClass} mb-6 flex items-center gap-3 ac-glass-card`}>
+        <div className="ac-glass-icon ac-icon-blue p-2 rounded-lg">
+          <Users className="w-5 h-5" />
         </div>
         <div>
-          <p className="text-gray-600 text-sm">Total Parents</p>
-          <p className="text-2xl font-bold text-gray-900">{loading ? '—' : parents.length}</p>
+          <p className="ac-text-secondary text-sm">Total Parents</p>
+          <p className="text-2xl font-bold ac-text-primary">{loading ? '—' : parents.length}</p>
         </div>
       </div>
 
@@ -131,61 +131,61 @@ export default function ParentsPage() {
           placeholder="Search by name, email, phone, or student name..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          className="ac-input w-full rounded-xl px-3 py-2 text-sm min-h-0"
         />
         {!loading && filteredParents.length === 0 ? (
           <div className="py-12 text-center">
-            <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <h3 className="text-gray-700 font-medium mb-1">No parents found</h3>
-            <p className="text-gray-500 text-sm mb-4">
+            <Users className="w-12 h-12 mx-auto mb-4 ac-text-muted" />
+            <h3 className="ac-text-primary font-medium mb-1">No parents found</h3>
+            <p className="ac-text-muted text-sm mb-4">
               {searchQuery ? 'Try adjusting your search' : 'Get started by adding your first parent'}
             </p>
             {!searchQuery && (
               <button
                 type="button"
                 onClick={() => navigate('/dashboard/admin/parents/add')}
-                className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+                className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium"
               >
                 Add Parent
               </button>
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <table className="min-w-full text-sm">
+          <div className="overflow-x-auto rounded-xl overflow-hidden ac-glass-card border border-[var(--ac-border)]">
+            <table className="min-w-full text-sm ac-table-wrap">
               <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                  <th className="px-4 py-2 font-medium text-gray-700">Name</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Email</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Phone</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Student</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Class</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Enrolled</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Actions</th>
+                <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
+                  <th className="px-4 py-2 font-medium">Name</th>
+                  <th className="px-4 py-2 font-medium">Email</th>
+                  <th className="px-4 py-2 font-medium">Phone</th>
+                  <th className="px-4 py-2 font-medium">Student</th>
+                  <th className="px-4 py-2 font-medium">Class</th>
+                  <th className="px-4 py-2 font-medium">Enrolled</th>
+                  <th className="px-4 py-2 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={`skeleton-${i}`} className="border-b border-gray-100">
-                      <td className="px-4 py-3"><div className="h-5 w-28 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-36 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-16 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-5 w-24 rounded bg-gray-200 animate-pulse" /></td>
-                      <td className="px-4 py-3"><div className="h-7 w-16 rounded bg-gray-200 animate-pulse" /></td>
+                    <tr key={`skeleton-${i}`} className="border-b border-[var(--ac-border)]">
+                      <td className="px-4 py-3"><div className="h-5 w-28 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-36 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-16 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-5 w-24 rounded ac-skeleton-block animate-pulse" /></td>
+                      <td className="px-4 py-3"><div className="h-7 w-16 rounded ac-skeleton-block animate-pulse" /></td>
                     </tr>
                   ))
                 ) : (
                   filteredParents.map((p) => (
-                    <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2 text-gray-900 font-medium">{p.name}</td>
-                      <td className="px-4 py-2 text-gray-700">{p.email}</td>
-                      <td className="px-4 py-2 text-gray-700">{p.phone || '-'}</td>
-                      <td className="px-4 py-2 text-gray-700">{p.student_name}</td>
-                      <td className="px-4 py-2 text-gray-700">{p.student_class}</td>
-                      <td className="px-4 py-2 text-gray-700">{p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
+                    <tr key={p.id} className="border-b border-[var(--ac-border)]">
+                      <td className="px-4 py-2 font-medium ac-text-primary">{p.name}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{p.email}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{p.phone || '-'}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{p.student_name}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{p.student_class}</td>
+                      <td className="px-4 py-2 ac-text-secondary">{p.created_at ? new Date(p.created_at).toLocaleString() : '-'}</td>
                       <td className="px-4 py-2">
                         <button
                           type="button"
