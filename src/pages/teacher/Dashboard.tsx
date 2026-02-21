@@ -66,8 +66,15 @@ async function fetchTeacherDashboardStats(
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
-  const schoolId = useAuthStore((s) => s.schoolId);
-  const userEmail = useAuthStore((s) => s.user?.email);
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
+  const user = useAuthStore((s) => s.user);
+  const userEmail = user?.email;
+  // Match old behavior (c1e76a5): school_id from store or from auth user_metadata so dashboard works even before users row is loaded
+  const schoolId =
+    schoolIdFromStore ??
+    (user?.user_metadata?.school_id as string | undefined) ??
+    (user?.raw_user_meta_data?.school_id as string | undefined) ??
+    null;
 
   const { data: stats, isLoading } = useQuery({
     queryKey: ['teacher', 'dashboard-stats', schoolId ?? '', userEmail ?? ''],
