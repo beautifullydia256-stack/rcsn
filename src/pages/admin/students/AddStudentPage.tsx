@@ -291,14 +291,57 @@ export default function AddStudentPage() {
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
-      if (guardianName.trim()) {
-        await supabase.from('parents').insert({
-          school_id: schoolId,
-          student_id: studentId,
-          name: guardianName.trim(),
-          ...(guardianPhone.trim() ? { phone: guardianPhone.trim() } : {}),
-          ...(guardianEmail.trim() ? { email: guardianEmail.trim() } : {}),
+      // Auto-create student login (username = admission number, email = admission_number@school.local)
+      try {
+        const loginRes = await fetch('/api/admin/create-student-login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            student_id: studentId,
+            admission_number,
+            email: `${admission_number}@school.local`,
+            password: admission_number,
+          }),
         });
+        if (!loginRes.ok) {
+          const errData = await loginRes.json().catch(() => ({}));
+          console.warn('Student login auto-create failed (student still enrolled):', errData.error || loginRes.statusText);
+        }
+      } catch (loginErr) {
+        console.warn('Student login auto-create failed (student still enrolled):', loginErr);
+      }
+
+      if (guardianName.trim()) {
+        const hasGuardianContact = !!(guardianEmail.trim() || guardianPhone.trim());
+        if (hasGuardianContact) {
+          try {
+            const parentRes = await fetch('/api/admin/ensure-parent-link', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({
+                student_id: studentId,
+                school_id: schoolId,
+                name: guardianName.trim(),
+                email: guardianEmail.trim() || undefined,
+                phone: guardianPhone.trim() || undefined,
+              }),
+            });
+            if (!parentRes.ok) {
+              const errData = await parentRes.json().catch(() => ({}));
+              console.warn('Parent link failed (guardian record may be missing login):', errData.error || parentRes.statusText);
+            }
+          } catch (parentErr) {
+            console.warn('Parent link failed:', parentErr);
+          }
+        } else {
+          await supabase.from('parents').insert({
+            school_id: schoolId,
+            student_id: studentId,
+            name: guardianName.trim(),
+          });
+        }
       }
 
       if (initialNum > 0) {

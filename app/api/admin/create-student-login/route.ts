@@ -76,15 +76,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Use provided email/password (no domain fallback). Email is required for auth
-    if (!email) {
+    // Email: use provided or default to admission_number@school.local for login-by-admission-number
+    const studentEmail = (email && String(email).includes('@'))
+      ? String(email)
+      : (admission_number ? `${admission_number}@school.local` : null);
+    if (!studentEmail) {
       return NextResponse.json(
-        { error: 'Email is required to create a student login.' },
+        { error: 'Email or admission_number is required to create a student login.' },
         { status: 400 }
       );
     }
-    const studentEmail = email as string;
-    const studentPassword = password || admission_number;
+    const studentPassword = password || admission_number || (studentData?.admission_number as string) || 'ChangeMe123';
 
     // Check if email already exists in users table
     const { data: existingUser, error: checkError } = await supabaseAdmin

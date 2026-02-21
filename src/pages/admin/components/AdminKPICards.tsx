@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Users, GraduationCap, DollarSign, CalendarCheck, ArrowUpRight } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -84,12 +84,77 @@ async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   };
 }
 
+type KPIVariant = 'blue' | 'green' | 'orange' | 'teal';
+
+function AdminKPICard({
+  icon: Icon,
+  label,
+  value,
+  subline,
+  variant = 'green',
+  href,
+  isLoading,
+  isPlaceholder,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string | number;
+  subline?: string;
+  variant?: KPIVariant;
+  href?: string;
+  isLoading?: boolean;
+  isPlaceholder?: boolean;
+}) {
+  const navigate = useNavigate();
+  const borderTopClass: Record<KPIVariant, string> = {
+    blue: 'border-t-[3px] border-t-blue-400/90',
+    green: 'border-t-[3px] border-t-emerald-500/90',
+    orange: 'border-t-[3px] border-t-amber-500/90',
+    teal: 'border-t-[3px] border-t-teal-500/90',
+  };
+  const iconClass: Record<KPIVariant, string> = {
+    blue: 'ac-glass-icon ac-icon-blue',
+    green: 'ac-glass-icon ac-icon-green',
+    orange: 'ac-glass-icon ac-icon-orange',
+    teal: 'ac-glass-icon ac-icon-teal',
+  };
+
+  const card = (
+    <div
+      className={`ac-glass-card will-change-transform rounded-[18px] p-5 transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]} ${isPlaceholder ? 'opacity-60' : ''}`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={iconClass[variant]}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </div>
+      <p className="ac-text-primary mt-3 text-2xl font-semibold tracking-tight">
+        {isLoading && !isPlaceholder ? (
+          <span className="inline-block h-8 w-20 animate-pulse rounded ac-skeleton-block" />
+        ) : (
+          value
+        )}
+      </p>
+      <p className="ac-text-secondary mt-0.5 text-sm font-medium">{label}</p>
+      {subline && <p className="ac-text-muted mt-1 text-xs">{subline}</p>}
+    </div>
+  );
+
+  if (href && !isPlaceholder) {
+    return (
+      <button type="button" onClick={() => navigate(href)} className="w-full text-left">
+        {card}
+      </button>
+    );
+  }
+  return card;
+}
+
 interface AdminKPICardsProps {
   schoolId: string;
 }
 
 export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
-  const navigate = useNavigate();
   const { data: kpis, isLoading } = useQuery({
     queryKey: ['dashboard', 'admin', 'kpis', schoolId],
     queryFn: () => fetchAdminKpis(schoolId),
@@ -97,82 +162,99 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
     staleTime: STALE_TIME_MS,
   });
 
+  const fmt = (n: number) =>
+    new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(n);
+
   const cards = kpis
     ? [
-        { label: 'Total Students', value: kpis.students, icon: Users, color: '#16a34a', href: '/dashboard/admin/students' },
-        { label: 'Total Teachers', value: kpis.teachers, icon: GraduationCap, color: '#16a34a', href: '/dashboard/admin/teachers' },
         {
-          label: 'Fees Collected',
-          value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.feesCollected),
-          icon: DollarSign,
-          color: '#16a34a',
-          href: '/dashboard/admin/outstanding',
+          label: 'TOTAL STUDENTS',
+          value: kpis.students,
+          subline: 'Active',
+          variant: 'green' as KPIVariant,
+          href: '/dashboard/admin/students',
+          icon: Users,
         },
         {
-          label: 'Outstanding Balances',
-          value: new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(kpis.outstanding),
-          icon: DollarSign,
-          color: '#dc2626',
-          href: '/dashboard/admin/outstanding',
+          label: 'TOTAL TEACHERS',
+          value: kpis.teachers,
+          subline: 'Staff',
+          variant: 'blue' as KPIVariant,
+          href: '/dashboard/admin/teachers',
+          icon: GraduationCap,
         },
-        { label: 'Attendance Today', value: kpis.attendance, icon: CalendarCheck, color: '#16a34a', href: undefined },
-        { label: 'Placeholder 1', value: '---', icon: Users, color: '#6b7280', href: undefined },
-        { label: 'Placeholder 2', value: '---', icon: Users, color: '#6b7280', href: undefined },
-        { label: 'Placeholder 3', value: '---', icon: Users, color: '#6b7280', href: undefined },
+        {
+          label: 'FEES COLLECTED',
+          value: fmt(kpis.feesCollected),
+          subline: 'This term',
+          variant: 'green' as KPIVariant,
+          href: '/dashboard/admin/outstanding',
+          icon: DollarSign,
+        },
+        {
+          label: 'OUTSTANDING BALANCES',
+          value: fmt(kpis.outstanding),
+          subline: 'Balance due',
+          variant: 'orange' as KPIVariant,
+          href: '/dashboard/admin/outstanding',
+          icon: DollarSign,
+        },
+        {
+          label: 'ATTENDANCE TODAY',
+          value: kpis.attendance,
+          subline: 'Present',
+          variant: 'teal' as KPIVariant,
+          href: undefined,
+          icon: CalendarCheck,
+        },
+        {
+          label: 'PLACEHOLDER 1',
+          value: '---',
+          subline: '',
+          variant: 'teal' as KPIVariant,
+          href: undefined,
+          icon: Users,
+          isPlaceholder: true,
+        },
+        {
+          label: 'PLACEHOLDER 2',
+          value: '---',
+          subline: '',
+          variant: 'teal' as KPIVariant,
+          href: undefined,
+          icon: Users,
+          isPlaceholder: true,
+        },
+        {
+          label: 'PLACEHOLDER 3',
+          value: '---',
+          subline: '',
+          variant: 'teal' as KPIVariant,
+          href: undefined,
+          icon: Users,
+          isPlaceholder: true,
+        },
       ]
     : [];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      {cards.map((c, index) => {
-        const Icon = c.icon;
-        const isFirstCard = index === 0;
-        const isPlaceholder = c.label.startsWith('Placeholder');
-
-        return (
-          <div
+    <section className="mb-7">
+      <h2 className="ac-text-muted mb-4 text-sm font-semibold uppercase tracking-wider">Key figures</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {cards.map((c) => (
+          <AdminKPICard
             key={c.label}
-            className={`rounded-2xl shadow-sm overflow-hidden transition-all hover:shadow-md ${
-              isFirstCard
-                ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
-                : isPlaceholder
-                  ? 'ac-glass-card opacity-60'
-                  : 'ac-glass-card'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() => !isPlaceholder && c.href && navigate(c.href)}
-              disabled={isPlaceholder}
-              className={`w-full p-5 sm:p-6 text-left transition-all ${
-                isFirstCard
-                  ? 'hover:from-emerald-600 hover:to-emerald-700'
-                  : isPlaceholder
-                    ? 'cursor-default'
-                    : 'hover:bg-white/5'
-              }`}
-            >
-              <div className="space-y-3">
-                <div className={`text-xs font-medium uppercase tracking-wide ${
-                  isFirstCard ? 'text-emerald-100' : isPlaceholder ? 'ac-text-muted' : 'ac-text-muted'
-                }`}>
-                  {c.label}
-                </div>
-
-                <div className={`text-3xl sm:text-4xl font-bold ${
-                  isFirstCard ? 'text-white' : isPlaceholder ? 'ac-text-muted' : 'ac-text-primary'
-                }`}>
-                  {isLoading && !isPlaceholder ? (
-                    <div className={`animate-pulse rounded h-9 w-20 ac-skeleton-block`} />
-                  ) : (
-                    c.value
-                  )}
-                </div>
-              </div>
-            </button>
-          </div>
-        );
-      })}
-    </div>
+            icon={c.icon}
+            label={c.label}
+            value={c.value}
+            subline={c.subline}
+            variant={c.variant}
+            href={c.href}
+            isLoading={isLoading}
+            isPlaceholder={c.isPlaceholder}
+          />
+        ))}
+      </div>
+    </section>
   );
 }

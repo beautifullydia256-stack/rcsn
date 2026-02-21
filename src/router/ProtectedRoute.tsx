@@ -20,14 +20,19 @@ export default function ProtectedRoute() {
           return;
         }
 
-        // Get user role from users table
+        // Get user role from users table (and is_active for deactivated accounts)
         const { data: userData } = await supabase
           .from('users')
-          .select('role, school_id')
+          .select('role, school_id, is_active')
           .eq('user_id', session.user.id)
           .single();
 
         if (userData) {
+          if (userData.is_active === false) {
+            await supabase.auth.signOut();
+            navigate('/login');
+            return;
+          }
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id); // Set schoolId in store
