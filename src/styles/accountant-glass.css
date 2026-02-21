@@ -286,9 +286,11 @@
   color: var(--ac-text-primary);
 }
 
-/* Table inside glass panels */
+/* Table inside glass panels (no white in dark mode) */
 .ac-table-wrap thead tr {
   border-bottom: 1px solid var(--ac-border);
+  background: var(--ac-card-bg);
+  background-color: var(--ac-card-bg-fallback);
 }
 .ac-table-wrap thead th {
   padding: 0.75rem 1rem;

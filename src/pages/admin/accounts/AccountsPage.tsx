@@ -36,20 +36,23 @@ async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   const { data: userData } = await supabase.from('users').select('school_id, role').eq('user_id', userId).single();
   if (!userData?.school_id || !['admin', 'owner'].includes(userData.role ?? '')) return [];
   const cols = 'user_id, email, name, role, phone, department, position, created_at, last_sign_in_at, is_active';
-  let result = await supabase
+  const result = await supabase
     .from('users')
     .select(cols)
     .eq('school_id', userData.school_id)
     .order('created_at', { ascending: false });
+  let rows: Record<string, unknown>[];
   if (result.error && result.error.message?.includes('is_active')) {
-    result = await supabase
+    const fallback = await supabase
       .from('users')
       .select('user_id, email, name, role, phone, department, position, created_at, last_sign_in_at')
       .eq('school_id', userData.school_id)
       .order('created_at', { ascending: false });
+    rows = (fallback.data || []).map((r) => ({ ...r, is_active: true }));
+  } else {
+    rows = (result.data || []).map((r: Record<string, unknown>) => ({ ...r, is_active: r.is_active ?? true }));
   }
-  const data = result.data || [];
-  return data.map((r: Record<string, unknown>) => ({ ...r, is_active: r.is_active ?? true })) as UserAccount[];
+  return rows as UserAccount[];
 }
 
 export default function AccountsPage() {
@@ -190,7 +193,7 @@ export default function AccountsPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {['admin', 'head_teacher', 'accountant', 'teacher', 'librarian', 'student', 'parent'].map((r) => (
-          <div key={r} className={`${adminCardClass} flex items-center gap-2`}>
+          <div key={r} className="ac-glass-card flex items-center gap-2 rounded-[18px] p-4">
             <span className={`px-2 py-1 rounded border text-xs ${getRoleBadgeClass(r)}`}>{getRoleLabel(r)}</span>
             <span className="text-lg font-bold ac-text-primary">{accounts.filter((a) => a.role === r).length}</span>
           </div>
@@ -204,20 +207,20 @@ export default function AccountsPage() {
             placeholder="Search by name, email, or department..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded-lg border border-[var(--ac-border)] bg-white/50 dark:bg-white/5 px-3 py-2 ac-text-primary placeholder-[var(--ac-text-muted)] focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="ac-input flex-1 rounded-xl px-3 py-2 text-sm min-h-0"
           />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="w-full sm:w-48 rounded-lg border border-[var(--ac-border)] bg-white/50 dark:bg-white/5 px-3 py-2 ac-text-primary focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+            className="ac-input w-full sm:w-48 rounded-xl px-3 py-2 text-sm min-h-0"
           >
             {ROLE_OPTIONS.map((o) => (
               <option key={o.value || 'all'} value={o.value}>{o.label}</option>
             ))}
           </select>
         </div>
-        <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)] overflow-hidden ac-table-wrap">
-          <table className="min-w-full text-sm">
+        <div className="overflow-x-auto rounded-xl overflow-hidden ac-glass-card border border-[var(--ac-border)]">
+          <table className="min-w-full text-sm ac-table-wrap">
             <thead>
               <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
                 <th className="px-4 py-2 font-medium">Name</th>
@@ -236,7 +239,7 @@ export default function AccountsPage() {
                 </tr>
               ) : (
                 filteredAccounts.map((a) => (
-                  <tr key={a.user_id} className="border-b border-[var(--ac-border)] hover:bg-white/5">
+                  <tr key={a.user_id} className="border-b border-[var(--ac-border)]">
                     <td className="px-4 py-2 font-medium ac-text-primary">{a.name || '-'}</td>
                     <td className="px-4 py-2 ac-text-secondary">{a.email}</td>
                     <td className="px-4 py-2">
