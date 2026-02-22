@@ -609,7 +609,7 @@ export default function AdminLayout() {
   // Non-admin section (e.g. redirect): minimal wrapper without glass
   return (
     <div className="min-h-screen relative">
-      <aside className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto bg-white border-r border-gray-200 shadow-sm">
+      <aside className="fixed left-0 top-0 bottom-0 w-52 flex flex-col z-10 overflow-y-auto bg-[#F0F0F0] border-r border-gray-200 shadow-sm">
         <div className="flex items-center gap-2 px-4 py-6 border-b border-gray-200">
           <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-800 rounded-lg flex items-center justify-center shrink-0">
             <GraduationCap className="w-5 h-5 text-white" />

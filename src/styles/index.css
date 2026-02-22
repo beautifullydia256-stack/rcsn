@@ -11,7 +11,8 @@
   }
   
   body {
-    @apply bg-gradient-to-br from-gray-50 via-white to-gray-100 text-foreground;
+    /* CPU-inspired soft white in light mode (not plain white) */
+    @apply bg-gradient-to-br from-[#F5F5F5] via-[#F0F0F0] to-[#EEEEEE] text-foreground;
     font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -70,7 +71,7 @@
     top: 0;
     width: 100%;
     max-width: none;
-    background: white;
+    background: #F0F0F0;
     box-shadow: none;
     border: none;
     padding: 0;
