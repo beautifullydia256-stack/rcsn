@@ -65,6 +65,7 @@ const TeacherExamResultsClassPage = lazyWithRetry(() => import('./pages/teacher/
 const TeacherExamResultsSubjectPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsSubjectPage'));
 const TeacherAttendancePage = lazyWithRetry(() => import('./pages/teacher/attendance/AttendancePage'));
 const TeacherTimetablePage = lazyWithRetry(() => import('./pages/teacher/timetable/TimetablePage'));
+const TeacherGradingSystemPage = lazyWithRetry(() => import('./pages/teacher/grading-system/GradingSystemPage'));
 const TeacherAiPlannerPage = lazyWithRetry(() => import('./pages/teacher/ai-planner/AiPlannerPage'));
 const TeacherAssignmentsPage = lazyWithRetry(() => import('./pages/teacher/assignments/AssignmentsPage'));
 const TeacherResourcesPage = lazyWithRetry(() => import('./pages/teacher/resources/ResourcesPage'));
@@ -154,6 +155,7 @@ function App() {
                   <Route path="exam-results/class/:classEncoded" element={<TeacherExamResultsClassPage />} />
                   <Route path="attendance" element={<TeacherAttendancePage />} />
                   <Route path="timetable" element={<TeacherTimetablePage />} />
+                  <Route path="grading-system" element={<TeacherGradingSystemPage />} />
                   <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
                   <Route path="assignments" element={<TeacherAssignmentsPage />} />
                   <Route path="resources" element={<TeacherResourcesPage />} />
