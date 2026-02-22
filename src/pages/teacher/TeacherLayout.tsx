@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from "react";
-import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -13,6 +13,7 @@ import {
   Sun,
   Moon,
   ChevronRight,
+  ChevronDown,
   GraduationCap,
   ChevronLeft,
   LogOut,
@@ -20,6 +21,7 @@ import {
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
+import { useTeacherContext } from "./useTeacherContext";
 
 // Prefetch route chunks on hover so navigation feels instant
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
@@ -66,11 +68,31 @@ function NavLinkStyle({
 
 export default function TeacherLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const user = useAuthStore((s) => s.user);
   const { setUser, setRole, setSchoolId } = useAuthStore();
+  const { classesWithSubjects } = useTeacherContext();
   const [searchQ, setSearchQ] = useState("");
+  const [examResultsOpen, setExamResultsOpen] = useState(false);
+  const [openClass, setOpenClass] = useState<string | null>(null);
+
+  const isExamResultsArea = location.pathname.startsWith("/dashboard/teacher/exam-results");
+  useEffect(() => {
+    if (isExamResultsArea) setExamResultsOpen(true);
+  }, [isExamResultsArea]);
+  // When on class/subject URL, expand that class in the sidebar
+  useEffect(() => {
+    const match = location.pathname.match(/^\/dashboard\/teacher\/exam-results\/class\/([^/]+)(?:\/subject\/[^/]+)?/);
+    if (match) {
+      try {
+        setOpenClass(decodeURIComponent(match[1]));
+      } catch {
+        setOpenClass(null);
+      }
+    }
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -146,9 +168,75 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/classes" icon={BookOpen} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[2])}>
             Classes
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/teacher/exam-results" icon={FileCheck} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[3])}>
-            Exam Results
-          </NavLinkStyle>
+          <div className="space-y-0.5">
+            <button
+              type="button"
+              onClick={() => setExamResultsOpen((o) => !o)}
+              className={`ac-sidebar-nav-item w-full text-left flex items-center ${
+                isExamResultsArea ? "ac-sidebar-nav-item-active" : ""
+              }`}
+            >
+              <FileCheck className="h-5 w-5 flex-shrink-0 [color:inherit]" />
+              <span className="flex-1">Exam Results</span>
+              {examResultsOpen ? (
+                <ChevronDown className="h-4 w-4 flex-shrink-0 opacity-80" />
+              ) : (
+                <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />
+              )}
+            </button>
+            {examResultsOpen && classesWithSubjects.length > 0 && (
+              <div className="pl-6 pr-2 py-1 space-y-0.5 border-l-2 border-white/10 ml-5">
+                {classesWithSubjects.map((c) => (
+                  <div key={c.class_name}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenClass((prev) => (prev === c.class_name ? null : c.class_name))}
+                      className="ac-sidebar-nav-item w-full text-left flex items-center py-1.5 px-2 rounded-md text-sm"
+                    >
+                      <ChevronRight
+                        className={`h-4 w-4 flex-shrink-0 transition-transform ${
+                          openClass === c.class_name ? "rotate-90" : ""
+                        }`}
+                      />
+                      <span className="truncate">{c.class_name}</span>
+                    </button>
+                    {openClass === c.class_name && c.subjects.length > 0 && (
+                      <div className="pl-4 py-1 space-y-0.5">
+                        {c.subjects.map((sub) => (
+                          <NavLink
+                            key={sub}
+                            to={`/dashboard/teacher/exam-results/class/${encodeURIComponent(c.class_name)}/subject/${encodeURIComponent(sub)}`}
+                            className={({ isActive }) =>
+                              `block py-1.5 px-2 rounded-md text-sm truncate ac-text-secondary hover:ac-text-primary ${
+                                isActive ? "ac-sidebar-nav-item-active" : ""
+                              }`
+                            }
+                            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[3])}
+                          >
+                            {sub}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <NavLink
+                  to="/dashboard/teacher/exam-results"
+                  end
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 py-1.5 px-2 rounded-md text-sm ac-text-muted hover:ac-text-primary ${isActive ? "ac-sidebar-nav-item-active" : ""}`
+                  }
+                >
+                  <span>All classes (cards)</span>
+                </NavLink>
+              </div>
+            )}
+            {examResultsOpen && classesWithSubjects.length === 0 && (
+              <div className="pl-6 py-1 border-l-2 border-white/10 ml-5">
+                <span className="text-xs ac-text-muted px-2">No classes assigned</span>
+              </div>
+            )}
+          </div>
           <NavLinkStyle to="/dashboard/teacher/attendance" icon={ClipboardList} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}>
             Attendance
           </NavLinkStyle>

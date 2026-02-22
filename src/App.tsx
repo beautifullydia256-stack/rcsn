@@ -62,6 +62,7 @@ const TeacherStudentsPage = lazyWithRetry(() => import('./pages/teacher/students
 const TeacherClassesPage = lazyWithRetry(() => import('./pages/teacher/classes/ClassesPage'));
 const TeacherExamResultsPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsPage'));
 const TeacherExamResultsClassPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsClassPage'));
+const TeacherExamResultsSubjectPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsSubjectPage'));
 const TeacherAttendancePage = lazyWithRetry(() => import('./pages/teacher/attendance/AttendancePage'));
 const TeacherTimetablePage = lazyWithRetry(() => import('./pages/teacher/timetable/TimetablePage'));
 const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
@@ -144,6 +145,7 @@ function App() {
                   <Route path="students" element={<TeacherStudentsPage />} />
                   <Route path="classes" element={<TeacherClassesPage />} />
                   <Route path="exam-results" element={<TeacherExamResultsPage />} />
+                  <Route path="exam-results/class/:classEncoded/subject/:subjectEncoded" element={<TeacherExamResultsSubjectPage />} />
                   <Route path="exam-results/class/:classEncoded" element={<TeacherExamResultsClassPage />} />
                   <Route path="attendance" element={<TeacherAttendancePage />} />
                   <Route path="timetable" element={<TeacherTimetablePage />} />
