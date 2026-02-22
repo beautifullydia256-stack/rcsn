@@ -16,14 +16,14 @@
 .accountant-glass:not([data-theme]) {
   --ac-cpu-white: #F0F0F0;
   --ac-page-bg: #F0F0F0;
-  --ac-card-bg: rgba(240, 240, 240, 0.75);
-  --ac-card-bg-fallback: #F0F0F0;
+  --ac-card-bg: rgba(255, 255, 255, 0.92);
+  --ac-card-bg-fallback: #FAFAFA;
   --ac-text-primary: #1F2937;
   --ac-text-secondary: rgba(31, 41, 55, 0.7);
   --ac-text-muted: rgba(31, 41, 55, 0.5);
-  --ac-border: rgba(0, 0, 0, 0.07);
-  --ac-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
-  --ac-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --ac-border: rgba(0, 0, 0, 0.08);
+  --ac-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 4px 12px -2px rgba(0, 0, 0, 0.08), 0 8px 24px -4px rgba(0, 0, 0, 0.06);
+  --ac-shadow-strong: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 10px 20px -5px rgba(0, 0, 0, 0.1), 0 20px 40px -10px rgba(0, 0, 0, 0.08);
   --ac-chart-grid: #E8E8E8;
   --ac-chart-axis: #64748b;
   --ac-chart-ref-line: #94a3b8;
