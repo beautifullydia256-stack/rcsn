@@ -220,15 +220,6 @@ export default function TeacherLayout() {
                     )}
                   </div>
                 ))}
-                <NavLink
-                  to="/dashboard/teacher/exam-results"
-                  end
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 py-1.5 px-2 rounded-md text-sm ac-text-muted hover:ac-text-primary ${isActive ? "ac-sidebar-nav-item-active" : ""}`
-                  }
-                >
-                  <span>All classes (cards)</span>
-                </NavLink>
               </div>
             )}
             {examResultsOpen && classesWithSubjects.length === 0 && (

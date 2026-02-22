@@ -281,7 +281,7 @@ export default function ExamResultsSubjectPage() {
                           : calculateGrade(marksNum, total);
                         return (
                           <tr key={stu.student_id} className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-bg-muted)]/50">
-                            <td className="p-2 font-medium">{stu.name}{stu.admission_number ? ` (${stu.admission_number})` : ''}</td>
+                            <td className="p-2 font-medium">{stu.name}</td>
                             <td className="p-2">
                               <input
                                 type="number"
