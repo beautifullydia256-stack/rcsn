@@ -3,19 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useTeacherContext } from '../useTeacherContext';
-import { Save } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
-type AttendanceRow = { attendance_id?: string; student_id: string; present: boolean };
+type AttendanceRow = { student_id: string; present: boolean };
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function TeacherAttendancePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { schoolId, teacherId, classNames, isLoading: ctxLoading } = useTeacherContext();
   const [selectedClass, setSelectedClass] = useState('');
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const selectedDate = todayISO();
   const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass],
@@ -67,13 +72,15 @@ export default function TeacherAttendancePage() {
 
   const saveAllMutation = useMutation({
     mutationFn: async () => {
-      if (!schoolId || !teacherId || !selectedClass || !selectedDate) throw new Error('Missing context');
+      setSaveError(null);
+      if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
+      const date = todayISO();
       const rows = Object.entries(localPresent).map(([student_id, present]) => ({
         school_id: schoolId,
         class_name: selectedClass,
         student_id,
         teacher_id: teacherId,
-        date: selectedDate,
+        date,
         present,
       }));
       const { error } = await supabase.from('student_attendance').upsert(rows, {
@@ -86,7 +93,12 @@ export default function TeacherAttendancePage() {
         queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
       });
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 2000);
+      setSaveError(null);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    },
+    onError: (err: Error) => {
+      setSaveError(err.message || 'Failed to save attendance');
+      console.error('Attendance save error:', err);
     },
   });
 
@@ -151,12 +163,10 @@ export default function TeacherAttendancePage() {
             </div>
             <div>
               <label className="block text-sm font-medium ac-text-muted mb-1">Date</label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg)] px-3 py-2 ac-text-primary"
-              />
+              <div className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg-muted)] px-3 py-2 ac-text-primary min-w-[140px]">
+                Today — {new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </div>
+              <p className="text-xs ac-text-muted mt-1">Attendance can only be marked for today.</p>
             </div>
           </div>
 
@@ -176,6 +186,18 @@ export default function TeacherAttendancePage() {
             <p className="ac-text-muted">No active students in this class.</p>
           )}
 
+          {saveSuccess && (
+            <div className="flex items-center gap-2 rounded-xl border border-green-500/40 bg-green-500/20 px-4 py-3 text-green-800 dark:text-green-200 text-sm font-medium">
+              <CheckCircle className="w-5 h-5 flex-shrink-0" />
+              <span>Attendance saved successfully.</span>
+            </div>
+          )}
+          {saveError && (
+            <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-200 text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
           {selectedClass && !isLoading && students.length > 0 && (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,12 +206,19 @@ export default function TeacherAttendancePage() {
                   type="button"
                   onClick={() => saveAllMutation.mutate()}
                   disabled={saveAllMutation.isPending || Object.keys(localPresent).length === 0}
-                  className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                    saveSuccess
+                      ? 'bg-green-600 text-white border border-green-500'
+                      : 'ac-glass-btn'
+                  }`}
                 >
                   {saveAllMutation.isPending ? (
                     <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                   ) : saveSuccess ? (
-                    <>Saved</>
+                    <>
+                      <CheckCircle className="w-4 h-4" />
+                      Saved
+                    </>
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
