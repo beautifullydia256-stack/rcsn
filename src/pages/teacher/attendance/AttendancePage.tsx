@@ -166,7 +166,6 @@ export default function TeacherAttendancePage() {
               <div className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg-muted)] px-3 py-2 ac-text-primary min-w-[140px]">
                 Today — {new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              <p className="text-xs ac-text-muted mt-1">Attendance can only be marked for today.</p>
             </div>
           </div>
 
