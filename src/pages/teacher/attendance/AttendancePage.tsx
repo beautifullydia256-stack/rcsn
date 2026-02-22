@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useTeacherContext } from '../useTeacherContext';
+import { Save } from 'lucide-react';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
 type AttendanceRow = { attendance_id?: string; student_id: string; present: boolean };
@@ -10,9 +11,11 @@ type AttendanceRow = { attendance_id?: string; student_id: string; present: bool
 export default function TeacherAttendancePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { schoolId, classNames, isLoading: ctxLoading } = useTeacherContext();
+  const { schoolId, teacherId, classNames, isLoading: ctxLoading } = useTeacherContext();
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [localPresent, setLocalPresent] = useState<Record<string, boolean>>({});
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   const { data: students = [], isLoading: studentsLoading } = useQuery({
     queryKey: ['teacher', 'attendance', 'students', schoolId ?? '', selectedClass],
@@ -36,48 +39,61 @@ export default function TeacherAttendancePage() {
       if (!schoolId || !selectedClass || !selectedDate) return [];
       const { data } = await supabase
         .from('student_attendance')
-        .select('attendance_id, student_id, present')
+        .select('student_id, present')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
-        .eq('attendance_date', selectedDate);
+        .eq('date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
     enabled: !!schoolId && !!selectedClass && !!selectedDate,
   });
 
-  const upsertAttendance = useMutation({
-    mutationFn: async ({
-      studentId,
-      present,
-    }: {
-      studentId: string;
-      present: boolean;
-    }) => {
-      if (!schoolId || !selectedClass || !selectedDate) throw new Error('Missing context');
-      const payload = {
+  const attendanceByStudent = useMemo(
+    () => new Map(existingAttendance.map((a) => [a.student_id, a.present])),
+    [existingAttendance]
+  );
+
+  useEffect(() => {
+    if (students.length === 0) {
+      setLocalPresent({});
+      return;
+    }
+    const next: Record<string, boolean> = {};
+    students.forEach((s) => {
+      next[s.student_id] = attendanceByStudent.get(s.student_id) ?? false;
+    });
+    setLocalPresent(next);
+  }, [students, attendanceByStudent]);
+
+  const saveAllMutation = useMutation({
+    mutationFn: async () => {
+      if (!schoolId || !teacherId || !selectedClass || !selectedDate) throw new Error('Missing context');
+      const rows = Object.entries(localPresent).map(([student_id, present]) => ({
         school_id: schoolId,
         class_name: selectedClass,
-        student_id: studentId,
-        attendance_date: selectedDate,
+        student_id,
+        teacher_id: teacherId,
+        date: selectedDate,
         present,
-      };
-      const { error } = await supabase
-        .from('student_attendance')
-        .upsert(payload, { onConflict: 'student_id,attendance_date' });
+      }));
+      const { error } = await supabase.from('student_attendance').upsert(rows, {
+        onConflict: 'student_id,date',
+      });
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ['teacher', 'attendance', 'records', schoolId ?? '', selectedClass, selectedDate],
       });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
     },
   });
 
-  const attendanceByStudent = new Map(existingAttendance.map((a) => [a.student_id, a.present]));
   const isLoading = ctxLoading || studentsLoading || attendanceLoading;
-
+  const presentFor = (studentId: string) => localPresent[studentId] ?? false;
   const setPresent = (studentId: string, present: boolean) => {
-    upsertAttendance.mutate({ studentId, present });
+    setLocalPresent((prev) => ({ ...prev, [studentId]: present }));
   };
 
   return (
@@ -161,53 +177,74 @@ export default function TeacherAttendancePage() {
           )}
 
           {selectedClass && !isLoading && students.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-[var(--ac-border)] ac-text-muted text-sm">
-                    <th className="p-3 font-medium">Name</th>
-                    <th className="p-3 font-medium">Admission No.</th>
-                    <th className="p-3 font-medium text-center">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="ac-text-primary">
-                  {students.map((s) => {
-                    const present = attendanceByStudent.get(s.student_id) ?? true;
-                    return (
-                      <tr key={s.student_id} className="border-b border-[var(--ac-border)] last:border-0">
-                        <td className="p-3">{s.name}</td>
-                        <td className="p-3">{s.admission_number ?? '—'}</td>
-                        <td className="p-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              type="button"
-                              role="switch"
-                              aria-checked={present}
-                              aria-label={present ? 'Present' : 'Absent'}
-                              disabled={upsertAttendance.isPending}
-                              onClick={() => setPresent(s.student_id, !present)}
-                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ac-focus)] focus:ring-offset-2 focus:ring-offset-[var(--ac-bg)] disabled:cursor-not-allowed disabled:opacity-50 ${
-                                present ? 'bg-green-600' : 'bg-[var(--ac-border)]'
-                              }`}
-                            >
-                              <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-                                  present ? 'translate-x-6' : 'translate-x-1'
+            <>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="ac-text-muted text-sm">Toggle each student to Present. Default is Absent.</p>
+                <button
+                  type="button"
+                  onClick={() => saveAllMutation.mutate()}
+                  disabled={saveAllMutation.isPending || Object.keys(localPresent).length === 0}
+                  className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {saveAllMutation.isPending ? (
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  ) : saveSuccess ? (
+                    <>Saved</>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save attendance
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-[var(--ac-border)] ac-text-muted text-sm">
+                      <th className="p-3 font-medium">Name</th>
+                      <th className="p-3 font-medium">Admission No.</th>
+                      <th className="p-3 font-medium text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="ac-text-primary">
+                    {students.map((s) => {
+                      const present = presentFor(s.student_id);
+                      return (
+                        <tr key={s.student_id} className="border-b border-[var(--ac-border)] last:border-0">
+                          <td className="p-3">{s.name}</td>
+                          <td className="p-3">{s.admission_number ?? '—'}</td>
+                          <td className="p-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={present}
+                                aria-label={present ? 'Present' : 'Absent'}
+                                onClick={() => setPresent(s.student_id, !present)}
+                                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ac-focus)] focus:ring-offset-2 focus:ring-offset-[var(--ac-bg)] ${
+                                  present ? 'bg-green-600' : 'bg-[var(--ac-border)]'
                                 }`}
-                                aria-hidden
-                              />
-                            </button>
-                            <span className="text-sm ac-text-muted min-w-[4rem]">
-                              {present ? 'Present' : 'Absent'}
-                            </span>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                              >
+                                <span
+                                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                                    present ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                  aria-hidden
+                                />
+                              </button>
+                              <span className="text-sm ac-text-muted min-w-[4rem]">
+                                {present ? 'Present' : 'Absent'}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       )}
