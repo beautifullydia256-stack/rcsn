@@ -47,7 +47,7 @@ export default function TeacherAttendancePage() {
         .select('student_id, present')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
-        .eq('date', selectedDate);
+        .eq('attendance_date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
     enabled: !!schoolId && !!selectedClass && !!selectedDate,
@@ -74,17 +74,17 @@ export default function TeacherAttendancePage() {
     mutationFn: async () => {
       setSaveError(null);
       if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
-      const date = todayISO();
+      const attendanceDate = todayISO();
       const rows = Object.entries(localPresent).map(([student_id, present]) => ({
         school_id: schoolId,
         class_name: selectedClass,
         student_id,
         teacher_id: teacherId,
-        date,
+        attendance_date: attendanceDate,
         present,
       }));
       const { error } = await supabase.from('student_attendance').upsert(rows, {
-        onConflict: 'student_id,date',
+        onConflict: 'student_id,attendance_date',
       });
       if (error) throw error;
     },
