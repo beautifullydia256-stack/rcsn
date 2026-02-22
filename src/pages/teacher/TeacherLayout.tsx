@@ -17,6 +17,10 @@ import {
   GraduationCap,
   ChevronLeft,
   LogOut,
+  Sparkles,
+  FileText,
+  Book,
+  MessageSquare,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -35,6 +39,11 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./exam-results/ExamResultsPage"),
   () => import("./attendance/AttendancePage"),
   () => import("./timetable/TimetablePage"),
+  () => import("./ai-planner/AiPlannerPage"),
+  () => import("./assignments/AssignmentsPage"),
+  () => import("./resources/ResourcesPage"),
+  () => import("./messages/MessagesPage"),
+  () => import("./notifications/NotificationsPage"),
   () => import("./settings/SettingsPage"),
 ];
 
@@ -162,11 +171,11 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher" end icon={LayoutDashboard} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[0])}>
             Dashboard
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/teacher/students" icon={Users} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}>
-            Students
-          </NavLinkStyle>
           <NavLinkStyle to="/dashboard/teacher/classes" icon={BookOpen} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[2])}>
-            Classes
+            My Classes
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/students" icon={Users} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}>
+            My Students
           </NavLinkStyle>
           <div className="space-y-0.5">
             <button
@@ -234,7 +243,22 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/timetable" icon={Calendar} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}>
             Timetable
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/teacher/settings" icon={Settings} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}>
+          <NavLinkStyle to="/dashboard/teacher/ai-planner" icon={Sparkles} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}>
+            AI Lesson Planner
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/assignments" icon={FileText} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}>
+            Assignments
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/resources" icon={Book} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[8])}>
+            Resources
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/messages" icon={MessageSquare} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}>
+            Messages
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/notifications" icon={Bell} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}>
+            Notifications
+          </NavLinkStyle>
+          <NavLinkStyle to="/dashboard/teacher/settings" icon={Settings} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}>
             Settings
           </NavLinkStyle>
           <div className="pt-4 mt-4 border-t border-white/10">

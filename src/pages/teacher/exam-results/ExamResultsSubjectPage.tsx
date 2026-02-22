@@ -210,18 +210,9 @@ export default function ExamResultsSubjectPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold ac-text-primary">Exam Results — {className} / {subject}</h1>
-          <p className="ac-text-muted text-sm mt-1">Select exam set, then enter marks.</p>
-        </div>
-        <button
-          type="button"
-          className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
-          onClick={() => navigate('/dashboard/teacher/exam-results')}
-        >
-          Back to Exam Results
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold ac-text-primary">Exam Results — {className} / {subject}</h1>
+        <p className="ac-text-muted text-sm mt-1">Select exam set, then enter marks.</p>
       </div>
 
       {currentTerm == null && (

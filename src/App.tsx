@@ -65,6 +65,11 @@ const TeacherExamResultsClassPage = lazyWithRetry(() => import('./pages/teacher/
 const TeacherExamResultsSubjectPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsSubjectPage'));
 const TeacherAttendancePage = lazyWithRetry(() => import('./pages/teacher/attendance/AttendancePage'));
 const TeacherTimetablePage = lazyWithRetry(() => import('./pages/teacher/timetable/TimetablePage'));
+const TeacherAiPlannerPage = lazyWithRetry(() => import('./pages/teacher/ai-planner/AiPlannerPage'));
+const TeacherAssignmentsPage = lazyWithRetry(() => import('./pages/teacher/assignments/AssignmentsPage'));
+const TeacherResourcesPage = lazyWithRetry(() => import('./pages/teacher/resources/ResourcesPage'));
+const TeacherMessagesPage = lazyWithRetry(() => import('./pages/teacher/messages/MessagesPage'));
+const TeacherNotificationsPage = lazyWithRetry(() => import('./pages/teacher/notifications/NotificationsPage'));
 const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/Dashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
@@ -149,6 +154,11 @@ function App() {
                   <Route path="exam-results/class/:classEncoded" element={<TeacherExamResultsClassPage />} />
                   <Route path="attendance" element={<TeacherAttendancePage />} />
                   <Route path="timetable" element={<TeacherTimetablePage />} />
+                  <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
+                  <Route path="assignments" element={<TeacherAssignmentsPage />} />
+                  <Route path="resources" element={<TeacherResourcesPage />} />
+                  <Route path="messages" element={<TeacherMessagesPage />} />
+                  <Route path="notifications" element={<TeacherNotificationsPage />} />
                   <Route path="settings" element={<TeacherSettingsPage />} />
                 </Route>
                 <Route path="student" element={<StudentLayout />}>

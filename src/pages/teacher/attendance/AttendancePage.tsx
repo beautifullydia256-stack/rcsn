@@ -181,28 +181,25 @@ export default function TeacherAttendancePage() {
                           <div className="flex items-center justify-center gap-2">
                             <button
                               type="button"
-                              onClick={() => setPresent(s.student_id, true)}
+                              role="switch"
+                              aria-checked={present}
+                              aria-label={present ? 'Present' : 'Absent'}
                               disabled={upsertAttendance.isPending}
-                              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                                present
-                                  ? 'bg-green-600 text-white'
-                                  : 'ac-glass-btn-secondary ac-text-primary'
+                              onClick={() => setPresent(s.student_id, !present)}
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--ac-focus)] focus:ring-offset-2 focus:ring-offset-[var(--ac-bg)] disabled:cursor-not-allowed disabled:opacity-50 ${
+                                present ? 'bg-green-600' : 'bg-[var(--ac-border)]'
                               }`}
                             >
-                              Present
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                                  present ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                                aria-hidden
+                              />
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setPresent(s.student_id, false)}
-                              disabled={upsertAttendance.isPending}
-                              className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                                !present
-                                  ? 'bg-red-600 text-white'
-                                  : 'ac-glass-btn-secondary ac-text-primary'
-                              }`}
-                            >
-                              Absent
-                            </button>
+                            <span className="text-sm ac-text-muted min-w-[4rem]">
+                              {present ? 'Present' : 'Absent'}
+                            </span>
                           </div>
                         </td>
                       </tr>
