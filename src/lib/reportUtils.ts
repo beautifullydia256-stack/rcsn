@@ -8,14 +8,13 @@ export interface GradeScale {
   remark: string;
 }
 
-// Ugandan grading system (secondary / O-Level style)
+// Ugandan grading system (secondary / O-Level style) – A to E only (no F)
 export const UGANDA_GRADE_SCALE: GradeScale[] = [
   { min: 80, max: 100, grade: 'A', points: 6, remark: 'Excellent' },
   { min: 70, max: 79, grade: 'B', points: 5, remark: 'Very Good' },
   { min: 60, max: 69, grade: 'C', points: 4, remark: 'Good' },
   { min: 50, max: 59, grade: 'D', points: 3, remark: 'Pass' },
-  { min: 40, max: 49, grade: 'E', points: 2, remark: 'Fair' },
-  { min: 0, max: 39, grade: 'F', points: 1, remark: 'Fail' }
+  { min: 0, max: 49, grade: 'E', points: 1, remark: 'Fail' }
 ];
 
 // Primary school Subject Grade Boundaries (D1–F9) – used in report templates
@@ -46,7 +45,7 @@ export function calculateGrade(marks: number, totalMarks: number): { grade: stri
     percentage >= scale.min && percentage <= scale.max
   );
   
-  return gradeInfo || { grade: 'F', points: 1, remark: 'Fail' };
+  return gradeInfo || { grade: 'E', points: 1, remark: 'Fail' };
 }
 
 export function calculateDivision(average: number): string {

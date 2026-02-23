@@ -63,7 +63,7 @@ export async function createMissedExamRecordsForNewStudent(
       subject: exam.subject,
       marks_obtained: 0,
       total_marks: 100,
-      grade: 'F',
+      grade: 'E',
       remarks: 'Missed exam - student added after exam period'
     }));
 
@@ -164,7 +164,7 @@ export async function backfillMissingExamResultsForClass(
           subject: exam.subject,
           marks_obtained: 0,
           total_marks: 100,
-          grade: 'F',
+          grade: 'E',
           remarks: 'Missed exam - backfilled for consistency'
         }));
 

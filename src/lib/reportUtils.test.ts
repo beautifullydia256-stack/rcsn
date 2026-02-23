@@ -15,9 +15,9 @@ describe('reportUtils', () => {
       const { grade } = calculateGrade(80, 100);
       expect(grade).toBe('A');
     });
-    it('returns F for below 40%', () => {
+    it('returns E for below 50% (secondary scale is A–E only)', () => {
       const { grade } = calculateGrade(30, 100);
-      expect(grade).toBe('F');
+      expect(grade).toBe('E');
     });
   });
 });
