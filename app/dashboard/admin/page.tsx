@@ -172,7 +172,7 @@ export default function AdminDashboard() {
 
       {/* Footer */}
       <footer className="mt-12 py-6 text-center text-sm text-gray-500">
-        <p>© 2025 PwezaCore School Management System.</p>
+        <p>© {new Date().getFullYear()} PwezaCore School Management System.</p>
       </footer>
     </>
   );

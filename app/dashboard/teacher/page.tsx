@@ -519,7 +519,7 @@ export default function TeacherDashboard() {
 
       {/* Footer */}
       <footer className="mt-12 py-6 text-center text-sm" style={{ color: 'rgba(255, 255, 255, 0.55)' }}>
-        <p>© 2025 PwezaCore School Management System. Powered by AI.</p>
+        <p>© {new Date().getFullYear()} PwezaCore School Management System. Powered by AI.</p>
       </footer>
     </>
   );

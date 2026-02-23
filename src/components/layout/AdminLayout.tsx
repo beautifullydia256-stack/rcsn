@@ -1,5 +1,5 @@
 import { Suspense, useState, useEffect, useRef } from 'react';
-import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -593,11 +593,11 @@ export default function AdminLayout() {
           </div>
           <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">
             <div className="ac-text-secondary flex items-center justify-between text-sm">
-              <span>Copyright © 2025 PwezaCore</span>
+              <span>Copyright © {new Date().getFullYear()} PwezaCore</span>
               <div className="flex items-center gap-6">
-                <a href="#" className="hover:opacity-100 opacity-80">Privacy Policy</a>
-                <a href="#" className="hover:opacity-100 opacity-80">Terms and conditions</a>
-                <a href="#" className="hover:opacity-100 opacity-80">Contact</a>
+                <Link to="/privacy-policy" className="hover:opacity-100 opacity-80">Privacy Policy</Link>
+                <Link to="/affiliate-terms" className="hover:opacity-100 opacity-80">Terms and conditions</Link>
+                <Link to="/contact" className="hover:opacity-100 opacity-80">Contact</Link>
               </div>
             </div>
           </footer>
