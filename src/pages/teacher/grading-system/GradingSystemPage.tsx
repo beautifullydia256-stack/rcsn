@@ -17,6 +17,8 @@ import {
   Trash2,
   MessageSquare,
   Users,
+  Save,
+  X,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
@@ -158,6 +160,31 @@ export default function GradingSystemPage() {
     onSuccess: invalidate,
   });
 
+  const updatePrimaryScaleRow = useMutation({
+    mutationFn: async ({ id, grade_code, min_pct, max_pct }: { id: string; grade_code: string; min_pct: string; max_pct: string }) => {
+      const { error } = await supabase.from('grading_scale').update({ grade_code, min_pct, max_pct }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deletePrimaryScaleRow = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('grading_scale').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const addPrimaryScaleRow = useMutation({
+    mutationFn: async ({ grade_code, min_pct, max_pct }: { grade_code: string; min_pct: string; max_pct: string }) => {
+      if (!schoolId) throw new Error('No school');
+      const { error } = await supabase.from('grading_scale').insert({ school_id: schoolId, grade_code, min_pct, max_pct });
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
   const copyDefaultSecondaryScale = useMutation({
     mutationFn: async () => {
       if (!schoolId) throw new Error('No school');
@@ -265,6 +292,13 @@ export default function GradingSystemPage() {
                   </button>
                 </div>
               )}
+              {primarySchoolRows.length > 0 && (
+                <PrimaryScaleAddRow
+                  onAdd={addPrimaryScaleRow.mutate}
+                  isPending={addPrimaryScaleRow.isPending}
+                  onSuccess={() => addPrimaryScaleRow.reset()}
+                />
+              )}
               <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
                 <table className="w-full text-left text-sm">
                   <thead>
@@ -272,22 +306,24 @@ export default function GradingSystemPage() {
                       <th className="p-3 font-medium">Grade</th>
                       <th className="p-3 font-medium">Marks (%)</th>
                       <th className="p-3 font-medium">Remark</th>
+                      {primarySchoolRows.length > 0 && <th className="p-3 font-medium w-24">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="ac-text-primary">
                     {displayPrimaryScale.map((row) => (
-                      <tr key={row.grade_code || row.id || row.min_pct} className="border-b border-[var(--ac-border)] last:border-0">
-                        <td className="p-3 font-medium">{row.grade_code}</td>
-                        <td className="p-3">{row.min_pct} – {row.max_pct}</td>
-                        <td className="p-3">{row.grade_code === 'F9' ? 'Fail' : 'Pass'}</td>
-                      </tr>
+                      <PrimaryScaleRow
+                        key={row.grade_code || row.id || row.min_pct}
+                        row={row}
+                        isSchoolRow={!!(row.id && primarySchoolRows.length > 0)}
+                        onUpdate={updatePrimaryScaleRow.mutate}
+                        onDelete={deletePrimaryScaleRow.mutate}
+                        isUpdating={updatePrimaryScaleRow.isPending}
+                        isDeleting={deletePrimaryScaleRow.isPending}
+                      />
                     ))}
                   </tbody>
                 </table>
               </div>
-              {(primarySchoolRows.length > 0 || primaryDefaultRows.length > 0) && (
-                <p className="mt-2 text-xs ac-text-muted">To add, edit or remove bands, your school admin can manage the scale in Admin settings, or we can add inline edit here in a future update.</p>
-              )}
             </>
           )}
         </div>
@@ -374,6 +410,134 @@ export default function GradingSystemPage() {
         </div>
       )}
     </motion.div>
+  );
+}
+
+function PrimaryScaleAddRow({
+  onAdd,
+  isPending,
+  onSuccess,
+}: {
+  onAdd: (v: { grade_code: string; min_pct: string; max_pct: string }) => void;
+  isPending: boolean;
+  onSuccess: () => void;
+}) {
+  const [grade_code, setGradeCode] = useState('');
+  const [min_pct, setMinPct] = useState('');
+  const [max_pct, setMaxPct] = useState('');
+  const primaryGrades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
+  const handleAdd = () => {
+    if (!grade_code.trim() || min_pct === '' || max_pct === '') return;
+    onAdd({ grade_code: grade_code.trim(), min_pct, max_pct });
+    setGradeCode('');
+    setMinPct('');
+    setMaxPct('');
+    onSuccess();
+  };
+  return (
+    <div className="mb-4 p-4 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)]">
+      <h3 className="text-sm font-medium ac-text-primary mb-3">Add grade band</h3>
+      <div className="flex flex-wrap gap-3 items-end">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs ac-text-muted">Grade</span>
+          <select value={grade_code} onChange={(e) => setGradeCode(e.target.value)} className="ac-input rounded-lg px-3 py-2 w-24">
+            <option value="">Select</option>
+            {primaryGrades.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs ac-text-muted">Min %</span>
+          <input type="number" min={0} max={100} value={min_pct} onChange={(e) => setMinPct(e.target.value)} placeholder="0" className="ac-input rounded-lg px-3 py-2 w-20" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs ac-text-muted">Max %</span>
+          <input type="number" min={0} max={100} value={max_pct} onChange={(e) => setMaxPct(e.target.value)} placeholder="100" className="ac-input rounded-lg px-3 py-2 w-20" />
+        </label>
+        <button type="button" onClick={handleAdd} disabled={isPending || !grade_code.trim() || min_pct === '' || max_pct === ''} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
+          <Plus className="w-4 h-4" /> Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PrimaryScaleRow({
+  row,
+  isSchoolRow,
+  onUpdate,
+  onDelete,
+  isUpdating,
+  isDeleting,
+}: {
+  row: { id?: string; grade_code: string; min_pct: string; max_pct: string };
+  isSchoolRow: boolean;
+  onUpdate: (v: { id: string; grade_code: string; min_pct: string; max_pct: string }) => void;
+  onDelete: (id: string) => void;
+  isUpdating: boolean;
+  isDeleting: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [grade_code, setGradeCode] = useState(row.grade_code);
+  const [min_pct, setMinPct] = useState(row.min_pct);
+  const [max_pct, setMaxPct] = useState(row.max_pct);
+  const primaryGrades = ['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9'];
+
+  const save = () => {
+    if (row.id) onUpdate({ id: row.id, grade_code, min_pct, max_pct });
+    setEditing(false);
+  };
+  const cancel = () => {
+    setGradeCode(row.grade_code);
+    setMinPct(row.min_pct);
+    setMaxPct(row.max_pct);
+    setEditing(false);
+  };
+
+  return (
+    <tr className="border-b border-[var(--ac-border)] last:border-0">
+      <td className="p-3 font-medium">
+        {editing && row.id ? (
+          <select value={grade_code} onChange={(e) => setGradeCode(e.target.value)} className="ac-input rounded px-2 py-1 text-sm w-20">
+            {primaryGrades.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        ) : (
+          row.grade_code
+        )}
+      </td>
+      <td className="p-3">
+        {editing && row.id ? (
+          <span className="flex items-center gap-1">
+            <input type="number" min={0} max={100} value={min_pct} onChange={(e) => setMinPct(e.target.value)} className="ac-input w-14 rounded px-2 py-1 text-sm" />
+            <span className="ac-text-muted">–</span>
+            <input type="number" min={0} max={100} value={max_pct} onChange={(e) => setMaxPct(e.target.value)} className="ac-input w-14 rounded px-2 py-1 text-sm" />
+          </span>
+        ) : (
+          `${row.min_pct} – ${row.max_pct}`
+        )}
+      </td>
+      <td className="p-3">{row.grade_code === 'F9' ? 'Fail' : 'Pass'}</td>
+      {isSchoolRow && (
+        <td className="p-3 w-24">
+          {row.id ? (
+            editing ? (
+              <span className="flex items-center gap-1">
+                <button type="button" onClick={save} disabled={isUpdating} className="p-1.5 rounded bg-blue-600 text-white hover:bg-blue-700" title="Save"><Save className="w-4 h-4" /></button>
+                <button type="button" onClick={cancel} className="p-1.5 rounded bg-[var(--ac-border)] hover:opacity-80" title="Cancel"><X className="w-4 h-4" /></button>
+              </span>
+            ) : (
+              <span className="flex items-center gap-1">
+                <button type="button" onClick={() => setEditing(true)} className="p-1.5 rounded hover:bg-[var(--ac-border)]" title="Edit"><Pencil className="w-4 h-4" /></button>
+                <button type="button" onClick={() => row.id && window.confirm('Remove this grade band?') && onDelete(row.id)} disabled={isDeleting} className="p-1.5 rounded hover:bg-red-500/20 text-red-600" title="Delete"><Trash2 className="w-4 h-4" /></button>
+              </span>
+            )
+          ) : null}
+        </td>
+      )}
+    </tr>
   );
 }
 
