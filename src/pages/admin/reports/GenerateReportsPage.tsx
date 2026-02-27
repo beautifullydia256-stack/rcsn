@@ -3,14 +3,14 @@
  */
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
-import { Eye, Download, FileDown, Printer } from 'lucide-react';
+import { Eye, Download, FileDown } from 'lucide-react';
 import JSZip from 'jszip';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -141,6 +141,7 @@ async function fetchStudentsWithResultsInClass(
 
 export default function GenerateReportsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTermKey, setSelectedTermKey] = useState('');
@@ -158,8 +159,8 @@ export default function GenerateReportsPage() {
   const [generationError, setGenerationError] = useState('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
-  const [showClassDownloadModal, setShowClassDownloadModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
@@ -388,32 +389,68 @@ export default function GenerateReportsPage() {
   };
 
   const handleDownloadSavedPdf = async () => {
-    if (!completedSnapshotId || !hasSavedReports) return;
+    if (!pageData?.schoolId || !selectedClass) return;
+    const examSet = getEffectiveExamSet();
+    if (!examSet) {
+      setError('');
+      setShowNoResultsModal(true);
+      return;
+    }
+    if (reportType === 'single' && !selectedStudent) {
+      setError('Please select a student');
+      return;
+    }
 
-    const snapshotId = completedSnapshotId;
-    // Production (Vercel): same-origin /api/pdf/generate. Dev: optional VITE_PDF_API_URL or localhost:3001.
     const baseUrl =
       import.meta.env.VITE_PDF_API_URL ??
       (import.meta.env.DEV ? 'http://localhost:3001' : '');
-    const reports = (generatedReports || []) as any[];
-    if (!reports.length) return;
 
-    const studentIds =
-      reportType === 'single' && selectedStudent
-        ? [selectedStudent]
-        : reports.map((r) => r.student_id).filter(Boolean);
-
-    if (!studentIds.length) return;
+    let snapshotId: string;
+    let reports: any[];
 
     setDownloadingPdf(true);
+    setDownloadPdfStatus('');
+    setGenerationError('');
+
     try {
+      if (completedSnapshotId && generatedReports.length > 0) {
+        snapshotId = completedSnapshotId;
+        reports = generatedReports as any[];
+      } else {
+        setDownloadPdfStatus('Generating reports…');
+        const term = selectedTerm || pageData.currentTerm;
+        const payload = {
+          schoolId: pageData.schoolId,
+          term: term.term,
+          year: term.year,
+          examSetId: examSet.id,
+          classNames: [selectedClass],
+          ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
+        };
+        const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
+        if (fnError) throw new Error(fnError.message || 'Save failed');
+        if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
+        snapshotId = data.snapshotId;
+        setCompletedSnapshotId(snapshotId);
+        await queryClient.invalidateQueries({ queryKey: ['admin', 'generated-reports', snapshotId] });
+        reports = await fetchGeneratedReports(snapshotId);
+        if (!reports.length) throw new Error('No reports were saved');
+      }
+
+      setDownloadPdfStatus('Preparing PDF…');
+
+      const studentIds =
+        reportType === 'single' && selectedStudent
+          ? [selectedStudent]
+          : reports.map((r) => r.student_id).filter(Boolean);
+      if (!studentIds.length) throw new Error('No students in report');
+
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           snapshotId,
           studentIds,
-          // Template: use the first report's template_id when available; API can default if null.
           templateId: reports[0]?.template_id ?? null,
         }),
       });
@@ -424,7 +461,7 @@ export default function GenerateReportsPage() {
         if (contentType.includes('application/json')) {
           errBody = await response.json().catch(() => ({}));
         } else {
-          await response.text(); // consume body
+          await response.text();
         }
         const msg =
           typeof errBody?.error === 'string'
@@ -446,9 +483,13 @@ export default function GenerateReportsPage() {
       a.download = `${filenamePrefix}_${snapshotId}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
+
+      setDownloadPdfStatus('Download started.');
+      setTimeout(() => setDownloadPdfStatus(''), 1500);
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to download PDF');
       setGeneratingStep('error');
+      setDownloadPdfStatus('');
     } finally {
       setDownloadingPdf(false);
     }
@@ -523,84 +564,6 @@ export default function GenerateReportsPage() {
   // Users can then choose "Save as PDF" in the print UI to download a real PDF.
   const downloadPdfFromHtml = async (_htmlContent: string, _filename: string) => {
     window.print();
-  };
-
-  const handleDownloadSinglePdf = async () => {
-    if (!hasReportsReady) return;
-    const baseUrl =
-      import.meta.env.VITE_PDF_API_URL ??
-      (import.meta.env.DEV ? 'http://localhost:3001' : '');
-    if (previewReports.length > 0 && pageData?.schoolId && baseUrl) {
-      setDownloadingPdf(true);
-      try {
-        const reportData = previewReports[0];
-        const res = await fetch(`${baseUrl}/api/pdf/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            reportData,
-            schoolId: pageData.schoolId,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error((err as any)?.error || `PDF failed ${res.status}`);
-        }
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'report.pdf';
-        a.click();
-        window.URL.revokeObjectURL(url);
-      } catch (e: any) {
-        setGenerationError(e?.message || 'PDF download failed');
-        window.print();
-      } finally {
-        setDownloadingPdf(false);
-      }
-      return;
-    }
-    setDownloadingPdf(true);
-    try {
-      window.print();
-    } finally {
-      setDownloadingPdf(false);
-    }
-  };
-
-  const handleDownloadClassCombinedPdf = async () => {
-    if (!hasReportsReady) return;
-    // Combined class: also just use the print dialog
-    setDownloadingPdf(true);
-    try {
-      window.print();
-    } finally {
-      setDownloadingPdf(false);
-      setShowClassDownloadModal(false);
-    }
-  };
-
-  const handleDownloadClassZip = async () => {
-    if (!hasReportsReady) return;
-    setDownloadingPdf(true);
-    try {
-      // ZIP option: we cannot build a real ZIP on the server from the SPA's domain today.
-      // For now, just open the print dialog as a graceful fallback.
-      window.print();
-    } finally {
-      setDownloadingPdf(false);
-      setShowClassDownloadModal(false);
-    }
-  };
-
-  const handleDownloadAsPdf = () => {
-    if (!hasReportsReady) return;
-    if (reportType === 'single') {
-      void handleDownloadSinglePdf();
-    } else {
-      setShowClassDownloadModal(true);
-    }
   };
 
   return (
@@ -833,38 +796,22 @@ export default function GenerateReportsPage() {
             <button
               type="button"
               onClick={handleDownloadSavedPdf}
-              disabled={!hasSavedReports || downloadingPdf}
-              title={
-                hasSavedReports
-                  ? 'Download PDF from saved snapshot (no print dialog)'
-                  : 'Generate & Save first to download from snapshot'
+              disabled={
+                downloadingPdf ||
+                saving ||
+                !selectedClass ||
+                (reportType === 'single' && !selectedStudent)
               }
+              title="Generate and save reports if needed, then download PDF"
               className="px-5 py-3 rounded-lg bg-indigo-600/90 text-white font-medium hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <FileDown className="w-4 h-4" />
-              {downloadingPdf ? 'Preparing PDF…' : 'Download PDF (Saved)'}
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadAsPdf}
-              disabled={!hasReportsReady}
-              title={hasReportsReady ? 'Open print dialog — choose "Save as PDF" to download PDF' : 'Generate reports first'}
-              className="px-5 py-3 rounded-lg bg-red-600/90 text-white font-medium hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <FileDown className="w-4 h-4" />
-              {reportType === 'single' ? 'Download as PDF (Single)' : 'Download All as PDF (Class)'}
-            </button>
-            <button
-              type="button"
-              onClick={handlePrintReport}
-              disabled={!hasReportsReady}
-              title={hasReportsReady ? 'Print report(s)' : 'Generate reports first'}
-              className="px-5 py-3 rounded-lg bg-amber-600/90 text-white font-medium hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              <Printer className="w-4 h-4" />
-              Print Report
+              Download PDF
             </button>
           </div>
+          {downloadPdfStatus && (
+            <p className="mt-2 text-sm ac-text-secondary">{downloadPdfStatus}</p>
+          )}
 
           {/* Report Preview – from preview API (no DB writes) or from generated_reports after Generate & Save */}
           {(previewReports.length > 0 || (generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0)) && reportsToDisplay.length > 0 && (() => {
@@ -907,37 +854,6 @@ export default function GenerateReportsPage() {
             >
               OK
             </button>
-          </GlassModal>
-
-          {/* Class download mode selector – only for entire class downloads */}
-          <GlassModal
-            isOpen={showClassDownloadModal}
-            onClose={() => !downloadingPdf && setShowClassDownloadModal(false)}
-            title="Download class reports"
-            size="sm"
-            className="-mt-24"
-          >
-            <p className="ac-text-secondary mb-4">
-              How would you like to download the class reports?
-            </p>
-            <div className="space-y-3">
-              <button
-                type="button"
-                disabled={downloadingPdf}
-                onClick={() => void handleDownloadClassCombinedPdf()}
-                className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium px-4 py-3"
-              >
-                {downloadingPdf ? 'Preparing PDF…' : 'One combined PDF (all students)'}
-              </button>
-              <button
-                type="button"
-                disabled={downloadingPdf}
-                onClick={() => void handleDownloadClassZip()}
-                className="w-full rounded-xl ac-glass-btn-secondary disabled:opacity-50 font-medium px-4 py-3 ac-text-primary"
-              >
-                {downloadingPdf ? 'Preparing ZIP…' : 'ZIP with one PDF per student'}
-              </button>
-            </div>
           </GlassModal>
 
           {/* Report preview modal (same as ReportViewer) */}
