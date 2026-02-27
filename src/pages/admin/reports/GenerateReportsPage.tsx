@@ -391,7 +391,10 @@ export default function GenerateReportsPage() {
     if (!completedSnapshotId || !hasSavedReports) return;
 
     const snapshotId = completedSnapshotId;
-    const baseUrl = import.meta.env.VITE_PDF_API_URL || 'http://localhost:3001';
+    // Production (Vercel): same-origin /api/pdf/generate. Dev: optional VITE_PDF_API_URL or localhost:3001.
+    const baseUrl =
+      import.meta.env.VITE_PDF_API_URL ??
+      (import.meta.env.DEV ? 'http://localhost:3001' : '');
     const reports = (generatedReports || []) as any[];
     if (!reports.length) return;
 

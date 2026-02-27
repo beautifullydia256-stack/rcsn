@@ -66,7 +66,9 @@ export default function ReportViewer() {
         window.open(report.pdf_url, '_blank');
       } else {
         // Generate PDF on demand (should be rare)
-        const response = await fetch(`${import.meta.env.VITE_PDF_API_URL || 'http://localhost:3001'}/api/pdf/generate`, {
+        const response = await fetch(
+          `${import.meta.env.VITE_PDF_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '')}/api/pdf/generate`,
+          {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
