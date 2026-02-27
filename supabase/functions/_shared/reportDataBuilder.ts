@@ -268,7 +268,7 @@ export async function buildReportDataFromScope(
 
   const snapshotData: SnapshotRowForPersist[] = [];
   (examResults || []).forEach((result: Record<string, unknown> & { student_id: string; class_name?: string; subject?: string; marks_obtained?: number; total_marks?: number; grade?: string; remarks?: string; teacher_initials?: string; teacher_comment?: string; students?: { current_class?: string; name?: string; admission_number?: string; expected_fee_amount?: number }; exam_sets?: { name?: string; term?: number; year?: number } }) => {
-    const student = (students || []).find((s: { student_id: string }) => s.student_id === result.student_id) as { expected_fee_amount?: number } | undefined;
+    const student = (students || []).find((s: { student_id: string }) => s.student_id === result.student_id) as { expected_fee_amount?: number; stream?: string; current_stream?: string; stream_name?: string } | undefined;
     const attendance = attendanceByStudent[result.student_id];
     const studentPhoto = (studentPhotos || []).find((p: { student_id: string }) => p.student_id === result.student_id) as { photo_url?: string } | undefined;
     const expectedFee = Number(student?.expected_fee_amount || 0);
@@ -284,6 +284,9 @@ export async function buildReportDataFromScope(
     const fromDb = processedByStudent[result.student_id];
     const division = fromDb?.division ?? calculateDivision(average);
     const className = (result.class_name || (result.students as { current_class?: string })?.current_class) as string;
+    const presentDays = attendance?.presentDays ?? 0;
+    const totalDays = attendance?.totalDays ?? 0;
+    const absentDays = totalDays - presentDays;
     snapshotData.push({
       student_id: result.student_id,
       class_name: className || '',
@@ -321,6 +324,13 @@ export async function buildReportDataFromScope(
         school_email: (schoolInfo as { email?: string; contact_email?: string })?.email || (schoolInfo as { contact_email?: string })?.contact_email || '',
         school_motto: (schoolInfo as { motto?: string })?.motto || '',
         total_students_in_class: Object.keys(studentResultsByClass[className] || {}).length,
+        attendance_present_days: presentDays,
+        attendance_absent_days: absentDays,
+        attendance_total_days: totalDays,
+        next_term_begins_date: (schoolInfo as { next_term_begins_date?: string })?.next_term_begins_date ?? null,
+        student_stream: (student as { stream?: string })?.stream ?? (student as { current_stream?: string })?.current_stream ?? (student as { stream_name?: string })?.stream_name ?? '',
+        school_subtitle: (schoolInfo as { subtitle?: string })?.subtitle ?? '',
+        school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
       },
     });
   });
@@ -333,7 +343,10 @@ export async function buildReportDataFromScope(
   );
 
   const toReturn = studentIds?.length
-    ? reportDataList.filter((r: { students?: { student_id?: string }[] }) => r.students?.[0] && studentIds.includes(r.students[0].student_id as string))
+    ? reportDataList.filter((r: unknown) => {
+        const item = r as { students?: { student_id?: string }[] };
+        return item?.students?.[0] && studentIds.includes(item.students[0].student_id as string);
+      })
     : reportDataList;
 
   return { reportDataList: toReturn, snapshotRowsForPersist: snapshotData };
@@ -487,14 +500,41 @@ function oneReportFromSnapshotRows(
     return s;
   });
 
+  const frozen = frozenData as {
+    school_name?: string;
+    school_address?: string;
+    school_phone?: string;
+    school_email?: string;
+    school_motto?: string;
+    school_subtitle?: string;
+    school_pobox?: string;
+    student_name?: string;
+    admission_number?: string;
+    total_students_in_class?: number;
+    attendance_present_days?: number;
+    attendance_absent_days?: number;
+    attendance_total_days?: number;
+    next_term_begins_date?: string | null;
+    student_stream?: string;
+  };
+  const attendanceDetails =
+    frozen.attendance_total_days != null
+      ? {
+          presentDays: frozen.attendance_present_days ?? 0,
+          absentDays: frozen.attendance_absent_days ?? 0,
+          totalSchoolDays: frozen.attendance_total_days ?? 0,
+        }
+      : undefined;
   return {
     school: {
       ...school,
-      name: (frozenData as { school_name?: string }).school_name || (school?.name as string) || '',
-      address: (frozenData as { school_address?: string }).school_address || (school?.address as string) || '',
-      phone: (frozenData as { school_phone?: string }).school_phone || (school?.phone as string) || (school?.contact_phone as string) || '',
-      email: (frozenData as { school_email?: string }).school_email || (school?.email as string) || (school?.contact_email as string) || '',
-      motto: (frozenData as { school_motto?: string }).school_motto || (school?.motto as string) || '',
+      name: frozen.school_name || (school?.name as string) || '',
+      address: frozen.school_address || (school?.address as string) || '',
+      phone: frozen.school_phone || (school?.phone as string) || (school?.contact_phone as string) || '',
+      email: frozen.school_email || (school?.email as string) || (school?.contact_email as string) || '',
+      motto: frozen.school_motto || (school?.motto as string) || '',
+      subtitle: frozen.school_subtitle || (school?.subtitle as string) || '',
+      pobox: frozen.school_pobox || (school?.pobox as string) || '',
       logo_url: firstRecord.school_logo_url ?? (school?.logo_url as string) ?? null,
     },
     examSet: {
@@ -506,10 +546,14 @@ function oneReportFromSnapshotRows(
     students: [
       {
         student_id: firstRecord.student_id,
-        name: (frozenData as { student_name?: string }).student_name || '',
+        name: frozen.student_name || '',
         current_class: firstRecord.class_name,
-        admission_number: (frozenData as { admission_number?: string }).admission_number || '',
+        admission_number: frozen.admission_number || '',
         profile_photo: firstRecord.student_photo_url ?? null,
+        stream: frozen.student_stream || undefined,
+        current_stream: frozen.student_stream || undefined,
+        stream_name: frozen.student_stream || undefined,
+        next_term_begins_date: frozen.next_term_begins_date || undefined,
         results,
         subjects,
         attendance: [],
@@ -531,8 +575,9 @@ function oneReportFromSnapshotRows(
           division: firstSummaryRecord.division ?? null,
           attendancePercentage: firstSummaryRecord.attendance_percentage ?? null,
           classPosition: firstSummaryRecord.position ?? null,
-          totalStudents: (frozenData as { total_students_in_class?: number }).total_students_in_class ?? null,
+          totalStudents: frozen.total_students_in_class ?? null,
           performanceRemark: firstSummaryRecord.division || 'N/A',
+          ...(attendanceDetails && { attendanceDetails }),
         },
       },
     ],
