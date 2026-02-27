@@ -254,62 +254,66 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   <meta charset="utf-8">
   <title>Student Report - Upper Section</title>
   <style>
+    @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body { margin: 0; padding: 10mm; font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.33; color: #1e293b; background: #fff; }
-    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 6mm; }
-    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; line-height: 1.25; color: #1e293b; background: #fff; }
+    .report-page { width: 210mm; min-height: 297mm; padding: 4mm 5mm 4mm 5mm; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 2.5mm; }
+    .logo-cell { width: 100px; height: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 3px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .school-center { flex: 1; text-align: center; margin-left: 12px; }
-    .school-name { font-size: 16.5pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 4px; }
-    .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 3px; }
-    .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: #2563eb; }
-    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 5mm 0 4mm; }
-    .badge-wrap { text-align: center; margin-bottom: 4mm; }
-    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
-    .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
-    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 12px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 6mm; background: #f8fafc; min-height: 32mm; }
-    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 10.2pt; }
+    .school-center { flex: 1; text-align: center; margin-left: 8px; }
+    .school-name { font-size: 14pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.03em; color: #1e3a8a; margin-bottom: 2px; }
+    .school-subtitle { font-size: 9.5pt; color: #3b82f6; margin-bottom: 1px; }
+    .school-address { font-size: 9.5pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
+    .school-contact { font-size: 9.5pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
+    .school-motto { font-size: 8.5pt; font-style: italic; font-weight: 600; color: #2563eb; }
+    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 2mm 0 2mm; }
+    .badge-wrap { text-align: center; margin-bottom: 2mm; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
+    .exam-sub { font-size: 7pt; color: #64748b; margin-top: 1px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 8px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 2.5mm; background: #f8fafc; min-height: 22mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 9pt; }
     .student-grid strong { color: #1e3a8a; }
-    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell { width: 1.8cm; height: 2.4cm; border: 1px solid #bfdbfe; border-radius: 3px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
     .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
-    table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin-bottom: 6mm; }
-    th, td { border: 1px solid #bfdbfe; padding: 5px 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin-bottom: 2.5mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 3px 5px; }
     thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
     th { text-align: left; }
     th.tc, td.tc { text-align: center; }
     td.subj-name { font-weight: 600; color: #0f172a; }
     td.grade { font-weight: 700; color: #1e3a8a; }
-    td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
+    td.comment, td.teacher { font-size: 8.2pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6mm; font-size: 8.7pt; }
-    .summary-box { padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
+    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 2.5mm; font-size: 8pt; }
+    .summary-box { padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
     .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 6mm; font-size: 8.6pt; }
-    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 4px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
-    .grading-table .head { background: #dbeafe; padding: 5px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
-    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
-    .grading-table th, .grading-table td { padding: 4px 6px; }
+    .grading-section { margin-bottom: 2.5mm; font-size: 7.8pt; }
+    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin-bottom: 2px; color: #1e3a8a; }
+    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 6px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 3px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 7.2pt; }
+    .grading-table th, .grading-table td { padding: 2px 4px; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 6mm; font-size: 8.5pt; background: #fff; }
-    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 4px; line-height: 1.28; color: #334155; }
-    .comments-box .signature { font-size: 8pt; margin-top: 4px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; padding-top: 8px; margin-top: 8px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 8px; margin-bottom: 2mm; font-size: 7.8pt; background: #fff; }
+    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.2; color: #334155; }
+    .comments-box .signature { font-size: 7pt; margin-top: 2px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.5pt; }
     .next-term-fees strong { color: #1e3a8a; }
-    .report-footer { text-align: center; font-size: 7pt; margin-top: 6mm; padding-top: 4px; border-top: 1px solid #bfdbfe; color: #64748b; }
-    .summary-row { font-size: 9.5pt; margin-bottom: 6mm; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+    .report-footer { text-align: center; font-size: 6.5pt; margin-top: 2mm; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .summary-row { font-size: 8.5pt; margin-bottom: 2.5mm; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; background: #f8fafc; }
     .summary-row strong { color: #1e3a8a; }
-    .comments-section { font-size: 9.5pt; }
-    .comment-title { font-weight: 600; margin-bottom: 2px; color: #1e293b; }
-    .comment-text { min-height: 24px; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 4px; }
+    .comments-section { font-size: 8.5pt; }
+    .comment-title { font-weight: 600; margin-bottom: 1px; color: #1e293b; }
+    .comment-text { min-height: 18px; border-bottom: 1px solid #cbd5e1; padding-bottom: 1px; margin-bottom: 2px; }
   </style>
 </head>
 <body>
-  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
+  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
+  <div class="report-page">
   <div class="header-wrap">
     <div class="logo-cell">
       ${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
@@ -337,7 +341,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div><strong>Date:</strong> ${reportDateDisplay}</div>
     </div>
     <div class="photo-cell">
-      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
+      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="68" height="90" style="object-fit:cover;display:block;" />` : '<span style="font-size:7pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
   <table>
@@ -421,6 +425,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     </div>
   </div>
   <div class="report-footer">Generated by PwezaCore School Management System</div>
+  </div>
 </body>
 </html>`;
 }
@@ -502,138 +507,36 @@ function buildMinimalReportHTML(reportData: any): string {
   <meta charset="utf-8" />
   <title>Student Report</title>
   <style>
+    @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 12mm;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #f3f4f6;
-      color: #111827;
-    }
+    body { margin: 0; padding: 0; font-family: system-ui, sans-serif; font-size: 9pt; color: #111827; background: #fff; }
     .page {
       width: 210mm;
       min-height: 297mm;
       margin: 0 auto;
-      background: #ffffff;
-      border-radius: 6px;
-      box-shadow: 0 0 0 1px rgba(15,23,42,0.08);
-      padding: 12mm 14mm;
+      padding: 4mm 5mm;
     }
-    .school-header {
-      text-align: center;
-      margin-bottom: 10mm;
-    }
-    .school-name {
-      font-size: 20pt;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 4px;
-    }
-    .school-contact {
-      font-size: 9pt;
-      color: #4b5563;
-    }
-    .school-motto {
-      margin-top: 4px;
-      font-style: italic;
-      font-size: 9.5pt;
-      color: #374151;
-    }
-    .report-title {
-      margin: 10mm 0 6mm;
-      padding: 6px 10px;
-      background: #2563eb;
-      color: #ffffff;
-      text-align: center;
-      font-weight: 600;
-      font-size: 11pt;
-      text-transform: uppercase;
-      border-radius: 4px;
-    }
-    .two-col {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 10mm;
-    }
-    .info-block {
-      flex: 1;
-      font-size: 9.5pt;
-      line-height: 1.5;
-    }
-    .info-label {
-      font-weight: 600;
-      color: #4b5563;
-      display: inline-block;
-      min-width: 90px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 999px;
-      font-size: 8pt;
-      font-weight: 600;
-      background: #eff6ff;
-      color: #1d4ed8;
-      margin-left: 6px;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 9pt;
-      margin-bottom: 10mm;
-    }
-    th, td {
-      border: 1px solid #d1d5db;
-      padding: 5px 6px;
-    }
-    th {
-      background: #eff6ff;
-      font-weight: 600;
-      text-align: center;
-    }
-    td.text-center {
-      text-align: center;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 6px 16px;
-      font-size: 9.5pt;
-      margin-bottom: 8mm;
-    }
-    .summary-label {
-      color: #4b5563;
-    }
-    .summary-value {
-      font-weight: 600;
-      color: #111827;
-    }
-    .comments-section {
-      font-size: 9.5pt;
-    }
-    .comment-block {
-      margin-bottom: 8mm;
-    }
-    .comment-title {
-      font-weight: 600;
-      margin-bottom: 4px;
-      color: #111827;
-    }
-    .comment-box {
-      min-height: 40px;
-      border-bottom: 1px solid #d1d5db;
-      padding-bottom: 4px;
-      margin-bottom: 4px;
-      white-space: pre-wrap;
-    }
-    .footer-note {
-      margin-top: 6mm;
-      font-size: 8.5pt;
-      color: #6b7280;
-      text-align: right;
-    }
+    .school-header { text-align: center; margin-bottom: 3mm; }
+    .school-name { font-size: 14pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 2px; }
+    .school-contact { font-size: 8.5pt; color: #4b5563; }
+    .school-motto { margin-top: 2px; font-style: italic; font-size: 8.5pt; color: #374151; }
+    .report-title { margin: 3mm 0 2.5mm; padding: 4px 8px; background: #2563eb; color: #fff; text-align: center; font-weight: 600; font-size: 9.5pt; text-transform: uppercase; border-radius: 4px; }
+    .two-col { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 3mm; }
+    .info-block { flex: 1; font-size: 8.5pt; line-height: 1.35; }
+    .info-label { font-weight: 600; color: #4b5563; display: inline-block; min-width: 80px; }
+    .badge { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: 7pt; font-weight: 600; background: #eff6ff; color: #1d4ed8; margin-left: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-bottom: 3mm; }
+    th, td { border: 1px solid #d1d5db; padding: 3px 5px; }
+    th { background: #eff6ff; font-weight: 600; text-align: center; }
+    td.text-center { text-align: center; }
+    .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; font-size: 8.5pt; margin-bottom: 3mm; }
+    .summary-label { color: #4b5563; }
+    .summary-value { font-weight: 600; color: #111827; }
+    .comments-section { font-size: 8.5pt; }
+    .comment-block { margin-bottom: 3mm; }
+    .comment-title { font-weight: 600; margin-bottom: 2px; color: #111827; }
+    .comment-box { min-height: 28px; border-bottom: 1px solid #d1d5db; padding-bottom: 2px; margin-bottom: 2px; white-space: pre-wrap; }
+    .footer-note { margin-top: 3mm; font-size: 7pt; color: #6b7280; text-align: right; }
   </style>
 </head>
 <body>
@@ -818,7 +721,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '0.5in', right: '0.5in', bottom: '0.5in', left: '0.5in' },
+      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
     });
     return Buffer.from(pdf);
   } finally {
