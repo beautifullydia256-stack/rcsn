@@ -257,62 +257,62 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; height: 100%; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 9.5pt; line-height: 1.25; color: #1e293b; background: #fff; }
-    .report-page { width: 210mm; min-height: 297mm; padding: 4mm 5mm 4mm 5mm; }
-    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 2.5mm; }
-    .logo-cell { width: 100px; height: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 3px; overflow: hidden; background: #f8fafc; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
+    .report-page { width: 210mm; padding: 4mm 5mm 4mm 5mm; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
+    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .school-center { flex: 1; text-align: center; margin-left: 8px; }
-    .school-name { font-size: 14pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.03em; color: #1e3a8a; margin-bottom: 2px; }
-    .school-subtitle { font-size: 9.5pt; color: #3b82f6; margin-bottom: 1px; }
-    .school-address { font-size: 9.5pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
-    .school-contact { font-size: 9.5pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
-    .school-motto { font-size: 8.5pt; font-style: italic; font-weight: 600; color: #2563eb; }
-    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 2mm 0 2mm; }
-    .badge-wrap { text-align: center; margin-bottom: 2mm; }
-    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 8pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
-    .exam-sub { font-size: 7pt; color: #64748b; margin-top: 1px; }
-    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 8px; border: 1px solid #bfdbfe; border-radius: 6px; margin-bottom: 2.5mm; background: #f8fafc; min-height: 22mm; }
-    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 9pt; }
+    .school-center { flex: 1; text-align: center; margin-left: 12px; }
+    .school-name { font-size: 16.5pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: #2563eb; }
+    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 3mm 0 3mm; }
+    .badge-wrap { text-align: center; margin-bottom: 3mm; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
+    .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
     .student-grid strong { color: #1e3a8a; }
-    .photo-cell { width: 1.8cm; height: 2.4cm; border: 1px solid #bfdbfe; border-radius: 3px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
     .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
-    table { width: 100%; border-collapse: collapse; font-size: 8.8pt; margin-bottom: 2.5mm; }
-    th, td { border: 1px solid #bfdbfe; padding: 3px 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin-bottom: 3mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 4px 6px; }
     thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
     th { text-align: left; }
     th.tc, td.tc { text-align: center; }
     td.subj-name { font-weight: 600; color: #0f172a; }
     td.grade { font-weight: 700; color: #1e3a8a; }
-    td.comment, td.teacher { font-size: 8.2pt; color: #475569; }
+    td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 2.5mm; font-size: 8pt; }
-    .summary-box { padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
+    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 3mm; font-size: 8.7pt; }
+    .summary-box { padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
     .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 2.5mm; font-size: 7.8pt; }
-    .grading-section h3 { font-size: 8.2pt; font-weight: 600; margin-bottom: 2px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-    .grading-table { border: 1px solid #bfdbfe; border-radius: 6px; overflow: hidden; }
-    .grading-table .head { background: #dbeafe; padding: 3px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
-    .grading-table table { width: 100%; margin-bottom: 0; font-size: 7.2pt; }
-    .grading-table th, .grading-table td { padding: 2px 4px; }
+    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; }
+    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 3px; color: #1e3a8a; }
+    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 4px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
+    .grading-table th, .grading-table td { padding: 3px 5px; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 6px; padding: 6px 8px; margin-bottom: 2mm; font-size: 7.8pt; background: #fff; }
-    .comments-box h3 { font-size: 8pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.2; color: #334155; }
-    .comments-box .signature { font-size: 7pt; margin-top: 2px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.5pt; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; }
+    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 3px; line-height: 1.26; color: #334155; }
+    .comments-box .signature { font-size: 8pt; margin-top: 3px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; padding-top: 6px; margin-top: 6px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; }
     .next-term-fees strong { color: #1e3a8a; }
-    .report-footer { text-align: center; font-size: 6.5pt; margin-top: 2mm; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; }
-    .summary-row { font-size: 8.5pt; margin-bottom: 2.5mm; padding: 4px 8px; border: 1px solid #e2e8f0; border-radius: 4px; background: #f8fafc; }
+    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .summary-row { font-size: 9.5pt; margin-bottom: 3mm; padding: 5px 8px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
     .summary-row strong { color: #1e3a8a; }
-    .comments-section { font-size: 8.5pt; }
-    .comment-title { font-weight: 600; margin-bottom: 1px; color: #1e293b; }
-    .comment-text { min-height: 18px; border-bottom: 1px solid #cbd5e1; padding-bottom: 1px; margin-bottom: 2px; }
+    .comments-section { font-size: 9.5pt; }
+    .comment-title { font-weight: 600; margin-bottom: 2px; color: #1e293b; }
+    .comment-text { min-height: 20px; border-bottom: 1px solid #cbd5e1; padding-bottom: 2px; margin-bottom: 3px; }
   </style>
 </head>
 <body>
-  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:18pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
+  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
   <div class="report-page">
   <div class="header-wrap">
     <div class="logo-cell">
@@ -341,7 +341,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div><strong>Date:</strong> ${reportDateDisplay}</div>
     </div>
     <div class="photo-cell">
-      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="68" height="90" style="object-fit:cover;display:block;" />` : '<span style="font-size:7pt;color:#94a3b8">Photo</span>'}
+      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
   <table>
