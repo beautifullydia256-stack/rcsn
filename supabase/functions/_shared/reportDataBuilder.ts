@@ -57,6 +57,11 @@ function isMidTermName(name: string | null | undefined): boolean {
   return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
 }
 
+function isEotName(name: string | null | undefined): boolean {
+  const n = String(name || '').trim().toLowerCase();
+  return n.includes('end') || n.includes('eot') || n.includes('end of term');
+}
+
 /**
  * Fetch all data and compute with FULL CLASS scope. Apply studentIds filter only when building reportDataList.
  * So single-student preview still gets correct class position and totalStudents.
@@ -82,6 +87,11 @@ export async function buildReportDataFromScope(
       ? [examSetId]
       : (examSetsForTerm || []).map((es: { id: string }) => es.id).filter(Boolean);
   if (examSetIdsToInclude.length === 0) examSetIdsToInclude.push(examSetId);
+
+  const hasMultipleSets = examSetIdsToInclude.length > 1;
+  const eotExamSetId: string | null = hasMultipleSets
+    ? (examSetsForTerm || []).find((es: { id: string; name?: string }) => isEotName(es.name))?.id ?? null
+    : null;
 
   let examResultsQuery = supabase
     .from('exam_results')
@@ -120,7 +130,7 @@ export async function buildReportDataFromScope(
   ] = await Promise.all([
     supabase
       .from('processed_primary_exam_results')
-      .select('student_id, aggregate, division, class_position')
+      .select('student_id, exam_set_id, aggregate, division, class_position')
       .eq('school_id', schoolId)
       .in('exam_set_id', examSetIdsToInclude)
       .in('student_id', allStudentIdsInClass),
@@ -140,8 +150,18 @@ export async function buildReportDataFromScope(
   ]);
 
   const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
-  (processedRows || []).forEach((row: { student_id: string; aggregate?: number; division?: string; class_position?: number }) => {
-    if (row.student_id && !processedByStudent[row.student_id]) {
+  (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number }) => {
+    if (!row.student_id) return;
+    if (hasMultipleSets && eotExamSetId) {
+      if (row.exam_set_id !== eotExamSetId) return;
+      processedByStudent[row.student_id] = {
+        aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
+        division: row.division && String(row.division).trim() ? row.division : undefined,
+        class_position: row.class_position != null ? Number(row.class_position) : undefined,
+      };
+      return;
+    }
+    if (!processedByStudent[row.student_id]) {
       processedByStudent[row.student_id] = {
         aggregate: row.aggregate != null ? Number(row.aggregate) : undefined,
         division: row.division && String(row.division).trim() ? row.division : undefined,
@@ -187,7 +207,13 @@ export async function buildReportDataFromScope(
     const studentAveragesList: { studentId: string; average: number; aggregate: number }[] = [];
     Object.entries(classStudents).forEach(([studentId, results]) => {
       const fromDb = processedByStudent[studentId];
-      const validResults = (results as { marks_obtained?: number; total_marks?: number }[]).filter(
+      let resultsForCalculation = results as { marks_obtained?: number; total_marks?: number; exam_sets?: { id?: string }; exam_set_id?: string }[];
+      if (hasMultipleSets && eotExamSetId) {
+        resultsForCalculation = resultsForCalculation.filter(
+          (r) => (r.exam_set_id ?? r.exam_sets?.id) === eotExamSetId
+        );
+      }
+      const validResults = resultsForCalculation.filter(
         (r) => r.marks_obtained != null && r.total_marks != null
       );
       if (validResults.length === 0) {
@@ -381,6 +407,9 @@ function oneReportFromSnapshotRows(
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
   const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
   const isEot = (n: string) => /end|eot/i.test(String(n || '').trim());
+  const eotRows = studentData.filter((d) => isEot(d.exam_set_name ?? ''));
+  const summaryRows = eotRows.length > 0 ? eotRows : studentData;
+  const firstSummaryRecord = eotRows.length > 0 ? eotRows[0] : firstRecord;
   const toPrimaryGrade = (g: string, m: unknown, t: number): string => {
     const grade = (g ?? '').toString().trim();
     if (grade && !['A', 'B', 'C', 'D', 'E', 'F'].includes(grade.toUpperCase())) return grade;
@@ -495,15 +524,15 @@ function oneReportFromSnapshotRows(
           head_teacher_text: firstRecord.headteacher_comment || '',
         },
         summary: {
-          totalMarks: studentData.reduce((s, d) => s + (d.marks_obtained || 0), 0),
-          totalPossibleMarks: studentData.reduce((s, d) => s + (d.total_marks || 100), 0),
-          average: firstRecord.average_percentage ?? null,
-          aggregate: firstRecord.aggregate ?? null,
-          division: firstRecord.division ?? null,
-          attendancePercentage: firstRecord.attendance_percentage ?? null,
-          classPosition: firstRecord.position ?? null,
+          totalMarks: summaryRows.reduce((s, d) => s + (d.marks_obtained || 0), 0),
+          totalPossibleMarks: summaryRows.reduce((s, d) => s + (d.total_marks || 100), 0),
+          average: firstSummaryRecord.average_percentage ?? null,
+          aggregate: firstSummaryRecord.aggregate ?? null,
+          division: firstSummaryRecord.division ?? null,
+          attendancePercentage: firstSummaryRecord.attendance_percentage ?? null,
+          classPosition: firstSummaryRecord.position ?? null,
           totalStudents: (frozenData as { total_students_in_class?: number }).total_students_in_class ?? null,
-          performanceRemark: firstRecord.division || 'N/A',
+          performanceRemark: firstSummaryRecord.division || 'N/A',
         },
       },
     ],

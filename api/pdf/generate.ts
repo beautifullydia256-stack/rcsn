@@ -26,6 +26,8 @@ interface GeneratePDFOptions {
   reportData?: Record<string, unknown>;
   /** When reportData is provided, use this for template lookup. Can also be read from reportData.school?.school_id. */
   schoolId?: string;
+  /** Fast path (like preview): list of report_data from generate-report-preview. No DB reads; combine into one PDF. */
+  reportDataList?: Record<string, unknown>[];
 }
 
 function renderReportHTML(templateHtml: string, templateCss: string, reportData: any): string {
@@ -139,6 +141,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   const schoolPhone = (school as any).phone ?? (school as any).contact_phone ?? '';
   const schoolMotto = (school as any).motto ?? '';
   const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
+  const contactLine = [schoolEmail, schoolPhone].filter(Boolean).join(' | ');
 
   const term = (examSet as any).term ?? '';
   const year = (examSet as any).year ?? '';
@@ -283,7 +286,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .school-center { flex: 1; text-align: center; margin-left: 12px; }
-    .school-name { font-size: 16.5pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
     .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 2px; }
     .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
     .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
@@ -342,7 +345,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div class="school-name">${schoolName}</div>
       ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
       ${(schoolAddress || schoolPobox) ? `<div class="school-address">${schoolAddress}${schoolAddress && schoolPobox ? ' ' : ''}${schoolPobox}</div>` : ''}
-      ${(schoolEmail || schoolPhone) ? `<div class="school-contact">${schoolEmail}${schoolEmail && schoolPhone ? ' | ' : ''}${schoolPhone}</div>` : ''}
+      ${contactLine ? `<div class="school-contact">${contactLine}</div>` : ''}
       ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
     </div>
   </div>
@@ -641,8 +644,20 @@ function buildMinimalReportHTML(reportData: any): string {
 </html>`;
 }
 
+/** Extract content between <body> and </body> from a full HTML string */
+function extractBodyContent(fullHtml: string): string {
+  const match = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return match ? match[1].trim() : fullHtml;
+}
+
+/** Extract <head>...</head> from a full HTML string */
+function extractHeadContent(fullHtml: string): string {
+  const match = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+  return match ? match[1].trim() : '';
+}
+
 async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
-  const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId } = options;
+  const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId, reportDataList: inlineReportDataList } = options;
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -657,8 +672,36 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   let useBuiltIn: boolean;
   let htmlContent: string | null = null;
   let cssContent = '';
+  /** When snapshot path returns multiple reports, combine them into one PDF. Also set for reportDataList path. */
+  let allCachedReports: { report_data: Record<string, unknown>; student_id: string }[] | null = null;
 
-  if (inlineReportData && (inlineReportData.students?.length ?? 0) > 0) {
+  if (inlineReportDataList && inlineReportDataList.length > 0) {
+    reportData = inlineReportDataList[0];
+    schoolIdForTemplate = inlineSchoolId ?? (inlineReportDataList[0]?.school as any)?.school_id ?? '';
+    allCachedReports = inlineReportDataList.map((rd) => ({
+      report_data: rd,
+      student_id: (rd?.students?.[0] as any)?.student_id ?? '',
+    }));
+    if (schoolIdForTemplate) {
+      const { data: template } = await supabase
+        .from('report_templates')
+        .select('html_content, css_content')
+        .eq('school_id', schoolIdForTemplate)
+        .eq('is_default', true)
+        .limit(1)
+        .maybeSingle();
+      htmlContent = template?.html_content ?? null;
+      cssContent = template?.css_content ?? '';
+    } else {
+      htmlContent = null;
+      cssContent = '';
+    }
+    useBuiltIn =
+      !htmlContent ||
+      typeof htmlContent !== 'string' ||
+      !htmlContent.trim() ||
+      isDefaultPlaceholderTemplate(htmlContent);
+  } else if (inlineReportData && (inlineReportData.students?.length ?? 0) > 0) {
     reportData = inlineReportData;
     schoolIdForTemplate = inlineSchoolId ?? (inlineReportData.school as any)?.school_id ?? '';
     if (schoolIdForTemplate) {
@@ -697,6 +740,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
     }
     const first = cachedReports[0];
     reportData = first.report_data as Record<string, unknown>;
+    allCachedReports = cachedReports as { report_data: Record<string, unknown>; student_id: string }[];
     const { data: snapshot } = await supabase.from('report_snapshots').select('school_id').eq('id', snapshotId).single();
     if (!snapshot) throw new Error('Snapshot not found');
     schoolIdForTemplate = snapshot.school_id;
@@ -749,6 +793,56 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
         (student as any).feesBalance = balance;
       }
     }
+    if (allCachedReports.length > 1 && schoolIdForTemplate) {
+      const allIds = allCachedReports.map((r) => r.student_id);
+      const { data: photoRows } = await supabase
+        .from('student_photos')
+        .select('student_id, photo_url')
+        .eq('school_id', schoolIdForTemplate)
+        .in('student_id', allIds);
+      const photosByStudent: Record<string, string> = {};
+      (photoRows || []).forEach((row: { student_id: string; photo_url?: string }) => {
+        if (row.photo_url && String(row.photo_url).trim()) photosByStudent[row.student_id] = row.photo_url;
+      });
+      const { data: studentsRows } = await supabase
+        .from('students')
+        .select('student_id, expected_fee_amount')
+        .eq('school_id', schoolIdForTemplate)
+        .in('student_id', allIds);
+      const expectedByStudent: Record<string, number> = {};
+      (studentsRows || []).forEach((row: { student_id: string; expected_fee_amount?: number }) => {
+        expectedByStudent[row.student_id] = Number(row.expected_fee_amount ?? 0);
+      });
+      const { data: paymentsRows } = await supabase
+        .from('student_payments')
+        .select('student_id, amount_paid')
+        .eq('school_id', schoolIdForTemplate)
+        .in('student_id', allIds);
+      const paidByStudent: Record<string, number> = {};
+      (paymentsRows || []).forEach((row: { student_id: string; amount_paid?: number }) => {
+        paidByStudent[row.student_id] = (paidByStudent[row.student_id] || 0) + Number(row.amount_paid ?? 0);
+      });
+      allCachedReports.forEach((item) => {
+        const sid = item.student_id;
+        const rd = item.report_data as Record<string, unknown>;
+        const st = rd?.students?.[0] as Record<string, unknown> | undefined;
+        if (!st) return;
+        if (!st.profile_photo && !st.photo_url && !st.student_photo_url && photosByStudent[sid]) {
+          (st as any).profile_photo = photosByStudent[sid];
+        }
+        const currentBal = (st as any).fees?.balance ?? (st as any).feesBalance ?? null;
+        if ((currentBal == null || currentBal === 0) && (expectedByStudent[sid] != null || paidByStudent[sid] != null)) {
+          const expected = expectedByStudent[sid] ?? 0;
+          const paid = paidByStudent[sid] ?? 0;
+          const balance = Math.max(0, expected - paid);
+          if (!(st as any).fees) (st as any).fees = {};
+          (st as any).fees.expected = expected;
+          (st as any).fees.paid = paid;
+          (st as any).fees.balance = balance;
+          (st as any).feesBalance = balance;
+        }
+      });
+    }
   }
 
   const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
@@ -763,11 +857,30 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   try {
     const page = await browser.newPage();
     const className = (student?.current_class ?? '') as string;
-    const html = useBuiltIn
-      ? isUpperSectionClass(className)
-        ? buildTemplate4UpperSectionHTML(reportData)
-        : buildMinimalReportHTML(reportData)
-      : renderReportHTML(htmlContent!, cssContent, reportData);
+    let html: string;
+    if (allCachedReports && allCachedReports.length > 1 && useBuiltIn) {
+      const pageBreak = '\n<div style="page-break-after: always;"></div>\n';
+      const chunks = allCachedReports.map((item) => {
+        const rd = item.report_data;
+        const cls = (rd?.students?.[0] as any)?.current_class ?? className;
+        return isUpperSectionClass(cls)
+          ? buildTemplate4UpperSectionHTML(rd)
+          : buildMinimalReportHTML(rd);
+      });
+      const firstFullHtml = chunks[0];
+      const head = extractHeadContent(firstFullHtml);
+      const bodyContents = chunks.map(extractBodyContent);
+      const combinedBody = bodyContents
+        .map((body, i) => (i < bodyContents.length - 1 ? body + pageBreak : body))
+        .join('');
+      html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
+    } else {
+      html = useBuiltIn
+        ? isUpperSectionClass(className)
+          ? buildTemplate4UpperSectionHTML(reportData)
+          : buildMinimalReportHTML(reportData)
+        : renderReportHTML(htmlContent!, cssContent, reportData);
+    }
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdf = await page.pdf({
@@ -808,11 +921,24 @@ export default async function handler(req: Req, res: Res) {
       studentIds?: string[];
       templateId?: string;
       reportData?: Record<string, unknown>;
+      reportDataList?: Record<string, unknown>[];
       schoolId?: string;
     };
     const snapshotId = body.snapshotId;
     const reportData = body.reportData;
+    const reportDataList = body.reportDataList;
     const schoolId = body.schoolId;
+
+    if (reportDataList && Array.isArray(reportDataList) && reportDataList.length > 0) {
+      const pdfBuffer = await generatePDF({
+        reportDataList,
+        schoolId: schoolId ?? (reportDataList[0]?.school as any)?.school_id,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="class_reports_${Date.now()}.pdf"`);
+      res.status(200).end(pdfBuffer);
+      return;
+    }
 
     if (reportData && (reportData.students?.length ?? 0) > 0) {
       const pdfBuffer = await generatePDF({

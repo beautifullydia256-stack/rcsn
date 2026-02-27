@@ -3,7 +3,7 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
@@ -141,7 +141,6 @@ async function fetchStudentsWithResultsInClass(
 
 export default function GenerateReportsPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTermKey, setSelectedTermKey] = useState('');
@@ -453,61 +452,34 @@ export default function GenerateReportsPage() {
       import.meta.env.VITE_PDF_API_URL ??
       (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
-    let snapshotId: string;
-    let reports: any[];
-
     setDownloadingPdf(true);
     setDownloadPdfStatus('');
     setGenerationError('');
 
     try {
-      if (completedSnapshotId && generatedReports.length > 0 && snapshotMatchesCurrentSelection) {
-        snapshotId = completedSnapshotId;
-        reports = generatedReports as any[];
-      } else {
-        setDownloadPdfStatus('Generating reports…');
-        const term = selectedTerm || pageData.currentTerm;
-        const payload = {
-          schoolId: pageData.schoolId,
-          term: term.term,
-          year: term.year,
-          examSetId: examSet.id,
-          classNames: [selectedClass],
-          ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
-        };
-        const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
-        if (fnError) throw new Error(fnError.message || 'Save failed');
-        if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
-        snapshotId = data.snapshotId;
-        setCompletedSnapshotId(snapshotId);
-        setLastGenerateFingerprint({
-          term: term.term,
-          year: term.year,
-          examSetId: examSet.id,
-          selectedClass,
-          reportType,
-          selectedStudent: reportType === 'single' ? selectedStudent : '',
-        });
-        await queryClient.invalidateQueries({ queryKey: ['admin', 'generated-reports', snapshotId] });
-        reports = await fetchGeneratedReports(snapshotId);
-        if (!reports.length) throw new Error('No reports were saved');
-      }
+      setDownloadPdfStatus('Generating reports…');
+      const term = selectedTerm || pageData.currentTerm;
+      const payload = {
+        schoolId: pageData.schoolId,
+        term: term.term,
+        year: term.year,
+        examSetId: examSet.id,
+        className: selectedClass,
+        ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
+      };
+      const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
+      if (fnError) throw new Error(fnError.message || 'Failed to load reports');
+      const reports = (data?.reports ?? []) as any[];
+      if (!reports.length) throw new Error('No reports to download');
 
       setDownloadPdfStatus('Preparing PDF…');
-
-      const studentIds =
-        reportType === 'single' && selectedStudent
-          ? [selectedStudent]
-          : reports.map((r) => r.student_id).filter(Boolean);
-      if (!studentIds.length) throw new Error('No students in report');
 
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          snapshotId,
-          studentIds,
-          templateId: reports[0]?.template_id ?? null,
+          reportDataList: reports,
+          schoolId: pageData.schoolId,
         }),
       });
 
@@ -536,7 +508,7 @@ export default function GenerateReportsPage() {
           ? 'report'
           : 'class_reports';
       a.href = url;
-      a.download = `${filenamePrefix}_${snapshotId}.pdf`;
+      a.download = `${filenamePrefix}_${Date.now()}.pdf`;
       a.click();
       window.URL.revokeObjectURL(url);
 
