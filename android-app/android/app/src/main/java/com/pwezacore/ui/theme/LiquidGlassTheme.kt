@@ -8,7 +8,23 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Glass Material Constants
+// Vibrant accent palette for sidebar icons and app highlights
+object AppAccentColors {
+    val Dashboard = Color(0xFF6366F1)   // Indigo
+    val Students = Color(0xFF10B981)    // Emerald
+    val Teachers = Color(0xFF3B82F6)     // Blue
+    val Parents = Color(0xFFF59E0B)      // Amber
+    val Staff = Color(0xFF14B8A6)        // Teal
+    val Finance = Color(0xFF22C55E)      // Green
+    val Reports = Color(0xFF8B5CF6)     // Violet
+    val Attendance = Color(0xFFF97316)  // Orange
+    val ExamSets = Color(0xFF06B6D4)    // Cyan
+    val Identity = Color(0xFFA855F7)    // Purple
+    val Classes = Color(0xFF0EA5E9)      // Sky
+    val JobVacancies = Color(0xFFEC4899) // Pink
+    val SystemSettings = Color(0xFF64748B) // Slate
+    val Notifications = Color(0xFFE11D48)  // Rose
+}
 object GlassConstants {
     // Blur radius for different surfaces
     const val BLUR_RADIUS_LIGHT = 20f
@@ -29,29 +45,37 @@ object GlassConstants {
     const val CORNER_RADIUS_MEDIUM = 16f // dp
     const val CORNER_RADIUS_LARGE = 24f // dp
     const val CORNER_RADIUS_XLARGE = 32f // dp
+
+    // Extra-strong blur for drawer / modal glass (frosted background)
+    const val BLUR_RADIUS_DRAWER = 55f
 }
-
-// Light Mode - Clear Milky Glass
-private val LightGlassBackground = Color(0xFFFFFFFF) // White base
-private val LightGlassSurface = Color(0xF5FFFFFF) // Milky white with transparency
-private val LightGlassSurfaceVariant = Color(0xE8FFFFFF) // Slightly more opaque
-private val LightGlassPrimary = Color(0xFF1A1A2E) // Dark text on glass
-private val LightGlassSecondary = Color(0xFF6366F1) // Accent color
-private val LightGlassTertiary = Color(0xFF8B5CF6) // Secondary accent
-private val LightGlassError = Color(0xFFEF4444)
-private val LightGlassOnSurface = Color(0xFF1A1A1A) // High contrast but softened
+// Light Mode - Clear Milky Glass with richer accents
+private val LightGlassBackground = Color(0xFFF8FAFC)
+private val LightGlassSurface = Color(0xFFF1F5F9)
+private val LightGlassSurfaceVariant = Color(0xFFE2E8F0)
+private val LightGlassPrimary = Color(0xFF4F46E5)
+private val LightGlassSecondary = Color(0xFF6366F1)
+private val LightGlassTertiary = Color(0xFF8B5CF6)
+private val LightGlassError = Color(0xFFDC2626)
+private val LightGlassOnSurface = Color(0xFF1E293B)
 private val LightGlassOnPrimary = Color(0xFFFFFFFF)
+private val LightGlassPrimaryContainer = Color(0xFFE0E7FF)
+private val LightGlassSecondaryContainer = Color(0xFFE0E7FF)
+private val LightGlassTertiaryContainer = Color(0xFFEDE9FE)
 
-// Dark Mode - Smoked Glass (NOT pure black)
-private val DarkGlassBackground = Color(0xFF0F0F16) // Very dark gray, not black
-private val DarkGlassSurface = Color(0x4D1A1A2E) // Smoked glass with transparency
-private val DarkGlassSurfaceVariant = Color(0x661A1A2E) // Slightly more opaque
-private val DarkGlassPrimary = Color(0xFF6366F1) // Accent color
-private val DarkGlassSecondary = Color(0xFF8B5CF6)
-private val DarkGlassTertiary = Color(0xFFA78BFA)
-private val DarkGlassError = Color(0xFFEF4444)
-private val DarkGlassOnSurface = Color(0xFFFFFFFF) // Soft white
-private val DarkGlassOnPrimary = Color(0xFFFFFFFF)
+// Dark Mode - Smoked Glass with vibrant accents
+private val DarkGlassBackground = Color(0xFF0F172A)
+private val DarkGlassSurface = Color(0xFF1E293B)
+private val DarkGlassSurfaceVariant = Color(0xFF334155)
+private val DarkGlassPrimary = Color(0xFF818CF8)
+private val DarkGlassSecondary = Color(0xFFA78BFA)
+private val DarkGlassTertiary = Color(0xFFC4B5FD)
+private val DarkGlassError = Color(0xFFF87171)
+private val DarkGlassOnSurface = Color(0xFFF8FAFC)
+private val DarkGlassOnPrimary = Color(0xFF1E1B4B)
+private val DarkGlassPrimaryContainer = Color(0xFF3730A3)
+private val DarkGlassSecondaryContainer = Color(0xFF5B21B6)
+private val DarkGlassTertiaryContainer = Color(0xFF6D28D9)
 
 // Edge highlight colors (subtle light reflection)
 val LightEdgeHighlight = Color(0x33FFFFFF) // Very subtle white
@@ -63,82 +87,52 @@ val DarkSpecularHighlight = Color(0x66FFFFFF)
 
 private val LightColorScheme = lightColorScheme(
     primary = LightGlassPrimary,
-    secondary = LightGlassSecondary,
-    tertiary = LightGlassTertiary,
-    error = LightGlassError,
-    background = LightGlassBackground,
-    surface = LightGlassSurface,
-    surfaceVariant = LightGlassSurfaceVariant,
     onPrimary = LightGlassOnPrimary,
+    primaryContainer = LightGlassPrimaryContainer,
+    onPrimaryContainer = LightGlassOnSurface,
+    secondary = LightGlassSecondary,
     onSecondary = LightGlassOnPrimary,
+    secondaryContainer = LightGlassSecondaryContainer,
+    onSecondaryContainer = LightGlassOnSurface,
+    tertiary = LightGlassTertiary,
+    onTertiary = LightGlassOnPrimary,
+    tertiaryContainer = LightGlassTertiaryContainer,
+    onTertiaryContainer = LightGlassOnSurface,
+    error = LightGlassError,
+    onError = LightGlassOnPrimary,
+    background = LightGlassBackground,
     onBackground = LightGlassOnSurface,
+    surface = LightGlassSurface,
     onSurface = LightGlassOnSurface,
-    onError = LightGlassOnPrimary
+    surfaceVariant = LightGlassSurfaceVariant,
+    onSurfaceVariant = LightGlassOnSurface
 )
 
 private val DarkColorScheme = darkColorScheme(
     primary = DarkGlassPrimary,
-    secondary = DarkGlassSecondary,
-    tertiary = DarkGlassTertiary,
-    error = DarkGlassError,
-    background = DarkGlassBackground,
-    surface = DarkGlassSurface,
-    surfaceVariant = DarkGlassSurfaceVariant,
     onPrimary = DarkGlassOnPrimary,
+    primaryContainer = DarkGlassPrimaryContainer,
+    onPrimaryContainer = DarkGlassOnSurface,
+    secondary = DarkGlassSecondary,
     onSecondary = DarkGlassOnPrimary,
+    secondaryContainer = DarkGlassSecondaryContainer,
+    onSecondaryContainer = DarkGlassOnSurface,
+    tertiary = DarkGlassTertiary,
+    onTertiary = DarkGlassOnPrimary,
+    tertiaryContainer = DarkGlassTertiaryContainer,
+    onTertiaryContainer = DarkGlassOnSurface,
+    error = DarkGlassError,
+    onError = DarkGlassOnPrimary,
+    background = DarkGlassBackground,
     onBackground = DarkGlassOnSurface,
+    surface = DarkGlassSurface,
     onSurface = DarkGlassOnSurface,
-    onError = DarkGlassOnPrimary
+    surfaceVariant = DarkGlassSurfaceVariant,
+    onSurfaceVariant = DarkGlassOnSurface
 )
 
-// Typography - Clean sans-serif, high contrast but softened
-val GlassTypography = Typography(
-    displayLarge = androidx.compose.material3.MaterialTheme.typography.displayLarge.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    displayMedium = androidx.compose.material3.MaterialTheme.typography.displayMedium.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    displaySmall = androidx.compose.material3.MaterialTheme.typography.displaySmall.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    headlineLarge = androidx.compose.material3.MaterialTheme.typography.headlineLarge.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    headlineMedium = androidx.compose.material3.MaterialTheme.typography.headlineMedium.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    headlineSmall = androidx.compose.material3.MaterialTheme.typography.headlineSmall.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    titleLarge = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    titleMedium = androidx.compose.material3.MaterialTheme.typography.titleMedium.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    titleSmall = androidx.compose.material3.MaterialTheme.typography.titleSmall.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    bodyLarge = androidx.compose.material3.MaterialTheme.typography.bodyLarge.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    bodyMedium = androidx.compose.material3.MaterialTheme.typography.bodyMedium.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    bodySmall = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    labelLarge = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    labelMedium = androidx.compose.material3.MaterialTheme.typography.labelMedium.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    ),
-    labelSmall = androidx.compose.material3.MaterialTheme.typography.labelSmall.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif
-    )
-)
+// Default typography for building GlassTypography (no MaterialTheme at top level)
+private val DefaultTypography = Typography()
 
 @Composable
 fun LiquidGlassTheme(
@@ -146,10 +140,26 @@ fun LiquidGlassTheme(
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
-
+    val typography = Typography(
+        displayLarge = DefaultTypography.displayLarge.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        displayMedium = DefaultTypography.displayMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        displaySmall = DefaultTypography.displaySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        headlineLarge = DefaultTypography.headlineLarge.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        headlineMedium = DefaultTypography.headlineMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        headlineSmall = DefaultTypography.headlineSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        titleLarge = DefaultTypography.titleLarge.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        titleMedium = DefaultTypography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        titleSmall = DefaultTypography.titleSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        bodyLarge = DefaultTypography.bodyLarge.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        bodyMedium = DefaultTypography.bodyMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        bodySmall = DefaultTypography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        labelLarge = DefaultTypography.labelLarge.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        labelMedium = DefaultTypography.labelMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif),
+        labelSmall = DefaultTypography.labelSmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif)
+    )
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = GlassTypography,
+        typography = typography,
         content = content
     )
 }

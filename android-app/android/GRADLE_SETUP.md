@@ -58,6 +58,14 @@ I've created all the necessary Gradle build files for your Android project. Here
    - Run `npm install` in the android-app folder
    - Sync Gradle again
 
+4. **kapt / "Metadata version 2.1.0" or InvocationTargetException:**
+   - The build is configured to use **Room 2.8.0** (supports Kotlin 2.1).
+   - To use **Java 17** for the build (recommended if you're on JDK 21):
+     - **Option A:** Set **JAVA_HOME** to a JDK 17 installation before starting Android Studio, then run **File → Invalidate Caches / Restart**.
+     - **Option B:** In `gradle.properties`, uncomment and set:
+       `org.gradle.java.home=C:\\Program Files\\Java\\jdk-17`  
+       (adjust the path to your JDK 17). Then run `gradlew --stop` and rebuild.
+
 The Gradle build system is now ready! 🎉
 
 

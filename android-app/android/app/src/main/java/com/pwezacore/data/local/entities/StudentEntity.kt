@@ -20,7 +20,10 @@ data class StudentEntity(
     val created_at: Long = System.currentTimeMillis(),
     val updated_at: Long = System.currentTimeMillis(),
     val synced_at: Long? = null,
-    val is_synced: Boolean = false
+    val is_synced: Boolean = false,
+    val deleted_at: Long? = null,
+    val version: Int = 1,
+    val device_id: String? = null
 )
 
 

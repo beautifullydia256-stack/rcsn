@@ -18,13 +18,13 @@ class AuthRepository @Inject constructor(
 ) {
     suspend fun signIn(email: String, password: String): Result<UserEntity> {
         return try {
-            // Sign in with Supabase Auth
-            val authResult = supabaseClient.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.Email) {
+            // Sign in with Supabase Auth (signInWith Email provider)
+            supabaseClient.auth.signInWith(io.github.jan.supabase.auth.providers.builtin.Email) {
                 this.email = email
                 this.password = password
             }
-            
-            val userId = authResult.user?.id ?: return Result.failure(Exception("User ID not found"))
+            val session = supabaseClient.auth.currentSessionOrNull()
+            val userId = session?.user?.id ?: return Result.failure(Exception("User ID not found"))
             
             // Fetch user data from database
             val userData = supabaseClient.postgrest.from("users")
@@ -46,9 +46,11 @@ class AuthRepository @Inject constructor(
     
     suspend fun signOut() {
         try {
+            val session = supabaseClient.auth.currentSessionOrNull()
+            session?.user?.id?.let { userId -> userDao.deleteUser(userId) }
             supabaseClient.auth.signOut()
         } catch (e: Exception) {
-            // Handle error
+            // ignore
         }
     }
     

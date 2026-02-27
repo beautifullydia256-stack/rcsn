@@ -117,3 +117,6 @@ jspm_packages/
 *_fix*.sql
 quick_*.sql
 debug_*.sql
+
+# Desktop app: real Supabase config (never commit). Copy supabase_config.json.example to supabase_config.json.
+desktop-app/app/src/main/resources/supabase_config.json

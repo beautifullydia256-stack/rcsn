@@ -2,6 +2,7 @@ package com.pwezacore.ui.components
 
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -18,11 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
 import com.pwezacore.ui.theme.GlassConstants
-import com.pwezacore.ui.theme.glassBlur
-import com.pwezacore.ui.theme.glassEdgeHighlight
 import com.pwezacore.ui.theme.glassFocusGlow
-import com.pwezacore.ui.theme.glassLightBlur
 
 @Composable
 fun GlassTextField(
@@ -54,12 +53,40 @@ fun GlassTextField(
     } else {
         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
     }
-    
+    val textFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedContainerColor = surfaceColor,
+        unfocusedContainerColor = surfaceColor,
+        disabledContainerColor = surfaceColor.copy(alpha = 0.5f),
+        errorContainerColor = surfaceColor,
+        focusedBorderColor = borderColor,
+        unfocusedBorderColor = borderColor,
+        disabledBorderColor = borderColor.copy(alpha = 0.5f),
+        errorBorderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+        unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        errorTextColor = MaterialTheme.colorScheme.onSurface,
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        errorLabelColor = MaterialTheme.colorScheme.error,
+        focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        disabledPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+        errorPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
+        unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        errorLeadingIconColor = MaterialTheme.colorScheme.error,
+        focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
+        unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+        errorTrailingIconColor = MaterialTheme.colorScheme.error
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(GlassConstants.CORNER_RADIUS_MEDIUM.dp))
-            .glassLightBlur(GlassConstants.CORNER_RADIUS_MEDIUM.dp)
             .glassFocusGlow(isFocused)
     ) {
         OutlinedTextField(
@@ -80,36 +107,7 @@ fun GlassTextField(
             maxLines = maxLines,
             minLines = minLines,
             interactionSource = interactionSource,
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = surfaceColor,
-                unfocusedContainerColor = surfaceColor,
-                disabledContainerColor = surfaceColor.copy(alpha = 0.5f),
-                errorContainerColor = surfaceColor,
-                focusedBorderColor = borderColor,
-                unfocusedBorderColor = borderColor,
-                disabledBorderColor = borderColor.copy(alpha = 0.5f),
-                errorBorderColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                errorTextColor = MaterialTheme.colorScheme.onSurface,
-                focusedLabelColor = MaterialTheme.colorScheme.primary,
-                unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                disabledLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                errorLabelColor = MaterialTheme.colorScheme.error,
-                focusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                disabledPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                errorPlaceholderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                focusedLeadingIconColor = MaterialTheme.colorScheme.primary,
-                unfocusedLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                disabledLeadingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                errorLeadingIconColor = MaterialTheme.colorScheme.error,
-                focusedTrailingIconColor = MaterialTheme.colorScheme.primary,
-                unfocusedTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                errorTrailingIconColor = MaterialTheme.colorScheme.error
-            ),
+            colors = textFieldColors,
             shape = RoundedCornerShape(GlassConstants.CORNER_RADIUS_MEDIUM.dp)
         )
     }

@@ -59,10 +59,8 @@ export async function generateReportFromSnapshot(
 }
 
 /**
- * Trigger bulk report generation via Edge Function
- * 
- * This function calls the server-side Edge Function for bulk generation.
- * All actual generation happens server-side.
+ * Trigger bulk report generation via Edge Function (generate-reports-final).
+ * Prefer this over client-side generateReportsBulkClient. Preview uses generate-report-preview (read-only).
  */
 export async function triggerBulkGeneration(
   snapshotId: string,
@@ -71,7 +69,7 @@ export async function triggerBulkGeneration(
   studentIds?: string[]
 ): Promise<{ success: boolean; generatedCount?: number; error?: string }> {
   try {
-    const { data, error } = await supabase.functions.invoke('generate-reports-bulk', {
+    const { data, error } = await supabase.functions.invoke('generate-reports-final', {
       body: {
         snapshotId,
         templateId,

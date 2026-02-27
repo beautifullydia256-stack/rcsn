@@ -6,8 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
-import { createSnapshotFromExamSet } from '../../../services/snapshotLock';
-import { generateReportsBulkClient } from '../../../services/reportGenerator';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
@@ -154,6 +152,9 @@ export default function GenerateReportsPage() {
   const [error, setError] = useState('');
   const [generatingStep, setGeneratingStep] = useState<'idle' | 'creating' | 'generating' | 'completed' | 'error'>('idle');
   const [completedSnapshotId, setCompletedSnapshotId] = useState<string | null>(null);
+  const [previewReports, setPreviewReports] = useState<any[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState('');
   const [generationError, setGenerationError] = useState('');
   const [viewingReport, setViewingReport] = useState<any | null>(null);
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
@@ -215,14 +216,19 @@ export default function GenerateReportsPage() {
     staleTime: STALE_TIME_MS,
   });
 
-  // Reports to show in preview and downloads (single student or entire class)
-  const reportsToShow = useMemo(() => {
+  // Reports to show: from preview API (no DB) or from generated_reports after "Generate & Save"
+  const reportsToDisplay = useMemo(() => {
+    if (previewReports.length > 0) {
+      return previewReports.map((reportData) => ({ report_data: reportData }));
+    }
     if (!generatedReports?.length) return [] as any[];
     if (reportType === 'single' && selectedStudent) {
       return (generatedReports as any[]).filter((r) => r.student_id === selectedStudent);
     }
     return generatedReports as any[];
-  }, [generatedReports, reportType, selectedStudent]);
+  }, [previewReports, generatedReports, reportType, selectedStudent]);
+
+  const hasReportsReady = (previewReports.length > 0 || (generatingStep === 'completed' && !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0));
 
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return 'Report For Baby Class';
@@ -247,6 +253,63 @@ export default function GenerateReportsPage() {
         (s.admission_number || '').toLowerCase().includes(q)
     );
   }, [studentsInClass, studentSearch]);
+
+  const getEffectiveExamSet = (): any => {
+    if (!pageData?.schoolId || !selectedClass) return undefined;
+    const term = selectedTerm || pageData.currentTerm;
+    if (selectedExamSetId) {
+      return pageData.examSets.find((es: any) => es.id === selectedExamSetId);
+    }
+    const forTerm = (pageData.examSets || []).filter(
+      (es: any) => es.term === term.term && es.year === term.year
+    );
+    const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
+    if (forTerm.length === 0) return undefined;
+    if (forTerm.length === 1) return forTerm[0];
+    const sorted = [...forTerm].sort((a, b) => {
+      const aMid = isMidTerm(a.name || '');
+      const bMid = isMidTerm(b.name || '');
+      return aMid === bMid ? 0 : aMid ? 1 : -1;
+    });
+    return sorted[0];
+  };
+
+  const handleGenerateAndSave = async () => {
+    if (!pageData?.schoolId || !selectedClass) return;
+    const examSet = getEffectiveExamSet();
+    if (!examSet) {
+      setError('');
+      setShowNoResultsModal(true);
+      return;
+    }
+    if (reportType === 'single' && !selectedStudent) {
+      setError('Please select a student');
+      return;
+    }
+    const term = selectedTerm || pageData.currentTerm;
+    setSaving(true);
+    setSaveSuccess('');
+    setGenerationError('');
+    try {
+      const payload = {
+        schoolId: pageData.schoolId,
+        term: term.term,
+        year: term.year,
+        examSetId: examSet.id,
+        classNames: [selectedClass],
+        ...(reportType === 'single' && selectedStudent ? { studentIds: [selectedStudent] } : {}),
+      };
+      const { data, error: fnError } = await supabase.functions.invoke('generate-reports-final', { body: payload });
+      if (fnError) throw new Error(fnError.message || 'Save failed');
+      if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
+      setCompletedSnapshotId(data.snapshotId);
+      setSaveSuccess(`Reports saved (${data.generatedCount ?? 0} students). You can download PDF or print.`);
+    } catch (err: any) {
+      setGenerationError(err.message || 'Failed to save reports');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handlePreviewReport = async () => {
     if (!pageData?.schoolId) return;
@@ -297,34 +360,23 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
-      // Single student or entire class: only snapshot that subset — much faster (1–2 s instead of 20–30 s)
-      const snapshotFilter =
-        reportType === 'single' && selectedStudent
-          ? { studentIds: [selectedStudent] }
-          : reportType === 'class' && selectedClass
-            ? { classNames: [selectedClass] }
-            : undefined;
-      const snapshotId = await createSnapshotFromExamSet(
-        pageData.schoolId,
-        examSet.id,
-        examSet.term,
-        examSet.year,
-        snapshotFilter
-      );
-      setGeneratingStep('generating');
-      // Client-side bulk generation: entire class = only selected class; single = only selected student
-      const result = await generateReportsBulkClient(
-        snapshotId,
-        undefined,
-        reportType === 'class' && selectedClass ? [selectedClass] : undefined,
-        reportType === 'single' && selectedStudent ? [selectedStudent] : undefined
-      );
-      if (!result.success) throw new Error(result.error || 'Generation failed');
-      setCompletedSnapshotId(snapshotId);
+      const payload = {
+        schoolId: pageData.schoolId,
+        term: term.term,
+        year: term.year,
+        examSetId: examSet.id,
+        className: selectedClass,
+        ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
+      };
+      const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
+      if (fnError) throw new Error(fnError.message || 'Preview failed');
+      const reports = (data?.reports ?? []) as any[];
+      setPreviewReports(reports);
       setGeneratingStep('completed');
     } catch (err: any) {
-      setGenerationError(err.message || 'Failed to generate reports');
+      setGenerationError(err.message || 'Failed to load preview');
       setGeneratingStep('error');
+      setPreviewReports([]);
     } finally {
       setPreviewing(false);
     }
@@ -449,8 +501,6 @@ export default function GenerateReportsPage() {
       setShowClassDownloadModal(true);
     }
   };
-
-  const hasReportsReady = generatingStep === 'completed' && !reportsLoading && !reportsError && generatedReports.length > 0;
 
   return (
     <div className="space-y-6">
@@ -656,6 +706,12 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
+          {saveSuccess && (
+            <div className="mb-4 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-3 py-2 text-sm text-emerald-700 dark:text-emerald-300">
+              {saveSuccess}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-3 items-center">
             <button
               type="button"
@@ -663,7 +719,15 @@ export default function GenerateReportsPage() {
               disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
               className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {previewing ? (generatingStep === 'creating' ? 'Preparing…' : 'Generating…') : 'Preview Report'}
+              {previewing ? 'Loading preview…' : 'Preview Report'}
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateAndSave}
+              disabled={saving || !selectedClass || (reportType === 'single' && !selectedStudent)}
+              className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {saving ? 'Saving…' : 'Generate & Save'}
             </button>
             <button
               type="button"
@@ -687,9 +751,8 @@ export default function GenerateReportsPage() {
             </button>
           </div>
 
-          {/* Report Preview – single student = one card, entire class = all cards (old 2f00b44 style) */}
-          {generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0 && (() => {
-            if (reportsToShow.length === 0) return null;
+          {/* Report Preview – from preview API (no DB writes) or from generated_reports after Generate & Save */}
+          {(previewReports.length > 0 || (generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0)) && reportsToDisplay.length > 0 && (() => {
             return (
               <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-[var(--ac-border)] ac-glass-card p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -698,15 +761,15 @@ export default function GenerateReportsPage() {
                 </div>
                 <div className="ac-glass-card p-4 rounded-lg overflow-auto max-h-[80vh] border border-[var(--ac-border)]">
                   <div className="mx-auto space-y-8 print:bg-white" style={{ width: '210mm', maxWidth: '100%' }}>
-                    {reportsToShow.map((report: any) => (
-                      <div key={report.id} className="report-student-card">
+                    {reportsToDisplay.map((report: any, idx: number) => (
+                      <div key={report.id || report.report_data?.students?.[0]?.student_id || idx} className="report-student-card">
                         <ReportPreviewFromData reportData={report.report_data} />
                       </div>
                     ))}
                   </div>
                 </div>
                 <p className="mt-4 ac-text-muted text-sm text-center">
-                  This preview shows exactly how the report{reportsToShow.length > 1 ? 's' : ''} will look when downloaded or printed.
+                  This preview shows exactly how the report{reportsToDisplay.length > 1 ? 's' : ''} will look when downloaded or printed.
                 </p>
               </div>
             );

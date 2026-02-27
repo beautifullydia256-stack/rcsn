@@ -1,0 +1,6 @@
+{
+  "supabaseUrl": "https://your-project.supabase.co",
+  "supabaseAnonKey": "your-anon-key-here",
+  "turnstileSiteKey": "your-turnstile-site-key",
+  "turnstileSecret": "0x4AAAAAAB4EReB4ZNsR3a4xHGL4rwceHj8"
+}

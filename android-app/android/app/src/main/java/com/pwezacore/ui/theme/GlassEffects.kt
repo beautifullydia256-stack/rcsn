@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -93,7 +94,8 @@ fun Modifier.glassSpecularHighlight(
 }
 
 /**
- * Composable that creates a glass container with blur and edge highlights
+ * Composable that creates a glass container with blur and edge highlights.
+ * Blur is applied only to the background layer so content stays sharp and readable.
  */
 @Composable
 fun GlassContainer(
@@ -104,15 +106,24 @@ fun GlassContainer(
     showEdgeHighlight: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .glassSurface(transparency, blurRadius, cornerRadius)
-            .then(if (showEdgeHighlight) Modifier.glassEdgeHighlight(
-                highlightWidth = GlassConstants.EDGE_HIGHLIGHT_WIDTH.dp,
-                cornerRadius = cornerRadius
-            ) else Modifier),
-        content = content
-    )
+    Box(modifier = modifier) {
+        // Layer 1: blurred background only (content must not be blurred)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .glassSurface(transparency, blurRadius, cornerRadius)
+        )
+        // Layer 2: content on top, sharp
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (showEdgeHighlight) Modifier.glassEdgeHighlight(
+                    highlightWidth = GlassConstants.EDGE_HIGHLIGHT_WIDTH.dp,
+                    cornerRadius = cornerRadius
+                ) else Modifier),
+            content = content
+        )
+    }
 }
 
 /**

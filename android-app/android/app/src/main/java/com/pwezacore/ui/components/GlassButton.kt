@@ -25,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.pwezacore.ui.theme.GlassAnimations
 import com.pwezacore.ui.theme.GlassConstants
-import com.pwezacore.ui.theme.glassBlur
 import com.pwezacore.ui.theme.glassEdgeHighlight
 import com.pwezacore.ui.theme.glassPressAnimation
 import com.pwezacore.ui.theme.glassSpecularHighlight
@@ -59,7 +58,6 @@ fun GlassButton(
                     )
                 )
             )
-            .glassBlur(if (isPressed) GlassConstants.BLUR_RADIUS_HEAVY else GlassConstants.BLUR_RADIUS_MEDIUM)
             .glassEdgeHighlight(
                 highlightWidth = GlassConstants.EDGE_HIGHLIGHT_WIDTH.dp,
                 cornerRadius = GlassConstants.CORNER_RADIUS_MEDIUM.dp
@@ -73,7 +71,7 @@ fun GlassButton(
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent,
-                contentColor = MaterialTheme.colorScheme.onSurface,
+                contentColor = if (isPrimary) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 disabledContainerColor = Color.Transparent,
                 disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             ),
