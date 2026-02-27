@@ -18,7 +18,7 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 async function fetchGeneratedReports(snapshotId: string) {
   const { data, error } = await supabase
     .from('generated_reports')
-    .select('id, snapshot_id, student_id, report_data, generated_at, pdf_url')
+    .select('id, snapshot_id, student_id, report_data, generated_at, pdf_url, template_id')
     .eq('snapshot_id', snapshotId)
     .order('generated_at', { ascending: false });
   if (error) throw error;
@@ -228,7 +228,8 @@ export default function GenerateReportsPage() {
     return generatedReports as any[];
   }, [previewReports, generatedReports, reportType, selectedStudent]);
 
-  const hasReportsReady = (previewReports.length > 0 || (generatingStep === 'completed' && !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0));
+  const hasReportsReady = previewReports.length > 0 || (generatingStep === 'completed' && !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0);
+  const hasSavedReports = !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0;
 
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return 'Report For Baby Class';
@@ -384,6 +385,57 @@ export default function GenerateReportsPage() {
 
   const handlePrintReport = () => {
     window.print();
+  };
+
+  const handleDownloadSavedPdf = async () => {
+    if (!completedSnapshotId || !hasSavedReports) return;
+
+    const snapshotId = completedSnapshotId;
+    const baseUrl = import.meta.env.VITE_PDF_API_URL || 'http://localhost:3001';
+    const reports = (generatedReports || []) as any[];
+    if (!reports.length) return;
+
+    const studentIds =
+      reportType === 'single' && selectedStudent
+        ? [selectedStudent]
+        : reports.map((r) => r.student_id).filter(Boolean);
+
+    if (!studentIds.length) return;
+
+    setDownloadingPdf(true);
+    try {
+      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          snapshotId,
+          studentIds,
+          // Template: use the first report's template_id when available; API can default if null.
+          templateId: reports[0]?.template_id ?? null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const filenamePrefix =
+        reportType === 'single' && selectedStudent
+          ? 'report'
+          : 'class_reports';
+      a.href = url;
+      a.download = `${filenamePrefix}_${snapshotId}.pdf`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setGenerationError(err.message || 'Failed to download PDF');
+      setGeneratingStep('error');
+    } finally {
+      setDownloadingPdf(false);
+    }
   };
 
   const buildHtmlForElement = async (element: HTMLElement): Promise<string> => {
@@ -728,6 +780,20 @@ export default function GenerateReportsPage() {
               className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {saving ? 'Saving…' : 'Generate & Save'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDownloadSavedPdf}
+              disabled={!hasSavedReports || downloadingPdf}
+              title={
+                hasSavedReports
+                  ? 'Download PDF from saved snapshot (no print dialog)'
+                  : 'Generate & Save first to download from snapshot'
+              }
+              className="px-5 py-3 rounded-lg bg-indigo-600/90 text-white font-medium hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <FileDown className="w-4 h-4" />
+              {downloadingPdf ? 'Preparing PDF…' : 'Download PDF (Saved)'}
             </button>
             <button
               type="button"
