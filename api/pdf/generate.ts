@@ -214,13 +214,31 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     (student as any).comments?.headteacher_text ?? (student as any).comments?.head_teacher_text ?? '';
 
   const summary = (student as any).summary || {};
+  const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
   const avg = summary.average != null ? (typeof summary.average === 'number' ? summary.average.toFixed(2) : summary.average) : '—';
   const position =
     summary.classPosition != null && summary.totalStudents != null
       ? `${summary.classPosition} of ${summary.totalStudents}`
       : summary.classPosition ?? '—';
-  const division = summary.division ?? '—';
-  const aggregate = summary.aggregate != null ? summary.aggregate : '—';
+  let division = summary.division ?? '—';
+  if (typeof division === 'string' && division.toLowerCase().startsWith('division')) {
+    division = division.replace(/division\s*/i, '').trim() || division;
+  }
+  const aggregate = summary.aggregate != null && summary.aggregate !== undefined ? summary.aggregate : 'N/A';
+
+  const attendance = summary.attendanceDetails || summary.attendance_details || {};
+  const daysPresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
+  const daysAbsent = attendance.absentDays ?? attendance.absent_days ?? 'N/A';
+  const totalDays = attendance.totalSchoolDays ?? attendance.total_school_days ?? attendance.total_days ?? 'N/A';
+
+  const nextTermBegins = (student as any).next_term_begins_date
+    ? new Date((student as any).next_term_begins_date).toLocaleDateString()
+    : 'TBA';
+  const feesBalance = (student as any).feesBalance ?? (student as any).fees?.balance ?? 0;
+  const feesFormatted =
+    typeof feesBalance === 'number'
+      ? new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(feesBalance)
+      : String(feesBalance);
 
   const photoUrl = (student as any).profile_photo ?? (student as any).photo_url ?? '';
 
@@ -259,6 +277,24 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     td.grade { font-weight: 700; color: #1e3a8a; }
     td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
     tbody tr:nth-child(even) { background: #f0f9ff; }
+    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6mm; font-size: 8.7pt; }
+    .summary-box { padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
+    .summary-box strong { color: #1e3a8a; }
+    .grading-section { margin-bottom: 6mm; font-size: 8.6pt; }
+    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 4px; color: #1e3a8a; }
+    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
+    .grading-table .head { background: #dbeafe; padding: 5px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
+    .grading-table th, .grading-table td { padding: 4px 6px; }
+    .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; margin-bottom: 6mm; font-size: 8.5pt; background: #fff; }
+    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 4px; line-height: 1.28; color: #334155; }
+    .comments-box .signature { font-size: 8pt; margin-top: 4px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; padding-top: 8px; margin-top: 8px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; }
+    .next-term-fees strong { color: #1e3a8a; }
+    .report-footer { text-align: center; font-size: 7pt; margin-top: 6mm; padding-top: 4px; border-top: 1px solid #bfdbfe; color: #64748b; }
     .summary-row { font-size: 9.5pt; margin-bottom: 6mm; padding: 6px 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
     .summary-row strong { color: #1e3a8a; }
     .comments-section { font-size: 9.5pt; }
@@ -267,6 +303,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   </style>
 </head>
 <body>
+  ${(schoolSubtitle || schoolMotto) ? `<div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:22pt;font-weight:700;color:#cbd5e1;opacity:0.1;pointer-events:none;z-index:0;">${schoolSubtitle || schoolMotto}</div>` : ''}
   <div class="header-wrap">
     <div class="logo-cell">
       ${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}
@@ -312,15 +349,72 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       ${subjectRows || '<tr><td colspan="6" class="tc">No subject results.</td></tr>'}
     </tbody>
   </table>
-  <div class="summary-row">
-    <strong>Average:</strong> ${avg}% &nbsp; <strong>Position:</strong> ${position} &nbsp; <strong>Division:</strong> ${division} &nbsp; <strong>Aggregate:</strong> ${aggregate}
+  <div class="summary-grid-3">
+    <div class="summary-box">
+      <div><strong>Total Marks:</strong> ${totalMarks}</div>
+      <div><strong>Average:</strong> ${avg}</div>
+      <div><strong>Aggregates:</strong> ${aggregate}</div>
+      <div><strong>Division:</strong> ${division}</div>
+    </div>
+    <div class="summary-box">
+      <div><strong>Class Position:</strong> ${summary.classPosition ?? 'N/A'}</div>
+      <div><strong>Out of:</strong> ${summary.totalStudents ?? 'N/A'} students</div>
+    </div>
+    <div class="summary-box">
+      <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
+      <div>Days Present: ${daysPresent}</div>
+      <div>Days Absent: ${daysAbsent}</div>
+      <div>Total Days: ${totalDays}</div>
+    </div>
   </div>
-  <div class="comments-section">
-    <div class="comment-title">Class Teacher's Comment</div>
-    <div class="comment-text">${classTeacherComment || '..............................................................'}</div>
-    <div class="comment-title">Head Teacher's Comment</div>
-    <div class="comment-text">${headTeacherComment || '..............................................................'}</div>
+  <div class="grading-section">
+    <h3>Grading System</h3>
+    <div class="grading-grid">
+      <div class="grading-table">
+        <div class="head">Subject Grade Boundaries</div>
+        <table>
+          <thead><tr><th style="text-align:left;">Percentage Range</th><th class="tc">Grade</th></tr></thead>
+          <tbody>
+            <tr><td>75 - 100</td><td class="tc">D1</td></tr>
+            <tr><td>70 - 74</td><td class="tc">D2</td></tr>
+            <tr><td>65 - 69</td><td class="tc">C3</td></tr>
+            <tr><td>60 - 64</td><td class="tc">C4</td></tr>
+            <tr><td>55 - 59</td><td class="tc">C5</td></tr>
+            <tr><td>50 - 54</td><td class="tc">C6</td></tr>
+            <tr><td>45 - 49</td><td class="tc">P7</td></tr>
+            <tr><td>40 - 44</td><td class="tc">P8</td></tr>
+            <tr><td>0 - 39</td><td class="tc">F9</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grading-table">
+        <div class="head">Division by Aggregate Points</div>
+        <table>
+          <thead><tr><th style="text-align:left;">Aggregate Range</th><th class="tc">Division</th></tr></thead>
+          <tbody>
+            <tr><td>4 - 12</td><td class="tc">Division 1</td></tr>
+            <tr><td>13 - 23</td><td class="tc">Division 2</td></tr>
+            <tr><td>24 - 29</td><td class="tc">Division 3</td></tr>
+            <tr><td>30 - 34</td><td class="tc">Division 4</td></tr>
+            <tr><td>35 - 36</td><td class="tc">U (Ungraded)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
+  <div class="comments-box">
+    <h3>Class Teacher's Comments</h3>
+    <p class="comment-p">${classTeacherComment || '..............................................................'}</p>
+    <div class="signature">Signature: ____________________</div>
+    <h3>Headteacher's Comments</h3>
+    <p class="comment-p">${headTeacherComment || '..............................................................'}</p>
+    <div class="signature">Signature: ____________________</div>
+    <div class="next-term-fees">
+      <div><strong>Next Term Begins:</strong> ${nextTermBegins}</div>
+      <div><strong>Fees Balance:</strong> ${feesFormatted}</div>
+    </div>
+  </div>
+  <div class="report-footer">Generated by PwezaCore School Management System</div>
 </body>
 </html>`;
 }
