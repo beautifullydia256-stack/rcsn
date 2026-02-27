@@ -240,7 +240,13 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       ? new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(feesBalance)
       : String(feesBalance);
 
-  const photoUrl = (student as any).profile_photo ?? (student as any).photo_url ?? '';
+  const photoUrl =
+    (student as any).profile_photo ??
+    (student as any).photo_url ??
+    (student as any).student_photo_url ??
+    (reportData as any).student_photo_url ??
+    '';
+  const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
 
   return `<!DOCTYPE html>
 <html>
@@ -331,7 +337,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div><strong>Date:</strong> ${reportDateDisplay}</div>
     </div>
     <div class="photo-cell">
-      ${photoUrl ? `<img src="${photoUrl}" alt="Student" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
+      ${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
   <table>
@@ -767,6 +773,30 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
     !htmlContent.trim() ||
     isDefaultPlaceholderTemplate(htmlContent);
 
+  const firstReport = cachedReports[0];
+  let reportData = firstReport.report_data as Record<string, unknown>;
+  const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
+  const studentId = firstReport.student_id as string;
+
+  if (student && snapshot.school_id) {
+    const hasPhoto =
+      (student.profile_photo && String(student.profile_photo).trim()) ||
+      (student.photo_url && String(student.photo_url).trim()) ||
+      (student.student_photo_url && String(student.student_photo_url).trim());
+    if (!hasPhoto) {
+      const { data: photoRow } = await supabase
+        .from('student_photos')
+        .select('photo_url')
+        .eq('school_id', snapshot.school_id)
+        .eq('student_id', studentId)
+        .maybeSingle();
+      const url = (photoRow as { photo_url?: string } | null)?.photo_url;
+      if (url && String(url).trim()) {
+        student.profile_photo = url;
+      }
+    }
+  }
+
   const executablePath = await chromium.executablePath();
   const browser = await puppeteer.launch({
     args: chromium.args,
@@ -777,9 +807,6 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
 
   try {
     const page = await browser.newPage();
-    const firstReport = cachedReports[0];
-    const reportData = firstReport.report_data;
-    const student = reportData?.students?.[0];
     const className = (student?.current_class ?? '') as string;
     const html = useBuiltIn
       ? isUpperSectionClass(className)
