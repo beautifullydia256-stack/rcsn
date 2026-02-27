@@ -90,6 +90,59 @@ function renderReportHTML(templateHtml: string, templateCss: string, reportData:
 </html>`;
 }
 
+/** Fallback when report_templates has no row for the school. */
+function buildMinimalReportHTML(reportData: any): string {
+  const student = reportData.students?.[0];
+  const school = reportData.school || {};
+  const examSet = reportData.examSet || {};
+  if (!student) throw new Error('No student in report data');
+
+  let rows = '';
+  if (Array.isArray(student.results)) {
+    rows = student.results
+      .map(
+        (r: any) =>
+          `<tr><td>${r.subject ?? ''}</td><td>${r.marks_obtained ?? ''}</td><td>${r.total_marks ?? 100}</td><td>${r.grade ?? ''}</td><td>${r.remarks ?? ''}</td></tr>`
+      )
+      .join('');
+  }
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Student Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 1in; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #333; padding: 6px 10px; text-align: left; }
+    th { background: #eee; }
+    .header { text-align: center; margin-bottom: 1.5em; }
+    .meta { margin-top: 1em; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>${(school as any).name ?? 'School'}</h1>
+    <p>${(school as any).address ?? ''}</p>
+    <p><strong>STUDENT PROGRESS REPORT</strong></p>
+  </div>
+  <p><strong>Student:</strong> ${student.name ?? ''} &nbsp; <strong>Class:</strong> ${student.current_class ?? ''} &nbsp; <strong>Admission No:</strong> ${student.admission_number ?? student.student_id ?? ''}</p>
+  <p><strong>Term:</strong> ${(examSet as any).term ?? ''} &nbsp; <strong>Year:</strong> ${(examSet as any).year ?? ''} &nbsp; <strong>Exam set:</strong> ${(examSet as any).name ?? ''}</p>
+  <table>
+    <thead><tr><th>Subject</th><th>Marks</th><th>Total</th><th>Grade</th><th>Remarks</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="meta">
+    <p><strong>Average:</strong> ${student.summary?.average ?? '—'}% &nbsp; <strong>Position:</strong> ${student.summary?.classPosition ?? '—'} of ${student.summary?.totalStudents ?? '—'}</p>
+    <p><strong>Division:</strong> ${student.summary?.division ?? '—'} &nbsp; <strong>Aggregate:</strong> ${student.summary?.aggregate ?? '—'}</p>
+    <p><strong>Class teacher:</strong> ${student.comments?.class_teacher_text ?? ''}</p>
+    <p><strong>Head teacher:</strong> ${student.comments?.headteacher_text ?? student.comments?.head_teacher_text ?? ''}</p>
+  </div>
+</body>
+</html>`;
+}
+
 async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   const { snapshotId, studentIds, templateId } = options;
 
@@ -137,9 +190,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   }
   const { data: template } = await templateQuery.single();
 
-  if (!template) {
-    throw new Error('Report template not found. Add a default template for this school.');
-  }
+  const htmlContent = template?.html_content;
+  const cssContent = template?.css_content ?? '';
+  const useBuiltIn = !htmlContent || typeof htmlContent !== 'string' || !htmlContent.trim();
 
   const executablePath = await chromium.executablePath();
   const browser = await puppeteer.launch({
@@ -153,7 +206,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
     const page = await browser.newPage();
     const firstReport = cachedReports[0];
     const reportData = firstReport.report_data;
-    const html = renderReportHTML(template.html_content, template.css_content, reportData);
+    const html = useBuiltIn
+      ? buildMinimalReportHTML(reportData)
+      : renderReportHTML(htmlContent, cssContent, reportData);
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdf = await page.pdf({

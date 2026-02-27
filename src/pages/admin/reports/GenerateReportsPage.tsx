@@ -419,7 +419,9 @@ export default function GenerateReportsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        const errBody = await response.json().catch(() => ({}));
+        const msg = typeof errBody?.error === 'string' ? errBody.error : `Failed to generate PDF (${response.status})`;
+        throw new Error(msg);
       }
 
       const blob = await response.blob();
@@ -749,7 +751,7 @@ export default function GenerateReportsPage() {
             <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/20 px-3 py-2 text-sm text-red-700 dark:text-red-300">
               <p className="font-medium">{generationError}</p>
               <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY); redeploy; or check Vercel → Deployments → Functions → Logs.
+                If it keeps failing: Vercel → Settings → Environment Variables (SUPABASE_URL, SUPABASE_ANON_KEY). For PDF download, also set SUPABASE_SERVICE_ROLE_KEY; redeploy; or check Vercel → Deployments → Functions → Logs.
               </p>
               <button
                 type="button"
