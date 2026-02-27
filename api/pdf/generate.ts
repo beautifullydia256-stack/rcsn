@@ -140,8 +140,14 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   const year = (examSet as any).year ?? '';
   const examName = (examSet as any).name ?? '';
 
+  const isMidTermOnly = (name: string) => {
+    const n = String(name || '').trim().toLowerCase();
+    return n === 'mid term' || n === 'midterm' || n.includes('mid') || n.includes('mid-term');
+  };
+  const showENDColumn = !isMidTermOnly(examName);
+
   // Build subjects: use student.subjects if present, else derive from student.results (same as ReportPreviewFromData)
-  type Subj = { subject_name: string; mot_marks: string | number; eot_marks: string | number; eot_grade: string; mot_grade: string; total_marks: number; teacher_comment: string; teacher_name: string };
+  type Subj = { subject_name: string; mot_marks: string | number; eot_marks: string | number; eot_grade: string; mot_grade: string; bot_grade?: string; total_marks: number; teacher_comment: string; teacher_name: string };
   let subjects: Subj[] = [];
   if (Array.isArray((student as any).subjects) && (student as any).subjects.length > 0) {
     subjects = ((student as any).subjects as Subj[]).map((s) => ({
@@ -187,17 +193,26 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   }
 
   const subjectRows = subjects
-    .map(
-      (s) =>
-        `<tr>
+    .map((s) => {
+      const displayGrade = (s.eot_grade && String(s.eot_grade).trim()) || (s.mot_grade && String(s.mot_grade).trim()) || (s.bot_grade && String(s.bot_grade).trim()) || '—';
+      if (showENDColumn) {
+        return `<tr>
           <td class="subj-name">${s.subject_name}</td>
           <td class="tc">${s.mot_marks}</td>
           <td class="tc">${s.eot_marks}</td>
-          <td class="tc grade">${s.eot_grade}</td>
+          <td class="tc grade">${displayGrade}</td>
           <td class="comment">${s.teacher_comment}</td>
           <td class="teacher">${s.teacher_name}</td>
-        </tr>`
-    )
+        </tr>`;
+      }
+      return `<tr>
+          <td class="subj-name">${s.subject_name}</td>
+          <td class="tc">${s.mot_marks}</td>
+          <td class="tc grade">${displayGrade}</td>
+          <td class="comment">${s.teacher_comment}</td>
+          <td class="teacher">${s.teacher_name}</td>
+        </tr>`;
+    })
     .join('');
 
   const streamDisplay = (student as any).stream ?? (student as any).current_stream ?? (student as any).stream_name ?? 'N/A';
@@ -328,7 +343,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   </div>
   <div class="divider"></div>
   <div class="badge-wrap">
-    <div class="badge">End of Term Report – Upper Section</div>
+    <div class="badge">${isMidTermOnly(examName) ? 'Mid Term Report – Upper Section' : 'End of Term Report – Upper Section'}</div>
     ${(examName || year) ? `<div class="exam-sub">${examName || 'Term Report'} - ${year || new Date().getFullYear()}</div>` : ''}
   </div>
   <div class="student-block">
@@ -349,14 +364,14 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <tr>
         <th>Subject</th>
         <th class="tc">MID</th>
-        <th class="tc">END</th>
+        ${showENDColumn ? '<th class="tc">END</th>' : ''}
         <th class="tc">Grade</th>
         <th>Teacher's Comment</th>
         <th>Teacher</th>
       </tr>
     </thead>
     <tbody>
-      ${subjectRows || '<tr><td colspan="6" class="tc">No subject results.</td></tr>'}
+      ${subjectRows || (showENDColumn ? '<tr><td colspan="6" class="tc">No subject results.</td></tr>' : '<tr><td colspan="5" class="tc">No subject results.</td></tr>')}
     </tbody>
   </table>
   <div class="summary-grid-3">
