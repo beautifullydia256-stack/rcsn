@@ -527,7 +527,40 @@ export default function GenerateReportsPage() {
 
   const handleDownloadSinglePdf = async () => {
     if (!hasReportsReady) return;
-    // Just open the print dialog – user can choose "Save as PDF"
+    const baseUrl =
+      import.meta.env.VITE_PDF_API_URL ??
+      (import.meta.env.DEV ? 'http://localhost:3001' : '');
+    if (previewReports.length > 0 && pageData?.schoolId && baseUrl) {
+      setDownloadingPdf(true);
+      try {
+        const reportData = previewReports[0];
+        const res = await fetch(`${baseUrl}/api/pdf/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reportData,
+            schoolId: pageData.schoolId,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error((err as any)?.error || `PDF failed ${res.status}`);
+        }
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'report.pdf';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      } catch (e: any) {
+        setGenerationError(e?.message || 'PDF download failed');
+        window.print();
+      } finally {
+        setDownloadingPdf(false);
+      }
+      return;
+    }
     setDownloadingPdf(true);
     try {
       window.print();

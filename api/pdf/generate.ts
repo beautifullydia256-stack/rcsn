@@ -19,9 +19,13 @@ type Res = {
 export const config = { maxDuration: 60 };
 
 interface GeneratePDFOptions {
-  snapshotId: string;
+  snapshotId?: string;
   studentIds?: string[];
   templateId?: string;
+  /** When provided, use this report data instead of fetching from DB (same as preview). Skips all report/snapshot/photo/fees fetches. */
+  reportData?: Record<string, unknown>;
+  /** When reportData is provided, use this for template lookup. Can also be read from reportData.school?.school_id. */
+  schoolId?: string;
 }
 
 function renderReportHTML(templateHtml: string, templateCss: string, reportData: any): string {
@@ -156,6 +160,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       eot_marks: s.eot_marks ?? '',
       eot_grade: (s.eot_grade ?? '').toString().trim() || '—',
       mot_grade: (s.mot_grade ?? '').toString().trim() || '—',
+      bot_grade: (s.bot_grade ?? '').toString().trim() || '—',
       total_marks: Number(s.total_marks) || 100,
       teacher_comment: (s.teacher_comment ?? '').toString(),
       teacher_name: (s.teacher_name ?? '').toString(),
@@ -194,7 +199,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
 
   const subjectRows = subjects
     .map((s) => {
-      const displayGrade = (s.eot_grade && String(s.eot_grade).trim()) || (s.mot_grade && String(s.mot_grade).trim()) || (s.bot_grade && String(s.bot_grade).trim()) || '—';
+      const displayGrade = (s.eot_grade && s.eot_grade !== '—') ? s.eot_grade : (s.mot_grade && s.mot_grade !== '—') ? s.mot_grade : (s.bot_grade && s.bot_grade !== '—') ? s.bot_grade : '—';
       if (showENDColumn) {
         return `<tr>
           <td class="subj-name">${s.subject_name}</td>
@@ -637,7 +642,7 @@ function buildMinimalReportHTML(reportData: any): string {
 }
 
 async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
-  const { snapshotId, studentIds, templateId } = options;
+  const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId } = options;
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -647,94 +652,106 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  let query = supabase
-    .from('generated_reports')
-    .select('report_data, student_id')
-    .eq('snapshot_id', snapshotId);
+  let reportData: Record<string, unknown>;
+  let schoolIdForTemplate: string;
+  let useBuiltIn: boolean;
+  let htmlContent: string | null = null;
+  let cssContent = '';
 
-  if (studentIds && studentIds.length > 0) {
-    query = query.in('student_id', studentIds);
-  }
-  if (templateId) {
-    query = query.eq('template_id', templateId);
-  }
-
-  const { data: cachedReports, error: reportsError } = await query;
-  if (reportsError) throw reportsError;
-  if (!cachedReports || cachedReports.length === 0) {
-    throw new Error('No cached reports found. Generate reports first.');
-  }
-
-  const { data: snapshot } = await supabase
-    .from('report_snapshots')
-    .select('school_id')
-    .eq('id', snapshotId)
-    .single();
-  if (!snapshot) throw new Error('Snapshot not found');
-
-  let templateQuery = supabase
-    .from('report_templates')
-    .select('html_content, css_content')
-    .eq('school_id', snapshot.school_id);
-  if (templateId) {
-    templateQuery = templateQuery.eq('id', templateId);
-  } else {
-    templateQuery = templateQuery.eq('is_default', true);
-  }
-  const { data: template } = await templateQuery.single();
-
-  const htmlContent = template?.html_content;
-  const cssContent = template?.css_content ?? '';
-  const useBuiltIn =
-    !htmlContent ||
-    typeof htmlContent !== 'string' ||
-    !htmlContent.trim() ||
-    isDefaultPlaceholderTemplate(htmlContent);
-
-  const firstReport = cachedReports[0];
-  let reportData = firstReport.report_data as Record<string, unknown>;
-  const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
-  const studentId = firstReport.student_id as string;
-
-    if (student && snapshot.school_id) {
-    const hasPhoto =
-      (student.profile_photo && String(student.profile_photo).trim()) ||
-      (student.photo_url && String(student.photo_url).trim()) ||
-      (student.student_photo_url && String(student.student_photo_url).trim());
-    if (!hasPhoto) {
-      const { data: photoRow } = await supabase
-        .from('student_photos')
-        .select('photo_url')
-        .eq('school_id', snapshot.school_id)
-        .eq('student_id', studentId)
+  if (inlineReportData && (inlineReportData.students?.length ?? 0) > 0) {
+    reportData = inlineReportData;
+    schoolIdForTemplate = inlineSchoolId ?? (inlineReportData.school as any)?.school_id ?? '';
+    if (schoolIdForTemplate) {
+      const { data: template } = await supabase
+        .from('report_templates')
+        .select('html_content, css_content')
+        .eq('school_id', schoolIdForTemplate)
+        .eq('is_default', true)
+        .limit(1)
         .maybeSingle();
-      const url = (photoRow as { photo_url?: string } | null)?.photo_url;
-      if (url && String(url).trim()) {
-        student.profile_photo = url;
+      htmlContent = template?.html_content ?? null;
+      cssContent = template?.css_content ?? '';
+    } else {
+      htmlContent = null;
+      cssContent = '';
+    }
+    useBuiltIn =
+      !htmlContent ||
+      typeof htmlContent !== 'string' ||
+      !htmlContent.trim() ||
+      isDefaultPlaceholderTemplate(htmlContent);
+  } else {
+    if (!snapshotId || typeof snapshotId !== 'string') {
+      throw new Error('snapshotId is required when reportData is not provided.');
+    }
+    let q = supabase
+      .from('generated_reports')
+      .select('report_data, student_id')
+      .eq('snapshot_id', snapshotId);
+    if (studentIds && studentIds.length > 0) q = q.in('student_id', studentIds);
+    if (templateId) q = q.eq('template_id', templateId);
+    const { data: cachedReports, error: reportsError } = await q;
+    if (reportsError) throw reportsError;
+    if (!cachedReports || cachedReports.length === 0) {
+      throw new Error('No cached reports found. Generate reports first.');
+    }
+    const first = cachedReports[0];
+    reportData = first.report_data as Record<string, unknown>;
+    const { data: snapshot } = await supabase.from('report_snapshots').select('school_id').eq('id', snapshotId).single();
+    if (!snapshot) throw new Error('Snapshot not found');
+    schoolIdForTemplate = snapshot.school_id;
+    let templateQuery = supabase
+      .from('report_templates')
+      .select('html_content, css_content')
+      .eq('school_id', schoolIdForTemplate);
+    if (templateId) templateQuery = templateQuery.eq('id', templateId);
+    else templateQuery = templateQuery.eq('is_default', true);
+    const { data: template } = await templateQuery.single();
+    htmlContent = template?.html_content ?? null;
+    cssContent = template?.css_content ?? '';
+    useBuiltIn =
+      !htmlContent ||
+      typeof htmlContent !== 'string' ||
+      !htmlContent.trim() ||
+      isDefaultPlaceholderTemplate(htmlContent);
+    const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
+    const studentId = first.student_id as string;
+    if (student && schoolIdForTemplate) {
+      const hasPhoto =
+        (student.profile_photo && String(student.profile_photo).trim()) ||
+        (student.photo_url && String(student.photo_url).trim()) ||
+        (student.student_photo_url && String(student.student_photo_url).trim());
+      if (!hasPhoto) {
+        const { data: photoRow } = await supabase
+          .from('student_photos')
+          .select('photo_url')
+          .eq('school_id', schoolIdForTemplate)
+          .eq('student_id', studentId)
+          .maybeSingle();
+        const url = (photoRow as { photo_url?: string } | null)?.photo_url;
+        if (url && String(url).trim()) (student as any).profile_photo = url;
+      }
+      const currentBalance = (student as any).fees?.balance ?? (student as any).feesBalance ?? null;
+      const needsFees = currentBalance == null || currentBalance === 0;
+      if (needsFees && studentId) {
+        const [studentRes, paymentsRes] = await Promise.all([
+          supabase.from('students').select('expected_fee_amount').eq('student_id', studentId).eq('school_id', schoolIdForTemplate).maybeSingle(),
+          supabase.from('student_payments').select('amount_paid').eq('student_id', studentId).eq('school_id', schoolIdForTemplate),
+        ]);
+        const expected = Number((studentRes?.data as any)?.expected_fee_amount ?? 0);
+        const payments = (paymentsRes?.data ?? []) as { amount_paid?: number }[];
+        const paid = payments.reduce((sum, p) => sum + Number(p?.amount_paid ?? 0), 0);
+        const balance = Math.max(0, expected - paid);
+        if (!(student as any).fees) (student as any).fees = {};
+        (student as any).fees.expected = expected;
+        (student as any).fees.paid = paid;
+        (student as any).fees.balance = balance;
+        (student as any).feesBalance = balance;
       }
     }
-
-    const currentBalance = (student as any).fees?.balance ?? (student as any).feesBalance ?? null;
-    const needsFees =
-      currentBalance == null || currentBalance === 0 || (typeof currentBalance === 'number' && currentBalance === 0);
-    if (needsFees && studentId && snapshot.school_id) {
-      const [studentRes, paymentsRes] = await Promise.all([
-        supabase.from('students').select('expected_fee_amount').eq('student_id', studentId).eq('school_id', snapshot.school_id).maybeSingle(),
-        supabase.from('student_payments').select('amount_paid').eq('student_id', studentId).eq('school_id', snapshot.school_id),
-      ]);
-      const studentData = studentRes?.data as { expected_fee_amount?: number } | null;
-      const expected = Number(studentData?.expected_fee_amount ?? 0);
-      const payments = (paymentsRes?.data ?? []) as { amount_paid?: number }[];
-      const paid = payments.reduce((sum, p) => sum + Number(p?.amount_paid ?? 0), 0);
-      const balance = Math.max(0, expected - paid);
-      if (!(student as any).fees) (student as any).fees = {};
-      (student as any).fees.expected = expected;
-      (student as any).fees.paid = paid;
-      (student as any).fees.balance = balance;
-      (student as any).feesBalance = balance;
-    }
   }
 
+  const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
   const executablePath = await chromium.executablePath();
   const browser = await puppeteer.launch({
     args: chromium.args,
@@ -750,7 +767,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       ? isUpperSectionClass(className)
         ? buildTemplate4UpperSectionHTML(reportData)
         : buildMinimalReportHTML(reportData)
-      : renderReportHTML(htmlContent, cssContent, reportData);
+      : renderReportHTML(htmlContent!, cssContent, reportData);
     await page.setContent(html, { waitUntil: 'networkidle0' });
 
     const pdf = await page.pdf({
@@ -786,10 +803,31 @@ export default async function handler(req: Req, res: Res) {
       return sendError(405, 'Method not allowed');
     }
 
-    const body = (req.body || {}) as { snapshotId?: string; studentIds?: string[]; templateId?: string };
+    const body = (req.body || {}) as {
+      snapshotId?: string;
+      studentIds?: string[];
+      templateId?: string;
+      reportData?: Record<string, unknown>;
+      schoolId?: string;
+    };
     const snapshotId = body.snapshotId;
+    const reportData = body.reportData;
+    const schoolId = body.schoolId;
+
+    if (reportData && (reportData.students?.length ?? 0) > 0) {
+      const pdfBuffer = await generatePDF({
+        reportData,
+        schoolId,
+        templateId: body.templateId,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="report.pdf"');
+      res.status(200).end(pdfBuffer);
+      return;
+    }
+
     if (!snapshotId || typeof snapshotId !== 'string') {
-      return sendError(400, 'snapshotId is required');
+      return sendError(400, 'snapshotId is required when reportData is not provided');
     }
 
     const pdfBuffer = await generatePDF({
