@@ -331,6 +331,7 @@ export async function buildReportDataFromScope(
         student_stream: (student as { stream?: string })?.stream ?? (student as { current_stream?: string })?.current_stream ?? (student as { stream_name?: string })?.stream_name ?? '',
         school_subtitle: (schoolInfo as { subtitle?: string })?.subtitle ?? '',
         school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
+        report_date: new Date().toISOString().slice(0, 10),
       },
     });
   });
@@ -516,6 +517,7 @@ function oneReportFromSnapshotRows(
     attendance_total_days?: number;
     next_term_begins_date?: string | null;
     student_stream?: string;
+    report_date?: string;
   };
   const attendanceDetails =
     frozen.attendance_total_days != null
@@ -525,6 +527,7 @@ function oneReportFromSnapshotRows(
           totalSchoolDays: frozen.attendance_total_days ?? 0,
         }
       : undefined;
+  const reportDate = frozen.report_date || undefined;
   return {
     school: {
       ...school,
@@ -542,6 +545,7 @@ function oneReportFromSnapshotRows(
       name: examSet?.name || '',
       term: examSet?.term ?? 0,
       year: examSet?.year ?? 0,
+      ...(reportDate && { date: reportDate }),
     },
     students: [
       {
@@ -577,6 +581,7 @@ function oneReportFromSnapshotRows(
           classPosition: firstSummaryRecord.position ?? null,
           totalStudents: frozen.total_students_in_class ?? null,
           performanceRemark: firstSummaryRecord.division || 'N/A',
+          ...(reportDate && { reportDate }),
           ...(attendanceDetails && { attendanceDetails }),
         },
       },

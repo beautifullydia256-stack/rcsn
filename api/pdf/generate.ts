@@ -253,6 +253,10 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   const daysPresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
   const daysAbsent = attendance.absentDays ?? attendance.absent_days ?? 'N/A';
   const totalDays = attendance.totalSchoolDays ?? attendance.total_school_days ?? attendance.total_days ?? 'N/A';
+  const attendancePct = summary.attendancePercentage != null ? String(summary.attendancePercentage) + '%' : '';
+  const attendanceFallback = (daysPresent === 'N/A' && daysAbsent === 'N/A' && totalDays === 'N/A' && attendancePct)
+    ? attendancePct + ' (days not recorded)'
+    : null;
 
   const nextTermBegins = (student as any).next_term_begins_date
     ? new Date((student as any).next_term_begins_date).toLocaleDateString()
@@ -395,9 +399,11 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     </div>
     <div class="summary-box">
       <div style="font-weight: 600; color: #1e3a8a;">Attendance:</div>
-      <div>Days Present: ${daysPresent}</div>
+      ${attendanceFallback
+        ? `<div>${attendanceFallback}</div>`
+        : `<div>Days Present: ${daysPresent}</div>
       <div>Days Absent: ${daysAbsent}</div>
-      <div>Total Days: ${totalDays}</div>
+      <div>Total Days: ${totalDays}</div>`}
     </div>
   </div>
   <div class="grading-section">
