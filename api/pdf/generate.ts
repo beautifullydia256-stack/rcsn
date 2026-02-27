@@ -13,8 +13,7 @@ type Res = {
   setHeader: (k: string, v: string) => void;
   status: (n: number) => Res;
   json: (x: unknown) => void;
-  send: (body: Buffer) => void;
-  end: () => void;
+  end: (body?: Buffer | string) => void;
 };
 
 export const config = { maxDuration: 60 };
@@ -223,27 +222,33 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
 }
 
 export default async function handler(req: Req, res: Res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  if (req.method !== 'POST') {
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const body = (req.body || {}) as { snapshotId?: string; studentIds?: string[]; templateId?: string };
-  const snapshotId = body.snapshotId;
-  if (!snapshotId || typeof snapshotId !== 'string') {
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(400).json({ error: 'snapshotId is required' });
-  }
+  const sendError = (status: number, error: string) => {
+    try {
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.status(status).json({ error });
+    } catch (_) {}
+  };
 
   try {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end();
+    }
+
+    if (req.method !== 'POST') {
+      return sendError(405, 'Method not allowed');
+    }
+
+    const body = (req.body || {}) as { snapshotId?: string; studentIds?: string[]; templateId?: string };
+    const snapshotId = body.snapshotId;
+    if (!snapshotId || typeof snapshotId !== 'string') {
+      return sendError(400, 'snapshotId is required');
+    }
+
     const pdfBuffer = await generatePDF({
       snapshotId,
       studentIds: body.studentIds,
@@ -252,11 +257,10 @@ export default async function handler(req: Req, res: Res) {
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="reports_${snapshotId}.pdf"`);
-    return res.send(pdfBuffer);
+    res.status(200).end(pdfBuffer);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error('PDF generate error:', message);
-    res.setHeader('Content-Type', 'application/json');
-    return res.status(500).json({ error: message || 'PDF generation failed' });
+    sendError(500, message || 'PDF generation failed');
   }
 }

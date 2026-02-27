@@ -85,6 +85,21 @@ export default function ReportViewer() {
           a.href = url;
           a.download = `${report.students?.name || 'report'}_${snapshotId}.pdf`;
           a.click();
+        } else {
+          let errBody: { error?: string } = {};
+          const contentType = response.headers.get('Content-Type') || '';
+          if (contentType.includes('application/json')) {
+            errBody = await response.json().catch(() => ({}));
+          } else {
+            await response.text();
+          }
+          const msg = typeof errBody?.error === 'string'
+            ? errBody.error
+            : response.status === 500
+              ? 'PDF generation failed (500). Check Vercel → Deployments → Functions → Logs.'
+              : `Failed to generate PDF (${response.status})`;
+          console.error('PDF API error:', msg);
+          alert(msg);
         }
       }
     } catch (err) {

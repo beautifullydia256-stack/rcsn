@@ -419,8 +419,19 @@ export default function GenerateReportsPage() {
       });
 
       if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        const msg = typeof errBody?.error === 'string' ? errBody.error : `Failed to generate PDF (${response.status})`;
+        let errBody: { error?: string } = {};
+        const contentType = response.headers.get('Content-Type') || '';
+        if (contentType.includes('application/json')) {
+          errBody = await response.json().catch(() => ({}));
+        } else {
+          await response.text(); // consume body
+        }
+        const msg =
+          typeof errBody?.error === 'string'
+            ? errBody.error
+            : response.status === 500
+              ? `PDF generation failed (500). Check Vercel → Deployments → Functions → Logs for the error.`
+              : `Failed to generate PDF (${response.status})`;
         throw new Error(msg);
       }
 
