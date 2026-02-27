@@ -56,6 +56,9 @@ function mapSnapshotRowToDb(row: SnapshotRowForPersist, snapshotId: string) {
     attendance_percentage: row.attendance_percentage ?? null,
     position: row.position ?? null,
     aggregate: row.aggregate ?? null,
+    fees_balance: row.fees_balance ?? null,
+    fees_paid: row.fees_paid ?? null,
+    fees_expected: row.fees_expected ?? null,
     frozen_data: row.frozen_data ?? {},
   };
 }
@@ -76,6 +79,9 @@ function mapDbRowToSnapshotRow(d: Record<string, unknown>): SnapshotRowForPersis
     attendance_percentage: d.attendance_percentage != null ? Number(d.attendance_percentage) : undefined,
     position: d.position != null ? Number(d.position) : undefined,
     aggregate: d.aggregate != null ? Number(d.aggregate) : undefined,
+    fees_balance: d.fees_balance != null ? Number(d.fees_balance) : undefined,
+    fees_paid: d.fees_paid != null ? Number(d.fees_paid) : undefined,
+    fees_expected: d.fees_expected != null ? Number(d.fees_expected) : undefined,
     frozen_data: (d.frozen_data as Record<string, unknown>) ?? {},
   };
 }
@@ -261,7 +267,7 @@ serve(async (req) => {
       studentIds: studentIds?.length ? studentIds : undefined,
     };
 
-    const { snapshotRowsForPersist } = await buildReportDataFromScope(supabase, payload);
+    const { reportDataList, snapshotRowsForPersist } = await buildReportDataFromScope(supabase, payload);
     const uniqueStudents = [...new Set(snapshotRowsForPersist.map((r) => r.student_id))];
     totalStudents = uniqueStudents.length;
 
@@ -299,24 +305,8 @@ serve(async (req) => {
     const { error: lockErr } = await supabase.rpc('lock_report_snapshot', { p_snapshot_id: snapshotId });
     if (lockErr) throw lockErr;
 
-    const { data: lockedRows, error: fetchErr } = await supabase
-      .from('report_snapshot_data')
-      .select('*')
-      .eq('snapshot_id', snapshotId);
-    if (fetchErr) throw fetchErr;
-
-    const lockedSnapshotRows = (lockedRows || []).map(mapDbRowToSnapshotRow);
-    const { data: school } = await supabase.from('schools').select('*').eq('school_id', schoolId).single();
-    const { data: examSet } = await supabase.from('exam_sets').select('*').eq('id', examSetId).single();
-
-    const reportDataList = buildReportDataFromSnapshotRows(
-      lockedSnapshotRows,
-      (school || {}) as Record<string, unknown>,
-      (examSet || { id: examSetId }) as { id: string; name?: string; term?: number; year?: number },
-      snapshotId
-    ) as Record<string, unknown>[];
-
-    const generatedRows = reportDataList.map((reportData) => {
+    const reportDataListForInsert = (reportDataList || []) as Record<string, unknown>[];
+    const generatedRows = reportDataListForInsert.map((reportData) => {
       const studentId = (reportData.students as { student_id?: string }[])?.[0]?.student_id!;
       return {
         snapshot_id: snapshotId,

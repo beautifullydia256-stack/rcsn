@@ -681,7 +681,7 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
   const studentId = firstReport.student_id as string;
 
-  if (student && snapshot.school_id) {
+    if (student && snapshot.school_id) {
     const hasPhoto =
       (student.profile_photo && String(student.profile_photo).trim()) ||
       (student.photo_url && String(student.photo_url).trim()) ||
@@ -697,6 +697,26 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       if (url && String(url).trim()) {
         student.profile_photo = url;
       }
+    }
+
+    const currentBalance = (student as any).fees?.balance ?? (student as any).feesBalance ?? null;
+    const needsFees =
+      currentBalance == null || currentBalance === 0 || (typeof currentBalance === 'number' && currentBalance === 0);
+    if (needsFees && studentId && snapshot.school_id) {
+      const [studentRes, paymentsRes] = await Promise.all([
+        supabase.from('students').select('expected_fee_amount').eq('student_id', studentId).eq('school_id', snapshot.school_id).maybeSingle(),
+        supabase.from('student_payments').select('amount_paid').eq('student_id', studentId).eq('school_id', snapshot.school_id),
+      ]);
+      const studentData = studentRes?.data as { expected_fee_amount?: number } | null;
+      const expected = Number(studentData?.expected_fee_amount ?? 0);
+      const payments = (paymentsRes?.data ?? []) as { amount_paid?: number }[];
+      const paid = payments.reduce((sum, p) => sum + Number(p?.amount_paid ?? 0), 0);
+      const balance = Math.max(0, expected - paid);
+      if (!(student as any).fees) (student as any).fees = {};
+      (student as any).fees.expected = expected;
+      (student as any).fees.paid = paid;
+      (student as any).fees.balance = balance;
+      (student as any).feesBalance = balance;
     }
   }
 

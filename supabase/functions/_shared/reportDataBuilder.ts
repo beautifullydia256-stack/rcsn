@@ -101,13 +101,45 @@ export async function buildReportDataFromScope(
   const allStudentIdsInClass = [...new Set((examResults || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResults || []).map((r: { class_name: string }) => r.class_name))];
 
+  let commentSettingsQuery = supabase
+    .from('class_teacher_comments_settings')
+    .select('*')
+    .eq('school_id', schoolId);
+  if (classNamesFromResults.length > 0) {
+    commentSettingsQuery = commentSettingsQuery.in('class_name', classNamesFromResults);
+  }
+  const [
+    { data: processedRows },
+    { data: students },
+    { data: attendanceData },
+    { data: studentPayments },
+    { data: studentPhotos },
+    { data: schoolInfo },
+    { data: commentSettings },
+    { data: reportCommentsRows },
+  ] = await Promise.all([
+    supabase
+      .from('processed_primary_exam_results')
+      .select('student_id, aggregate, division, class_position')
+      .eq('school_id', schoolId)
+      .in('exam_set_id', examSetIdsToInclude)
+      .in('student_id', allStudentIdsInClass),
+    supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    supabase.from('student_payments').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
+    supabase.from('schools').select('*').eq('school_id', schoolId).single(),
+    commentSettingsQuery,
+    supabase
+      .from('report_comments')
+      .select('student_id, comment_type, comment_text')
+      .eq('school_id', schoolId)
+      .eq('term', term)
+      .eq('year', year)
+      .in('student_id', allStudentIdsInClass),
+  ]);
+
   const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
-  const { data: processedRows } = await supabase
-    .from('processed_primary_exam_results')
-    .select('student_id, aggregate, division, class_position')
-    .eq('school_id', schoolId)
-    .in('exam_set_id', examSetIdsToInclude)
-    .in('student_id', allStudentIdsInClass);
   (processedRows || []).forEach((row: { student_id: string; aggregate?: number; division?: string; class_position?: number }) => {
     if (row.student_id && !processedByStudent[row.student_id]) {
       processedByStudent[row.student_id] = {
@@ -118,37 +150,7 @@ export async function buildReportDataFromScope(
     }
   });
 
-  let commentSettingsQuery = supabase
-    .from('class_teacher_comments_settings')
-    .select('*')
-    .eq('school_id', schoolId);
-  if (classNamesFromResults.length > 0) {
-    commentSettingsQuery = commentSettingsQuery.in('class_name', classNamesFromResults);
-  }
-  const [
-    { data: students },
-    { data: attendanceData },
-    { data: studentPayments },
-    { data: studentPhotos },
-    { data: schoolInfo },
-    { data: commentSettings },
-  ] = await Promise.all([
-    supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('student_payments').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
-    supabase.from('schools').select('*').eq('school_id', schoolId).single(),
-    commentSettingsQuery,
-  ]);
-
   let studentComments: { student_id: string; class_teacher_text?: string; headteacher_text?: string }[] = [];
-  const { data: reportCommentsRows } = await supabase
-    .from('report_comments')
-    .select('student_id, comment_type, comment_text')
-    .eq('school_id', schoolId)
-    .eq('term', term)
-    .eq('year', year)
-    .in('student_id', allStudentIdsInClass);
   if (reportCommentsRows?.length) {
     const byStudent = new Map<string, { class_teacher_text?: string; headteacher_text?: string }>();
     for (const row of reportCommentsRows) {
