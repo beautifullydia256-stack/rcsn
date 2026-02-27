@@ -1,7 +1,7 @@
 /**
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
@@ -161,6 +161,15 @@ export default function GenerateReportsPage() {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
+  /** Selection used when we last generated; snapshot is only reused when current selection matches */
+  const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
+    term: number;
+    year: number;
+    examSetId: string;
+    selectedClass: string;
+    reportType: 'single' | 'class';
+    selectedStudent: string;
+  } | null>(null);
 
   const { data: pageData, isLoading } = useQuery({
     queryKey: ['admin', 'student-report-generator', user?.id ?? ''],
@@ -199,6 +208,37 @@ export default function GenerateReportsPage() {
     });
     return sorted[0]?.id ?? null;
   }, [pageData?.examSets, examSetsForSelectedTerm, selectedExamSetId]);
+
+  /** Current selection as a fingerprint; used to decide if we can reuse the last snapshot */
+  const currentFingerprint = useMemo(() => {
+    const term = selectedTerm || pageData?.currentTerm;
+    if (!term || !effectiveExamSetId || !selectedClass) return null;
+    return {
+      term: term.term,
+      year: term.year,
+      examSetId: effectiveExamSetId,
+      selectedClass,
+      reportType,
+      selectedStudent: reportType === 'single' ? selectedStudent : '',
+    };
+  }, [selectedTerm, pageData?.currentTerm, effectiveExamSetId, selectedClass, reportType, selectedStudent]);
+
+  const snapshotMatchesCurrentSelection =
+    !!lastGenerateFingerprint &&
+    !!currentFingerprint &&
+    lastGenerateFingerprint.term === currentFingerprint.term &&
+    lastGenerateFingerprint.year === currentFingerprint.year &&
+    lastGenerateFingerprint.examSetId === currentFingerprint.examSetId &&
+    lastGenerateFingerprint.selectedClass === currentFingerprint.selectedClass &&
+    lastGenerateFingerprint.reportType === currentFingerprint.reportType &&
+    lastGenerateFingerprint.selectedStudent === currentFingerprint.selectedStudent;
+
+  // When user changes anything (term, exam set, class, report type, or student), clear saved snapshot
+  // so we never show or reuse reports for a different selection — avoids wrong PDF (e.g. wrong class/student).
+  useEffect(() => {
+    setCompletedSnapshotId(null);
+    setLastGenerateFingerprint(null);
+  }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent]);
 
   const { data: studentsInClass = [] } = useQuery({
     queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass, effectiveExamSetId ?? ''],
@@ -305,6 +345,14 @@ export default function GenerateReportsPage() {
       if (fnError) throw new Error(fnError.message || 'Save failed');
       if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
       setCompletedSnapshotId(data.snapshotId);
+      setLastGenerateFingerprint({
+        term: term.term,
+        year: term.year,
+        examSetId: examSet.id,
+        selectedClass,
+        reportType,
+        selectedStudent: reportType === 'single' ? selectedStudent : '',
+      });
       setSaveSuccess(`Reports saved (${data.generatedCount ?? 0} students). You can download PDF or print.`);
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to save reports');
@@ -413,7 +461,7 @@ export default function GenerateReportsPage() {
     setGenerationError('');
 
     try {
-      if (completedSnapshotId && generatedReports.length > 0) {
+      if (completedSnapshotId && generatedReports.length > 0 && snapshotMatchesCurrentSelection) {
         snapshotId = completedSnapshotId;
         reports = generatedReports as any[];
       } else {
@@ -432,6 +480,14 @@ export default function GenerateReportsPage() {
         if (!data?.success || !data?.snapshotId) throw new Error(data?.error || 'Save failed');
         snapshotId = data.snapshotId;
         setCompletedSnapshotId(snapshotId);
+        setLastGenerateFingerprint({
+          term: term.term,
+          year: term.year,
+          examSetId: examSet.id,
+          selectedClass,
+          reportType,
+          selectedStudent: reportType === 'single' ? selectedStudent : '',
+        });
         await queryClient.invalidateQueries({ queryKey: ['admin', 'generated-reports', snapshotId] });
         reports = await fetchGeneratedReports(snapshotId);
         if (!reports.length) throw new Error('No reports were saved');
