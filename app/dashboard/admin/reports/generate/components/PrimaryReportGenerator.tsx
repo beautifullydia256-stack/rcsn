@@ -3223,6 +3223,18 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     return n === 'end of term' || n.includes('end') || n.includes('final') || n.includes('eot');
   };
 
+  // Resolve comments same as Template 4: from result row first, then student.comments, then placeholder
+  const endOfTermResult = (() => {
+    const results = student?.results || [];
+    const endResults = results.filter((r: any) => {
+      const name = String(r.exam_set_name || r.exam_set || '').toLowerCase();
+      return name.includes('end') || name.includes('final') || name.includes('eot');
+    });
+    return endResults.find((r: any) => r.headteacher_comment || r.class_teacher_comment) || endResults[0] || results[0] || null;
+  })();
+  const classTeacherCommentDisplay = (endOfTermResult?.class_teacher_comment || student?.comments?.class_teacher_text || student?.comments?.class_teacher_comment || student?.class_teacher_comment || '').toString().trim() || '..............................................................';
+  const headTeacherCommentDisplay = (endOfTermResult?.headteacher_comment || student?.comments?.head_teacher_text || student?.comments?.head_teacher_comment || student?.comments?.headteacher_text || student?.head_teacher_comment || '').toString().trim() || '..............................................................';
+
   // Determine which columns to show based on selected exam set
   // If examSet is provided and has a name, check if it's a specific exam set
   let showMidTermColumn = true;
@@ -3670,12 +3682,12 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-4.5 py-3.5 text-[9.2pt] space-y-3">
         <div>
             <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
-            <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || student.class_teacher_comment || '..............................................................'}</p>
+            <p>{classTeacherCommentDisplay}</p>
             <p className="mt-2">Signature: ______________________</p>
           </div>
           <div>
             <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Headteacher's Comments:</h3>
-            <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.comments?.headteacher_text || student.results?.[0]?.headteacher_comment || student.head_teacher_comment || '..............................................................'}</p>
+            <p>{headTeacherCommentDisplay}</p>
             <p className="mt-2">Signature: ______________________</p>
         </div>
           <div className="flex justify-between items-center text-[8.5pt] pt-2.5 border-t border-blue-100/40">
