@@ -880,7 +880,8 @@ export function PrimaryReportGenerator() {
               return ruleBasedClassComment;
             }
 
-            return '';
+            // Default so comments always show (e.g. when no settings configured for Lower Section)
+            return 'Good progress. Keep it up.';
           })();
 
           const resolvedHeadTeacherComment = (() => {
@@ -902,7 +903,8 @@ export function PrimaryReportGenerator() {
               return studentComments.head_teacher_comment;
             }
 
-            return '';
+            // Default so comments always show (e.g. when no settings configured for Lower Section)
+            return 'Approved.';
           })();
 
           // For Template4 (Upper Section P.5-P.7), create subjects array with bot_marks, mot_marks, eot_marks
