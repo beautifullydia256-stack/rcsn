@@ -22,7 +22,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
   // Primary/Nursery path (non O-Level)
   if (!isOL) {
     if (template === 'template3' || isLower) {
-      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
+      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
     }
     if (template === 'template4') {
       return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
@@ -44,7 +44,7 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     case 'template2':
       return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
     case 'template3':
-      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} />;
+      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
     case 'template4':
       return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
     case 'template5':
@@ -767,11 +767,45 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
 }
 
 // Template 3 - Kyotera Parents' Secondary School Format
-function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any }) {
+function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
+
+  // Default grading scales (same as Upper Section) for Grading System block
+  const defaultGradeScale = [
+    { min: 75, max: 100, grade: 'D1' },
+    { min: 70, max: 74, grade: 'D2' },
+    { min: 65, max: 69, grade: 'C3' },
+    { min: 60, max: 64, grade: 'C4' },
+    { min: 55, max: 59, grade: 'C5' },
+    { min: 50, max: 54, grade: 'C6' },
+    { min: 45, max: 49, grade: 'P7' },
+    { min: 40, max: 44, grade: 'P8' },
+    { min: 0, max: 39, grade: 'F9' }
+  ];
+  const defaultDivisionScale = [
+    { min: 4, max: 12, division: 'Division 1' },
+    { min: 13, max: 23, division: 'Division 2' },
+    { min: 24, max: 29, division: 'Division 3' },
+    { min: 30, max: 34, division: 'Division 4' },
+    { min: 35, max: 36, division: 'U (Ungraded)' }
+  ];
+  const gradeScale = (gradeSystem?.grades && gradeSystem.grades.length > 0 ? gradeSystem.grades : defaultGradeScale)
+    .map((range: { min: number; max: number; grade: string }) => ({
+      min: Number(range.min),
+      max: Number(range.max),
+      grade: String(range.grade || '').toUpperCase()
+    }))
+    .sort((a: { min: number }, b: { min: number }) => b.min - a.min);
+  const divisionScale = (gradeSystem?.divisions && gradeSystem.divisions.length > 0 ? gradeSystem.divisions : defaultDivisionScale)
+    .map((range: { min: number; max: number; division: string }) => ({
+      min: Number(range.min),
+      max: Number(range.max),
+      division: String(range.division || '')
+    }))
+    .sort((a: { min: number }, b: { min: number }) => a.min - b.min);
   
   // Generate report title based on settings
   const getReportTitle = () => {
@@ -1304,28 +1338,69 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           </div>
         </div>
 
-        {/* COMMENTS & FOOTER */}
-        <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-4.5 py-3.5 text-[9.2pt] space-y-3">
-        <div>
-            <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
-            <p>{classTeacherCommentDisplay}</p>
-            <p className="mt-2">Signature: ______________________</p>
+      {/* GRADING SYSTEM - same as Upper Section */}
+      <div className="text-[8.6pt]">
+          <h3 className="text-[9.2pt] font-semibold mb-1.2 text-blue-900">Grading System</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.9">
+            <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm overflow-hidden">
+              <div className="bg-blue-100/70 px-2.1 py-1.2 font-semibold text-center text-blue-900 uppercase tracking-wide text-[7.8pt]">Subject Grade Boundaries</div>
+              <table className="w-full text-[8pt]">
+                <thead>
+                  <tr className="bg-blue-50 text-blue-900">
+                    <th className="border border-blue-100 px-2.1 py-1.05 text-left">Percentage Range</th>
+                    <th className="border border-blue-100 px-2.1 py-1.05 text-center">Grade</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {gradeScale.map((range: { min: number; max: number; grade: string }, idx: number) => (
+                    <tr key={`${range.grade}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
+                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.grade}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+        </div>
+            <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm overflow-hidden">
+              <div className="bg-blue-100/70 px-2.1 py-1.2 font-semibold text-center text-blue-900 uppercase tracking-wide text-[7.8pt]">Division by Aggregate Points</div>
+              <table className="w-full text-[8pt]">
+                <thead>
+                  <tr className="bg-blue-50 text-blue-900">
+                    <th className="border border-blue-100 px-2.1 py-1.05 text-left">Aggregate Range</th>
+                    <th className="border border-blue-100 px-2.1 py-1.05 text-center">Division</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {divisionScale.map((range: { min: number; max: number; division: string }, idx: number) => (
+                    <tr key={`${range.division}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
+                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.division}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+        </div>
+          </div>
+        </div>
+
+        {/* COMMENTS & FOOTER - aligned with Upper Section */}
+        <div className="text-[8.5pt] rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.9 py-2.2 space-y-1.6">
+          <div>
+            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1.1 text-[9pt]">Class Teacher&apos;s Comments</h3>
+            <p className="text-slate-700 leading-[1.28]">{classTeacherCommentDisplay}</p>
+            <div className="text-slate-700 mt-1.1 text-[8pt]">Signature: ____________________</div>
           </div>
           <div>
-            <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Headteacher's Comments:</h3>
-            <p>{headTeacherCommentDisplay}</p>
-            <p className="mt-2">Signature: ______________________</p>
-        </div>
-          <div className="flex justify-between items-center text-[8.5pt] pt-2.5 border-t border-blue-100/40">
-            <div>
-              <strong className="text-blue-900">Next term begins on:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : '____________________'}
-            </div>
-            <div>
-              <strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}
-            </div>
+            <h3 className="text-blue-900 font-semibold uppercase tracking-wide mb-1.1 text-[9pt]">Headteacher&apos;s Comments</h3>
+            <p className="text-slate-700 leading-[1.28]">{headTeacherCommentDisplay}</p>
+            <div className="text-slate-700 mt-1.1 text-[8pt]">Signature: ____________________</div>
+          </div>
+          <div className="flex justify-between items-center text-[8.1pt] pt-1.6 mt-1.6 border-t border-blue-100/60">
+            <div><strong className="text-blue-900">Next term begins on:</strong> {student?.next_term_begins_date ? new Date(student.next_term_begins_date).toLocaleDateString() : 'TBA'}</div>
+            <div><strong className="text-blue-900">Fees Balance:</strong> {formatCurrency(student?.feesBalance || 0)}</div>
           </div>
         </div>
-        <div className="text-center text-[7.2pt] text-slate-500 mt-2.5">Generated by PwezaCore School Management System</div>
+        <div className="text-center text-[7pt] mt-1.25 pt-[0.2rem] border-t border-blue-100/80 text-slate-500">Generated by PwezaCore School Management System</div>
       </div>
     </div>
   );
