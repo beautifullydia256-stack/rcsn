@@ -3366,7 +3366,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               )}
 
               {/* Contact Information - Email | Phone - Serif Font - Uses saved color */}
-              {(school?.contact_email || school?.contact_phone) && (
+              {(school?.contact_email || school?.contact_phone || school?.email || school?.phone) && (
                 <div 
                   style={{
                     fontSize: '11pt',
@@ -3377,9 +3377,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     lineHeight: '1.32'
                   }}
                 >
-                  {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
-                  {school?.contact_phone && <span>{school.contact_phone}</span>}
+                  {(school?.contact_email || school?.email) && <span>{school?.contact_email || school?.email}</span>}
+                  {(school?.contact_email || school?.email) && (school?.contact_phone || school?.phone) && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
+                  {(school?.contact_phone || school?.phone) && <span>{school?.contact_phone || school?.phone}</span>}
       </div>
               )}
 
@@ -3670,12 +3670,12 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-4.5 py-3.5 text-[9.2pt] space-y-3">
         <div>
             <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Class Teacher's Comments:</h3>
-            <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || '..............................................................'}</p>
+            <p>{student.comments?.class_teacher_text || student.comments?.class_teacher_comment || student.results?.[0]?.class_teacher_comment || student.class_teacher_comment || '..............................................................'}</p>
             <p className="mt-2">Signature: ______________________</p>
           </div>
           <div>
             <h3 className="text-[9.5pt] font-semibold mb-1 text-blue-900">Headteacher's Comments:</h3>
-            <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.results?.[0]?.headteacher_comment || '..............................................................'}</p>
+            <p>{student.comments?.head_teacher_text || student.comments?.head_teacher_comment || student.comments?.headteacher_text || student.results?.[0]?.headteacher_comment || student.head_teacher_comment || '..............................................................'}</p>
             <p className="mt-2">Signature: ______________________</p>
         </div>
           <div className="flex justify-between items-center text-[8.5pt] pt-2.5 border-t border-blue-100/40">
