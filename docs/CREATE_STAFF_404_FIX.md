@@ -21,7 +21,7 @@ If Create Staff shows **Server error (404). The page could not be found**, the f
 
 The Create Staff page will then call `{VITE_API_URL}/api/admin/create-user-account` and the API will respond with CORS headers so the browser allows the request.
 
-**Important:** The project that serves api.pwezacore.com must be built and run with **Next.js** (e.g. in Vercel: Framework Preset = Next.js, or Build Command = `next build`). The repo has both Vite and Next.js (app/, next.config.ts, middleware.ts). If the API project uses the same Vite build as www, `/api/*` does not exist there and you will get 404/CORS errors. Use a separate Vercel project for the API with Next.js so that middleware and API routes run.
+**Important:** The project that serves api.pwezacore.com must be built and run with **Next.js** (e.g. in Vercel: Framework Preset = Next.js, or Build Command = `next build`). The repo has both Vite (main app) and Next.js (app/, next.config.ts). Root `middleware.ts` was removed because the main Vercel build is Vite-only; Vercel would try to run middleware as an Edge Function and fail (no `next` dependency). CORS for the API is handled in `app/api/admin/create-user-account/route.ts` (OPTIONS + response headers) and in `next.config.ts` headers when you deploy with Next.js. If the API project uses the same Vite build as www, `/api/*` does not exist there and you will get 404/CORS errors.
 
 ### Option 2: Serve API on the same host
 
