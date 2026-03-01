@@ -7,14 +7,19 @@ If Create Staff shows **Server error (404). The page could not be found**, the f
 ### Option 1: Use `VITE_API_URL` (recommended if API is elsewhere)
 
 1. Deploy the **Next.js** part of this repo so that `/api/admin/create-user-account` exists (e.g. a second Vercel project using the same repo with Next.js build, or any host that runs the `app` API routes).
-2. In your **Vite app** deployment (Vercel / env), set:
+2. **CORS:** The API allows requests from `https://www.pwezacore.com` by default. On the **API** deployment (e.g. api.pwezacore.com), set in Environment Variables:
    ```bash
-   VITE_API_URL=https://your-api-origin.com
+   CORS_ORIGIN=https://www.pwezacore.com
+   ```
+   (Optional; this is the default. Use if your frontend is on a different origin.)
+3. In your **Vite app** deployment (Vercel / env), set:
+   ```bash
+   VITE_API_URL=https://api.pwezacore.com
    ```
    Use the full origin where the Next.js API is served (no trailing slash), e.g. `https://www.pwezacore.com` if the same domain serves the API, or `https://api.pwezacore.com` if the API is on a subdomain.
-3. Rebuild and redeploy the Vite app so the env is baked in.
+4. Rebuild and redeploy both the API and the Vite app so env is applied.
 
-The Create Staff page will then call `{VITE_API_URL}/api/admin/create-user-account` instead of `/api/admin/create-user-account`.
+The Create Staff page will then call `{VITE_API_URL}/api/admin/create-user-account` and the API will respond with CORS headers so the browser allows the request.
 
 ### Option 2: Serve API on the same host
 

@@ -3,6 +3,26 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
+// CORS: allow frontend at www.pwezacore.com (and optional CORS_ORIGIN env) when API is on api.pwezacore.com
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
+const corsHeaders: Record<string, string> = {
+  'Access-Control-Allow-Origin': CORS_ORIGIN,
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Max-Age': '86400',
+};
+
+function withCors(res: NextResponse): NextResponse {
+  Object.entries(corsHeaders).forEach(([k, v]) => res.headers.set(k, v));
+  return res;
+}
+
+/** Handle CORS preflight so browser allows POST from www.pwezacore.com */
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: corsHeaders });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
@@ -11,10 +31,10 @@ export async function POST(request: NextRequest) {
 
     if (!supabaseUrl || !supabaseAnon || !supabaseServiceKey) {
       console.error('Missing Supabase env: URL, anon key, or service role key');
-      return NextResponse.json(
+      return withCors(NextResponse.json(
         { error: 'Server configuration error. Please contact support.' },
         { status: 500 }
-      );
+      ));
     }
 
     const cookieStore = await cookies();
@@ -30,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     const { data: { user: adminUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !adminUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return withCors(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
 
     // Get admin's school
@@ -41,7 +61,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!adminData || !['admin', 'owner'].includes(adminData.role)) {
-      return NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 });
+      return withCors(NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 }));
     }
 
     const body = await request.json();
@@ -68,9 +88,9 @@ export async function POST(request: NextRequest) {
         
         if (existingUserRecord) {
           // Both auth user and public.users record exist - email is truly in use
-          return NextResponse.json({ 
+          return withCors(NextResponse.json({ 
             error: 'A user with this email address has already been registered' 
-          }, { status: 400 });
+          }, { status: 400 }));
         } else {
           // Orphaned auth user exists (no public.users record) - delete it first
           console.log(`Cleaning up orphaned auth user for email: ${email}`);
@@ -215,9 +235,9 @@ export async function POST(request: NextRequest) {
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
       }
-      return NextResponse.json({ 
+      return withCors(NextResponse.json({ 
         error: 'Admin user does not have a school_id. Please contact support.' 
-      }, { status: 400 });
+      }, { status: 400 }));
     }
 
     // Verify school_id exists in schools table before inserting
@@ -232,10 +252,10 @@ export async function POST(request: NextRequest) {
       if (authUserId) {
         await supabaseAdmin.auth.admin.deleteUser(authUserId);
       }
-      return NextResponse.json({ 
+      return withCors(NextResponse.json({ 
         error: `The school_id (${adminData.school_id}) does not exist in the schools table. Please verify your school setup.`,
         details: schoolCheckError?.message
-      }, { status: 400 });
+      }, { status: 400 }));
     }
 
     // Create user profile in users table using service role
@@ -308,19 +328,19 @@ export async function POST(request: NextRequest) {
         errorMessage = `Database integrity error: The school_id (${adminData.school_id}) does not exist in the schools table. Please contact support.`;
       }
       
-      return NextResponse.json({ 
+      return withCors(NextResponse.json({ 
         error: errorMessage,
         details: profileError.message,
         code: profileError.code
-      }, { status: 500 });
+      }, { status: 500 }));
     }
 
-    return NextResponse.json({ 
+    return withCors(NextResponse.json({ 
       success: true,
       message: sendEmailInvite 
         ? "User invited successfully! They will receive an email to set up their account."
         : "User created successfully! They can now log in with their credentials."
-    });
+    }));
 
   } catch (error: any) {
     console.error('Error creating user:', error);
@@ -343,10 +363,10 @@ export async function POST(request: NextRequest) {
       errorMessage = 'A user with this email address already exists.';
     }
     
-    return NextResponse.json({ 
+    return withCors(NextResponse.json({ 
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error?.message : undefined
-    }, { status: 500 });
+    }, { status: 500 }));
   }
 }
 
