@@ -87,8 +87,8 @@ export default function CreateStaffPage() {
 
     setSaving(true);
     try {
-      // When deployed as Vite-only, /api doesn't exist on the same host. Set VITE_API_URL to the
-      // origin where the Next.js API runs (e.g. https://www.pwezacore.com if you deploy Next.js there).
+      // Call same-origin /api/admin/create-user-account (Vercel serverless on www).
+      // Leave VITE_API_URL unset so request goes to www.pwezacore.com/api/... = no CORS.
       const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
       const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
       const response = await fetch(url, {

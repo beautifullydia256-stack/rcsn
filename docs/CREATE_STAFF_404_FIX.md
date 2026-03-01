@@ -1,10 +1,19 @@
-# Create Staff 404 / "The page could not be found"
+# Create Staff 404 / CORS / "Failed to fetch"
 
-If Create Staff shows **Server error (404). The page could not be found**, the frontend (Vite app) is calling `/api/admin/create-user-account` on the same host, but that path is not available (e.g. you deploy only the Vite build, so there is no API server).
+## Recommended: Use same origin (no CORS)
 
-## Fix options
+The repo now includes a **Vercel serverless function** at `api/admin/create-user-account.ts`. When you deploy the **www** project (Vite build), Vercel also deploys this function, so **https://www.pwezacore.com/api/admin/create-user-account** exists on the same host as the app.
 
-### Option 1: Use `VITE_API_URL` (recommended if API is elsewhere)
+**Do this:**
+1. **Remove the env var `VITE_API_URL`** from your www project in Vercel (or leave it empty). The Create Staff page will then call `/api/admin/create-user-account` on the same origin → no CORS, no second domain.
+2. In the **www** project, ensure these env vars are set (same as today): `NEXT_PUBLIC_SUPABASE_URL` (or `VITE_SUPABASE_URL`), `NEXT_PUBLIC_SUPABASE_ANON_KEY` (or `VITE_SUPABASE_ANON_KEY`), `SUPABASE_SERVICE_ROLE_KEY`.
+3. Redeploy. Create Staff should work.
+
+---
+
+## If you still use a separate API domain (api.pwezacore.com)
+
+If Create Staff shows **Server error (404)** or **CORS / Failed to fetch**, and you want to keep calling api.pwezacore.com:
 
 1. Deploy the **Next.js** part of this repo so that `/api/admin/create-user-account` exists (e.g. a second Vercel project using the same repo with Next.js build, or any host that runs the `app` API routes).
 2. **CORS:** The API allows requests from `https://www.pwezacore.com` by default. On the **API** deployment (e.g. api.pwezacore.com), set in Environment Variables:
