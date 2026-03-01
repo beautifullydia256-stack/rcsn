@@ -87,7 +87,11 @@ export default function CreateStaffPage() {
 
     setSaving(true);
     try {
-      const response = await fetch('/api/admin/create-user-account', {
+      // When deployed as Vite-only, /api doesn't exist on the same host. Set VITE_API_URL to the
+      // origin where the Next.js API runs (e.g. https://www.pwezacore.com if you deploy Next.js there).
+      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+      const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
