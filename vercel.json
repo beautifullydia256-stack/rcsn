@@ -5,12 +5,6 @@
   "rewrites": [
     { "source": "/((?!api/)(?!assets/).*)", "destination": "/index.html" }
   ],
-  "functions": {
-    "api/admin/create-user-account.ts": {
-      "runtime": "nodejs20.x",
-      "maxDuration": 30
-    }
-  },
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
   }
