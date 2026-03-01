@@ -5,10 +5,19 @@ import { createServerClient } from '@supabase/ssr';
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
     const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+
+    if (!supabaseUrl || !supabaseAnon || !supabaseServiceKey) {
+      console.error('Missing Supabase env: URL, anon key, or service role key');
+      return NextResponse.json(
+        { error: 'Server configuration error. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
+    const cookieStore = await cookies();
 
     // Get current admin user
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {

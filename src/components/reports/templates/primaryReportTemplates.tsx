@@ -881,8 +881,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     });
     return endResults.find((r: any) => r.headteacher_comment || r.class_teacher_comment) || endResults[0] || results[0] || null;
   })();
-  const classTeacherCommentDisplay = (endOfTermResult?.class_teacher_comment || student?.comments?.class_teacher_text || student?.comments?.class_teacher_comment || (student as any)?.class_teacher_comment || '').toString().trim() || '..............................................................';
-  const headTeacherCommentDisplay = (endOfTermResult?.headteacher_comment || student?.comments?.head_teacher_text || student?.comments?.head_teacher_comment || student?.comments?.headteacher_text || (student as any)?.head_teacher_comment || '').toString().trim() || '..............................................................';
+  const classTeacherCommentDisplay = (() => {
+    const raw = (endOfTermResult?.class_teacher_comment || student?.comments?.class_teacher_text || student?.comments?.class_teacher_comment || (student as any)?.class_teacher_comment || '').toString().trim();
+    return raw || 'Good progress. Keep it up.';
+  })();
+  const headTeacherCommentDisplay = (() => {
+    const raw = (endOfTermResult?.headteacher_comment || student?.comments?.head_teacher_text || student?.comments?.head_teacher_comment || student?.comments?.headteacher_text || (student as any)?.head_teacher_comment || '').toString().trim();
+    return raw || 'Approved.';
+  })();
 
   // Determine which columns to show (same rule as Template4 / Primary 7 for consistency)
   // Mid Term only → show just Mid column; End of Term or Auto → show BOTH Mid and End columns.

@@ -103,7 +103,27 @@ export default function CreateStaffPage() {
           sendEmailInvite: false,
         }),
       });
-      const result = await response.json();
+
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
+      let result: { error?: string; message?: string } = {};
+      if (isJson) {
+        try {
+          result = await response.json();
+        } catch {
+          setError('Invalid response from server. Please try again.');
+          return;
+        }
+      } else {
+        const text = await response.text();
+        setError(
+          response.ok
+            ? 'Invalid response from server. Please try again.'
+            : `Server error (${response.status}). ${text?.slice(0, 100) || 'Please try again.'}`
+        );
+        return;
+      }
+
       if (!response.ok) throw new Error(result.error || 'Failed to create user');
 
       setSuccess(result.message || 'User created successfully.');

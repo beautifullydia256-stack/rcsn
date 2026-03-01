@@ -1204,7 +1204,10 @@ export function PrimaryReportGenerator() {
             ...student,
             results: allStudentResults.map((r: any) => ({
               ...r,
-              next_term_begins_date: schoolInfo?.next_term_begins_date || null
+              next_term_begins_date: schoolInfo?.next_term_begins_date || null,
+              // Ensure comments are on each result row so Lower Section template finds them from endOfTermResult
+              class_teacher_comment: r.class_teacher_comment || resolvedClassTeacherComment,
+              headteacher_comment: r.headteacher_comment || resolvedHeadTeacherComment,
             })),
             subjects: subjects.length > 0 ? subjects : undefined, // Only add if Template4
             attendance: studentAttendance,
@@ -3268,8 +3271,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     });
     return endResults.find((r: any) => r.headteacher_comment || r.class_teacher_comment) || endResults[0] || results[0] || null;
   })();
-  const classTeacherCommentDisplay = (endOfTermResult?.class_teacher_comment || student?.comments?.class_teacher_text || student?.comments?.class_teacher_comment || student?.class_teacher_comment || '').toString().trim() || '..............................................................';
-  const headTeacherCommentDisplay = (endOfTermResult?.headteacher_comment || student?.comments?.head_teacher_text || student?.comments?.head_teacher_comment || student?.comments?.headteacher_text || student?.head_teacher_comment || '').toString().trim() || '..............................................................';
+  const classTeacherCommentDisplay = (() => {
+    const raw = (endOfTermResult?.class_teacher_comment || student?.comments?.class_teacher_text || student?.comments?.class_teacher_comment || student?.class_teacher_comment || '').toString().trim();
+    return raw || 'Good progress. Keep it up.';
+  })();
+  const headTeacherCommentDisplay = (() => {
+    const raw = (endOfTermResult?.headteacher_comment || student?.comments?.head_teacher_text || student?.comments?.head_teacher_comment || student?.comments?.headteacher_text || student?.head_teacher_comment || '').toString().trim();
+    return raw || 'Approved.';
+  })();
 
   // Determine which columns to show based on selected exam set
   // If examSet is provided and has a name, check if it's a specific exam set
