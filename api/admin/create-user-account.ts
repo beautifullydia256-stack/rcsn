@@ -199,57 +199,27 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    let profileError: { message?: string } | null = null;
+    // Create user profile in users table - direct upsert (no RPC), same as create-teacher-login / app route
     try {
-      const { error: rpcError } = await supabaseAdmin.rpc('insert_user_with_school', {
-        p_user_id: authUserId,
-        p_email: String(email),
-        p_name: name,
-        p_role: String(role ?? 'teacher'),
-        p_school_id: adminData.school_id,
-        p_phone: phone != null ? String(phone) : null,
-        p_department: department != null ? String(department) : null,
-        p_position: position != null ? String(position) : null,
-      });
-      profileError = rpcError;
-      if (rpcError) {
-        const msg = (rpcError.message || '').toLowerCase();
-        if (msg.includes('function') && (msg.includes('does not exist') || msg.includes('schema cache'))) {
-          const { error: insertError } = await supabaseAdmin.from('users').insert({
-            user_id: authUserId,
-            email,
-            name,
-            role: role ?? 'teacher',
-            school_id: adminData.school_id,
-            phone: phone ?? null,
-            department: department ?? null,
-            position: position ?? null,
-          });
-          profileError = insertError;
-        }
-      }
-    } catch (rpcThrow: unknown) {
-      // RPC failed (e.g. network) - fall back to direct insert
-      const { error: insertError } = await supabaseAdmin.from('users').insert({
-        user_id: authUserId,
-        email,
-        name,
-        role: role ?? 'teacher',
-        school_id: adminData.school_id,
-        phone: phone ?? null,
-        department: department ?? null,
-        position: position ?? null,
-      });
-      profileError = insertError;
-    }
+      const { error: userInsertError } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          user_id: authUserId,
+          email: String(email),
+          name,
+          role: String(role ?? 'teacher'),
+          school_id: adminData.school_id,
+          phone: phone != null ? String(phone) : null,
+          department: department != null ? String(department) : null,
+          position: position != null ? String(position) : null,
+        }, { onConflict: 'user_id' });
 
-    if (profileError) {
-      if (authUserId) {
-        try { await supabaseAdmin.auth.admin.deleteUser(authUserId); } catch {}
+      if (userInsertError) {
+        console.warn('Failed to create user record:', userInsertError.message);
+        // Don't fail the entire operation; auth user can still log in
       }
-      setCors();
-      res.status(500).json({ error: profileError.message || 'Failed to create user profile', details: profileError.message });
-      return;
+    } catch (userErr: unknown) {
+      console.warn('Error creating user record:', userErr);
     }
 
     setCors();
