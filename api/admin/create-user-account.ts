@@ -133,20 +133,17 @@ export default async function handler(req: Req, res: Res) {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    try {
-      const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingAuthUser = existingAuthUsers?.users?.find((u: { email?: string }) => u.email === email);
-      if (existingAuthUser) {
-        const { data: existingUserRecord } = await supabaseAdmin.from('users').select('user_id').eq('user_id', existingAuthUser.id).single();
-        if (existingUserRecord) {
-          setCors();
-          res.status(400).json({ error: 'A user with this email address has already been registered' });
-          return;
-        }
-        await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
-      }
-    } catch {
-      // continue
+    // Check if email already exists in public.users (fast) - avoid listUsers() which can timeout on serverless
+    const { data: existingUserByEmail } = await supabaseAdmin
+      .from('users')
+      .select('user_id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUserByEmail) {
+      setCors();
+      res.status(400).json({ error: 'A user with this email address has already been registered' });
+      return;
     }
 
     let authUserId: string | null = null;
@@ -156,28 +153,13 @@ export default async function handler(req: Req, res: Res) {
       const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
       if (inviteError) {
         if (inviteError.message?.toLowerCase().includes('already') || inviteError.message?.toLowerCase().includes('registered')) {
-          try {
-            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-            const orphaned = authUsers?.users?.find((u: { email?: string }) => u.email === email);
-            if (orphaned) {
-              const { data: ur } = await supabaseAdmin.from('users').select('user_id').eq('user_id', orphaned.id).single();
-              if (!ur) {
-                await supabaseAdmin.auth.admin.deleteUser(orphaned.id);
-                const retry = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
-                if (retry.error) throw retry.error;
-                authUserId = retry.data.user?.id ?? null;
-              } else throw inviteError;
-            } else throw inviteError;
-          } catch (e) {
-            setCors();
-            res.status(400).json({ error: inviteError.message });
-            return;
-          }
-        } else {
           setCors();
-          res.status(400).json({ error: inviteError.message });
+          res.status(400).json({ error: 'A user with this email address has already been registered' });
           return;
         }
+        setCors();
+        res.status(400).json({ error: inviteError.message });
+        return;
       } else {
         authUserId = data?.user?.id ?? null;
       }
@@ -190,28 +172,13 @@ export default async function handler(req: Req, res: Res) {
       });
       if (signupError) {
         if (signupError.message?.toLowerCase().includes('already') || signupError.message?.toLowerCase().includes('registered')) {
-          try {
-            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-            const orphaned = authUsers?.users?.find((u: { email?: string }) => u.email === email);
-            if (orphaned) {
-              const { data: ur } = await supabaseAdmin.from('users').select('user_id').eq('user_id', orphaned.id).single();
-              if (!ur) {
-                await supabaseAdmin.auth.admin.deleteUser(orphaned.id);
-                const retry = await supabaseAdmin.auth.admin.createUser({ email: String(email), password: String(password), email_confirm: true, user_metadata: meta });
-                if (retry.error) throw retry.error;
-                authUserId = retry.data.user?.id ?? null;
-              } else throw signupError;
-            } else throw signupError;
-          } catch (e) {
-            setCors();
-            res.status(400).json({ error: signupError.message });
-            return;
-          }
-        } else {
           setCors();
-          res.status(400).json({ error: signupError.message });
+          res.status(400).json({ error: 'A user with this email address has already been registered' });
           return;
         }
+        setCors();
+        res.status(400).json({ error: signupError.message });
+        return;
       } else {
         authUserId = data?.user?.id ?? null;
       }
@@ -232,33 +199,48 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const { error: rpcError } = await supabaseAdmin.rpc('insert_user_with_school', {
-      p_user_id: authUserId,
-      p_email: String(email),
-      p_name: name,
-      p_role: String(role ?? 'teacher'),
-      p_school_id: adminData.school_id,
-      p_phone: phone != null ? String(phone) : null,
-      p_department: department != null ? String(department) : null,
-      p_position: position != null ? String(position) : null,
-    });
-
-    let profileError = rpcError;
-    if (rpcError) {
-      const msg = (rpcError.message || '').toLowerCase();
-      if (msg.includes('function') && (msg.includes('does not exist') || msg.includes('schema cache'))) {
-        const { error: insertError } = await supabaseAdmin.from('users').insert({
-          user_id: authUserId,
-          email,
-          name,
-          role: role ?? 'teacher',
-          school_id: adminData.school_id,
-          phone: phone ?? null,
-          department: department ?? null,
-          position: position ?? null,
-        });
-        profileError = insertError;
+    let profileError: { message?: string } | null = null;
+    try {
+      const { error: rpcError } = await supabaseAdmin.rpc('insert_user_with_school', {
+        p_user_id: authUserId,
+        p_email: String(email),
+        p_name: name,
+        p_role: String(role ?? 'teacher'),
+        p_school_id: adminData.school_id,
+        p_phone: phone != null ? String(phone) : null,
+        p_department: department != null ? String(department) : null,
+        p_position: position != null ? String(position) : null,
+      });
+      profileError = rpcError;
+      if (rpcError) {
+        const msg = (rpcError.message || '').toLowerCase();
+        if (msg.includes('function') && (msg.includes('does not exist') || msg.includes('schema cache'))) {
+          const { error: insertError } = await supabaseAdmin.from('users').insert({
+            user_id: authUserId,
+            email,
+            name,
+            role: role ?? 'teacher',
+            school_id: adminData.school_id,
+            phone: phone ?? null,
+            department: department ?? null,
+            position: position ?? null,
+          });
+          profileError = insertError;
+        }
       }
+    } catch (rpcThrow: unknown) {
+      // RPC failed (e.g. network) - fall back to direct insert
+      const { error: insertError } = await supabaseAdmin.from('users').insert({
+        user_id: authUserId,
+        email,
+        name,
+        role: role ?? 'teacher',
+        school_id: adminData.school_id,
+        phone: phone ?? null,
+        department: department ?? null,
+        position: position ?? null,
+      });
+      profileError = insertError;
     }
 
     if (profileError) {
