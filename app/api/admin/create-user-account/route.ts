@@ -73,33 +73,18 @@ export async function POST(request: NextRequest) {
     // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if email already exists in auth.users
-    try {
-      const { data: existingAuthUsers } = await supabaseAdmin.auth.admin.listUsers();
-      const existingAuthUser = existingAuthUsers?.users?.find(u => u.email === email);
-      
-      if (existingAuthUser) {
-        // Check if there's a corresponding public.users record
-        const { data: existingUserRecord } = await supabaseAdmin
-          .from('users')
-          .select('user_id')
-          .eq('user_id', existingAuthUser.id)
-          .single();
-        
-        if (existingUserRecord) {
-          // Both auth user and public.users record exist - email is truly in use
-          return withCors(NextResponse.json({ 
-            error: 'A user with this email address has already been registered' 
-          }, { status: 400 }));
-        } else {
-          // Orphaned auth user exists (no public.users record) - delete it first
-          console.log(`Cleaning up orphaned auth user for email: ${email}`);
-          await supabaseAdmin.auth.admin.deleteUser(existingAuthUser.id);
-        }
-      }
-    } catch (checkError) {
-      console.warn('Error checking for existing auth user:', checkError);
-      // Continue with creation attempt - if email exists, Supabase will error
+    // Check if email already exists in public.users (fast, indexed) - avoid listUsers() which can timeout on serverless
+    const { data: existingUserByEmail } = await supabaseAdmin
+      .from('users')
+      .select('user_id')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingUserByEmail) {
+      return withCors(NextResponse.json(
+        { error: 'A user with this email address has already been registered' },
+        { status: 400 }
+      ));
     }
 
     let authUserId = null;
@@ -118,48 +103,14 @@ export async function POST(request: NextRequest) {
       });
 
       if (inviteError) {
-        // Check if error is due to email already existing
+        // Email already in auth - return clear message (avoid listUsers which can timeout)
         if (inviteError.message?.toLowerCase().includes('already') || inviteError.message?.toLowerCase().includes('registered')) {
-          // Try to find and clean up orphaned auth user
-          try {
-            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-            const orphanedUser = authUsers?.users?.find(u => u.email === email);
-            if (orphanedUser) {
-              const { data: userRecord } = await supabaseAdmin
-                .from('users')
-                .select('user_id')
-                .eq('user_id', orphanedUser.id)
-                .single();
-              
-              if (!userRecord) {
-                // Orphaned auth user - delete it and retry
-                console.log(`Cleaning up orphaned auth user and retrying for email: ${email}`);
-                await supabaseAdmin.auth.admin.deleteUser(orphanedUser.id);
-                // Retry the invite
-                const { data: retryData, error: retryError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-                  data: {
-                    name,
-                    role,
-                    school_id: adminData.school_id,
-                    department,
-                    position,
-                    phone
-                  }
-                });
-                if (retryError) throw retryError;
-                authUserId = retryData.user?.id;
-              } else {
-                throw inviteError; // Email is truly in use
-              }
-            } else {
-              throw inviteError; // Email exists but we couldn't find it
-            }
-          } catch (cleanupError) {
-            throw inviteError; // Throw original error if cleanup fails
-          }
-        } else {
-          throw inviteError;
+          return withCors(NextResponse.json(
+            { error: 'A user with this email address has already been registered' },
+            { status: 400 }
+          ));
         }
+        throw inviteError;
       } else {
         authUserId = data.user?.id;
       }
@@ -180,51 +131,14 @@ export async function POST(request: NextRequest) {
       });
 
       if (signupError) {
-        // Check if error is due to email already existing
+        // Email already in auth - return clear message (avoid listUsers which can timeout)
         if (signupError.message?.toLowerCase().includes('already') || signupError.message?.toLowerCase().includes('registered')) {
-          // Try to find and clean up orphaned auth user
-          try {
-            const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-            const orphanedUser = authUsers?.users?.find(u => u.email === email);
-            if (orphanedUser) {
-              const { data: userRecord } = await supabaseAdmin
-                .from('users')
-                .select('user_id')
-                .eq('user_id', orphanedUser.id)
-                .single();
-              
-              if (!userRecord) {
-                // Orphaned auth user - delete it and retry
-                console.log(`Cleaning up orphaned auth user and retrying for email: ${email}`);
-                await supabaseAdmin.auth.admin.deleteUser(orphanedUser.id);
-                // Retry the creation
-                const { data: retryData, error: retryError } = await supabaseAdmin.auth.admin.createUser({
-                  email,
-                  password,
-                  email_confirm: true,
-                  user_metadata: {
-                    name,
-                    role,
-                    school_id: adminData.school_id,
-                    department,
-                    position,
-                    phone
-                  }
-                });
-                if (retryError) throw retryError;
-                authUserId = retryData.user?.id;
-              } else {
-                throw signupError; // Email is truly in use
-              }
-            } else {
-              throw signupError; // Email exists but we couldn't find it
-            }
-          } catch (cleanupError) {
-            throw signupError; // Throw original error if cleanup fails
-          }
-        } else {
-          throw signupError;
+          return withCors(NextResponse.json(
+            { error: 'A user with this email address has already been registered' },
+            { status: 400 }
+          ));
         }
+        throw signupError;
       } else {
         authUserId = data.user?.id;
       }
