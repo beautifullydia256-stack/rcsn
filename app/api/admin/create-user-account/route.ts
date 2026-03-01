@@ -173,80 +173,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user profile in users table using service role
-    // Note: phone, department, and position are also stored in user_metadata for auth purposes
-    // Try using RPC function first (if it exists), otherwise fall back to direct insert
-    let profileError = null;
-    
+    // Same pattern as create-teacher-login: direct upsert (no RPC) to avoid FUNCTION_INVOCATION_FAILED
     try {
-      const { error: rpcError } = await supabaseAdmin.rpc('insert_user_with_school', {
-        p_user_id: authUserId,
-        p_email: email,
-        p_name: name,
-        p_role: role,
-        p_school_id: adminData.school_id,
-        p_phone: phone || null,
-        p_department: department || null,
-        p_position: position || null
-      });
-      
-      if (rpcError) {
-        // If function doesn't exist (check for various error formats), fall back to direct insert
-        const errorMsg = rpcError.message?.toLowerCase() || '';
-        if (errorMsg.includes('function') && (errorMsg.includes('does not exist') || errorMsg.includes('schema cache'))) {
-          const { error: insertError } = await supabaseAdmin.from('users').insert({
-            user_id: authUserId,
-            email,
-            name,
-            role,
-            school_id: adminData.school_id,
-            phone: phone || null,
-            department: department || null,
-            position: position || null
-          });
-          profileError = insertError;
-        } else {
-          profileError = rpcError;
-        }
-      }
-    } catch (e: any) {
-      // Fall back to direct insert if RPC fails
-      const { error: insertError } = await supabaseAdmin.from('users').insert({
-        user_id: authUserId,
-        email,
-        name,
-        role,
-        school_id: adminData.school_id,
-        phone: phone || null,
-        department: department || null,
-        position: position || null
-      });
-      profileError = insertError;
-    }
+      const { error: userInsertError } = await supabaseAdmin
+        .from('users')
+        .upsert({
+          user_id: authUserId,
+          email,
+          name,
+          role,
+          school_id: adminData.school_id,
+          phone: phone || null,
+          department: department || null,
+          position: position || null
+        }, { onConflict: 'user_id' });
 
-    if (profileError) {
-      // If public.users insert fails, clean up the auth user we just created
-      if (authUserId) {
-        console.error('Failed to create user profile, cleaning up auth user:', profileError);
-        try {
-          await supabaseAdmin.auth.admin.deleteUser(authUserId);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user after profile creation failure:', cleanupError);
-        }
+      if (userInsertError) {
+        console.warn('Failed to create user record:', userInsertError.message);
+        // Don't fail the entire operation (match create-teacher-login); auth user can still log in
       }
-      
-      // Provide more helpful error messages
-      let errorMessage = profileError.message || 'Failed to create user profile';
-      if (profileError.message?.includes('relation') && profileError.message?.includes('does not exist')) {
-        errorMessage = `Database schema error: ${profileError.message}. Please ensure all required tables exist in the database.`;
-      } else if (profileError.message?.includes('foreign key') || profileError.message?.includes('schools')) {
-        errorMessage = `Database integrity error: The school_id (${adminData.school_id}) does not exist in the schools table. Please contact support.`;
-      }
-      
-      return withCors(NextResponse.json({ 
-        error: errorMessage,
-        details: profileError.message,
-        code: profileError.code
-      }, { status: 500 }));
+    } catch (userErr: any) {
+      console.warn('Error creating user record:', userErr);
+      // Don't fail the entire operation
     }
 
     return withCors(NextResponse.json({ 
