@@ -8,7 +8,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
-type Req = { method?: string; headers?: { cookie?: string }; body?: string };
+type Req = {
+  method?: string;
+  headers?: { cookie?: string; get?: (name: string) => string | null };
+  body?: string | Record<string, unknown>;
+};
 type Res = {
   setHeader: (k: string, v: string | number) => void;
   status: (n: number) => Res;
@@ -16,15 +20,35 @@ type Res = {
   end: (body?: string) => void;
 };
 
+function getCookieString(req: Req): string | undefined {
+  const h = req.headers;
+  if (!h) return undefined;
+  if (typeof h.cookie === 'string') return h.cookie;
+  if (typeof (h as { get?: (n: string) => string | null }).get === 'function') {
+    return (h as { get: (n: string) => string | null }).get('cookie') ?? undefined;
+  }
+  return undefined;
+}
+
 function parseCookies(cookieHeader: string | undefined): (name: string) => string | undefined {
   const map = new Map<string, string>();
   if (cookieHeader) {
     for (const part of cookieHeader.split(';')) {
       const [key, ...v] = part.trim().split('=');
-      if (key) map.set(key, decodeURIComponent(v.join('=').trim()));
+      if (key) map.set(key.trim(), decodeURIComponent((v.join('=') || '').trim()));
     }
   }
   return (name: string) => map.get(name);
+}
+
+function parseBody(req: Req): Record<string, unknown> {
+  const b = req.body;
+  if (b == null) return {};
+  if (typeof b === 'object' && !Array.isArray(b)) return b as Record<string, unknown>;
+  if (typeof b === 'string') {
+    try { return JSON.parse(b || '{}') as Record<string, unknown>; } catch { return {}; }
+  }
+  return {};
 }
 
 export default async function handler(req: Req, res: Res) {
@@ -38,21 +62,27 @@ export default async function handler(req: Req, res: Res) {
   };
   const setCors = () => Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
 
-  if (req.method === 'OPTIONS') {
+  const send500 = (err: unknown) => {
     setCors();
-    res.status(204).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    setCors();
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: msg || 'A server error has occurred' });
+  };
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-    const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    if (req.method === 'OPTIONS') {
+      setCors();
+      res.status(204).end();
+      return;
+    }
+
+    if (req.method !== 'POST') {
+      setCors();
+      res.status(405).json({ error: 'Method not allowed' });
+      return;
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseAnon || !supabaseServiceKey) {
@@ -61,14 +91,21 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const getCookie = parseCookies(req.headers?.cookie);
-    const supabase = createServerClient(supabaseUrl, supabaseAnon, {
-      cookies: {
-        get(name: string) { return getCookie(name) ?? undefined; },
-        set() {},
-        remove() {},
-      },
-    });
+    const cookieStr = getCookieString(req);
+    const getCookie = parseCookies(cookieStr);
+    let supabase: ReturnType<typeof createServerClient>;
+    try {
+      supabase = createServerClient(supabaseUrl, supabaseAnon, {
+        cookies: {
+          get(name: string) { return getCookie(name) ?? undefined; },
+          set() {},
+          remove() {},
+        },
+      });
+    } catch (e) {
+      send500(e);
+      return;
+    }
 
     const { data: { user: adminUser }, error: authError } = await supabase.auth.getUser();
     if (authError || !adminUser) {
@@ -89,14 +126,7 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    let body: Record<string, unknown> = {};
-    try {
-      body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : (req.body || {});
-    } catch {
-      setCors();
-      res.status(400).json({ error: 'Invalid JSON body' });
-      return;
-    }
+    const body = parseBody(req);
 
     const { email, firstName, lastName, role, phone, password, sendEmailInvite, department, position } = body as Record<string, unknown>;
     const name = `${firstName || ''} ${lastName || ''}`.toString().trim();
@@ -248,8 +278,6 @@ export default async function handler(req: Req, res: Res) {
         : 'User created successfully! They can now log in with their credentials.',
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to create user';
-    setCors();
-    res.status(500).json({ error: message });
+    send500(err);
   }
 }
