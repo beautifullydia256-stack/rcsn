@@ -47,10 +47,13 @@ export async function createMissedExamRecordsForNewStudent(
     }
 
     // Get unique combinations of exam_set_id and subject
+    // Use '|||' delimiter since '-' appears in UUIDs and subject names
     const uniqueExams = Array.from(
-      new Set(classExamData.map(item => `${item.exam_set_id}-${item.subject}`))
+      new Set(classExamData.map(item => `${item.exam_set_id}|||${item.subject}`))
     ).map(combo => {
-      const [exam_set_id, subject] = combo.split('-');
+      const idx = combo.indexOf('|||');
+      const exam_set_id = combo.slice(0, idx);
+      const subject = combo.slice(idx + 3);
       return { exam_set_id, subject };
     });
 
@@ -126,10 +129,13 @@ export async function backfillMissingExamResultsForClass(
     }
 
     // Get unique combinations of exam_set_id and subject
+    // Use '|||' delimiter since '-' appears in UUIDs and subject names
     const uniqueExams = Array.from(
-      new Set(classExamData.map(item => `${item.exam_set_id}-${item.subject}`))
+      new Set(classExamData.map(item => `${item.exam_set_id}|||${item.subject}`))
     ).map(combo => {
-      const [exam_set_id, subject] = combo.split('-');
+      const idx = combo.indexOf('|||');
+      const exam_set_id = combo.slice(0, idx);
+      const subject = combo.slice(idx + 3);
       return { exam_set_id, subject };
     });
 
@@ -146,12 +152,13 @@ export async function backfillMissingExamResultsForClass(
       if (!existingStudentResults) continue;
 
       // Find missing exam combinations for this student
+      const comboSep = '|||';
       const existingCombinations = new Set(
-        existingStudentResults.map(item => `${item.exam_set_id}-${item.subject}`)
+        existingStudentResults.map(item => `${item.exam_set_id}${comboSep}${item.subject}`)
       );
 
       const missingExams = uniqueExams.filter(
-        exam => !existingCombinations.has(`${exam.exam_set_id}-${exam.subject}`)
+        exam => !existingCombinations.has(`${exam.exam_set_id}${comboSep}${exam.subject}`)
       );
 
       if (missingExams.length > 0) {
