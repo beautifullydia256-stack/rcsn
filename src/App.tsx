@@ -42,7 +42,12 @@ const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportVie
 const StudentsPage = lazyWithRetry(() => import('./pages/admin/students/StudentsPage'));
 const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
 const TeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/TeachersPage'));
+const AddTeacherPage = lazyWithRetry(() => import('./pages/admin/teachers/AddTeacherPage'));
+const TeacherProfilePage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherProfilePage'));
+const TeacherEditPage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherEditPage'));
+const CreateTeacherLoginPage = lazyWithRetry(() => import('./pages/admin/teachers/CreateTeacherLoginPage'));
 const ParentsPage = lazyWithRetry(() => import('./pages/admin/parents/ParentsPage'));
+const AddParentPage = lazyWithRetry(() => import('./pages/admin/parents/AddParentPage'));
 const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
 const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/CreateStaffPage'));
 const StaffPage = lazyWithRetry(() => import('./pages/admin/staff/StaffPage'));
@@ -124,7 +129,12 @@ function App() {
                   <Route path="students" element={<StudentsPage />} />
                   <Route path="students/add" element={<AddStudentPage />} />
                   <Route path="teachers" element={<TeachersPage />} />
+                  <Route path="teachers/add" element={<AddTeacherPage />} />
+                  <Route path="teachers/:teacher_id" element={<TeacherProfilePage />} />
+                  <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
+                  <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
                   <Route path="parents" element={<ParentsPage />} />
+                  <Route path="parents/add" element={<AddParentPage />} />
                   <Route path="accounts" element={<AccountsPage />} />
                   <Route path="accounts/add" element={<CreateStaffPage />} />
                   <Route path="staff" element={<StaffPage />} />
