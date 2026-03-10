@@ -80,7 +80,13 @@ export default function TeacherProfilePage() {
         setClassTeacherOf(ctForTeacher?.class_name || null);
 
         const { data: students } = await supabase.from('students').select('current_class').eq('school_id', teacher.school_id);
-        const uniqueClasses = Array.from(new Set((students || []).map((s: { current_class?: string }) => s.current_class).filter(Boolean)) as string[]).sort();
+        const uniqueClasses = Array.from(
+          new Set<string>(
+            (students || [])
+              .map((s: { current_class?: string }) => s.current_class)
+              .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
+          )
+        ).sort();
         setAllClasses(uniqueClasses);
         const { data: classTeachers } = await supabase
           .from('class_teachers')
