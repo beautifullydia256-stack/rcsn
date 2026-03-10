@@ -35,12 +35,12 @@ export default function RegisterPage() {
 
   const generateSchoolCode = async (schoolName: string) => {
     try {
-      const { data, error: err } = await supabase.rpc('generate_unique_school_code', {
-        school_name: schoolName,
+      const { data, error } = await supabase.rpc('generate_unique_school_code', {
+        p_school_name: schoolName,
+        p_branch_name: null,
       });
-      if (err) return;
-      if (data && Array.isArray(data) && data.length > 0) {
-        const code = (data[0] as any)?.generate_unique_school_code ?? '';
+      if (!error && data) {
+        const code = String(data);
         setFormData((prev) => ({ ...prev, schoolCode: code }));
       }
     } catch {
@@ -207,10 +207,11 @@ export default function RegisterPage() {
               value={formData.schoolCode}
               onChange={handleChange}
               className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder-white/60"
-              placeholder="Auto-generated (e.g., KHS)"
-              required
+              placeholder="Leave blank to auto-generate (e.g., KHS)"
             />
-            <p className="mt-1 text-xs text-white/60">💡 Auto-generated from school name. You can edit it.</p>
+            <p className="mt-1 text-xs text-white/60">
+              💡 Auto-generated from school name. You can leave it empty or edit it; if you choose a custom code, it must be unique.
+            </p>
           </div>
           <div>
             <label className="block mb-1 text-sm font-medium text-white">Admin Name</label>
