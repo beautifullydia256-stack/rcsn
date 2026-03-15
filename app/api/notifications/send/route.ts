@@ -33,29 +33,12 @@ async function sendEmail(to: string, subject: string, body: string) {
   }
 }
 
-// SMS sending function (using Twilio or Africa's Talking)
+import { sendAfricaTalkingSMS } from '@/lib/africastalking';
+
 async function sendSMS(to: string, message: string) {
-  try {
-    // For now, this is a placeholder
-    // In production, you would integrate with an SMS service:
-    
-    // Example with Twilio:
-    // const twilio = require('twilio');
-    // const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    // await client.messages.create({ body: message, to, from: process.env.TWILIO_PHONE_NUMBER });
-    
-    // Example with Africa's Talking:
-    // const africastalking = require('africastalking')({ apiKey, username });
-    // await africastalking.SMS.send({ to: [to], message });
-    
-    console.log(`[SMS] Sending to ${to}: ${message.substring(0, 100)}...`);
-    
-    // Simulate successful send for now
-    return { success: true };
-  } catch (error) {
-    console.error('SMS send error:', error);
-    return { success: false, error: String(error) };
-  }
+  const result = await sendAfricaTalkingSMS(to, message);
+  if (!result.success) console.warn('[SMS]', result.error);
+  return result;
 }
 
 // WhatsApp sending function (using Twilio WhatsApp API)
