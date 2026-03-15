@@ -26,6 +26,11 @@ export default function NotificationsPage() {
   const [priority, setPriority] = useState('medium');
   const [targetClass, setTargetClass] = useState('all');
   const [sending, setSending] = useState(false);
+  const [testPhone, setTestPhone] = useState('');
+  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – test SMS.');
+  const [testSending, setTestSending] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [processingLogs, setProcessingLogs] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'notifications', user?.id ?? ''],
@@ -84,6 +89,37 @@ export default function NotificationsPage() {
     }
   };
 
+  const sendTestSMS = async () => {
+    if (!testPhone.trim() || !testMessage.trim()) {
+      setTestResult({ ok: false, message: 'Enter phone and message.' });
+      return;
+    }
+    setTestSending(true);
+    setTestResult(null);
+    try {
+      const res = await fetch('/api/notifications/test-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }) });
+      const data = await res.json();
+      setTestResult(data.success ? { ok: true, message: 'SMS sent.' } : { ok: false, message: data.error || 'Failed.' });
+    } catch (e) {
+      setTestResult({ ok: false, message: String(e) });
+    } finally {
+      setTestSending(false);
+    }
+  };
+
+  const processPending = async () => {
+    setProcessingLogs(true);
+    try {
+      const res = await fetch('/api/notifications/send', { method: 'POST' });
+      const data = await res.json();
+      alert(data.success ? `Sent: ${data.sent}, Failed: ${data.failed}` : data.error);
+    } catch (e) {
+      alert(String(e));
+    } finally {
+      setProcessingLogs(false);
+    }
+  };
+
   if (loading) {
     return (
       <AdminPageWrapper title="Notifications">
@@ -96,6 +132,24 @@ export default function NotificationsPage() {
 
   return (
     <AdminPageWrapper title="Notifications" subtitle="Send announcements and view notification stats">
+      <div className="space-y-6">
+        <div className={adminCardClass}>
+          <h2 className="text-lg font-semibold text-white mb-3">Quick Actions</h2>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={sendTestSMS} disabled={testSending} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testSending ? 'Sending...' : '📱 Send test SMS'}</button>
+            <button type="button" onClick={processPending} disabled={processingLogs} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">{processingLogs ? 'Processing...' : '📤 Process Pending'}</button>
+          </div>
+        </div>
+        <div className={`${adminCardClass} border-2 border-blue-500/40`}>
+          <h2 className="text-lg font-semibold text-white mb-1">📱 Send test SMS</h2>
+          <p className="text-sm text-white/70 mb-3">Phone number and message to test Africa&apos;s Talking.</p>
+          <div className="space-y-2">
+            <input type="text" value={testPhone} onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }} placeholder="0712345678 or +254..." className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            <textarea value={testMessage} onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }} rows={2} placeholder="Message" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            {testResult && <p className={testResult.ok ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>{testResult.message}</p>}
+            <button type="button" onClick={sendTestSMS} disabled={testSending || !testPhone.trim() || !testMessage.trim()} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Send test SMS</button>
+          </div>
+        </div>
       <div className={`${adminCardClass} space-y-4`}>
         <h2 className="text-lg font-semibold text-white">Send Announcement</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -169,6 +223,7 @@ export default function NotificationsPage() {
         >
           {sending ? 'Sending...' : 'Send Announcement'}
         </button>
+      </div>
       </div>
     </AdminPageWrapper>
   );
