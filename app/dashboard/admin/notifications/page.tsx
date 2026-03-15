@@ -261,6 +261,46 @@ export default function NotificationsPage() {
           <p className="text-white/70 mt-2">Send announcements and manage automated notifications</p>
         </div>
 
+        {/* Test SMS — first so admins can send test SMS without scrolling */}
+        <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
+          <h3 className="text-xl font-semibold text-white mb-1">📱 Send test SMS</h3>
+          <p className="text-sm text-white/70 mb-5">Enter the phone number to send to and the message below, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Phone number to send to</label>
+              <input
+                type="text"
+                value={testPhone}
+                onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }}
+                placeholder="e.g. 0712345678 or +254712345678"
+                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Message to send</label>
+              <textarea
+                value={testMessage}
+                onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }}
+                placeholder="Type your test message here..."
+                rows={4}
+                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 resize-y"
+              />
+            </div>
+            {testResult && (
+              <div className={`px-4 py-3 rounded-lg ${testResult.ok ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                {testResult.message}
+              </div>
+            )}
+            <button
+              onClick={sendTestSMS}
+              disabled={testSending || !testPhone.trim() || !testMessage.trim()}
+              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {testSending ? 'Sending...' : 'Send test SMS'}
+            </button>
+          </div>
+        </div>
+
         {/* Stats Cards */}
         {stats && (
           <motion.div
@@ -377,46 +417,6 @@ export default function NotificationsPage() {
             >
               <span>←</span>
               <span>Back to Dashboard</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Test SMS — clear section to enter number and message */}
-        <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-          <h3 className="text-xl font-semibold text-white mb-1">📱 Test SMS</h3>
-          <p className="text-sm text-white/70 mb-5">Enter the phone number to send to and the message below, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup.</p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Phone number to send to</label>
-              <input
-                type="text"
-                value={testPhone}
-                onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }}
-                placeholder="e.g. 0712345678 or +254712345678"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Message to send</label>
-              <textarea
-                value={testMessage}
-                onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }}
-                placeholder="Type your test message here..."
-                rows={4}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 resize-y"
-              />
-            </div>
-            {testResult && (
-              <div className={`px-4 py-3 rounded-lg ${testResult.ok ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                {testResult.message}
-              </div>
-            )}
-            <button
-              onClick={sendTestSMS}
-              disabled={testSending || !testPhone.trim() || !testMessage.trim()}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {testSending ? 'Sending...' : 'Send test SMS'}
             </button>
           </div>
         </div>
