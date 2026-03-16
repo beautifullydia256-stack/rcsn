@@ -119,7 +119,13 @@ export default function NotificationsPage() {
         return;
       }
 
-      setTestResult({ ok: true, message: 'SMS sent.' });
+      const sandbox = data?.sandbox === true;
+      setTestResult({
+        ok: true,
+        message: sandbox
+          ? 'Accepted (sandbox). Sandbox does not deliver to real phones – use production to receive SMS.'
+          : 'Sent. If not received: check Africa\'s Talking dashboard, credits, and number format (+254...).',
+      });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
     } finally {

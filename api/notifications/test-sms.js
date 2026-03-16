@@ -77,7 +77,7 @@ async function sendAfricaTalkingSMS(to, message) {
       const rec = data?.SMSMessageData?.Recipients?.[0];
       const code = rec?.statusCode;
       const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
-      return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
+      return ok ? { success: true, sandbox: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
     }
 
     const r = await httpsRequest(
@@ -94,7 +94,7 @@ async function sendAfricaTalkingSMS(to, message) {
     const rec = data?.SMSMessageData?.Recipients?.[0];
     const code = rec?.statusCode;
     const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
-    return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
+    return ok ? { success: true, sandbox: false } : { success: false, error: rec?.status || `HTTP ${r.status}` };
   } catch (err) {
     console.error('AfricaTalking SMS error', err);
     return { success: false, error: String(err) };

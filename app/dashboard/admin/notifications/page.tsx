@@ -200,9 +200,12 @@ export default function NotificationsPage() {
         return;
       }
 
+      const sandbox = data?.sandbox === true;
       setTestResult({
         ok: true,
-        message: 'SMS sent successfully. Check the phone for the message.',
+        message: sandbox
+          ? 'Accepted (sandbox). Sandbox does not deliver to real phones – set AFRICASTALKING_SANDBOX to false and use a production account to receive SMS.'
+          : 'Sent. If you don\'t receive it: check Africa\'s Talking dashboard, ensure you have credits, and the number is correct (e.g. +254...).',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
