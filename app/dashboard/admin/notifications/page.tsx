@@ -204,8 +204,8 @@ export default function NotificationsPage() {
       setTestResult({
         ok: true,
         message: sandbox
-          ? 'Accepted (sandbox). No credits are used in sandbox and messages don\'t reach real phones. To use credits and deliver SMS: in Vercel set AFRICASTALKING_SANDBOX to false (or delete it), then redeploy.'
-          : 'Sent via production. Credits deduct when the message is delivered. If your balance isn\'t changing: check Africa\'s Talking dashboard for delivery status and balance.',
+          ? 'Accepted (sandbox). No credits used; messages don\'t reach real phones. Set AFRICASTALKING_SANDBOX=false and redeploy for production.'
+          : 'Accepted by Africa\'s Talking. Final delivery depends on the telco – check the delivery report in your dashboard (Submitted, Buffered, Success, Failed, or Rejected). Credits deduct on delivery.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -283,7 +283,7 @@ export default function NotificationsPage() {
         {/* Test SMS — first so admins can send test SMS without scrolling */}
         <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
           <h3 className="text-xl font-semibold text-white mb-1">📱 Send test SMS</h3>
-          <p className="text-sm text-white/70 mb-5">Uganda (+256) numbers only. Enter the phone number and message, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup. Credits only deduct in production (set AFRICASTALKING_SANDBOX=false or remove it in Vercel); sandbox uses no credits.</p>
+          <p className="text-sm text-white/70 mb-5">Uganda (+256) numbers only. Enter the phone number and message, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup. &quot;Success&quot; here means the API accepted the message; actual delivery is in your Africa&apos;s Talking delivery report (Submitted, Buffered, Success, Failed, Rejected). Credits deduct on delivery.</p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Phone number to send to</label>

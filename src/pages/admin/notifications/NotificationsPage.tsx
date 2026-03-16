@@ -123,8 +123,8 @@ export default function NotificationsPage() {
       setTestResult({
         ok: true,
         message: sandbox
-          ? 'Accepted (sandbox). No credits used. Set AFRICASTALKING_SANDBOX=false and redeploy to use production and deduct credits.'
-          : 'Sent (production). Credits deduct on delivery. If balance unchanged, check Africa\'s Talking dashboard.',
+          ? 'Accepted (sandbox). No credits used. Set AFRICASTALKING_SANDBOX=false and redeploy for production.'
+          : 'Accepted by API. Check delivery report in dashboard for real status (Submitted, Buffered, Success, Failed, Rejected). Credits deduct on delivery.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
