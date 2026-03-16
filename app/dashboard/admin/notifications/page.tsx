@@ -182,12 +182,33 @@ export default function NotificationsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setTestResult({ ok: true, message: 'SMS sent successfully. Check the phone for the message.' });
-      } else {
-        setTestResult({ ok: false, message: data.error || 'Send failed.' });
+
+      // Try to parse JSON, but fall back to plain text if the server
+      // returns an HTML error page or non‑JSON (e.g. 404 HTML).
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text();
+        setTestResult({
+          ok: false,
+          message: `SMS test failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`,
+        });
+        return;
       }
+
+      if (!res.ok || !data?.success) {
+        setTestResult({
+          ok: false,
+          message: data?.error || `SMS test failed with status ${res.status}.`,
+        });
+        return;
+      }
+
+      setTestResult({
+        ok: true,
+        message: 'SMS sent successfully. Check the phone for the message.',
+      });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
     } finally {

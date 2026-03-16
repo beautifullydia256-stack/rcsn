@@ -1,6 +1,6 @@
 {
-  "supabaseUrl": "https://your-project.supabase.co",
-  "supabaseAnonKey": "your-anon-key-here",
-  "turnstileSiteKey": "your-turnstile-site-key",
+  "supabaseUrl": "https://ibnyclqobbrnjyxbbfsg.supabase.co"
+  "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlibnljbHFvYmJybmp5eGJiZnNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMzA4NTksImV4cCI6MjA3MzYwNjg1OX0.JR5mcF3o8zDsl65KUgeAsPDDAf8qVhla_wm6gTadeVw"
+  "turnstileSiteKey": "0x4AAAAAAB4ERbu0E4JALixi"
   "turnstileSecret": "0x4AAAAAAB4EReB4ZNsR3a4xHGL4rwceHj8"
 }

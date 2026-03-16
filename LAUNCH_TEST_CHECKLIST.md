@@ -9,7 +9,7 @@ This checklist covers the critical flows to verify before selling Pwezacore to s
 - [x] **Environments configured**: Supabase project, service role keys, URL, JWT settings, storage buckets, and RPCs are correctly configured for production (no dev keys or test databases).
 - [ ] **Web auth flows**:
   - [x] Admin login and logout work and redirect correctly.
-  - [ ] Registration flow works (creates correct role and school linkage).
+  - [x] Registration flow works (creates correct role and school linkage).
   - [ ] Password reset flow works end‑to‑end (email link → new password → login).
   - [ ] Role‑specific logins (teacher, student, parent, accountant, librarian, head‑teacher, owner) go to the correct dashboards where applicable.
 - [ ] **Role‑based dashboards**: Each role lands on the correct dashboard (`/dashboard/admin`, `/dashboard/teacher`, `/dashboard/student`, `/dashboard/parent`, `/dashboard/accountant`, `/dashboard/librarian`, `/dashboard/head-teacher`, `/dashboard/owner`) and cannot access unauthorized sections.
