@@ -205,7 +205,7 @@ export default function NotificationsPage() {
         ok: true,
         message: sandbox
           ? 'Accepted (sandbox). Sandbox does not deliver to real phones – set AFRICASTALKING_SANDBOX to false and use a production account to receive SMS.'
-          : 'Sent. If you don\'t receive it: check Africa\'s Talking dashboard, ensure you have credits, and the number is in international format (e.g. +256... or +254...).',
+          : 'Sent. If you don\'t receive it: check Africa\'s Talking dashboard and credits. Uganda (+256) only.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -283,7 +283,7 @@ export default function NotificationsPage() {
         {/* Test SMS — first so admins can send test SMS without scrolling */}
         <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
           <h3 className="text-xl font-semibold text-white mb-1">📱 Send test SMS</h3>
-          <p className="text-sm text-white/70 mb-5">Enter the phone number to send to and the message below, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup.</p>
+          <p className="text-sm text-white/70 mb-5">Uganda (+256) numbers only. Enter the phone number and message, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup.</p>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Phone number to send to</label>
@@ -291,7 +291,7 @@ export default function NotificationsPage() {
                 type="text"
                 value={testPhone}
                 onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }}
-                placeholder="e.g. 0712345678 or +256712345678 or +254..."
+                placeholder="Uganda only: 0712345678 or +256712345678"
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
               />
             </div>

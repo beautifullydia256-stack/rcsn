@@ -19,11 +19,14 @@ function sanitizeHeaderValue(s) {
 function normalizePhone(to) {
   let digits = to.replace(/\D/g, '');
   if (digits.startsWith('0')) digits = digits.slice(1);
-  const countryCode = process.env.AFRICASTALKING_COUNTRY_CODE || '254';
   if (digits.length === 9 && !digits.startsWith('254') && !digits.startsWith('256')) {
-    digits = countryCode + digits;
+    digits = '256' + digits;
   }
   return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+function isUgandaNumber(normalized) {
+  return /^\+256\d{9}$/.test(normalized);
 }
 
 function httpsRequest(url, opts, body) {
@@ -65,6 +68,9 @@ async function sendAfricaTalkingSMS(to, message) {
   }
 
   const normalized = normalizePhone(to);
+  if (!isUgandaNumber(normalized)) {
+    return { success: false, error: 'Only Uganda (+256) numbers are allowed.' };
+  }
 
   const url = isSandbox
     ? 'https://api.sandbox.africastalking.com/version1/messaging'
