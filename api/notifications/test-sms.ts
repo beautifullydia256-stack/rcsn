@@ -1,7 +1,6 @@
 export const config = { runtime: 'nodejs' };
 
-import * as https from 'node:https';
-import { Buffer } from 'node:buffer';
+import https from 'https';
 
 function normalizePhone(to: string): string {
   const digits = to.replace(/\D/g, '').replace(/^0/, '254');

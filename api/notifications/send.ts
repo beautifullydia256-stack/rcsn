@@ -1,8 +1,7 @@
 export const config = { runtime: 'nodejs' };
 
 import { createClient } from '@supabase/supabase-js';
-import * as https from 'node:https';
-import { Buffer } from 'node:buffer';
+import https from 'https';
 
 function getEnvAny(keys: string[]): string | undefined {
   for (const k of keys) {
