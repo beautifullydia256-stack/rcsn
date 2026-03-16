@@ -33,10 +33,16 @@ function httpsRequest(url, opts, body) {
   });
 }
 
+// Strip newlines/carriage returns so env vars are valid HTTP header values
+function sanitizeHeaderValue(s) {
+  if (typeof s !== 'string') return '';
+  return s.replace(/\r\n|\r|\n/g, '').trim();
+}
+
 async function sendAfricaTalkingSMS(to, message) {
-  const apiKey = process.env.AFRICASTALKING_API_KEY;
-  const username = process.env.AFRICASTALKING_USERNAME;
-  const senderId = process.env.AFRICASTALKING_SENDER_ID || 'AFRICASTKNG';
+  const apiKey = sanitizeHeaderValue(process.env.AFRICASTALKING_API_KEY);
+  const username = sanitizeHeaderValue(process.env.AFRICASTALKING_USERNAME);
+  const senderId = sanitizeHeaderValue(process.env.AFRICASTALKING_SENDER_ID) || 'AFRICASTKNG';
   const isSandbox = process.env.AFRICASTALKING_SANDBOX === 'true';
 
   if (!apiKey || !username) {
@@ -59,7 +65,7 @@ async function sendAfricaTalkingSMS(to, message) {
       const body = new URLSearchParams({ username, to: normalized, message, from: senderId }).toString();
       const r = await httpsRequest(
         url,
-        { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey } },
+        { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey: apiKey } },
         body
       );
       let data = {};
@@ -75,7 +81,7 @@ async function sendAfricaTalkingSMS(to, message) {
 
     const r = await httpsRequest(
       url,
-      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey } },
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey: apiKey } },
       JSON.stringify({ username, phoneNumbers: [normalized], message, senderId })
     );
     let data = {};
