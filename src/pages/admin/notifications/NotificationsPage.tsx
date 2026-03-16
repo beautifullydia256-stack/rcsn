@@ -97,9 +97,30 @@ export default function NotificationsPage() {
     setTestSending(true);
     setTestResult(null);
     try {
-      const res = await fetch('/api/notifications/test-sms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }) });
-      const data = await res.json();
-      setTestResult(data.success ? { ok: true, message: 'SMS sent.' } : { ok: false, message: data.error || 'Failed.' });
+      const res = await fetch('/api/notifications/test-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
+      });
+
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text();
+        setTestResult({
+          ok: false,
+          message: `SMS test failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`,
+        });
+        return;
+      }
+
+      if (!res.ok || !data?.success) {
+        setTestResult({ ok: false, message: data?.error || `SMS test failed with status ${res.status}.` });
+        return;
+      }
+
+      setTestResult({ ok: true, message: 'SMS sent.' });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
     } finally {
@@ -111,8 +132,15 @@ export default function NotificationsPage() {
     setProcessingLogs(true);
     try {
       const res = await fetch('/api/notifications/send', { method: 'POST' });
-      const data = await res.json();
-      alert(data.success ? `Sent: ${data.sent}, Failed: ${data.failed}` : data.error);
+      let data: any = null;
+      try {
+        data = await res.json();
+      } catch {
+        const text = await res.text();
+        alert(`Process failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`);
+        return;
+      }
+      alert(data.success ? `Sent: ${data.sent}, Failed: ${data.failed}` : data.error || `Process failed (${res.status}).`);
     } catch (e) {
       alert(String(e));
     } finally {
