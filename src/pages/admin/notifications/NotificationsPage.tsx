@@ -123,8 +123,8 @@ export default function NotificationsPage() {
       setTestResult({
         ok: true,
         message: sandbox
-          ? 'Accepted (sandbox). Sandbox does not deliver to real phones – use production to receive SMS.'
-          : 'Sent. If not received: check Africa\'s Talking dashboard and credits. Uganda (+256) only.',
+          ? 'Accepted (sandbox). No credits used. Set AFRICASTALKING_SANDBOX=false and redeploy to use production and deduct credits.'
+          : 'Sent (production). Credits deduct on delivery. If balance unchanged, check Africa\'s Talking dashboard.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
