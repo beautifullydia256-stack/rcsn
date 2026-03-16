@@ -1,6 +1,37 @@
+import https from 'https';
+
 function normalizePhone(to: string): string {
   const digits = to.replace(/\D/g, '').replace(/^0/, '254');
   return digits.startsWith('254') ? `+${digits}` : `+254${digits}`;
+}
+
+async function httpsRequest(
+  url: string,
+  opts: { method: 'POST'; headers: Record<string, string> },
+  body: string
+): Promise<{ status: number; text: string }> {
+  return await new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const req = https.request(
+      {
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port ? Number(u.port) : undefined,
+        path: `${u.pathname}${u.search}`,
+        method: opts.method,
+        headers: { ...opts.headers, 'Content-Length': Buffer.byteLength(body).toString() },
+      },
+      (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => resolve({ status: res.statusCode || 0, text: data }));
+      }
+    );
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
 }
 
 async function sendAfricaTalkingSMS(to: string, message: string): Promise<{ success: boolean; error?: string }> {
@@ -21,23 +52,23 @@ async function sendAfricaTalkingSMS(to: string, message: string): Promise<{ succ
 
   if (isSandbox) {
     const body = new URLSearchParams({ username, to: normalized, message, from: senderId }).toString();
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey },
-      body,
-    });
-    const data = (await r.json()) as any;
+    const r = await httpsRequest(
+      url,
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey } },
+      body
+    );
+    const data = JSON.parse(r.text || '{}') as any;
     const rec = data?.SMSMessageData?.Recipients?.[0];
     const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
     return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };
   }
 
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey },
-    body: JSON.stringify({ username, phoneNumbers: [normalized], message, senderId }),
-  });
-  const data = (await r.json()) as any;
+  const r = await httpsRequest(
+    url,
+    { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey } },
+    JSON.stringify({ username, phoneNumbers: [normalized], message, senderId })
+  );
+  const data = JSON.parse(r.text || '{}') as any;
   const rec = data?.SMSMessageData?.Recipients?.[0];
   const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
   return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };

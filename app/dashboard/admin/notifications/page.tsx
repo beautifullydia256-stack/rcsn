@@ -183,24 +183,19 @@ export default function NotificationsPage() {
         body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
       });
 
-      // Try to parse JSON, but fall back to plain text if the server
-      // returns an HTML error page or non‑JSON (e.g. 404 HTML).
+      // Read the body once (prevents "body stream already read"), then parse if possible.
+      const raw = await res.text();
       let data: any = null;
       try {
-        data = await res.json();
+        data = raw ? JSON.parse(raw) : null;
       } catch {
-        const text = await res.text();
-        setTestResult({
-          ok: false,
-          message: `SMS test failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`,
-        });
-        return;
+        // Non-JSON response (e.g. HTML error page)
       }
 
       if (!res.ok || !data?.success) {
         setTestResult({
           ok: false,
-          message: data?.error || `SMS test failed with status ${res.status}.`,
+          message: data?.error || `SMS test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
         });
         return;
       }

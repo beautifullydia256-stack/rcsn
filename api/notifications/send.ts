@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import https from 'https';
 
 function getEnvAny(keys: string[]): string | undefined {
   for (const k of keys) {
@@ -29,25 +30,54 @@ async function sendAfricaTalkingSMS(to: string, message: string): Promise<{ succ
     ? 'https://api.sandbox.africastalking.com/version1/messaging'
     : 'https://api.africastalking.com/version1/messaging/bulk';
 
+  const httpsRequest = async (
+    u: string,
+    opts: { method: 'POST'; headers: Record<string, string> },
+    body: string
+  ): Promise<{ status: number; text: string }> => {
+    return await new Promise((resolve, reject) => {
+      const parsed = new URL(u);
+      const req = https.request(
+        {
+          protocol: parsed.protocol,
+          hostname: parsed.hostname,
+          port: parsed.port ? Number(parsed.port) : undefined,
+          path: `${parsed.pathname}${parsed.search}`,
+          method: opts.method,
+          headers: { ...opts.headers, 'Content-Length': Buffer.byteLength(body).toString() },
+        },
+        (res) => {
+          let data = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => (data += chunk));
+          res.on('end', () => resolve({ status: res.statusCode || 0, text: data }));
+        }
+      );
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  };
+
   if (isSandbox) {
     const body = new URLSearchParams({ username, to: normalized, message, from: senderId }).toString();
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey },
-      body,
-    });
-    const data = (await r.json()) as any;
+    const r = await httpsRequest(
+      url,
+      { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey } },
+      body
+    );
+    const data = JSON.parse(r.text || '{}') as any;
     const rec = data?.SMSMessageData?.Recipients?.[0];
     const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
     return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };
   }
 
-  const r = await fetch(url, {
-    method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey },
-    body: JSON.stringify({ username, phoneNumbers: [normalized], message, senderId }),
-  });
-  const data = (await r.json()) as any;
+  const r = await httpsRequest(
+    url,
+    { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey } },
+    JSON.stringify({ username, phoneNumbers: [normalized], message, senderId })
+  );
+  const data = JSON.parse(r.text || '{}') as any;
   const rec = data?.SMSMessageData?.Recipients?.[0];
   const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
   return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };

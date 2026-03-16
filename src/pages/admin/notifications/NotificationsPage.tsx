@@ -103,20 +103,19 @@ export default function NotificationsPage() {
         body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
       });
 
+      const raw = await res.text();
       let data: any = null;
       try {
-        data = await res.json();
+        data = raw ? JSON.parse(raw) : null;
       } catch {
-        const text = await res.text();
-        setTestResult({
-          ok: false,
-          message: `SMS test failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`,
-        });
-        return;
+        // ignore non-JSON
       }
 
       if (!res.ok || !data?.success) {
-        setTestResult({ ok: false, message: data?.error || `SMS test failed with status ${res.status}.` });
+        setTestResult({
+          ok: false,
+          message: data?.error || `SMS test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
+        });
         return;
       }
 
@@ -132,12 +131,15 @@ export default function NotificationsPage() {
     setProcessingLogs(true);
     try {
       const res = await fetch('/api/notifications/send', { method: 'POST' });
+      const raw = await res.text();
       let data: any = null;
       try {
-        data = await res.json();
+        data = raw ? JSON.parse(raw) : null;
       } catch {
-        const text = await res.text();
-        alert(`Process failed (${res.status}). Server did not return JSON: ${text.slice(0, 120)}...`);
+        // ignore non-JSON
+      }
+      if (!data) {
+        alert(`Process failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`);
         return;
       }
       alert(data.success ? `Sent: ${data.sent}, Failed: ${data.failed}` : data.error || `Process failed (${res.status}).`);
