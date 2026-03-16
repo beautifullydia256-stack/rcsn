@@ -75,7 +75,8 @@ async function sendAfricaTalkingSMS(to, message) {
         data = {};
       }
       const rec = data?.SMSMessageData?.Recipients?.[0];
-      const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
+      const code = rec?.statusCode;
+      const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
       return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
     }
 
@@ -91,7 +92,8 @@ async function sendAfricaTalkingSMS(to, message) {
       data = {};
     }
     const rec = data?.SMSMessageData?.Recipients?.[0];
-    const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
+    const code = rec?.statusCode;
+    const ok = (r.status === 200 || r.status === 201) || (code === 100 || code === 101 || code === 102);
     return ok ? { success: true } : { success: false, error: rec?.status || `HTTP ${r.status}` };
   } catch (err) {
     console.error('AfricaTalking SMS error', err);
