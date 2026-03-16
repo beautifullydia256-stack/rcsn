@@ -4,8 +4,13 @@
 const https = require('https');
 
 function normalizePhone(to) {
-  const digits = to.replace(/\D/g, '').replace(/^0/, '254');
-  return digits.startsWith('254') ? `+${digits}` : `+254${digits}`;
+  let digits = to.replace(/\D/g, '');
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  const countryCode = process.env.AFRICASTALKING_COUNTRY_CODE || '254';
+  if (digits.length === 9 && !digits.startsWith('254') && !digits.startsWith('256')) {
+    digits = countryCode + digits;
+  }
+  return digits.startsWith('+') ? digits : `+${digits}`;
 }
 
 function httpsRequest(url, opts, body) {
@@ -124,7 +129,7 @@ module.exports = async function handler(req, res) {
       res.end(
         JSON.stringify({
           success: false,
-          error: 'Missing phone or message. Send JSON: { "phone": "+254...", "message": "..." }',
+          error: 'Missing phone or message. Send JSON: { "phone": "+256... or +254...", "message": "..." }',
         })
       );
       return;

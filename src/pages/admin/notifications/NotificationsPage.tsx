@@ -124,7 +124,7 @@ export default function NotificationsPage() {
         ok: true,
         message: sandbox
           ? 'Accepted (sandbox). Sandbox does not deliver to real phones – use production to receive SMS.'
-          : 'Sent. If not received: check Africa\'s Talking dashboard, credits, and number format (+254...).',
+          : 'Sent. If not received: check Africa\'s Talking dashboard, credits, and number format (+256... or +254...).',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -180,7 +180,7 @@ export default function NotificationsPage() {
           <h2 className="text-lg font-semibold text-white mb-1">📱 Send test SMS</h2>
           <p className="text-sm text-white/70 mb-3">Phone number and message to test Africa&apos;s Talking.</p>
           <div className="space-y-2">
-            <input type="text" value={testPhone} onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }} placeholder="0712345678 or +254..." className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            <input type="text" value={testPhone} onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }} placeholder="0712345678 or +256... or +254..." className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
             <textarea value={testMessage} onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }} rows={2} placeholder="Message" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
             {testResult && <p className={testResult.ok ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>{testResult.message}</p>}
             <button type="button" onClick={sendTestSMS} disabled={testSending || !testPhone.trim() || !testMessage.trim()} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Send test SMS</button>

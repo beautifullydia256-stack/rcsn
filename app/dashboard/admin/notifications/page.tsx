@@ -205,7 +205,7 @@ export default function NotificationsPage() {
         ok: true,
         message: sandbox
           ? 'Accepted (sandbox). Sandbox does not deliver to real phones – set AFRICASTALKING_SANDBOX to false and use a production account to receive SMS.'
-          : 'Sent. If you don\'t receive it: check Africa\'s Talking dashboard, ensure you have credits, and the number is correct (e.g. +254...).',
+          : 'Sent. If you don\'t receive it: check Africa\'s Talking dashboard, ensure you have credits, and the number is in international format (e.g. +256... or +254...).',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -291,7 +291,7 @@ export default function NotificationsPage() {
                 type="text"
                 value={testPhone}
                 onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }}
-                placeholder="e.g. 0712345678 or +254712345678"
+                placeholder="e.g. 0712345678 or +256712345678 or +254..."
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
               />
             </div>
