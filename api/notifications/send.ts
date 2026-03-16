@@ -1,5 +1,8 @@
+export const config = { runtime: 'nodejs' };
+
 import { createClient } from '@supabase/supabase-js';
-import https from 'https';
+import * as https from 'node:https';
+import { Buffer } from 'node:buffer';
 
 function getEnvAny(keys: string[]): string | undefined {
   for (const k of keys) {
@@ -66,7 +69,12 @@ async function sendAfricaTalkingSMS(to: string, message: string): Promise<{ succ
       { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded', apiKey } },
       body
     );
-    const data = JSON.parse(r.text || '{}') as any;
+    let data: any = {};
+    try {
+      data = JSON.parse(r.text || '{}');
+    } catch {
+      data = {};
+    }
     const rec = data?.SMSMessageData?.Recipients?.[0];
     const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
     return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };
@@ -77,7 +85,12 @@ async function sendAfricaTalkingSMS(to: string, message: string): Promise<{ succ
     { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey } },
     JSON.stringify({ username, phoneNumbers: [normalized], message, senderId })
   );
-  const data = JSON.parse(r.text || '{}') as any;
+  let data: any = {};
+  try {
+    data = JSON.parse(r.text || '{}');
+  } catch {
+    data = {};
+  }
   const rec = data?.SMSMessageData?.Recipients?.[0];
   const ok = rec && (rec.statusCode === 100 || rec.statusCode === 101 || rec.statusCode === 102);
   return ok ? { success: true } : { success: false, error: rec?.status ?? `HTTP ${r.status}` };
