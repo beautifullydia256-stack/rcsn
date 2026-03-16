@@ -40,9 +40,11 @@ async function sendAfricaTalkingSMS(to, message) {
   const isSandbox = process.env.AFRICASTALKING_SANDBOX === 'true';
 
   if (!apiKey || !username) {
+    const keyStatus = apiKey ? 'set' : 'missing';
+    const userStatus = username ? 'set' : 'missing';
     return {
       success: false,
-      error: 'SMS provider not configured. Set AFRICASTALKING_API_KEY and AFRICASTALKING_USERNAME in your env.',
+      error: `SMS provider not configured. AFRICASTALKING_API_KEY: ${keyStatus}; AFRICASTALKING_USERNAME: ${userStatus}. Use exact names (not CASTALKING_USERNAME). If both are set in Vercel, trigger a new deployment so the function gets the env.`,
     };
   }
 
