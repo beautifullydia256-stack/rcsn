@@ -16,6 +16,7 @@ export default function AddTeacherPage() {
   const [dob, setDob] = useState<string>("");
   const [nationalId, setNationalId] = useState("");
   // Contact
+  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   // Professional
@@ -107,7 +108,7 @@ export default function AddTeacherPage() {
 
   const resetForm = () => {
     setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob(""); setNationalId("");
-    setPhone(""); setAddress("");
+    setEmail(""); setPhone(""); setAddress("");
     setSubjects([]); setClassesAssigned([]); setSubjectsByClass({});
     setSalary("");
     setError(null); setSuccess(null);
@@ -126,10 +127,11 @@ export default function AddTeacherPage() {
     const filteredClasses = classesAssigned.filter(c => allowed.has(c));
 
     setSaving(true);
+    const emailToSave = email.trim() || null;
     const { data, error: insertError } = await supabase.from("teachers").insert({
       school_id: schoolId,
       name: fullName,
-      email: null, // Will be auto-generated later
+      email: emailToSave,
       phone: phone || null,
       address: address || null,
       gender: gender || null,
@@ -144,24 +146,23 @@ export default function AddTeacherPage() {
     setSaving(false);
     if (insertError) { setError(insertError.message); return; }
     
-    // Auto-generate email for the teacher
-    try {
-      if (data?.teacher_id && schoolId) {
+    // Auto-generate email only if none was provided
+    if (!emailToSave && data?.teacher_id && schoolId) {
+      try {
         const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
           p_first_name: firstName,
           p_last_name: lastName,
           p_school_id: schoolId
         });
-        
         if (generatedEmail) {
           await supabase
             .from('teachers')
             .update({ email: generatedEmail })
             .eq('teacher_id', data.teacher_id);
         }
+      } catch (emailError) {
+        console.warn('Could not generate teacher email:', emailError);
       }
-    } catch (emailError) {
-      console.warn('Could not generate teacher email:', emailError);
     }
     
     // Also persist class/subject assignments into teacher_class_subjects
@@ -189,7 +190,7 @@ export default function AddTeacherPage() {
       console.warn('Failed to create teacher assignments:', e?.message || e);
     }
 
-    setSuccess(`Teacher added successfully! Employee ID: ${data?.employee_id || 'Generated'}, Email auto-generated. You can add more information in the teacher profile. 🎉`);
+    setSuccess(`Teacher added successfully! Employee ID: ${data?.employee_id || 'Generated'}. ${emailToSave ? 'Email set.' : 'Email auto-generated.'} You can add more information in the teacher profile. 🎉`);
     if (data?.teacher_id) {
       setTimeout(() => router.push(`/dashboard/admin/teachers/${data.teacher_id}`), 600);
     }
@@ -230,11 +231,18 @@ export default function AddTeacherPage() {
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
             <div className="text-white font-medium mb-3">Contact Information</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input
+                type="email"
+                className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2"
+                placeholder="Email (optional)"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
               <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone (+256..., +1...) - Optional" value={phone} onChange={(e)=>setPhone(e.target.value)} />
               <input className="sm:col-span-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Residential Address - Optional" value={address} onChange={(e)=>setAddress(e.target.value)} />
               <div className="sm:col-span-2">
                 <p className="text-xs text-blue-300 mt-1">
-                  💡 Email will be auto-generated as: firstname+lastname@schoolcode.sch
+                  💡 Leave email blank to auto-generate: firstname+lastname@schoolcode.sch
                 </p>
               </div>
           </div>
@@ -288,7 +296,7 @@ export default function AddTeacherPage() {
             <div className="text-white/70 text-xs mt-2">
               <div>📋 Employee ID will be auto-generated in format: SchoolCode-Year-SerialNumber</div>
               <div>📅 Date of Hire will be set automatically to today's date</div>
-              <div>📧 Email will be auto-generated as: firstname+lastname@schoolcode.sch</div>
+              <div>📧 Enter email above or leave blank to auto-generate</div>
             </div>
           </motion.div>
         </div>
