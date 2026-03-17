@@ -30,8 +30,6 @@ export default function CreateTeacherLoginPage() {
     if (teacherId) load();
   }, [teacherId, navigate]);
 
-  const apiBase = typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL ? import.meta.env.VITE_API_URL : '';
-
   const createLogin = async () => {
     setError(null);
     setSuccess(null);
@@ -49,28 +47,21 @@ export default function CreateTeacherLoginPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch(`${apiBase}/api/admin/create-teacher-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { data, error: fnError } = await supabase.functions.invoke('create-teacher-login', {
+        body: {
           email,
           password,
           teacher_id: teacher.teacher_id,
           name: teacher.name,
           school_id: schoolId,
-        }),
+        },
       });
-      const text = await res.text();
-      if (!res.ok) {
-        let errMsg = 'Failed to create login';
-        try {
-          const j = JSON.parse(text) as { error?: string };
-          errMsg = j.error || errMsg;
-        } catch {
-          if (res.status === 404) errMsg = 'Create login service is not available (404). Please try again later or contact support.';
-          else errMsg = `Request failed (${res.status}). Please try again.`;
-        }
-        setError(errMsg);
+      if (fnError) {
+        setError(fnError.message || 'Failed to create login');
+        return;
+      }
+      if (!data?.success) {
+        setError((data as { error?: string })?.error || 'Failed to create login');
         return;
       }
       setSuccess('Teacher login created successfully!');
