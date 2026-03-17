@@ -48,25 +48,38 @@ export default function CreateTeacherLoginPage() {
       return;
     }
     setSaving(true);
-    const res = await fetch(`${apiBase}/api/admin/create-teacher-login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        teacher_id: teacher.teacher_id,
-        name: teacher.name,
-        school_id: schoolId,
-      }),
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const err = await res.json();
-      setError((err as { error?: string }).error || 'Failed to create login');
-      return;
+    try {
+      const res = await fetch(`${apiBase}/api/admin/create-teacher-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          teacher_id: teacher.teacher_id,
+          name: teacher.name,
+          school_id: schoolId,
+        }),
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        let errMsg = 'Failed to create login';
+        try {
+          const j = JSON.parse(text) as { error?: string };
+          errMsg = j.error || errMsg;
+        } catch {
+          if (res.status === 404) errMsg = 'Create login service is not available (404). Please try again later or contact support.';
+          else errMsg = `Request failed (${res.status}). Please try again.`;
+        }
+        setError(errMsg);
+        return;
+      }
+      setSuccess('Teacher login created successfully!');
+      setTimeout(() => navigate(`/dashboard/admin/teachers/${teacherId}`), 800);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Network error. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setSuccess('Teacher login created successfully!');
-    setTimeout(() => navigate(`/dashboard/admin/teachers/${teacherId}`), 800);
   };
 
   return (
