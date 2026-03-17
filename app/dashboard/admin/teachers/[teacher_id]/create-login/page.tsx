@@ -38,25 +38,38 @@ export default function CreateTeacherLoginPage() {
     if (!isValidEmailFormat(email)) { setError('Enter a valid email'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
     setSaving(true);
-    const res = await fetch('/api/admin/create-teacher-login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email,
-        password,
-        teacher_id: teacher.teacher_id,
-        name: teacher.name,
-        school_id: schoolId
-      })
-    });
-    setSaving(false);
-    if (!res.ok) {
-      const err = await res.json();
-      setError(err.error || 'Failed to create login');
-      return;
+    try {
+      const res = await fetch('/api/admin/create-teacher-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          teacher_id: teacher.teacher_id,
+          name: teacher.name,
+          school_id: schoolId
+        })
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        let errMsg = 'Failed to create login';
+        try {
+          const j = JSON.parse(text);
+          errMsg = j.error || errMsg;
+        } catch {
+          if (res.status === 404) errMsg = 'Create login service is not available (404). Please redeploy the app or try again later.';
+          else errMsg = `Request failed (${res.status}). Please try again or contact support.`;
+        }
+        setError(errMsg);
+        return;
+      }
+      setSuccess('Teacher login created successfully!');
+      setTimeout(() => router.push(`/dashboard/admin/teachers/${teacherId}`), 800);
+    } catch (e: any) {
+      setError(e?.message || 'Network error. Please try again.');
+    } finally {
+      setSaving(false);
     }
-    setSuccess('Teacher login created successfully!');
-    setTimeout(() => router.push(`/dashboard/admin/teachers/${teacherId}`), 800);
   };
 
   return (
