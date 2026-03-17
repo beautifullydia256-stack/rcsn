@@ -146,6 +146,17 @@ serve(async (req) => {
         { onConflict: 'user_id' },
       );
 
+    // Ensure the teacher profile row also has the login email (for lists/search)
+    try {
+      await adminClient
+        .from('teachers')
+        .update({ email })
+        .eq('teacher_id', teacherId)
+        .eq('school_id', schoolId);
+    } catch {
+      // Non-fatal: auth user + users row is still created successfully
+    }
+
     return new Response(JSON.stringify({ success: true, user_id: created.user.id }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
