@@ -24,7 +24,8 @@ export default function CreateTeacherLoginPage() {
       if (!user) return navigate('/login');
       const { data: t } = await supabase.from('teachers').select('*').eq('teacher_id', teacherId).single();
       setTeacher((t || null) as Record<string, unknown> | null);
-      if (t?.email) setEmail(String(t.email));
+      setEmail(t?.email ? String(t.email) : '');
+      setPassword('');
       setSchoolId((t?.school_id as string) || null);
     };
     if (teacherId) load();
@@ -80,7 +81,7 @@ export default function CreateTeacherLoginPage() {
       </div>
       {error && <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2">{error}</div>}
       {success && <div className="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-3 py-2">{success}</div>}
-      <div className={`${adminCardClass} space-y-4`}>
+      <form className={`${adminCardClass} space-y-4`} autoComplete="off" onSubmit={(e) => { e.preventDefault(); void createLogin(); }}>
         <div>
           <label className="block ac-text-secondary text-sm mb-1">Teacher email</label>
           <input
@@ -89,6 +90,12 @@ export default function CreateTeacherLoginPage() {
             placeholder="teacher@school.sch"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            name="teacher_email"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            data-lpignore="true"
           />
         </div>
         <div>
@@ -100,6 +107,9 @@ export default function CreateTeacherLoginPage() {
               placeholder="Min 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              name="new-password"
+              autoComplete="new-password"
+              data-lpignore="true"
             />
             <button
               type="button"
@@ -112,14 +122,13 @@ export default function CreateTeacherLoginPage() {
           </div>
         </div>
         <button
-          type="button"
+          type="submit"
           className="rounded-lg bg-green-600 hover:bg-green-500 px-4 py-2 text-white font-medium disabled:opacity-50"
           disabled={saving}
-          onClick={createLogin}
         >
           {saving ? 'Creating...' : 'Create Login'}
         </button>
-      </div>
+      </form>
     </AdminPageWrapper>
   );
 }

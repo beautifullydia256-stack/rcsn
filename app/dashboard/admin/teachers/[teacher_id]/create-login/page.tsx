@@ -26,7 +26,8 @@ export default function CreateTeacherLoginPage() {
       if (!user) return router.push('/login');
       const { data: t } = await supabase.from('teachers').select('*').eq('teacher_id', teacherId).single();
       setTeacher(t || null);
-      if (t?.email) setEmail(t.email);
+      setEmail(t?.email ? String(t.email) : '');
+      setPassword('');
       setSchoolId(t?.school_id || null);
     };
     if (teacherId) load();
@@ -83,17 +84,38 @@ export default function CreateTeacherLoginPage() {
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4">
           {error && <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2">{error}</div>}
           {success && <div className="mb-3 rounded-lg border border-green-500/30 bg-green-500/10 text-green-200 px-3 py-2">{success}</div>}
-          <div className="space-y-3">
-            <input className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Teacher email" value={email} onChange={(e)=>setEmail(e.target.value)} />
+          <form className="space-y-3" autoComplete="off" onSubmit={(e) => { e.preventDefault(); void createLogin(); }}>
+            <input
+              className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2"
+              placeholder="Teacher email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              name="teacher_email"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              data-lpignore="true"
+            />
             <div className="relative">
-              <input type={showPassword ? 'text' : 'password'} className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 pr-10" placeholder="Temporary password" value={password} onChange={(e)=>setPassword(e.target.value)} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 pr-10"
+                placeholder="Temporary password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                name="new-password"
+                autoComplete="new-password"
+                data-lpignore="true"
+              />
               <button type="button" aria-label="Toggle password visibility" className="absolute right-2 top-1/2 -translate-y-1/2 text-white/80 hover:text-white" onClick={()=>setShowPassword(p=>!p)}>
                 {showPassword ? '🙈' : '👁️'}
               </button>
             </div>
-          </div>
+          </form>
           <div className="flex gap-2 mt-4">
-            <button disabled={saving} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50" onClick={createLogin}>{saving ? 'Creating...' : 'Create Login'}</button>
+            <button type="submit" formNoValidate disabled={saving} className="px-3 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white disabled:opacity-50" onClick={createLogin}>{saving ? 'Creating...' : 'Create Login'}</button>
           </div>
         </motion.div>
       </div>
