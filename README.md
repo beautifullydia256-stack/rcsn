@@ -65,6 +65,7 @@ PwezaCore is a modern, multi-tenant SaaS platform designed to streamline school 
    NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
+   For **SMS & WhatsApp** (Africa's Talking), set in Vercel (or `.env.local`): `AFRICASTALKING_API_KEY`, `AFRICASTALKING_USERNAME`, `AFRICASTALKING_SENDER_ID` (SMS); for **WhatsApp** also set `AFRICASTALKING_WHATSAPP_NUMBER` (your WhatsApp business number, e.g. +256…).
 
 4. **Set up Supabase database**
    - Create a new Supabase project

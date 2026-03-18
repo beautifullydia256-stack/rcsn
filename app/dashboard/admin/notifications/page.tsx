@@ -40,6 +40,11 @@ export default function NotificationsPage() {
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
+  const [waPhone, setWaPhone] = useState('');
+  const [waMessage, setWaMessage] = useState('Hello from PwezaCore – test WhatsApp.');
+  const [waSending, setWaSending] = useState(false);
+  const [waResult, setWaResult] = useState<{ ok: boolean; message: string } | null>(null);
+
   // Form state for sending announcements
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -214,6 +219,44 @@ export default function NotificationsPage() {
     }
   };
 
+  const sendTestWhatsApp = async () => {
+    if (!waPhone.trim() || !waMessage.trim()) {
+      setWaResult({ ok: false, message: 'Enter phone number and message.' });
+      return;
+    }
+    setWaSending(true);
+    setWaResult(null);
+    try {
+      const res = await fetch('/api/notifications/test-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: waPhone.trim(), message: waMessage.trim() }),
+      });
+      const raw = await res.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        // ignore non-JSON
+      }
+      if (!res.ok || !data?.success) {
+        setWaResult({
+          ok: false,
+          message: data?.error || `Request failed (${res.status}). ${raw ? raw.slice(0, 100) : ''}`,
+        });
+        return;
+      }
+      setWaResult({
+        ok: true,
+        message: `Accepted. Status: ${data.status || 'SENT'}. Check WhatsApp for delivery. Uganda (+256) only.`,
+      });
+    } catch (e) {
+      setWaResult({ ok: false, message: String(e) });
+    } finally {
+      setWaSending(false);
+    }
+  };
+
   const processPendingNotifications = async () => {
     setProcessingLogs(true);
     try {
@@ -316,6 +359,46 @@ export default function NotificationsPage() {
               className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {testSending ? 'Sending...' : 'Send test SMS'}
+            </button>
+          </div>
+        </div>
+
+        {/* Test WhatsApp */}
+        <div className="rounded-xl border-2 border-green-500/40 bg-green-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
+          <h3 className="text-xl font-semibold text-white mb-1">💬 Send test WhatsApp</h3>
+          <p className="text-sm text-white/70 mb-5">Uganda (+256) only. Set AFRICASTALKING_WHATSAPP_NUMBER (your WhatsApp business number) in Vercel. Same API key and username as SMS.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Phone number</label>
+              <input
+                type="text"
+                value={waPhone}
+                onChange={(e) => { setWaPhone(e.target.value); setWaResult(null); }}
+                placeholder="0712345678 or +256712345678"
+                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-green-500 focus:border-green-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Message</label>
+              <textarea
+                value={waMessage}
+                onChange={(e) => { setWaMessage(e.target.value); setWaResult(null); }}
+                placeholder="Test message..."
+                rows={3}
+                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-green-500 focus:border-green-400 resize-y"
+              />
+            </div>
+            {waResult && (
+              <div className={`px-4 py-3 rounded-lg ${waResult.ok ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                {waResult.message}
+              </div>
+            )}
+            <button
+              onClick={sendTestWhatsApp}
+              disabled={waSending || !waPhone.trim() || !waMessage.trim()}
+              className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {waSending ? 'Sending...' : 'Send test WhatsApp'}
             </button>
           </div>
         </div>

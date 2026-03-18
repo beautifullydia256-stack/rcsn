@@ -181,7 +181,7 @@ export default function AdminKPICards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (
@@ -191,34 +191,35 @@ export default function AdminKPICards() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             whileHover={{ y: -2 }}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
+            className="bg-[#0b1120] rounded-xl border border-white/10 overflow-hidden"
           >
             <button
               type="button"
               onClick={() => c.href && router.push(c.href)}
-              className="w-full p-4 sm:p-5 text-left hover:bg-gray-50/50 transition-colors"
+              className="w-full p-4 sm:p-5 text-left hover:bg-white/5 transition-colors"
             >
+              <div className="h-0.5 w-full" style={{ background: `${c.color}` }} />
               <div className="flex items-start justify-between gap-2">
                 <div className="p-2 rounded-lg flex-shrink-0" style={{ background: `${c.color}15` }}>
                   <Icon className="w-5 h-5" style={{ color: c.color }} />
                 </div>
                 {c.href && (
                   <ArrowUpRight
-                    className="w-4 h-4 text-gray-400 flex-shrink-0"
+                    className="w-4 h-4 text-white/50 flex-shrink-0"
                     aria-hidden
                   />
                 )}
               </div>
               <div className="mt-3">
-                <div className="text-xs sm:text-sm text-gray-500 mb-0.5">{c.label}</div>
-                <div className="text-xl sm:text-2xl font-bold text-gray-900">
+                <div className="text-xs sm:text-sm text-white/60 mb-0.5">{c.label}</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">
                   {loading ? (
-                    <div className="animate-pulse bg-gray-200 rounded h-7 w-16" />
+                    <div className="animate-pulse bg-white/15 rounded h-7 w-16" />
                   ) : (
                     c.value
                   )}
                 </div>
-                <div className="mt-1 text-xs text-green-600 font-medium">{c.trend}</div>
+                <div className="mt-1 text-xs text-white/60 font-medium">{c.trend}</div>
               </div>
             </button>
           </motion.div>

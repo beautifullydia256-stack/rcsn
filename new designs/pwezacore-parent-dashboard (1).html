@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Parent Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #060810;
+  --s1:       #0a0d1a;
+  --s2:       #0f1326;
+  --s3:       #151b32;
+  --s4:       #1c253e;
+  --border:   rgba(255,255,255,0.055);
+  --bh:       rgba(255,255,255,0.10);
+
+  /* Parent accent — warm coral-to-rose gold */
+  --coral:    #ff6b6b;
+  --coral-s:  rgba(255,107,107,0.10);
+  --coral-g:  rgba(255,107,107,0.22);
+  --gold:     #ffd93d;
+  --gold-s:   rgba(255,217,61,0.10);
+
+  /* Semantic */
+  --teal:     #06d6a0;
+  --teal-s:   rgba(6,214,160,0.10);
+  --blue:     #4895ef;
+  --blue-s:   rgba(72,149,239,0.10);
+  --amber:    #f4a261;
+  --amber-s:  rgba(244,162,97,0.10);
+  --rose:     #e63946;
+  --rose-s:   rgba(230,57,70,0.10);
+  --violet:   #c77dff;
+  --violet-s: rgba(199,125,255,0.10);
+  --lime:     #a8dadc;
+  --lime-s:   rgba(168,218,220,0.10);
+
+  --t1: #eef2ff;
+  --t2: #7d8fbe;
+  --t3: #374669;
+
+  --sw: 230px;
+  --r:  14px;
+  --rs: 9px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100vh;
+  display: flex;
+  overflow-x: hidden;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 99px; }
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width: var(--sw); min-height: 100vh;
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; inset: 0 auto 0 0;
+  z-index: 200; overflow-y: auto;
+}
+.sidebar::-webkit-scrollbar { width: 0; }
+
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.brand-logo {
+  width: 33px; height: 33px;
+  background: linear-gradient(135deg, var(--coral), var(--gold));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+  box-shadow: 0 4px 14px var(--coral-g);
+}
+.brand-name {
+  font-family: 'Fraunces', sans-serif;
+  font-weight: 700; font-size: 17px; letter-spacing: -0.3px; color: var(--t1);
+}
+.brand-pill {
+  margin-left: auto;
+  font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+  color: var(--coral); background: var(--coral-s);
+  border: 1px solid rgba(255,107,107,0.2); border-radius: 4px; padding: 2px 6px;
+}
+
+.nav-sec { padding: 16px 10px 4px; }
+.nav-lbl {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+  color: var(--t3); padding: 0 6px; margin-bottom: 5px;
+}
+
+.nav-link {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 10px; border-radius: var(--rs);
+  cursor: pointer; transition: all 0.15s;
+  color: var(--t2); font-size: 13px; font-weight: 500;
+}
+.nav-link:hover { background: var(--s2); color: var(--t1); }
+.nav-link.active { background: var(--coral-s); color: var(--coral); border: 1px solid rgba(255,107,107,0.15); }
+.nav-ic { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
+
+.nav-badge {
+  margin-left: auto; font-size: 10px; font-weight: 700;
+  border-radius: 99px; padding: 1px 6px;
+  background: var(--rose); color: #fff; flex-shrink: 0;
+}
+.nav-badge.teal { background: var(--teal); color: #060810; }
+.nav-badge.coral { background: var(--coral); color: #fff; }
+
+.sb-footer {
+  margin-top: auto; padding: 12px;
+  border-top: 1px solid var(--border);
+}
+.parent-card {
+  display: flex; align-items: center; gap: 9px;
+  padding: 10px; border-radius: var(--rs);
+  background: var(--s2); border: 1px solid var(--border);
+  cursor: pointer; transition: border-color 0.18s;
+}
+.parent-card:hover { border-color: var(--bh); }
+
+.p-av {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--coral), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: #fff; flex-shrink: 0;
+  box-shadow: 0 2px 10px var(--coral-g);
+}
+.p-name { font-size: 12px; font-weight: 700; color: var(--t1); }
+.p-role { font-size: 10.5px; color: var(--t3); }
+
+/* ─── MAIN ─── */
+.main { margin-left: var(--sw); flex: 1; display: flex; flex-direction: column; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height: 56px;
+  background: rgba(6,8,16,0.90);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 28px;
+  position: sticky; top: 0; z-index: 100;
+}
+.bc { font-family: 'Fraunces', sans-serif; font-weight: 600; font-size: 13px; }
+.bc-d { color: var(--t3); }
+.bc-s { color: var(--t3); margin: 0 5px; }
+.bc-c { color: var(--t1); }
+
+.tb-child-switcher {
+  margin-left: 16px;
+  display: flex; gap: 6px;
+}
+.child-tab {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 99px;
+  font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.18s;
+  border: 1px solid var(--border);
+  color: var(--t2); background: var(--s2);
+}
+.child-tab.active { background: var(--coral-s); color: var(--coral); border-color: rgba(255,107,107,0.2); }
+.child-tab:hover:not(.active) { border-color: var(--bh); color: var(--t1); }
+.child-tab-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+.search-wrap { margin-left: auto; position: relative; }
+.search-input {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 7px 14px 7px 33px;
+  font-size: 12.5px; font-family: 'DM Sans', sans-serif;
+  color: var(--t1); width: 230px; transition: all 0.2s; outline: none;
+}
+.search-input::placeholder { color: var(--t3); }
+.search-input:focus { border-color: var(--coral); width: 280px; }
+.si { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--t3); font-size: 13px; pointer-events: none; }
+
+.tb-btns { display: flex; gap: 6px; margin-left: 10px; }
+.ib {
+  width: 34px; height: 34px; border-radius: var(--rs); background: var(--s2);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: var(--t2); font-size: 14px;
+  transition: all 0.15s; position: relative;
+}
+.ib:hover { border-color: var(--bh); color: var(--t1); }
+.pip { width: 6px; height: 6px; background: var(--rose); border-radius: 50%; position: absolute; top: 6px; right: 6px; border: 1.5px solid var(--bg); }
+
+/* ─── CONTENT ─── */
+.content { padding: 26px 28px 60px; display: flex; flex-direction: column; gap: 22px; }
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+.fu { animation: fadeUp 0.45s ease both; }
+.d1{animation-delay:.04s} .d2{animation-delay:.09s} .d3{animation-delay:.14s}
+.d4{animation-delay:.19s} .d5{animation-delay:.24s} .d6{animation-delay:.29s}
+
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.25} }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); animation: blink 2s infinite; }
+
+/* ─── HERO CARD ─── */
+.hero {
+  background: linear-gradient(135deg, var(--s2) 0%, var(--s3) 60%, rgba(255,107,107,0.05) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 26px 30px;
+  position: relative; overflow: hidden;
+  display: flex; align-items: center; gap: 0;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -80px; right: -80px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(255,107,107,0.12) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -50px; left: 35%;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(255,217,61,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-left { position: relative; z-index: 1; flex: 1; }
+
+.hero-greeting {
+  font-size: 11.5px; color: var(--t3); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 7px;
+}
+.hero-name {
+  font-family: 'Fraunces', sans-serif;
+  font-weight: 700; font-size: 26px; letter-spacing: -0.5px; color: var(--t1);
+}
+.hero-sub { font-size: 13px; color: var(--t2); margin-top: 4px; }
+
+.hero-children {
+  display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap;
+}
+.child-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: rgba(7,9,14,0.5);
+  cursor: pointer; transition: all 0.18s;
+  position: relative; z-index: 1;
+}
+.child-pill:hover { border-color: var(--bh); }
+.child-pill.active { border-color: rgba(255,107,107,0.3); background: var(--coral-s); }
+
+.cp-av {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.cp-name { font-size: 12px; font-weight: 600; color: var(--t1); }
+.cp-class { font-size: 10px; color: var(--t3); }
+
+/* KPI for hero right */
+.hero-right {
+  display: flex; gap: 14px; position: relative; z-index: 1; flex-shrink: 0;
+}
+.hkpi {
+  text-align: center; padding: 14px 18px;
+  background: rgba(6,8,16,0.55);
+  border: 1px solid var(--border); border-radius: var(--r);
+  min-width: 88px;
+  transition: border-color 0.18s;
+}
+.hkpi:hover { border-color: var(--bh); }
+.hkpi-val {
+  font-family: 'Fraunces', sans-serif;
+  font-weight: 700; font-size: 24px; letter-spacing: -0.8px; line-height: 1;
+}
+.hkpi-lbl { font-size: 10px; color: var(--t3); margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+
+/* ─── KPI GRID ─── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.kpi {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 18px 20px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.kpi:hover { border-color: var(--bh); transform: translateY(-2px); }
+.kpi::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: var(--r) var(--r) 0 0;
+}
+.kpi.coral::before { background: linear-gradient(90deg, var(--coral), var(--gold)); }
+.kpi.teal::before  { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+.kpi.amber::before { background: linear-gradient(90deg, var(--amber), var(--coral)); }
+.kpi.rose::before  { background: linear-gradient(90deg, var(--rose), var(--violet)); }
+.kpi.blue::before  { background: linear-gradient(90deg, var(--blue), var(--violet)); }
+.kpi.violet::before{ background: linear-gradient(90deg, var(--violet), var(--blue)); }
+
+.kpi-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.kpi-ic { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; }
+.kpi-ic.coral  { background: var(--coral-s); }
+.kpi-ic.teal   { background: var(--teal-s); }
+.kpi-ic.amber  { background: var(--amber-s); }
+.kpi-ic.rose   { background: var(--rose-s); }
+.kpi-ic.blue   { background: var(--blue-s); }
+.kpi-ic.violet { background: var(--violet-s); }
+
+.kpi-badge { font-size: 11px; font-weight: 600; padding: 3px 7px; border-radius: 99px; }
+.kpi-badge.up   { background: var(--teal-s); color: var(--teal); }
+.kpi-badge.down { background: var(--rose-s); color: var(--rose); }
+.kpi-badge.flat { background: var(--s3); color: var(--t3); }
+.kpi-badge.warn { background: var(--amber-s); color: var(--amber); }
+
+.kpi-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--t3); }
+.kpi-val {
+  font-family: 'Fraunces', sans-serif;
+  font-weight: 700; font-size: 26px; letter-spacing: -0.5px; color: var(--t1);
+  margin: 4px 0 5px; line-height: 1.1;
+}
+.kpi-sub { font-size: 11.5px; color: var(--t3); }
+.prog { width: 100%; height: 4px; background: var(--s3); border-radius: 99px; overflow: hidden; margin-top: 10px; }
+.prog-fill { height: 100%; border-radius: 99px; }
+
+/* ─── LAYOUT ─── */
+.row { display: grid; gap: 12px; }
+.row-2   { grid-template-columns: 1fr 1fr; }
+.row-3   { grid-template-columns: repeat(3, 1fr); }
+.row-2-1 { grid-template-columns: 1fr 340px; }
+.row-1-2 { grid-template-columns: 340px 1fr; }
+
+/* ─── CARD ─── */
+.card { background: var(--s1); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+.card-hd {
+  padding: 15px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title {
+  font-family: 'Fraunces', sans-serif;
+  font-weight: 600; font-size: 14.5px; color: var(--t1);
+  display: flex; align-items: center; gap: 8px;
+}
+.card-action { font-size: 12px; font-weight: 500; color: var(--coral); cursor: pointer; transition: opacity 0.18s; }
+.card-action:hover { opacity: 0.6; }
+
+/* ─── CHIP ─── */
+.chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px;
+}
+.chip.coral  { background: var(--coral-s); color: var(--coral); }
+.chip.teal   { background: var(--teal-s); color: var(--teal); }
+.chip.amber  { background: var(--amber-s); color: var(--amber); }
+.chip.rose   { background: var(--rose-s); color: var(--rose); }
+.chip.blue   { background: var(--blue-s); color: var(--blue); }
+.chip.violet { background: var(--violet-s); color: var(--violet); }
+.chip.slate  { background: var(--s3); color: var(--t2); }
+.chip.gold   { background: var(--gold-s); color: var(--gold); }
+
+/* ─── SUBJECT PERFORMANCE ─── */
+.subj-row {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+.subj-row:last-child { border-bottom: none; }
+.subj-name { font-size: 12.5px; font-weight: 500; color: var(--t2); width: 96px; flex-shrink: 0; }
+.subj-bar  { flex: 1; height: 6px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.subj-fill { height: 100%; border-radius: 99px; }
+.subj-val  { font-size: 12px; font-weight: 700; width: 32px; text-align: right; flex-shrink: 0; }
+.subj-grade{ font-size: 11px; font-weight: 800; width: 20px; text-align: center; flex-shrink: 0; }
+
+/* ─── TIMETABLE ─── */
+.tt-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 20px; border-bottom: 1px solid var(--border);
+  cursor: default; transition: background 0.14s;
+}
+.tt-row:last-child { border-bottom: none; }
+.tt-row:hover { background: var(--s2); }
+.tt-row.now { background: var(--coral-s); border-left: 3px solid var(--coral); }
+
+.tt-time { text-align: center; flex-shrink: 0; width: 48px; }
+.tt-h  { font-size: 12.5px; font-weight: 700; color: var(--t1); }
+.tt-ap { font-size: 10px; color: var(--t3); }
+.tt-sep { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; }
+.tt-info { flex: 1; }
+.tt-subj { font-size: 13px; font-weight: 600; color: var(--t1); }
+.tt-meta { font-size: 11.5px; color: var(--t3); margin-top: 1px; }
+.tt-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── ATTENDANCE CALENDAR ─── */
+.att-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; padding: 12px 20px; }
+.att-hd  { font-size: 9.5px; font-weight: 700; color: var(--t3); text-align: center; padding-bottom: 5px; text-transform: uppercase; }
+.att-cell {
+  aspect-ratio: 1; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; font-weight: 600;
+  background: var(--s2); color: var(--t3); cursor: default;
+}
+.att-cell.present { background: var(--teal-s); color: var(--teal); }
+.att-cell.absent  { background: var(--rose-s); color: var(--rose); }
+.att-cell.late    { background: var(--amber-s); color: var(--amber); }
+.att-cell.today   { background: var(--coral); color: #fff; box-shadow: 0 2px 10px var(--coral-g); }
+.att-cell.future  { opacity: 0.25; }
+.att-cell.empty   { background: transparent; }
+
+/* ─── FEE ROWS ─── */
+.fee-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.14s;
+}
+.fee-row:last-child { border-bottom: none; }
+.fee-row:hover { background: var(--s2); }
+.fee-ic { font-size: 19px; flex-shrink: 0; }
+.fee-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+.fee-sub  { font-size: 11.5px; color: var(--t3); margin-top: 1px; }
+.fee-amt  { font-size: 13.5px; font-weight: 700; flex-shrink: 0; margin-left: auto; }
+
+/* ─── RESULTS TABLE ─── */
+.res-hd {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 90px;
+  padding: 9px 20px; background: var(--s2); border-bottom: 1px solid var(--border);
+}
+.res-row {
+  display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 90px;
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  align-items: center; cursor: pointer; transition: background 0.14s;
+}
+.res-row:last-child { border-bottom: none; }
+.res-row:hover { background: var(--s2); }
+.th { font-size: 10.5px; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.8px; }
+.td { font-size: 13px; color: var(--t2); }
+.td.bold { color: var(--t1); font-weight: 600; }
+
+/* ─── NOTICE ─── */
+.notice-item {
+  display: flex; gap: 12px; padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.14s;
+}
+.notice-item:last-child { border-bottom: none; }
+.notice-item:hover { background: var(--s2); }
+.n-ic { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+.n-title { font-size: 13px; font-weight: 600; color: var(--t1); }
+.n-body  { font-size: 11.5px; color: var(--t2); margin-top: 2px; line-height: 1.4; }
+.n-time  { font-size: 10.5px; color: var(--t3); margin-top: 3px; }
+
+/* ─── MESSAGES ─── */
+.msg-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.14s;
+}
+.msg-row:last-child { border-bottom: none; }
+.msg-row:hover { background: var(--s2); }
+.msg-row.unread { background: rgba(255,107,107,0.03); }
+.msg-av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.msg-sender  { font-size: 13px; font-weight: 600; color: var(--t1); }
+.msg-preview { font-size: 11.5px; color: var(--t2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.msg-time    { font-size: 10.5px; color: var(--t3); flex-shrink: 0; margin-left: auto; }
+.unread-dot  { width: 7px; height: 7px; border-radius: 50%; background: var(--coral); flex-shrink: 0; margin-top: 5px; }
+
+/* ─── ACTIVITY FEED ─── */
+.act-row {
+  display: flex; gap: 12px; padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.14s;
+}
+.act-row:last-child { border-bottom: none; }
+.act-row:hover { background: var(--s2); }
+.act-av { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.act-main { font-size: 12.5px; color: var(--t2); line-height: 1.4; }
+.act-main strong { color: var(--t1); font-weight: 600; }
+.act-time { font-size: 11px; color: var(--t3); margin-top: 2px; }
+.act-ic { font-size: 17px; flex-shrink: 0; align-self: center; }
+
+/* ─── REPORT CARD PREVIEW ─── */
+.report-band {
+  display: flex; gap: 6px; padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.rband-item { flex: 1; min-width: 70px; text-align: center; padding: 10px 6px; border-radius: 9px; border: 1px solid var(--border); background: var(--s2); }
+.rband-subject { font-size: 9.5px; color: var(--t3); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
+.rband-score { font-family: 'Fraunces', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.5px; }
+.rband-grade { font-size: 10px; font-weight: 700; margin-top: 2px; }
+
+/* ─── TEACHER CONTACT ─── */
+.teacher-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.14s;
+}
+.teacher-row:last-child { border-bottom: none; }
+.teacher-row:hover { background: var(--s2); }
+.t-av { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.t-name { font-size: 13px; font-weight: 600; color: var(--t1); }
+.t-subj { font-size: 11.5px; color: var(--t3); margin-top: 1px; }
+.t-msg-btn {
+  margin-left: auto; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px;
+  background: var(--coral-s); color: var(--coral);
+  border: 1px solid rgba(255,107,107,0.2);
+  cursor: pointer; transition: all 0.15s;
+}
+.t-msg-btn:hover { background: var(--coral); color: #fff; }
+
+/* ─── BTN ─── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 17px; border-radius: var(--rs);
+  font-size: 12.5px; font-weight: 600; font-family: 'DM Sans', sans-serif;
+  cursor: pointer; transition: all 0.18s; border: none;
+}
+.btn-coral   { background: var(--coral); color: #fff; }
+.btn-coral:hover { background: #ff8585; transform: translateY(-1px); box-shadow: 0 4px 18px var(--coral-g); }
+.btn-outline { background: transparent; color: var(--t2); border: 1px solid var(--border); }
+.btn-outline:hover { border-color: var(--bh); color: var(--t1); }
+.btn-ghost   { background: var(--s2); color: var(--t2); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--bh); color: var(--t1); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════ SIDEBAR -->
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand-logo">👨‍👩‍👧‍👦</div>
+    <span class="brand-name">PwezaCore</span>
+    <span class="brand-pill">Parent</span>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">Overview</div>
+    <div class="nav-link active"><span class="nav-ic">⊞</span> Dashboard</div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">My Children</div>
+    <div class="nav-link"><span class="nav-ic">👦</span> David Mugisha <span class="nav-badge coral">1</span></div>
+    <div class="nav-link"><span class="nav-ic">👧</span> Grace Mugisha</div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">Academics</div>
+    <div class="nav-link"><span class="nav-ic">📊</span> Report Cards</div>
+    <div class="nav-link"><span class="nav-ic">📋</span> Attendance</div>
+    <div class="nav-link"><span class="nav-ic">📝</span> Assignments</div>
+    <div class="nav-link"><span class="nav-ic">🧪</span> Exams & Results</div>
+    <div class="nav-link"><span class="nav-ic">⏱️</span> Timetable</div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">Finance</div>
+    <div class="nav-link"><span class="nav-ic">💳</span> Fee Statement <span class="nav-badge">!</span></div>
+    <div class="nav-link"><span class="nav-ic">🧾</span> Payment History</div>
+    <div class="nav-link"><span class="nav-ic">📑</span> Invoices</div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">Communication</div>
+    <div class="nav-link"><span class="nav-ic">💬</span> Messages <span class="nav-badge teal">3</span></div>
+    <div class="nav-link"><span class="nav-ic">📣</span> Notice Board <span class="nav-badge coral">2</span></div>
+    <div class="nav-link"><span class="nav-ic">🔔</span> Notifications</div>
+  </div>
+
+  <div class="nav-sec">
+    <div class="nav-lbl">Account</div>
+    <div class="nav-link"><span class="nav-ic">👤</span> My Profile</div>
+    <div class="nav-link"><span class="nav-ic">⚙️</span> Settings</div>
+  </div>
+
+  <div class="sb-footer">
+    <div class="parent-card">
+      <div class="p-av">AM</div>
+      <div>
+        <div class="p-name">Agatha Mugisha</div>
+        <div class="p-role">Parent · 2 children enrolled</div>
+      </div>
+      <span style="color:var(--t3);font-size:13px;margin-left:auto">⋯</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════ MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="bc">
+      <span class="bc-d">PwezaCore</span>
+      <span class="bc-s">/</span>
+      <span class="bc-c">Parent Dashboard</span>
+    </div>
+
+    <!-- Child switcher tabs -->
+    <div class="tb-child-switcher">
+      <div class="child-tab active">
+        <div class="child-tab-dot" style="background:var(--coral)"></div>
+        David · S.2A
+      </div>
+      <div class="child-tab">
+        <div class="child-tab-dot" style="background:var(--blue)"></div>
+        Grace · S.4B
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <span class="si">🔍</span>
+      <input class="search-input" placeholder="Search reports, fees, messages…">
+    </div>
+
+    <div class="tb-btns">
+      <div class="ib" title="Pay fees">💳</div>
+      <div class="ib" title="Messages">💬<span class="pip"></span></div>
+      <div class="ib" title="Notifications">🔔<span class="pip"></span></div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+
+    <!-- HERO WELCOME -->
+    <div class="hero fu">
+      <div class="hero-left">
+        <div class="hero-greeting">
+          <span class="live-dot"></span>
+          Wednesday, 18 March 2026 · Term 1 Week 8 · Academic Year 2025/2026
+        </div>
+        <div class="hero-name">Good morning, Agatha 👋</div>
+        <div class="hero-sub">Track your children's progress, fees, and school updates — all in one place.</div>
+
+        <div class="hero-children">
+          <!-- Child 1 -->
+          <div class="child-pill active">
+            <div class="cp-av" style="background:linear-gradient(135deg,var(--coral),var(--gold))">DM</div>
+            <div>
+              <div class="cp-name">David Mugisha</div>
+              <div class="cp-class">Senior 2A · Reg: STU-2042</div>
+            </div>
+            <span class="chip coral" style="margin-left:6px;font-size:10px">● Present</span>
+          </div>
+
+          <!-- Child 2 -->
+          <div class="child-pill">
+            <div class="cp-av" style="background:linear-gradient(135deg,var(--blue),var(--violet))">GM</div>
+            <div>
+              <div class="cp-name">Grace Mugisha</div>
+              <div class="cp-class">Senior 4B · Reg: STU-1891</div>
+            </div>
+            <span class="chip teal" style="margin-left:6px;font-size:10px">● Present</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero stats — viewing David -->
+      <div class="hero-right" style="margin-left:28px;">
+        <div class="hkpi">
+          <div class="hkpi-val" style="color:var(--coral)">72%</div>
+          <div class="hkpi-lbl">Avg Score</div>
+        </div>
+        <div class="hkpi">
+          <div class="hkpi-val" style="color:var(--teal)">87%</div>
+          <div class="hkpi-lbl">Attendance</div>
+        </div>
+        <div class="hkpi">
+          <div class="hkpi-val" style="color:var(--amber)">USh 85K</div>
+          <div class="hkpi-lbl">Fee Balance</div>
+        </div>
+        <div class="hkpi">
+          <div class="hkpi-val" style="color:var(--gold)">#5</div>
+          <div class="hkpi-lbl">Class Rank</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEE PAYMENT BANNER — the most critical action for a parent -->
+    <div class="fu d1" style="background:linear-gradient(135deg,var(--s2) 0%,var(--s3) 100%);border:1px solid rgba(244,162,97,0.25);border-radius:var(--r);padding:22px 28px;display:flex;align-items:center;gap:24px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--amber),var(--coral))"></div>
+      <div style="position:absolute;top:-60px;right:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(244,162,97,0.10) 0%,transparent 70%);pointer-events:none"></div>
+
+      <div style="width:52px;height:52px;border-radius:14px;background:var(--amber-s);border:1px solid rgba(244,162,97,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0">💳</div>
+
+      <div style="flex:1;position:relative;z-index:1;">
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px">Outstanding Fee Balance · David Mugisha</div>
+        <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;">
+          <span style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:28px;color:var(--amber);letter-spacing:-1px">USh 85,000</span>
+          <span style="font-size:12.5px;color:var(--t2)">due by <strong style="color:var(--rose)">March 31, 2026</strong></span>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2)"><span style="width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0;display:inline-block"></span>ICT Lab Fee — <strong style="color:var(--t1)">USh 45,000</strong></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--t2)"><span style="width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0;display:inline-block"></span>Library Fee — <strong style="color:var(--t1)">USh 40,000</strong></div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--teal)"><span style="width:6px;height:6px;border-radius:50%;background:var(--teal);flex-shrink:0;display:inline-block"></span>Grace Mugisha — <strong style="color:var(--teal)">All fees cleared ✓</strong></div>
+        </div>
+        <div style="margin-top:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:11px;color:var(--t3);font-weight:600">Term 1 payment progress</span><span style="font-size:11px;font-weight:700;color:var(--amber)">72% paid</span></div>
+          <div style="height:5px;background:var(--s4);border-radius:99px;overflow:hidden;"><div style="height:100%;width:72%;border-radius:99px;background:linear-gradient(90deg,var(--teal),var(--amber))"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="font-size:10.5px;color:var(--teal)">USh 215,000 paid</span><span style="font-size:10.5px;color:var(--t3)">Total: USh 300,000</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;position:relative;z-index:1;min-width:190px;">
+        <button class="btn btn-coral" style="justify-content:center;font-size:13px;padding:11px 20px;width:100%">💳 Pay USh 85,000 Now</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+          <button class="btn btn-ghost" style="justify-content:center;font-size:11px;padding:8px 6px;">📱 Mobile Money</button>
+          <button class="btn btn-ghost" style="justify-content:center;font-size:11px;padding:8px 6px;">🏦 Bank Transfer</button>
+        </div>
+        <div style="text-align:center;font-size:10.5px;color:var(--t3)">Receipt sent to email · Instant confirmation</div>
+      </div>
+    </div>
+
+    <!-- REPORT CARD + TIMETABLE -->
+    <div class="row row-2-1 fu d2">
+
+      <!-- Academic Performance — David -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">📈 Academic Performance — David</span>
+          <a class="card-action">Full transcript →</a>
+        </div>
+
+        <!-- Radial summary row -->
+        <div style="display:flex;gap:18px;padding:16px 20px 14px;border-bottom:1px solid var(--border);">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+            <svg width="62" height="62" viewBox="0 0 62 62">
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--s3)" stroke-width="7"/>
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--coral)" stroke-width="7"
+                stroke-dasharray="113 157" stroke-dashoffset="39" stroke-linecap="round"/>
+              <text x="31" y="35" text-anchor="middle" font-size="12" font-weight="700" fill="var(--t1)" font-family="Fraunces">72</text>
+            </svg>
+            <div style="font-size:10.5px;color:var(--t3);font-weight:600">Average</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+            <svg width="62" height="62" viewBox="0 0 62 62">
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--s3)" stroke-width="7"/>
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--teal)" stroke-width="7"
+                stroke-dasharray="127 157" stroke-dashoffset="39" stroke-linecap="round"/>
+              <text x="31" y="35" text-anchor="middle" font-size="12" font-weight="700" fill="var(--teal)" font-family="Fraunces">88</text>
+            </svg>
+            <div style="font-size:10.5px;color:var(--t3);font-weight:600">Best</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:5px;">
+            <svg width="62" height="62" viewBox="0 0 62 62">
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--s3)" stroke-width="7"/>
+              <circle cx="31" cy="31" r="25" fill="none" stroke="var(--rose)" stroke-width="7"
+                stroke-dasharray="85 157" stroke-dashoffset="39" stroke-linecap="round"/>
+              <text x="31" y="35" text-anchor="middle" font-size="12" font-weight="700" fill="var(--rose)" font-family="Fraunces">58</text>
+            </svg>
+            <div style="font-size:10.5px;color:var(--t3);font-weight:600">Lowest</div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:8px;">
+            <div style="padding:10px 14px;border-radius:9px;background:var(--amber-s);border:1px solid rgba(244,162,97,0.18);">
+              <div style="font-size:10px;color:var(--amber);font-weight:700;text-transform:uppercase;letter-spacing:0.5px">⚠️ Needs Attention</div>
+              <div style="font-size:12.5px;font-weight:600;color:var(--t1);margin-top:2px">History — 58%</div>
+              <div style="font-size:11px;color:var(--t2);margin-top:1px">Ranked #9 in class. Consider revision support.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subject bars -->
+        <div style="padding:14px 20px;">
+          <div class="subj-row">
+            <div class="subj-name">Mathematics</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:72%;background:var(--coral)"></div></div>
+            <div class="subj-val" style="color:var(--coral)">72</div><div class="subj-grade" style="color:var(--coral)">B</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">Physics</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:88%;background:var(--teal)"></div></div>
+            <div class="subj-val" style="color:var(--teal)">88</div><div class="subj-grade" style="color:var(--teal)">A</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">English</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:68%;background:var(--blue)"></div></div>
+            <div class="subj-val" style="color:var(--blue)">68</div><div class="subj-grade" style="color:var(--blue)">B</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">Biology</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:75%;background:var(--violet)"></div></div>
+            <div class="subj-val" style="color:var(--violet)">75</div><div class="subj-grade" style="color:var(--violet)">B</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">History</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:58%;background:var(--rose)"></div></div>
+            <div class="subj-val" style="color:var(--rose)">58</div><div class="subj-grade" style="color:var(--rose)">C</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">Geography</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:81%;background:var(--amber)"></div></div>
+            <div class="subj-val" style="color:var(--amber)">81</div><div class="subj-grade" style="color:var(--amber)">A</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">Chemistry</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:63%;background:var(--coral)"></div></div>
+            <div class="subj-val" style="color:var(--coral)">63</div><div class="subj-grade" style="color:var(--coral)">C</div>
+          </div>
+          <div class="subj-row">
+            <div class="subj-name">Kiswahili</div>
+            <div class="subj-bar"><div class="subj-fill" style="width:79%;background:var(--lime)"></div></div>
+            <div class="subj-val" style="color:var(--lime)">79</div><div class="subj-grade" style="color:var(--lime)">B</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TODAY'S TIMETABLE + ATTENDANCE -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Today's Schedule -->
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-title">⏱️ David's Schedule Today</span>
+            <a class="card-action">Full →</a>
+          </div>
+
+          <div class="tt-row now">
+            <div class="tt-time"><div class="tt-h">7:30</div><div class="tt-ap">AM</div></div>
+            <div class="tt-sep" style="background:var(--coral);opacity:0.5"></div>
+            <div class="tt-info"><div class="tt-subj">Mathematics</div><div class="tt-meta">Room 101 · Mr. Kafeero</div></div>
+            <span class="chip coral" style="font-size:10px">Now</span>
+          </div>
+          <div class="tt-row">
+            <div class="tt-time"><div class="tt-h">9:00</div><div class="tt-ap">AM</div></div>
+            <div class="tt-sep"></div>
+            <div class="tt-info"><div class="tt-subj">English</div><div class="tt-meta">Room 101 · Ms. Amara</div></div>
+            <div class="tt-dot" style="background:var(--blue)"></div>
+          </div>
+          <div class="tt-row">
+            <div class="tt-time"><div class="tt-h">11:00</div><div class="tt-ap">AM</div></div>
+            <div class="tt-sep"></div>
+            <div class="tt-info"><div class="tt-subj">Physics</div><div class="tt-meta">Lab 2 · Mr. Musono</div></div>
+            <div class="tt-dot" style="background:var(--teal)"></div>
+          </div>
+          <div class="tt-row">
+            <div class="tt-time"><div class="tt-h">2:00</div><div class="tt-ap">PM</div></div>
+            <div class="tt-sep"></div>
+            <div class="tt-info"><div class="tt-subj">History</div><div class="tt-meta">Room 205 · Mr. Oryema</div></div>
+            <div class="tt-dot" style="background:var(--amber)"></div>
+          </div>
+          <div class="tt-row">
+            <div class="tt-time"><div class="tt-h">3:30</div><div class="tt-ap">PM</div></div>
+            <div class="tt-sep"></div>
+            <div class="tt-info"><div class="tt-subj">Geography</div><div class="tt-meta">Room 101 · Mrs. Nakato</div></div>
+            <div class="tt-dot" style="background:var(--violet)"></div>
+          </div>
+        </div>
+
+        <!-- Attendance mini -->
+        <div class="card">
+          <div class="card-hd">
+            <span class="card-title">📋 Attendance — March</span>
+            <a class="card-action">History →</a>
+          </div>
+          <div class="att-grid">
+            <div class="att-hd">M</div><div class="att-hd">T</div><div class="att-hd">W</div>
+            <div class="att-hd">T</div><div class="att-hd">F</div><div class="att-hd">S</div><div class="att-hd">S</div>
+            <div class="att-cell empty"></div><div class="att-cell empty"></div><div class="att-cell empty"></div><div class="att-cell empty"></div><div class="att-cell empty"></div>
+            <div class="att-cell">1</div><div class="att-cell">2</div>
+            <div class="att-cell present">3</div><div class="att-cell present">4</div><div class="att-cell present">5</div>
+            <div class="att-cell late">6</div><div class="att-cell present">7</div>
+            <div class="att-cell">8</div><div class="att-cell">9</div>
+            <div class="att-cell present">10</div><div class="att-cell absent">11</div>
+            <div class="att-cell present">12</div><div class="att-cell present">13</div><div class="att-cell present">14</div>
+            <div class="att-cell">15</div><div class="att-cell">16</div>
+            <div class="att-cell present">17</div><div class="att-cell today">18</div>
+            <div class="att-cell future">19</div><div class="att-cell future">20</div><div class="att-cell future">21</div>
+            <div class="att-cell">22</div><div class="att-cell">23</div>
+          </div>
+          <div style="display:flex;gap:8px;padding:8px 20px 14px;">
+            <div style="flex:1;text-align:center;padding:8px;background:var(--teal-s);border-radius:8px;">
+              <div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:17px;color:var(--teal)">13</div>
+              <div style="font-size:9.5px;color:var(--t3);font-weight:700;text-transform:uppercase">Present</div>
+            </div>
+            <div style="flex:1;text-align:center;padding:8px;background:var(--rose-s);border-radius:8px;">
+              <div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:17px;color:var(--rose)">1</div>
+              <div style="font-size:9.5px;color:var(--t3);font-weight:700;text-transform:uppercase">Absent</div>
+            </div>
+            <div style="flex:1;text-align:center;padding:8px;background:var(--amber-s);border-radius:8px;">
+              <div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:17px;color:var(--amber)">1</div>
+              <div style="font-size:9.5px;color:var(--t3);font-weight:700;text-transform:uppercase">Late</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- PAYMENT HISTORY + EXAM UPCOMING + TEACHER CONTACTS -->
+    <div class="row row-3 fu d3">
+
+      <!-- Payment History -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">🧾 Payment History</span>
+          <a class="card-action">Download receipt →</a>
+        </div>
+
+        <!-- All transactions -->
+        <div class="fee-row">
+          <span class="fee-ic">✅</span>
+          <div style="flex:1;">
+            <div class="fee-name">Term 1 Tuition — David</div>
+            <div class="fee-sub">Feb 20, 2026 · Cash · Receipt #1041</div>
+          </div>
+          <div class="fee-amt" style="color:var(--teal)">USh 175,000</div>
+        </div>
+        <div class="fee-row">
+          <span class="fee-ic">✅</span>
+          <div style="flex:1;">
+            <div class="fee-name">Development Levy — David</div>
+            <div class="fee-sub">Feb 20, 2026 · Cash · Receipt #1041</div>
+          </div>
+          <div class="fee-amt" style="color:var(--teal)">USh 40,000</div>
+        </div>
+        <div class="fee-row" style="background:rgba(244,162,97,0.04);">
+          <span class="fee-ic">⏳</span>
+          <div style="flex:1;">
+            <div class="fee-name">ICT Lab Fee — David</div>
+            <div class="fee-sub" style="color:var(--rose)">Unpaid · Due Mar 31, 2026</div>
+          </div>
+          <div class="fee-amt" style="color:var(--rose)">USh 45,000</div>
+        </div>
+        <div class="fee-row" style="background:rgba(244,162,97,0.04);">
+          <span class="fee-ic">⏳</span>
+          <div style="flex:1;">
+            <div class="fee-name">Library Fee — David</div>
+            <div class="fee-sub" style="color:var(--rose)">Unpaid · Due Mar 31, 2026</div>
+          </div>
+          <div class="fee-amt" style="color:var(--rose)">USh 40,000</div>
+        </div>
+        <div class="fee-row">
+          <span class="fee-ic">✅</span>
+          <div style="flex:1;">
+            <div class="fee-name">All Term 1 Fees — Grace</div>
+            <div class="fee-sub">Feb 20, 2026 · Bank · Receipt #1038</div>
+          </div>
+          <div class="fee-amt" style="color:var(--teal)">USh 300,000</div>
+        </div>
+
+        <!-- Inline pay shortcut for unpaid items -->
+        <div style="margin:12px 20px;padding:14px 16px;border-radius:10px;background:var(--amber-s);border:1px solid rgba(244,162,97,0.2);">
+          <div style="font-size:11px;color:var(--amber);font-weight:700;margin-bottom:8px">⚠️ USh 85,000 still outstanding for David</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-coral" style="flex:1;justify-content:center;font-size:12px;padding:9px 10px;">💳 Pay Now</button>
+            <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px;padding:9px 10px;">📱 Mobile Money</button>
+            <button class="btn btn-ghost" style="flex:1;justify-content:center;font-size:12px;padding:9px 10px;">🏦 Bank</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Exams -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">🧪 Upcoming Exams</span>
+          <a class="card-action">Full schedule →</a>
+        </div>
+
+        <div style="margin:14px 20px;padding:12px 16px;border-radius:10px;background:linear-gradient(135deg,var(--coral-s),var(--gold-s));border:1px solid rgba(255,107,107,0.18);">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:3px">⏳ Mid-Term countdown</div>
+          <div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:20px;color:var(--coral)">17 days remaining</div>
+          <div style="font-size:11.5px;color:var(--t2);margin-top:2px">April 4, 2026 · Both David & Grace</div>
+        </div>
+
+        <!-- David's exams -->
+        <div style="padding:6px 20px 4px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;">David — S.2A</div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+          <div style="text-align:center;flex-shrink:0;width:42px;"><div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:18px;color:var(--t1);line-height:1">04</div><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">Apr</div></div>
+          <div style="width:1px;height:30px;background:var(--border);flex-shrink:0"></div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--t1)">Mathematics Paper 1</div><div style="font-size:11.5px;color:var(--t3);margin-top:1px">8:00 AM – 10:00 AM</div></div>
+          <span class="chip coral">Mid-Term</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+          <div style="text-align:center;flex-shrink:0;width:42px;"><div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:18px;color:var(--t1);line-height:1">05</div><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">Apr</div></div>
+          <div style="width:1px;height:30px;background:var(--border);flex-shrink:0"></div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--t1)">Physics Paper 1 & 2</div><div style="font-size:11.5px;color:var(--t3);margin-top:1px">8:00 AM – 11:00 AM</div></div>
+          <span class="chip teal">Mid-Term</span>
+        </div>
+
+        <!-- Grace's exams -->
+        <div style="padding:10px 20px 4px;font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;border-top:1px solid var(--border);margin-top:4px">Grace — S.4B</div>
+
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;border-bottom:1px solid var(--border);cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+          <div style="text-align:center;flex-shrink:0;width:42px;"><div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:18px;color:var(--t1);line-height:1">04</div><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">Apr</div></div>
+          <div style="width:1px;height:30px;background:var(--border);flex-shrink:0"></div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--t1)">Mathematics Paper 1 & 2</div><div style="font-size:11.5px;color:var(--t3);margin-top:1px">8:00 AM – 11:00 AM</div></div>
+          <span class="chip blue">Mid-Term</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;padding:10px 20px;cursor:pointer;" onmouseover="this.style.background='var(--s2)'" onmouseout="this.style.background=''">
+          <div style="text-align:center;flex-shrink:0;width:42px;"><div style="font-family:'Fraunces',sans-serif;font-weight:700;font-size:18px;color:var(--t1);line-height:1">07</div><div style="font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase">Apr</div></div>
+          <div style="width:1px;height:30px;background:var(--border);flex-shrink:0"></div>
+          <div style="flex:1;"><div style="font-size:13px;font-weight:600;color:var(--t1)">Chemistry P1 & P2</div><div style="font-size:11.5px;color:var(--t3);margin-top:1px">8:00 AM – 11:30 AM</div></div>
+          <span class="chip violet">Mid-Term</span>
+        </div>
+      </div>
+
+      <!-- Teacher Contacts -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">👩‍🏫 Teacher Contacts</span>
+          <a class="card-action">Message all →</a>
+        </div>
+
+        <div class="teacher-row">
+          <div class="t-av" style="background:linear-gradient(135deg,var(--coral),var(--gold))">MK</div>
+          <div style="flex:1;">
+            <div class="t-name">Mr. Mustafa Kafeero</div>
+            <div class="t-subj">Mathematics · David's Class Teacher</div>
+          </div>
+          <div class="t-msg-btn">💬 Message</div>
+        </div>
+        <div class="teacher-row">
+          <div class="t-av" style="background:linear-gradient(135deg,var(--teal),var(--blue))">LM</div>
+          <div style="flex:1;">
+            <div class="t-name">Mr. Luuka Musono</div>
+            <div class="t-subj">Physics · David</div>
+          </div>
+          <div class="t-msg-btn">💬 Message</div>
+        </div>
+        <div class="teacher-row">
+          <div class="t-av" style="background:linear-gradient(135deg,var(--amber),var(--coral))">AA</div>
+          <div style="flex:1;">
+            <div class="t-name">Ms. Amara Achola</div>
+            <div class="t-subj">English · David</div>
+          </div>
+          <div class="t-msg-btn">💬 Message</div>
+        </div>
+        <div class="teacher-row">
+          <div class="t-av" style="background:linear-gradient(135deg,var(--blue),var(--violet))">RN</div>
+          <div style="flex:1;">
+            <div class="t-name">Ms. Rose Nakibuuka</div>
+            <div class="t-subj">Mathematics · Grace's Class Teacher</div>
+          </div>
+          <div class="t-msg-btn">💬 Message</div>
+        </div>
+        <div class="teacher-row">
+          <div class="t-av" style="background:linear-gradient(135deg,var(--violet),var(--coral))">JO</div>
+          <div style="flex:1;">
+            <div class="t-name">Mr. James Oryema</div>
+            <div class="t-subj">History · David</div>
+          </div>
+          <div class="t-msg-btn">💬 Message</div>
+        </div>
+
+        <div style="padding:12px 20px;border-top:1px solid var(--border);">
+          <button class="btn btn-outline" style="width:100%;justify-content:center;font-size:12px;">📞 School Reception</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MESSAGES + NOTICES + ACTIVITY -->
+    <div class="row row-3 fu d4">
+
+      <!-- Messages -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">💬 Messages</span>
+          <a class="card-action">All messages →</a>
+        </div>
+
+        <div class="msg-row unread">
+          <div class="msg-av" style="background:linear-gradient(135deg,var(--coral),var(--gold))">MK</div>
+          <div style="flex:1;min-width:0;">
+            <div class="msg-sender">Mr. Mustafa Kafeero</div>
+            <div class="msg-preview">David's Algebra worksheet is overdue. Please ensure he submits…</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+            <div class="msg-time">9:14 AM</div>
+            <div class="unread-dot"></div>
+          </div>
+        </div>
+
+        <div class="msg-row unread">
+          <div class="msg-av" style="background:linear-gradient(135deg,var(--teal),var(--blue))">NS</div>
+          <div style="flex:1;min-width:0;">
+            <div class="msg-sender">School Admin</div>
+            <div class="msg-preview">Reminder: David's fee balance of USh 85,000 is due by March 31…</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+            <div class="msg-time">8:30 AM</div>
+            <div class="unread-dot"></div>
+          </div>
+        </div>
+
+        <div class="msg-row">
+          <div class="msg-av" style="background:linear-gradient(135deg,var(--amber),var(--coral))">AA</div>
+          <div style="flex:1;min-width:0;">
+            <div class="msg-sender">Ms. Amara Achola</div>
+            <div class="msg-preview">David's novel analysis was excellent — a great improvement!</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+            <div class="msg-time">Yesterday</div>
+          </div>
+        </div>
+
+        <div class="msg-row">
+          <div class="msg-av" style="background:linear-gradient(135deg,var(--blue),var(--violet))">RN</div>
+          <div style="flex:1;min-width:0;">
+            <div class="msg-sender">Ms. Rose Nakibuuka</div>
+            <div class="msg-preview">Grace scored 92% on her latest Math test — outstanding work!</div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+            <div class="msg-time">Mar 17</div>
+          </div>
+        </div>
+
+        <div style="padding:12px 20px;border-top:1px solid var(--border);">
+          <button class="btn btn-outline" style="width:100%;justify-content:center;font-size:12px;">✏️ Send Message to Teacher</button>
+        </div>
+      </div>
+
+      <!-- Notice Board -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">📣 School Notices</span>
+          <a class="card-action">All notices →</a>
+        </div>
+
+        <div class="notice-item">
+          <div class="n-ic" style="background:var(--rose-s)">🚨</div>
+          <div>
+            <div class="n-title">Mid-Term Exam Timetable</div>
+            <div class="n-body">Exams begin April 4. Room allocations are confirmed. Ensure your children arrive 15 min early.</div>
+            <div class="n-time">Today · School Administration</div>
+          </div>
+        </div>
+        <div class="notice-item">
+          <div class="n-ic" style="background:var(--amber-s)">⚠️</div>
+          <div>
+            <div class="n-title">Fee Payment Reminder</div>
+            <div class="n-body">All outstanding fees must be cleared by March 31 to avoid late penalties.</div>
+            <div class="n-time">Today · Finance Office</div>
+          </div>
+        </div>
+        <div class="notice-item">
+          <div class="n-ic" style="background:var(--blue-s)">🔬</div>
+          <div>
+            <div class="n-title">Science Fair — March 28</div>
+            <div class="n-body">S.2 students must submit project proposals by March 22. Parents are welcome to attend the fair.</div>
+            <div class="n-time">Yesterday · Science Dept.</div>
+          </div>
+        </div>
+        <div class="notice-item">
+          <div class="n-ic" style="background:var(--teal-s)">🏆</div>
+          <div>
+            <div class="n-title">Sports Day — April 15</div>
+            <div class="n-body">Inter-house sports day is open to parents. Seating is limited — register your attendance by April 5.</div>
+            <div class="n-time">Mar 16 · Head Teacher</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card">
+        <div class="card-hd">
+          <span class="card-title">🕐 Recent Activity</span>
+          <a class="card-action">View all →</a>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--teal),var(--blue))">DM</div>
+          <div style="flex:1;">
+            <div class="act-main"><strong>David</strong> was marked <strong>present</strong> this morning.</div>
+            <div class="act-time">Today · 7:28 AM</div>
+          </div>
+          <span class="act-ic">✅</span>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--coral),var(--amber))">MK</div>
+          <div style="flex:1;">
+            <div class="act-main"><strong>Mr. Kafeero</strong> flagged David's Algebra assignment as overdue.</div>
+            <div class="act-time">Today · 9:10 AM</div>
+          </div>
+          <span class="act-ic">📝</span>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--blue),var(--violet))">GM</div>
+          <div style="flex:1;">
+            <div class="act-main"><strong>Grace</strong> scored <strong>92%</strong> on her Math assessment.</div>
+            <div class="act-time">Yesterday · 3:45 PM</div>
+          </div>
+          <span class="act-ic">🏅</span>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--amber),var(--rose))">FO</div>
+          <div style="flex:1;">
+            <div class="act-main">Finance: <strong>Receipt #1041</strong> confirmed for USh 300,000.</div>
+            <div class="act-time">Feb 20 · Payment</div>
+          </div>
+          <span class="act-ic">💰</span>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--violet),var(--coral))">AA</div>
+          <div style="flex:1;">
+            <div class="act-main"><strong>Ms. Amara</strong> praised David's novel analysis submission.</div>
+            <div class="act-time">Yesterday · 4:02 PM</div>
+          </div>
+          <span class="act-ic">⭐</span>
+        </div>
+
+        <div class="act-row">
+          <div class="act-av" style="background:linear-gradient(135deg,var(--teal),var(--coral))">GM</div>
+          <div style="flex:1;">
+            <div class="act-main"><strong>Grace</strong> submitted her Chemistry lab report.</div>
+            <div class="act-time">Mar 17 · 2:30 PM</div>
+          </div>
+          <span class="act-ic">📋</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  // Nav active
+  document.querySelectorAll('.nav-link').forEach(n => {
+    n.addEventListener('click', () => {
+      document.querySelectorAll('.nav-link').forEach(x => x.classList.remove('active'));
+      n.classList.add('active');
+    });
+  });
+
+  // Child tab switcher (topbar)
+  document.querySelectorAll('.child-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.child-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  // Child pill switcher (hero)
+  document.querySelectorAll('.child-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      document.querySelectorAll('.child-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+    });
+  });
+
+  // Search expand
+  const si = document.querySelector('.search-input');
+  si?.addEventListener('focus', () => si.style.width = '300px');
+  si?.addEventListener('blur', () => si.style.width = '230px');
+</script>
+</body>
+</html>

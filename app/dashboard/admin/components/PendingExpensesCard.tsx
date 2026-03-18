@@ -122,24 +122,24 @@ export default function PendingExpensesCard() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="bg-[#101828] rounded-xl border border-white/10 p-6 mb-6">
         <div className="animate-pulse space-y-3">
-          <div className="h-6 bg-gray-200 rounded w-1/3" />
-          <div className="h-4 bg-gray-200 rounded w-2/3" />
+          <div className="h-6 bg-white/10 rounded w-1/3" />
+          <div className="h-4 bg-white/10 rounded w-2/3" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div className="bg-[#101828] rounded-xl border border-white/10 p-6 mb-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-amber-100">
+        <div className="p-3 rounded-xl bg-[#f5a623]/15">
           <Clock className="w-6 h-6 text-amber-600" />
         </div>
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Pending Expense Approvals</h2>
-          <p className="text-sm text-gray-500">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-white">Pending Expense Approvals</h2>
+          <p className="text-sm text-white/60">
             {expenses.length} expense{expenses.length !== 1 ? 's' : ''} awaiting approval
           </p>
         </div>
@@ -147,8 +147,8 @@ export default function PendingExpensesCard() {
 
       {expenses.length === 0 ? (
         <div className="text-center py-8">
-          <CheckCircle className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-          <p className="text-gray-500">No pending expenses to approve</p>
+          <CheckCircle className="w-12 h-12 mx-auto mb-2 text-white/20" />
+          <p className="text-white/60">No pending expenses to approve</p>
         </div>
       ) : (
         <div className="space-y-3 max-h-[500px] overflow-y-auto">
@@ -157,26 +157,26 @@ export default function PendingExpensesCard() {
               key={expense.expense_id}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="p-4 rounded-xl bg-gray-50 border border-gray-100"
+              className="p-4 rounded-xl bg-white/5 border border-white/10"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-5 h-5 text-red-500" />
-                    <span className="font-medium text-gray-900">{expense.category_name}</span>
-                    <span className="text-xs text-gray-400">•</span>
-                    <span className="text-xs text-gray-600">{expense.reference_number}</span>
+                    <span className="font-medium text-white">{expense.category_name}</span>
+                    <span className="text-xs text-white/40">•</span>
+                    <span className="text-xs text-white/60">{expense.reference_number}</span>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">{expense.description}</p>
-                  <div className="flex flex-wrap gap-3 text-xs text-gray-500">
+                  <p className="text-sm text-white/70 mb-2">{expense.description}</p>
+                  <div className="flex flex-wrap gap-3 text-xs text-white/60">
                     <span>
-                      Amount: <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span>
+                      Amount: <span className="font-semibold text-[#f75c5c]">{formatCurrency(expense.amount)}</span>
                     </span>
-                    <span>•</span>
+                    <span className="text-white/40">•</span>
                     <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
-                    <span>•</span>
+                    <span className="text-white/40">•</span>
                     <span>Method: {expense.payment_method}</span>
-                    <span>•</span>
+                    <span className="text-white/40">•</span>
                     <span>By: {expense.recorded_by_name}</span>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ export default function PendingExpensesCard() {
                     type="button"
                     onClick={() => handleApproval(expense.expense_id, 'approve')}
                     disabled={processing === expense.expense_id}
-                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-[#10d9a8]/30 bg-[#10d9a8]/15 text-[#10d9a8] hover:bg-[#10d9a8]/25 disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Approve
@@ -194,7 +194,7 @@ export default function PendingExpensesCard() {
                     type="button"
                     onClick={() => handleApproval(expense.expense_id, 'reject')}
                     disabled={processing === expense.expense_id}
-                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                    className="flex items-center gap-1 text-sm px-3 py-1.5 rounded-lg border border-[#f75c5c]/30 bg-[#f75c5c]/15 text-[#f75c5c] hover:bg-[#f75c5c]/25 disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
                     Reject

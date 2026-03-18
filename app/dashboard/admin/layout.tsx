@@ -46,7 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {/* Main Content Area - white/light background on dashboard */}
       <div
-        className={`flex flex-col min-h-screen transition-[margin] duration-200 ease-out ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} ${isDashboard ? 'bg-gray-50' : ''}`}
+        className={`flex flex-col min-h-screen transition-[margin] duration-200 ease-out ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} ${isDashboard ? 'bg-[#05080f] text-white' : ''}`}
       >
         {/* Static Navbar - stays fixed during navigation */}
         <AdminNavbar />
@@ -62,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.1 }}
-                className={`absolute inset-0 z-10 flex items-center justify-center ${isDashboard ? 'bg-gray-100/80 backdrop-blur-[1px]' : 'bg-black/20 backdrop-blur-[1px]'}`}
+                className={`absolute inset-0 z-10 flex items-center justify-center ${isDashboard ? 'bg-[#05080f]/70 backdrop-blur-[2px]' : 'bg-black/20 backdrop-blur-[1px]'}`}
               >
                 <div
                   className={`w-8 h-8 border-2 rounded-full animate-spin ${isDashboard ? 'border-gray-200 border-t-green-600' : 'border-white/30 border-t-white'}`}

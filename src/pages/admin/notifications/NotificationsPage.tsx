@@ -30,6 +30,10 @@ export default function NotificationsPage() {
   const [testMessage, setTestMessage] = useState('Hello from PwezaCore – test SMS.');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [waPhone, setWaPhone] = useState('');
+  const [waMessage, setWaMessage] = useState('Hello from PwezaCore – test WhatsApp.');
+  const [waSending, setWaSending] = useState(false);
+  const [waResult, setWaResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [processingLogs, setProcessingLogs] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -133,6 +137,44 @@ export default function NotificationsPage() {
     }
   };
 
+  const sendTestWhatsApp = async () => {
+    if (!waPhone.trim() || !waMessage.trim()) {
+      setWaResult({ ok: false, message: 'Enter phone and message.' });
+      return;
+    }
+    setWaSending(true);
+    setWaResult(null);
+    try {
+      const res = await fetch('/api/notifications/test-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: waPhone.trim(), message: waMessage.trim() }),
+      });
+      const raw = await res.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        // ignore non-JSON
+      }
+      if (!res.ok || !data?.success) {
+        setWaResult({
+          ok: false,
+          message: data?.error || `Request failed (${res.status}). ${raw ? raw.slice(0, 100) : ''}`,
+        });
+        return;
+      }
+      setWaResult({
+        ok: true,
+        message: `Accepted. Status: ${data.status || 'SENT'}. Uganda (+256) only.`,
+      });
+    } catch (e) {
+      setWaResult({ ok: false, message: String(e) });
+    } finally {
+      setWaSending(false);
+    }
+  };
+
   const processPending = async () => {
     setProcessingLogs(true);
     try {
@@ -173,6 +215,7 @@ export default function NotificationsPage() {
           <h2 className="text-lg font-semibold text-white mb-3">Quick Actions</h2>
           <div className="flex flex-wrap gap-3">
             <button type="button" onClick={sendTestSMS} disabled={testSending} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testSending ? 'Sending...' : '📱 Send test SMS'}</button>
+            <button type="button" onClick={sendTestWhatsApp} disabled={waSending} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">{waSending ? 'Sending...' : '💬 Send test WhatsApp'}</button>
             <button type="button" onClick={processPending} disabled={processingLogs} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">{processingLogs ? 'Processing...' : '📤 Process Pending'}</button>
           </div>
         </div>
@@ -184,6 +227,16 @@ export default function NotificationsPage() {
             <textarea value={testMessage} onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }} rows={2} placeholder="Message" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
             {testResult && <p className={testResult.ok ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>{testResult.message}</p>}
             <button type="button" onClick={sendTestSMS} disabled={testSending || !testPhone.trim() || !testMessage.trim()} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Send test SMS</button>
+          </div>
+        </div>
+        <div className={`${adminCardClass} border-2 border-green-500/40`}>
+          <h2 className="text-lg font-semibold text-white mb-1">💬 Send test WhatsApp</h2>
+          <p className="text-sm text-white/70 mb-3">Uganda (+256) only. Set AFRICASTALKING_WHATSAPP_NUMBER in Vercel.</p>
+          <div className="space-y-2">
+            <input type="text" value={waPhone} onChange={(e) => { setWaPhone(e.target.value); setWaResult(null); }} placeholder="0712345678 or +256..." className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            <textarea value={waMessage} onChange={(e) => { setWaMessage(e.target.value); setWaResult(null); }} rows={2} placeholder="Message" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            {waResult && <p className={waResult.ok ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>{waResult.message}</p>}
+            <button type="button" onClick={sendTestWhatsApp} disabled={waSending || !waPhone.trim() || !waMessage.trim()} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">Send test WhatsApp</button>
           </div>
         </div>
       <div className={`${adminCardClass} space-y-4`}>

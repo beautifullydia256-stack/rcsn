@@ -340,18 +340,18 @@ export default function ChartsAnalytics() {
   return (
     <div className="space-y-6 mb-6">
       {/* Hero: Enrollment & Attendance Analytics (bar chart - last 7 working days) */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-[#101828] rounded-xl border border-white/10 p-6">
         <div className="flex items-center gap-3 mb-4">
           <Users className="w-5 h-5 text-green-600" />
-          <h3 className="text-lg font-semibold text-gray-900">Enrollment & Attendance Analytics</h3>
+          <h3 className="text-lg font-semibold text-white">Enrollment & Attendance Analytics</h3>
         </div>
         {attendanceLoading ? (
           <div className="h-40 flex items-center justify-center">
-            <div className="text-gray-500 text-sm">Loading...</div>
+            <div className="text-white/60 text-sm">Loading...</div>
           </div>
         ) : attendanceData.length === 0 ? (
           <div className="h-40 flex items-center justify-center">
-            <div className="text-gray-500 text-sm">No attendance data available</div>
+            <div className="text-white/60 text-sm">No attendance data available</div>
           </div>
         ) : (
           <>
@@ -372,15 +372,15 @@ export default function ChartsAnalytics() {
                       }}
                       title={`${dayName} ${dayNumber}: ${day.percentage}% (${day.present}/${day.total})`}
                     />
-                    <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
-                      <div className="font-medium text-gray-700">{dayName}</div>
+                    <div className="text-[10px] text-white/60 mt-1 text-center leading-tight">
+                      <div className="font-medium text-white/80">{dayName}</div>
                       <div>{dayNumber}</div>
                     </div>
                   </div>
                 );
               })}
             </div>
-            <div className="text-xs text-gray-500 mt-2 text-center">Last 7 working days</div>
+            <div className="text-xs text-white/60 mt-2 text-center">Last 7 working days</div>
           </>
         )}
       </div>
@@ -388,18 +388,18 @@ export default function ChartsAnalytics() {
       {/* Secondary charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Enrollment Trends (by term) */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-[#101828] rounded-xl border border-white/10 p-6">
           <div className="flex items-center gap-3 mb-4">
             <TrendingUp className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Enrollment by Term</h3>
+            <h3 className="text-lg font-semibold text-white">Enrollment by Term</h3>
           </div>
           {termLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-gray-500 text-sm">Loading...</div>
+              <div className="text-white/60 text-sm">Loading...</div>
             </div>
           ) : termEnrollmentData.length === 0 ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-gray-500 text-sm">No term data available</div>
+              <div className="text-white/60 text-sm">No term data available</div>
             </div>
           ) : (
             (() => {
@@ -421,14 +421,14 @@ export default function ChartsAnalytics() {
                           }}
                           title={`${term.label}: ${term.count.toLocaleString()} students`}
                         />
-                        <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
-                          <div className="font-medium text-gray-700">{term.label}</div>
+                        <div className="text-[10px] text-white/60 mt-1 text-center leading-tight">
+                          <div className="font-medium text-white/80">{term.label}</div>
                           <div>{term.count}</div>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="text-xs text-gray-500 mt-2 text-center">Current term vs previous 3 terms</div>
+                  <div className="text-xs text-white/60 mt-2 text-center">Current term vs previous 3 terms</div>
                 </>
               );
             })()
@@ -436,18 +436,18 @@ export default function ChartsAnalytics() {
         </div>
 
         {/* Fee Collections by week */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <div className="bg-[#101828] rounded-xl border border-white/10 p-6">
           <div className="flex items-center gap-3 mb-4">
             <DollarSign className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Fee Collections by Week</h3>
+            <h3 className="text-lg font-semibold text-white">Fee Collections by Week</h3>
           </div>
           {feeLoading ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-gray-500 text-sm">Loading...</div>
+              <div className="text-white/60 text-sm">Loading...</div>
             </div>
           ) : feeData.length === 0 ? (
             <div className="h-32 flex items-center justify-center">
-              <div className="text-gray-500 text-sm">No fee data available</div>
+              <div className="text-white/60 text-sm">No fee data available</div>
             </div>
           ) : (
             <>
@@ -465,15 +465,15 @@ export default function ChartsAnalytics() {
                         }}
                         title={`${week.label}: UGX ${week.rawAmount.toLocaleString()}`}
                       />
-                      <div className="text-[10px] text-gray-500 mt-1 text-center leading-tight">
-                        <div className="font-medium text-gray-700">{week.label}</div>
+                      <div className="text-[10px] text-white/60 mt-1 text-center leading-tight">
+                        <div className="font-medium text-white/80">{week.label}</div>
                         <div>{week.amount}M</div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div className="text-xs text-gray-500 mt-2 text-center">Last 7 weeks (M UGX)</div>
+              <div className="text-xs text-white/60 mt-2 text-center">Last 7 weeks (M UGX)</div>
             </>
           )}
         </div>

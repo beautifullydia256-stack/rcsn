@@ -57,32 +57,32 @@ export default function StaffOverviewCard() {
   }, []);
 
   const statusColors: Record<StaffMember['status'], string> = {
-    Teaching: 'bg-green-100 text-green-800',
-    Free: 'bg-amber-100 text-amber-800',
-    'On leave': 'bg-red-100 text-red-800',
+    Teaching: 'bg-[#10d9a8]/15 text-[#10d9a8]',
+    Free: 'bg-[#f5a623]/15 text-[#f5a623]',
+    'On leave': 'bg-[#f75c5c]/15 text-[#f75c5c]',
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+    <div className="bg-[#101828] rounded-xl border border-white/10 p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-green-600" />
           Staff Overview
         </h3>
         <button
           type="button"
           onClick={() => router.push('/dashboard/admin/teachers')}
-          className="text-sm font-medium text-green-600 hover:text-green-700"
+          className="text-sm font-semibold text-[#10d9a8] hover:text-[#14f0bb]"
         >
           View all
         </button>
       </div>
       {loading ? (
         <div className="h-32 flex items-center justify-center">
-          <div className="text-gray-500 text-sm">Loading...</div>
+          <div className="text-white/60 text-sm">Loading...</div>
         </div>
       ) : staff.length === 0 ? (
-        <p className="text-gray-500 text-sm">No staff listed.</p>
+        <p className="text-white/60 text-sm">No staff listed.</p>
       ) : (
         <ul className="space-y-3">
           {staff.map((s) => (
@@ -90,14 +90,14 @@ export default function StaffOverviewCard() {
               <button
                 type="button"
                 onClick={() => router.push(`/dashboard/admin/teachers/${s.teacher_id}`)}
-                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
+                className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-semibold text-sm flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                   {s.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-900 truncate">{s.name}</p>
-                  <p className="text-xs text-gray-500 truncate">Current class</p>
+                  <p className="text-sm font-medium text-white truncate">{s.name}</p>
+                  <p className="text-xs text-white/60 truncate">Current class</p>
                 </div>
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded-full flex-shrink-0 ${statusColors[s.status]}`}

@@ -12,6 +12,8 @@ import UpcomingDueCard from './components/UpcomingDueCard';
 import StaffOverviewCard from './components/StaffOverviewCard';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
+import ActivityFeedCard from './components/ActivityFeedCard';
+import JobVacanciesCard from './components/JobVacanciesCard';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -124,21 +126,37 @@ export default function AdminDashboard() {
       {/* Page Header: Title, subtitle, CTAs */}
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
-          <p className="text-gray-600">Plan, prioritize, and manage your school with ease.</p>
+          <div className="text-sm text-white/60 mb-1">
+            <span className="inline-flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400/90" />
+              School Overview
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-1">School Overview</h1>
+          <p className="text-white/70">Plan, prioritize, and manage your school with full visibility.</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => router.push('/dashboard/admin/students/add')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-[#05080f] bg-[#10d9a8] hover:bg-[#14f0bb] transition-colors"
           >
             + Add Student
           </button>
           <button
-            onClick={() => router.push('#')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 transition-colors"
+            onClick={() => {
+              // Placeholder: UI button exists, but no backend/import route is wired yet.
+              router.push('#');
+            }}
+            title="Import Data is a UI-only placeholder for now"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
           >
             Import Data
+          </button>
+          <button
+            onClick={() => router.push('/dashboard/admin/reports/generate')}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white/70 bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+          >
+            Generate Report
           </button>
         </div>
       </div>
@@ -164,6 +182,12 @@ export default function AdminDashboard() {
       {/* Recent Payments & Notifications */}
       <RecentPaymentsNotifications />
 
+      {/* Activity feed + job vacancies */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <ActivityFeedCard />
+        <JobVacanciesCard />
+      </div>
+
       {/* Staff Overview (optional) */}
       <StaffOverviewCard />
 
@@ -171,7 +195,7 @@ export default function AdminDashboard() {
       <RecentReportsSystemHealth />
 
       {/* Footer */}
-      <footer className="mt-12 py-6 text-center text-sm text-gray-500">
+      <footer className="mt-12 py-6 text-center text-sm text-white/60">
         <p>© {new Date().getFullYear()} PwezaCore School Management System.</p>
       </footer>
     </>

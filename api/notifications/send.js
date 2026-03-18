@@ -117,12 +117,53 @@ async function sendAfricaTalkingSMS(to, message) {
   }
 }
 
+async function sendAfricaTalkingWhatsApp(to, message) {
+  const apiKey = sanitizeHeaderValue(process.env.AFRICASTALKING_API_KEY);
+  const username = sanitizeHeaderValue(process.env.AFRICASTALKING_USERNAME);
+  const waNumber = sanitizeHeaderValue(process.env.AFRICASTALKING_WHATSAPP_NUMBER);
+
+  if (!apiKey || !username || !waNumber) {
+    return { success: false, error: 'WhatsApp not configured. Set AFRICASTALKING_WHATSAPP_NUMBER.' };
+  }
+
+  const normalized = normalizePhone(to);
+  if (!isUgandaNumber(normalized)) {
+    return { success: false, error: 'Only Uganda (+256) numbers allowed for WhatsApp.' };
+  }
+
+  const url = 'https://chat.africastalking.com/whatsapp/message/send';
+  try {
+    const body = JSON.stringify({
+      username,
+      waNumber,
+      phoneNumber: normalized,
+      body: { message },
+    });
+    const r = await httpsRequest(url, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', apiKey },
+    }, body);
+    let data = {};
+    try {
+      data = JSON.parse(r.text || '{}');
+    } catch {
+      data = {};
+    }
+    const status = (data.status || '').toUpperCase();
+    const ok = (r.status === 200 || r.status === 201) && (status === 'SENT' || status === 'DELIVERED' || status === 'READ');
+    return ok ? { success: true } : { success: false, error: data.status || data.message || `HTTP ${r.status}` };
+  } catch (err) {
+    console.error('WhatsApp send error', err);
+    return { success: false, error: String(err) };
+  }
+}
+
 async function sendEmail(_to, _subject, _body) {
   return { success: true };
 }
 
-async function sendWhatsApp(_to, _message) {
-  return { success: true };
+async function sendWhatsApp(to, message) {
+  return sendAfricaTalkingWhatsApp(to, message);
 }
 
 module.exports = async function handler(req, res) {

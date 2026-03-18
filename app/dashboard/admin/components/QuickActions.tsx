@@ -36,8 +36,8 @@ export default function AdminQuickActions() {
   ];
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+    <div className="bg-[#101828] rounded-xl border border-white/10 p-6 mb-6">
+      <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {actions.map((action, index) => {
           const Icon = action.icon;
@@ -51,10 +51,10 @@ export default function AdminQuickActions() {
               whileHover={{ y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push(action.path)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all border ${
                 isGreen
-                  ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
-                  : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                  ? 'bg-[#10d9a8]/15 border-[#10d9a8]/30 text-[#10d9a8] hover:bg-[#10d9a8]/25'
+                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
               }`}
             >
               <Icon className="w-4 h-4" style={{ color: action.color }} />

@@ -92,40 +92,40 @@ export default function RecentPaymentsNotifications() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* Recent Payments */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-[#101828] rounded-xl border border-white/10 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-green-100">
+            <div className="p-2 rounded-xl bg-[#10d9a8]/15">
               <DollarSign className="w-5 h-5 text-green-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Recent Payments</h2>
+            <h2 className="text-lg font-semibold text-white">Recent Payments</h2>
           </div>
           <button
             type="button"
             onClick={() => router.push('/dashboard/admin/payments/recent')}
-            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+            className="text-sm font-semibold text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
           >
             View all →
           </button>
         </div>
         <div className="space-y-3">
           {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
+            <div className="text-sm text-white/60">Loading...</div>
           ) : payments.length === 0 ? (
-            <div className="text-sm text-gray-500">No recent payments</div>
+            <div className="text-sm text-white/60">No recent payments</div>
           ) : (
             payments.map((payment) => (
               <div
                 key={payment.payment_id}
-                className="flex items-center justify-between p-3 rounded-xl bg-gray-50 border border-gray-100"
+                className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10"
               >
                 <div>
-                  <div className="font-medium text-gray-900 text-sm">{payment.students?.name || 'Unknown'}</div>
-                  <div className="text-xs text-gray-500">
+                  <div className="font-medium text-white text-sm">{payment.students?.name || 'Unknown'}</div>
+                  <div className="text-xs text-white/60">
                     {payment.payment_method} • {new Date(payment.payment_date).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="text-sm font-semibold text-gray-900">{formatCurrency(payment.amount_paid)}</div>
+                <div className="text-sm font-semibold text-[#10d9a8]">{formatCurrency(payment.amount_paid)}</div>
               </div>
             ))
           )}
@@ -133,33 +133,33 @@ export default function RecentPaymentsNotifications() {
       </div>
 
       {/* Notifications */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="bg-[#101828] rounded-xl border border-white/10 p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-green-100">
+            <div className="p-2 rounded-xl bg-[#10d9a8]/15">
               <Bell className="w-5 h-5 text-green-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Notifications</h2>
+            <h2 className="text-lg font-semibold text-white">Notifications</h2>
           </div>
           <button
             type="button"
             onClick={() => router.push('/dashboard/admin/notifications')}
-            className="text-sm font-medium text-green-600 hover:text-green-700 transition-colors"
+            className="text-sm font-semibold text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
           >
             View all →
           </button>
         </div>
         <div className="space-y-3">
           {loading ? (
-            <div className="text-sm text-gray-500">Loading...</div>
+            <div className="text-sm text-white/60">Loading...</div>
           ) : notifications.length === 0 ? (
-            <div className="text-sm text-gray-500">No notifications</div>
+            <div className="text-sm text-white/60">No notifications</div>
           ) : (
             notifications.map((notification) => (
-              <div key={notification.id} className="p-3 rounded-xl bg-gray-50 border border-gray-100">
-                <div className="font-medium text-gray-900 text-sm mb-1">{notification.title}</div>
-                <div className="text-xs text-gray-600">{notification.message}</div>
-                <div className="text-xs text-gray-500 mt-1">
+              <div key={notification.id} className="p-3 rounded-xl bg-white/5 border border-white/10">
+                <div className="font-medium text-white text-sm mb-1">{notification.title}</div>
+                <div className="text-xs text-white/70">{notification.message}</div>
+                <div className="text-xs text-white/60 mt-1">
                   {new Date(notification.created_at).toLocaleDateString()}
                 </div>
               </div>
