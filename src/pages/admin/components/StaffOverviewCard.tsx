@@ -44,22 +44,22 @@ export default function StaffOverviewCard() {
   }, []);
 
   const statusColors: Record<StaffMember['status'], string> = {
-    Teaching: 'bg-green-100 text-green-800',
-    Free: 'bg-amber-100 text-amber-800',
-    'On leave': 'bg-red-100 text-red-800',
+    Teaching: 'bg-[#10d9a8]/15 text-[#10d9a8]',
+    Free: 'bg-[#f5a623]/15 text-[#f5a623]',
+    'On leave': 'bg-[#f75c5c]/15 text-[#f75c5c]',
   };
 
   return (
     <div className="ac-glass-card p-6 mb-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold ac-text-primary flex items-center gap-2">
-          <Users className="w-5 h-5 text-emerald-600" />
+          <Users className="w-5 h-5 text-[#10d9a8]" />
           Staff Overview
         </h3>
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/teachers')}
-          className="text-sm font-medium text-emerald-600 hover:text-emerald-700"
+          className="text-sm font-medium text-[#10d9a8] hover:text-[#14f0bb]"
         >
           View all
         </button>
@@ -79,7 +79,7 @@ export default function StaffOverviewCard() {
                 onClick={() => navigate(`/dashboard/admin/teachers/${s.teacher_id}`)}
                 className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors text-left"
               >
-                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-semibold text-sm flex-shrink-0">
+                <div className="w-9 h-9 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
                   {s.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">

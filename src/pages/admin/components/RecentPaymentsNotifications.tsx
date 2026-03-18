@@ -91,15 +91,15 @@ export default function RecentPaymentsNotifications() {
       <div className="ac-glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-100">
-              <DollarSign className="w-5 h-5 text-emerald-600" />
+            <div className="p-2 rounded-xl bg-[#10d9a8]/15 border border-[#10d9a8]/25">
+              <DollarSign className="w-5 h-5 text-[#10d9a8]" />
             </div>
             <h2 className="text-lg font-semibold ac-text-primary">Recent Payments</h2>
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/outstanding')}
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="text-sm font-medium text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
           >
             View all →
           </button>
@@ -131,15 +131,15 @@ export default function RecentPaymentsNotifications() {
       <div className="ac-glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-100">
-              <Bell className="w-5 h-5 text-emerald-600" />
+            <div className="p-2 rounded-xl bg-[#10d9a8]/15 border border-[#10d9a8]/25">
+              <Bell className="w-5 h-5 text-[#10d9a8]" />
             </div>
             <h2 className="text-lg font-semibold ac-text-primary">Notifications</h2>
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/notifications')}
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="text-sm font-medium text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
           >
             View all →
           </button>

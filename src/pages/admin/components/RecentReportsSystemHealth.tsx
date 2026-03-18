@@ -45,15 +45,15 @@ export default function RecentReportsSystemHealth() {
       <div className="ac-glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-emerald-100">
-              <FileText className="w-5 h-5 text-emerald-600" />
+            <div className="p-2 rounded-xl bg-[#10d9a8]/15 border border-[#10d9a8]/25">
+              <FileText className="w-5 h-5 text-[#10d9a8]" />
             </div>
             <h2 className="text-lg font-semibold ac-text-primary">Recent Reports</h2>
           </div>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="text-sm font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+            className="text-sm font-medium text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
           >
             View all →
           </button>
@@ -81,7 +81,7 @@ export default function RecentReportsSystemHealth() {
                     if (report.file_url) window.open(report.file_url, '_blank');
                     else navigate('/dashboard/admin/reports');
                   }}
-                  className="text-xs font-medium text-emerald-600 hover:text-emerald-700 transition-colors"
+                  className="text-xs font-medium text-[#10d9a8] hover:text-[#14f0bb] transition-colors"
                 >
                   {report.file_url ? 'Open →' : 'View →'}
                 </button>
@@ -93,25 +93,25 @@ export default function RecentReportsSystemHealth() {
 
       <div className="ac-glass-card p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-xl bg-emerald-100">
-            <Activity className="w-5 h-5 text-emerald-600" />
+          <div className="p-2 rounded-xl bg-[#10d9a8]/15 border border-[#10d9a8]/25">
+            <Activity className="w-5 h-5 text-[#10d9a8]" />
           </div>
           <h2 className="text-lg font-semibold ac-text-primary">System Health</h2>
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Database className="w-4 h-4 text-emerald-600" />
+              <Database className="w-4 h-4 text-[#10d9a8]" />
               <span className="text-sm ac-text-secondary">Database</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-emerald-600 font-medium">{systemHealth.database.status}</span>
+              <span className="text-xs text-[#10d9a8] font-medium">{systemHealth.database.status}</span>
               <div className="text-xs ac-text-muted">{systemHealth.database.responseTime}</div>
             </div>
           </div>
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <HardDrive className="w-4 h-4 text-emerald-600" />
+              <HardDrive className="w-4 h-4 text-[#10d9a8]" />
               <span className="text-sm ac-text-secondary">Storage</span>
             </div>
             <div className="text-right">
@@ -121,21 +121,21 @@ export default function RecentReportsSystemHealth() {
           </div>
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-emerald-600" />
+              <Zap className="w-4 h-4 text-[#10d9a8]" />
               <span className="text-sm ac-text-secondary">API</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-emerald-600 font-medium">{systemHealth.api.status}</span>
+              <span className="text-xs text-[#10d9a8] font-medium">{systemHealth.api.status}</span>
               <div className="text-xs ac-text-muted">{systemHealth.api.responseTime}</div>
             </div>
           </div>
           <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10">
             <div className="flex items-center gap-2">
-              <Activity className="w-4 h-4 text-emerald-600" />
+              <Activity className="w-4 h-4 text-[#10d9a8]" />
               <span className="text-sm ac-text-secondary">Background Jobs</span>
             </div>
             <div className="text-right">
-              <span className="text-xs text-emerald-600 font-medium">{systemHealth.jobs.status}</span>
+              <span className="text-xs text-[#10d9a8] font-medium">{systemHealth.jobs.status}</span>
               <div className="text-xs ac-text-muted">{systemHealth.jobs.active} active</div>
             </div>
           </div>

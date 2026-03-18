@@ -107,8 +107,8 @@ export default function PendingExpensesCard() {
   return (
     <div className="ac-glass-card p-6 mb-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="p-3 rounded-xl bg-amber-100">
-          <Clock className="w-6 h-6 text-amber-600" />
+        <div className="p-3 rounded-xl bg-[#f5a623]/15 border border-[#f5a623]/25">
+          <Clock className="w-6 h-6 text-[#f5a623]" />
         </div>
         <div>
           <h2 className="text-lg font-semibold ac-text-primary">Pending Expense Approvals</h2>
@@ -151,7 +151,7 @@ export default function PendingExpensesCard() {
                     type="button"
                     onClick={() => handleApproval(expense.expense_id, 'approve')}
                     disabled={processing === expense.expense_id}
-                    className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-[#10d9a8]/30 bg-[#10d9a8]/15 px-3 py-2 text-sm font-medium text-[#10d9a8] hover:bg-[#10d9a8]/25 disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Approve
@@ -160,7 +160,7 @@ export default function PendingExpensesCard() {
                     type="button"
                     onClick={() => handleApproval(expense.expense_id, 'reject')}
                     disabled={processing === expense.expense_id}
-                    className="flex items-center gap-1 rounded-lg bg-red-100 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-200 disabled:opacity-50"
+                    className="flex items-center gap-1 rounded-lg border border-[#f75c5c]/30 bg-[#f75c5c]/15 px-3 py-2 text-sm font-medium text-[#f75c5c] hover:bg-[#f75c5c]/25 disabled:opacity-50"
                   >
                     <XCircle className="w-4 h-4" />
                     Reject

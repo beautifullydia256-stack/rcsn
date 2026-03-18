@@ -13,6 +13,8 @@ import UpcomingDueCard from './components/UpcomingDueCard';
 import StaffOverviewCard from './components/StaffOverviewCard';
 import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
 import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
+import ActivityFeedCard from './components/ActivityFeedCard';
+import JobVacanciesCard from './components/JobVacanciesCard';
 
 const STALE_TIME_MS = 5 * 60 * 1000; // 5 min
 
@@ -148,10 +150,16 @@ export default function AdminDashboard() {
     <>
       <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary mb-1">Dashboard</h1>
-          <p className="ac-text-secondary">Plan, prioritize, and manage your school with ease.</p>
+          <div className="text-sm ac-text-muted mb-1">
+            <span className="inline-flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90" />
+              School Overview
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary mb-1">School Overview</h1>
+          <p className="ac-text-secondary">Plan, prioritize, and manage your school with full visibility.</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/students/add')}
@@ -161,10 +169,21 @@ export default function AdminDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => {}}
+            onClick={() => {
+              // Placeholder UI: import data flow is not wired in this dashboard yet.
+            }}
+            title="Import Data is a UI-only placeholder right now"
             className="ac-glass-btn-secondary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ac-text-primary transition-colors"
           >
             Import Data
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/admin/reports/generate')}
+            className="ac-glass-btn-secondary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ac-text-primary transition-colors"
+            title="Generate report"
+          >
+            Generate Report
           </button>
         </div>
       </div>
@@ -184,6 +203,11 @@ export default function AdminDashboard() {
         </div>
 
         <RecentPaymentsNotifications />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ActivityFeedCard />
+        <JobVacanciesCard />
+      </div>
 
         <StaffOverviewCard />
 
