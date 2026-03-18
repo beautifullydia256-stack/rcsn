@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { Users, GraduationCap, DollarSign, CalendarCheck } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, CalendarCheck, Clock, FileCheck } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -13,12 +13,23 @@ type Kpis = {
   outstanding: number;
   feesCollected: number;
   attendance: number;
+  pendingExpenses: number;
+  activeClasses: number;
+  jobApplications: number | null; // placeholder for now (requires backend data mapping)
 };
 
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [termsResult, studentsResult, teachersResult, attendanceResult, balancesResult] = await Promise.all([
+  const [
+    termsResult,
+    studentsResult,
+    teachersResult,
+    attendanceResult,
+    balancesResult,
+    pendingExpensesResult,
+    activeClassesResult,
+  ] = await Promise.all([
     supabase
       .from('school_terms')
       .select('id, start_date, end_date, year, term')
@@ -29,6 +40,16 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase.from('student_attendance').select('student_id').eq('school_id', schoolId).eq('date', today).eq('present', true),
     supabase.from('students').select('student_id, expected_fee_amount').eq('school_id', schoolId).eq('status', 'active'),
+    supabase
+      .from('school_expenses')
+      .select('expense_id', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('status', 'pending'),
+    supabase
+      .from('students')
+      .select('current_class')
+      .eq('school_id', schoolId)
+      .eq('status', 'active'),
   ]);
 
   const allTerms = termsResult.data || [];
@@ -78,12 +99,21 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     0
   );
 
+  const pendingExpenses = pendingExpensesResult.count ?? 0;
+  const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
+
+  // Placeholder: "job applications" isn't available in existing KPIs fetch.
+  const jobApplications = null;
+
   return {
     students: studentsResult.count ?? 0,
     teachers: teachersResult.count ?? 0,
     outstanding,
     feesCollected,
     attendance: new Set((attendanceResult.data || []).map((x: { student_id: string }) => x.student_id)).size,
+    pendingExpenses,
+    activeClasses,
+    jobApplications,
   };
 }
 
@@ -109,37 +139,61 @@ function AdminKPICard({
   isPlaceholder?: boolean;
 }) {
   const navigate = useNavigate();
-  const borderTopClass: Record<KPIVariant, string> = {
-    blue: 'border-t-[3px] border-t-blue-400/90',
-    green: 'border-t-[3px] border-t-emerald-500/90',
-    orange: 'border-t-[3px] border-t-amber-500/90',
-    teal: 'border-t-[3px] border-t-teal-500/90',
+  const stripeGradient: Record<KPIVariant, string> = {
+    teal: 'linear-gradient(90deg, #10d9a8, #22d3ee)',
+    green: 'linear-gradient(90deg, #10d9a8, #22d3ee)',
+    blue: 'linear-gradient(90deg, #3d8ef8, #9d7bf8)',
+    orange: 'linear-gradient(90deg, #f5a623, #ef4444)',
   };
-  const iconClass: Record<KPIVariant, string> = {
-    blue: 'ac-glass-icon ac-icon-blue',
-    green: 'ac-glass-icon ac-icon-green',
-    orange: 'ac-glass-icon ac-icon-orange',
-    teal: 'ac-glass-icon ac-icon-teal',
+
+  const iconColor: Record<KPIVariant, string> = {
+    teal: '#10d9a8',
+    green: '#10d9a8',
+    blue: '#3d8ef8',
+    orange: '#f5a623',
+  };
+
+  const iconBg: Record<KPIVariant, string> = {
+    teal: 'rgba(16,217,168,0.15)',
+    green: 'rgba(16,217,168,0.15)',
+    blue: 'rgba(61,142,248,0.15)',
+    orange: 'rgba(245,166,35,0.15)',
   };
 
   const card = (
     <div
-      className={`ac-glass-card will-change-transform rounded-[18px] p-5 transition-shadow hover:shadow-[var(--ac-shadow-strong)] ${borderTopClass[variant]} ${isPlaceholder ? 'opacity-60' : ''}`}
+      className={`bg-[#0b1120] rounded-[13px] border border-white/10 p-5 transition-all hover:border-white/20 ${
+        isPlaceholder ? 'opacity-60' : ''
+      }`}
     >
-      <div className="flex items-start justify-between">
-        <div className={iconClass[variant]}>
+      <div className="h-[2px] rounded-full" style={{ background: stripeGradient[variant] }} />
+
+      <div className="mt-3 flex items-start justify-between gap-3">
+        <div
+          className="w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0"
+          style={{ background: iconBg[variant], color: iconColor[variant] }}
+        >
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className="ac-text-primary mt-3 text-2xl font-semibold tracking-tight">
+
+      <p className="mt-4 text-xs font-semibold uppercase tracking-wider" style={{ color: '#8296be' }}>
+        {label}
+      </p>
+
+      <p className="mt-2 text-3xl font-extrabold" style={{ color: '#eef3ff', lineHeight: 1 }}>
         {isLoading && !isPlaceholder ? (
-          <span className="inline-block h-8 w-20 animate-pulse rounded ac-skeleton-block" />
+          <span className="inline-block h-8 w-20 animate-pulse rounded bg-white/15" />
         ) : (
           value
         )}
       </p>
-      <p className="ac-text-secondary mt-0.5 text-sm font-medium">{label}</p>
-      {subline && <p className="ac-text-muted mt-1 text-xs">{subline}</p>}
+
+      {subline && (
+        <p className="mt-2 text-sm font-medium" style={{ color: '#3d5278' }}>
+          {subline}
+        </p>
+      )}
     </div>
   );
 
@@ -171,31 +225,31 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
   const cards = kpis
     ? [
         {
-          label: 'TOTAL STUDENTS',
+          label: 'Total Students',
           value: kpis.students,
-          subline: 'Active',
-          variant: 'green' as KPIVariant,
+          subline: 'Active enrollments',
+          variant: 'teal' as KPIVariant,
           href: '/dashboard/admin/students',
           icon: Users,
         },
         {
-          label: 'TOTAL TEACHERS',
+          label: 'Total Teachers',
           value: kpis.teachers,
-          subline: 'Staff',
+          subline: '3 on leave today (placeholder)',
           variant: 'blue' as KPIVariant,
           href: '/dashboard/admin/teachers',
           icon: GraduationCap,
         },
         {
-          label: 'FEES COLLECTED',
+          label: 'Fees Collected',
           value: fmt(kpis.feesCollected),
           subline: 'This term',
-          variant: 'green' as KPIVariant,
+          variant: 'teal' as KPIVariant,
           href: '/dashboard/admin/outstanding',
           icon: DollarSign,
         },
         {
-          label: 'OUTSTANDING BALANCES',
+          label: 'Outstanding Fees',
           value: fmt(kpis.outstanding),
           subline: 'Balance due',
           variant: 'orange' as KPIVariant,
@@ -203,7 +257,7 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
           icon: DollarSign,
         },
         {
-          label: 'ATTENDANCE TODAY',
+          label: 'Attendance Today',
           value: kpis.attendance,
           subline: 'Present',
           variant: 'teal' as KPIVariant,
@@ -211,30 +265,28 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
           icon: CalendarCheck,
         },
         {
-          label: 'PLACEHOLDER 1',
-          value: '---',
-          subline: '',
-          variant: 'teal' as KPIVariant,
+          label: 'Pending Expenses',
+          value: kpis.pendingExpenses,
+          subline: 'Awaiting approval',
+          variant: 'orange' as KPIVariant,
           href: undefined,
-          icon: Users,
-          isPlaceholder: true,
+          icon: Clock,
         },
         {
-          label: 'PLACEHOLDER 2',
-          value: '---',
-          subline: '',
+          label: 'Active Classes',
+          value: kpis.activeClasses,
+          subline: 'Across all streams',
           variant: 'teal' as KPIVariant,
           href: undefined,
-          icon: Users,
-          isPlaceholder: true,
+          icon: FileCheck,
         },
         {
-          label: 'PLACEHOLDER 3',
-          value: '---',
-          subline: '',
-          variant: 'teal' as KPIVariant,
+          label: 'Job Applications',
+          value: '—',
+          subline: 'Placeholder',
+          variant: 'blue' as KPIVariant,
           href: undefined,
-          icon: Users,
+          icon: GraduationCap,
           isPlaceholder: true,
         },
       ]

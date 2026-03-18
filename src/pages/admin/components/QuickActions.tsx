@@ -33,23 +33,28 @@ export default function AdminQuickActions() {
   ];
 
   return (
-    <div className="ac-glass-card p-6 mb-6">
-      <h2 className="text-lg font-semibold ac-text-primary mb-4">Quick Actions</h2>
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="bg-[#101828] rounded-xl border border-white/10 p-6 mb-6">
+      <div className="flex items-center justify-between gap-4 mb-4">
+        <h2 className="text-lg font-semibold text-white">Quick Actions</h2>
+        <span className="text-xs text-white/50">Frequently used shortcuts</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {actions.map((action) => {
           const Icon = action.icon;
-          const isGreen = action.color === '#16a34a';
+          const isPrimary = action.color === '#16a34a';
           return (
             <button
               key={action.label}
               type="button"
               onClick={() => navigate(action.path)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium transition-all ac-glass-btn-secondary ${
-                isGreen ? '!bg-emerald-500/15 !border-emerald-400/30 ac-text-primary hover:!bg-emerald-500/25' : ''
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all border ${
+                isPrimary
+                  ? 'bg-[#10d9a8]/15 border-[#10d9a8]/30 text-[#10d9a8] hover:bg-[#10d9a8]/25'
+                  : 'bg-white/5 border-white/10 text-white/70 hover:bg-white/10'
               }`}
             >
-              <Icon className="w-4 h-4" style={{ color: action.color }} />
-              <span>{action.label}</span>
+              <Icon className="w-4 h-4 flex-shrink-0" style={{ color: action.color }} />
+              <span className="truncate">{action.label}</span>
             </button>
           );
         })}
