@@ -1,31 +1,56 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useUIStore } from '@/store/uiStore';
 
-// Use the provided HTML as the pixel-perfect layout body (sidebar + topbar + sections).
-// Vite will inline the CSS/HTML at build time.
-// eslint-disable-next-line import/no-unresolved
-import designRaw from '../../../../new designs/pwezacore-admin-dashboard.html?raw';
+import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
-function stripScripts(html: string) {
-  return html.replace(/<script[\s\S]*?<\/script>/gi, '');
-}
+type Props = {
+  schoolId: string;
+};
 
 function extractStyleAndBody(raw: string) {
   const styleMatch = raw.match(/<style>([\s\S]*?)<\/style>/i);
   const bodyMatch = raw.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
   const style = styleMatch?.[1] ?? '';
   const body = bodyMatch?.[1] ?? '';
-
-  // The design file contains a typo: `::root` (should be `:root`).
-  const fixedStyle = style.replace('::root', ':root');
-  return { style: fixedStyle, body: stripScripts(body) };
+  // The design file(s) sometimes contain `::root` typo in older versions.
+  const fixedStyle = style.replace(/::root/g, ':root');
+  // Integration spec: the design should be injected as *content only*
+  // because sidebar/topbar are provided by `AdminLayout`.
+  const contentOnlyBody = body.replace(/<header\s+class=["']pa-topbar["'][\s\S]*?<\/header>/i, '');
+  return { style: fixedStyle, body: contentOnlyBody };
 }
 
-function formatUShFull(amount: number) {
-  if (!Number.isFinite(amount)) return 'USh —';
-  return `USh ${Math.round(amount).toLocaleString('en-US')}`;
+function escapeHtml(s: string) {
+  return s.replace(/[&<>"']/g, (c) => {
+    switch (c) {
+      case '&':
+        return '&amp;';
+      case '<':
+        return '&lt;';
+      case '>':
+        return '&gt;';
+      case '"':
+        return '&quot;';
+      case "'":
+        return '&#039;';
+      default:
+        return c;
+    }
+  });
+}
+
+function initialsFromName(name: string) {
+  return (
+    name
+      ?.trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() || '')
+      .join('') || '—'
+  );
 }
 
 function formatUShCompact(amount: number) {
@@ -41,851 +66,695 @@ function formatUShCompact(amount: number) {
     const s = v >= 10 ? v.toFixed(1) : v.toFixed(2);
     return `USh ${s.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1')}K`;
   }
-  return formatUShFull(n);
+  return `USh ${n.toLocaleString('en-US')}`;
 }
 
-type Kpis = {
-  students: number;
-  teachers: number;
-  outstanding: number;
-  feesCollected: number;
-  attendance: number;
-  pendingExpenses: number;
-  activeClasses: number;
-};
+function formatUShFull(amount: number) {
+  if (!Number.isFinite(amount)) return 'USh —';
+  return `USh ${Math.round(amount).toLocaleString('en-US')}`;
+}
 
-export default function DesignAdminDashboard({ schoolId }: { schoolId: string }) {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
-  const rootRef = useRef<HTMLDivElement | null>(null);
-  const [loading, setLoading] = useState(true);
+function formatDateShort(iso: string | null | undefined) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' });
+  } catch {
+    return '—';
+  }
+}
 
-  // Search (was previously handled by `AdminLayout` chrome; now we must wire it ourselves).
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchResults, setSearchResults] = useState<{
-    students: Array<{ student_id: string; name: string; current_class?: string; admission_number?: string }>;
-    teachers: Array<{ teacher_id: string; name: string; email?: string }>;
-    reports: Array<{ report_id: string; template_name?: string; created_at: string; student_name?: string }>;
-  }>({ students: [], teachers: [], reports: [] });
-  const [searchAnchor, setSearchAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
-  const searchInputElRef = useRef<HTMLInputElement | null>(null);
-  const searchDropdownRef = useRef<HTMLDivElement | null>(null);
+function mapNavPath(path: string) {
+  // The design HTML uses some route names that don't match the current React Router paths.
+  // Map them to existing routes so clicks always navigate correctly.
+  const MAP: Record<string, string> = {
+    '/dashboard/admin/students/new': '/dashboard/admin/students/add',
+    '/dashboard/admin/teachers/new': '/dashboard/admin/teachers/add',
+    '/dashboard/admin/parents/new': '/dashboard/admin/parents/add',
+    '/dashboard/admin/user-management': '/dashboard/admin/accounts',
+    '/dashboard/admin/system-settings': '/dashboard/admin/settings',
+    '/dashboard/admin/location-settings': '/dashboard/admin/settings/location',
+    '/dashboard/admin/receipts': '/dashboard/admin/outstanding',
+    '/dashboard/admin/finance': '/dashboard/admin/outstanding',
+    '/dashboard/admin/job-vacancies/new': '/dashboard/admin/jobs',
+    '/dashboard/admin/job-vacancies': '/dashboard/admin/jobs',
+  };
+  return MAP[path] ?? path;
+}
 
-  const { style, body } = useMemo(() => extractStyleAndBody(designRaw), []);
+async function runSearch(query: string, container: HTMLElement) {
+  const q = query.trim();
+  if (q.length < 2) return;
 
-  useEffect(() => {
-    // Ensure the design fonts are available (the HTML provides them in <head>).
-    const id = 'pwezacore-admin-design-fonts';
-    if (document.getElementById(id)) return;
-    const link = document.createElement('link');
-    link.id = id;
-    link.rel = 'stylesheet';
-    link.href =
-      'https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap';
-    document.head.appendChild(link);
-  }, []);
+  const wrap = container.querySelector('.pa-search-wrap') as HTMLElement | null;
+  if (!wrap) return;
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+  try {
+    const [studentsRes, teachersRes] = await Promise.all([
+      supabase
+        .from('students')
+        .select('student_id, name, current_class, admission_number')
+        .eq('school_id', (wrap as any).__schoolId as string) // optional; can be unset
+        .or(`name.ilike.%${q}%,admission_number.ilike.%${q}%,current_class.ilike.%${q}%`)
+        .limit(5),
+      supabase
+        .from('teachers')
+        .select('teacher_id, name, email')
+        .eq('school_id', (wrap as any).__schoolId as string)
+        .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
+        .limit(3),
+    ]);
 
-    // Navigation: map UI labels in the design to existing React Router routes.
-    const NAV: Array<{ match: string; to: string | null }> = [
-      { match: 'Dashboard', to: '/dashboard/admin' },
-      { match: 'Students', to: '/dashboard/admin/students' },
-      { match: 'Teachers', to: '/dashboard/admin/teachers' },
-      { match: 'Parents', to: '/dashboard/admin/parents' },
-      { match: 'User Management', to: '/dashboard/admin/accounts' },
-      { match: 'Staff', to: '/dashboard/admin/accounts' },
-      { match: 'Classes', to: '/dashboard/admin/settings/classes' },
-      { match: 'Job Vacancies', to: '/dashboard/admin/jobs' },
-      { match: 'Finance', to: '/dashboard/admin/outstanding' },
-      { match: 'Reports', to: '/dashboard/admin/reports/generate' },
-      { match: 'Receipts', to: '/dashboard/admin/reports' },
-      { match: 'Attendance', to: '/dashboard/admin/attendance-records' },
-      { match: 'Exam Sets', to: '/dashboard/admin/exam-sets' },
-      { match: 'Identity', to: '/dashboard/admin/identity' },
-      { match: 'Notifications', to: '/dashboard/admin/notifications' },
-      { match: 'System Settings', to: '/dashboard/admin/settings' },
-      { match: 'Headed Paper', to: '/dashboard/admin/settings' },
+    const results: Array<{ label: string; sub: string; path: string }> = [
+      ...((studentsRes.data || []) as any[]).map((s) => ({
+        label: s.name || 'Student',
+        sub: `Student · ${s.current_class || ''}`,
+        path: '/dashboard/admin/students',
+      })),
+      ...((teachersRes.data || []) as any[]).map((t) => ({
+        label: t.name || 'Teacher',
+        sub: `Teacher · ${t.email || ''}`,
+        path: '/dashboard/admin/teachers',
+      })),
     ];
 
-    const findRouteFromText = (text: string) => {
-      const t = text.trim();
-      return NAV.find((n) => t.includes(n.match))?.to ?? null;
-    };
+    container.querySelector('#pa-search-dropdown')?.remove();
+    if (results.length === 0) return;
 
-    const onDocumentClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
+    const dropdown = document.createElement('div');
+    dropdown.id = 'pa-search-dropdown';
+    Object.assign(dropdown.style, {
+      position: 'absolute',
+      top: '38px',
+      left: '0',
+      right: '0',
+      background: '#0b1120',
+      border: '1px solid rgba(255,255,255,0.1)',
+      borderRadius: '9px',
+      zIndex: '999',
+      overflow: 'hidden',
+      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    } as Partial<CSSStyleDeclaration>);
 
-      const navLink = target.closest?.('.nav-link') as HTMLElement | null;
-      if (navLink) {
-        const to = findRouteFromText(navLink.textContent || '');
-        if (to) navigate(to);
-        return;
+    results.forEach((r) => {
+      const item = document.createElement('div');
+      item.style.cssText =
+        'padding:10px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06);font-size:12.5px;color:#eef3ff;';
+      item.innerHTML = `<div style="font-weight:600">${escapeHtml(r.label)}</div><div style="font-size:10.5px;color:#3d5278;margin-top:1px">${escapeHtml(
+        r.sub
+      )}</div>`;
+      item.onmouseenter = () => {
+        item.style.background = '#101828';
+      };
+      item.onmouseleave = () => {
+        item.style.background = '';
+      };
+      item.onclick = () => {
+        dropdown.remove();
+        window.dispatchEvent(new CustomEvent('pweza-navigate', { detail: r.path }));
+      };
+      dropdown.appendChild(item);
+    });
+
+    wrap.style.position = 'relative';
+    wrap.appendChild(dropdown);
+
+    // Close on outside click
+    const closeDropdown = (e: MouseEvent) => {
+      if (!dropdown.contains(e.target as Node)) {
+        dropdown.remove();
+        document.removeEventListener('click', closeDropdown);
       }
-
-      const qaBtn = target.closest?.('.qa-btn') as HTMLElement | null;
-      if (qaBtn) {
-        const label = (qaBtn.querySelector('.qa-label')?.textContent || '').trim();
-        const quick: Record<string, string | null> = {
-          'Add Student': '/dashboard/admin/students/add',
-          'Add Teacher': '/dashboard/admin/teachers/add',
-          'Add Parent': '/dashboard/admin/parents/add',
-          'Add Accounts Manager': '/dashboard/admin/accounts/add',
-          'Generate Reports': '/dashboard/admin/reports/generate',
-          'Generate Receipts': null,
-          'Post Job Vacancy': '/dashboard/admin/jobs/post',
-          'Add Librarian': '/dashboard/admin/librarian/add',
-          'Appoint Head Teacher': '/dashboard/admin/head-teacher/appoint',
-          'Headed Paper': '/dashboard/head-teacher',
-          'Location Settings': '/dashboard/admin/settings/location',
-          'System Settings': '/dashboard/admin/settings',
-        };
-        const to = quick[label] ?? null;
-        if (to) navigate(to);
-        return;
-      }
-
-      // Job vacancy card actions (design uses `<a class="card-action">` without href).
-      const cardAction = target.closest?.('a.card-action') as HTMLElement | null;
-      if (cardAction) {
-        const txt = (cardAction.textContent || '').trim();
-        if (txt.includes('Post new')) {
-          navigate('/dashboard/admin/jobs');
-          return;
-        }
-        if (txt.includes('Add reminder')) {
-          navigate('/dashboard/admin/notifications');
-          return;
-        }
-      }
-
-      const jobManageBtn = target.closest?.('button') as HTMLButtonElement | null;
-      if (jobManageBtn && (jobManageBtn.textContent || '').includes('Manage All Vacancies')) {
-        navigate('/dashboard/admin/jobs');
-        return;
-      }
-
-      const expenseBtn = target.closest?.('button.ea-btn') as HTMLButtonElement | null;
-      if (expenseBtn) {
-        const expenseId = expenseBtn.dataset.expenseId;
-        const action = expenseBtn.classList.contains('approve') ? 'approve' : 'reject';
-        if (!expenseId) return;
-        void (async () => {
-          try {
-            expenseBtn.disabled = true;
-            const resp = await fetch('/api/accountant/approve-expense', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                expense_id: expenseId,
-                action,
-                notes: `Processed by admin dashboard`,
-              }),
-            });
-            if (!resp.ok) throw new Error('Request failed');
-            const row = expenseBtn.closest?.('.expense-row') as HTMLElement | null;
-            if (row) {
-              row.style.opacity = '0.4';
-              row.style.pointerEvents = 'none';
-            }
-          } catch {
-            alert('Failed to process expense');
-            expenseBtn.disabled = false;
-          }
-        })();
-        return;
-      }
-
-      // Header CTA buttons
-      const headerBtn = target.closest?.('button.btn, button') as HTMLButtonElement | null;
-      if (headerBtn && headerBtn.textContent) {
-        const txt = headerBtn.textContent.trim();
-        if (txt.includes('＋ Add Student')) navigate('/dashboard/admin/students/add');
-        if (txt.includes('Generate Report')) navigate('/dashboard/admin/reports/generate');
-      }
-
-      // Theme toggle (moon icon button)
-      const darkModeBtn = target.closest?.('.ib[title="Dark mode"]') as HTMLElement | null;
-      if (darkModeBtn) {
-        toggleTheme();
-      }
-
-      // Notifications button
-      const notifBtn = target.closest?.('.ib[title="Notifications"]') as HTMLElement | null;
-      if (notifBtn) navigate('/dashboard/admin/notifications');
     };
+    setTimeout(() => document.addEventListener('click', closeDropdown), 100);
+  } catch (err) {
+    console.error('Search error:', err);
+  }
+}
 
-    document.addEventListener('click', onDocumentClick);
-    return () => document.removeEventListener('click', onDocumentClick);
-  }, [navigate, toggleTheme]);
+async function loadKPIs(schoolId: string, setText: (sel: string, val: string) => void, el: HTMLElement) {
+  try {
+    const todayIso = new Date().toISOString().slice(0, 10);
 
-  // Attach input listeners for `.search-input` inside the injected HTML.
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    const { data: terms } = await supabase
+      .from('school_terms')
+      .select('id, start_date, end_date')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: false });
 
-    const inputEl = root.querySelector('input.search-input') as HTMLInputElement | null;
-    if (!inputEl) return;
-    searchInputElRef.current = inputEl;
+    const currentTerm =
+      (terms || []).find((t: any) =>
+        t.start_date ? t.start_date <= todayIso && t.end_date >= todayIso : t.end_date >= todayIso
+      ) || terms?.[0] || null;
 
-    const updateAnchor = () => {
-      const ir = inputEl.getBoundingClientRect();
-      setSearchAnchor({
-        left: ir.left,
-        top: ir.bottom + 6,
-        width: ir.width,
-      });
-    };
+    const termStart = currentTerm?.start_date || '1900-01-01';
+    const termEnd = currentTerm?.end_date || '2100-12-31';
 
-    const handleInput = () => {
-      setSearchQuery(inputEl.value);
-      if (inputEl.value.trim().length >= 2) setSearchOpen(true);
-    };
-    const handleFocus = () => {
-      if (inputEl.value.trim().length >= 2) setSearchOpen(true);
-      updateAnchor();
-    };
+    const [
+      studentsCountRes,
+      teachersCountRes,
+      attendanceRes,
+      paymentsRes,
+      pendingExpensesCountRes,
+      activeClassesRowsRes,
+      jobsCountRes,
+    ] = await Promise.all([
+      supabase
+        .from('students')
+        .select('student_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'active'),
+      supabase
+        .from('teachers')
+        .select('teacher_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId),
+      supabase
+        .from('student_attendance')
+        .select('student_id, present')
+        .eq('school_id', schoolId)
+        .eq('date', todayIso),
+      supabase
+        .from('student_payments')
+        .select('student_id, amount_paid')
+        .eq('school_id', schoolId)
+        .gte('payment_date', termStart)
+        .lte('payment_date', termEnd),
+      supabase
+        .from('school_expenses')
+        .select('expense_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'pending'),
+      supabase
+        .from('students')
+        .select('current_class')
+        .eq('school_id', schoolId)
+        .eq('status', 'active')
+        .limit(5000),
+      supabase
+        .from('jobs')
+        .select('job_id', { count: 'exact', head: true })
+        .eq('school_id', schoolId)
+        .eq('status', 'Pending'),
+    ]);
 
-    inputEl.addEventListener('input', handleInput);
-    inputEl.addEventListener('focus', handleFocus);
-    window.addEventListener('resize', updateAnchor);
+    const totalStudents = studentsCountRes.count ?? 0;
+    const totalTeachers = teachersCountRes.count ?? 0;
+    const present = (attendanceRes.data || []).filter((r: any) => r.present === true).length;
+    const totalAttendance = (attendanceRes.data || []).length;
+    const pct = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
 
-    return () => {
-      inputEl.removeEventListener('input', handleInput);
-      inputEl.removeEventListener('focus', handleFocus);
-      window.removeEventListener('resize', updateAnchor);
-    };
-  }, []);
+    const balances = await supabase
+      .from('students')
+      .select('student_id, expected_fee_amount')
+      .eq('school_id', schoolId)
+      .eq('status', 'active');
 
-  // Close search dropdown on outside click / Escape.
-  useEffect(() => {
-    const onMouseDown = (e: MouseEvent) => {
-      if (!searchOpen) return;
-      const inputEl = searchInputElRef.current;
-      const dropdownEl = searchDropdownRef.current;
-      const target = e.target as Node | null;
-      if (inputEl && target && inputEl.contains(target)) return;
-      if (dropdownEl && target && dropdownEl.contains(target)) return;
-      setSearchOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setSearchOpen(false);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onMouseDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [searchOpen]);
+    const payments = (paymentsRes.data || []) as any[];
+    const paidByStudent: Record<string, number> = {};
+    payments.forEach((p: any) => {
+      paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
+    });
 
-  // Fetch search results (same query strategy as `AdminLayout`).
-  useEffect(() => {
-    const q = searchQuery.trim();
-    if (q.length < 2) {
-      setSearchOpen(false);
-      setSearchResults({ students: [], teachers: [], reports: [] });
+    const feesCollected = payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+
+    const outstanding = (balances.data || [])
+      .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
+      .reduce((sum: number, b: number) => sum + b, 0);
+
+    const expensesCount = pendingExpensesCountRes.count ?? 0;
+    const activeClasses = new Set((activeClassesRowsRes.data || []).map((r: any) => r.current_class).filter(Boolean)).size;
+
+    const jobApps = jobsCountRes.count ?? 0;
+
+    setText('[data-kpi="total-students"]', String(totalStudents));
+    setText('[data-kpi="students-sub"]', 'Active enrollments');
+
+    setText('[data-kpi="total-teachers"]', String(totalTeachers));
+    setText('[data-kpi="teachers-sub"]', 'Staff members');
+
+    setText('[data-kpi="fees-collected"]', formatUShCompact(feesCollected));
+    setText('[data-kpi="outstanding-fees"]', formatUShCompact(outstanding));
+
+    setText('[data-kpi="attendance-today"]', `${pct}%`);
+    setText('[data-kpi="attendance-sub"]', `${present} / ${totalAttendance} present`);
+
+    setText('[data-kpi="pending-expenses"]', String(expensesCount));
+    setText('[data-kpi="active-classes"]', String(activeClasses));
+    setText('[data-kpi="job-applications"]', String(jobApps));
+
+    const expCountEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
+    if (expCountEl) expCountEl.textContent = `${expensesCount} pending`;
+  } catch (err) {
+    console.error('KPI load error:', err);
+  }
+}
+
+async function loadStaff(schoolId: string, setHtml: (id: string, html: string) => void) {
+  try {
+    const { data } = await supabase
+      .from('teachers')
+      .select('teacher_id, name, email')
+      .eq('school_id', schoolId)
+      .limit(5);
+
+    if (!data || data.length === 0) {
+      setHtml('pa-staff-list', '<div class="pa-empty-state"><span>No staff found</span></div>');
       return;
     }
-    if (!schoolId) return;
 
-    const t = window.setTimeout(async () => {
-      setSearchLoading(true);
-      try {
-        const [studentsRes, teachersRes, reportsRes] = await Promise.all([
-          supabase
-            .from('students')
-            .select('student_id, name, current_class, admission_number')
-            .eq('school_id', schoolId)
-            .or(`name.ilike.%${q}%,admission_number.ilike.%${q}%,current_class.ilike.%${q}%`)
-            .limit(8),
-          supabase
-            .from('teachers')
-            .select('teacher_id, name, email')
-            .eq('school_id', schoolId)
-            .or(`name.ilike.%${q}%,email.ilike.%${q}%`)
-            .limit(5),
-          supabase
-            .from('reports')
-            .select('report_id, template_name, created_at, students(name)')
-            .eq('school_id', schoolId)
-            .ilike('template_name', `%${q}%`)
-            .order('created_at', { ascending: false })
-            .limit(5),
-        ]);
+    const gradients = [
+      'linear-gradient(135deg,#10d9a8,#3d8ef8)',
+      'linear-gradient(135deg,#9d7bf8,#ec4899)',
+      'linear-gradient(135deg,#f5a623,#ef4444)',
+      'linear-gradient(135deg,#22d3ee,#3d8ef8)',
+      'linear-gradient(135deg,#f75c5c,#9d7bf8)',
+    ];
 
-        const students = (studentsRes.data || []) as Array<{
-          student_id: string;
-          name: string;
-          current_class?: string;
-          admission_number?: string;
-        }>;
-        const teachers = (teachersRes.data || []) as Array<{ teacher_id: string; name: string; email?: string }>;
-        const reportsRaw = (reportsRes.data || []) as Array<{
-          report_id: string;
-          template_name?: string;
-          created_at: string;
-          students?: { name?: string } | { name?: string }[];
-        }>;
+    const html = data
+      .map((t: any, i: number) => {
+        const initials = initialsFromName(String(t.name || 'Teacher'));
+        const bg = gradients[i % gradients.length];
+        return `
+          <div class="pa-staff-row" data-nav="/dashboard/admin/teachers/${escapeHtml(String(t.teacher_id || ''))}">
+            <div class="pa-staff-av" style="background:${bg}">${escapeHtml(initials)}</div>
+            <div style="flex:1;">
+              <div class="pa-staff-name">${escapeHtml(String(t.name || '—'))}</div>
+              <div class="pa-staff-sub">Teaching</div>
+            </div>
+            <span class="pa-chip teal">● Teaching</span>
+          </div>`;
+      })
+      .join('');
 
-        const reports = reportsRaw.map((r) => ({
-          report_id: r.report_id,
-          template_name: r.template_name,
-          created_at: r.created_at,
-          student_name: Array.isArray(r.students)
-            ? (r.students[0] as { name?: string })?.name
-            : (r.students as { name?: string })?.name,
-        }));
+    setHtml('pa-staff-list', html);
+  } catch (err) {
+    console.error('Staff load error:', err);
+  }
+}
 
-        setSearchResults({ students, teachers, reports });
-        setSearchOpen(true);
-      } catch {
-        setSearchResults({ students: [], teachers: [], reports: [] });
-        setSearchOpen(true);
-      } finally {
-        setSearchLoading(false);
-      }
-    }, 300);
+async function loadExpenses(
+  schoolId: string,
+  setHtml: (id: string, html: string) => void,
+  setText: (sel: string, val: string) => void,
+  el: HTMLElement
+) {
+  try {
+    const { data: expenses } = await supabase
+      .from('school_expenses')
+      .select('expense_id, category_name, description, amount, created_at')
+      .eq('school_id', schoolId)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(5);
 
-    return () => window.clearTimeout(t);
-  }, [searchQuery, schoolId]);
+    const countRes = await supabase
+      .from('school_expenses')
+      .select('expense_id', { count: 'exact', head: true })
+      .eq('school_id', schoolId)
+      .eq('status', 'pending');
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    const expCount = countRes.count ?? 0;
+    setText('[data-kpi="pending-expenses"]', String(expCount));
+    const badge = el.querySelector('#pa-expense-count') as HTMLElement | null;
+    if (badge) badge.textContent = `${expCount} pending`;
 
-    const path = location.pathname;
-    const activeMatch =
-      path === '/dashboard/admin'
-        ? 'Dashboard'
-        : path.startsWith('/dashboard/admin/students')
-          ? 'Students'
-          : path.startsWith('/dashboard/admin/teachers')
-            ? 'Teachers'
-            : path.startsWith('/dashboard/admin/parents')
-              ? 'Parents'
-              : path.startsWith('/dashboard/admin/accounts')
-                ? 'Staff'
-                : path.startsWith('/dashboard/admin/jobs')
-                  ? 'Job Vacancies'
-                  : path.startsWith('/dashboard/admin/outstanding')
-                    ? 'Finance'
-                    : path.startsWith('/dashboard/admin/reports')
-                      ? 'Reports'
-                      : path.startsWith('/dashboard/admin/attendance')
-                        ? 'Attendance'
-                        : path.startsWith('/dashboard/admin/exam-sets')
-                          ? 'Exam Sets'
-                          : path.startsWith('/dashboard/admin/identity')
-                            ? 'Identity'
-                            : path.startsWith('/dashboard/admin/notifications')
-                              ? 'Notifications'
-                              : path.startsWith('/dashboard/admin/settings')
-                                ? 'System Settings'
-                                : null;
+    if (!expenses || expenses.length === 0) {
+      setHtml('pa-expenses-list', '<div class="pa-empty-state"><span>No pending expenses ✓</span></div>');
+      return;
+    }
 
-    root.querySelectorAll('.nav-link').forEach((el) => el.classList.remove('active'));
-    if (!activeMatch) return;
+    const icons = ['🖨️', '🔧', '📚', '🚌', '📄'];
+    const iconBgs = ['var(--amber-s)', 'var(--blue-s)', 'var(--teal-s)', 'var(--rose-s)', 'var(--violet-s)'];
 
-    const matchEl = Array.from(root.querySelectorAll('.nav-link')).find((el) => {
-      const txt = (el.textContent || '').trim();
-      return txt.includes(activeMatch);
-    }) as HTMLElement | undefined;
-    if (matchEl) matchEl.classList.add('active');
-  }, [location.pathname]);
+    const html = expenses
+      .map((exp: any, i: number) => {
+        const amt = Number(exp.amount || 0).toLocaleString('en-US');
+        const date = formatDateShort(exp.created_at);
+        return `
+          <div class="pa-expense-row" data-expense-id="${escapeHtml(String(exp.expense_id))}">
+            <div class="pa-expense-ic" style="background:${iconBgs[i % iconBgs.length]}">${icons[i % icons.length]}</div>
+            <div style="flex:1;">
+              <div class="pa-expense-title">${escapeHtml(String(exp.category_name || 'Expense'))}</div>
+              <div class="pa-expense-sub">Submitted ${escapeHtml(date)}</div>
+            </div>
+            <div class="pa-expense-amount">USh ${escapeHtml(amt)}</div>
+            <div class="pa-ea-btns">
+              <button class="pa-ea-btn approve">✓ Approve</button>
+              <button class="pa-ea-btn decline">✕ Decline</button>
+            </div>
+          </div>`;
+      })
+      .join('');
 
-  useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    setHtml('pa-expenses-list', html);
+  } catch (err) {
+    console.error('Expenses load error:', err);
+  }
+}
 
-    let cancelled = false;
-    const run = async () => {
-      setLoading(true);
-      try {
-        // Header eyebrow date (design file is hard-coded; this keeps it data-driven).
-        const eyebrowEl = root.querySelector('.pg-eyebrow') as HTMLElement | null;
-        if (eyebrowEl) {
-          const d = new Date();
-          const weekday = d.toLocaleDateString('en-US', { weekday: 'long' });
-          const day = d.getDate();
-          const month = d.toLocaleDateString('en-US', { month: 'long' });
-          const year = d.getFullYear();
-          const dateStr = `${weekday}, ${day} ${month} ${year}`;
-          const restTokens = (eyebrowEl.textContent || '')
-            .split('·')
-            .map((x) => x.trim())
-            .filter(Boolean);
-          const rest = restTokens.slice(1).join(' · ');
-          eyebrowEl.innerHTML = `<span class="live-dot"></span> ${dateStr}${rest ? ` · ${rest}` : ''}`;
-        }
+async function loadPayments(
+  schoolId: string,
+  setHtml: (id: string, html: string) => void
+) {
+  try {
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const { data: terms } = await supabase
+      .from('school_terms')
+      .select('id, start_date, end_date')
+      .eq('school_id', schoolId)
+      .order('year', { ascending: false })
+      .order('term', { ascending: false });
 
-        // -----------------------
-        // KPIs
-        // -----------------------
-        const kpis: Kpis = await (async (): Promise<Kpis> => {
-          const today = new Date().toISOString().slice(0, 10);
+    const currentTerm =
+      (terms || []).find((t: any) => (t.start_date ? t.start_date <= todayIso && t.end_date >= todayIso : t.end_date >= todayIso)) ||
+      terms?.[0] ||
+      null;
 
-          const [
-            termsResult,
-            studentsResult,
-            teachersResult,
-            attendanceResult,
-            balancesResult,
-            pendingExpensesResult,
-            activeClassesResult,
-          ] = await Promise.all([
-            supabase
-              .from('school_terms')
-              .select('id, start_date, end_date, year, term')
-              .eq('school_id', schoolId)
-              .order('year', { ascending: false })
-              .order('term', { ascending: false }),
-            supabase
-              .from('students')
-              .select('*', { count: 'exact', head: true })
-              .eq('school_id', schoolId)
-              .eq('status', 'active'),
-            supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-            supabase
-              .from('student_attendance')
-              .select('student_id')
-              .eq('school_id', schoolId)
-              .eq('date', today)
-              .eq('present', true),
-            supabase
-              .from('students')
-              .select('student_id, expected_fee_amount')
-              .eq('school_id', schoolId)
-              .eq('status', 'active'),
-            supabase
-              .from('school_expenses')
-              .select('expense_id', { count: 'exact', head: true })
-              .eq('school_id', schoolId)
-              .eq('status', 'pending'),
-            supabase
-              .from('students')
-              .select('current_class')
-              .eq('school_id', schoolId)
-              .eq('status', 'active'),
-          ]);
+    const termStart = currentTerm?.start_date || '1900-01-01';
+    const termEnd = currentTerm?.end_date || '2100-12-31';
 
-          const allTerms = termsResult.data || [];
-          const currentTermData =
-            allTerms.find((t: any) =>
-              t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
-            ) || (allTerms[0] as any) || null;
+    const { data: payments } = await supabase
+      .from('student_payments')
+      .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
+      .eq('school_id', schoolId)
+      .gte('payment_date', termStart)
+      .lte('payment_date', termEnd)
+      .order('payment_date', { ascending: false })
+      .limit(5);
 
-          const balances = balancesResult.data || [];
-          const studentIds = balances.map((s: any) => s.student_id);
+    if (!payments || payments.length === 0) {
+      setHtml('pa-payments-list', '<div class="pa-empty-state"><span>No payments this term</span></div>');
+      return;
+    }
 
-          const [feesCollectedResult, paymentsResult] = await Promise.all([
-            currentTermData
-              ? supabase
-                  .from('student_payments')
-                  .select('amount_paid')
-                  .eq('school_id', schoolId)
-                  .gte('payment_date', currentTermData.start_date || '1900-01-01')
-                  .lte('payment_date', currentTermData.end_date || '2100-12-31')
-              : supabase.from('student_payments').select('amount_paid').eq('school_id', schoolId),
-            studentIds.length > 0
-              ? supabase
-                  .from('student_payments')
-                  .select('student_id, amount_paid')
-                  .in('student_id', studentIds)
-                  .eq('school_id', schoolId)
-              : Promise.resolve({ data: [] as any[] }),
-          ]);
+    const gradients = [
+      'linear-gradient(135deg,#10d9a8,#3d8ef8)',
+      'linear-gradient(135deg,#9d7bf8,#f43f5e)',
+      'linear-gradient(135deg,#f5a623,#ef4444)',
+      'linear-gradient(135deg,#22d3ee,#9d7bf8)',
+      'linear-gradient(135deg,#3d8ef8,#10d9a8)',
+    ];
 
-          const payments = paymentsResult.data || [];
-          const paidByStudent: Record<string, number> = {};
-          payments.forEach((p: any) => {
-            paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
-          });
+    const html = payments
+      .map((p: any, i: number) => {
+        const name =
+          p.students?.name ||
+          (Array.isArray(p.students) ? p.students[0]?.name : p.students?.name) ||
+          'Student';
+        const initials = initialsFromName(String(name));
+        const amt = Number(p.amount_paid || 0).toLocaleString('en-US');
+        const date = formatDateShort(p.payment_date);
+        const method = p.payment_method || 'Cash';
 
-          const outstanding = balances
-            .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
-            .reduce((sum: number, b: number) => sum + b, 0);
+        return `
+          <div class="pa-pay-row">
+            <div class="pa-pay-av" style="background:${gradients[i % gradients.length]}">${escapeHtml(initials)}</div>
+            <div style="flex:1;">
+              <div class="pa-pay-name">${escapeHtml(String(name))}</div>
+              <div class="pa-pay-meta">${escapeHtml(date)}</div>
+            </div>
+            <span class="pa-pay-method">${escapeHtml(String(method))}</span>
+            <div class="pa-pay-amount">USh ${escapeHtml(amt)}</div>
+          </div>`;
+      })
+      .join('');
 
-          const feesCollected = (feesCollectedResult.data || []).reduce(
-            (sum: number, p: any) => sum + Number(p.amount_paid || 0),
-            0
-          );
+    setHtml('pa-payments-list', html);
+  } catch (err) {
+    console.error('Payments load error:', err);
+  }
+}
 
-          const pendingExpenses = pendingExpensesResult.count ?? 0;
-          const activeClasses = new Set(
-            (activeClassesResult.data || [])
-              .map((s: any) => s.current_class)
-              .filter(Boolean)
-          ).size;
+async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string) => void) {
+  try {
+    const currentYear = new Date().getFullYear();
+    const { data: exams } = await supabase
+      .from('exam_sets')
+      .select('id, name, start_date, term')
+      .eq('school_id', schoolId)
+      .eq('year', currentYear)
+      .gte('start_date', new Date().toISOString())
+      .order('start_date', { ascending: true })
+      .limit(5);
 
-          return {
-            students: studentsResult.count ?? 0,
-            teachers: teachersResult.count ?? 0,
-            outstanding,
-            feesCollected,
-            attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
-            pendingExpenses,
-            activeClasses,
-          };
-        })();
+    if (!exams || exams.length === 0) {
+      setHtml('pa-upcoming-list', '<div class="pa-empty-state"><span>No upcoming events</span></div>');
+      return;
+    }
 
-        if (cancelled) return;
-
-        // Update KPI values by order in the design (8 cards).
-        const kpiValues = Array.from(root.querySelectorAll('.kpi-value')) as HTMLElement[];
-        if (kpiValues.length >= 8) {
-          kpiValues[0].textContent = String(kpis.students || 0); // Total Students
-          kpiValues[1].textContent = String(kpis.teachers || 0); // Total Teachers
-          kpiValues[2].textContent = formatUShCompact(kpis.feesCollected || 0); // Fees Collected
-          kpiValues[3].textContent = formatUShCompact(kpis.outstanding || 0); // Outstanding Fees
-          const attendancePct = kpis.students > 0 ? (kpis.attendance / kpis.students) * 100 : 0;
-          kpiValues[4].textContent = formatPercent(attendancePct); // Attendance Today
-          kpiValues[5].textContent = String(kpis.pendingExpenses || 0); // Pending Expenses
-          kpiValues[6].textContent = String(kpis.activeClasses || 0); // Active Classes
-          // kpiValues[7] = Job Applications (not wired yet)
-          if (kpiValues[7]) kpiValues[7].textContent = '—';
-        }
-
-        // -----------------------
-        // Staff Overview (teachers)
-        // -----------------------
-        const teachersRes = await supabase
-          .from('teachers')
-          .select('teacher_id, name, email')
-          .eq('school_id', schoolId)
-          .limit(5);
-        const teachers = teachersRes.data || [];
-
-        if (cancelled) return;
-        const staffRows = Array.from(root.querySelectorAll('.staff-row')) as HTMLElement[];
-        const gradients = [
-          'linear-gradient(135deg,#10d9a8,#3d8ef8)',
-          'linear-gradient(135deg,#9d7bf8,#ec4899)',
-          'linear-gradient(135deg,#f5a623,#ef4444)',
-          'linear-gradient(135deg,#22d3ee,#3d8ef8)',
-          'linear-gradient(135deg,#f75c5c,#9d7bf8)',
-        ];
-
-        staffRows.forEach((row, i) => {
-          const t = teachers[i];
-          if (!t) return;
-          const nameEl = row.querySelector('.staff-name') as HTMLElement | null;
-          const subEl = row.querySelector('.staff-sub') as HTMLElement | null;
-          const classEl = row.querySelector('.staff-class') as HTMLElement | null;
-          const chipEl = row.querySelector('.chip') as HTMLElement | null;
-          const avEl = row.querySelector('.staff-av') as HTMLElement | null;
-          if (avEl) {
-            avEl.textContent = String(t.name || '?')
-              .split(' ')
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((x: string) => x[0]?.toUpperCase())
-              .join('');
-            avEl.style.background = gradients[i % gradients.length];
-          }
-          if (nameEl) nameEl.textContent = t.name || 'Teacher';
-          if (subEl) subEl.textContent = 'Teaching · Assigned class (placeholder)';
-          if (classEl) classEl.textContent = 'Faculty (placeholder)';
-          if (chipEl) chipEl.textContent = '● Teaching';
-          row.style.cursor = 'pointer';
-          row.onclick = () => navigate(`/dashboard/admin/teachers/${t.teacher_id}`);
-        });
-
-        // -----------------------
-        // Pending Expense Approvals
-        // -----------------------
-        const expenseRes = await supabase
-          .from('school_expenses')
-          .select('expense_id, category_name, description, amount, expense_date, reference_number, recorded_by, payment_method, created_at')
-          .eq('school_id', schoolId)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(4);
-        const expenses = expenseRes.data || [];
-
-        const recordedByIds = expenses.map((e: any) => e.recorded_by).filter(Boolean);
-        const userMapRes = recordedByIds.length
-          ? await supabase.from('users').select('user_id, name').in('user_id', recordedByIds)
-          : { data: [] as any[] };
-        const userMap = new Map((userMapRes.data || []).map((u: any) => [u.user_id, u.name]));
-
-        if (cancelled) return;
-        const expenseRows = Array.from(root.querySelectorAll('.expense-row')) as HTMLElement[];
-        expenseRows.forEach((row, i) => {
-          const exp = expenses[i];
-          const titleEl = row.querySelector('.expense-title') as HTMLElement | null;
-          const subEl = row.querySelector('.expense-sub') as HTMLElement | null;
-          const amountEl = row.querySelector('.expense-amount') as HTMLElement | null;
-          const approveBtn = row.querySelector('button.ea-btn.approve') as HTMLButtonElement | null;
-          const declineBtn = row.querySelector('button.ea-btn.decline') as HTMLButtonElement | null;
-
-          if (!exp) return;
-          if (titleEl) titleEl.textContent = exp.category_name || 'Expense';
-          const recordedByName = userMap.get(exp.recorded_by) || 'Unknown';
-          if (subEl) subEl.textContent = `${recordedByName} · ${exp.expense_date ? new Date(exp.expense_date).toLocaleDateString() : '—'}`;
-          if (amountEl) amountEl.textContent = formatUShFull(exp.amount || 0);
-
-          if (approveBtn) {
-            approveBtn.dataset.expenseId = exp.expense_id;
-            approveBtn.disabled = false;
-          }
-          if (declineBtn) {
-            declineBtn.dataset.expenseId = exp.expense_id;
-            declineBtn.disabled = false;
-          }
-        });
-
-        // -----------------------
-        // Recent Payments
-        // -----------------------
-        const today = new Date().toISOString().slice(0, 10);
-        const termRes = await supabase
-          .from('school_terms')
-          .select('start_date, end_date')
-          .eq('school_id', schoolId)
-          .order('year', { ascending: false })
-          .order('term', { ascending: false });
-        const currentTerm = (termRes.data || []).find((t: any) =>
-          t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
-        ) || (termRes.data || [])[0] || null;
-        const termStart = currentTerm?.start_date || '1900-01-01';
-        const termEnd = currentTerm?.end_date || '2100-12-31';
-
-        const paymentsRes = await supabase
-          .from('student_payments')
-          .select('payment_id, amount_paid, payment_date, payment_method, student_id, students!inner(name)')
-          .eq('school_id', schoolId)
-          .gte('payment_date', termStart)
-          .lte('payment_date', termEnd)
-          .order('payment_date', { ascending: false })
-          .limit(5);
-        const payments = paymentsRes.data || [];
-
-        if (cancelled) return;
-        const payRows = Array.from(root.querySelectorAll('.pay-row')) as HTMLElement[];
-        payRows.forEach((row, i) => {
-          const p = payments[i];
-          if (!p) return;
-          const payName = row.querySelector('.pay-name') as HTMLElement | null;
-          const payMeta = row.querySelector('.pay-meta') as HTMLElement | null;
-          const payAmount = row.querySelector('.pay-amount') as HTMLElement | null;
-          const payMethod = row.querySelector('.pay-method') as HTMLElement | null;
-          const payAv = row.querySelector('.pay-av') as HTMLElement | null;
-
-          const studentName =
-            (p as any).students?.name ||
-            (Array.isArray((p as any).students) ? (p as any).students[0]?.name : (p as any).students?.name) ||
-            'Student';
-
-          if (payName) payName.textContent = studentName;
-          if (payMeta) payMeta.textContent = p.payment_date ? new Date(p.payment_date).toLocaleDateString() : '—';
-          if (payAmount) payAmount.textContent = formatUShFull(p.amount_paid || 0);
-          if (payMethod) payMethod.textContent = p.payment_method || '—';
-          if (payAv) {
-            payAv.textContent = studentName
-              .split(' ')
-              .filter(Boolean)
-              .slice(0, 2)
-              .map((x: string) => x[0]?.toUpperCase())
-              .join('');
-          }
-        });
-
-        // -----------------------
-        // Upcoming Events (exam sets)
-        // -----------------------
-        const currentYear = new Date().getFullYear();
-        const examSetsRes = await supabase
-          .from('exam_sets')
-          .select('id, name, term, year')
-          .eq('school_id', schoolId)
-          .eq('year', currentYear)
-          .order('term', { ascending: true })
-          .limit(5);
-        const examSets = examSetsRes.data || [];
-
-        if (cancelled) return;
-        const upcomingItems = Array.from(root.querySelectorAll('.upcoming-item')) as HTMLElement[];
-        const monthByTerm: Record<number, { mon: string; day: number; chip: string }> = {
-          1: { mon: 'Mar', day: 20, chip: 'Urgent' },
-          2: { mon: 'Mar', day: 28, chip: 'Soon' },
-          3: { mon: 'Apr', day: 4, chip: 'Planned' },
-          4: { mon: 'May', day: 15, chip: 'Term End' },
-          5: { mon: 'Jun', day: 2, chip: 'Upcoming' },
-        };
-
-        upcomingItems.forEach((item, i) => {
-          const es = examSets[i];
-          if (!es) return;
-          const titleEl = item.querySelector('.upcoming-title') as HTMLElement | null;
-          const subEl = item.querySelector('.upcoming-sub') as HTMLElement | null;
-          const chipEl = item.querySelector('.chip') as HTMLElement | null;
-          const dayEl = item.querySelector('.ud-day') as HTMLElement | null;
-          const monEl = item.querySelector('.ud-mon') as HTMLElement | null;
-
-          if (titleEl) titleEl.textContent = es.name || `Exam Set T${es.term} ${es.year}`;
-          if (subEl) subEl.textContent = `Term ${es.term}, ${es.year}`;
-          const m = monthByTerm[Number(es.term)] || { mon: 'Mar', day: 1, chip: 'Planned' };
-          if (dayEl) dayEl.textContent = String(m.day);
-          if (monEl) monEl.textContent = m.mon;
-          if (chipEl) chipEl.textContent = m.chip;
-        });
-
-        // -----------------------
-        // Reminders (latest notification)
-        // -----------------------
-        const reminderRes = await supabase
-          .from('notifications')
-          .select('id, title, message, created_at')
-          .eq('school_id', schoolId)
-          .order('created_at', { ascending: false })
-          .limit(1);
-        const reminder = (reminderRes.data || [])[0] || null;
-
-        if (!cancelled && reminder) {
-          const reminderCard = Array.from(root.querySelectorAll('.card')).find((c) => {
-            const t = (c.querySelector('.card-title')?.textContent || '').trim();
-            return t.includes('Reminders');
-          });
-          if (reminderCard) {
-            const titleSpans = (reminderCard as HTMLElement).querySelectorAll('div[style*="font-size:12.5px"]');
-            const msgSpans = (reminderCard as HTMLElement).querySelectorAll('div[style*="font-size:11px"]');
-            if (titleSpans[0]) titleSpans[0].textContent = reminder.title || 'Reminder';
-            if (msgSpans[0]) msgSpans[0].textContent = reminder.message || '';
-          }
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+    const urgencyChips: Record<number, string> = {
+      0: '<span class="pa-chip rose">Urgent</span>',
+      1: '<span class="pa-chip amber">Soon</span>',
+      2: '<span class="pa-chip blue">Planned</span>',
+      3: '<span class="pa-chip violet">Term End</span>',
+      4: '<span class="pa-chip teal">Upcoming</span>',
     };
 
-    void run();
+    const html = exams
+      .map((exam: any, i: number) => {
+        const d = new Date(exam.start_date);
+        const day = String(d.getDate()).padStart(2, '0');
+        const mon = d.toLocaleString('en', { month: 'short' }).toUpperCase();
+        const chip = urgencyChips[Math.min(i, 4)];
+        return `
+          <div class="pa-upcoming-item" data-nav="/dashboard/admin/exam-sets">
+            <div class="pa-upcoming-date">
+              <div class="pa-ud-day">${escapeHtml(day)}</div>
+              <div class="pa-ud-mon">${escapeHtml(mon)}</div>
+            </div>
+            <div class="pa-upcoming-sep"></div>
+            <div style="flex:1;">
+              <div class="pa-upcoming-title">${escapeHtml(String(exam.name || 'Exam'))}</div>
+              <div class="pa-upcoming-sub">${exam.term ? `Term ${escapeHtml(String(exam.term))}` : ''}</div>
+            </div>
+            ${chip}
+          </div>`;
+      })
+      .join('');
+
+    setHtml('pa-upcoming-list', html);
+  } catch (err) {
+    console.error('Upcoming load error:', err);
+  }
+}
+
+async function loadReminder(schoolId: string, setText: (sel: string, val: string) => void) {
+  try {
+    const { data } = await supabase
+      .from('notifications')
+      .select('title, message, created_at')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (data && data[0]) {
+      setText('#pa-reminder-title', data[0].title || 'Reminder');
+      setText('#pa-reminder-text', data[0].message || '—');
+    } else {
+      setText('#pa-reminder-title', 'No upcoming reminders');
+      setText('#pa-reminder-text', 'All caught up!');
+    }
+  } catch (err) {
+    console.error('Reminder load error:', err);
+  }
+}
+
+async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: string) => void) {
+  try {
+    const { data } = await supabase
+      .from('jobs')
+      .select('job_id, title, created_at, status')
+      .eq('school_id', schoolId)
+      .eq('status', 'Pending')
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (!data || data.length === 0) {
+      setHtml('pa-jobs-list', '<div class="pa-empty-state" style="padding:16px"><span>No open vacancies</span></div>');
+      return;
+    }
+
+    const icons = ['⚗️', '📚', '🔭'];
+    const chips = ['pa-chip teal', 'pa-chip violet', 'pa-chip blue'];
+
+    const html = data
+      .map((job: any, i: number) => {
+        const date = job.created_at ? new Date(job.created_at).toLocaleDateString('en-UG', { day: 'numeric', month: 'short' }) : '';
+        // This codebase does not currently expose application counts in the admin job insert flow.
+        const apps = job.applications_count ?? 0;
+        return `
+          <div class="pa-job-row" data-nav="/dashboard/admin/jobs">
+            <div style="width:30px;height:30px;border-radius:8px;background:var(--teal-s);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0">${icons[i % icons.length]}</div>
+            <div style="flex:1;">
+              <div class="pa-job-title">${escapeHtml(String(job.title || 'Position'))}</div>
+              <div class="pa-job-sub">Posted ${escapeHtml(date)}</div>
+            </div>
+            <span class="${chips[i % chips.length]}">${apps} applied</span>
+          </div>`;
+      })
+      .join('');
+
+    setHtml('pa-jobs-list', html);
+  } catch (err) {
+    console.error('Jobs load error:', err);
+  }
+}
+
+export default function DesignAdminDashboard({ schoolId }: Props) {
+  const navigate = useNavigate();
+  const toggleTheme = useUIStore((s) => s.toggleTheme);
+
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const { style: scopedStyle, body: scopedBody } = useMemo(() => extractStyleAndBody(designRaw), []);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const path = (e as CustomEvent).detail as string | undefined;
+      if (!path) return;
+      navigate(mapNavPath(path));
+    };
+    window.addEventListener('pweza-navigate', handler);
+    return () => window.removeEventListener('pweza-navigate', handler);
+  }, [navigate]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    // Navigation via data-nav attributes
+    const handleClick = (e: MouseEvent) => {
+      const target = (e.target as Element | null)?.closest?.('[data-nav]') as HTMLElement | null;
+      if (!target) return;
+      const path = target.getAttribute('data-nav');
+      if (!path) return;
+      e.preventDefault();
+      e.stopPropagation();
+      navigate(mapNavPath(path));
+    };
+
+    el.addEventListener('click', handleClick);
+
+    // Wire search input (design-owned)
+    const searchInput = el.querySelector('#pa-search-input') as HTMLInputElement | null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onInput = (ev: Event) => {
+      const val = (ev.target as HTMLInputElement).value.trim();
+      if (timer) clearTimeout(timer);
+      if (val.length < 2) return;
+      // Pass schoolId through the wrapper so runSearch can filter by school.
+      const wrap = el.querySelector('.pa-search-wrap') as any;
+      if (wrap) wrap.__schoolId = schoolId;
+      timer = setTimeout(() => {
+        void runSearch(val, el).catch(console.error);
+      }, 300);
+    };
+    if (searchInput) searchInput.addEventListener('input', onInput);
+
+    // Wire theme + notifications buttons if present
+    const darkToggle = el.querySelector('#pa-dark-toggle') as HTMLElement | null;
+    if (darkToggle) {
+      const darkClick = () => toggleTheme();
+      darkToggle.addEventListener('click', darkClick);
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+      // (no-op; keeps types happy)
+      // Cleanup below
+      darkToggle.dataset._wired = '1';
+      (darkToggle as any).__darkClick = darkClick;
+    }
+    const notifBtn = el.querySelector('#pa-notif-btn') as HTMLElement | null;
+    if (notifBtn) {
+      const notifClick = () => navigate('/dashboard/admin/notifications');
+      notifBtn.addEventListener('click', notifClick);
+      (notifBtn as any).__notifClick = notifClick;
+    }
+
+    // Expense approve/decline (delegated)
+    const handleExpenseButtons = (e: MouseEvent) => {
+      const btn = (e.target as Element | null)?.closest?.('.pa-ea-btn') as HTMLElement | null;
+      if (!btn) return;
+      const approveBtn = (e.target as Element | null)?.closest?.('.pa-ea-btn.approve') as HTMLElement | null;
+      const declineBtn = (e.target as Element | null)?.closest?.('.pa-ea-btn.decline') as HTMLElement | null;
+      if (!approveBtn && !declineBtn) return;
+
+      const row = (btn.closest?.('.pa-expense-row') as HTMLElement | null) ?? null;
+      const expenseId = row?.getAttribute('data-expense-id');
+      if (!row || !expenseId) return;
+
+      const action = approveBtn ? 'approve' : 'reject';
+      row.style.opacity = '0.4';
+      row.style.pointerEvents = 'none';
+
+      void (async () => {
+        try {
+          const resp = await fetch('/api/accountant/approve-expense', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ expense_id: expenseId, action, notes: 'Processed by admin dashboard' }),
+          });
+
+          if (!resp.ok) throw new Error('Request failed');
+
+          const countEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
+          if (countEl) {
+            const current = parseInt((countEl.textContent || '').replace(/[^0-9]/g, ''), 10) || 0;
+            const next = Math.max(0, current - 1);
+            countEl.textContent = `${next} pending`;
+          }
+        } catch {
+          row.style.opacity = '1';
+          row.style.pointerEvents = '';
+          alert('Failed to process expense');
+        }
+      })();
+    };
+
+    el.addEventListener('click', handleExpenseButtons);
+
     return () => {
-      cancelled = true;
+      el.removeEventListener('click', handleClick);
+      el.removeEventListener('click', handleExpenseButtons);
+      if (searchInput) searchInput.removeEventListener('input', onInput);
+      if (darkToggle) {
+        const darkClick = (darkToggle as any).__darkClick as (() => void) | undefined;
+        if (darkClick) darkToggle.removeEventListener('click', darkClick);
+      }
+      if (notifBtn) {
+        const notifClick = (notifBtn as any).__notifClick as (() => void) | undefined;
+        if (notifClick) notifBtn.removeEventListener('click', notifClick);
+      }
+      if (timer) clearTimeout(timer);
     };
+  }, [navigate, toggleTheme, schoolId]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const setText = (sel: string, val: string) => {
+      const node = el.querySelector(sel) as HTMLElement | null;
+      if (node) node.textContent = val;
+    };
+    const setHtml = (id: string, html: string) => {
+      const node = el.querySelector(`#${id}`) as HTMLElement | null;
+      if (node) node.innerHTML = html;
+    };
+
+    // Progressive loading: fire all requests immediately; each function updates its own DOM region.
+    void loadKPIs(schoolId, setText, el);
+    void loadStaff(schoolId, setHtml);
+    void loadExpenses(schoolId, setHtml, setText, el);
+    void loadPayments(schoolId, setHtml);
+    void loadUpcoming(schoolId, setHtml);
+    void loadReminder(schoolId, setText);
+    void loadJobVacancies(schoolId, setHtml);
   }, [schoolId]);
 
   return (
     <>
-      <style>{style}</style>
-      {/* The injected markup must be direct children of this flex container
-          (so the design CSS `body` flex assumptions behave consistently). */}
-      <div
-        ref={rootRef}
-        className={loading ? 'opacity-0' : ''}
-        style={{ display: 'flex', minHeight: '100vh', overflowX: 'hidden' }}
-        dangerouslySetInnerHTML={{ __html: body }}
-      />
-
-      {searchOpen && searchAnchor && (
-        <div
-          ref={searchDropdownRef}
-          className="ac-glass-card rounded-xl shadow-lg border overflow-hidden z-50"
-          style={{
-            position: 'fixed',
-            top: searchAnchor.top,
-            left: searchAnchor.left,
-            width: searchAnchor.width,
-          }}
-        >
-          {searchLoading ? (
-            <div className="p-4 text-center text-sm ac-text-secondary">Searching...</div>
-          ) : (
-            <>
-              {searchResults.students.length > 0 && (
-                <div className="border-b border-white/10">
-                  <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Students
-                  </div>
-                  {searchResults.students.map((s) => (
-                    <button
-                      key={s.student_id}
-                      type="button"
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 text-sm ac-text-primary"
-                      onClick={() => {
-                        navigate(`/dashboard/admin/students?highlight=${encodeURIComponent(s.student_id)}`);
-                        setSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <span className="font-medium truncate">{s.name}</span>
-                      <span className="ac-text-muted shrink-0">{s.current_class || '—'}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {searchResults.teachers.length > 0 && (
-                <div className="border-b border-white/10">
-                  <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Teachers
-                  </div>
-                  {searchResults.teachers.map((t) => (
-                    <button
-                      key={t.teacher_id}
-                      type="button"
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 text-sm ac-text-primary"
-                      onClick={() => {
-                        navigate('/dashboard/admin/teachers');
-                        setSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <span className="font-medium truncate">{t.name}</span>
-                      {t.email && <span className="ac-text-muted text-xs truncate max-w-[180px]">{t.email}</span>}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {searchResults.reports.length > 0 && (
-                <div className="border-b border-white/10">
-                  <div className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Reports
-                  </div>
-                  {searchResults.reports.map((r) => (
-                    <button
-                      key={r.report_id}
-                      type="button"
-                      className="w-full flex items-center justify-between gap-2 px-4 py-2.5 text-left hover:bg-white/5 text-sm ac-text-primary"
-                      onClick={() => {
-                        navigate('/dashboard/admin/report-records');
-                        setSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <span className="font-medium truncate">{r.template_name || 'Report'}</span>
-                      {r.student_name && (
-                        <span className="ac-text-muted shrink-0 truncate max-w-[120px]">{r.student_name}</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {!searchLoading &&
-                searchQuery.trim().length >= 2 &&
-                searchResults.students.length === 0 &&
-                searchResults.teachers.length === 0 &&
-                searchResults.reports.length === 0 && (
-                  <div className="p-4 text-center ac-text-muted text-sm">No results found.</div>
-                )}
-            </>
-          )}
-        </div>
-      )}
+      <style>{scopedStyle}</style>
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh' }} dangerouslySetInnerHTML={{ __html: scopedBody }} />
     </>
   );
-}
-
-function formatPercent(p: number) {
-  if (!Number.isFinite(p)) return '0%';
-  return `${Math.round(p)}%`;
 }
 

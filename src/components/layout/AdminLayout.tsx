@@ -247,13 +247,6 @@ export default function AdminLayout() {
 
   // Glass layout (same as accountant): only when we're in admin dashboard routes
   if (isAdminSection) {
-    // Strict HTML replacement: the `/dashboard/admin` landing page provides its own
-    // sidebar + topbar markup (pixel-perfect against `new designs/pwezacore-admin-dashboard.html`).
-    // Avoid mixing with the existing glass chrome on this single route.
-    if (location.pathname === '/dashboard/admin') {
-      return <Outlet />;
-    }
-
     return (
       <div
         className="accountant-glass fixed inset-0 flex overflow-hidden"
