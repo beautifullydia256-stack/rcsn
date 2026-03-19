@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ─── SCOPE: all styles are scoped under .pweza-admin to avoid leaking into React ─── */
+
+.pweza-admin *,
+.pweza-admin *::before,
+.pweza-admin *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.pweza-admin {
+  --bg:        #05080f;
+  --s1:        #0b1120;
+  --s2:        #101828;
+  --s3:        #141c2e;
+  --s4:        #1d2d4e;
+  --border:    rgba(255,255,255,0.07);
+  --bh:        rgba(255,255,255,0.12);
+
+  /* Teal accent */
+  --teal:      #10d9a8;
+  --teal-s:    rgba(16,217,168,0.10);
+  --teal-g:    rgba(16,217,168,0.22);
+  --blue:      #3d8ef8;
+  --blue-s:    rgba(61,142,248,0.10);
+  --amber:     #f5a623;
+  --amber-s:   rgba(245,166,35,0.10);
+  --rose:      #f75c5c;
+  --rose-s:    rgba(247,92,92,0.10);
+  --violet:    #9d7bf8;
+  --violet-s:  rgba(157,123,248,0.10);
+  --cyan:      #22d3ee;
+  --cyan-s:    rgba(34,211,238,0.10);
+
+  --t1: #eef3ff;
+  --t2: #8296be;
+  --t3: #3d5278;
+
+  --r:  13px;
+  --rs: 8px;
+
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  /* CRITICAL: NO fixed positioning, NO overflow:hidden on root */
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ─── TOPBAR ─── */
+.pweza-admin .pa-topbar {
+  background: rgba(5,8,15,0.95);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  height: 56px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+}
+
+.pweza-admin .pa-breadcrumb {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.pweza-admin .pa-bc-dim { color: var(--t3); }
+.pweza-admin .pa-bc-sep { color: var(--t3); }
+.pweza-admin .pa-bc-cur { color: var(--t1); }
+
+.pweza-admin .pa-filters {
+  display: flex;
+  gap: 6px;
+  margin-left: 12px;
+}
+
+.pweza-admin .pa-filter-select {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 5px 26px 5px 10px;
+  font-size: 11.5px;
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--t2);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233d5278' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.pweza-admin .pa-filter-select:focus { border-color: var(--teal); }
+
+.pweza-admin .pa-topbar-right {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+}
+
+.pweza-admin .pa-search-wrap {
+  position: relative;
+}
+
+.pweza-admin .pa-search-input {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 6px 12px 6px 30px;
+  font-size: 12px;
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--t1);
+  width: 200px;
+  transition: all 0.2s;
+  outline: none;
+}
+.pweza-admin .pa-search-input::placeholder { color: var(--t3); }
+.pweza-admin .pa-search-input:focus { border-color: var(--teal); width: 240px; }
+
+.pweza-admin .pa-search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--t3);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.pweza-admin .pa-ib {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--rs);
+  background: var(--s2);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--t2);
+  font-size: 13px;
+  transition: all 0.15s;
+  position: relative;
+  flex-shrink: 0;
+}
+.pweza-admin .pa-ib:hover { border-color: var(--bh); color: var(--t1); }
+.pweza-admin .pa-notif-pip {
+  width: 6px;
+  height: 6px;
+  background: var(--rose);
+  border-radius: 50%;
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  border: 1.5px solid var(--bg);
+}
+
+/* ─── CONTENT WRAPPER ─── */
+.pweza-admin .pa-content {
+  padding: 22px 20px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* ─── PAGE HEADER ─── */
+.pweza-admin .pa-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pweza-admin .pa-page-eyebrow {
+  font-size: 11px;
+  color: var(--t3);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pweza-admin .pa-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: pa-blink 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes pa-blink { 0%,100%{opacity:1}50%{opacity:.25} }
+
+.pweza-admin .pa-page-title {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: -0.4px;
+  color: var(--t1);
+}
+.pweza-admin .pa-page-sub {
+  font-size: 12.5px;
+  color: var(--t2);
+  margin-top: 3px;
+}
+
+.pweza-admin .pa-header-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* ─── BUTTONS ─── */
+.pweza-admin .pa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 15px;
+  border-radius: var(--rs);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: none;
+  white-space: nowrap;
+}
+.pweza-admin .pa-btn-primary {
+  background: var(--teal);
+  color: #05080f;
+}
+.pweza-admin .pa-btn-primary:hover {
+  background: #14f0bb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--teal-g);
+}
+.pweza-admin .pa-btn-outline {
+  background: transparent;
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+.pweza-admin .pa-btn-outline:hover { border-color: var(--bh); color: var(--t1); }
+.pweza-admin .pa-btn-ghost {
+  background: var(--s2);
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+.pweza-admin .pa-btn-ghost:hover { border-color: var(--bh); color: var(--t1); }
+
+/* ─── KPI GRID ─── */
+.pweza-admin .pa-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pweza-admin .pa-kpi {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+  cursor: default;
+}
+.pweza-admin .pa-kpi:hover { border-color: var(--bh); transform: translateY(-2px); }
+
+.pweza-admin .pa-kpi::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: var(--r) var(--r) 0 0;
+}
+.pweza-admin .pa-kpi.teal::before  { background: linear-gradient(90deg, var(--teal), var(--cyan)); }
+.pweza-admin .pa-kpi.blue::before  { background: linear-gradient(90deg, var(--blue), var(--violet)); }
+.pweza-admin .pa-kpi.amber::before { background: linear-gradient(90deg, var(--amber), #ef4444); }
+.pweza-admin .pa-kpi.rose::before  { background: linear-gradient(90deg, var(--rose), var(--violet)); }
+.pweza-admin .pa-kpi.violet::before{ background: linear-gradient(90deg, var(--violet), var(--blue)); }
+.pweza-admin .pa-kpi.cyan::before  { background: linear-gradient(90deg, var(--cyan), var(--teal)); }
+
+.pweza-admin .pa-kpi-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.pweza-admin .pa-kpi-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+.pweza-admin .pa-kpi-ic.teal   { background: var(--teal-s); }
+.pweza-admin .pa-kpi-ic.blue   { background: var(--blue-s); }
+.pweza-admin .pa-kpi-ic.amber  { background: var(--amber-s); }
+.pweza-admin .pa-kpi-ic.rose   { background: var(--rose-s); }
+.pweza-admin .pa-kpi-ic.violet { background: var(--violet-s); }
+.pweza-admin .pa-kpi-ic.cyan   { background: var(--cyan-s); }
+
+.pweza-admin .pa-kpi-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 99px;
+}
+.pweza-admin .pa-kpi-badge.up   { background: var(--teal-s); color: var(--teal); }
+.pweza-admin .pa-kpi-badge.down { background: var(--rose-s); color: var(--rose); }
+.pweza-admin .pa-kpi-badge.flat { background: var(--s3); color: var(--t3); }
+.pweza-admin .pa-kpi-badge.warn { background: var(--amber-s); color: var(--amber); }
+
+.pweza-admin .pa-kpi-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--t3);
+}
+.pweza-admin .pa-kpi-val {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+  color: var(--t1);
+  margin: 3px 0 4px;
+  line-height: 1.1;
+  /* CRITICAL: This class name is what DesignAdminDashboard.tsx targets */
+}
+.pweza-admin .pa-kpi-sub {
+  font-size: 11px;
+  color: var(--t3);
+}
+
+/* ─── QUICK ACTIONS ─── */
+.pweza-admin .pa-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+.pweza-admin .pa-card-hd {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pweza-admin .pa-card-title {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--t1);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.pweza-admin .pa-card-sub {
+  font-size: 11.5px;
+  color: var(--t3);
+}
+.pweza-admin .pa-card-action {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--teal);
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+.pweza-admin .pa-card-action:hover { opacity: 0.65; }
+
+.pweza-admin .pa-qa-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  padding: 14px 18px;
+}
+.pweza-admin .pa-qa-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 13px 8px;
+  border-radius: 10px;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.18s;
+  text-align: center;
+}
+.pweza-admin .pa-qa-btn:hover { border-color: var(--teal); transform: translateY(-1px); }
+.pweza-admin .pa-qa-btn.primary {
+  background: var(--teal-s);
+  border-color: rgba(16,217,168,0.2);
+}
+.pweza-admin .pa-qa-btn.primary:hover { border-color: var(--teal); }
+.pweza-admin .pa-qa-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+}
+.pweza-admin .pa-qa-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--t2);
+  line-height: 1.3;
+}
+.pweza-admin .pa-qa-btn.primary .pa-qa-label { color: var(--teal); }
+
+/* ─── TWO/THREE COL LAYOUTS ─── */
+.pweza-admin .pa-row { display: grid; gap: 12px; }
+.pweza-admin .pa-row-2   { grid-template-columns: 1fr 1fr; }
+.pweza-admin .pa-row-3   { grid-template-columns: repeat(3,1fr); }
+.pweza-admin .pa-row-2-1 { grid-template-columns: 1fr 340px; }
+
+/* ─── CHIP ─── */
+.pweza-admin .pa-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 99px;
+}
+.pweza-admin .pa-chip.teal   { background: var(--teal-s); color: var(--teal); }
+.pweza-admin .pa-chip.blue   { background: var(--blue-s); color: var(--blue); }
+.pweza-admin .pa-chip.amber  { background: var(--amber-s); color: var(--amber); }
+.pweza-admin .pa-chip.rose   { background: var(--rose-s); color: var(--rose); }
+.pweza-admin .pa-chip.violet { background: var(--violet-s); color: var(--violet); }
+.pweza-admin .pa-chip.slate  { background: var(--s3); color: var(--t2); }
+
+/* ─── ANALYTICS ROW ─── */
+.pweza-admin .pa-chart-bar-area {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 90px;
+}
+.pweza-admin .pa-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.pweza-admin .pa-bar {
+  width: 100%;
+  max-width: 30px;
+  border-radius: 3px 3px 0 0;
+  min-height: 3px;
+  transition: opacity 0.2s;
+}
+.pweza-admin .pa-bar:hover { opacity: 0.75; }
+.pweza-admin .pa-bar-lbl { font-size: 9.5px; color: var(--t3); }
+
+/* donut */
+.pweza-admin .pa-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pweza-admin .pa-leg-row { display: flex; align-items: center; gap: 7px; }
+.pweza-admin .pa-leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.pweza-admin .pa-leg-lbl { font-size: 11.5px; color: var(--t2); flex: 1; }
+.pweza-admin .pa-leg-val { font-size: 12px; font-weight: 700; color: var(--t1); }
+
+/* ─── STAFF TABLE ─── */
+.pweza-admin .pa-staff-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.pweza-admin .pa-staff-row:last-child { border-bottom: none; }
+.pweza-admin .pa-staff-row:hover { background: var(--s2); }
+
+.pweza-admin .pa-staff-av {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.pweza-admin .pa-staff-name { font-size: 12.5px; font-weight: 600; color: var(--t1); }
+.pweza-admin .pa-staff-sub  { font-size: 11px; color: var(--t3); margin-top: 1px; }
+
+/* ─── EXPENSE ROWS ─── */
+.pweza-admin .pa-expense-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.14s;
+}
+.pweza-admin .pa-expense-row:last-child { border-bottom: none; }
+.pweza-admin .pa-expense-row:hover { background: var(--s2); }
+
+.pweza-admin .pa-expense-ic {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.pweza-admin .pa-expense-title { font-size: 12.5px; font-weight: 600; color: var(--t1); }
+.pweza-admin .pa-expense-sub   { font-size: 11px; color: var(--t3); margin-top: 1px; }
+.pweza-admin .pa-expense-amount { font-size: 12.5px; font-weight: 700; color: var(--t1); flex-shrink: 0; }
+.pweza-admin .pa-ea-btns { display: flex; gap: 5px; flex-shrink: 0; }
+.pweza-admin .pa-ea-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.14s;
+  border: none;
+  font-family: 'Instrument Sans', sans-serif;
+}
+.pweza-admin .pa-ea-btn.approve {
+  background: var(--teal-s);
+  color: var(--teal);
+  border: 1px solid rgba(16,217,168,0.2);
+}
+.pweza-admin .pa-ea-btn.approve:hover { background: var(--teal); color: #05080f; }
+.pweza-admin .pa-ea-btn.decline {
+  background: var(--rose-s);
+  color: var(--rose);
+  border: 1px solid rgba(247,92,92,0.2);
+}
+.pweza-admin .pa-ea-btn.decline:hover { background: var(--rose); color: #fff; }
+
+/* ─── PAYMENT ROWS ─── */
+.pweza-admin .pa-pay-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.pweza-admin .pa-pay-row:last-child { border-bottom: none; }
+.pweza-admin .pa-pay-row:hover { background: var(--s2); }
+.pweza-admin .pa-pay-av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.pweza-admin .pa-pay-name { font-size: 12.5px; font-weight: 600; color: var(--t1); }
+.pweza-admin .pa-pay-meta { font-size: 11px; color: var(--t3); margin-top: 1px; }
+.pweza-admin .pa-pay-amount {
+  margin-left: auto;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--teal);
+  flex-shrink: 0;
+}
+.pweza-admin .pa-pay-method {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 99px;
+  background: var(--s3);
+  color: var(--t2);
+  flex-shrink: 0;
+}
+
+/* ─── UPCOMING / ACTIVITY ROWS ─── */
+.pweza-admin .pa-upcoming-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.pweza-admin .pa-upcoming-item:last-child { border-bottom: none; }
+.pweza-admin .pa-upcoming-item:hover { background: var(--s2); }
+.pweza-admin .pa-upcoming-date { text-align: center; flex-shrink: 0; width: 40px; }
+.pweza-admin .pa-ud-day {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--t1);
+  line-height: 1;
+}
+.pweza-admin .pa-ud-mon {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pweza-admin .pa-upcoming-sep { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; }
+.pweza-admin .pa-upcoming-title { font-size: 12.5px; font-weight: 600; color: var(--t1); }
+.pweza-admin .pa-upcoming-sub  { font-size: 11px; color: var(--t3); margin-top: 1px; }
+
+/* ─── ACTIVITY FEED ─── */
+.pweza-admin .pa-act-row {
+  display: flex;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.14s;
+}
+.pweza-admin .pa-act-row:last-child { border-bottom: none; }
+.pweza-admin .pa-act-row:hover { background: var(--s2); }
+.pweza-admin .pa-act-av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.pweza-admin .pa-act-main { font-size: 12px; color: var(--t2); line-height: 1.4; }
+.pweza-admin .pa-act-main strong { color: var(--t1); font-weight: 600; }
+.pweza-admin .pa-act-time { font-size: 10.5px; color: var(--t3); margin-top: 2px; }
+
+/* ─── SYSTEM HEALTH ─── */
+.pweza-admin .pa-sys-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.pweza-admin .pa-sys-row:last-child { border-bottom: none; }
+.pweza-admin .pa-sys-ic { font-size: 16px; flex-shrink: 0; }
+.pweza-admin .pa-sys-name { font-size: 12.5px; font-weight: 500; color: var(--t1); flex: 1; }
+.pweza-admin .pa-sys-val { font-size: 11.5px; color: var(--t2); flex-shrink: 0; }
+.pweza-admin .pa-sys-ok   { color: var(--teal); font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
+.pweza-admin .pa-sys-warn { color: var(--amber); font-size: 11.5px; font-weight: 600; flex-shrink: 0; }
+.pweza-admin .pa-sys-bar  { flex: 1; height: 4px; background: var(--s3); border-radius: 99px; overflow: hidden; max-width: 80px; }
+.pweza-admin .pa-sys-fill { height: 100%; border-radius: 99px; background: var(--teal); }
+
+/* ─── ALERTS ─── */
+.pweza-admin .pa-alert-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 14px;
+  border-radius: var(--rs);
+  margin: 0 18px 8px;
+}
+.pweza-admin .pa-alert-item:last-child { margin-bottom: 14px; }
+.pweza-admin .pa-alert-title { font-size: 12px; font-weight: 600; }
+.pweza-admin .pa-alert-body  { font-size: 11px; color: var(--t2); margin-top: 2px; }
+
+/* ─── JOB ROW ─── */
+.pweza-admin .pa-job-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.pweza-admin .pa-job-row:last-child { border-bottom: none; }
+.pweza-admin .pa-job-row:hover { background: var(--s2); }
+.pweza-admin .pa-job-title { font-size: 12.5px; font-weight: 600; color: var(--t1); }
+.pweza-admin .pa-job-sub   { font-size: 11px; color: var(--t3); margin-top: 1px; }
+
+/* ─── PROGRESS BAR ─── */
+.pweza-admin .pa-prog { width: 100%; height: 4px; background: var(--s3); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.pweza-admin .pa-prog-fill { height: 100%; border-radius: 99px; }
+
+/* ─── LOADING STATE ─── */
+.pweza-admin .pa-skeleton {
+  background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
+  background-size: 200% 100%;
+  animation: pa-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes pa-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+.pweza-admin .pa-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--t3);
+  font-size: 13px;
+}
+
+/* ─── MOBILE RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  .pweza-admin .pa-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .pweza-admin .pa-row-2-1  { grid-template-columns: 1fr; }
+  .pweza-admin .pa-row-3    { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .pweza-admin .pa-content { padding: 14px 14px 50px; gap: 14px; }
+  .pweza-admin .pa-topbar  { padding: 0 12px; gap: 6px; }
+  .pweza-admin .pa-filters { display: none; }
+  .pweza-admin .pa-search-input { width: 140px; }
+  .pweza-admin .pa-search-input:focus { width: 170px; }
+  .pweza-admin .pa-kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pweza-admin .pa-kpi-val  { font-size: 20px; }
+  .pweza-admin .pa-row-2    { grid-template-columns: 1fr; }
+  .pweza-admin .pa-row-3    { grid-template-columns: 1fr; }
+  .pweza-admin .pa-row-2-1  { grid-template-columns: 1fr; }
+  .pweza-admin .pa-qa-grid  { grid-template-columns: repeat(3, 1fr); }
+  .pweza-admin .pa-page-title { font-size: 20px; }
+  .pweza-admin .pa-header-btns .pa-btn-outline,
+  .pweza-admin .pa-header-btns .pa-btn-ghost { display: none; }
+}
+
+@media (max-width: 480px) {
+  .pweza-admin .pa-kpi-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .pweza-admin .pa-kpi      { padding: 14px 14px; }
+  .pweza-admin .pa-kpi-val  { font-size: 18px; }
+  .pweza-admin .pa-qa-grid  { grid-template-columns: repeat(2, 1fr); }
+  .pweza-admin .pa-breadcrumb { font-size: 11px; }
+}
+
+/* ─── FADE IN ANIMATION ─── */
+@keyframes pa-fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pweza-admin .pa-fu  { animation: pa-fadeUp 0.4s ease both; }
+.pweza-admin .pa-d1  { animation-delay: 0.04s; }
+.pweza-admin .pa-d2  { animation-delay: 0.08s; }
+.pweza-admin .pa-d3  { animation-delay: 0.12s; }
+.pweza-admin .pa-d4  { animation-delay: 0.16s; }
+.pweza-admin .pa-d5  { animation-delay: 0.20s; }
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s4); border-radius: 99px; }
+</style>
+</head>
+<body>
+
+<!--
+  REACT INJECTION TARGET:
+  Everything inside .pweza-admin is injected via dangerouslySetInnerHTML.
+  The outer wrapper is added by React.
+
+  CLASS NAME MAP for DesignAdminDashboard.tsx DOM updates:
+  ─────────────────────────────────────────────────────────
+  KPI values:         .pa-kpi-val          (data-kpi attribute distinguishes which)
+  KPI sub text:       .pa-kpi-sub          (data-kpi attribute)
+  KPI badge:          .pa-kpi-badge        (data-kpi attribute)
+  Staff rows:         #pa-staff-list       (innerHTML replaced)
+  Expense rows:       #pa-expenses-list    (innerHTML replaced)
+  Payment rows:       #pa-payments-list    (innerHTML replaced)
+  Upcoming items:     #pa-upcoming-list    (innerHTML replaced)
+  Reminder text:      #pa-reminder-text
+  Activity feed:      #pa-activity-list    (innerHTML replaced)
+  System health:      #pa-syshealth-list   (innerHTML replaced)
+-->
+
+<div class="pweza-admin">
+
+  <!-- ── TOPBAR ── -->
+  <header class="pa-topbar">
+    <div class="pa-breadcrumb">
+      <span class="pa-bc-dim">PwezaCore</span>
+      <span class="pa-bc-sep">/</span>
+      <span class="pa-bc-cur">Admin Dashboard</span>
+    </div>
+
+    <div class="pa-filters">
+      <select class="pa-filter-select" id="pa-term-select">
+        <option>Term 1, 2026</option>
+        <option>Term 2, 2026</option>
+        <option>Term 3, 2026</option>
+      </select>
+      <select class="pa-filter-select" id="pa-class-select">
+        <option>All Classes</option>
+      </select>
+      <select class="pa-filter-select" id="pa-year-select">
+        <option>2025/2026</option>
+        <option>2024/2025</option>
+      </select>
+    </div>
+
+    <div class="pa-topbar-right">
+      <div class="pa-search-wrap">
+        <span class="pa-search-icon">🔍</span>
+        <input class="pa-search-input" id="pa-search-input" type="text" placeholder="Search students, fees…">
+      </div>
+      <div class="pa-ib" id="pa-dark-toggle" title="Toggle theme">🌙</div>
+      <div class="pa-ib" id="pa-notif-btn" title="Notifications">
+        🔔
+        <span class="pa-notif-pip" id="pa-notif-pip"></span>
+      </div>
+      <div class="pa-ib" id="pa-export-btn" title="Export">📤</div>
+    </div>
+  </header>
+
+  <!-- ── CONTENT ── -->
+  <main class="pa-content">
+
+    <!-- PAGE HEADER -->
+    <div class="pa-page-header pa-fu">
+      <div>
+        <div class="pa-page-eyebrow">
+          <span class="pa-live-dot"></span>
+          <span id="pa-date-line">Wednesday, 18 March 2026 · Term 1 Week 8 · Academic Year 2025/2026</span>
+        </div>
+        <h1 class="pa-page-title">School Overview</h1>
+        <p class="pa-page-sub">Plan, prioritize, and manage your school with full visibility.</p>
+      </div>
+      <div class="pa-header-btns">
+        <button class="pa-btn pa-btn-outline" id="pa-import-btn">📥 Import Data</button>
+        <button class="pa-btn pa-btn-ghost" id="pa-report-btn">📄 Generate Report</button>
+        <button class="pa-btn pa-btn-primary" id="pa-add-student-btn">＋ Add Student</button>
+      </div>
+    </div>
+
+    <!-- KPI GRID ROW 1 -->
+    <div class="pa-kpi-grid pa-fu pa-d1">
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">👨‍🎓</div>
+          <span class="pa-kpi-badge up" data-kpi="students-badge">↑ 2</span>
+        </div>
+        <div class="pa-kpi-lbl">Total Students</div>
+        <div class="pa-kpi-val" data-kpi="total-students">—</div>
+        <div class="pa-kpi-sub" data-kpi="students-sub">Active enrollments</div>
+      </div>
+
+      <div class="pa-kpi blue">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic blue">🧑‍🏫</div>
+          <span class="pa-kpi-badge flat" data-kpi="teachers-badge">→ 0</span>
+        </div>
+        <div class="pa-kpi-lbl">Total Teachers</div>
+        <div class="pa-kpi-val" data-kpi="total-teachers">—</div>
+        <div class="pa-kpi-sub" data-kpi="teachers-sub">Staff members</div>
+      </div>
+
+      <div class="pa-kpi amber">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic amber">💵</div>
+          <span class="pa-kpi-badge up" data-kpi="fees-badge">↑ 12%</span>
+        </div>
+        <div class="pa-kpi-lbl">Fees Collected</div>
+        <div class="pa-kpi-val" data-kpi="fees-collected">—</div>
+        <div class="pa-kpi-sub" data-kpi="fees-sub">This term</div>
+      </div>
+
+      <div class="pa-kpi rose">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic rose">⚠️</div>
+          <span class="pa-kpi-badge down" data-kpi="outstanding-badge">↑ 3</span>
+        </div>
+        <div class="pa-kpi-lbl">Outstanding Fees</div>
+        <div class="pa-kpi-val" data-kpi="outstanding-fees" style="color:var(--rose)">—</div>
+        <div class="pa-kpi-sub" data-kpi="outstanding-sub">Balance due</div>
+      </div>
+
+    </div>
+
+    <!-- KPI GRID ROW 2 -->
+    <div class="pa-kpi-grid pa-fu pa-d2">
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">📋</div>
+          <span class="pa-kpi-badge up" data-kpi="attendance-badge">↑ 4%</span>
+        </div>
+        <div class="pa-kpi-lbl">Attendance Today</div>
+        <div class="pa-kpi-val" data-kpi="attendance-today">—</div>
+        <div class="pa-kpi-sub" data-kpi="attendance-sub">Present today</div>
+      </div>
+
+      <div class="pa-kpi violet">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic violet">📝</div>
+          <span class="pa-kpi-badge flat" data-kpi="expenses-badge">0 pending</span>
+        </div>
+        <div class="pa-kpi-lbl">Pending Expenses</div>
+        <div class="pa-kpi-val" data-kpi="pending-expenses">—</div>
+        <div class="pa-kpi-sub" data-kpi="expenses-sub">Awaiting approval</div>
+      </div>
+
+      <div class="pa-kpi teal">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic teal">🏫</div>
+          <span class="pa-kpi-badge up" data-kpi="classes-badge">↑ 1</span>
+        </div>
+        <div class="pa-kpi-lbl">Active Classes</div>
+        <div class="pa-kpi-val" data-kpi="active-classes">—</div>
+        <div class="pa-kpi-sub" data-kpi="classes-sub">Across all streams</div>
+      </div>
+
+      <div class="pa-kpi blue">
+        <div class="pa-kpi-top">
+          <div class="pa-kpi-ic blue">💼</div>
+          <span class="pa-kpi-badge up" data-kpi="jobs-badge">↑ 2</span>
+        </div>
+        <div class="pa-kpi-lbl">Job Applications</div>
+        <div class="pa-kpi-val" data-kpi="job-applications">—</div>
+        <div class="pa-kpi-sub" data-kpi="jobs-sub">2 vacancies open</div>
+      </div>
+
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="pa-card pa-fu pa-d2">
+      <div class="pa-card-hd">
+        <span class="pa-card-title">⚡ Quick Actions</span>
+        <span class="pa-card-sub">Frequently used shortcuts</span>
+      </div>
+      <div class="pa-qa-grid">
+        <div class="pa-qa-btn primary" data-nav="/dashboard/admin/students/new"><div class="pa-qa-ic" style="background:var(--teal-s)">👨‍🎓</div><span class="pa-qa-label">Add Student</span></div>
+        <div class="pa-qa-btn primary" data-nav="/dashboard/admin/teachers/new"><div class="pa-qa-ic" style="background:var(--teal-s)">🧑‍🏫</div><span class="pa-qa-label">Add Teacher</span></div>
+        <div class="pa-qa-btn primary" data-nav="/dashboard/admin/parents/new"><div class="pa-qa-ic" style="background:var(--teal-s)">👨‍👩‍👧</div><span class="pa-qa-label">Add Parent</span></div>
+        <div class="pa-qa-btn primary" data-nav="/dashboard/admin/user-management"><div class="pa-qa-ic" style="background:var(--teal-s)">📊</div><span class="pa-qa-label">Add Accounts Manager</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/reports"><div class="pa-qa-ic" style="background:var(--s3)">📋</div><span class="pa-qa-label">Generate Reports</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/receipts"><div class="pa-qa-ic" style="background:var(--s3)">🧾</div><span class="pa-qa-label">Generate Receipts</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/job-vacancies/new"><div class="pa-qa-ic" style="background:var(--s3)">💼</div><span class="pa-qa-label">Post Job Vacancy</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/user-management"><div class="pa-qa-ic" style="background:var(--s3)">📚</div><span class="pa-qa-label">Add Librarian</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/teachers"><div class="pa-qa-ic" style="background:var(--s3)">👩‍💼</div><span class="pa-qa-label">Appoint Head Teacher</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/identity"><div class="pa-qa-ic" style="background:var(--s3)">📄</div><span class="pa-qa-label">Headed Paper</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/system-settings"><div class="pa-qa-ic" style="background:var(--s3)">📍</div><span class="pa-qa-label">Location Settings</span></div>
+        <div class="pa-qa-btn" data-nav="/dashboard/admin/system-settings"><div class="pa-qa-ic" style="background:var(--s3)">⚙️</div><span class="pa-qa-label">System Settings</span></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS + DONUT -->
+    <div class="pa-row pa-row-2-1 pa-fu pa-d3">
+
+      <!-- Attendance + Fee Chart -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">📈 Enrollment & Attendance Analytics</span>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t2)"><div style="width:7px;height:7px;border-radius:2px;background:var(--teal)"></div>Attendance</div>
+            <a class="pa-card-action" data-nav="/dashboard/admin/attendance">Full report →</a>
+          </div>
+        </div>
+        <div style="padding:16px 18px;">
+          <div style="display:flex;gap:24px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);">
+            <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Avg Attendance</div><div style="font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:20px;color:var(--teal)" data-kpi="avg-attendance">89.2%</div></div>
+            <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Enrolled</div><div style="font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:20px;color:var(--t1)" data-kpi="enrolled-count">—</div></div>
+            <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Absent Today</div><div style="font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:20px;color:var(--amber)" data-kpi="absent-today">—</div></div>
+          </div>
+          <!-- Attendance bars -->
+          <div class="pa-chart-bar-area">
+            <div class="pa-bar-col"><div class="pa-bar" style="height:70px;background:var(--teal);opacity:.8"></div><div class="pa-bar-lbl">Mon</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:84px;background:var(--teal)"></div><div class="pa-bar-lbl">Tue</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:60px;background:var(--teal);opacity:.75"></div><div class="pa-bar-lbl">Wed</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:78px;background:var(--teal);opacity:.88"></div><div class="pa-bar-lbl">Thu</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:66px;background:var(--amber);opacity:.85"></div><div class="pa-bar-lbl">Fri</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:20px;background:var(--s4)"></div><div class="pa-bar-lbl">Sat</div></div>
+            <div class="pa-bar-col"><div class="pa-bar" style="height:5px;background:var(--s4)"></div><div class="pa-bar-lbl">Sun</div></div>
+          </div>
+          <!-- Fee bars -->
+          <div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px;">
+            <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Fee Collections by Week</div>
+            <div class="pa-chart-bar-area" style="height:55px;">
+              <div class="pa-bar-col"><div class="pa-bar" style="height:28px;background:var(--blue);opacity:.7"></div><div class="pa-bar-lbl">W1</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:45px;background:var(--blue);opacity:.85"></div><div class="pa-bar-lbl">W2</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:38px;background:var(--blue);opacity:.8"></div><div class="pa-bar-lbl">W3</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:52px;background:var(--teal)"></div><div class="pa-bar-lbl">W4</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:18px;background:var(--s4);opacity:.6"></div><div class="pa-bar-lbl">W5</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:6px;background:var(--s4);opacity:.4"></div><div class="pa-bar-lbl">W6</div></div>
+              <div class="pa-bar-col"><div class="pa-bar" style="height:6px;background:var(--s4);opacity:.3"></div><div class="pa-bar-lbl">W7</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fee Status Donut -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">🥧 Fee Status</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/finance">Details →</a>
+        </div>
+        <div style="padding:16px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;">
+          <svg viewBox="0 0 120 120" width="108" height="108">
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--s3)" stroke-width="14"/>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--teal)" stroke-width="14"
+              stroke-dasharray="184 289" stroke-dashoffset="72" stroke-linecap="round"/>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--rose)" stroke-width="14"
+              stroke-dasharray="87 289" stroke-dashoffset="-112" stroke-linecap="round"/>
+            <circle cx="60" cy="60" r="46" fill="none" stroke="var(--amber)" stroke-width="14"
+              stroke-dasharray="18 289" stroke-dashoffset="-199" stroke-linecap="round"/>
+            <text x="60" y="56" text-anchor="middle" font-size="15" font-weight="800" fill="var(--t1)" font-family="Cabinet Grotesk" id="pa-donut-pct">64%</text>
+            <text x="60" y="69" text-anchor="middle" font-size="9" fill="var(--t3)" font-family="Instrument Sans">collected</text>
+          </svg>
+          <div style="width:100%;display:flex;flex-direction:column;gap:7px;">
+            <div class="pa-leg-row"><div class="pa-leg-dot" style="background:var(--teal)"></div><span class="pa-leg-lbl">Collected</span><span class="pa-leg-val" data-kpi="fee-pct-collected">64%</span></div>
+            <div class="pa-leg-row"><div class="pa-leg-dot" style="background:var(--rose)"></div><span class="pa-leg-lbl">Outstanding</span><span class="pa-leg-val" data-kpi="fee-pct-outstanding">30%</span></div>
+            <div class="pa-leg-row"><div class="pa-leg-dot" style="background:var(--amber)"></div><span class="pa-leg-lbl">Waived</span><span class="pa-leg-val">6%</span></div>
+          </div>
+          <div style="width:100%;border-top:1px solid var(--border);padding-top:10px;">
+            <div style="font-size:10px;color:var(--t3);margin-bottom:3px">Total Term Target</div>
+            <div style="font-family:'Cabinet Grotesk',sans-serif;font-weight:800;font-size:16px;color:var(--t1)" data-kpi="fee-target">USh 2,175,000</div>
+            <div class="pa-prog" style="margin-top:7px"><div class="pa-prog-fill" style="width:64%;background:var(--teal)" id="pa-fee-progress"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- STAFF + EXPENSES -->
+    <div class="pa-row pa-row-2 pa-fu pa-d3">
+
+      <!-- Staff Overview -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">👥 Staff Overview</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/teachers">View all →</a>
+        </div>
+        <div id="pa-staff-list">
+          <!-- Populated by DesignAdminDashboard.tsx -->
+          <div class="pa-empty-state">
+            <span style="font-size:28px;opacity:.4">👥</span>
+            <span>Loading staff…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pending Expenses -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">🧾 Pending Expense Approvals</span>
+          <span class="pa-chip amber" id="pa-expense-count">Loading…</span>
+        </div>
+        <div id="pa-expenses-list">
+          <div class="pa-empty-state">
+            <span style="font-size:28px;opacity:.4">🧾</span>
+            <span>Loading expenses…</span>
+          </div>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border);">
+          <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/finance">View All Expenses</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAYMENTS + UPCOMING + SYSTEM HEALTH -->
+    <div class="pa-row pa-row-3 pa-fu pa-d4">
+
+      <!-- Recent Payments -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">💳 Recent Payments</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/finance">View all →</a>
+        </div>
+        <div id="pa-payments-list">
+          <div class="pa-empty-state">
+            <span style="font-size:28px;opacity:.4">💳</span>
+            <span>Loading payments…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upcoming Events -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">📅 Upcoming Events</span>
+          <a class="pa-card-action" data-nav="/dashboard/admin/exam-sets">View all →</a>
+        </div>
+        <div id="pa-upcoming-list">
+          <div class="pa-empty-state">
+            <span style="font-size:28px;opacity:.4">📅</span>
+            <span>Loading events…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Health -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">🖥️ System Health</span>
+          <span class="pa-chip teal" id="pa-system-status">● Operational</span>
+        </div>
+        <div id="pa-syshealth-list">
+          <div class="pa-sys-row"><span class="pa-sys-ic">🗄️</span><span class="pa-sys-name">Database</span><span class="pa-sys-ok">Healthy</span><span class="pa-sys-val">45ms</span></div>
+          <div class="pa-sys-row"><span class="pa-sys-ic">💾</span><span class="pa-sys-name">Storage</span><div class="pa-sys-bar"><div class="pa-sys-fill" style="width:24%"></div></div><span class="pa-sys-val">2.4 / 10 GB</span></div>
+          <div class="pa-sys-row"><span class="pa-sys-ic">⚡</span><span class="pa-sys-name">API Server</span><span class="pa-sys-ok">Operational</span><span class="pa-sys-val">120ms</span></div>
+          <div class="pa-sys-row"><span class="pa-sys-ic">🔐</span><span class="pa-sys-name">Auth Service</span><span class="pa-sys-ok">Online</span><span class="pa-sys-val">—</span></div>
+          <div class="pa-sys-row"><span class="pa-sys-ic">📧</span><span class="pa-sys-name">Email / SMS</span><span class="pa-sys-ok">Active</span><span class="pa-sys-val">—</span></div>
+          <div class="pa-sys-row"><span class="pa-sys-ic">💿</span><span class="pa-sys-name">Backup</span><span class="pa-sys-ok">Up to date</span><span class="pa-sys-val">2h ago</span></div>
+        </div>
+        <div style="margin:10px 18px;padding:9px 13px;border-radius:8px;background:var(--teal-s);border:1px solid rgba(16,217,168,0.15);">
+          <div style="font-size:11px;font-weight:600;color:var(--teal)">✅ 99.98% uptime this month</div>
+          <div style="font-size:10.5px;color:var(--t2);margin-top:2px">Last incident: None recorded · PwezaCore v2.4</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ACTIVITY + JOBS + REMINDERS -->
+    <div class="pa-row pa-row-2 pa-fu pa-d5">
+
+      <!-- Recent Activity -->
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">🕐 Recent Activity</span>
+          <a class="pa-card-action">View all →</a>
+        </div>
+        <div id="pa-activity-list">
+          <div class="pa-empty-state">
+            <span style="font-size:28px;opacity:.4">🕐</span>
+            <span>Loading activity…</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Jobs + Reminders -->
+      <div style="display:flex;flex-direction:column;gap:12px;">
+
+        <!-- Reminders -->
+        <div class="pa-card">
+          <div class="pa-card-hd">
+            <span class="pa-card-title">🔔 Reminders</span>
+            <a class="pa-card-action" data-nav="/dashboard/admin/notifications">All →</a>
+          </div>
+          <div style="padding:12px 18px;display:flex;flex-direction:column;gap:8px;" id="pa-reminder-area">
+            <div style="display:flex;gap:9px;align-items:flex-start;padding:9px 12px;border-radius:8px;background:var(--amber-s);border:1px solid rgba(245,166,35,0.18);">
+              <span>⚠️</span>
+              <div>
+                <div style="font-size:11.5px;font-weight:600;color:var(--amber)" id="pa-reminder-title">Loading reminders…</div>
+                <div style="font-size:10.5px;color:var(--t2);margin-top:2px" id="pa-reminder-text">—</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:0 18px 12px;">
+            <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/notifications">View Notifications</button>
+          </div>
+        </div>
+
+        <!-- Job Vacancies -->
+        <div class="pa-card">
+          <div class="pa-card-hd">
+            <span class="pa-card-title">💼 Job Vacancies</span>
+            <a class="pa-card-action" data-nav="/dashboard/admin/job-vacancies">Post new →</a>
+          </div>
+          <div id="pa-jobs-list">
+            <div class="pa-empty-state" style="padding:20px;">
+              <span>Loading vacancies…</span>
+            </div>
+          </div>
+          <div style="padding:10px 18px;border-top:1px solid var(--border);">
+            <button class="pa-btn pa-btn-outline" style="width:100%;justify-content:center;font-size:11.5px;" data-nav="/dashboard/admin/job-vacancies">Manage All Vacancies</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+</div>
+
+</body>
+</html>
