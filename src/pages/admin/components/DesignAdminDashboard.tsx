@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { useUIStore } from '@/store/uiStore';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
@@ -21,6 +20,8 @@ function extractStyleAndBody(raw: string) {
   const contentOnlyBody = body.replace(/<header\s+class=["']pa-topbar["'][\s\S]*?<\/header>/i, '');
   return { style: fixedStyle, body: contentOnlyBody };
 }
+
+const CACHED_DESIGN = extractStyleAndBody(designRaw);
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => {
@@ -602,11 +603,64 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
 
 export default function DesignAdminDashboard({ schoolId }: Props) {
   const navigate = useNavigate();
-  const toggleTheme = useUIStore((s) => s.toggleTheme);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const dataLoadedRef = useRef(false);
 
-  const { style: scopedStyle, body: scopedBody } = useMemo(() => extractStyleAndBody(designRaw), []);
+  const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
+
+  const syncTheme = useCallback((isDark: boolean) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const root = container.querySelector('.pweza-admin') as HTMLElement | null;
+    if (!root) return;
+
+    if (isDark) {
+      root.style.setProperty('--bg', '#05080f');
+      root.style.setProperty('--s1', '#0b1120');
+      root.style.setProperty('--s2', '#101828');
+      root.style.setProperty('--s3', '#141c2e');
+      root.style.setProperty('--s4', '#1d2d4e');
+      root.style.setProperty('--t1', '#eef3ff');
+      root.style.setProperty('--t2', '#8296be');
+      root.style.setProperty('--t3', '#3d5278');
+      root.style.setProperty('--border', 'rgba(255,255,255,0.07)');
+      root.style.background = '#05080f';
+    } else {
+      root.style.setProperty('--bg', '#f0f4f8');
+      root.style.setProperty('--s1', '#ffffff');
+      root.style.setProperty('--s2', '#f5f7fa');
+      root.style.setProperty('--s3', '#e8edf5');
+      root.style.setProperty('--s4', '#d0dbe8');
+      root.style.setProperty('--t1', '#0d1c2e');
+      root.style.setProperty('--t2', '#4a6080');
+      root.style.setProperty('--t3', '#8aa0b8');
+      root.style.setProperty('--border', 'rgba(0,0,0,0.08)');
+      root.style.background = '#f0f4f8';
+    }
+  }, []);
+
+  const runAllDataLoads = useCallback(() => {
+    const el = containerRef.current;
+    if (!el || !schoolId) return;
+
+    const setText = (sel: string, val: string) => {
+      const node = el.querySelector(sel) as HTMLElement | null;
+      if (node) node.textContent = val;
+    };
+    const setHtml = (id: string, html: string) => {
+      const node = el.querySelector(`#${id}`) as HTMLElement | null;
+      if (node) node.innerHTML = html;
+    };
+
+    void loadKPIs(schoolId, setText, el);
+    void loadStaff(schoolId, setHtml);
+    void loadExpenses(schoolId, setHtml, setText, el);
+    void loadPayments(schoolId, setHtml);
+    void loadUpcoming(schoolId, setHtml);
+    void loadReminder(schoolId, setText);
+    void loadJobVacancies(schoolId, setHtml);
+  }, [schoolId]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -651,24 +705,6 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
     };
     if (searchInput) searchInput.addEventListener('input', onInput);
 
-    // Wire theme + notifications buttons if present
-    const darkToggle = el.querySelector('#pa-dark-toggle') as HTMLElement | null;
-    if (darkToggle) {
-      const darkClick = () => toggleTheme();
-      darkToggle.addEventListener('click', darkClick);
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      // (no-op; keeps types happy)
-      // Cleanup below
-      darkToggle.dataset._wired = '1';
-      (darkToggle as any).__darkClick = darkClick;
-    }
-    const notifBtn = el.querySelector('#pa-notif-btn') as HTMLElement | null;
-    if (notifBtn) {
-      const notifClick = () => navigate('/dashboard/admin/notifications');
-      notifBtn.addEventListener('click', notifClick);
-      (notifBtn as any).__notifClick = notifClick;
-    }
-
     // Expense approve/decline (delegated)
     const handleExpenseButtons = (e: MouseEvent) => {
       const btn = (e.target as Element | null)?.closest?.('.pa-ea-btn') as HTMLElement | null;
@@ -711,44 +747,44 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
 
     el.addEventListener('click', handleExpenseButtons);
 
+    const readDark = () =>
+      document.documentElement.classList.contains('dark') ||
+      document.body.classList.contains('dark') ||
+      !document.documentElement.classList.contains('light');
+
+    syncTheme(readDark());
+    const observer = new MutationObserver(() => {
+      syncTheme(readDark());
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
     return () => {
       el.removeEventListener('click', handleClick);
       el.removeEventListener('click', handleExpenseButtons);
       if (searchInput) searchInput.removeEventListener('input', onInput);
-      if (darkToggle) {
-        const darkClick = (darkToggle as any).__darkClick as (() => void) | undefined;
-        if (darkClick) darkToggle.removeEventListener('click', darkClick);
-      }
-      if (notifBtn) {
-        const notifClick = (notifBtn as any).__notifClick as (() => void) | undefined;
-        if (notifClick) notifBtn.removeEventListener('click', notifClick);
-      }
+      observer.disconnect();
       if (timer) clearTimeout(timer);
     };
-  }, [navigate, toggleTheme, schoolId]);
+  }, [navigate, schoolId, syncTheme]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (!containerRef.current || !schoolId) return;
+    const raf = requestAnimationFrame(() => {
+      runAllDataLoads();
+      dataLoadedRef.current = true;
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [schoolId, runAllDataLoads]);
 
-    const setText = (sel: string, val: string) => {
-      const node = el.querySelector(sel) as HTMLElement | null;
-      if (node) node.textContent = val;
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && dataLoadedRef.current) {
+        runAllDataLoads();
+      }
     };
-    const setHtml = (id: string, html: string) => {
-      const node = el.querySelector(`#${id}`) as HTMLElement | null;
-      if (node) node.innerHTML = html;
-    };
-
-    // Progressive loading: fire all requests immediately; each function updates its own DOM region.
-    void loadKPIs(schoolId, setText, el);
-    void loadStaff(schoolId, setHtml);
-    void loadExpenses(schoolId, setHtml, setText, el);
-    void loadPayments(schoolId, setHtml);
-    void loadUpcoming(schoolId, setHtml);
-    void loadReminder(schoolId, setText);
-    void loadJobVacancies(schoolId, setHtml);
-  }, [schoolId]);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [runAllDataLoads]);
 
   return (
     <>
