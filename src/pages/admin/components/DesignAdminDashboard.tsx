@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
@@ -603,6 +603,7 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
 
 export default function DesignAdminDashboard({ schoolId }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dataLoadedRef = useRef(false);
@@ -785,6 +786,14 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [runAllDataLoads]);
+
+  useEffect(() => {
+    if (location.pathname !== '/dashboard/admin' || !dataLoadedRef.current) return;
+    const raf = requestAnimationFrame(() => {
+      runAllDataLoads();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [location.pathname, runAllDataLoads]);
 
   return (
     <>
