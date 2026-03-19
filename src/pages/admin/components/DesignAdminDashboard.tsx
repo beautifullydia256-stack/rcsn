@@ -753,7 +753,11 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
   return (
     <>
       <style>{scopedStyle}</style>
-      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh' }} dangerouslySetInnerHTML={{ __html: scopedBody }} />
+      <div
+        ref={containerRef}
+        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
+        dangerouslySetInnerHTML={{ __html: scopedBody }}
+      />
     </>
   );
 }

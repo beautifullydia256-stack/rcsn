@@ -1,9 +1,38 @@
+@import url('https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap');
 @import './glass-variables.css';
 @import './liquid-glass.css';
 @import './accountant-glass.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* PwezaCore Admin Design Tokens */
+  --pw-bg: #05080f;
+  --pw-s1: #0b1120;
+  --pw-s2: #101828;
+  --pw-s3: #16213a;
+  --pw-s4: #1d2d4e;
+  --pw-border: rgba(255, 255, 255, 0.07);
+  --pw-bh: rgba(255, 255, 255, 0.12);
+
+  --pw-teal: #10d9a8;
+  --pw-teal-s: rgba(16, 217, 168, 0.1);
+  --pw-teal-g: rgba(16, 217, 168, 0.22);
+  --pw-blue: #3d8ef8;
+  --pw-blue-s: rgba(61, 142, 248, 0.1);
+  --pw-amber: #f5a623;
+  --pw-amber-s: rgba(245, 166, 35, 0.1);
+  --pw-rose: #f75c5c;
+  --pw-rose-s: rgba(247, 92, 92, 0.1);
+  --pw-violet: #9d7bf8;
+
+  --pw-t1: #eef3ff;
+  --pw-t2: #8296be;
+  --pw-t3: #3d5278;
+
+  --pw-sidebar-width: 232px;
+}
 
 @layer base {
   * {
