@@ -3,18 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import AdminContentSkeleton from '@/components/layout/AdminContentSkeleton';
-import AdminKPICards from './components/AdminKPICards';
-import QuickActions from './components/QuickActions';
-import PendingExpensesCard from './components/PendingExpensesCard';
-import ChartsAnalytics from './components/ChartsAnalytics';
-import RemindersCard from './components/RemindersCard';
-import UpcomingDueCard from './components/UpcomingDueCard';
-import StaffOverviewCard from './components/StaffOverviewCard';
-import RecentPaymentsNotifications from './components/RecentPaymentsNotifications';
-import RecentReportsSystemHealth from './components/RecentReportsSystemHealth';
-import ActivityFeedCard from './components/ActivityFeedCard';
-import JobVacanciesCard from './components/JobVacanciesCard';
+import DesignAdminDashboard from './components/DesignAdminDashboard';
 
 const STALE_TIME_MS = 5 * 60 * 1000; // 5 min
 
@@ -146,77 +135,7 @@ export default function AdminDashboard() {
     );
   }
 
-  return (
-    <>
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <div className="text-sm ac-text-muted mb-1">
-            <span className="inline-flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90" />
-              School Overview
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary mb-1">School Overview</h1>
-          <p className="ac-text-secondary">Plan, prioritize, and manage your school with full visibility.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/students/add')}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
-          >
-            + Add Student
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              // Placeholder UI: import data flow is not wired in this dashboard yet.
-            }}
-            title="Import Data is a UI-only placeholder right now"
-            className="ac-glass-btn-secondary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ac-text-primary transition-colors"
-          >
-            Import Data
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/reports/generate')}
-            className="ac-glass-btn-secondary inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium ac-text-primary transition-colors"
-            title="Generate report"
-          >
-            Generate Report
-          </button>
-        </div>
-      </div>
-
-      <div className="space-y-6">
-        <AdminKPICards schoolId={effectiveSchoolId} />
-
-        <QuickActions />
-
-        <PendingExpensesCard />
-
-        <ChartsAnalytics />
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <RemindersCard />
-          <UpcomingDueCard />
-        </div>
-
-        <RecentPaymentsNotifications />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActivityFeedCard />
-        <JobVacanciesCard />
-      </div>
-
-        <StaffOverviewCard />
-
-        <RecentReportsSystemHealth />
-      </div>
-
-      <footer className="mt-12 py-6 text-center text-sm ac-text-muted">
-        <p>© {new Date().getFullYear()} PwezaCore School Management System.</p>
-      </footer>
-    </>
-  );
+  // Strict HTML body replacement (sidebar + topbar + sections) for `/dashboard/admin`.
+  // Backend logic stays the same; values are injected into the provided HTML.
+  return <DesignAdminDashboard schoolId={effectiveSchoolId} />;
 }
