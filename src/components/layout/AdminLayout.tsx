@@ -184,6 +184,35 @@ export default function AdminLayout() {
   return (
     <>
       <style>{`
+        html.dark .pw-layout,
+        html[data-theme="dark"] .pw-layout,
+        body.dark .pw-layout {
+          --pw-bg: #05080f;
+          --pw-s1: #0b1120;
+          --pw-s2: #101828;
+          --pw-s3: #141c2e;
+          --pw-s4: #1d2d4e;
+          --pw-t1: #eef3ff;
+          --pw-t2: #8296be;
+          --pw-t3: #3d5278;
+          --pw-border: rgba(255,255,255,0.07);
+          --pw-bh: rgba(255,255,255,0.12);
+        }
+        html.light .pw-layout,
+        html[data-theme="light"] .pw-layout,
+        body.light .pw-layout,
+        :root:not(.dark) .pw-layout {
+          --pw-bg: #f0f4f8;
+          --pw-s1: #ffffff;
+          --pw-s2: #f5f7fa;
+          --pw-s3: #e8edf5;
+          --pw-s4: #d0dbe8;
+          --pw-t1: #0d1c2e;
+          --pw-t2: #4a6080;
+          --pw-t3: #8aa0b8;
+          --pw-border: rgba(0,0,0,0.08);
+          --pw-bh: rgba(0,0,0,0.14);
+        }
         .pw-layout {
           display: flex;
           min-height: 100vh;
@@ -421,6 +450,8 @@ export default function AdminLayout() {
           min-height: 100vh;
           width: calc(100% - var(--pw-sidebar-width, 232px));
           overflow-x: hidden;
+          background: var(--pw-bg, #05080f);
+          color: var(--pw-t1, #eef3ff);
         }
         @media (max-width: 768px) {
           .pw-main {
@@ -429,6 +460,15 @@ export default function AdminLayout() {
             padding-top: 0;
           }
         }
+        html.dark .pw-main table,
+        html.dark .pw-main th,
+        html.dark .pw-main td { color: #eef3ff; }
+        html.light .pw-main table,
+        html.light .pw-main th,
+        html.light .pw-main td,
+        :root:not(.dark) .pw-main table,
+        :root:not(.dark) .pw-main th,
+        :root:not(.dark) .pw-main td { color: #0d1c2e; }
       `}</style>
 
       <div className="pw-layout">

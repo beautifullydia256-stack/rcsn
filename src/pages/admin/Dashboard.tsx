@@ -13,7 +13,7 @@ async function fetchDashboardAuth(userId: string) {
 
   const { data: userData, error: userError } = await supabase
     .from('users')
-    .select('role, school_id')
+    .select('role, school_id, name')
     .eq('user_id', user.id)
     .single();
 
@@ -33,6 +33,7 @@ async function fetchDashboardAuth(userId: string) {
     schoolId: userData.school_id as string,
     schoolName: schoolData.name as string,
     role: userData.role as string,
+    adminName: (userData.name as string | null) || null,
   };
 }
 
@@ -137,5 +138,5 @@ export default function AdminDashboard() {
 
   // Strict HTML body replacement (sidebar + topbar + sections) for `/dashboard/admin`.
   // Backend logic stays the same; values are injected into the provided HTML.
-  return <DesignAdminDashboard schoolId={effectiveSchoolId} />;
+  return <DesignAdminDashboard schoolId={effectiveSchoolId} adminName={authData?.adminName ?? undefined} />;
 }

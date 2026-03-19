@@ -6,6 +6,7 @@ import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboa
 
 type Props = {
   schoolId: string;
+  adminName?: string;
 };
 
 function extractStyleAndBody(raw: string) {
@@ -100,6 +101,21 @@ function mapNavPath(path: string) {
     '/dashboard/admin/job-vacancies': '/dashboard/admin/jobs',
   };
   return MAP[path] ?? path;
+}
+
+function updateGreeting(el: HTMLElement, adminName?: string) {
+  const cleanName = (adminName || '').trim();
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const titleEl = el.querySelector('.pa-page-title') as HTMLElement | null;
+  const subEl = el.querySelector('.pa-page-sub') as HTMLElement | null;
+
+  if (titleEl) {
+    titleEl.textContent = cleanName ? `${greeting}, ${cleanName} 👋` : `${greeting} 👋`;
+  }
+  if (subEl) {
+    subEl.textContent = "Here's what's happening across your school today.";
+  }
 }
 
 async function runSearch(query: string, container: HTMLElement) {
@@ -601,7 +617,7 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
   }
 }
 
-export default function DesignAdminDashboard({ schoolId }: Props) {
+export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -645,6 +661,8 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
     const el = containerRef.current;
     if (!el || !schoolId) return;
 
+    updateGreeting(el, adminName);
+
     const setText = (sel: string, val: string) => {
       const node = el.querySelector(sel) as HTMLElement | null;
       if (node) node.textContent = val;
@@ -661,7 +679,7 @@ export default function DesignAdminDashboard({ schoolId }: Props) {
     void loadUpcoming(schoolId, setHtml);
     void loadReminder(schoolId, setText);
     void loadJobVacancies(schoolId, setHtml);
-  }, [schoolId]);
+  }, [schoolId, adminName]);
 
   useEffect(() => {
     const handler = (e: Event) => {
