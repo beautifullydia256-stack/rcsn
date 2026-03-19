@@ -104,7 +104,10 @@ function mapNavPath(path: string) {
 }
 
 function updateGreeting(el: HTMLElement, adminName?: string) {
-  const cleanName = (adminName || '').trim();
+  const cleanName = (adminName || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)[0] || '';
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const titleEl = el.querySelector('.pa-page-title') as HTMLElement | null;
@@ -623,6 +626,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dataLoadedRef = useRef(false);
+  const lastReloadAtRef = useRef(0);
 
   const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
 
@@ -680,6 +684,17 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     void loadReminder(schoolId, setText);
     void loadJobVacancies(schoolId, setHtml);
   }, [schoolId, adminName]);
+
+  const reloadDashboardData = useCallback((force = false) => {
+    if (!dataLoadedRef.current && !force) return;
+    const now = Date.now();
+    // Prevent accidental rapid-fire reload storms from multiple browser events.
+    if (!force && now - lastReloadAtRef.current < 1200) return;
+    lastReloadAtRef.current = now;
+    requestAnimationFrame(() => {
+      runAllDataLoads();
+    });
+  }, [runAllDataLoads]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -798,20 +813,49 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible' && dataLoadedRef.current) {
-        runAllDataLoads();
+        reloadDashboardData();
       }
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [runAllDataLoads]);
+  }, [reloadDashboardData]);
 
   useEffect(() => {
     if (location.pathname !== '/dashboard/admin' || !dataLoadedRef.current) return;
-    const raf = requestAnimationFrame(() => {
-      runAllDataLoads();
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [location.pathname, runAllDataLoads]);
+    reloadDashboardData(true);
+  }, [location.pathname, reloadDashboardData]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    updateGreeting(el, adminName);
+    const timer = window.setInterval(() => {
+      updateGreeting(el, adminName);
+    }, 60000);
+
+    return () => clearInterval(timer);
+  }, [adminName]);
+
+  useEffect(() => {
+    const onFocus = () => reloadDashboardData();
+    const onPageShow = () => reloadDashboardData();
+    const onOnline = () => reloadDashboardData(true);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === 'visible') reloadDashboardData();
+    }, 120000);
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('pageshow', onPageShow);
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('pageshow', onPageShow);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [reloadDashboardData]);
 
   return (
     <>

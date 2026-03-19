@@ -138,5 +138,10 @@ export default function AdminDashboard() {
 
   // Strict HTML body replacement (sidebar + topbar + sections) for `/dashboard/admin`.
   // Backend logic stays the same; values are injected into the provided HTML.
-  return <DesignAdminDashboard schoolId={effectiveSchoolId} adminName={authData?.adminName ?? undefined} />;
+  const fallbackName =
+    ((user as any)?.user_metadata?.name as string | undefined) ||
+    ((user as any)?.user_metadata?.full_name as string | undefined) ||
+    (user.email ? user.email.split('@')[0] : undefined);
+
+  return <DesignAdminDashboard schoolId={effectiveSchoolId} adminName={authData?.adminName ?? fallbackName} />;
 }
