@@ -17,12 +17,14 @@ interface NavItemProps {
   badge?: string | number;
   badgeColor?: 'teal' | 'amber' | 'rose';
   onClick?: () => void;
+  end?: boolean;
 }
 
-function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick }: NavItemProps) {
+function NavItem({ to, icon, label, badge, badgeColor = 'rose', onClick, end = false }: NavItemProps) {
   return (
     <NavLink
       to={to}
+      end={end}
       onClick={onClick}
       className={({ isActive }) => ['pw-nav-link', isActive ? 'pw-nav-link--active' : ''].join(' ')}
     >
@@ -448,7 +450,7 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
-            <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" onClick={closeSidebar} />
+            <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" end onClick={closeSidebar} />
             <NavItem to="/dashboard/admin/students" icon="👨‍🎓" label="Students" badge={studentCount ?? undefined} badgeColor="teal" onClick={closeSidebar} />
             <NavItem to="/dashboard/admin/teachers" icon="🧑‍🏫" label="Teachers" onClick={closeSidebar} />
             <NavItem to="/dashboard/admin/parents" icon="👨‍👩‍👧" label="Parents" onClick={closeSidebar} />
