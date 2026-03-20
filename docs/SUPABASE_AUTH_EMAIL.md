@@ -82,15 +82,25 @@ Supabase Auth emails are edited in the **Dashboard**, not in this repo.
 
 1. Host your logo at **`{Site URL}/logo.png`** (e.g. put `public/logo.png` in the app and deploy so `https://www.pwezacore.com/logo.png` works).
 2. In Supabase: **Authentication → Email** → open the **Reset password** / **Recovery** template.
-3. Replace the body with the HTML in **`docs/supabase-email-templates/reset-password.html`** (copy the whole file).
+3. Set the **subject** to something neutral and clear, e.g. **`Reset your PwezaCore password`** (avoid ALL CAPS or spammy phrases).
+4. Replace the body with the HTML in **`docs/supabase-email-templates/reset-password.html`** (copy the whole file).
 
 That template uses:
 
 - **`{{ .SiteURL }}/logo.png`** — logo (needs **Site URL** set under Authentication → URL Configuration).
 - **`{{ .ConfirmationURL }}`** — reset link (required; if this is wrong, the button has no URL).
 - **`{{ .Email }}`** — recipient email.
+- It includes a **hidden preheader** (better inbox preview), **plain URL fallback** for the link, and **transactional** footer copy (helps legitimacy).
 
 If the logo doesn’t load, use a full URL in the `img` tag instead, e.g. `https://www.pwezacore.com/logo.png`.
+
+### Deliverability (spam folder)
+
+HTML alone does not guarantee inbox placement. Also:
+
+- Complete **SPF** / **DKIM** / **DMARC** for your domain in **Resend** + DNS (see Resend domain setup).
+- Use **SMTP** in Supabase with the same verified domain as sender.
+- New domains may take time to build reputation; ask users to mark “Not spam” when appropriate.
 
 ---
 
