@@ -76,7 +76,25 @@ Optional: add a dedicated `/auth/reset-password` page that calls `supabase.auth.
 
 ---
 
-## 7. Security notes
+## 7. Branded “Reset password” email (logo + layout)
+
+Supabase Auth emails are edited in the **Dashboard**, not in this repo.
+
+1. Host your logo at **`{Site URL}/logo.png`** (e.g. put `public/logo.png` in the app and deploy so `https://www.pwezacore.com/logo.png` works).
+2. In Supabase: **Authentication → Email** → open the **Reset password** / **Recovery** template.
+3. Replace the body with the HTML in **`docs/supabase-email-templates/reset-password.html`** (copy the whole file).
+
+That template uses:
+
+- **`{{ .SiteURL }}/logo.png`** — logo (needs **Site URL** set under Authentication → URL Configuration).
+- **`{{ .ConfirmationURL }}`** — reset link (required; if this is wrong, the button has no URL).
+- **`{{ .Email }}`** — recipient email.
+
+If the logo doesn’t load, use a full URL in the `img` tag instead, e.g. `https://www.pwezacore.com/logo.png`.
+
+---
+
+## 8. Security notes
 
 - Treat **Resend API key** and **service role key** as secrets.
 - Sending a **temporary password by email** is convenient but not as strong as invite-only; encourage users to change password after first login.
