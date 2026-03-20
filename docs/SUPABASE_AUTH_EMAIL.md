@@ -91,11 +91,11 @@ Supabase Auth emails are edited in the **Dashboard**, not in this repo. To get t
 3. Set the **subject** to something neutral and clear, e.g. **`Reset your PwezaCore password`** (avoid ALL CAPS or spammy phrases).
 4. **Replace the entire default body** with the contents of **`docs/supabase-email-templates/reset-password.html`** (open the file in your editor, select all, copy, paste into Supabase — the file is only HTML, safe to paste whole).
 
-What that template includes:
+What that template includes (Google/Apple-style card: centered white card, hierarchy, pill CTA):
 
-- **Branding:** top accent bar, logo, PwezaCore footer.
-- **Option 1:** a **Reset password** button + plain URL copy box (same link: **`{{ .ConfirmationURL }}`**).
-- **Option 2:** a **verification code** block (**`{{ .Token }}`**) with a link to **`{{ .SiteURL }}/auth/recovery-code`**, only when Supabase sends a token; if you never see Option 2 in real emails, your project may be **link-only** for recovery — Option 1 still works.
+- **Branding:** logo, “Security” label, account chip, grey footer strip with **Help | Privacy** links.
+- **Verification code** first when **`{{ .Token }}`** is present (link to **`/auth/recovery-code`**), then a pill **Reset password** button (**`{{ .ConfirmationURL }}`**). If there is no token, only the button is shown.
+- No plain-URL “copy this link” box (keeps the layout simple).
 
 Template variables:
 
@@ -115,6 +115,27 @@ HTML alone does not guarantee inbox placement. Also:
 - Complete **SPF** / **DKIM** / **DMARC** for your domain in **Resend** + DNS (see Resend domain setup).
 - Use **SMTP** in Supabase with the same verified domain as sender.
 - New domains may take time to build reputation; ask users to mark “Not spam” when appropriate.
+
+**Gmail “?” or warning on the sender:** Usually means the domain isn’t fully authenticated (SPF/DKIM/DMARC) or the address is unfamiliar. Fix DNS for your sending domain in Resend first.
+
+---
+
+## 7b. “Password changed” security email (matches the same look)
+
+Supabase sends this **after** a successful password change. It is a separate template from reset.
+
+1. Dashboard → **Authentication → Email** (or **Email Templates**) → **Password changed** under **Security notifications** (ensure that notification is **enabled** for the project).
+2. Subject example: **`Your PwezaCore password was changed`**
+3. Paste the full HTML from **`docs/supabase-email-templates/password-changed.html`**.
+
+Uses **`{{ .Email }}`** and **`{{ .SiteURL }}`**. The headline includes a first-line name when **`{{ .Data }}`** has any of:
+
+- **`{{ .Data.name }}`**
+- **`{{ .Data.full_name }}`**
+- **`{{ .Data.admin_name }}`** (school admins often have this from registration)
+- **`{{ .Data.display_name }}`** (some OAuth profiles)
+
+Those keys come from **`auth.users.raw_user_meta_data`**. If none are set, the headline is **“Your password was changed”** without a name. To show names for every user type, ensure your signup / admin “create user” flows set **`user_metadata.name`** (or `full_name` / `admin_name`) in Supabase.
 
 ---
 
