@@ -91,7 +91,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # If unset, emails use {VITE_APP_URL or NEXT_PUBLIC_APP_URL or https://www.pwezacore.com}/logo.png
 # Add public/logo.png to the app so that URL returns a real image.
 # Set to "none" to send email without a header logo.
+# You may use https://... or just www.example.com — the server normalizes to https.
 # EMAIL_LOGO_URL=https://www.pwezacore.com/logo.png
+#
+# Public site URL (footer links + default logo host). Same value as frontend; scheme optional on Vercel.
+# VITE_APP_URL=https://www.pwezacore.com
 
 # Local test: npm run test:resend -- your@email.com
 
