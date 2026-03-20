@@ -12,6 +12,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 import { isValidRealEmail } from '@/lib/realEmail';
+import { formatStudentSaveError } from '@/lib/supabaseError';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -304,14 +305,8 @@ export default function AddStudentPage() {
         .single();
 
       if (insertError) {
-        const code = (insertError as { code?: string }).code;
-        const msg = String((insertError as { message?: string }).message || '');
-        if (code === '23505' || /duplicate key|unique constraint/i.test(msg)) {
-          throw new Error(
-            'Could not save: that admission number is already used for your school, or a database uniqueness rule blocked the row. Wait a few seconds and try again; if it keeps failing, contact support.'
-          );
-        }
-        throw insertError;
+        setError(formatStudentSaveError(insertError));
+        return;
       }
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
@@ -375,15 +370,7 @@ export default function AddStudentPage() {
       toast.success('Student saved. Send a portal invitation from User Management when you are ready.');
       navigate('/dashboard/admin/students');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to add student.';
-      const http = (err as { status?: number })?.status;
-      if (http === 409 || /409|conflict|duplicate/i.test(msg)) {
-        setError(
-          'Save conflict (409): usually a duplicate admission number for this school, or a rare race when generating the number. Try again in a few seconds.'
-        );
-      } else {
-        setError(msg);
-      }
+      setError(formatStudentSaveError(err));
     } finally {
       setSubmitting(false);
     }
@@ -433,7 +420,9 @@ export default function AddStudentPage() {
 
         <form onSubmit={handleSubmit} className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-wrap">
+              {error}
+            </div>
           )}
 
           <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">

@@ -8,6 +8,7 @@ import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 import { isValidRealEmail } from '@/lib/realEmail';
+import { formatStudentSaveError } from '@/lib/supabaseError';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -181,8 +182,8 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
       onClose();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to add student.');
+    } catch (err: unknown) {
+      setError(formatStudentSaveError(err));
     } finally {
       setSubmitting(false);
     }
@@ -199,7 +200,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 whitespace-pre-wrap">
               {error}
             </div>
           )}
