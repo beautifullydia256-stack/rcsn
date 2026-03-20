@@ -8,9 +8,10 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
+  /** Lets /auth/callback route recovery to set-password after PKCE (not only dashboard). */
   const redirectTo =
     typeof window !== 'undefined'
-      ? `${window.location.origin}/auth/callback`
+      ? `${window.location.origin}/auth/callback?flow=recovery`
       : undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,19 +41,39 @@ export default function ForgotPasswordPage() {
         <h1 className="text-2xl font-bold text-white mb-2">Reset password</h1>
         {sent ? (
           <>
-            <p className="text-white/85 mb-6 text-left">
-              If an account exists for <strong className="text-white">{email}</strong>, we sent a link to reset your
-              password. Check your inbox and spam folder.
+            <p className="text-white/85 mb-4 text-left text-sm leading-relaxed">
+              If an account exists for <strong className="text-white">{email}</strong>, we sent an email that includes:
             </p>
-            <Link to="/login" className="text-blue-300 hover:text-blue-200 font-medium">
-              Back to sign in
-            </Link>
+            <ul className="text-white/85 mb-6 text-left text-sm list-disc pl-5 space-y-2">
+              <li>
+                A <strong className="text-white">verification code</strong> you can enter here on the site, and
+              </li>
+              <li>
+                A <strong className="text-white">Reset password</strong> button — click it to go straight to choosing a new
+                password.
+              </li>
+            </ul>
+            <p className="text-white/60 text-xs mb-6 text-left">
+              If the email only shows the button and no code, that is normal for some mail settings; use the button or request
+              another email.
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link
+                to={`/auth/recovery-code?email=${encodeURIComponent(email.trim())}`}
+                className="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4"
+              >
+                Enter verification code
+              </Link>
+              <Link to="/login" className="text-blue-300 hover:text-blue-200 font-medium text-sm text-center">
+                Back to sign in
+              </Link>
+            </div>
           </>
         ) : (
           <>
             <p className="text-white/75 mb-6 text-left text-sm">
-              Enter the email you use for PwezaCore. You will receive a message from Supabase with a link to choose a new
-              password (configure custom SMTP in Supabase for branded mail).
+              Enter the email you use for PwezaCore. We will send a reset message with a verification code and a button to set
+              a new password.
             </p>
             <form onSubmit={handleSubmit} className="space-y-4 text-left">
               <div>
@@ -73,7 +94,7 @@ export default function ForgotPasswordPage() {
                 disabled={loading}
                 className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 disabled:opacity-50"
               >
-                {loading ? 'Sending…' : 'Send reset link'}
+                {loading ? 'Sending…' : 'Send reset email'}
               </button>
             </form>
             <p className="mt-6">

@@ -48,9 +48,15 @@ After this, **password reset**, **confirm signup**, and **invite** emails are se
 
 ## 4. Password reset
 
-The **Forgot password** page calls `supabase.auth.resetPasswordForEmail` with `redirectTo: {origin}/auth/callback`. The user receives Supabase’s reset email (via your SMTP). After opening the link, `detectSessionInUrl` on the Supabase client picks up the session; the user should **set a new password** in your app (e.g. account settings) once logged in.
+The **Forgot password** page calls `supabase.auth.resetPasswordForEmail` with  
+`redirectTo: {origin}/auth/callback?flow=recovery`.
 
-Optional: add a dedicated `/auth/reset-password` page that calls `supabase.auth.updateUser({ password })` if you want a dedicated UI right after the link.
+- After the user clicks the **Reset password** button in the email, the app exchanges the PKCE `code` on `/auth/callback` and sends them to **`/auth/update-password`** to choose a new password (not straight to the generic dashboard).
+- The success screen also links to **`/auth/recovery-code`**, where they can enter the **verification code** from the email (`verifyOtp` with `type: 'recovery'`) if your Supabase template includes `{{ .Token }}`. If the email has no numeric code (link-only), they should use the button in the email.
+
+**Redirect URLs:** Allow your callback with query, e.g. `https://www.pwezacore.com/auth/callback**` (wildcard) or explicitly include `https://www.pwezacore.com/auth/callback?flow=recovery` if your project uses strict matching.
+
+Branded HTML for the reset email lives in **`docs/supabase-email-templates/reset-password.html`** (paste into **Authentication → Email → Reset password**).
 
 ---
 
@@ -78,19 +84,27 @@ Optional: add a dedicated `/auth/reset-password` page that calls `supabase.auth.
 
 ## 7. Branded “Reset password” email (logo + layout)
 
-Supabase Auth emails are edited in the **Dashboard**, not in this repo.
+Supabase Auth emails are edited in the **Dashboard**, not in this repo. To get the **full branded email** (PwezaCore look, button, optional code block):
 
 1. Host your logo at **`{Site URL}/logo.png`** (e.g. put `public/logo.png` in the app and deploy so `https://www.pwezacore.com/logo.png` works).
 2. In Supabase: **Authentication → Email** → open the **Reset password** / **Recovery** template.
 3. Set the **subject** to something neutral and clear, e.g. **`Reset your PwezaCore password`** (avoid ALL CAPS or spammy phrases).
-4. Replace the body with the HTML in **`docs/supabase-email-templates/reset-password.html`** (copy the whole file).
+4. **Replace the entire default body** with the contents of **`docs/supabase-email-templates/reset-password.html`** (open the file in your editor, select all, copy, paste into Supabase — the file is only HTML, safe to paste whole).
 
-That template uses:
+What that template includes:
 
-- **`{{ .SiteURL }}/logo.png`** — logo (needs **Site URL** set under Authentication → URL Configuration).
+- **Branding:** top accent bar, logo, PwezaCore footer.
+- **Option 1:** a **Reset password** button + plain URL copy box (same link: **`{{ .ConfirmationURL }}`**).
+- **Option 2:** a **verification code** block (**`{{ .Token }}`**) with a link to **`{{ .SiteURL }}/auth/recovery-code`**, only when Supabase sends a token; if you never see Option 2 in real emails, your project may be **link-only** for recovery — Option 1 still works.
+
+Template variables:
+
+- **`{{ .SiteURL }}/logo.png`** — logo (needs **Site URL** under Authentication → URL Configuration).
 - **`{{ .ConfirmationURL }}`** — reset link (required; if this is wrong, the button has no URL).
 - **`{{ .Email }}`** — recipient email.
-- It includes a **hidden preheader** (better inbox preview), **plain URL fallback** for the link, and **transactional** footer copy (helps legitimacy).
+- **`{{ .Token }}`** — optional; wrapped in **`{{ if .Token }}`** so empty tokens don’t show a blank section.
+
+It also includes a **hidden preheader** (inbox preview), **plain URL fallback**, and **transactional** footer copy (helps legitimacy).
 
 If the logo doesn’t load, use a full URL in the `img` tag instead, e.g. `https://www.pwezacore.com/logo.png`.
 

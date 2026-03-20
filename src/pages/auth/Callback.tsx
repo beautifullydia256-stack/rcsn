@@ -2,9 +2,16 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
+function isRecoveryImplicitFromHash(): boolean {
+  const h = window.location.hash;
+  if (!h || h.length < 2) return false;
+  const p = new URLSearchParams(h.slice(1));
+  return p.get('type') === 'recovery';
+}
+
 /**
- * Handles email confirmation, magic links, and password-recovery redirects.
- * Tokens may arrive in the URL hash or as a ?code= (PKCE); we poll briefly for a session.
+ * Email confirmation, magic links, OAuth, and password recovery (PKCE).
+ * Recovery uses `?flow=recovery` on redirect so we can send users to set-password (exchange reports SIGNED_IN).
  */
 export default function AuthCallbackPage() {
   const navigate = useNavigate();
@@ -12,23 +19,53 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     let cancelled = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        navigate('/dashboard', { replace: true });
+    const params = new URLSearchParams(window.location.search);
+    const flowRecovery = params.get('flow') === 'recovery';
+    const code = params.get('code');
+
+    async function finishRecoveryOrDashboard() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (cancelled) return;
+      if (!session) {
+        navigate('/login', { replace: true });
+        return;
       }
-    });
+      if (flowRecovery || isRecoveryImplicitFromHash()) {
+        navigate('/auth/update-password', { replace: true });
+        return;
+      }
+      navigate('/dashboard', { replace: true });
+    }
 
     async function run() {
-      if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        if (error) console.warn('[auth/callback] exchangeCodeForSession', error);
+      if (code) {
+        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        if (cancelled) return;
+        if (error) {
+          console.warn('[auth/callback] exchangeCodeForSession', error);
+          await finishRecoveryOrDashboard();
+          return;
+        }
+        const redirectType = (data as { redirectType?: string | null })?.redirectType;
+        if (flowRecovery || redirectType === 'PASSWORD_RECOVERY') {
+          navigate('/auth/update-password', { replace: true });
+          return;
+        }
+        if (data.session) {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
       }
 
-      for (let i = 0; i < 8; i++) {
+      for (let i = 0; i < 12; i++) {
         if (cancelled) return;
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
-          navigate('/dashboard', { replace: true });
+          if (flowRecovery || isRecoveryImplicitFromHash()) {
+            navigate('/auth/update-password', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
           return;
         }
         await new Promise((r) => setTimeout(r, 120));
@@ -43,13 +80,12 @@ export default function AuthCallbackPage() {
 
     return () => {
       cancelled = true;
-      subscription.unsubscribe();
     };
   }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+    <div className="min-h-screen flex items-center justify-center bg-slate-950">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500" />
     </div>
   );
 }

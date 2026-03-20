@@ -100,6 +100,8 @@ const AffiliatePage = lazyWithRetry(() => import('./pages/Affiliate'));
 const ContactPage = lazyWithRetry(() => import('./pages/Contact'));
 const ForgotPasswordPage = lazyWithRetry(() => import('./pages/auth/ForgotPassword'));
 const AuthCallbackPage = lazyWithRetry(() => import('./pages/auth/Callback'));
+const UpdatePasswordPage = lazyWithRetry(() => import('./pages/auth/UpdatePassword'));
+const RecoveryCodePage = lazyWithRetry(() => import('./pages/auth/RecoveryCode'));
 const PrivacyPolicyPage = lazyWithRetry(() => import('./pages/PrivacyPolicy'));
 const SecurityLetterPage = lazyWithRetry(() => import('./pages/SecurityLetter'));
 const AffiliateTermsPage = lazyWithRetry(() => import('./pages/AffiliateTerms'));
@@ -120,6 +122,8 @@ function App() {
               <Route path="/affiliate-terms" element={<AffiliateTermsPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/auth/forgot" element={<ForgotPasswordPage />} />
+              <Route path="/auth/recovery-code" element={<RecoveryCodePage />} />
+              <Route path="/auth/update-password" element={<UpdatePasswordPage />} />
               <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
               <Route path="/security-letter" element={<SecurityLetterPage />} />
