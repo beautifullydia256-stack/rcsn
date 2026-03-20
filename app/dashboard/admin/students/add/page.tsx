@@ -232,17 +232,9 @@ export default function AddStudentPage() {
       }
       
 
-      // Generate admission number via RPC for atomicity
-      const { data: admData, error: admErr } = await supabase.rpc('generate_admission_number', {
-        p_school_id: schoolId,
-        p_first_name: firstName,
-        p_middle_name: middleName || null,
-        p_last_name: lastName,
-        p_admission_date: admissionDate
-      });
-      if (admErr) throw admErr;
-      const admission_number = admData as string;
-      setGeneratedAdmNo(admission_number);
+      // Admission number is assigned by DB trigger (set_student_admission_number_if_empty)
+      // in the same transaction as INSERT, so advisory locks in generate_admission_number
+      // apply and concurrent adds cannot get duplicate numbers. Do not call the RPC here.
 
       const student_email = trimStudentEmail;
 
@@ -274,7 +266,6 @@ export default function AddStudentPage() {
         guardian_occupation: guardianOccupation || null,
         guardian_address: guardianAddress || null,
         medical_condition: medicalCondition || null,
-        admission_number,
         stream: stream || null,
         previous_school: previousSchool || null,
         admission_date: admissionDate,
@@ -282,8 +273,11 @@ export default function AddStudentPage() {
         enrollment_fee: enrollmentFee ? Number(enrollmentFee) : null,
         payment_status: paymentStatus,
         expected_fee_amount: expectedFee ? Number(expectedFee) : null,
-      }).select('student_id').single();
+      }).select('student_id, admission_number').single();
       if (insertErr) throw insertErr;
+
+      const admission_number = insertedStudent?.admission_number ?? '';
+      setGeneratedAdmNo(admission_number || null);
 
       // Record initial tuition payment if provided
       if (initialNum > 0 && insertedStudent?.student_id) {

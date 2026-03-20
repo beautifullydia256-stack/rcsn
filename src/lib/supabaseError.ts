@@ -51,7 +51,10 @@ export function fieldHintForStudentInsert(err: unknown): string | null {
     return 'Change the guardian email — this address is already in use.';
   }
   if (raw.includes('admission') || raw.includes('admission_number')) {
-    return 'Admission number conflict — try saving again in a few seconds, or change the admission number if you entered it manually.';
+    if (raw.includes('idx_students_admission_number') || raw.includes('students_admission_number_key')) {
+      return 'The database is still using a global “one admission number for the whole system” rule. An admin should apply the latest Supabase migrations (drops that index and keeps uniqueness per school).';
+    }
+    return 'Admission number conflict — if two people saved at the exact same moment, try once more. If it keeps happening, ensure the latest Supabase migrations are applied (per-school uniqueness; generation runs inside the insert transaction).';
   }
   if (/duplicate|unique|23505/i.test(raw) && raw.includes('email')) {
     return 'Use a different email — the value must be unique.';

@@ -242,17 +242,8 @@ export default function AddStudentPage() {
     }
     setSubmitting(true);
     try {
-      // Admission number is always auto-generated (generate_admission_number RPC)
-      const { data: admData, error: admErr } = await supabase.rpc('generate_admission_number', {
-        p_school_id: schoolId,
-        p_first_name: trimFirst,
-        p_middle_name: middleName.trim() || null,
-        p_last_name: trimLast,
-        p_admission_date: admissionDate,
-      });
-      if (admErr) throw admErr;
-      const admission_number = admData as string;
-      setGeneratedAdmNo(admission_number);
+      // Admission number: DB trigger assigns in the same transaction as INSERT (avoids
+      // duplicate numbers when RPC + INSERT were separate transactions).
 
       const student_email = studentEmail.trim();
 
@@ -291,7 +282,6 @@ export default function AddStudentPage() {
           guardian_occupation: guardianOccupation || null,
           guardian_address: guardianAddress || null,
           medical_condition: medicalCondition || null,
-          admission_number: admission_number || undefined,
           stream: stream || null,
           previous_school: previousSchool || null,
           admission_date: admissionDate,
@@ -301,13 +291,15 @@ export default function AddStudentPage() {
           expected_fee_amount: expectedFeeAmount ?? (expectedFee ? Number(expectedFee) : null),
           fee_discount_percent: percent > 0 ? percent : undefined,
         })
-        .select('student_id')
+        .select('student_id, admission_number')
         .single();
 
       if (insertError) {
         setError(formatStudentSaveError(insertError));
         return;
       }
+      const admission_number = inserted?.admission_number ?? '';
+      setGeneratedAdmNo(admission_number || null);
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
@@ -703,9 +695,10 @@ export default function AddStudentPage() {
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
               <p className="text-sm font-medium text-gray-700">Admission number</p>
               <p className="mt-1 text-xs text-gray-600">
-                Auto-generated when you save. Format: <strong>SCHOOL-YEAR-MONTH-NUMBER</strong> (e.g. KPS-2026-02-001).
-                The database function <code className="bg-gray-200 px-1 rounded">generate_admission_number</code> uses
-                school abbreviation, admission date, and the next sequence for that school/month.
+                Auto-generated when you save (same database transaction as the insert, so concurrent enrollments cannot collide).
+                Format: <strong>SCHOOL-YEAR-MONTH-NUMBER</strong> (e.g. KPS-2026-02-001). The function{' '}
+                <code className="bg-gray-200 px-1 rounded">generate_admission_number</code> uses school abbreviation,
+                admission date, and the next sequence for that school/month.
               </p>
               {generatedAdmNo && (
                 <p className="mt-2 text-sm text-green-700 font-medium">Generated: {generatedAdmNo}</p>
