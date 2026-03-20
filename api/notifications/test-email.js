@@ -1,6 +1,7 @@
 // CommonJS serverless: send one test email via Resend (same env as send.js).
 
 const https = require('https');
+const { buildEmailHtml } = require('../../lib/emailHtml');
 
 function sanitizeHeaderValue(s) {
   if (typeof s !== 'string') return '';
@@ -49,7 +50,8 @@ async function sendResendEmail(to, subject, bodyText) {
       error: 'RESEND_API_KEY not configured. Add it in Vercel and redeploy.',
     };
   }
-  const html = bodyText.trim().startsWith('<') ? bodyText : `<p>${escapeHtml(bodyText)}</p>`;
+  const inner = bodyText.trim().startsWith('<') ? bodyText : `<p>${escapeHtml(bodyText)}</p>`;
+  const html = buildEmailHtml(inner);
   const payload = JSON.stringify({
     from,
     to: [to],

@@ -1,4 +1,9 @@
+import { createRequire } from 'module';
+import { join } from 'path';
 import { NextRequest, NextResponse } from 'next/server';
+
+const require = createRequire(join(process.cwd(), 'package.json'));
+const { buildEmailHtml } = require(join(process.cwd(), 'lib', 'emailHtml.js'));
 
 function escapeHtml(s: string) {
   return String(s)
@@ -35,7 +40,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const html = message.trim().startsWith('<') ? message : `<p>${escapeHtml(message)}</p>`;
+    const inner = message.trim().startsWith('<') ? message : `<p>${escapeHtml(message)}</p>`;
+    const html = buildEmailHtml(inner);
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',

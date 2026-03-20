@@ -87,6 +87,11 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # ----------------------------
 # RESEND_API_KEY=re_xxxxxxxx
 # RESEND_FROM="PwezaCore <noreply@pwezacore.com>"
+# Optional: full https URL to your logo image (PNG recommended for email clients).
+# If unset, emails use {VITE_APP_URL or NEXT_PUBLIC_APP_URL or https://www.pwezacore.com}/logo.png
+# Add public/logo.png to the app so that URL returns a real image.
+# Set to "none" to send email without a header logo.
+# EMAIL_LOGO_URL=https://www.pwezacore.com/logo.png
 
 # Local test: npm run test:resend -- your@email.com
 

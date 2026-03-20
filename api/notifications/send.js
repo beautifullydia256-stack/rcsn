@@ -2,6 +2,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const https = require('https');
+const { buildEmailHtml } = require('../../lib/emailHtml');
 
 function getEnvAny(keys) {
   for (const k of keys) {
@@ -174,7 +175,8 @@ async function sendEmail(to, subject, body) {
     return { success: false, error: 'RESEND_API_KEY not configured' };
   }
   const raw = typeof body === 'string' ? body : String(body);
-  const html = raw.trim().startsWith('<') ? raw : `<p>${escapeHtml(raw)}</p>`;
+  const inner = raw.trim().startsWith('<') ? raw : `<p>${escapeHtml(raw)}</p>`;
+  const html = buildEmailHtml(inner);
   const payload = JSON.stringify({
     from,
     to: [to],

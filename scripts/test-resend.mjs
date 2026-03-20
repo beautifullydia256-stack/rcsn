@@ -4,8 +4,12 @@
  * Loads RESEND_API_KEY from .env.local if present (same keys as production).
  */
 import { readFileSync, existsSync } from 'fs';
+import { createRequire } from 'module';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+
+const require = createRequire(import.meta.url);
+const { buildEmailHtml } = require(join(dirname(fileURLToPath(import.meta.url)), '..', 'lib', 'emailHtml.js'));
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const envPath = join(__dirname, '..', '.env.local');
@@ -46,7 +50,7 @@ const res = await fetch('https://api.resend.com/emails', {
     from,
     to: [to],
     subject: 'PwezaCore — Resend test',
-    html: '<p>If you received this, Resend is configured correctly.</p>',
+    html: buildEmailHtml('<p>If you received this, Resend is configured correctly.</p>'),
   }),
 });
 
