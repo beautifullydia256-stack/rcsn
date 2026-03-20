@@ -154,18 +154,6 @@ export default function LoginPage() {
       data = loginResult.data;
       authError = loginResult.error;
 
-      if (authError && !email.includes('@') && /^[A-Z0-9-]+$/i.test(email)) {
-        const fallbackResult = await supabase.auth.signInWithPassword({
-          email: `${email}@school.local`,
-          password,
-          options: captchaToken ? { captchaToken } : undefined,
-        });
-        if (!fallbackResult.error) {
-          data = fallbackResult.data;
-          authError = null;
-        }
-      }
-
       if (authError) {
         if (authError.message.includes('email not confirmed') || authError.message.includes('Email not confirmed')) {
           const role = data?.user?.raw_user_meta_data?.role;

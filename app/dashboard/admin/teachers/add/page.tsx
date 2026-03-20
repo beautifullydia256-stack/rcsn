@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { isValidRealEmail } from "@/src/lib/realEmail";
 
 export default function AddTeacherPage() {
   const router = useRouter();
@@ -140,6 +141,10 @@ export default function AddTeacherPage() {
     setError(null); setSuccess(null);
     if (!schoolId) { setError("Missing school context"); return; }
     if (!firstName || !lastName) { setError("Please enter first and last name"); return; }
+    if (!email.trim() || !isValidRealEmail(email.trim())) {
+      setError("Enter a valid real email address for the teacher.");
+      return;
+    }
     
     // Optional validation for phone if provided
     if (phone && !validatePhone(phone)) { setError("Enter a valid phone with country code"); return; }
@@ -149,7 +154,7 @@ export default function AddTeacherPage() {
     const filteredClasses = classesAssigned.filter(c => allowed.has(c));
 
     setSaving(true);
-    const emailToSave = email.trim() || null;
+    const emailToSave = email.trim();
     const { data, error: insertError } = await supabase.from("teachers").insert({
       school_id: schoolId,
       name: fullName,
@@ -167,25 +172,6 @@ export default function AddTeacherPage() {
 
     setSaving(false);
     if (insertError) { setError(insertError.message); return; }
-    
-    // Auto-generate email only if none was provided
-    if (!emailToSave && data?.teacher_id && schoolId) {
-      try {
-        const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
-          p_first_name: firstName,
-          p_last_name: lastName,
-          p_school_id: schoolId
-        });
-        if (generatedEmail) {
-          await supabase
-            .from('teachers')
-            .update({ email: generatedEmail })
-            .eq('teacher_id', data.teacher_id);
-        }
-      } catch (emailError) {
-        console.warn('Could not generate teacher email:', emailError);
-      }
-    }
     
     // Also persist class/subject assignments into teacher_class_subjects
     try {
@@ -390,8 +376,7 @@ export default function AddTeacherPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <label className="text-[12px] text-[var(--color-text-secondary)] font-medium">Email address</label>
-                    <input type="email" className="text-[13px] px-2.5 py-[7px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)] outline-none focus:border-[#1a56db] focus:ring-2 focus:ring-[#1a56db]/15" placeholder="Auto-generated if left blank" value={email} onChange={(e) => setEmail(e.target.value)} />
-                    <span className="text-[11px] text-[var(--color-text-tertiary)] mt-0.5">Auto-generated as firstname+lastname@school.sch</span>
+                    <input type="email" required className="text-[13px] px-2.5 py-[7px] border border-[var(--color-border-secondary)] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] text-[var(--color-text-primary)] outline-none focus:border-[#1a56db] focus:ring-2 focus:ring-[#1a56db]/15" placeholder="Real email (login & invitations)" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div className="flex flex-col gap-1">
                     <label className="text-[12px] text-[var(--color-text-secondary)] font-medium">Phone number</label>

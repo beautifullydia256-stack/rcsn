@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { isValidRealEmail } from '@/lib/realEmail';
 
 export default function AddTeacherPage() {
   const navigate = useNavigate();
@@ -162,6 +163,10 @@ export default function AddTeacherPage() {
       setError('Please enter first and last name');
       return;
     }
+    if (!email.trim() || !isValidRealEmail(email.trim())) {
+      setError('Enter a valid real email address for the teacher (no placeholder or auto-generated addresses).');
+      return;
+    }
     if (phone && !validatePhone(phone)) {
       setError('Enter a valid phone with country code');
       return;
@@ -170,7 +175,7 @@ export default function AddTeacherPage() {
     const filteredClasses = classesAssigned.filter((c) => allowed.has(c));
 
     setSaving(true);
-    const emailToSave = email.trim() || null;
+    const emailToSave = email.trim();
     const { data, error: insertError } = await supabase
       .from('teachers')
       .insert({
@@ -196,23 +201,6 @@ export default function AddTeacherPage() {
       return;
     }
 
-    if (!emailToSave) {
-      try {
-        if (data?.teacher_id && schoolId) {
-          const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
-            p_first_name: firstName,
-            p_last_name: lastName,
-            p_school_id: schoolId,
-          });
-          if (generatedEmail) {
-            await supabase.from('teachers').update({ email: generatedEmail }).eq('teacher_id', data.teacher_id);
-          }
-        }
-      } catch (emailError) {
-        console.warn('Could not generate teacher email:', emailError);
-      }
-    }
-
     try {
       if (data?.teacher_id && filteredClasses.length > 0) {
         const payload: { school_id: string; teacher_id: string; class_name: string; subject: string }[] = [];
@@ -235,9 +223,7 @@ export default function AddTeacherPage() {
       console.warn('Failed to create teacher assignments:', e);
     }
 
-    setSuccess(
-      `Teacher added successfully! Employee ID: ${data?.employee_id || 'Generated'}. ${emailToSave ? 'Email set.' : 'Email auto-generated.'}`
-    );
+    setSuccess(`Teacher added successfully! Employee ID: ${data?.employee_id || 'Generated'}.`);
     if (data?.teacher_id) {
       setTimeout(() => navigate(`/dashboard/admin/teachers/${data.teacher_id}`), 600);
     }
@@ -417,9 +403,17 @@ export default function AddTeacherPage() {
             <div className="p-5">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="flex flex-col gap-1">
-                  <label className="text-[12px] text-[var(--color-text-secondary)] font-medium">Email address</label>
-                  <input type="email" className="ac-input rounded-lg px-3 py-2 w-full" placeholder="Auto-generated if left blank" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  <span className="text-[11px] ac-text-secondary mt-0.5">Auto-generated as firstname+lastname@school.sch</span>
+                  <label className="text-[12px] text-[var(--color-text-secondary)] font-medium">
+                    Email address <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="ac-input rounded-lg px-3 py-2 w-full"
+                    placeholder="Real email address (login & invitations)"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
                 <div className="flex flex-col gap-1">
                   <label className="text-[12px] text-[var(--color-text-secondary)] font-medium">Phone number</label>

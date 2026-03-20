@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
+import { isValidRealEmail } from '@/src/lib/realEmail';
 
 export async function POST(request: NextRequest) {
   try {
@@ -76,16 +77,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Email: use provided or default to admission_number@school.local for login-by-admission-number
-    const studentEmail = (email && String(email).includes('@'))
-      ? String(email)
-      : (admission_number ? `${admission_number}@school.local` : null);
-    if (!studentEmail) {
+    const fromBody = email && String(email).trim();
+    const fromStudent =
+      studentData?.student_email && String(studentData.student_email).trim();
+    const candidate =
+      fromBody && isValidRealEmail(fromBody)
+        ? fromBody.trim()
+        : fromStudent && isValidRealEmail(fromStudent)
+          ? fromStudent.trim()
+          : null;
+    if (!candidate) {
       return NextResponse.json(
-        { error: 'Email or admission_number is required to create a student login.' },
+        {
+          error:
+            'Set a real email address on the student record (or pass a valid email in the request) before creating a login.',
+        },
         { status: 400 }
       );
     }
+    const studentEmail = candidate;
     const studentPassword = password || admission_number || (studentData?.admission_number as string) || 'ChangeMe123';
 
     // Check if email already exists in users table

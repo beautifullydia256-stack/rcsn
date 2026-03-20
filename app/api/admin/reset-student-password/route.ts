@@ -33,13 +33,6 @@ export async function POST(request: NextRequest) {
       u.user_metadata?.admission_number === admission_number
     );
 
-    // If not found, try by email format
-    if (!user) {
-      user = users.find(u => 
-        u.email === `${admission_number}@school.local`
-      );
-    }
-
     if (!user) {
       return NextResponse.json(
         { error: 'Student login not found. Please create login first.' },

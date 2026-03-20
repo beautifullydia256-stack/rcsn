@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import ImageUpload from "@/src/components/ImageUpload";
 import { createMissedExamRecordsForNewStudent } from "@/src/lib/examResultsUtils";
 import { CompressionResult } from "@/src/lib/imageCompression";
+import { isValidRealEmail } from "@/src/lib/realEmail";
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -28,11 +29,13 @@ export default function AddStudentPage() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [studentPhone, setStudentPhone] = useState("");
+  const [studentEmail, setStudentEmail] = useState("");
 
   // Parent/Guardian
   const [guardianName, setGuardianName] = useState("");
   const [guardianRelationship, setGuardianRelationship] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianEmail, setGuardianEmail] = useState("");
   const [guardianOccupation, setGuardianOccupation] = useState("");
   const [guardianAddress, setGuardianAddress] = useState("");
 
@@ -42,7 +45,6 @@ export default function AddStudentPage() {
   const [previousSchool, setPreviousSchool] = useState("");
   const [admissionDate, setAdmissionDate] = useState("");
   const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
-  const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
   const [boardingType, setBoardingType] = useState("Day Scholar");
 
   // Fees & Finance
@@ -198,6 +200,18 @@ export default function AddStudentPage() {
       alert('Initial payment cannot exceed Tuition/Fee Amount Due.');
       return false;
     }
+    const trimStudentEmail = studentEmail.trim();
+    if (!trimStudentEmail || !isValidRealEmail(trimStudentEmail)) {
+      alert('Enter a valid real email address for the student.');
+      return false;
+    }
+    if (guardianName.trim()) {
+      const ge = guardianEmail.trim();
+      if (!ge || !isValidRealEmail(ge)) {
+        alert('When a parent/guardian name is provided, enter a valid real email for that parent.');
+        return false;
+      }
+    }
     setSaving(true);
     try {
       // Check for duplicate student before creating
@@ -230,15 +244,7 @@ export default function AddStudentPage() {
       const admission_number = admData as string;
       setGeneratedAdmNo(admission_number);
 
-      // Generate student email via RPC
-      const { data: emailData, error: emailErr } = await supabase.rpc('generate_unique_school_email', {
-        p_first_name: firstName,
-        p_last_name: lastName,
-        p_school_id: schoolId
-      });
-      if (emailErr) throw emailErr;
-      const student_email = emailData as string;
-      setGeneratedEmail(student_email);
+      const student_email = trimStudentEmail;
 
       // Compose full name for legacy name column
       const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
@@ -264,6 +270,7 @@ export default function AddStudentPage() {
         guardian_name: guardianName,
         guardian_relationship: guardianRelationship,
         guardian_phone: guardianPhone,
+        guardian_email: guardianEmail.trim() || null,
         guardian_occupation: guardianOccupation || null,
         guardian_address: guardianAddress || null,
         medical_condition: medicalCondition || null,
@@ -344,18 +351,36 @@ export default function AddStudentPage() {
         }
       }
 
-      // Login creation is now manual - admin must create login through Student Details page
+      if (insertedStudent?.student_id && guardianName.trim() && schoolId) {
+        try {
+          await fetch('/api/admin/ensure-parent-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              student_id: insertedStudent.student_id,
+              school_id: schoolId,
+              name: guardianName.trim(),
+              email: guardianEmail.trim(),
+              phone: guardianPhone.trim() || undefined,
+              relationship: guardianRelationship || undefined,
+            }),
+          });
+        } catch (e) {
+          console.warn('Parent link failed', e);
+        }
+      }
 
       alert(`Student added successfully. Admission No: ${admission_number}\nTo create login: Go to Student Details page and use "Create Login" button.`);
       // reset minimal fields for add-another flow
       setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob("");
       setNationality(""); setReligion("");
-      setAddress(""); setCity(""); setCountry(""); setStudentPhone("");
-      setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianOccupation(""); setGuardianAddress("");
+      setAddress(""); setCity(""); setCountry(""); setStudentPhone(""); setStudentEmail("");
+      setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianEmail(""); setGuardianOccupation(""); setGuardianAddress("");
       setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate(""); setBoardingType("Day Scholar");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
       setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
-      setGeneratedAdmNo(null); setGeneratedEmail(null);
+      setGeneratedAdmNo(null);
     } catch (e: any) {
       console.error(e);
       alert(`Failed to add student: ${e?.message || e}`);
@@ -418,6 +443,7 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Home Address" value={address} onChange={(e)=>setAddress(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="City / District / Village" value={city} onChange={(e)=>setCity(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Country" value={country} onChange={(e)=>setCountry(e.target.value)} />
+            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student email (required)" value={studentEmail} onChange={(e)=>setStudentEmail(e.target.value)} type="email" />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student Phone (optional)" value={studentPhone} onChange={(e)=>setStudentPhone(e.target.value)} />
 
             <div className="text-white/90 font-medium col-span-full mt-2">Parent / Guardian Information</div>
@@ -429,6 +455,7 @@ export default function AddStudentPage() {
               <option value="Guardian">Guardian</option>
             </select>
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone Number" value={guardianPhone} onChange={(e)=>setGuardianPhone(e.target.value)} />
+            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Parent email (required if name filled)" value={guardianEmail} onChange={(e)=>setGuardianEmail(e.target.value)} type="email" />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Occupation (optional)" value={guardianOccupation} onChange={(e)=>setGuardianOccupation(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Address (if different)" value={guardianAddress} onChange={(e)=>setGuardianAddress(e.target.value)} />
 
@@ -509,9 +536,6 @@ export default function AddStudentPage() {
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Initial Payment (optional)" value={initialPayment} onChange={(e)=>setInitialPayment(e.target.value)} />
             {generatedAdmNo && (
               <input readOnly className="rounded-lg border border-emerald-300/30 bg-emerald-500/10 text-white px-3 py-2" value={generatedAdmNo} />
-            )}
-            {generatedEmail && (
-              <input readOnly className="rounded-lg border border-blue-300/30 bg-blue-500/10 text-white px-3 py-2" value={generatedEmail} />
             )}
           </div>
           <div className="flex gap-2 mt-4">

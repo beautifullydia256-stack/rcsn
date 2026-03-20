@@ -6,6 +6,8 @@ import { useAuthStore } from '@/store/authStore';
 import NativeModal from '@/components/NativeModal';
 import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
+import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
+import { isValidRealEmail } from '@/lib/realEmail';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -46,6 +48,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [name, setName] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
   const [currentClass, setCurrentClass] = useState('');
   const [admissionNumber, setAdmissionNumber] = useState('');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -77,6 +80,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
   useEffect(() => {
     if (open) {
       setName('');
+      setStudentEmail('');
       setCurrentClass(classOptions[0] || '');
       setAdmissionNumber('');
       setDiscountPercent(0);
@@ -100,6 +104,18 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       setError('School not found.');
       return;
     }
+    const trimEmail = studentEmail.trim();
+    if (!trimEmail || !isValidRealEmail(trimEmail)) {
+      setError('Enter a valid real email address for the student.');
+      return;
+    }
+    if (guardianName.trim()) {
+      const ge = guardianEmail.trim();
+      if (!ge || !isValidRealEmail(ge)) {
+        setError('When a guardian name is provided, enter a valid real parent email.');
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const baseFee = feeByClass[currentClass] ?? 0;
@@ -112,6 +128,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
         .insert({
           school_id: schoolId,
           name: trimmedName,
+          student_email: trimEmail,
           current_class: currentClass || classOptions[0],
           status: 'active',
           ...(admissionNumber.trim() ? { admission_number: admissionNumber.trim() } : {}),
@@ -123,14 +140,17 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       if (insertError) throw insertError;
 
       const studentId = inserted?.student_id;
-      if (studentId && guardianName.trim()) {
-        await supabase.from('parents').insert({
-          school_id: schoolId,
+      if (studentId && guardianName.trim() && schoolId) {
+        const linkRes = await ensureParentLinkForStudent({
           student_id: studentId,
+          school_id: schoolId,
           name: guardianName.trim(),
-          ...(guardianEmail.trim() ? { email: guardianEmail.trim() } : {}),
-          ...(guardianPhone.trim() ? { phone: guardianPhone.trim() } : {}),
+          email: guardianEmail.trim(),
+          phone: guardianPhone.trim() || undefined,
         });
+        if (!linkRes.ok) {
+          throw new Error(linkRes.error || 'Could not link parent to this student.');
+        }
       }
 
       if (studentId && profilePhoto) {
@@ -212,6 +232,21 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 placeholder="e.g. John Doe"
                 required
+              />
+            </div>
+            <div>
+              <label htmlFor="modal-student-email" className="mb-1 block text-sm font-medium text-gray-700">
+                Student email <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="modal-student-email"
+                type="email"
+                value={studentEmail}
+                onChange={(e) => setStudentEmail(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="Real email for invitations"
+                required
+                autoComplete="email"
               />
             </div>
             <div>

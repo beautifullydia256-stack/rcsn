@@ -211,21 +211,6 @@ export default function Login() {
       data = loginResult.data;
       authError = loginResult.error;
 
-      // If login failed and it looks like an admission number, try the old format as fallback
-      if (authError && !email.includes('@') && /^[A-Z0-9-]+$/i.test(email)) {
-        const fallbackEmail = `${email}@school.local`;
-        const fallbackResult = await supabase.auth.signInWithPassword({
-          email: fallbackEmail,
-          password: password,
-          options: captchaToken ? { captchaToken } : undefined,
-        });
-        
-        if (!fallbackResult.error) {
-          data = fallbackResult.data;
-          authError = null;
-        }
-      }
-
       if (authError) {
         // Check if it's an email confirmation error
         if (authError.message.includes('email not confirmed') || authError.message.includes('Email not confirmed')) {

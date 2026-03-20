@@ -111,6 +111,11 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { isValidRealEmail } = require('../../lib/realEmail.js') as {
+      isValidRealEmail: (e: string) => boolean;
+    };
+
     const body = parseBody(req);
     const { admission_number, student_id, email, password } = body as { admission_number?: string; student_id?: string; email?: string; password?: string };
 
@@ -132,14 +137,24 @@ export default async function handler(req: Req, res: Res) {
       if (!error) studentData = data;
     }
 
-    const studentEmail = (email && String(email).includes('@'))
-      ? String(email)
-      : (admission_number ? `${admission_number}@school.local` : null);
-    if (!studentEmail) {
+    const fromBody = email && String(email).trim();
+    const fromStudent =
+      studentData?.student_email && String(studentData.student_email).trim();
+    const candidate =
+      fromBody && isValidRealEmail(fromBody)
+        ? fromBody.trim()
+        : fromStudent && isValidRealEmail(fromStudent)
+          ? fromStudent.trim()
+          : null;
+    if (!candidate) {
       setCors();
-      res.status(400).json({ error: 'Email or admission_number is required to create a student login.' });
+      res.status(400).json({
+        error:
+          'Set a real email address on the student record (or pass a valid email in the request) before creating a login.',
+      });
       return;
     }
+    const studentEmail = candidate;
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const {
@@ -222,7 +237,7 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const canEmail = studentEmail.includes('@') && !studentEmail.toLowerCase().endsWith('@school.local');
+    const canEmail = isValidRealEmail(studentEmail);
     if (canEmail && studentPassword) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports

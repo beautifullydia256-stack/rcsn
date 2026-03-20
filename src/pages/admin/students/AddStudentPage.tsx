@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -10,6 +10,8 @@ import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
 import { useToast } from '@/components/Toast';
 import { usePermission } from '@/hooks/usePermission';
 import { PERMISSION_KEYS } from '@/lib/permissions';
+import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
+import { isValidRealEmail } from '@/lib/realEmail';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -114,6 +116,7 @@ export default function AddStudentPage() {
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
+  const [studentEmail, setStudentEmail] = useState('');
 
   // Guardian
   const [guardianName, setGuardianName] = useState('');
@@ -130,7 +133,6 @@ export default function AddStudentPage() {
   const [admissionDate, setAdmissionDate] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
   const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
-  const [generatedEmail, setGeneratedEmail] = useState<string | null>(null);
 
   // Fees & discount (existing behaviour)
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -148,7 +150,6 @@ export default function AddStudentPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [createStudentLogin, setCreateStudentLogin] = useState(true);
   const toast = useToast();
 
   // Collapsible sections: multiple can be open; user closes when they want
@@ -226,6 +227,18 @@ export default function AddStudentPage() {
       setError('Initial payment cannot exceed tuition/fee amount due.');
       return;
     }
+    const trimStudentEmail = studentEmail.trim();
+    if (!trimStudentEmail || !isValidRealEmail(trimStudentEmail)) {
+      setError('Enter a valid real email address for the student (no placeholder or system-generated addresses).');
+      return;
+    }
+    if (guardianName.trim()) {
+      const ge = guardianEmail.trim();
+      if (!ge || !isValidRealEmail(ge)) {
+        setError('When a parent/guardian name is provided, enter a valid real email for that parent.');
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       // Admission number is always auto-generated (generate_admission_number RPC)
@@ -240,17 +253,7 @@ export default function AddStudentPage() {
       const admission_number = admData as string;
       setGeneratedAdmNo(admission_number);
 
-      let student_email: string | null = null;
-
-      const { data: emailData, error: emailErr } = await supabase.rpc('generate_unique_school_email', {
-        p_first_name: trimFirst,
-        p_last_name: trimLast,
-        p_school_id: schoolId,
-      });
-      if (!emailErr && emailData) {
-        student_email = emailData as string;
-        setGeneratedEmail(student_email);
-      }
+      const student_email = studentEmail.trim();
 
       const name = [trimFirst, middleName.trim(), trimLast].filter(Boolean).join(' ');
       const percent = Math.min(100, Math.max(0, Number(discountPercent) || 0));
@@ -279,10 +282,11 @@ export default function AddStudentPage() {
           city: city || null,
           country: country || null,
           student_phone: studentPhone || null,
-          student_email: student_email || null,
+          student_email,
           guardian_name: guardianName || null,
           guardian_relationship: guardianRelationship || null,
           guardian_phone: guardianPhone || null,
+          guardian_email: guardianEmail.trim() || null,
           guardian_occupation: guardianOccupation || null,
           guardian_address: guardianAddress || null,
           medical_condition: medicalCondition || null,
@@ -303,72 +307,19 @@ export default function AddStudentPage() {
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
-      if (createStudentLogin) {
-        const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-        const loginUrl = apiBase ? `${apiBase}/api/admin/create-student-login` : '/api/admin/create-student-login';
-        const loginEmail =
-          student_email && String(student_email).includes('@')
-            ? String(student_email).trim()
-            : `${admission_number}@school.local`;
-        try {
-          const loginRes = await fetch(loginUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              student_id: studentId,
-              admission_number,
-              email: loginEmail,
-            }),
-          });
-          const loginJson = await loginRes.json().catch(() => ({}));
-          if (loginRes.ok) {
-            toast.success(
-              loginEmail.toLowerCase().endsWith('@school.local')
-                ? 'Student saved. Portal login created — share credentials from your admin tools or reset password to email a real address.'
-                : 'Student saved. Portal login created — a one-time password was emailed to their school address when possible.'
-            );
-          } else {
-            toast.warning(
-              `Student saved, but portal login was not created: ${(loginJson as { error?: string }).error || loginRes.statusText}`
-            );
-          }
-        } catch (loginErr) {
+      if (guardianName.trim() && schoolId) {
+        const linkRes = await ensureParentLinkForStudent({
+          student_id: studentId,
+          school_id: schoolId,
+          name: guardianName.trim(),
+          email: guardianEmail.trim() || undefined,
+          phone: guardianPhone.trim() || undefined,
+          relationship: guardianRelationship.trim() || undefined,
+        });
+        if (!linkRes.ok) {
           toast.warning(
-            `Student saved, but portal login failed: ${loginErr instanceof Error ? loginErr.message : 'Network error'}`
+            `Student saved, but linking the parent failed: ${linkRes.error || 'Unknown error'}. Guardian details are stored on the student; you can fix the link from Parents or support.`
           );
-        }
-      }
-
-      if (guardianName.trim()) {
-        const hasGuardianContact = !!(guardianEmail.trim() || guardianPhone.trim());
-        if (hasGuardianContact) {
-          try {
-            const parentRes = await fetch('/api/admin/ensure-parent-link', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                student_id: studentId,
-                school_id: schoolId,
-                name: guardianName.trim(),
-                email: guardianEmail.trim() || undefined,
-                phone: guardianPhone.trim() || undefined,
-              }),
-            });
-            if (!parentRes.ok) {
-              const errData = await parentRes.json().catch(() => ({}));
-              console.warn('Parent link failed (guardian record may be missing login):', errData.error || parentRes.statusText);
-            }
-          } catch (parentErr) {
-            console.warn('Parent link failed:', parentErr);
-          }
-        } else {
-          await supabase.from('parents').insert({
-            school_id: schoolId,
-            student_id: studentId,
-            name: guardianName.trim(),
-          });
         }
       }
 
@@ -412,6 +363,7 @@ export default function AddStudentPage() {
       }
 
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
+      toast.success('Student saved. Send a portal invitation from User Management when you are ready.');
       navigate('/dashboard/admin/students');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to add student.');
@@ -467,21 +419,16 @@ export default function AddStudentPage() {
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-gray-800">
-            <input
-              type="checkbox"
-              checked={createStudentLogin}
-              onChange={(e) => setCreateStudentLogin(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-            />
-            <span>
-              <span className="font-medium text-gray-900">Create student portal login</span>
-              <span className="block text-gray-600 mt-0.5">
-                On by default: a secure one-time password is generated. If the school email is real, it can be emailed
-                automatically.
-              </span>
-            </span>
-          </label>
+          <p className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+            Portal logins are not created here. Enter a real email for the student (and parents below). After saving, use{' '}
+            <Link
+              to="/dashboard/admin/accounts"
+              className="font-medium text-emerald-700 hover:text-emerald-800 underline underline-offset-2"
+            >
+              User Management
+            </Link>{' '}
+            to send invitations — they only set a password when they accept.
+          </p>
 
           <Section id="personal" title="Personal information" isOpen={openSections.includes('personal')} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -590,15 +537,31 @@ export default function AddStudentPage() {
                 />
               </div>
             </div>
-            <div>
-              <label className={labelClass}>Student phone</label>
-              <input
-                type="text"
-                value={studentPhone}
-                onChange={(e) => setStudentPhone(e.target.value)}
-                className={inputClass}
-                placeholder="e.g. 0700123456"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>
+                  Student email <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={studentEmail}
+                  onChange={(e) => setStudentEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="real address used for invitations"
+                  required
+                  autoComplete="email"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Student phone</label>
+                <input
+                  type="text"
+                  value={studentPhone}
+                  onChange={(e) => setStudentPhone(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. 0700123456"
+                />
+              </div>
             </div>
           </Section>
 
@@ -639,7 +602,9 @@ export default function AddStudentPage() {
               </div>
             </div>
             <div>
-              <label className={labelClass}>Email <span className="text-gray-400 font-normal">(optional)</span></label>
+              <label className={labelClass}>
+                Email {guardianName.trim() ? <span className="text-red-500">*</span> : <span className="text-gray-400 font-normal">(required if guardian name is filled)</span>}
+              </label>
               <input
                 type="email"
                 value={guardianEmail}

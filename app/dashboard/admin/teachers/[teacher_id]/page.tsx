@@ -38,30 +38,6 @@ export default function TeacherProfilePage() {
         .single();
       setRow(teacher || null);
       
-      // Auto-generate school-branded email for teacher if not already set
-      if (teacher && !teacher.email && teacher.school_id) {
-        try {
-          const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
-            p_first_name: teacher.name?.split(' ')[0] || 'Teacher',
-            p_last_name: teacher.name?.split(' ')[1] || teacher.name?.split(' ')[0] || 'User',
-            p_school_id: teacher.school_id
-          });
-          
-          if (generatedEmail) {
-            // Update the teacher record in database
-            await supabase
-              .from('teachers')
-              .update({ email: generatedEmail })
-              .eq('teacher_id', teacher.teacher_id);
-            
-            // Update the local state
-            setRow(prev => prev ? { ...prev, email: generatedEmail } : null);
-          }
-        } catch (error) {
-          console.warn('Could not generate teacher email:', error);
-        }
-      }
-      
       // get school for type and id
       if (teacher?.school_id) {
         setSchoolId(teacher.school_id);

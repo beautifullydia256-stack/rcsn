@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase';
+import { isValidRealEmail } from '@/src/lib/realEmail';
 
 /**
  * After enrolling a student with guardian info: find existing parent user by email (or create one)
@@ -35,22 +36,35 @@ export async function POST(request: NextRequest) {
       .eq('user_id', adminUser.id)
       .single();
 
-    if (!adminRow || !['admin', 'owner'].includes(adminRow.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
-
     const body = await request.json();
-    const { student_id, school_id, name, email, phone } = body;
+    const { student_id, school_id, name, email, phone, relationship } = body as {
+      student_id?: string;
+      school_id?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      relationship?: string;
+    };
+
     if (!student_id || !school_id || !name) {
       return NextResponse.json(
         { error: 'student_id, school_id, and name are required' },
         { status: 400 }
       );
     }
-    if (!email && !phone) {
+
+    if (!adminRow?.school_id || String(adminRow.school_id) !== String(school_id)) {
       return NextResponse.json(
-        { error: 'At least one of email or phone is required to create or link parent login' },
-        { status: 400 }
+        { error: 'You can only manage parents for your own school.' },
+        { status: 403 }
+      );
+    }
+
+    const { data: canManage, error: rpcErr } = await supabase.rpc('current_user_can_manage_students');
+    if (rpcErr || !canManage) {
+      return NextResponse.json(
+        { error: 'You do not have permission to link parents for students.' },
+        { status: 403 }
       );
     }
 
@@ -62,14 +76,18 @@ export async function POST(request: NextRequest) {
     }
 
     const parentName = String(name).trim();
-    const parentEmail = email && String(email).trim() ? String(email).trim() : null;
+    const parentEmailRaw = email && String(email).trim() ? String(email).trim() : '';
     const parentPhone = phone && String(phone).trim() ? String(phone).trim() : null;
+    const rel = relationship && String(relationship).trim() ? String(relationship).trim() : null;
 
-    // Prefer email for auth; if only phone, use a synthetic email so auth has a unique identifier
-    const authEmail = parentEmail || (parentPhone ? `p.${parentPhone.replace(/\D/g, '')}@school.parent` : null);
-    if (!authEmail) {
-      return NextResponse.json({ error: 'Could not derive login identifier' }, { status: 400 });
+    if (!parentEmailRaw || !isValidRealEmail(parentEmailRaw)) {
+      return NextResponse.json(
+        { error: 'A real parent email address is required (no auto-generated or placeholder addresses).' },
+        { status: 400 }
+      );
     }
+    const parentEmail = parentEmailRaw;
+    const authEmail = parentEmail;
 
     // Find existing parent user by email
     const { data: existingUser } = await supabaseAdmin
@@ -123,6 +141,7 @@ export async function POST(request: NextRequest) {
         name: parentName,
         email: parentEmail || null,
         phone: parentPhone || null,
+        ...(rel ? { relationship: rel } : {}),
       });
 
     if (linkError) {

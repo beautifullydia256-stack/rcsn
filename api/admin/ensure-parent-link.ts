@@ -104,35 +104,54 @@ export default async function handler(req: Req, res: Res) {
       .eq('user_id', adminUser.id)
       .single();
 
-    if (!adminRow || !['admin', 'owner'].includes(adminRow.role)) {
-      setCors();
-      res.status(403).json({ error: 'Admin access required' });
-      return;
-    }
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { isValidRealEmail } = require('../../lib/realEmail.js') as {
+      isValidRealEmail: (e: string) => boolean;
+    };
 
     const body = parseBody(req);
-    const { student_id, school_id, name, email, phone } = body as { student_id?: string; school_id?: string; name?: string; email?: string; phone?: string };
+    const { student_id, school_id, name, email, phone, relationship } = body as {
+      student_id?: string;
+      school_id?: string;
+      name?: string;
+      email?: string;
+      phone?: string;
+      relationship?: string;
+    };
 
     if (!student_id || !school_id || !name) {
       setCors();
       res.status(400).json({ error: 'student_id, school_id, and name are required' });
       return;
     }
-    if (!email && !phone) {
+
+    if (!adminRow?.school_id || String(adminRow.school_id) !== String(school_id)) {
       setCors();
-      res.status(400).json({ error: 'At least one of email or phone is required to create or link parent login' });
+      res.status(403).json({ error: 'You can only manage parents for your own school.' });
+      return;
+    }
+
+    const { data: canManage, error: rpcErr } = await supabase.rpc('current_user_can_manage_students');
+    if (rpcErr || !canManage) {
+      setCors();
+      res.status(403).json({ error: 'You do not have permission to link parents for students.' });
       return;
     }
 
     const parentName = String(name).trim();
-    const parentEmail = email && String(email).trim() ? String(email).trim() : null;
+    const parentEmailRaw = email && String(email).trim() ? String(email).trim() : '';
     const parentPhone = phone && String(phone).trim() ? String(phone).trim() : null;
-    const authEmail = parentEmail || (parentPhone ? `p.${parentPhone.replace(/\D/g, '')}@school.parent` : null);
-    if (!authEmail) {
+    const rel = relationship && String(relationship).trim() ? String(relationship).trim() : null;
+
+    if (!parentEmailRaw || !isValidRealEmail(parentEmailRaw)) {
       setCors();
-      res.status(400).json({ error: 'Could not derive login identifier' });
+      res.status(400).json({
+        error: 'A real parent email address is required (no auto-generated or placeholder addresses).',
+      });
       return;
     }
+    const parentEmail = parentEmailRaw;
+    const authEmail = parentEmail;
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -180,6 +199,7 @@ export default async function handler(req: Req, res: Res) {
         name: parentName,
         email: parentEmail || null,
         phone: parentPhone || null,
+        ...(rel ? { relationship: rel } : {}),
       });
 
     if (linkError) {

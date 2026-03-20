@@ -82,35 +82,6 @@ export default function AddAccountsManagerPage() {
     run();
   }, [router]);
 
-  // Generate email when school code is loaded and names are available
-  useEffect(() => {
-    if (schoolCode && firstName && lastName) {
-      const generatedEmail = generateEmail(firstName, lastName);
-      setEmail(generatedEmail);
-    }
-  }, [schoolCode, firstName, lastName]);
-
-  // Generate email from first name, last name and school code
-  const generateEmail = (first: string, last: string, suffix: string = "") => {
-    if (!first.trim() || !last.trim()) {
-      // Email generation failed: Missing names
-      return "";
-    }
-    
-    if (!schoolCode) {
-      // Email generation failed: Missing school code
-      return "";
-    }
-    
-    const firstLower = first.trim().toLowerCase();
-    const lastLower = last.trim().toLowerCase();
-    const schoolCodeLower = schoolCode.toLowerCase();
-    const generatedEmail = `${firstLower}${lastLower}${suffix}@${schoolCodeLower}.sch`;
-    
-    // Generated email
-    return generatedEmail;
-  };
-
   // Check if email exists and suggest alternatives
   const checkEmailAvailability = async (emailToCheck: string) => {
     try {
@@ -136,26 +107,7 @@ export default function AddAccountsManagerPage() {
     }
   };
 
-  // Handle name changes and auto-generate email
-  const handleFirstNameChange = (newFirstName: string) => {
-    setFirstName(newFirstName);
-    const generatedEmail = generateEmail(newFirstName, lastName);
-    setEmail(generatedEmail);
-  };
-
-  const handleLastNameChange = (newLastName: string) => {
-    setLastName(newLastName);
-    const generatedEmail = generateEmail(firstName, newLastName);
-    setEmail(generatedEmail);
-  };
-
   const validateForm = async () => {
-    // Generate email if not already generated
-    if (!email && firstName && lastName && schoolCode) {
-      const generatedEmail = generateEmail(firstName, lastName);
-      setEmail(generatedEmail);
-    }
-    
     if (!email || !firstName || !lastName || !phone) {
       setError("Please fill in all required fields");
       return false;
@@ -170,22 +122,7 @@ export default function AddAccountsManagerPage() {
     const emailAvailable = await checkEmailAvailability(email);
     
     if (emailAvailable === false) {
-      // Email exists, try to find an alternative
-      let alternativeEmail = "";
-      for (let i = 1; i <= 99; i++) {
-        const testEmail = generateEmail(firstName, lastName, i.toString());
-        const isAvailable = await checkEmailAvailability(testEmail);
-        if (isAvailable === true) {
-          alternativeEmail = testEmail;
-          break;
-        }
-      }
-      
-      if (alternativeEmail) {
-        setError(`This email address is already in use. Suggested alternative: ${alternativeEmail}`);
-      } else {
-        setError("This email address is already in use. Please try a different name combination.");
-      }
+      setError("This email address is already in use. Enter a different email.");
       return false;
     }
     
@@ -330,7 +267,7 @@ export default function AddAccountsManagerPage() {
                     className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
                     placeholder="Enter first name" 
                     value={firstName} 
-                    onChange={(e) => handleFirstNameChange(e.target.value)} 
+                    onChange={(e) => setFirstName(e.target.value)} 
                   />
                 </div>
                 <div>
@@ -339,20 +276,20 @@ export default function AddAccountsManagerPage() {
                     className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
                     placeholder="Enter last name" 
                     value={lastName} 
-                    onChange={(e) => handleLastNameChange(e.target.value)} 
+                    onChange={(e) => setLastName(e.target.value)} 
                   />
                 </div>
                 <div>
                   <label className="block text-white/70 text-sm mb-2">Email Address *</label>
                   <input 
                     type="email"
-                    className="w-full rounded-lg border border-white/10 bg-white/5 text-white px-3 py-2 cursor-not-allowed" 
-                    placeholder={email || "Email will be auto-generated"} 
+                    className="w-full rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/50 px-3 py-2 focus:border-blue-500 focus:outline-none" 
+                    placeholder="name@example.com" 
                     value={email} 
-                    readOnly
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                     <p className="text-xs text-blue-300 mt-1">
-                    💡 Email will be auto-generated as: {email || `firstname+lastname@${schoolCode}.sch`}
+                    Enter the person&apos;s real email address (used for login and invitations).
                     </p>
                 </div>
                 <div>

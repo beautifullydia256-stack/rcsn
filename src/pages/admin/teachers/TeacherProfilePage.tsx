@@ -31,22 +31,6 @@ export default function TeacherProfilePage() {
       const { data: teacher } = await supabase.from('teachers').select('*').eq('teacher_id', teacherId).single();
       setRow(teacher || null);
 
-      if (teacher && !teacher.email && teacher.school_id) {
-        try {
-          const { data: generatedEmail } = await supabase.rpc('generate_unique_school_email', {
-            p_first_name: (teacher.name as string)?.split(' ')[0] || 'Teacher',
-            p_last_name: (teacher.name as string)?.split(' ')[1] || (teacher.name as string)?.split(' ')[0] || 'User',
-            p_school_id: teacher.school_id,
-          });
-          if (generatedEmail) {
-            await supabase.from('teachers').update({ email: generatedEmail }).eq('teacher_id', teacher.teacher_id);
-            setRow((prev) => (prev ? { ...prev, email: generatedEmail } : null));
-          }
-        } catch {
-          // ignore
-        }
-      }
-
       if (teacher?.school_id) {
         setSchoolId(teacher.school_id as string);
         const { data: sch } = await supabase.from('schools').select('type').eq('school_id', teacher.school_id).single();
