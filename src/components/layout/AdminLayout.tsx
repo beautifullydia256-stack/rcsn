@@ -156,11 +156,10 @@ export default function AdminLayout() {
           supabase
             .from('jobs')
             .select('job_id', { count: 'exact', head: true })
-            .eq('school_id', schoolId)
-            .eq('status', 'Pending'),
+            .eq('school_id', schoolId),
           supabase
             .from('notifications')
-            .select('id', { count: 'exact', head: true })
+            .select('notification_id', { count: 'exact', head: true })
             .eq('school_id', schoolId),
         ]);
 

@@ -273,8 +273,7 @@ async function loadKPIs(schoolId: string, setText: (sel: string, val: string) =>
       supabase
         .from('jobs')
         .select('job_id', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('status', 'Pending'),
+        .eq('school_id', schoolId),
     ]);
 
     const totalStudents = studentsCountRes.count ?? 0;
@@ -510,11 +509,10 @@ async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string
     const currentYear = new Date().getFullYear();
     const { data: exams } = await supabase
       .from('exam_sets')
-      .select('id, name, start_date, term')
+      .select('id, name, term, year, created_at')
       .eq('school_id', schoolId)
       .eq('year', currentYear)
-      .gte('start_date', new Date().toISOString())
-      .order('start_date', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(5);
 
     if (!exams || exams.length === 0) {
@@ -532,7 +530,7 @@ async function loadUpcoming(schoolId: string, setHtml: (id: string, html: string
 
     const html = exams
       .map((exam: any, i: number) => {
-        const d = new Date(exam.start_date);
+        const d = new Date(exam.created_at || Date.now());
         const day = String(d.getDate()).padStart(2, '0');
         const mon = d.toLocaleString('en', { month: 'short' }).toUpperCase();
         const chip = urgencyChips[Math.min(i, 4)];
@@ -583,9 +581,8 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
   try {
     const { data } = await supabase
       .from('jobs')
-      .select('job_id, title, created_at, status')
+      .select('job_id, title, created_at')
       .eq('school_id', schoolId)
-      .eq('status', 'Pending')
       .order('created_at', { ascending: false })
       .limit(3);
 
