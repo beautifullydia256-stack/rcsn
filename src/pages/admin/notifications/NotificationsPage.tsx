@@ -26,8 +26,9 @@ export default function NotificationsPage() {
   const [priority, setPriority] = useState('medium');
   const [targetClass, setTargetClass] = useState('all');
   const [sending, setSending] = useState(false);
-  const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – test SMS.');
+  const [testEmail, setTestEmail] = useState('');
+  const [testSubject, setTestSubject] = useState('PwezaCore test');
+  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – test email.');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [waPhone, setWaPhone] = useState('');
@@ -93,18 +94,22 @@ export default function NotificationsPage() {
     }
   };
 
-  const sendTestSMS = async () => {
-    if (!testPhone.trim() || !testMessage.trim()) {
-      setTestResult({ ok: false, message: 'Enter phone and message.' });
+  const sendTestEmail = async () => {
+    if (!testEmail.trim() || !testMessage.trim()) {
+      setTestResult({ ok: false, message: 'Enter email address and message.' });
       return;
     }
     setTestSending(true);
     setTestResult(null);
     try {
-      const res = await fetch('/api/notifications/test-sms', {
+      const res = await fetch('/api/notifications/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
+        body: JSON.stringify({
+          to: testEmail.trim(),
+          subject: testSubject.trim() || 'PwezaCore test',
+          message: testMessage.trim(),
+        }),
       });
 
       const raw = await res.text();
@@ -118,17 +123,16 @@ export default function NotificationsPage() {
       if (!res.ok || !data?.success) {
         setTestResult({
           ok: false,
-          message: data?.error || `SMS test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
+          message: data?.error || `Email test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
         });
         return;
       }
 
-      const sandbox = data?.sandbox === true;
       setTestResult({
         ok: true,
-        message: sandbox
-          ? 'Accepted (sandbox). No credits used. Set AFRICASTALKING_SANDBOX=false and redeploy for production.'
-          : 'Accepted by API. Check delivery report in dashboard for real status (Submitted, Buffered, Success, Failed, Rejected). Credits deduct on delivery.',
+        message: data?.id
+          ? `Sent. Resend id: ${data.id}. Check inbox and Resend → Logs.`
+          : 'Sent. Check inbox and Resend → Logs.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -214,19 +218,20 @@ export default function NotificationsPage() {
         <div className={adminCardClass}>
           <h2 className="text-lg font-semibold text-white mb-3">Quick Actions</h2>
           <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={sendTestSMS} disabled={testSending} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testSending ? 'Sending...' : '📱 Send test SMS'}</button>
+            <button type="button" onClick={sendTestEmail} disabled={testSending} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">{testSending ? 'Sending...' : '📧 Send test email'}</button>
             <button type="button" onClick={sendTestWhatsApp} disabled={waSending} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">{waSending ? 'Sending...' : '💬 Send test WhatsApp'}</button>
             <button type="button" onClick={processPending} disabled={processingLogs} className="rounded-xl border border-green-500 bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">{processingLogs ? 'Processing...' : '📤 Process Pending'}</button>
           </div>
         </div>
         <div className={`${adminCardClass} border-2 border-blue-500/40`}>
-          <h2 className="text-lg font-semibold text-white mb-1">📱 Send test SMS</h2>
-          <p className="text-sm text-white/70 mb-3">Uganda (+256) numbers only. Phone number and message to test Africa&apos;s Talking.</p>
+          <h2 className="text-lg font-semibold text-white mb-1">📧 Send test email</h2>
+          <p className="text-sm text-white/70 mb-3">Uses Resend with your verified domain. Set RESEND_API_KEY and RESEND_FROM on the server (e.g. Vercel).</p>
           <div className="space-y-2">
-            <input type="text" value={testPhone} onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }} placeholder="Uganda only: 0712345678 or +256712345678" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            <input type="email" value={testEmail} onChange={(e) => { setTestEmail(e.target.value); setTestResult(null); }} placeholder="recipient@example.com" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
+            <input type="text" value={testSubject} onChange={(e) => { setTestSubject(e.target.value); setTestResult(null); }} placeholder="Subject (optional)" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
             <textarea value={testMessage} onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }} rows={2} placeholder="Message" className="w-full rounded-lg border border-white/20 bg-white/5 px-3 py-2 text-white placeholder-white/50" />
             {testResult && <p className={testResult.ok ? 'text-green-400 text-sm' : 'text-red-400 text-sm'}>{testResult.message}</p>}
-            <button type="button" onClick={sendTestSMS} disabled={testSending || !testPhone.trim() || !testMessage.trim()} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Send test SMS</button>
+            <button type="button" onClick={sendTestEmail} disabled={testSending || !testEmail.trim() || !testMessage.trim()} className="rounded-xl border border-blue-500 bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">Send test email</button>
           </div>
         </div>
         <div className={`${adminCardClass} border-2 border-green-500/40`}>

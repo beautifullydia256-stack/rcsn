@@ -79,7 +79,16 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # SMTP_PORT=587
 # SMTP_USER=your-email@gmail.com
 # SMTP_PASS=your-app-password
-# SMTP_FROM=noreply@pwezacore.com
+# SMTP_FROM="PwezaCore <noreply@pwezacore.com>"
+
+# ----------------------------
+# Resend (transactional email — used by /api/notifications/send)
+# Get key: resend.com → API Keys. Domain must be verified for custom From.
+# ----------------------------
+# RESEND_API_KEY=re_xxxxxxxx
+# RESEND_FROM="PwezaCore <noreply@pwezacore.com>"
+
+# Local test: npm run test:resend -- your@email.com
 
 # ----------------------------
 # Optional: Analytics & Monitoring

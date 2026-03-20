@@ -9,7 +9,8 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "test:resend": "node scripts/test-resend.mjs"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.3.1",

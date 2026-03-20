@@ -34,9 +34,10 @@ export default function NotificationsPage() {
   const [processingLogs, setProcessingLogs] = useState(false);
   const router = useRouter();
 
-  // Test SMS state
-  const [testPhone, setTestPhone] = useState('');
-  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – this is a test SMS.');
+  // Test email (Resend)
+  const [testEmailAddr, setTestEmailAddr] = useState('');
+  const [testSubject, setTestSubject] = useState('PwezaCore test');
+  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – this is a test email.');
   const [testSending, setTestSending] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -174,21 +175,24 @@ export default function NotificationsPage() {
     }
   };
 
-  const sendTestSMS = async () => {
-    if (!testPhone.trim() || !testMessage.trim()) {
-      setTestResult({ ok: false, message: 'Enter phone number and message.' });
+  const sendTestEmail = async () => {
+    if (!testEmailAddr.trim() || !testMessage.trim()) {
+      setTestResult({ ok: false, message: 'Enter email address and message.' });
       return;
     }
     setTestSending(true);
     setTestResult(null);
     try {
-      const res = await fetch('/api/notifications/test-sms', {
+      const res = await fetch('/api/notifications/test-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: testPhone.trim(), message: testMessage.trim() }),
+        body: JSON.stringify({
+          to: testEmailAddr.trim(),
+          subject: testSubject.trim() || 'PwezaCore test',
+          message: testMessage.trim(),
+        }),
       });
 
-      // Read the body once (prevents "body stream already read"), then parse if possible.
       const raw = await res.text();
       let data: any = null;
       try {
@@ -200,17 +204,16 @@ export default function NotificationsPage() {
       if (!res.ok || !data?.success) {
         setTestResult({
           ok: false,
-          message: data?.error || `SMS test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
+          message: data?.error || `Email test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
         });
         return;
       }
 
-      const sandbox = data?.sandbox === true;
       setTestResult({
         ok: true,
-        message: sandbox
-          ? 'Accepted (sandbox). No credits used; messages don\'t reach real phones. Set AFRICASTALKING_SANDBOX=false and redeploy for production.'
-          : 'Accepted by Africa\'s Talking. Final delivery depends on the telco – check the delivery report in your dashboard (Submitted, Buffered, Success, Failed, or Rejected). Credits deduct on delivery.',
+        message: data?.id
+          ? `Sent. Resend id: ${data.id}. Check inbox and Resend → Logs.`
+          : 'Sent. Check inbox and Resend → Logs.',
       });
     } catch (e) {
       setTestResult({ ok: false, message: String(e) });
@@ -323,23 +326,35 @@ export default function NotificationsPage() {
           <p className="text-white/70 mt-2">Send announcements and manage automated notifications</p>
         </div>
 
-        {/* Test SMS — first so admins can send test SMS without scrolling */}
+        {/* Test email (Resend) */}
         <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
-          <h3 className="text-xl font-semibold text-white mb-1">📱 Send test SMS</h3>
-          <p className="text-sm text-white/70 mb-5">Uganda (+256) numbers only. Enter the phone number and message, then click &quot;Send test SMS&quot; to test your Africa&apos;s Talking setup. &quot;Success&quot; here means the API accepted the message; actual delivery is in your Africa&apos;s Talking delivery report (Submitted, Buffered, Success, Failed, Rejected). Credits deduct on delivery.</p>
+          <h3 className="text-xl font-semibold text-white mb-1">📧 Send test email</h3>
+          <p className="text-sm text-white/70 mb-5">
+            Sends one message via Resend using RESEND_API_KEY and RESEND_FROM (e.g. PwezaCore &lt;noreply@pwezacore.com&gt;). Check your inbox and Resend → Logs after sending.
+          </p>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Phone number to send to</label>
+              <label className="block text-sm font-medium text-white mb-2">Email address to send to</label>
               <input
-                type="text"
-                value={testPhone}
-                onChange={(e) => { setTestPhone(e.target.value); setTestResult(null); }}
-                placeholder="Uganda only: 0712345678 or +256712345678"
+                type="email"
+                value={testEmailAddr}
+                onChange={(e) => { setTestEmailAddr(e.target.value); setTestResult(null); }}
+                placeholder="you@example.com"
                 className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Message to send</label>
+              <label className="block text-sm font-medium text-white mb-2">Subject</label>
+              <input
+                type="text"
+                value={testSubject}
+                onChange={(e) => { setTestSubject(e.target.value); setTestResult(null); }}
+                placeholder="PwezaCore test"
+                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Message</label>
               <textarea
                 value={testMessage}
                 onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }}
@@ -354,11 +369,11 @@ export default function NotificationsPage() {
               </div>
             )}
             <button
-              onClick={sendTestSMS}
-              disabled={testSending || !testPhone.trim() || !testMessage.trim()}
+              onClick={sendTestEmail}
+              disabled={testSending || !testEmailAddr.trim() || !testMessage.trim()}
               className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {testSending ? 'Sending...' : 'Send test SMS'}
+              {testSending ? 'Sending...' : 'Send test email'}
             </button>
           </div>
         </div>

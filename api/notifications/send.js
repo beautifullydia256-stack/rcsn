@@ -158,8 +158,58 @@ async function sendAfricaTalkingWhatsApp(to, message) {
   }
 }
 
-async function sendEmail(_to, _subject, _body) {
-  return { success: true };
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function sendEmail(to, subject, body) {
+  const apiKey = sanitizeHeaderValue(process.env.RESEND_API_KEY);
+  const from = sanitizeHeaderValue(process.env.RESEND_FROM) || 'PwezaCore <noreply@pwezacore.com>';
+  if (!apiKey) {
+    console.warn('[EMAIL] RESEND_API_KEY not set');
+    return { success: false, error: 'RESEND_API_KEY not configured' };
+  }
+  const raw = typeof body === 'string' ? body : String(body);
+  const html = raw.trim().startsWith('<') ? raw : `<p>${escapeHtml(raw)}</p>`;
+  const payload = JSON.stringify({
+    from,
+    to: [to],
+    subject: subject || 'Notification',
+    html,
+  });
+  try {
+    const r = await httpsRequest(
+      'https://api.resend.com/emails',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+      },
+      payload
+    );
+    let data = {};
+    try {
+      data = JSON.parse(r.text || '{}');
+    } catch {
+      data = {};
+    }
+    if (r.status >= 200 && r.status < 300) {
+      return { success: true };
+    }
+    return {
+      success: false,
+      error: data.message || data.name || r.text || `HTTP ${r.status}`,
+    };
+  } catch (err) {
+    console.error('Resend email error', err);
+    return { success: false, error: String(err) };
+  }
 }
 
 async function sendWhatsApp(to, message) {
