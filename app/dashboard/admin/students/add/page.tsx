@@ -8,6 +8,7 @@ import ImageUpload from "@/src/components/ImageUpload";
 import { createMissedExamRecordsForNewStudent } from "@/src/lib/examResultsUtils";
 import { CompressionResult } from "@/src/lib/imageCompression";
 import { isValidRealEmail } from "@/src/lib/realEmail";
+import { ensureParentLinkForStudent } from "@/src/lib/ensureParentLink";
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -346,22 +347,16 @@ export default function AddStudentPage() {
       }
 
       if (insertedStudent?.student_id && guardianName.trim() && schoolId) {
-        try {
-          await fetch('/api/admin/ensure-parent-link', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({
-              student_id: insertedStudent.student_id,
-              school_id: schoolId,
-              name: guardianName.trim(),
-              email: guardianEmail.trim(),
-              phone: guardianPhone.trim() || undefined,
-              relationship: guardianRelationship || undefined,
-            }),
-          });
-        } catch (e) {
-          console.warn('Parent link failed', e);
+        const linkRes = await ensureParentLinkForStudent({
+          student_id: insertedStudent.student_id,
+          school_id: schoolId,
+          name: guardianName.trim(),
+          email: guardianEmail.trim(),
+          phone: guardianPhone.trim() || undefined,
+          relationship: guardianRelationship || undefined,
+        });
+        if (!linkRes.ok) {
+          console.warn('Parent link failed', linkRes.error);
         }
       }
 

@@ -10,17 +10,43 @@ export async function ensureParentLinkForStudent(body: {
   phone?: string;
   relationship?: string;
 }): Promise<{ ok: boolean; status: number; error?: string; message?: string }> {
-  const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+  const apiBase = (
+    import.meta.env.VITE_API_URL ||
+    (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
+    ''
+  ).replace(/\/$/, '');
   const url = apiBase ? `${apiBase}/api/admin/ensure-parent-link` : '/api/admin/ensure-parent-link';
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(body),
-  });
-  const json = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
-  if (!res.ok) {
-    return { ok: false, status: res.status, error: json.error || res.statusText };
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+    });
+    const text = await res.text();
+    let json = {} as { error?: string; message?: string };
+    try {
+      json = text ? (JSON.parse(text) as typeof json) : {};
+    } catch {
+      json = { error: text ? text.slice(0, 300) : undefined };
+    }
+    if (!res.ok) {
+      const errMsg =
+        json.error ||
+        (text && !json.error ? `HTTP ${res.status}: ${text.slice(0, 200)}` : '') ||
+        res.statusText ||
+        `HTTP ${res.status}`;
+      return { ok: false, status: res.status, error: errMsg };
+    }
+    return { ok: true, status: res.status, message: json.message };
+  } catch (e) {
+    return {
+      ok: false,
+      status: 0,
+      error:
+        e instanceof Error
+          ? `${e.message}${e.message.includes('fetch') ? ' (if the app API is on another host, CORS must allow this site.)' : ''}`
+          : 'Network error',
+    };
   }
-  return { ok: true, status: res.status, message: json.message };
 }

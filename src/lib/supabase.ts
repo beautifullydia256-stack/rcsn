@@ -1,8 +1,38 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ?? import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+function envStr(key: string): string | undefined {
+  if (typeof process !== 'undefined' && process.env && typeof process.env[key] === 'string') {
+    const v = process.env[key];
+    if (v) return v;
+  }
+  return undefined;
+}
+
+const supabaseUrl =
+  envStr('NEXT_PUBLIC_SUPABASE_URL') ||
+  envStr('VITE_SUPABASE_URL') ||
+  envStr('SUPABASE_URL') ||
+  import.meta.env.VITE_SUPABASE_URL ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
+
+const supabaseAnonKey =
+  envStr('NEXT_PUBLIC_SUPABASE_ANON_KEY') ||
+  envStr('VITE_SUPABASE_ANON_KEY') ||
+  envStr('SUPABASE_ANON_KEY') ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+/** Service role: never available in the browser bundle. */
+function getServiceRoleKey(): string | undefined {
+  if (typeof window !== 'undefined') return undefined;
+  return (
+    envStr('SUPABASE_SERVICE_ROLE_KEY') ||
+    import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY ||
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
+
+const supabaseServiceKey = getServiceRoleKey();
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');

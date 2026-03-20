@@ -2,6 +2,7 @@ import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import {
@@ -45,8 +46,6 @@ function avatarGradient(i: number) {
   return AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
 }
 
-type ParentLite = { name: string; email?: string; phone?: string };
-
 type FetchResult = {
   rows: Array<{
     student_id: string;
@@ -54,6 +53,9 @@ type FetchResult = {
     current_class: string | null;
     address: string | null;
     guardian_address: string | null;
+    guardian_name?: string | null;
+    guardian_email?: string | null;
+    guardian_phone?: string | null;
   }>;
   parentsByStudent: Record<string, ParentLite[]>;
   classTeacherNameByClass: Record<string, string>;
@@ -71,7 +73,7 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
   const [studentsRes, parentsRes, classTeachersRes, attendanceRes] = await Promise.all([
     supabase
       .from('students')
-      .select('student_id, name, current_class, address, guardian_address')
+      .select('student_id, name, current_class, address, guardian_address, guardian_name, guardian_email, guardian_phone')
       .eq('school_id', u.school_id)
       .order('name'),
     supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
@@ -166,10 +168,11 @@ export default function DesignStudentsPage() {
     const t = q.trim().toLowerCase();
     if (t) {
       out = out.filter((r) => {
-        const parents = parentsByStudent[r.student_id] || [];
+        const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
         return (
           (r.name || '').toLowerCase().includes(t) ||
           (r.current_class || '').toLowerCase().includes(t) ||
+          (r.guardian_name || '').toLowerCase().includes(t) ||
           parents.some((p) => (p.name || '').toLowerCase().includes(t))
         );
       });
@@ -209,7 +212,9 @@ export default function DesignStudentsPage() {
 
   const stats = useMemo(() => {
     const uniqueClasses = new Set(rows.map((r) => r.current_class).filter(Boolean)).size;
-    const withParents = rows.filter((r) => (parentsByStudent[r.student_id]?.length ?? 0) > 0).length;
+    const withParents = rows.filter(
+      (r) => displayParentsForStudent(r.student_id, r, parentsByStudent).length > 0
+    ).length;
     return {
       total: rows.length,
       classes: uniqueClasses,
@@ -407,7 +412,7 @@ export default function DesignStudentsPage() {
                   ) : (
                     pageSlice.map((r, idx) => {
                       const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                      const parents = parentsByStudent[r.student_id] || [];
+                      const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
                       const first = parents[0];
                       const addr =
                         (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
@@ -574,7 +579,7 @@ export default function DesignStudentsPage() {
             ) : (
               pageSlice.map((r, idx) => {
                 const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                const parents = parentsByStudent[r.student_id] || [];
+                const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
                 const first = parents[0];
                 const addr =
                   (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';

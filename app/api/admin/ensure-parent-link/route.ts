@@ -63,7 +63,11 @@ export async function POST(request: NextRequest) {
     const { data: canManage, error: rpcErr } = await supabase.rpc('current_user_can_manage_students');
     if (rpcErr || !canManage) {
       return NextResponse.json(
-        { error: 'You do not have permission to link parents for students.' },
+        {
+          error:
+            rpcErr?.message ||
+            'You do not have permission to link parents for students. Ensure your role is admin/owner/head_teacher/accountant or you have students.manage permission.',
+        },
         { status: 403 }
       );
     }

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { displayParentsForStudent } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import {
@@ -30,7 +31,7 @@ async function fetchStudentsList(userId: string) {
     supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
     supabase
       .from('students')
-      .select('student_id, name, current_class, status, created_at, admission_number, address, guardian_address')
+      .select('student_id, name, current_class, status, created_at, admission_number, address, guardian_address, guardian_name, guardian_email, guardian_phone')
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
     supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
@@ -91,7 +92,17 @@ export default function StudentsPage() {
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     let out = rows;
-    if (t) out = out.filter((r) => (r.name || '').toLowerCase().includes(t) || (r.current_class || '').toLowerCase().includes(t) || (parentsByStudent[r.student_id]?.some((p) => p.name?.toLowerCase().includes(t))));
+    if (t) {
+      out = out.filter((r) => {
+        const parentsList = displayParentsForStudent(r.student_id, r, parentsByStudent);
+        return (
+          (r.name || '').toLowerCase().includes(t) ||
+          (r.current_class || '').toLowerCase().includes(t) ||
+          (r.guardian_name || '').toLowerCase().includes(t) ||
+          parentsList.some((p) => p.name?.toLowerCase().includes(t))
+        );
+      });
+    }
     if (klass) out = out.filter((r) => (r.current_class || '') === klass);
     return out;
   }, [q, klass, rows, parentsByStudent]);
@@ -106,8 +117,16 @@ export default function StudentsPage() {
           bVal = (b.name || '').toLowerCase();
           break;
         case 'parents':
-          aVal = (parentsByStudent[a.student_id]?.map((p) => p.name).join(', ') || '').toLowerCase();
-          bVal = (parentsByStudent[b.student_id]?.map((p) => p.name).join(', ') || '').toLowerCase();
+          aVal = (
+            displayParentsForStudent(a.student_id, a, parentsByStudent)
+              .map((p) => p.name)
+              .join(', ') || ''
+          ).toLowerCase();
+          bVal = (
+            displayParentsForStudent(b.student_id, b, parentsByStudent)
+              .map((p) => p.name)
+              .join(', ') || ''
+          ).toLowerCase();
           break;
         case 'teacher':
           aVal = ('—').toLowerCase();
@@ -118,12 +137,12 @@ export default function StudentsPage() {
           bVal = (b.current_class || '').toLowerCase();
           break;
         case 'email':
-          aVal = (parentsByStudent[a.student_id]?.[0]?.email || '—').toLowerCase();
-          bVal = (parentsByStudent[b.student_id]?.[0]?.email || '—').toLowerCase();
+          aVal = (displayParentsForStudent(a.student_id, a, parentsByStudent)[0]?.email || '—').toLowerCase();
+          bVal = (displayParentsForStudent(b.student_id, b, parentsByStudent)[0]?.email || '—').toLowerCase();
           break;
         case 'phone':
-          aVal = (parentsByStudent[a.student_id]?.[0]?.phone || '—').toLowerCase();
-          bVal = (parentsByStudent[b.student_id]?.[0]?.phone || '—').toLowerCase();
+          aVal = (displayParentsForStudent(a.student_id, a, parentsByStudent)[0]?.phone || '—').toLowerCase();
+          bVal = (displayParentsForStudent(b.student_id, b, parentsByStudent)[0]?.phone || '—').toLowerCase();
           break;
         default:
           return 0;
@@ -301,7 +320,7 @@ export default function StudentsPage() {
                   <tr><td colSpan={7} className="px-4 py-8 text-center ac-text-muted">No students found.</td></tr>
                 ) : (
                   sorted.map((r, idx) => {
-                    const parentsList = parentsByStudent[r.student_id] || [];
+                    const parentsList = displayParentsForStudent(r.student_id, r, parentsByStudent);
                     const firstParent = parentsList[0];
                     const isExpanded = expandedParent?.studentId === r.student_id && expandedParent?.parentIndex !== undefined;
                     const clickedParent = isExpanded && parentsList[expandedParent.parentIndex] ? parentsList[expandedParent.parentIndex] : null;

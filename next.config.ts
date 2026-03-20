@@ -1,22 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // CORS for API when called from www.pwezacore.com (e.g. api.pwezacore.com)
-  async headers() {
-    const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
-    return [
-      {
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: origin },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PUT, DELETE, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
-          { key: 'Access-Control-Allow-Credentials', value: 'true' },
-          { key: 'Access-Control-Max-Age', value: '86400' },
-        ],
-      },
-    ];
-  },
+  // API CORS: use root middleware.ts so apex + www + localhost match the request Origin.
   // Reduce bundle size
   experimental: {
     optimizePackageImports: ['@supabase/supabase-js', 'framer-motion', 'lucide-react'],
