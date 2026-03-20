@@ -1,0 +1,15 @@
+---
+description: When the user asks to push to Git, commit all relevant work and push
+alwaysApply: true
+---
+
+# Git: push means commit + push
+
+When the user says **push** (or "push to git", "commit and push"), they mean:
+
+1. **Stage** all changes that belong in this repository: modified files, new files, and new directories — respecting `.gitignore` (never commit `.env`, `node_modules`, secrets, or build artifacts).
+2. If a directory is a **nested git repository** (contains its own `.git`), either remove that inner `.git` so the folder can be tracked as normal files in the parent repo, or set up a proper **git submodule** with a remote URL — do not leave only an empty submodule pointer unless the user asked for submodules.
+3. **Commit** with a clear message summarizing the changes.
+4. **Push** to the current branch (usually `origin` and the checked-out branch).
+
+Do **not** cherry-pick only "task-related" files unless the user explicitly limits scope (e.g. "only push the API changes"). Default to **everything that should be versioned**.

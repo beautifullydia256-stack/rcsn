@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Students</title>
+<link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── All styles scoped to .pw-students to avoid leaking into React ── */
+.pw-students *, .pw-students *::before, .pw-students *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+}
+
+.pw-students {
+  --bg:      #05080f;
+  --s1:      #0b1120;
+  --s2:      #101828;
+  --s3:      #141c2e;
+  --s4:      #1d2d4e;
+  --border:  rgba(255,255,255,0.07);
+  --bh:      rgba(255,255,255,0.12);
+  --teal:    #10d9a8;
+  --teal-s:  rgba(16,217,168,0.10);
+  --teal-g:  rgba(16,217,168,0.22);
+  --blue:    #3d8ef8;
+  --blue-s:  rgba(61,142,248,0.10);
+  --amber:   #f5a623;
+  --amber-s: rgba(245,166,35,0.10);
+  --rose:    #f75c5c;
+  --rose-s:  rgba(247,92,92,0.10);
+  --violet:  #9d7bf8;
+  --violet-s:rgba(157,123,248,0.10);
+  --green:   #22c55e;
+  --green-s: rgba(34,197,94,0.10);
+  --t1: #eef3ff;
+  --t2: #8296be;
+  --t3: #3d5278;
+  --r:  12px;
+  --rs: 8px;
+
+  font-family: 'Instrument Sans', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* ── Light mode overrides ── */
+html.light .pw-students,
+html[data-theme="light"] .pw-students {
+  --bg:     #f0f4f8;
+  --s1:     #ffffff;
+  --s2:     #f5f7fa;
+  --s3:     #e8edf5;
+  --s4:     #d0dbe8;
+  --border: rgba(0,0,0,0.08);
+  --bh:     rgba(0,0,0,0.14);
+  --t1:     #0d1c2e;
+  --t2:     #4a6080;
+  --t3:     #94a3b8;
+  background: var(--bg);
+  color: var(--t1);
+}
+
+/* ── PAGE HEADER ── */
+.pw-students .ps-header {
+  padding: 22px 24px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pw-students .ps-title-row { flex: 1; }
+
+.pw-students .ps-eyebrow {
+  font-size: 11px;
+  color: var(--t3);
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pw-students .ps-live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: ps-blink 2s infinite;
+  flex-shrink: 0;
+}
+@keyframes ps-blink { 0%,100%{opacity:1}50%{opacity:.25} }
+
+.pw-students .ps-page-title {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: -0.4px;
+  color: var(--t1);
+}
+.pw-students .ps-page-sub {
+  font-size: 12.5px;
+  color: var(--t2);
+  margin-top: 3px;
+}
+
+.pw-students .ps-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+/* ── BUTTONS ── */
+.pw-students .ps-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 15px;
+  border-radius: var(--rs);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s;
+  border: none;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.pw-students .ps-btn-primary {
+  background: var(--teal);
+  color: #05080f;
+}
+.pw-students .ps-btn-primary:hover {
+  background: #14f0bb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px var(--teal-g);
+}
+.pw-students .ps-btn-outline {
+  background: transparent;
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+.pw-students .ps-btn-outline:hover { border-color: var(--bh); color: var(--t1); }
+.pw-students .ps-btn-ghost {
+  background: var(--s2);
+  color: var(--t2);
+  border: 1px solid var(--border);
+}
+.pw-students .ps-btn-ghost:hover { border-color: var(--bh); color: var(--t1); }
+
+/* ── STATS STRIP ── */
+.pw-students .ps-stats {
+  display: flex;
+  gap: 1px;
+  padding: 18px 24px 0;
+  flex-wrap: wrap;
+}
+.pw-students .ps-stat {
+  flex: 1;
+  min-width: 100px;
+  padding: 14px 18px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.2s;
+  cursor: default;
+}
+.pw-students .ps-stat:first-child { border-radius: var(--r) 0 0 var(--r); }
+.pw-students .ps-stat:last-child  { border-radius: 0 var(--r) var(--r) 0; }
+.pw-students .ps-stat:only-child  { border-radius: var(--r); }
+.pw-students .ps-stat:hover { border-color: var(--bh); }
+.pw-students .ps-stat-ic {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.pw-students .ps-stat-lbl {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--t3);
+  margin-bottom: 2px;
+}
+.pw-students .ps-stat-val {
+  font-family: 'Cabinet Grotesk', sans-serif;
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.5px;
+  color: var(--t1);
+  line-height: 1;
+}
+
+/* ── TOOLBAR ── */
+.pw-students .ps-toolbar {
+  padding: 16px 24px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pw-students .ps-search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+  max-width: 320px;
+}
+.pw-students .ps-search-input {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 8px 14px 8px 34px;
+  font-size: 13px;
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--t1);
+  transition: border-color 0.2s;
+  outline: none;
+}
+.pw-students .ps-search-input::placeholder { color: var(--t3); }
+.pw-students .ps-search-input:focus { border-color: var(--teal); }
+.pw-students .ps-search-ic {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--t3);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.pw-students .ps-select {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  padding: 8px 28px 8px 12px;
+  font-size: 12.5px;
+  font-family: 'Instrument Sans', sans-serif;
+  color: var(--t2);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%233d5278' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  outline: none;
+  transition: border-color 0.18s;
+}
+.pw-students .ps-select:focus { border-color: var(--teal); color: var(--t1); }
+
+.pw-students .ps-toolbar-right {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ── VIEW TOGGLE ── */
+.pw-students .ps-view-toggle {
+  display: flex;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--rs);
+  overflow: hidden;
+}
+.pw-students .ps-view-btn {
+  padding: 7px 11px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--t3);
+  border: none;
+  background: transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+}
+.pw-students .ps-view-btn.active {
+  background: var(--teal-s);
+  color: var(--teal);
+}
+.pw-students .ps-view-btn:hover:not(.active) { color: var(--t2); }
+
+/* ── TABLE VIEW ── */
+.pw-students .ps-table-wrap {
+  padding: 0 24px 24px;
+  overflow-x: auto;
+}
+.pw-students .ps-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  min-width: 700px;
+}
+
+/* Table header */
+.pw-students .ps-th-row {
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+.pw-students .ps-th {
+  padding: 11px 16px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.14s;
+}
+.pw-students .ps-th:hover { color: var(--t1); }
+.pw-students .ps-th.sorted { color: var(--teal); }
+.pw-students .ps-th-icon { font-size: 9px; margin-left: 4px; opacity: 0.6; }
+
+/* Table rows */
+.pw-students .ps-tr {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.14s;
+}
+.pw-students .ps-tr:last-child { border-bottom: none; }
+.pw-students .ps-tr:hover { background: var(--s2); }
+.pw-students .ps-tr.expanded { background: var(--s2); }
+
+.pw-students .ps-td {
+  padding: 13px 16px;
+  font-size: 13px;
+  color: var(--t2);
+  vertical-align: middle;
+}
+.pw-students .ps-td.bold { color: var(--t1); font-weight: 600; }
+.pw-students .ps-td.muted { color: var(--t3); }
+
+/* Student name cell */
+.pw-students .ps-student-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pw-students .ps-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.pw-students .ps-student-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--t1);
+}
+.pw-students .ps-student-id {
+  font-size: 10.5px;
+  color: var(--t3);
+  margin-top: 1px;
+}
+
+/* Actions menu button */
+.pw-students .ps-row-actions {
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.14s;
+}
+.pw-students .ps-tr:hover .ps-row-actions { opacity: 1; }
+.pw-students .ps-row-action-btn {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  background: var(--s3);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.14s;
+  color: var(--t2);
+}
+.pw-students .ps-row-action-btn:hover { background: var(--s4); color: var(--t1); border-color: var(--bh); }
+
+/* Chip */
+.pw-students .ps-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+.pw-students .ps-chip.teal   { background: var(--teal-s); color: var(--teal); }
+.pw-students .ps-chip.blue   { background: var(--blue-s); color: var(--blue); }
+.pw-students .ps-chip.amber  { background: var(--amber-s); color: var(--amber); }
+.pw-students .ps-chip.violet { background: var(--violet-s); color: var(--violet); }
+.pw-students .ps-chip.green  { background: var(--green-s); color: var(--green); }
+.pw-students .ps-chip.slate  { background: var(--s3); color: var(--t2); }
+
+/* ── EXPANDED ROW ── */
+.pw-students .ps-expand-row { background: var(--s2); border-bottom: 1px solid var(--border); }
+.pw-students .ps-expand-row:last-child { border-bottom: none; }
+.pw-students .ps-expand-panel {
+  padding: 16px 20px 16px 60px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.pw-students .ps-expand-group {}
+.pw-students .ps-expand-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  margin-bottom: 4px;
+}
+.pw-students .ps-expand-val {
+  font-size: 13px;
+  color: var(--t1);
+  font-weight: 500;
+}
+.pw-students .ps-expand-actions {
+  display: flex;
+  gap: 8px;
+  grid-column: span 3;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* ── CARD VIEW ── */
+.pw-students .ps-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+.pw-students .ps-card-grid { display: none; } /* hidden by default, shown by JS */
+
+.pw-students .ps-student-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.pw-students .ps-student-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--teal), var(--blue));
+  border-radius: var(--r) var(--r) 0 0;
+}
+.pw-students .ps-student-card:hover { border-color: var(--bh); transform: translateY(-2px); }
+
+.pw-students .ps-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.pw-students .ps-card-av {
+  width: 42px; height: 42px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+.pw-students .ps-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--t1);
+}
+.pw-students .ps-card-class {
+  font-size: 11.5px;
+  color: var(--t3);
+  margin-top: 2px;
+}
+.pw-students .ps-card-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 12px 0;
+}
+.pw-students .ps-card-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.pw-students .ps-card-row:last-child { margin-bottom: 0; }
+.pw-students .ps-card-row-lbl { color: var(--t3); }
+.pw-students .ps-card-row-val { color: var(--t1); font-weight: 500; }
+
+.pw-students .ps-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+}
+.pw-students .ps-card-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Instrument Sans', sans-serif;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--t2);
+  transition: all 0.15s;
+  text-align: center;
+}
+.pw-students .ps-card-btn:hover { border-color: var(--teal); color: var(--teal); }
+.pw-students .ps-card-btn.primary { background: var(--teal-s); color: var(--teal); border-color: rgba(16,217,168,0.2); }
+
+/* ── EMPTY STATE ── */
+.pw-students .ps-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 12px;
+}
+.pw-students .ps-empty-icon { font-size: 40px; opacity: 0.35; }
+.pw-students .ps-empty-title { font-family: 'Cabinet Grotesk', sans-serif; font-weight: 700; font-size: 17px; color: var(--t2); }
+.pw-students .ps-empty-sub { font-size: 13px; color: var(--t3); max-width: 280px; line-height: 1.5; }
+
+/* ── SKELETON LOADING ── */
+.pw-students .ps-skeleton {
+  background: linear-gradient(90deg, var(--s2) 25%, var(--s3) 50%, var(--s2) 75%);
+  background-size: 200% 100%;
+  animation: ps-shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+@keyframes ps-shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
+
+/* ── PAGINATION ── */
+.pw-students .ps-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pw-students .ps-pagination-info { font-size: 12.5px; color: var(--t3); }
+.pw-students .ps-pagination-btns { display: flex; gap: 4px; }
+.pw-students .ps-page-btn {
+  width: 32px; height: 32px;
+  border-radius: var(--rs);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--s2);
+  color: var(--t2);
+  transition: all 0.14s;
+}
+.pw-students .ps-page-btn:hover  { border-color: var(--bh); color: var(--t1); }
+.pw-students .ps-page-btn.active { background: var(--teal-s); color: var(--teal); border-color: rgba(16,217,168,0.2); }
+.pw-students .ps-page-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+
+/* ── MOBILE RESPONSIVE ── */
+@media (max-width: 900px) {
+  .pw-students .ps-expand-panel { grid-template-columns: 1fr 1fr; }
+  .pw-students .ps-expand-actions { grid-column: span 2; }
+}
+@media (max-width: 768px) {
+  .pw-students .ps-header { padding: 16px 16px 0; }
+  .pw-students .ps-stats  { padding: 12px 16px 0; }
+  .pw-students .ps-toolbar{ padding: 12px 16px; }
+  .pw-students .ps-table-wrap { padding: 0 16px 16px; }
+  .pw-students .ps-card-grid  { padding: 0 16px 16px; }
+  .pw-students .ps-pagination  { padding: 10px 16px 16px; }
+  .pw-students .ps-stat { padding: 10px 14px; }
+  .pw-students .ps-stat-val { font-size: 18px; }
+  .pw-students .ps-toolbar-right .ps-btn-outline { display: none; }
+  .pw-students .ps-page-title { font-size: 22px; }
+  .pw-students .ps-expand-panel { grid-template-columns: 1fr; }
+  .pw-students .ps-expand-actions { grid-column: span 1; }
+  .pw-students .ps-search-wrap { max-width: 100%; }
+}
+@media (max-width: 480px) {
+  .pw-students .ps-stats { flex-direction: column; gap: 6px; }
+  .pw-students .ps-stat { border-radius: var(--r) !important; }
+  .pw-students .ps-header-actions .ps-btn-ghost { display: none; }
+}
+
+/* ── FADE IN ── */
+@keyframes ps-fadeUp { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+.pw-students .ps-fu   { animation: ps-fadeUp 0.38s ease both; }
+.pw-students .ps-d1   { animation-delay:.04s }
+.pw-students .ps-d2   { animation-delay:.08s }
+.pw-students .ps-d3   { animation-delay:.12s }
+</style>
+</head>
+<body>
+
+<div class="pw-students">
+
+  <!-- ── PAGE HEADER ── -->
+  <div class="ps-header ps-fu">
+    <div class="ps-title-row">
+      <div class="ps-eyebrow">
+        <span class="ps-live-dot"></span>
+        <span id="ps-breadcrumb">Admin Dashboard / Students</span>
+      </div>
+      <h1 class="ps-page-title">Students</h1>
+      <p class="ps-page-sub">Manage all enrolled students, classes, and parent contacts.</p>
+    </div>
+    <div class="ps-header-actions">
+      <button class="ps-btn ps-btn-ghost" id="ps-print-btn">🖨️ Print</button>
+      <button class="ps-btn ps-btn-outline" id="ps-export-btn">📤 Export</button>
+      <button class="ps-btn ps-btn-ghost" id="ps-family-btn">👨‍👩‍👧 Add Family</button>
+      <button class="ps-btn ps-btn-primary" id="ps-add-btn">＋ Add Student</button>
+    </div>
+  </div>
+
+  <!-- ── STATS STRIP ── -->
+  <div class="ps-stats ps-fu ps-d1">
+    <div class="ps-stat">
+      <div class="ps-stat-ic" style="background:var(--teal-s)">👨‍🎓</div>
+      <div>
+        <div class="ps-stat-lbl">Total Students</div>
+        <div class="ps-stat-val" id="ps-stat-total">—</div>
+      </div>
+    </div>
+    <div class="ps-stat">
+      <div class="ps-stat-ic" style="background:var(--blue-s)">🏫</div>
+      <div>
+        <div class="ps-stat-lbl">Classes</div>
+        <div class="ps-stat-val" id="ps-stat-classes">—</div>
+      </div>
+    </div>
+    <div class="ps-stat">
+      <div class="ps-stat-ic" style="background:var(--green-s)">👨‍👩‍👧</div>
+      <div>
+        <div class="ps-stat-lbl">With Parents Linked</div>
+        <div class="ps-stat-val" id="ps-stat-parents">—</div>
+      </div>
+    </div>
+    <div class="ps-stat">
+      <div class="ps-stat-ic" style="background:var(--green-s)">✅</div>
+      <div>
+        <div class="ps-stat-lbl">Attended Today</div>
+        <div class="ps-stat-val" id="ps-stat-showing">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TOOLBAR ── -->
+  <div class="ps-toolbar ps-fu ps-d2">
+
+    <!-- Search -->
+    <div class="ps-search-wrap">
+      <span class="ps-search-ic">🔍</span>
+      <input
+        class="ps-search-input"
+        id="ps-search"
+        type="text"
+        placeholder="Search by name, class, or parent…"
+      >
+    </div>
+
+    <!-- Class filter -->
+    <select class="ps-select" id="ps-class-filter">
+      <option value="">All Classes</option>
+    </select>
+
+    <!-- Sort -->
+    <select class="ps-select" id="ps-sort-select">
+      <option value="name-asc">Name A → Z</option>
+      <option value="name-desc">Name Z → A</option>
+      <option value="class-asc">Class A → Z</option>
+      <option value="class-desc">Class Z → A</option>
+    </select>
+
+    <div class="ps-toolbar-right">
+      <!-- View toggle -->
+      <div class="ps-view-toggle">
+        <button class="ps-view-btn active" id="ps-view-table" title="Table view">☰</button>
+        <button class="ps-view-btn" id="ps-view-cards" title="Card view">⊞</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── TABLE VIEW ── -->
+  <div class="ps-table-wrap ps-fu ps-d3" id="ps-table-view">
+    <table class="ps-table">
+      <thead>
+        <tr class="ps-th-row">
+          <th class="ps-th" data-sort="name" style="min-width:200px">
+            Student Name <span class="ps-th-icon">↕</span>
+          </th>
+          <th class="ps-th" style="min-width:160px">Parents / Guardian</th>
+          <th class="ps-th" style="min-width:130px">Class</th>
+          <th class="ps-th" style="min-width:160px">Class Teacher</th>
+          <th class="ps-th" style="min-width:120px">Address</th>
+          <th class="ps-th" style="min-width:130px">Phone</th>
+          <th class="ps-th" style="width:80px">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="ps-table-body">
+        <!-- Skeleton rows while loading -->
+        <tr class="ps-tr">
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:140px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:100px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:70px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:120px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:80px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:90px"></div></td>
+          <td class="ps-td"></td>
+        </tr>
+        <tr class="ps-tr">
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:120px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:90px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:60px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:110px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:70px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:85px"></div></td>
+          <td class="ps-td"></td>
+        </tr>
+        <tr class="ps-tr">
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:150px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:110px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:65px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:130px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:75px"></div></td>
+          <td class="ps-td"><div class="ps-skeleton" style="height:14px;width:95px"></div></td>
+          <td class="ps-td"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── CARD VIEW (hidden by default) ── -->
+  <div class="ps-card-grid" id="ps-card-view">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- ── PAGINATION ── -->
+  <div class="ps-pagination" id="ps-pagination" style="display:none">
+    <span class="ps-pagination-info" id="ps-pagination-info">Showing 1–10 of 0</span>
+    <div class="ps-pagination-btns" id="ps-pagination-btns"></div>
+  </div>
+
+</div>
+
+</body>
+</html>

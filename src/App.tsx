@@ -39,8 +39,9 @@ const GenerateReportsPage = lazyWithRetry(() => import('./pages/admin/reports/Ge
 const ReportRecordsPage = lazyWithRetry(() => import('./pages/admin/reports/ReportRecordsPage'));
 const BulkGenerator = lazyWithRetry(() => import('./pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportViewer'));
-const StudentsPage = lazyWithRetry(() => import('./pages/admin/students/StudentsPage'));
+const DesignStudentsPage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentsPage'));
 const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
+const StudentProfilePage = lazyWithRetry(() => import('./pages/admin/students/StudentProfile'));
 const TeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/TeachersPage'));
 const AddTeacherPage = lazyWithRetry(() => import('./pages/admin/teachers/AddTeacherPage'));
 const TeacherProfilePage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherProfilePage'));
@@ -126,8 +127,11 @@ function App() {
                 <Route index element={<DashboardEntry />} />
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
-                  <Route path="students" element={<StudentsPage />} />
-                  <Route path="students/add" element={<AddStudentPage />} />
+                  <Route path="students">
+                    <Route index element={<DesignStudentsPage />} />
+                    <Route path="add" element={<AddStudentPage />} />
+                    <Route path=":student_id" element={<StudentProfilePage />} />
+                  </Route>
                   <Route path="teachers" element={<TeachersPage />} />
                   <Route path="teachers/add" element={<AddTeacherPage />} />
                   <Route path="teachers/:teacher_id" element={<TeacherProfilePage />} />
