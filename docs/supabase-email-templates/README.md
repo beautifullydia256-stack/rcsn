@@ -17,6 +17,10 @@ Until you complete steps 3–5, Supabase keeps sending the **default** body (`<h
 
 - **`password-changed.html`** → Dashboard → **Password changed** (under security notifications).
 
+### Logo image
+
+Templates use `{{ .SiteURL }}/logo.png` with a fallback to **`https://www.pwezacore.com/logo.png`** when `SiteURL` is empty (some **security notification** emails have had missing `SiteURL`). If your production domain is different, replace that fallback URL in the `<img>` tag in both HTML files.
+
 ### Checklist
 
 - [ ] Pasted **entire** HTML file (from `<!DOCTYPE` through `</html>`).

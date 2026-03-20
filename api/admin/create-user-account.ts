@@ -129,6 +129,19 @@ export default async function handler(req: Req, res: Res) {
     const body = parseBody(req);
 
     const { email, firstName, lastName, role, phone, password, sendEmailInvite, department, position } = body as Record<string, unknown>;
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { validatePasswordLength } = require('../../lib/passwordPolicy') as {
+      validatePasswordLength: (p: unknown) => string | null;
+    };
+    if (!sendEmailInvite) {
+      const pwdErr = validatePasswordLength(password);
+      if (pwdErr) {
+        setCors();
+        res.status(400).json({ error: pwdErr });
+        return;
+      }
+    }
     const name = `${firstName || ''} ${lastName || ''}`.toString().trim();
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
@@ -227,17 +240,18 @@ export default async function handler(req: Req, res: Res) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { sendResendInnerHtml } = require('../../lib/resendSend');
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { buildCredentialInnerHtml } = require('../../lib/credentialInnerHtml');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { getPublicSiteOrigin } = require('../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login`;
         await sendResendInnerHtml({
           to: String(email),
-          subject: 'Your PwezaCore login — save your password',
+          subject: buildCredentialEmailSubject(String(role ?? ''), ''),
           innerHtml: buildCredentialInnerHtml({
             recipientName: name || String(firstName ?? '') || 'there',
             email: String(email),
             password: String(password),
+            role: String(role ?? ''),
             roleLabel: String(role ?? ''),
             loginUrl,
           }),

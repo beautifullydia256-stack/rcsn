@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { useCanAccessAccountantDashboard } from "../../hooks/usePermission";
+import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
 import { useUIStore } from "../../store/uiStore";
 import RecordPaymentModal from "../../components/accountant/RecordPaymentModal";
 import { fetchDebtors, OUTSTANDING_QUERY_KEY } from "./api/outstanding";
@@ -85,7 +87,8 @@ export default function AccountantLayout() {
   const queryClient = useQueryClient();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
-  const { user, schoolId, setUser, setRole, setSchoolId } = useAuthStore();
+  const { user, schoolId, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const canAccessAccountant = useCanAccessAccountantDashboard();
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -127,6 +130,12 @@ export default function AccountantLayout() {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  useEffect(() => {
+    if (!canAccessAccountant) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [canAccessAccountant, navigate]);
 
   useEffect(() => {
     const check = async () => {
@@ -172,8 +181,13 @@ export default function AccountantLayout() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setPermissions([]);
     navigate("/");
   };
+
+  if (!canAccessAccountant) {
+    return <ThemedLoadingView />;
+  }
 
   return (
     <div className="accountant-glass fixed inset-0 flex overflow-hidden" data-theme={theme} style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>

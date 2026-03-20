@@ -3,12 +3,13 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
+import { refreshPermissionsForSession } from '../lib/refreshPermissions';
 import ThemedLoadingView from '../components/ui/ThemedLoadingView';
 
 export default function ProtectedRoute() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const { user, setUser, setRole, setSchoolId } = useAuthStore();
+  const { user, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -36,6 +37,7 @@ export default function ProtectedRoute() {
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id); // Set schoolId in store
+          await refreshPermissionsForSession(supabase, setPermissions);
           void ensureCurrentAndNextAcademicYears(); // Keep academic calendar ahead
         } else {
           // Fallback to metadata
@@ -43,6 +45,7 @@ export default function ProtectedRoute() {
                       (session.user.user_metadata?.student_id ? 'student' : null);
           setUser(session.user);
           setRole(role);
+          setPermissions([]);
         }
 
         setLoading(false);

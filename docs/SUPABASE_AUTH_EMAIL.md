@@ -63,7 +63,11 @@ Branded HTML for the reset email lives in **`docs/supabase-email-templates/reset
 ## 5. Invites vs password creation
 
 - **`inviteUserByEmail`** — Supabase sends an **invite** email; the user sets their own password on the invite link. No credential email from our Resend template.
-- **`createUser` + password** (admin flow) — Our API sends a **Resend** email with the **temporary password** using `RESEND_API_KEY` / `RESEND_FROM` on the server.
+- **`createUser` + password** (admin flow) — Our API sends a **Resend** email with a **one-time password** using `RESEND_API_KEY` / `RESEND_FROM` on the server. Content is built in **`lib/credentialInnerHtml.js`** (wrapped by **`lib/emailHtml.js`** with logo + card + footer). Copy is **role-specific** (teacher, student, head teacher, librarian, accountant, parent, admin, owner, or generic staff). Subjects look like **`Your PwezaCore teacher login`** — short and neutral for deliverability. Passwords must be **8–72 characters** (see `lib/passwordPolicy.js`); auto-generated one-time passwords are **8 characters**.
+
+### Student logins without a provided password
+
+If the generated password would be shorter than 8 characters (e.g. short admission number), the server uses a random **8-character** one-time password instead.
 
 ---
 

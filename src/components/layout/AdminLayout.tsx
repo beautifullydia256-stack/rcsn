@@ -100,7 +100,7 @@ export default function AdminLayout() {
   const isAdminDashboardRoute = location.pathname === '/dashboard/admin';
 
   useEffect(() => {
-    if (location.pathname.includes('/accounts')) setUserMgmtOpen(true);
+    if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
     if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
       setReportsOpen(true);
     }
@@ -498,9 +498,10 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Management</span>
-            <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/admin/accounts']}>
+            <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/admin/accounts', '/dashboard/admin/permissions']}>
               <SubItem to="/dashboard/admin/accounts" label="All Users" onClick={closeSidebar} />
               <SubItem to="/dashboard/admin/accounts/add" label="Create Staff" onClick={closeSidebar} />
+              <SubItem to="/dashboard/admin/permissions" label="Access & permissions" onClick={closeSidebar} />
             </NavGroup>
             <NavItem to="/dashboard/admin/staff" icon="🏢" label="Staff" onClick={closeSidebar} />
             <NavItem to="/dashboard/admin/settings/classes" icon="🏫" label="Classes" onClick={closeSidebar} />

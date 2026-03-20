@@ -129,11 +129,13 @@ module.exports = async function handler(req, res) {
       res.end(JSON.stringify({ error: 'Missing required fields' }));
       return;
     }
-    if (password.length < 6) {
+    const { validatePasswordLength } = require('../../lib/passwordPolicy');
+    const pwdErr = validatePasswordLength(password);
+    if (pwdErr) {
       setCors();
       res.statusCode = 400;
       res.setHeader('Content-Type', 'application/json');
-      res.end(JSON.stringify({ error: 'Password must be at least 6 characters' }));
+      res.end(JSON.stringify({ error: pwdErr }));
       return;
     }
 
@@ -195,16 +197,17 @@ module.exports = async function handler(req, res) {
 
     try {
       const { sendResendInnerHtml } = require('../../lib/resendSend');
-      const { buildCredentialInnerHtml } = require('../../lib/credentialInnerHtml');
+      const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
       const { getPublicSiteOrigin } = require('../../lib/emailHtml');
       const loginUrl = `${getPublicSiteOrigin()}/login`;
       await sendResendInnerHtml({
         to: email,
-        subject: 'Your teacher PwezaCore login',
+        subject: buildCredentialEmailSubject('teacher', 'Teacher'),
         innerHtml: buildCredentialInnerHtml({
           recipientName: name,
           email,
           password,
+          role: 'teacher',
           roleLabel: 'Teacher',
           loginUrl,
         }),

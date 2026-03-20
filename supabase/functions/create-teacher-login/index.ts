@@ -55,11 +55,11 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (password.length < 6) {
-      return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    if (password.length < 8 || password.length > 72) {
+      return new Response(
+        JSON.stringify({ error: 'Password must be between 8 and 72 characters' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Caller-scoped client (validates JWT + reads caller profile)

@@ -14,6 +14,8 @@ const ROLE_OPTIONS = [
   { value: 'accountant', label: 'Accountant' },
   { value: 'teacher', label: 'Teacher' },
   { value: 'librarian', label: 'Librarian' },
+  { value: 'lab_technician', label: 'Lab technician' },
+  { value: 'clinician', label: 'School clinician' },
   { value: 'student', label: 'Student' },
   { value: 'parent', label: 'Parent' },
 ];
@@ -151,6 +153,8 @@ export default function AccountsPage() {
       case 'teacher': return 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700';
       case 'student': return 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-700';
       case 'parent': return 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700';
+      case 'lab_technician': return 'bg-cyan-100 text-cyan-900 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-200 dark:border-cyan-700';
+      case 'clinician': return 'bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-700';
       default: return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:border-gray-600';
     }
   };
@@ -177,8 +181,8 @@ export default function AccountsPage() {
       title="User Management"
       subtitle="View all users, filter by role, reset password, activate or deactivate."
     >
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        {['admin', 'head_teacher', 'accountant', 'teacher', 'librarian', 'student', 'parent'].map((r) => (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
+        {['admin', 'head_teacher', 'accountant', 'teacher', 'librarian', 'lab_technician', 'clinician', 'student', 'parent'].map((r) => (
           <div key={r} className="ac-glass-card flex items-center gap-2 rounded-[18px] p-4">
             <span className={`px-2 py-1 rounded border text-xs ${getRoleBadgeClass(r)}`}>{getRoleLabel(r)}</span>
             <span className="text-lg font-bold ac-text-primary">{accounts.filter((a) => a.role === r).length}</span>

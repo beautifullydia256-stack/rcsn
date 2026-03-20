@@ -12,6 +12,8 @@ const roleToPath: Record<string, string> = {
   parent: '/dashboard/parent',
   student: '/dashboard/student',
   librarian: '/dashboard/librarian',
+  lab_technician: '/dashboard/lab-technician',
+  clinician: '/dashboard/clinician',
   accountant: '/dashboard/accountant',
   head_teacher: '/dashboard/head-teacher',
 };

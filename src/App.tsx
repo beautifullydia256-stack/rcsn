@@ -51,6 +51,7 @@ const ParentsPage = lazyWithRetry(() => import('./pages/admin/parents/ParentsPag
 const AddParentPage = lazyWithRetry(() => import('./pages/admin/parents/AddParentPage'));
 const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
 const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/CreateStaffPage'));
+const PermissionsPage = lazyWithRetry(() => import('./pages/admin/permissions/PermissionsPage'));
 const StaffPage = lazyWithRetry(() => import('./pages/admin/staff/StaffPage'));
 const ExamSetsPage = lazyWithRetry(() => import('./pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazyWithRetry(() => import('./pages/admin/attendance/AttendanceRecordsPage'));
@@ -92,6 +93,8 @@ const AccountantFeeStructurePage = lazyWithRetry(() => import('./pages/accountan
 const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
 const AccountantAdjustmentsPage = lazyWithRetry(() => import('./pages/accountant/AdjustmentsPage'));
 const LibrarianDashboard = lazyWithRetry(() => import('./pages/librarian/Dashboard'));
+const LabTechnicianDashboard = lazyWithRetry(() => import('./pages/lab-technician/Dashboard'));
+const ClinicianDashboard = lazyWithRetry(() => import('./pages/clinician/Dashboard'));
 const HeadTeacherDashboard = lazyWithRetry(() => import('./pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazyWithRetry(() => import('./pages/owner/Dashboard'));
 const LibraryPage = lazyWithRetry(() => import('./pages/Library'));
@@ -145,6 +148,7 @@ function App() {
                   <Route path="parents/add" element={<AddParentPage />} />
                   <Route path="accounts" element={<AccountsPage />} />
                   <Route path="accounts/add" element={<CreateStaffPage />} />
+                  <Route path="permissions" element={<PermissionsPage />} />
                   <Route path="staff" element={<StaffPage />} />
                   <Route path="exam-sets" element={<ExamSetsPage />} />
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
@@ -180,6 +184,7 @@ function App() {
                   <Route path="messages" element={<TeacherMessagesPage />} />
                   <Route path="notifications" element={<TeacherNotificationsPage />} />
                   <Route path="settings" element={<TeacherSettingsPage />} />
+                  <Route path="school/add-student" element={<AddStudentPage />} />
                 </Route>
                 <Route path="student" element={<StudentLayout />}>
                   <Route index element={<StudentDashboard />} />
@@ -199,6 +204,8 @@ function App() {
                   <Route path="adjustments" element={<AccountantAdjustmentsPage />} />
                 </Route>
                 <Route path="librarian" element={<LibrarianDashboard />} />
+                <Route path="lab-technician" element={<LabTechnicianDashboard />} />
+                <Route path="clinician" element={<ClinicianDashboard />} />
                 <Route path="head-teacher" element={<HeadTeacherDashboard />} />
                 <Route path="owner" element={<OwnerDashboard />} />
               </Route>

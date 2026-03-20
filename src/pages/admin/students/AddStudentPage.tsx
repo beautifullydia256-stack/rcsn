@@ -7,6 +7,9 @@ import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { ArrowLeft, ChevronDown, ChevronRight } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
+import { useToast } from '@/components/Toast';
+import { usePermission } from '@/hooks/usePermission';
+import { PERMISSION_KEYS } from '@/lib/permissions';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -89,6 +92,13 @@ export default function AddStudentPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const canEnrol = usePermission(PERMISSION_KEYS.studentsManage);
+
+  useEffect(() => {
+    if (!canEnrol) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [canEnrol, navigate]);
 
   // Personal
   const [firstName, setFirstName] = useState('');
@@ -138,6 +148,8 @@ export default function AddStudentPage() {
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createStudentLogin, setCreateStudentLogin] = useState(true);
+  const toast = useToast();
 
   // Collapsible sections: multiple can be open; user closes when they want
   const [openSections, setOpenSections] = useState<string[]>(['personal']);
@@ -291,25 +303,41 @@ export default function AddStudentPage() {
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
-      // Auto-create student login (username = admission number, email = admission_number@school.local)
-      try {
-        const loginRes = await fetch('/api/admin/create-student-login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            student_id: studentId,
-            admission_number,
-            email: `${admission_number}@school.local`,
-            password: admission_number,
-          }),
-        });
-        if (!loginRes.ok) {
-          const errData = await loginRes.json().catch(() => ({}));
-          console.warn('Student login auto-create failed (student still enrolled):', errData.error || loginRes.statusText);
+      if (createStudentLogin) {
+        const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+        const loginUrl = apiBase ? `${apiBase}/api/admin/create-student-login` : '/api/admin/create-student-login';
+        const loginEmail =
+          student_email && String(student_email).includes('@')
+            ? String(student_email).trim()
+            : `${admission_number}@school.local`;
+        try {
+          const loginRes = await fetch(loginUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              student_id: studentId,
+              admission_number,
+              email: loginEmail,
+            }),
+          });
+          const loginJson = await loginRes.json().catch(() => ({}));
+          if (loginRes.ok) {
+            toast.success(
+              loginEmail.toLowerCase().endsWith('@school.local')
+                ? 'Student saved. Portal login created — share credentials from your admin tools or reset password to email a real address.'
+                : 'Student saved. Portal login created — a one-time password was emailed to their school address when possible.'
+            );
+          } else {
+            toast.warning(
+              `Student saved, but portal login was not created: ${(loginJson as { error?: string }).error || loginRes.statusText}`
+            );
+          }
+        } catch (loginErr) {
+          toast.warning(
+            `Student saved, but portal login failed: ${loginErr instanceof Error ? loginErr.message : 'Network error'}`
+          );
         }
-      } catch (loginErr) {
-        console.warn('Student login auto-create failed (student still enrolled):', loginErr);
       }
 
       if (guardianName.trim()) {
@@ -438,6 +466,22 @@ export default function AddStudentPage() {
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>
           )}
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-emerald-200 bg-emerald-50/80 p-3 text-sm text-gray-800">
+            <input
+              type="checkbox"
+              checked={createStudentLogin}
+              onChange={(e) => setCreateStudentLogin(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>
+              <span className="font-medium text-gray-900">Create student portal login</span>
+              <span className="block text-gray-600 mt-0.5">
+                On by default: a secure one-time password is generated. If the school email is real, it can be emailed
+                automatically.
+              </span>
+            </span>
+          </label>
 
           <Section id="personal" title="Personal information" isOpen={openSections.includes('personal')} onToggle={toggleSection}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

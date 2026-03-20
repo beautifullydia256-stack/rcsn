@@ -141,7 +141,28 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const studentPassword = password || admission_number || (studentData?.admission_number as string) || 'ChangeMe123';
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const {
+      generateOneTimePassword,
+      validatePasswordLength,
+    } = require('../../lib/passwordPolicy') as {
+      generateOneTimePassword: () => string;
+      validatePasswordLength: (p: unknown) => string | null;
+    };
+
+    let studentPassword: string;
+    if (password != null && String(password).trim() !== '') {
+      const err = validatePasswordLength(password);
+      if (err) {
+        setCors();
+        res.status(400).json({ error: err });
+        return;
+      }
+      studentPassword = String(password).trim();
+    } else {
+      // Never reuse admission number as password (guessable). Admin UI omits password for this path.
+      studentPassword = generateOneTimePassword();
+    }
     const canonicalStudentId = studentData?.student_id as string;
     const canonicalAdmission = (studentData?.admission_number as string) || admission_number || 'N/A';
 
@@ -207,18 +228,19 @@ export default async function handler(req: Req, res: Res) {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { sendResendInnerHtml } = require('../../lib/resendSend');
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { buildCredentialInnerHtml } = require('../../lib/credentialInnerHtml');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { getPublicSiteOrigin } = require('../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login`;
         const displayName = (studentData?.name as string) || canonicalAdmission || 'Student';
         await sendResendInnerHtml({
           to: studentEmail,
-          subject: 'Your student PwezaCore login',
+          subject: buildCredentialEmailSubject('student', 'Student'),
           innerHtml: buildCredentialInnerHtml({
             recipientName: displayName,
             email: studentEmail,
             password: studentPassword,
+            role: 'student',
             roleLabel: 'Student',
             loginUrl,
           }),

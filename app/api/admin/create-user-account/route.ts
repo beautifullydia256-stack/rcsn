@@ -66,7 +66,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { email, firstName, lastName, role, phone, password, sendEmailInvite, department, position } = body;
-    
+
+    const { validatePasswordLength } = require('../../../../lib/passwordPolicy') as {
+      validatePasswordLength: (p: unknown) => string | null;
+    };
+    if (!sendEmailInvite) {
+      const pwdErr = validatePasswordLength(password);
+      if (pwdErr) {
+        return withCors(NextResponse.json({ error: pwdErr }, { status: 400 }));
+      }
+    }
+
     // Combine firstName and lastName into name
     const name = `${firstName || ''} ${lastName || ''}`.trim();
 
@@ -200,16 +210,17 @@ export async function POST(request: NextRequest) {
     if (!sendEmailInvite && password) {
       try {
         const { sendResendInnerHtml } = require('../../../../lib/resendSend');
-        const { buildCredentialInnerHtml } = require('../../../../lib/credentialInnerHtml');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../../../lib/credentialInnerHtml');
         const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login`;
         await sendResendInnerHtml({
           to: String(email),
-          subject: 'Your PwezaCore login — save your password',
+          subject: buildCredentialEmailSubject(String(role ?? ''), ''),
           innerHtml: buildCredentialInnerHtml({
             recipientName: name || 'there',
             email: String(email),
             password: String(password),
+            role: String(role ?? ''),
             roleLabel: String(role ?? ''),
             loginUrl,
           }),

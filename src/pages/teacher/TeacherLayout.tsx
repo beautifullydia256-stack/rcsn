@@ -22,9 +22,13 @@ import {
   Book,
   MessageSquare,
   Percent,
+  UserPlus,
+  Banknote,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/usePermission";
+import { PERMISSION_KEYS } from "../../lib/permissions";
 import { useUIStore } from "../../store/uiStore";
 import { useTeacherContext } from "./useTeacherContext";
 
@@ -47,6 +51,7 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./messages/MessagesPage"),
   () => import("./notifications/NotificationsPage"),
   () => import("./settings/SettingsPage"),
+  () => import("../admin/students/AddStudentPage"),
 ];
 
 function NavLinkStyle({
@@ -83,7 +88,10 @@ export default function TeacherLayout() {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const user = useAuthStore((s) => s.user);
-  const { setUser, setRole, setSchoolId } = useAuthStore();
+  const role = useAuthStore((s) => s.role);
+  const { setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const canEnrolStudents = usePermission(PERMISSION_KEYS.studentsManage);
+  const canAccessFinance = useCanAccessAccountantDashboard();
   const { classesWithSubjects } = useTeacherContext();
   const [searchQ, setSearchQ] = useState("");
   const [examResultsOpen, setExamResultsOpen] = useState(false);
@@ -110,6 +118,7 @@ export default function TeacherLayout() {
     setUser(null);
     setRole(null);
     setSchoolId(null);
+    setPermissions([]);
     navigate("/");
   };
 
@@ -179,6 +188,20 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/students" icon={Users} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}>
             My Students
           </NavLinkStyle>
+          {canEnrolStudents && (
+            <NavLinkStyle
+              to="/dashboard/teacher/school/add-student"
+              icon={UserPlus}
+              onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[13])}
+            >
+              Add student (school)
+            </NavLinkStyle>
+          )}
+          {canAccessFinance && role !== "accountant" && (
+            <NavLinkStyle to="/dashboard/accountant" icon={Banknote} onPrefetch={() => prefetchChunk(() => import("../accountant/Dashboard"))}>
+              Finance & accounting
+            </NavLinkStyle>
+          )}
           <div className="space-y-0.5">
             <button
               type="button"

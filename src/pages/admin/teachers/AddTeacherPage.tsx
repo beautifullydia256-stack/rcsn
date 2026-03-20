@@ -29,6 +29,9 @@ export default function AddTeacherPage() {
   const [classesAssigned, setClassesAssigned] = useState<string[]>([]);
   const [subjectsByClass, setSubjectsByClass] = useState<Record<string, string[]>>({});
   const [salary, setSalary] = useState('');
+  const [payFrequency, setPayFrequency] = useState<
+    '' | 'monthly' | 'biweekly' | 'weekly' | 'termly' | 'annual' | 'custom'
+  >('monthly');
   const [employmentType, setEmploymentType] = useState<'Full-time' | 'Part-time' | 'Contract'>('Full-time');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,6 +145,7 @@ export default function AddTeacherPage() {
     setClassesAssigned([]);
     setSubjectsByClass({});
     setSalary('');
+    setPayFrequency('monthly');
     setEmploymentType('Full-time');
     setError(null);
     setSuccess(null);
@@ -181,6 +185,7 @@ export default function AddTeacherPage() {
         subjects: subjects.length ? subjects : null,
         classes: filteredClasses.length ? filteredClasses : null,
         salary: salary ? parseFloat(salary) : null,
+        pay_frequency: payFrequency || null,
       })
       .select('teacher_id, employee_id')
       .single();
@@ -531,15 +536,36 @@ export default function AddTeacherPage() {
                 </div>
               </div>
 
-              <div className="mt-4">
-                <div className="ac-text-secondary text-sm mb-1">Monthly Salary (UGX)</div>
-                <input
-                  type="number"
-                  className="ac-input rounded-lg px-3 py-2 w-full max-w-xs"
-                  placeholder="e.g., 800000"
-                  value={salary}
-                  onChange={(e) => setSalary(e.target.value)}
-                />
+              <div className="mt-4 flex flex-col sm:flex-row gap-4 sm:items-end">
+                <div className="flex-1 max-w-xs">
+                  <div className="ac-text-secondary text-sm mb-1">Salary amount (UGX)</div>
+                  <input
+                    type="number"
+                    className="ac-input rounded-lg px-3 py-2 w-full"
+                    placeholder="e.g., 800000"
+                    value={salary}
+                    onChange={(e) => setSalary(e.target.value)}
+                  />
+                </div>
+                <div className="w-full max-w-xs">
+                  <div className="ac-text-secondary text-sm mb-1">How often paid</div>
+                  <select
+                    className="ac-input rounded-lg px-3 py-2 w-full"
+                    value={payFrequency}
+                    onChange={(e) =>
+                      setPayFrequency(
+                        e.target.value as '' | 'monthly' | 'biweekly' | 'weekly' | 'termly' | 'annual' | 'custom'
+                      )
+                    }
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="biweekly">Bi-weekly</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="termly">Per term</option>
+                    <option value="annual">Annual</option>
+                    <option value="custom">Custom / other</option>
+                  </select>
+                </div>
               </div>
               <p className="ac-text-secondary text-xs mt-2">Employee ID and date of hire will be set automatically.</p>
             </div>
