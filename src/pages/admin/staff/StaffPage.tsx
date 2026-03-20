@@ -5,6 +5,7 @@ import { Users, UserPlus, Trash2, Briefcase } from 'lucide-react';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
 
 const STALE_MS = 60 * 1000;
 
@@ -26,6 +27,8 @@ type OtherStaffRow = {
   national_id: string | null;
   phone: string | null;
   email: string | null;
+  staff_role: string | null;
+  linked_user_id: string | null;
   address: string | null;
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
@@ -40,7 +43,7 @@ async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]> {
   const { data, error } = await supabase
     .from('other_staff_members')
     .select(
-      'id, full_name, job_title, department, national_id, phone, email, address, emergency_contact_name, emergency_contact_phone, notes, hire_date, salary_amount, pay_frequency, created_at'
+      'id, full_name, job_title, department, national_id, phone, email, staff_role, linked_user_id, address, emergency_contact_name, emergency_contact_phone, notes, hire_date, salary_amount, pay_frequency, created_at'
     )
     .eq('school_id', schoolId)
     .order('full_name');
@@ -66,6 +69,7 @@ export default function StaffPage() {
   const [hireDate, setHireDate] = useState('');
   const [salaryAmount, setSalaryAmount] = useState('');
   const [payFrequency, setPayFrequency] = useState('');
+  const [staffRole, setStaffRole] = useState('');
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -99,6 +103,7 @@ export default function StaffPage() {
     setHireDate('');
     setSalaryAmount('');
     setPayFrequency('');
+    setStaffRole('');
     setFormError(null);
   };
 
@@ -124,6 +129,7 @@ export default function StaffPage() {
         national_id: nationalId.trim() || null,
         phone: phone.trim() || null,
         email: email.trim() || null,
+        staff_role: staffRole.trim() || null,
         address: address.trim() || null,
         emergency_contact_name: emergencyName.trim() || null,
         emergency_contact_phone: emergencyPhone.trim() || null,
@@ -167,7 +173,7 @@ export default function StaffPage() {
   return (
     <AdminPageWrapper
       title="Staff"
-      subtitle="Teaching staff are under Teachers. Logins for lab techs, clinicians, and office roles are under User Management → Create staff. This section keeps records for everyone else (no login required)."
+      subtitle="Add non-teachers here (accountant, lab tech, clinician, etc.). Set a dashboard role if they may get a login. Teachers belong under Teachers. Invitations are sent from User Management → Send invitations."
     >
       <div className="max-w-5xl w-full space-y-8">
         <div className="flex flex-wrap gap-3">
@@ -179,11 +185,11 @@ export default function StaffPage() {
             Add teacher
           </Link>
           <Link
-            to="/dashboard/admin/accounts/add"
+            to="/dashboard/admin/accounts/invite"
             className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
           >
             <Briefcase className="h-4 w-4" />
-            Create staff login
+            Send invitations
           </Link>
           <Link
             to="/dashboard/admin/accounts"
@@ -237,7 +243,19 @@ export default function StaffPage() {
               </div>
               <div>
                 <label className={labelClass}>Email</label>
-                <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} type="email" />
+                <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Optional on file; required before invite" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Dashboard role (for login)</label>
+                <p className="text-xs text-gray-500 mb-1">Pick a role if this person may receive an invitation. Not for teachers.</p>
+                <select className={inputClass} value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
+                  <option value="">— None / support only —</option>
+                  {STAFF_ROSTER_ROLES.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="sm:col-span-2">
                 <label className={labelClass}>Address</label>
@@ -309,7 +327,10 @@ export default function StaffPage() {
                 <thead className="bg-gray-50 text-left text-gray-600">
                   <tr>
                     <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Role</th>
+                    <th className="px-3 py-2 font-medium">Job</th>
+                    <th className="px-3 py-2 font-medium">Dashboard</th>
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">Login</th>
                     <th className="px-3 py-2 font-medium">Phone</th>
                     <th className="px-3 py-2 font-medium">Salary ref.</th>
                     <th className="px-3 py-2 font-medium">Pay cycle</th>
@@ -317,10 +338,21 @@ export default function StaffPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r) => (
+                  {rows.map((r) => {
+                    const dashLabel = STAFF_ROSTER_ROLES.find((x) => x.value === r.staff_role)?.label;
+                    return (
                     <tr key={r.id} className="border-t border-gray-100">
                       <td className="px-3 py-2 font-medium text-gray-900">{r.full_name}</td>
                       <td className="px-3 py-2 text-gray-700">{r.job_title || r.department || '—'}</td>
+                      <td className="px-3 py-2 text-gray-700 text-xs capitalize">{dashLabel || (r.staff_role ? r.staff_role.replace(/_/g, ' ') : '—')}</td>
+                      <td className="px-3 py-2 text-gray-600 text-xs max-w-[180px] truncate" title={r.email || undefined}>{r.email || '—'}</td>
+                      <td className="px-3 py-2">
+                        {r.linked_user_id ? (
+                          <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Linked</span>
+                        ) : (
+                          <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">No login</span>
+                        )}
+                      </td>
                       <td className="px-3 py-2 text-gray-600">{r.phone || '—'}</td>
                       <td className="px-3 py-2 text-gray-700">
                         {r.salary_amount != null ? Number(r.salary_amount).toLocaleString() : '—'}
@@ -337,7 +369,8 @@ export default function StaffPage() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

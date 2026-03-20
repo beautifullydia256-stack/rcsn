@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Clinician</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+ * REACT INJECTION FORMAT — Clinician Dashboard
+ * Scope: .pw-clinic  |  No sidebar/topbar
+ * DOM targets:
+ *   KPIs:     [data-kpi="..."] — textContent
+ *   Emergency: #pc-emergency-banner (innerHTML), #pc-emergency-wrap (display)
+ *   Lists:    #pc-queue-list, #pc-appointments-list, #pc-medicines-list,
+ *             #pc-referrals-list, #pc-vaccinations-list, #pc-activity-list
+ *   Stats:    #pc-patients-today, #pc-in-queue, #pc-emergencies, #pc-referred
+ *   Greeting: #pc-greeting, #pc-date-line
+ */
+
+.pw-clinic*,.pw-clinic *::before,.pw-clinic *::after{box-sizing:border-box;margin:0;padding:0}
+
+.pw-clinic{
+  --bg:#020a0d;--s1:#041418;--s2:#071e24;--s3:#0b2830;--s4:#103440;
+  --border:rgba(255,255,255,0.07);--bh:rgba(255,255,255,0.13);
+  --cyan:#06b6d4;--cyan-s:rgba(6,182,212,0.10);--cyan-g:rgba(6,182,212,0.22);
+  --mint:#10d9a8;--mint-s:rgba(16,217,168,0.10);
+  --teal:#0d9488;--teal-s:rgba(13,148,136,0.10);
+  --amber:#f59e0b;--amber-s:rgba(245,158,11,0.10);
+  --rose:#f43f5e;--rose-s:rgba(244,63,94,0.10);
+  --red:#ef4444;--red-s:rgba(239,68,68,0.10);
+  --violet:#8b5cf6;--violet-s:rgba(139,92,246,0.10);
+  --blue:#3d8ef8;--blue-s:rgba(61,142,248,0.10);
+  --green:#22c55e;--green-s:rgba(34,197,94,0.10);
+  --t1:#e6fdff;--t2:#5a9aaa;--t3:#1a5060;
+  --r:13px;--rs:8px;
+  font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--t1);width:100%;min-height:100vh;
+}
+
+html.light .pw-clinic,html[data-theme=light] .pw-clinic{
+  --bg:#f0fdff;--s1:#ffffff;--s2:#f0fdff;--s3:#e0f8ff;--s4:#c8f0f8;
+  --border:rgba(0,0,0,0.08);--bh:rgba(0,0,0,0.14);
+  --t1:#020a0d;--t2:#0a5060;--t3:#80a8b0;
+  background:var(--bg);color:var(--t1);
+}
+
+@keyframes pc-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pc-blink{0%,100%{opacity:1}50%{opacity:.25}}
+@keyframes pc-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}}
+.pc-fu{animation:pc-up .38s ease both}
+.pc-d1{animation-delay:.04s}.pc-d2{animation-delay:.08s}.pc-d3{animation-delay:.12s}.pc-d4{animation-delay:.16s}
+
+.pw-clinic .pc-content{padding:22px 24px 60px;display:flex;flex-direction:column;gap:18px}
+
+/* emergency banner */
+.pw-clinic .pc-emergency{background:linear-gradient(135deg,rgba(239,68,68,.10),rgba(244,63,94,.07));border:1px solid rgba(239,68,68,.28);border-radius:var(--r);padding:16px 20px;display:flex;align-items:flex-start;gap:14px;position:relative;overflow:hidden}
+.pw-clinic .pc-emergency::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--rose))}
+.pw-clinic .pc-emerg-ic{font-size:26px;flex-shrink:0;animation:pc-pulse 2s infinite;border-radius:50%}
+.pw-clinic .pc-emerg-title{font-family:'Lexend',sans-serif;font-weight:700;font-size:15px;color:var(--red);margin-bottom:3px;letter-spacing:.2px}
+
+/* header */
+.pw-clinic .pc-eyebrow{font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.pw-clinic .pc-live{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:pc-blink 2s infinite;flex-shrink:0}
+.pw-clinic .pc-title{font-family:'Lexend',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.3px;color:var(--t1)}
+.pw-clinic .pc-sub{font-size:12.5px;color:var(--t2);margin-top:3px}
+
+/* hero stats */
+.pw-clinic .pc-hero-stats{display:flex;gap:10px;flex-wrap:wrap}
+.pw-clinic .pc-hs{text-align:center;padding:14px 18px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);min-width:90px;flex:1;transition:border-color .18s}
+.pw-clinic .pc-hs:hover{border-color:var(--bh)}
+.pw-clinic .pc-hs-val{font-family:'Lexend',sans-serif;font-weight:700;font-size:24px;letter-spacing:-.5px;line-height:1}
+.pw-clinic .pc-hs-lbl{font-size:10px;color:var(--t3);margin-top:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+
+/* status strip */
+.pw-clinic .pc-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.pw-clinic .pc-stat-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+.pw-clinic .pc-stat-card:hover{border-color:var(--bh);transform:translateY(-2px)}
+.pw-clinic .pc-stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}
+.pw-clinic .pc-stat-card.cyan::before{background:linear-gradient(90deg,var(--cyan),var(--mint))}
+.pw-clinic .pc-stat-card.red::before{background:linear-gradient(90deg,var(--red),var(--rose));border-color:rgba(239,68,68,.25) !important}
+.pw-clinic .pc-stat-card.amber::before{background:linear-gradient(90deg,var(--amber),#ef4444)}
+.pw-clinic .pc-stat-card.mint::before{background:linear-gradient(90deg,var(--mint),var(--cyan))}
+.pw-clinic .pc-stat-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;margin-bottom:10px}
+.pw-clinic .pc-stat-ic.cyan{background:var(--cyan-s)}.pw-clinic .pc-stat-ic.red{background:var(--red-s)}.pw-clinic .pc-stat-ic.amber{background:var(--amber-s)}.pw-clinic .pc-stat-ic.mint{background:var(--mint-s)}
+.pw-clinic .pc-stat-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+.pw-clinic .pc-stat-val{font-family:'Lexend',sans-serif;font-weight:700;font-size:24px;letter-spacing:-.5px;color:var(--t1);margin:3px 0 4px;line-height:1.1}
+.pw-clinic .pc-stat-sub{font-size:11px;color:var(--t3)}
+
+/* cards */
+.pw-clinic .pc-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.pw-clinic .pc-card-hd{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pw-clinic .pc-card-title{font-family:'Lexend',sans-serif;font-weight:700;font-size:13.5px;color:var(--t1);display:flex;align-items:center;gap:7px}
+.pw-clinic .pc-card-action{font-size:12px;font-weight:500;color:var(--cyan);cursor:pointer;transition:opacity .18s;text-decoration:none}
+.pw-clinic .pc-card-action:hover{opacity:.6}
+
+/* chips */
+.pw-clinic .pc-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px}
+.pw-clinic .pc-chip.cyan{background:var(--cyan-s);color:var(--cyan)}
+.pw-clinic .pc-chip.mint{background:var(--mint-s);color:var(--mint)}
+.pw-clinic .pc-chip.amber{background:var(--amber-s);color:var(--amber)}
+.pw-clinic .pc-chip.rose{background:var(--rose-s);color:var(--rose)}
+.pw-clinic .pc-chip.red{background:var(--red-s);color:var(--red)}
+.pw-clinic .pc-chip.green{background:var(--green-s);color:var(--green)}
+.pw-clinic .pc-chip.slate{background:var(--s3);color:var(--t2)}
+.pw-clinic .pc-chip.violet{background:var(--violet-s);color:var(--violet)}
+
+/* buttons */
+.pw-clinic .pc-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:12.5px;font-weight:600;font-family:'Be Vietnam Pro',sans-serif;cursor:pointer;transition:all .18s;border:none;white-space:nowrap;text-decoration:none}
+.pw-clinic .pc-btn-cyan{background:var(--cyan);color:#020a0d}
+.pw-clinic .pc-btn-cyan:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 16px var(--cyan-g)}
+.pw-clinic .pc-btn-red{background:var(--red-s);color:var(--red);border:1px solid rgba(239,68,68,.2)}
+.pw-clinic .pc-btn-red:hover{background:var(--red);color:#fff}
+.pw-clinic .pc-btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.pw-clinic .pc-btn-ghost:hover{border-color:var(--bh);color:var(--t1)}
+
+/* layout */
+.pw-clinic .pc-row{display:grid;gap:12px}
+.pw-clinic .pc-row-2{grid-template-columns:1fr 1fr}
+.pw-clinic .pc-row-2-1{grid-template-columns:1fr 340px}
+.pw-clinic .pc-row-3{grid-template-columns:repeat(3,1fr)}
+
+/* patient queue */
+.pw-clinic .pc-queue-row{display:flex;align-items:center;gap:11px;padding:11px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-clinic .pc-queue-row:last-child{border-bottom:none}
+.pw-clinic .pc-queue-row:hover{background:var(--s2)}
+.pw-clinic .pc-queue-row.active{background:rgba(6,182,212,.05);border-left:2px solid var(--cyan)}
+.pw-clinic .pc-queue-row.emergency{background:rgba(239,68,68,.05);border-left:2px solid var(--red)}
+.pw-clinic .pc-queue-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--s3);color:var(--t2);flex-shrink:0}
+.pw-clinic .pc-queue-name{font-size:12.5px;font-weight:600;color:var(--t1)}
+.pw-clinic .pc-queue-complaint{font-size:11px;color:var(--t3);margin-top:1px}
+.pw-clinic .pc-act-btn{font-size:11px;font-weight:600;padding:4px 9px;border-radius:6px;cursor:pointer;transition:all .14s;border:none;font-family:'Be Vietnam Pro',sans-serif;flex-shrink:0}
+.pw-clinic .pc-act-btn.done{background:var(--mint-s);color:var(--mint);border:1px solid rgba(16,217,168,.2)}
+.pw-clinic .pc-act-btn.done:hover{background:var(--mint);color:#020a0d}
+.pw-clinic .pc-act-btn.record{background:var(--cyan-s);color:var(--cyan);border:1px solid rgba(6,182,212,.2)}
+.pw-clinic .pc-act-btn.record:hover{background:var(--cyan);color:#020a0d}
+
+/* medicine rows */
+.pw-clinic .pc-med-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .14s;cursor:pointer}
+.pw-clinic .pc-med-row:last-child{border-bottom:none}
+.pw-clinic .pc-med-row:hover{background:var(--s2)}
+.pw-clinic .pc-med-name{font-size:12.5px;font-weight:600;color:var(--t1);flex:1}
+.pw-clinic .pc-med-class{font-size:11px;color:var(--t3);margin-top:1px}
+.pw-clinic .pc-med-bar{flex:1;height:4px;background:var(--s3);border-radius:99px;overflow:hidden;max-width:80px}
+.pw-clinic .pc-med-fill{height:100%;border-radius:99px}
+.pw-clinic .pc-med-qty{font-size:12px;font-weight:700;flex-shrink:0}
+.pw-clinic .pc-med-exp{font-size:10.5px;color:var(--t3);flex-shrink:0}
+
+/* referral rows */
+.pw-clinic .pc-ref-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-clinic .pc-ref-row:last-child{border-bottom:none}
+.pw-clinic .pc-ref-row:hover{background:var(--s2)}
+.pw-clinic .pc-ref-name{font-size:12.5px;font-weight:600;color:var(--t1)}
+.pw-clinic .pc-ref-hospital{font-size:11px;color:var(--t3);margin-top:1px}
+
+/* activity */
+.pw-clinic .pc-act-row{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .14s}
+.pw-clinic .pc-act-row:last-child{border-bottom:none}
+.pw-clinic .pc-act-row:hover{background:var(--s2)}
+.pw-clinic .pc-act-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px}
+.pw-clinic .pc-act-text{font-size:12px;color:var(--t2);line-height:1.4}
+.pw-clinic .pc-act-text strong{color:var(--t1);font-weight:600}
+.pw-clinic .pc-act-time{font-size:10.5px;color:var(--t3);margin-top:2px}
+
+/* responsive */
+@media(max-width:1100px){.pw-clinic .pc-strip{grid-template-columns:repeat(2,1fr)}.pw-clinic .pc-row-2-1{grid-template-columns:1fr}.pw-clinic .pc-row-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.pw-clinic .pc-content{padding:14px 14px 50px}.pw-clinic .pc-strip{grid-template-columns:1fr 1fr}.pw-clinic .pc-row-2{grid-template-columns:1fr}.pw-clinic .pc-row-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="pw-clinic">
+<div class="pc-content">
+
+  <!-- EMERGENCY BANNER — hidden when no emergencies -->
+  <div class="pc-emergency pc-fu" id="pc-emergency-wrap" style="display:none">
+    <span class="pc-emerg-ic">🚨</span>
+    <div style="flex:1">
+      <div class="pc-emerg-title" id="pc-emerg-count">Active Emergencies</div>
+      <div style="font-size:12.5px;color:var(--t2);line-height:1.5" id="pc-emergency-banner">Loading…</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+      <button class="pc-btn pc-btn-red" style="font-size:12px;padding:8px 14px">🚑 Call Ambulance</button>
+      <button class="pc-btn pc-btn-ghost" style="font-size:12px;padding:7px 14px" data-nav="/dashboard/clinic/notifications">📱 Notify Parents</button>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="pc-fu">
+    <div class="pc-eyebrow"><span class="pc-live"></span><span id="pc-date-line">Wednesday, 18 March 2026 · Term 1 Week 8</span></div>
+    <h1 class="pc-title" id="pc-greeting">Good morning, Nurse 👋</h1>
+    <p class="pc-sub">Patient care, clinic operations, and health records — all in one place.</p>
+  </div>
+
+  <!-- HERO STATS -->
+  <div class="pc-hero-stats pc-fu pc-d1">
+    <div class="pc-hs"><div class="pc-hs-val" style="color:var(--cyan)" id="pc-patients-today">—</div><div class="pc-hs-lbl">Seen Today</div></div>
+    <div class="pc-hs"><div class="pc-hs-val" style="color:var(--amber)" id="pc-in-queue">—</div><div class="pc-hs-lbl">In Queue</div></div>
+    <div class="pc-hs"><div class="pc-hs-val" style="color:var(--red)" id="pc-emergencies">—</div><div class="pc-hs-lbl">Emergencies</div></div>
+    <div class="pc-hs"><div class="pc-hs-val" style="color:var(--violet)" id="pc-referred">—</div><div class="pc-hs-lbl">Referred</div></div>
+  </div>
+
+  <!-- STATUS STRIP — 4 cards -->
+  <div class="pc-strip pc-fu pc-d1">
+    <div class="pc-stat-card cyan">
+      <div class="pc-stat-ic cyan">🏥</div>
+      <div class="pc-stat-lbl">Today's Patients</div>
+      <div class="pc-stat-val" data-kpi="patients-kpi">—</div>
+      <div class="pc-stat-sub" data-kpi="patients-sub">Seen vs queued</div>
+    </div>
+    <div class="pc-stat-card red" style="border-color:rgba(239,68,68,.28)">
+      <div class="pc-stat-ic red">🚨</div>
+      <div class="pc-stat-lbl">Active Emergencies</div>
+      <div class="pc-stat-val" style="color:var(--red)" data-kpi="emerg-kpi">—</div>
+      <div class="pc-stat-sub" data-kpi="emerg-sub">Requiring attention</div>
+    </div>
+    <div class="pc-stat-card amber">
+      <div class="pc-stat-ic amber">💊</div>
+      <div class="pc-stat-lbl">Medicine Stock</div>
+      <div class="pc-stat-val" style="color:var(--amber)" data-kpi="medicine-low">—</div>
+      <div class="pc-stat-sub" data-kpi="medicine-sub">Items low / critical</div>
+    </div>
+    <div class="pc-stat-card mint">
+      <div class="pc-stat-ic mint">💉</div>
+      <div class="pc-stat-lbl">Vaccinations Due</div>
+      <div class="pc-stat-val" style="color:var(--mint)" data-kpi="vacc-due">—</div>
+      <div class="pc-stat-sub" data-kpi="vacc-sub">Students this week</div>
+    </div>
+  </div>
+
+  <!-- PATIENT QUEUE + APPOINTMENTS -->
+  <div class="pc-row pc-row-2-1 pc-fu pc-d2">
+    <div class="pc-card">
+      <div class="pc-card-hd">
+        <span class="pc-card-title">🏥 Patient Queue</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="pc-chip red" id="pc-queue-badge">— waiting</span>
+          <a class="pc-card-action" data-nav="/dashboard/clinic/queue">Manage →</a>
+        </div>
+      </div>
+      <div id="pc-queue-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading queue…</div></div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:8px">
+        <button class="pc-btn pc-btn-cyan" style="flex:1;justify-content:center;font-size:12px" data-nav="/dashboard/clinic/queue/new">➕ Register Patient</button>
+        <button class="pc-btn pc-btn-ghost" style="flex:1;justify-content:center;font-size:12px" data-nav="/dashboard/clinic/sick-leave">📋 Sick Leave Note</button>
+      </div>
+    </div>
+    <div class="pc-card">
+      <div class="pc-card-hd"><span class="pc-card-title">📅 Today's Appointments</span><a class="pc-card-action" data-nav="/dashboard/clinic/appointments">All →</a></div>
+      <div id="pc-appointments-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- MEDICINE + REFERRALS + ACTIVITY -->
+  <div class="pc-row pc-row-3 pc-fu pc-d3">
+    <div class="pc-card">
+      <div class="pc-card-hd">
+        <span class="pc-card-title">💊 Medicine Inventory</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="pc-chip amber" id="pc-medicine-low-badge">— low</span>
+          <a class="pc-card-action" data-nav="/dashboard/clinic/medicines">Restock →</a>
+        </div>
+      </div>
+      <div id="pc-medicines-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+    </div>
+    <div class="pc-card">
+      <div class="pc-card-hd"><span class="pc-card-title">🏨 Referrals</span><a class="pc-card-action" data-nav="/dashboard/clinic/referrals">All →</a></div>
+      <div id="pc-referrals-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border)">
+        <button class="pc-btn pc-btn-ghost" style="width:100%;justify-content:center;font-size:11.5px" data-nav="/dashboard/clinic/referrals/new">➕ New Referral</button>
+      </div>
+    </div>
+    <div class="pc-card">
+      <div class="pc-card-hd"><span class="pc-card-title">🕐 Clinic Activity</span><a class="pc-card-action">All →</a></div>
+      <div id="pc-activity-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+    </div>
+  </div>
+
+  <!-- VACCINATIONS -->
+  <div class="pc-fu pc-d4">
+    <div class="pc-card">
+      <div class="pc-card-hd">
+        <span class="pc-card-title">💉 Vaccinations Due This Week</span>
+        <a class="pc-card-action" data-nav="/dashboard/clinic/vaccinations">Schedule →</a>
+      </div>
+      <div id="pc-vaccinations-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading vaccinations…</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

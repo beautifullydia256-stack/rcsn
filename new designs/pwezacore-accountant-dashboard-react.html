@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Accountant Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/*
+ * REACT INJECTION FORMAT — Accountant Dashboard
+ * Scope: .pw-acct  |  No sidebar/topbar
+ * DOM targets:
+ *   KPIs:       [data-kpi="..."] — textContent
+ *   Lists:      #pa-transactions-list, #pa-outstanding-list, #pa-invoices-list, #pa-reminder-text
+ *   Charts:     #pa-collection-pct, #pa-progress-bar (style.width)
+ */
+
+.pw-acct*,.pw-acct *::before,.pw-acct *::after{box-sizing:border-box;margin:0;padding:0}
+
+.pw-acct{
+  --bg:#020b08;--s1:#061410;--s2:#0b1f18;--s3:#102a20;--s4:#16382b;
+  --border:rgba(255,255,255,0.07);--bh:rgba(255,255,255,0.13);
+  --green:#00d084;--green-s:rgba(0,208,132,0.10);--green-g:rgba(0,208,132,0.22);
+  --teal:#10d9a8;--teal-s:rgba(16,217,168,0.10);
+  --blue:#3d8ef8;--blue-s:rgba(61,142,248,0.10);
+  --amber:#f59e0b;--amber-s:rgba(245,158,11,0.10);
+  --rose:#f43f5e;--rose-s:rgba(244,63,94,0.10);
+  --violet:#8b5cf6;--violet-s:rgba(139,92,246,0.10);
+  --t1:#e0fff4;--t2:#6aaa90;--t3:#24614a;
+  --r:13px;--rs:8px;
+  font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);width:100%;min-height:100vh;
+}
+
+html.light .pw-acct,html[data-theme=light] .pw-acct{
+  --bg:#f0fff8;--s1:#ffffff;--s2:#f5fdf8;--s3:#e6f9f0;--s4:#cff2e4;
+  --border:rgba(0,0,0,0.08);--bh:rgba(0,0,0,0.14);
+  --t1:#061a10;--t2:#2a6645;--t3:#8ab8a0;
+  background:var(--bg);color:var(--t1);
+}
+
+@keyframes pa-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pa-blink{0%,100%{opacity:1}50%{opacity:.25}}
+.pa-fu{animation:pa-up .38s ease both}
+.pa-d1{animation-delay:.04s}.pa-d2{animation-delay:.08s}.pa-d3{animation-delay:.12s}.pa-d4{animation-delay:.16s}
+
+.pw-acct .pa-content{padding:22px 24px 60px;display:flex;flex-direction:column;gap:18px}
+
+/* header */
+.pw-acct .pa-eyebrow{font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.pw-acct .pa-live{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pa-blink 2s infinite;flex-shrink:0}
+.pw-acct .pa-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.3px;color:var(--t1)}
+.pw-acct .pa-sub{font-size:12.5px;color:var(--t2);margin-top:3px}
+
+/* kpi */
+.pw-acct .pa-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.pw-acct .pa-kpi{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;cursor:default}
+.pw-acct .pa-kpi:hover{border-color:var(--bh);transform:translateY(-2px)}
+.pw-acct .pa-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}
+.pw-acct .pa-kpi.green::before{background:linear-gradient(90deg,var(--green),var(--teal))}
+.pw-acct .pa-kpi.amber::before{background:linear-gradient(90deg,var(--amber),#ef4444)}
+.pw-acct .pa-kpi.rose::before{background:linear-gradient(90deg,var(--rose),var(--violet))}
+.pw-acct .pa-kpi.blue::before{background:linear-gradient(90deg,var(--blue),var(--teal))}
+.pw-acct .pa-kpi-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.pw-acct .pa-kpi-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.pw-acct .pa-kpi-ic.green{background:var(--green-s)}.pw-acct .pa-kpi-ic.amber{background:var(--amber-s)}
+.pw-acct .pa-kpi-ic.rose{background:var(--rose-s)}.pw-acct .pa-kpi-ic.blue{background:var(--blue-s)}
+.pw-acct .pa-badge{font-size:10.5px;font-weight:600;padding:3px 7px;border-radius:99px}
+.pw-acct .pa-badge.up{background:var(--teal-s);color:var(--teal)}
+.pw-acct .pa-badge.down{background:var(--rose-s);color:var(--rose)}
+.pw-acct .pa-badge.flat{background:var(--s3);color:var(--t3)}
+.pw-acct .pa-badge.warn{background:var(--amber-s);color:var(--amber)}
+.pw-acct .pa-kpi-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--t3)}
+.pw-acct .pa-kpi-val{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:22px;letter-spacing:-.5px;color:var(--t1);margin:3px 0 4px;line-height:1.1}
+.pw-acct .pa-kpi-sub{font-size:11px;color:var(--t3)}
+.pw-acct .pa-prog{width:100%;height:4px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:8px}
+.pw-acct .pa-prog-fill{height:100%;border-radius:99px}
+
+/* cards */
+.pw-acct .pa-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.pw-acct .pa-card-hd{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pw-acct .pa-card-title{font-weight:700;font-size:13.5px;color:var(--t1);display:flex;align-items:center;gap:7px}
+.pw-acct .pa-card-action{font-size:12px;font-weight:500;color:var(--green);cursor:pointer;transition:opacity .18s}
+.pw-acct .pa-card-action:hover{opacity:.6}
+
+/* chips */
+.pw-acct .pa-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px}
+.pw-acct .pa-chip.green{background:var(--green-s);color:var(--green)}
+.pw-acct .pa-chip.amber{background:var(--amber-s);color:var(--amber)}
+.pw-acct .pa-chip.rose{background:var(--rose-s);color:var(--rose)}
+.pw-acct .pa-chip.blue{background:var(--blue-s);color:var(--blue)}
+.pw-acct .pa-chip.slate{background:var(--s3);color:var(--t2)}
+.pw-acct .pa-chip.violet{background:var(--violet-s);color:var(--violet)}
+
+/* buttons */
+.pw-acct .pa-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:12.5px;font-weight:600;font-family:'Outfit',sans-serif;cursor:pointer;transition:all .18s;border:none;white-space:nowrap}
+.pw-acct .pa-btn-primary{background:var(--green);color:#020b08}
+.pw-acct .pa-btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 16px var(--green-g)}
+.pw-acct .pa-btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.pw-acct .pa-btn-ghost:hover{border-color:var(--bh);color:var(--t1)}
+
+/* rows */
+.pw-acct .pa-row{display:grid;gap:12px}
+.pw-acct .pa-row-2{grid-template-columns:1fr 1fr}
+.pw-acct .pa-row-2-1{grid-template-columns:1fr 340px}
+.pw-acct .pa-row-3{grid-template-columns:repeat(3,1fr)}
+
+/* transaction rows */
+.pw-acct .pa-tx-row{display:flex;align-items:center;gap:11px;padding:11px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-acct .pa-tx-row:last-child{border-bottom:none}
+.pw-acct .pa-tx-row:hover{background:var(--s2)}
+.pw-acct .pa-tx-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.pw-acct .pa-tx-name{font-size:12.5px;font-weight:600;color:var(--t1)}
+.pw-acct .pa-tx-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.pw-acct .pa-tx-amt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;margin-left:auto;flex-shrink:0}
+.pw-acct .pa-tx-amt.credit{color:var(--green)}.pw-acct .pa-tx-amt.debit{color:var(--rose)}
+
+/* outstanding rows */
+.pw-acct .pa-out-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-acct .pa-out-row:last-child{border-bottom:none}
+.pw-acct .pa-out-row:hover{background:var(--s2)}
+.pw-acct .pa-out-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;flex-shrink:0}
+.pw-acct .pa-out-name{font-size:12.5px;font-weight:600;color:var(--t1);flex:1}
+.pw-acct .pa-out-days{font-size:10.5px;color:var(--t3)}
+.pw-acct .pa-out-amt{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--rose);flex-shrink:0}
+
+/* invoice rows */
+.pw-acct .pa-inv-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-acct .pa-inv-row:last-child{border-bottom:none}
+.pw-acct .pa-inv-row:hover{background:var(--s2)}
+
+/* bank cards */
+.pw-acct .pa-bank-card{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:border-color .2s}
+.pw-acct .pa-bank-card:hover{border-color:var(--bh)}
+.pw-acct .pa-bank-ic{width:38px;height:38px;border-radius:9px;background:var(--green-s);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.pw-acct .pa-bank-name{font-size:12px;font-weight:600;color:var(--t1)}
+.pw-acct .pa-bank-acc{font-size:10.5px;color:var(--t3);margin-top:1px;font-family:'JetBrains Mono',monospace}
+.pw-acct .pa-bank-bal{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:var(--green);margin-left:auto;flex-shrink:0}
+
+/* bar chart */
+.pw-acct .pa-bar-area{display:flex;align-items:flex-end;gap:6px;height:80px}
+.pw-acct .pa-bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.pw-acct .pa-bar{width:100%;border-radius:3px 3px 0 0;min-height:3px;transition:opacity .2s}
+.pw-acct .pa-bar:hover{opacity:.7}
+.pw-acct .pa-bar-lbl{font-size:9.5px;color:var(--t3)}
+
+/* responsive */
+@media(max-width:1100px){.pw-acct .pa-kpi-grid{grid-template-columns:repeat(2,1fr)}.pw-acct .pa-row-2-1{grid-template-columns:1fr}.pw-acct .pa-row-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.pw-acct .pa-content{padding:14px 14px 50px}.pw-acct .pa-kpi-grid{grid-template-columns:1fr 1fr;gap:8px}.pw-acct .pa-kpi-val{font-size:18px}.pw-acct .pa-row-2{grid-template-columns:1fr}.pw-acct .pa-row-3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="pw-acct">
+<div class="pa-content">
+
+  <!-- HEADER -->
+  <div class="pa-fu">
+    <div class="pa-eyebrow"><span class="pa-live"></span><span id="pa-date-line">Wednesday, 18 March 2026 · Term 1 Week 8</span></div>
+    <h1 class="pa-title" id="pa-greeting">Good morning, Accountant 👋</h1>
+    <p class="pa-sub">School financial overview — fees, expenses, and balances at a glance.</p>
+  </div>
+
+  <!-- KPI ROW 1 -->
+  <div class="pa-kpi-grid pa-fu pa-d1">
+    <div class="pa-kpi green">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic green">💵</div><span class="pa-badge up" data-kpi="collected-badge">↑ 12%</span></div>
+      <div class="pa-kpi-lbl">Fees Collected</div>
+      <div class="pa-kpi-val" data-kpi="fees-collected">—</div>
+      <div class="pa-kpi-sub" data-kpi="collected-sub">This term</div>
+      <div class="pa-prog"><div class="pa-prog-fill" style="background:var(--green);width:51%" id="pa-progress-bar"></div></div>
+    </div>
+    <div class="pa-kpi amber">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic amber">📊</div><span class="pa-badge flat" data-kpi="expected-badge">Term target</span></div>
+      <div class="pa-kpi-lbl">Total Expected</div>
+      <div class="pa-kpi-val" data-kpi="fees-expected">—</div>
+      <div class="pa-kpi-sub" data-kpi="expected-sub">Including arrears</div>
+    </div>
+    <div class="pa-kpi rose">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic rose">⚠️</div><span class="pa-badge down" data-kpi="outstanding-badge">Balance due</span></div>
+      <div class="pa-kpi-lbl">Outstanding Balance</div>
+      <div class="pa-kpi-val" style="color:var(--rose)" data-kpi="outstanding-balance">—</div>
+      <div class="pa-kpi-sub" data-kpi="outstanding-sub">Unpaid this term</div>
+    </div>
+    <div class="pa-kpi green">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic green">📅</div><span class="pa-badge up" data-kpi="today-badge">Today</span></div>
+      <div class="pa-kpi-lbl">Collected Today</div>
+      <div class="pa-kpi-val" data-kpi="collected-today">—</div>
+      <div class="pa-kpi-sub" data-kpi="today-sub">Payments received</div>
+    </div>
+  </div>
+
+  <!-- KPI ROW 2 -->
+  <div class="pa-kpi-grid pa-fu pa-d2">
+    <div class="pa-kpi rose">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic rose">🧾</div><span class="pa-badge warn" data-kpi="expenses-badge">Pending</span></div>
+      <div class="pa-kpi-lbl">Total Expenses</div>
+      <div class="pa-kpi-val" data-kpi="total-expenses">—</div>
+      <div class="pa-kpi-sub" data-kpi="expenses-sub">Approved this term</div>
+    </div>
+    <div class="pa-kpi green">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic green">💰</div><span class="pa-badge up" data-kpi="net-badge">Net</span></div>
+      <div class="pa-kpi-lbl">Net Cash Position</div>
+      <div class="pa-kpi-val" style="color:var(--green)" data-kpi="net-cash">—</div>
+      <div class="pa-kpi-sub" data-kpi="net-sub">Collected minus expenses</div>
+    </div>
+    <div class="pa-kpi amber">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic amber">📄</div><span class="pa-badge warn" data-kpi="invoices-badge">Open</span></div>
+      <div class="pa-kpi-lbl">Pending Invoices</div>
+      <div class="pa-kpi-val" data-kpi="pending-invoices">—</div>
+      <div class="pa-kpi-sub" data-kpi="invoices-sub">Awaiting payment</div>
+    </div>
+    <div class="pa-kpi blue">
+      <div class="pa-kpi-top"><div class="pa-kpi-ic blue">🏦</div><span class="pa-badge flat" data-kpi="bank-badge">Synced</span></div>
+      <div class="pa-kpi-lbl">Bank Balance</div>
+      <div class="pa-kpi-val" data-kpi="bank-balance">—</div>
+      <div class="pa-kpi-sub" data-kpi="bank-sub">All accounts combined</div>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="pa-fu pa-d2">
+    <div class="pa-card">
+      <div class="pa-card-hd"><span class="pa-card-title">⚡ Quick Actions</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--green-s);border:1px solid rgba(0,208,132,0.18);cursor:pointer" data-nav="/dashboard/accountant/payments/new"><div style="width:34px;height:34px;border-radius:9px;background:var(--green-s);display:flex;align-items:center;justify-content:center;font-size:17px">💳</div><span style="font-size:11px;font-weight:600;color:var(--green);text-align:center">Record Payment</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer" data-nav="/dashboard/accountant/receipts"><div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">🧾</div><span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Print Receipt</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer" data-nav="/dashboard/accountant/outstanding"><div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📱</div><span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Send Reminder</span></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer" data-nav="/dashboard/accountant/reports"><div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📊</div><span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Export Report</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART + TRANSACTIONS -->
+  <div class="pa-row pa-row-2-1 pa-fu pa-d3">
+    <div class="pa-card">
+      <div class="pa-card-hd">
+        <span class="pa-card-title">📈 Cash Flow — This Term</span>
+        <select style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11.5px;font-family:'Outfit',sans-serif;color:var(--t2);outline:none">
+          <option>This Month</option><option>Last Month</option><option>Full Term</option>
+        </select>
+      </div>
+      <div style="padding:16px 18px">
+        <div style="display:flex;gap:20px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+          <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Collection Rate</div><div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;color:var(--green)" id="pa-collection-pct">—%</div></div>
+          <div><div style="font-size:10px;color:var(--t3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.6px;font-weight:700">Expenses Rate</div><div style="font-family:'JetBrains Mono',monospace;font-weight:700;font-size:20px;color:var(--amber)" data-kpi="expense-rate">—%</div></div>
+        </div>
+        <div class="pa-bar-area">
+          <div class="pa-bar-col"><div class="pa-bar" style="height:52px;background:var(--blue);opacity:.7"></div><div class="pa-bar-lbl">W1</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:68px;background:var(--blue)"></div><div class="pa-bar-lbl">W2</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:58px;background:var(--blue);opacity:.8"></div><div class="pa-bar-lbl">W3</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:76px;background:var(--green)"></div><div class="pa-bar-lbl">W4</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:22px;background:var(--s4)"></div><div class="pa-bar-lbl">W5</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:8px;background:var(--s4);opacity:.5"></div><div class="pa-bar-lbl">W6</div></div>
+          <div class="pa-bar-col"><div class="pa-bar" style="height:5px;background:var(--s4);opacity:.3"></div><div class="pa-bar-lbl">W7</div></div>
+        </div>
+      </div>
+      <div class="pa-card-hd" style="border-top:1px solid var(--border);border-bottom:none">
+        <span class="pa-card-title">💳 Recent Transactions</span>
+        <a class="pa-card-action" data-nav="/dashboard/accountant/payments">All →</a>
+      </div>
+      <div id="pa-transactions-list">
+        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading transactions…</div>
+      </div>
+    </div>
+
+    <!-- Outstanding + Bank -->
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="pa-card">
+        <div class="pa-card-hd">
+          <span class="pa-card-title">⚠️ Outstanding Fees</span>
+          <a class="pa-card-action" data-nav="/dashboard/accountant/outstanding">All →</a>
+        </div>
+        <div id="pa-outstanding-list">
+          <div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">Loading…</div>
+        </div>
+        <div style="padding:10px 18px;border-top:1px solid var(--border)">
+          <button class="pa-btn pa-btn-ghost" style="width:100%;justify-content:center;font-size:11.5px" data-nav="/dashboard/accountant/outstanding">📱 Send All Reminders</button>
+        </div>
+      </div>
+      <div class="pa-card">
+        <div class="pa-card-hd"><span class="pa-card-title">🏦 Bank Accounts</span></div>
+        <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+          <div class="pa-bank-card"><div class="pa-bank-ic">🏦</div><div><div class="pa-bank-name">Stanbic Bank</div><div class="pa-bank-acc">••••4821</div></div><div class="pa-bank-bal" data-kpi="bank-stanbic">—</div></div>
+          <div class="pa-bank-card"><div class="pa-bank-ic">🏛️</div><div><div class="pa-bank-name">DFCU Bank</div><div class="pa-bank-acc">••••2047</div></div><div class="pa-bank-bal" data-kpi="bank-dfcu">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVOICES -->
+  <div class="pa-fu pa-d4">
+    <div class="pa-card">
+      <div class="pa-card-hd">
+        <span class="pa-card-title">📄 Pending Invoices</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11.5px;font-family:'Outfit',sans-serif;color:var(--t2);outline:none"><option>All Status</option><option>Overdue</option><option>Due Soon</option><option>Sent</option></select>
+          <a class="pa-card-action" data-nav="/dashboard/accountant/invoices">View all →</a>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1.2fr 1fr 1fr 80px;padding:9px 18px;background:var(--s2);border-bottom:1px solid var(--border)">
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Student</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Invoice #</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Amount</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Due Date</div>
+        <div style="font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px">Status</div>
+      </div>
+      <div id="pa-invoices-list">
+        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading invoices…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REMINDER -->
+  <div class="pa-fu pa-d4">
+    <div class="pa-card">
+      <div class="pa-card-hd"><span class="pa-card-title">🔔 Latest Notification</span><a class="pa-card-action" data-nav="/dashboard/accountant/notifications">All →</a></div>
+      <div style="padding:14px 18px">
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:10px 14px;border-radius:9px;background:var(--amber-s);border:1px solid rgba(245,158,11,0.18)">
+          <span>⚠️</span>
+          <div style="font-size:12.5px;color:var(--t1)" id="pa-reminder-text">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>

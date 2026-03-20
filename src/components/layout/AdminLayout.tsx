@@ -500,7 +500,7 @@ export default function AdminLayout() {
             <span className="pw-nav-label">Management</span>
             <NavGroup icon="👥" label="User Management" isOpen={userMgmtOpen} onToggle={() => setUserMgmtOpen(!userMgmtOpen)} matchPaths={['/dashboard/admin/accounts', '/dashboard/admin/permissions']}>
               <SubItem to="/dashboard/admin/accounts" label="All Users" onClick={closeSidebar} />
-              <SubItem to="/dashboard/admin/accounts/add" label="Create Staff" onClick={closeSidebar} />
+              <SubItem to="/dashboard/admin/accounts/invite" label="Send invitations" onClick={closeSidebar} />
               <SubItem to="/dashboard/admin/permissions" label="Access & permissions" onClick={closeSidebar} />
             </NavGroup>
             <NavItem to="/dashboard/admin/staff" icon="🏢" label="Staff" onClick={closeSidebar} />

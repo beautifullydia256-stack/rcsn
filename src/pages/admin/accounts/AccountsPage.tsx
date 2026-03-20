@@ -35,7 +35,8 @@ interface UserAccount {
 
 async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   const { data: userData } = await supabase.from('users').select('school_id, role').eq('user_id', userId).single();
-  if (!userData?.school_id || !['admin', 'owner'].includes(userData.role ?? '')) return [];
+  const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
+  if (!userData?.school_id || !MANAGER_ROLES.includes(String(userData.role ?? ''))) return [];
   const cols = 'user_id, email, name, role, phone, department, position, created_at, last_sign_in_at, is_active';
   const result = await supabase
     .from('users')

@@ -120,7 +120,8 @@ export default async function handler(req: Req, res: Res) {
       .eq('user_id', adminUser.id)
       .single();
 
-    if (!adminData || !['admin', 'owner'].includes(adminData.role)) {
+    const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
+    if (!adminData || !MANAGER_ROLES.includes(String(adminData.role ?? ''))) {
       setCors();
       res.status(403).json({ error: 'Unauthorized - Admin access required' });
       return;
@@ -128,7 +129,27 @@ export default async function handler(req: Req, res: Res) {
 
     const body = parseBody(req);
 
-    const { email, firstName, lastName, role, phone, password, sendEmailInvite, department, position } = body as Record<string, unknown>;
+    let emailIn = body.email != null ? String(body.email).trim() : '';
+    let firstName = body.firstName != null ? String(body.firstName) : '';
+    let lastName = body.lastName != null ? String(body.lastName) : '';
+    let roleOut = body.role != null ? String(body.role) : 'teacher';
+    const { phone, password, department, position } = body as Record<string, unknown>;
+    let sendEmailInvite = Boolean(body.sendEmailInvite);
+
+    const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
+    const otherStaffId = body.otherStaffId != null ? String(body.otherStaffId).trim() : '';
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Link invite to an existing teacher or other_staff roster row (invite-only)
+    if (teacherId || otherStaffId) {
+      sendEmailInvite = true;
+      if (body.password != null && String(body.password).trim() !== '') {
+        setCors();
+        res.status(400).json({ error: 'Roster invites use email only — remove password from the request.' });
+        return;
+      }
+    }
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { validatePasswordLength } = require('../../lib/passwordPolicy') as {
@@ -142,9 +163,78 @@ export default async function handler(req: Req, res: Res) {
         return;
       }
     }
-    const name = `${firstName || ''} ${lastName || ''}`.toString().trim();
 
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    if (teacherId) {
+      const { data: t, error: tErr } = await supabaseAdmin
+        .from('teachers')
+        .select('teacher_id, school_id, name, email, phone')
+        .eq('teacher_id', teacherId)
+        .single();
+      if (tErr || !t || String(t.school_id) !== String(adminData.school_id)) {
+        setCors();
+        res.status(400).json({ error: 'Teacher not found or not in your school.' });
+        return;
+      }
+      roleOut = 'teacher';
+      const full = String((t as { name?: string }).name || '').trim();
+      const parts = full.split(/\s+/).filter(Boolean);
+      firstName = parts[0] || 'Teacher';
+      lastName = parts.slice(1).join(' ') || '';
+      if (!emailIn) emailIn = (t as { email?: string }).email ? String((t as { email?: string }).email).trim() : '';
+      if (!emailIn) {
+        setCors();
+        res.status(400).json({ error: 'This teacher has no email. Add an email in the invitation form, then send again.' });
+        return;
+      }
+      const { data: existingT } = await supabaseAdmin
+        .from('users')
+        .select('user_id')
+        .eq('school_id', adminData.school_id)
+        .eq('role', 'teacher')
+        .ilike('email', emailIn)
+        .maybeSingle();
+      if (existingT?.user_id) {
+        setCors();
+        res.status(400).json({ error: 'A teacher account with this email already exists for your school.' });
+        return;
+      }
+    } else if (otherStaffId) {
+      const { data: o, error: oErr } = await supabaseAdmin
+        .from('other_staff_members')
+        .select('id, school_id, full_name, email, staff_role, linked_user_id')
+        .eq('id', otherStaffId)
+        .single();
+      if (oErr || !o || String(o.school_id) !== String(adminData.school_id)) {
+        setCors();
+        res.status(400).json({ error: 'Staff member not found or not in your school.' });
+        return;
+      }
+      if ((o as { linked_user_id?: string }).linked_user_id) {
+        setCors();
+        res.status(400).json({ error: 'This person already has a login linked.' });
+        return;
+      }
+      const sr = String((o as { staff_role?: string }).staff_role || '').trim();
+      if (!sr) {
+        setCors();
+        res.status(400).json({ error: 'Set a dashboard role (Staff role) on the Staff page before inviting.' });
+        return;
+      }
+      roleOut = sr;
+      const full = String((o as { full_name?: string }).full_name || '').trim();
+      const parts = full.split(/\s+/).filter(Boolean);
+      firstName = parts[0] || 'Staff';
+      lastName = parts.slice(1).join(' ') || '';
+      if (!emailIn) emailIn = (o as { email?: string }).email ? String((o as { email?: string }).email).trim() : '';
+      if (!emailIn) {
+        setCors();
+        res.status(400).json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
+        return;
+      }
+    }
+
+    const email = emailIn;
+    const name = `${firstName || ''} ${lastName || ''}`.toString().trim() || email;
 
     // Check if email already exists in public.users (fast) - avoid listUsers() which can timeout on serverless
     const { data: existingUserByEmail } = await supabaseAdmin
@@ -160,7 +250,16 @@ export default async function handler(req: Req, res: Res) {
     }
 
     let authUserId: string | null = null;
-    const meta = { name, role, school_id: adminData.school_id, department: department ?? null, position: position ?? null, phone: phone ?? null };
+    const meta: Record<string, unknown> = {
+      name,
+      role: roleOut,
+      school_id: adminData.school_id,
+      department: department ?? null,
+      position: position ?? null,
+      phone: phone != null ? String(phone) : null,
+    };
+    if (teacherId) meta.teacher_id = teacherId;
+    if (otherStaffId) meta.other_staff_id = otherStaffId;
 
     if (sendEmailInvite) {
       const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
@@ -220,7 +319,7 @@ export default async function handler(req: Req, res: Res) {
           user_id: authUserId,
           email: String(email),
           name,
-          role: String(role ?? 'teacher'),
+          role: String(roleOut ?? 'teacher'),
           school_id: adminData.school_id,
           phone: phone != null ? String(phone) : null,
           department: department != null ? String(department) : null,
@@ -235,6 +334,28 @@ export default async function handler(req: Req, res: Res) {
       console.warn('Error creating user record:', userErr);
     }
 
+    if (authUserId && teacherId) {
+      try {
+        await supabaseAdmin
+          .from('teachers')
+          .update({ email: String(email) })
+          .eq('teacher_id', teacherId)
+          .eq('school_id', adminData.school_id);
+      } catch (e) {
+        console.warn('Could not sync teacher email:', e);
+      }
+    }
+    if (authUserId && otherStaffId) {
+      try {
+        await supabaseAdmin
+          .from('other_staff_members')
+          .update({ email: String(email), linked_user_id: authUserId })
+          .eq('id', otherStaffId);
+      } catch (e) {
+        console.warn('Could not link other_staff:', e);
+      }
+    }
+
     if (!sendEmailInvite && password) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -246,13 +367,13 @@ export default async function handler(req: Req, res: Res) {
         const loginUrl = `${getPublicSiteOrigin()}/login`;
         await sendResendInnerHtml({
           to: String(email),
-          subject: buildCredentialEmailSubject(String(role ?? ''), ''),
+          subject: buildCredentialEmailSubject(String(roleOut ?? ''), ''),
           innerHtml: buildCredentialInnerHtml({
             recipientName: name || String(firstName ?? '') || 'there',
             email: String(email),
             password: String(password),
-            role: String(role ?? ''),
-            roleLabel: String(role ?? ''),
+            role: String(roleOut ?? ''),
+            roleLabel: String(roleOut ?? ''),
             loginUrl,
           }),
         });

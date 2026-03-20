@@ -51,6 +51,7 @@ const ParentsPage = lazyWithRetry(() => import('./pages/admin/parents/ParentsPag
 const AddParentPage = lazyWithRetry(() => import('./pages/admin/parents/AddParentPage'));
 const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
 const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/CreateStaffPage'));
+const InviteFromRosterPage = lazyWithRetry(() => import('./pages/admin/accounts/InviteFromRosterPage'));
 const PermissionsPage = lazyWithRetry(() => import('./pages/admin/permissions/PermissionsPage'));
 const StaffPage = lazyWithRetry(() => import('./pages/admin/staff/StaffPage'));
 const ExamSetsPage = lazyWithRetry(() => import('./pages/admin/exam-sets/ExamSetsPage'));
@@ -64,7 +65,7 @@ const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPa
 const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
 const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazyWithRetry(() => import('./pages/admin/identity/StudentIDCardPage'));
-const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/Dashboard'));
+const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/DesignTeacherDashboard'));
 const TeacherStudentsPage = lazyWithRetry(() => import('./pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazyWithRetry(() => import('./pages/teacher/classes/ClassesPage'));
 const TeacherExamResultsPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsPage'));
@@ -79,10 +80,10 @@ const TeacherResourcesPage = lazyWithRetry(() => import('./pages/teacher/resourc
 const TeacherMessagesPage = lazyWithRetry(() => import('./pages/teacher/messages/MessagesPage'));
 const TeacherNotificationsPage = lazyWithRetry(() => import('./pages/teacher/notifications/NotificationsPage'));
 const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
-const StudentDashboard = lazyWithRetry(() => import('./pages/student/Dashboard'));
+const StudentDashboard = lazyWithRetry(() => import('./pages/student/DesignStudentDashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
-const ParentDashboard = lazyWithRetry(() => import('./pages/parent/Dashboard'));
-const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
+const ParentDashboard = lazyWithRetry(() => import('./pages/parent/DesignParentDashboard'));
+const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/DesignAccountantDashboard'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
 const AccountantOutstandingPage = lazyWithRetry(() => import('./pages/accountant/OutstandingPage'));
 const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/ReceiptsPage'));
@@ -92,9 +93,9 @@ const AccountantBankPage = lazyWithRetry(() => import('./pages/accountant/BankPa
 const AccountantFeeStructurePage = lazyWithRetry(() => import('./pages/accountant/FeeStructurePage'));
 const AccountantPaymentsPage = lazyWithRetry(() => import('./pages/accountant/PaymentsPage'));
 const AccountantAdjustmentsPage = lazyWithRetry(() => import('./pages/accountant/AdjustmentsPage'));
-const LibrarianDashboard = lazyWithRetry(() => import('./pages/librarian/Dashboard'));
-const LabTechnicianDashboard = lazyWithRetry(() => import('./pages/lab-technician/Dashboard'));
-const ClinicianDashboard = lazyWithRetry(() => import('./pages/clinician/Dashboard'));
+const LibrarianDashboard = lazyWithRetry(() => import('./pages/librarian/DesignLibrarianDashboard'));
+const LabTechnicianDashboard = lazyWithRetry(() => import('./pages/lab-technician/DesignLabDashboard'));
+const ClinicianDashboard = lazyWithRetry(() => import('./pages/clinician/DesignClinicDashboard'));
 const HeadTeacherDashboard = lazyWithRetry(() => import('./pages/head-teacher/Dashboard'));
 const OwnerDashboard = lazyWithRetry(() => import('./pages/owner/Dashboard'));
 const LibraryPage = lazyWithRetry(() => import('./pages/Library'));
@@ -148,6 +149,7 @@ function App() {
                   <Route path="parents/add" element={<AddParentPage />} />
                   <Route path="accounts" element={<AccountsPage />} />
                   <Route path="accounts/add" element={<CreateStaffPage />} />
+                  <Route path="accounts/invite" element={<InviteFromRosterPage />} />
                   <Route path="permissions" element={<PermissionsPage />} />
                   <Route path="staff" element={<StaffPage />} />
                   <Route path="exam-sets" element={<ExamSetsPage />} />

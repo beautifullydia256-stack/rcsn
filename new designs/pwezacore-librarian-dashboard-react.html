@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Librarian</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Mulish:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+ * REACT INJECTION FORMAT — Librarian Dashboard
+ * Scope: .pw-lib  |  No sidebar/topbar
+ * DOM targets:
+ *   KPIs:    [data-kpi="..."] — textContent (via data-kpi attr)
+ *   Hero:    #pl-active-loans, #pl-available, #pl-overdue, #pl-returned-today
+ *   Lists:   #pl-loans-list, #pl-overdue-list, #pl-reservations-list,
+ *            #pl-fines-list, #pl-popular-list, #pl-activity-list
+ *   Actions: #pl-renew-count (badge)
+ *   Greeting: #pl-greeting, #pl-date-line
+ */
+
+.pw-lib*,.pw-lib *::before,.pw-lib *::after{box-sizing:border-box;margin:0;padding:0}
+
+.pw-lib{
+  --bg:#09080a;--s1:#120f10;--s2:#1a1518;--s3:#231c22;--s4:#2e2530;
+  --border:rgba(255,255,255,0.07);--bh:rgba(255,255,255,0.13);
+  --amber:#e8a020;--amber-s:rgba(232,160,32,0.10);--amber-g:rgba(232,160,32,0.22);
+  --bronze:#cd7f32;--bronze-s:rgba(205,127,50,0.10);
+  --teal:#10d9a8;--teal-s:rgba(16,217,168,0.10);
+  --rose:#f43f5e;--rose-s:rgba(244,63,94,0.10);
+  --blue:#3d8ef8;--blue-s:rgba(61,142,248,0.10);
+  --violet:#8b5cf6;--violet-s:rgba(139,92,246,0.10);
+  --green:#22c55e;--green-s:rgba(34,197,94,0.10);
+  --t1:#fdf6ec;--t2:#a8926a;--t3:#5a4030;
+  --r:13px;--rs:8px;
+  font-family:'Mulish',sans-serif;background:var(--bg);color:var(--t1);width:100%;min-height:100vh;
+}
+
+html.light .pw-lib,html[data-theme=light] .pw-lib{
+  --bg:#fdf8f0;--s1:#ffffff;--s2:#fdf4e8;--s3:#f8ece0;--s4:#f0dfc8;
+  --border:rgba(0,0,0,0.08);--bh:rgba(0,0,0,0.14);
+  --t1:#1a1008;--t2:#6a4020;--t3:#b09080;
+  background:var(--bg);color:var(--t1);
+}
+
+@keyframes pl-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pl-blink{0%,100%{opacity:1}50%{opacity:.25}}
+.pl-fu{animation:pl-up .38s ease both}
+.pl-d1{animation-delay:.04s}.pl-d2{animation-delay:.08s}.pl-d3{animation-delay:.12s}.pl-d4{animation-delay:.16s}
+
+.pw-lib .pl-content{padding:22px 24px 60px;display:flex;flex-direction:column;gap:18px}
+
+.pw-lib .pl-eyebrow{font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
+.pw-lib .pl-live{width:6px;height:6px;border-radius:50%;background:var(--amber);animation:pl-blink 2s infinite;flex-shrink:0}
+.pw-lib .pl-title{font-family:'Playfair Display',serif;font-weight:800;font-size:25px;letter-spacing:-.3px;color:var(--t1)}
+.pw-lib .pl-sub{font-size:12.5px;color:var(--t2);margin-top:3px}
+
+/* hero stats */
+.pw-lib .pl-hero-stats{display:flex;gap:10px;flex-wrap:wrap}
+.pw-lib .pl-hs{text-align:center;padding:14px 18px;background:var(--s1);border:1px solid var(--border);border-radius:var(--r);min-width:90px;transition:border-color .18s;flex:1}
+.pw-lib .pl-hs:hover{border-color:var(--bh)}
+.pw-lib .pl-hs-val{font-family:'Playfair Display',serif;font-weight:700;font-size:24px;letter-spacing:-.5px;line-height:1}
+.pw-lib .pl-hs-lbl{font-size:10px;color:var(--t3);margin-top:5px;text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+
+/* circulation strip */
+.pw-lib .pl-circ-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pw-lib .pl-circ-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s}
+.pw-lib .pl-circ-card:hover{border-color:var(--bh);transform:translateY(-2px)}
+.pw-lib .pl-circ-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}
+.pw-lib .pl-circ-card.amber::before{background:linear-gradient(90deg,var(--amber),var(--teal))}
+.pw-lib .pl-circ-card.rose::before{background:linear-gradient(90deg,var(--rose),var(--violet));border-color:rgba(244,63,94,.25) !important}
+.pw-lib .pl-circ-card.bronze::before{background:linear-gradient(90deg,var(--amber),var(--bronze));border-color:rgba(232,160,32,.25) !important}
+.pw-lib .pl-circ-ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.pw-lib .pl-circ-ic.amber{background:var(--amber-s)}.pw-lib .pl-circ-ic.rose{background:var(--rose-s)}.pw-lib .pl-circ-ic.bronze{background:var(--bronze-s)}
+.pw-lib .pl-circ-lbl{font-size:10.5px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:3px}
+.pw-lib .pl-circ-val{font-family:'Playfair Display',serif;font-weight:700;font-size:26px;letter-spacing:-.5px;line-height:1.05}
+.pw-lib .pl-circ-sub{font-size:11.5px;color:var(--t2);margin-top:3px}
+
+/* cards */
+.pw-lib .pl-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.pw-lib .pl-card-hd{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pw-lib .pl-card-title{font-family:'Playfair Display',serif;font-weight:700;font-size:13.5px;color:var(--t1);display:flex;align-items:center;gap:7px}
+.pw-lib .pl-card-action{font-size:12px;font-weight:500;color:var(--amber);cursor:pointer;transition:opacity .18s;text-decoration:none}
+.pw-lib .pl-card-action:hover{opacity:.6}
+
+/* chips */
+.pw-lib .pl-chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:99px}
+.pw-lib .pl-chip.amber{background:var(--amber-s);color:var(--amber)}
+.pw-lib .pl-chip.teal{background:var(--teal-s);color:var(--teal)}
+.pw-lib .pl-chip.rose{background:var(--rose-s);color:var(--rose)}
+.pw-lib .pl-chip.green{background:var(--green-s);color:var(--green)}
+.pw-lib .pl-chip.blue{background:var(--blue-s);color:var(--blue)}
+.pw-lib .pl-chip.slate{background:var(--s3);color:var(--t2)}
+
+/* buttons */
+.pw-lib .pl-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:12.5px;font-weight:600;font-family:'Mulish',sans-serif;cursor:pointer;transition:all .18s;border:none;white-space:nowrap}
+.pw-lib .pl-btn-amber{background:var(--amber);color:#09080a}
+.pw-lib .pl-btn-amber:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:0 4px 16px var(--amber-g)}
+.pw-lib .pl-btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
+.pw-lib .pl-btn-ghost:hover{border-color:var(--bh);color:var(--t1)}
+.pw-lib .pl-btn-collect{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:7px;background:var(--amber-s);color:var(--amber);border:1px solid rgba(232,160,32,.2);cursor:pointer;transition:all .15s;font-family:'Mulish',sans-serif}
+.pw-lib .pl-btn-collect:hover{background:var(--amber);color:#09080a}
+
+/* layout */
+.pw-lib .pl-row{display:grid;gap:12px}
+.pw-lib .pl-row-2{grid-template-columns:1fr 1fr}
+.pw-lib .pl-row-2-1{grid-template-columns:1fr 340px}
+.pw-lib .pl-row-3{grid-template-columns:repeat(3,1fr)}
+
+/* loan rows */
+.pw-lib .pl-loan-row{display:flex;align-items:center;gap:11px;padding:11px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-lib .pl-loan-row:last-child{border-bottom:none}
+.pw-lib .pl-loan-row:hover{background:var(--s2)}
+.pw-lib .pl-loan-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.pw-lib .pl-loan-name{font-size:12.5px;font-weight:600;color:var(--t1)}
+.pw-lib .pl-loan-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.pw-lib .pl-loan-due{font-size:11.5px;font-weight:600;flex-shrink:0}
+.pw-lib .pl-loan-due.ok{color:var(--teal)}.pw-lib .pl-loan-due.soon{color:var(--amber)}.pw-lib .pl-loan-due.late{color:var(--rose)}
+
+/* overdue rows */
+.pw-lib .pl-od-row{display:flex;align-items:center;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-lib .pl-od-row:last-child{border-bottom:none}
+.pw-lib .pl-od-row:hover{background:var(--s2)}
+.pw-lib .pl-od-name{font-size:12.5px;font-weight:600;color:var(--t1);flex:1}
+.pw-lib .pl-od-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.pw-lib .pl-od-days{font-size:12px;font-weight:700;color:var(--rose);flex-shrink:0}
+.pw-lib .pl-od-fine{font-size:12px;font-weight:700;color:var(--amber);flex-shrink:0}
+
+/* quick actions */
+.pw-lib .pl-qa-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:14px 18px}
+.pw-lib .pl-qa-btn{display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s;text-align:center}
+.pw-lib .pl-qa-btn:hover{border-color:var(--amber);transform:translateY(-1px)}
+.pw-lib .pl-qa-btn.primary{background:var(--amber-s);border-color:rgba(232,160,32,.2)}
+.pw-lib .pl-qa-ic{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.pw-lib .pl-qa-label{font-size:11px;font-weight:600;color:var(--t2);line-height:1.3}
+.pw-lib .pl-qa-btn.primary .pl-qa-label{color:var(--amber)}
+
+/* activity */
+.pw-lib .pl-act-row{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .14s}
+.pw-lib .pl-act-row:last-child{border-bottom:none}
+.pw-lib .pl-act-row:hover{background:var(--s2)}
+.pw-lib .pl-act-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px}
+.pw-lib .pl-act-text{font-size:12px;color:var(--t2);line-height:1.4}
+.pw-lib .pl-act-text strong{color:var(--t1);font-weight:600}
+.pw-lib .pl-act-time{font-size:10.5px;color:var(--t3);margin-top:2px}
+
+/* responsive */
+@media(max-width:1100px){.pw-lib .pl-circ-strip{grid-template-columns:1fr}.pw-lib .pl-row-2-1{grid-template-columns:1fr}.pw-lib .pl-row-3{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:768px){.pw-lib .pl-content{padding:14px 14px 50px}.pw-lib .pl-row-2{grid-template-columns:1fr}.pw-lib .pl-row-3{grid-template-columns:1fr}.pw-lib .pl-hero-stats{gap:6px}}
+</style>
+</head>
+<body>
+<div class="pw-lib">
+<div class="pl-content">
+
+  <!-- HEADER -->
+  <div class="pl-fu">
+    <div class="pl-eyebrow"><span class="pl-live"></span><span id="pl-date-line">Wednesday, 18 March 2026 · Term 1 Week 8</span></div>
+    <h1 class="pl-title" id="pl-greeting">Good morning, Florence 👋</h1>
+    <p class="pl-sub">Your library at a glance — books, loans, overdue items and member activity.</p>
+    <!-- Hero tags -->
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--s2);border:1px solid var(--border);color:var(--t2)">📚 <span data-kpi="catalog-size">—</span> books in catalog</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--s2);border:1px solid var(--border);color:var(--teal)">🟢 Library open · 7 AM – 5 PM</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--rose-s);border:1px solid rgba(244,63,94,.2);color:var(--rose)">⏰ <span data-kpi="overdue-count">—</span> overdue items</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;background:var(--amber-s);border:1px solid rgba(232,160,32,.2);color:var(--amber)">💰 <span data-kpi="fines-total">—</span> fines pending</span>
+    </div>
+  </div>
+
+  <!-- HERO STATS -->
+  <div class="pl-hero-stats pl-fu pl-d1">
+    <div class="pl-hs"><div class="pl-hs-val" style="color:var(--amber)" id="pl-active-loans">—</div><div class="pl-hs-lbl">Active Loans</div></div>
+    <div class="pl-hs"><div class="pl-hs-val" style="color:var(--teal)" id="pl-available">—</div><div class="pl-hs-lbl">Available</div></div>
+    <div class="pl-hs"><div class="pl-hs-val" style="color:var(--rose)" id="pl-overdue">—</div><div class="pl-hs-lbl">Overdue</div></div>
+    <div class="pl-hs"><div class="pl-hs-val" style="color:var(--green)" id="pl-returned-today">—</div><div class="pl-hs-lbl">Returned Today</div></div>
+  </div>
+
+  <!-- CIRCULATION STRIP -->
+  <div class="pl-circ-strip pl-fu pl-d1">
+    <div class="pl-circ-card amber">
+      <div class="pl-circ-ic amber">📋</div>
+      <div>
+        <div class="pl-circ-lbl">Today's Circulation</div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span class="pl-circ-val" style="color:var(--amber)" data-kpi="issued-today">—</span><span style="font-size:11px;color:var(--t3)">issued</span>
+          <span style="font-size:16px;color:var(--t3)">·</span>
+          <span class="pl-circ-val" style="color:var(--teal)" data-kpi="returned-today">—</span><span style="font-size:11px;color:var(--t3)">returned</span>
+        </div>
+        <div class="pl-circ-sub" data-kpi="circ-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="pl-circ-card rose" style="border-color:rgba(244,63,94,.28)">
+      <div class="pl-circ-ic rose">⏰</div>
+      <div>
+        <div class="pl-circ-lbl">Overdue Books</div>
+        <div class="pl-circ-val" style="color:var(--rose)" data-kpi="overdue-strip">—</div>
+        <div class="pl-circ-sub" data-kpi="overdue-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="pl-circ-card bronze" style="border-color:rgba(232,160,32,.25)">
+      <div class="pl-circ-ic bronze">💰</div>
+      <div style="flex:1">
+        <div class="pl-circ-lbl">Pending Fines</div>
+        <div class="pl-circ-val" style="color:var(--amber)" data-kpi="fines-strip">—</div>
+        <div class="pl-circ-sub" data-kpi="fines-sub">Loading…</div>
+      </div>
+      <button class="pl-btn-collect" data-nav="/dashboard/librarian/fines">Collect</button>
+    </div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="pl-fu pl-d2">
+    <div class="pl-card">
+      <div class="pl-card-hd"><span class="pl-card-title">⚡ Quick Actions</span></div>
+      <div class="pl-qa-grid">
+        <div class="pl-qa-btn primary" data-nav="/dashboard/librarian/issue"><div class="pl-qa-ic" style="background:var(--amber-s)">📤</div><span class="pl-qa-label">Issue Book</span></div>
+        <div class="pl-qa-btn primary" data-nav="/dashboard/librarian/return"><div class="pl-qa-ic" style="background:var(--amber-s)">📥</div><span class="pl-qa-label">Return Book</span></div>
+        <div class="pl-qa-btn primary" data-nav="/dashboard/librarian/catalog/add"><div class="pl-qa-ic" style="background:var(--amber-s)">➕</div><span class="pl-qa-label">Add New Book</span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/overdue"><div class="pl-qa-ic" style="background:var(--s3)">📱</div><span class="pl-qa-label">Send Reminder</span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/fines"><div class="pl-qa-ic" style="background:var(--s3)">💰</div><span class="pl-qa-label">Collect Fine</span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/reports"><div class="pl-qa-ic" style="background:var(--s3)">📊</div><span class="pl-qa-label">Export Report</span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/renewals"><div class="pl-qa-ic" style="background:var(--s3)">🔄</div><span class="pl-qa-label">Renewals <span id="pl-renew-count"></span></span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/members"><div class="pl-qa-ic" style="background:var(--s3)">🪪</div><span class="pl-qa-label">Member Cards</span></div>
+        <div class="pl-qa-btn" data-nav="/dashboard/librarian/catalog"><div class="pl-qa-ic" style="background:var(--s3)">🔍</div><span class="pl-qa-label">Search Catalog</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LOANS + OVERDUE -->
+  <div class="pl-row pl-row-2 pl-fu pl-d3">
+    <div class="pl-card">
+      <div class="pl-card-hd">
+        <span class="pl-card-title">📤 Active Loans</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select style="background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11.5px;font-family:'Mulish',sans-serif;color:var(--t2);outline:none"><option>All members</option><option>Students</option><option>Teachers</option></select>
+          <a class="pl-card-action" data-nav="/dashboard/librarian/loans">View all →</a>
+        </div>
+      </div>
+      <div id="pl-loans-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading loans…</div></div>
+    </div>
+    <div class="pl-card">
+      <div class="pl-card-hd">
+        <span class="pl-card-title">⏰ Overdue Items</span>
+        <a class="pl-card-action" data-nav="/dashboard/librarian/overdue">View all →</a>
+      </div>
+      <div id="pl-overdue-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+      <div style="padding:10px 18px;border-top:1px solid var(--border)">
+        <button class="pl-btn pl-btn-ghost" style="width:100%;justify-content:center;font-size:11.5px" data-nav="/dashboard/librarian/overdue">📱 Send All Reminders</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVITY + RESERVATIONS -->
+  <div class="pl-row pl-row-2 pl-fu pl-d4">
+    <div class="pl-card">
+      <div class="pl-card-hd"><span class="pl-card-title">🕐 Library Activity</span><a class="pl-card-action">Full log →</a></div>
+      <div id="pl-activity-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading activity…</div></div>
+    </div>
+    <div class="pl-card">
+      <div class="pl-card-hd">
+        <span class="pl-card-title">📌 Reservations</span>
+        <a class="pl-card-action" data-nav="/dashboard/librarian/reservations">All →</a>
+      </div>
+      <div id="pl-reservations-list"><div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading…</div></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</body>
+</html>
