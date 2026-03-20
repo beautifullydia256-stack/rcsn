@@ -303,7 +303,16 @@ export default function AddStudentPage() {
         .select('student_id')
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        const code = (insertError as { code?: string }).code;
+        const msg = String((insertError as { message?: string }).message || '');
+        if (code === '23505' || /duplicate key|unique constraint/i.test(msg)) {
+          throw new Error(
+            'Could not save: that admission number is already used for your school, or a database uniqueness rule blocked the row. Wait a few seconds and try again; if it keeps failing, contact support.'
+          );
+        }
+        throw insertError;
+      }
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
 
@@ -366,7 +375,15 @@ export default function AddStudentPage() {
       toast.success('Student saved. Send a portal invitation from User Management when you are ready.');
       navigate('/dashboard/admin/students');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to add student.');
+      const msg = err instanceof Error ? err.message : 'Failed to add student.';
+      const http = (err as { status?: number })?.status;
+      if (http === 409 || /409|conflict|duplicate/i.test(msg)) {
+        setError(
+          'Save conflict (409): usually a duplicate admission number for this school, or a rare race when generating the number. Try again in a few seconds.'
+        );
+      } else {
+        setError(msg);
+      }
     } finally {
       setSubmitting(false);
     }
