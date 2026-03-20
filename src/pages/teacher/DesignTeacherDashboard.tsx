@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
 import { useTeacherContext } from './useTeacherContext';
 
-import designRaw from '../../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
+import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
 const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
 
