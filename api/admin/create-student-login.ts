@@ -201,6 +201,33 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
+    const canEmail = studentEmail.includes('@') && !studentEmail.toLowerCase().endsWith('@school.local');
+    if (canEmail && studentPassword) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { sendResendInnerHtml } = require('../../lib/resendSend');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { buildCredentialInnerHtml } = require('../../lib/credentialInnerHtml');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getPublicSiteOrigin } = require('../../lib/emailHtml');
+        const loginUrl = `${getPublicSiteOrigin()}/login`;
+        const displayName = (studentData?.name as string) || canonicalAdmission || 'Student';
+        await sendResendInnerHtml({
+          to: studentEmail,
+          subject: 'Your student PwezaCore login',
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: displayName,
+            email: studentEmail,
+            password: studentPassword,
+            roleLabel: 'Student',
+            loginUrl,
+          }),
+        });
+      } catch (mailErr) {
+        console.warn('Could not send student credential email:', mailErr);
+      }
+    }
+
     setCors();
     res.status(200).json({ success: true, message: 'Student login created successfully!', user: data.user });
   } catch (err: unknown) {

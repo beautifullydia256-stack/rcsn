@@ -197,6 +197,28 @@ export async function POST(request: NextRequest) {
       // Don't fail the entire operation
     }
 
+    if (!sendEmailInvite && password) {
+      try {
+        const { sendResendInnerHtml } = require('../../../../lib/resendSend');
+        const { buildCredentialInnerHtml } = require('../../../../lib/credentialInnerHtml');
+        const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
+        const loginUrl = `${getPublicSiteOrigin()}/login`;
+        await sendResendInnerHtml({
+          to: String(email),
+          subject: 'Your PwezaCore login — save your password',
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: name || 'there',
+            email: String(email),
+            password: String(password),
+            roleLabel: String(role ?? ''),
+            loginUrl,
+          }),
+        });
+      } catch (mailErr) {
+        console.warn('Could not send credential email:', mailErr);
+      }
+    }
+
     return withCors(NextResponse.json({ 
       success: true,
       message: sendEmailInvite 

@@ -48,24 +48,32 @@ export default function CreateTeacherLoginPage() {
     }
     setSaving(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('create-teacher-login', {
-        body: {
+      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+      const url = apiBase ? `${apiBase}/api/admin/create-teacher-login` : '/api/admin/create-teacher-login';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
           email,
           password,
           teacher_id: teacher.teacher_id,
           name: teacher.name,
           school_id: schoolId,
-        },
+        }),
       });
-      if (fnError) {
-        setError(fnError.message || 'Failed to create login');
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
+      const data = isJson ? await response.json().catch(() => ({})) : {};
+      if (!response.ok) {
+        setError((data as { error?: string })?.error || `Request failed (${response.status})`);
         return;
       }
-      if (!data?.success) {
+      if (!(data as { success?: boolean }).success) {
         setError((data as { error?: string })?.error || 'Failed to create login');
         return;
       }
-      setSuccess('Teacher login created successfully!');
+      setSuccess('Teacher login created! They will receive an email with their password.');
       setTimeout(() => navigate(`/dashboard/admin/teachers/${teacherId}`), 800);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Network error. Please try again.');

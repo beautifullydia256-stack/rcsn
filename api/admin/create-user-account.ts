@@ -222,6 +222,31 @@ export default async function handler(req: Req, res: Res) {
       console.warn('Error creating user record:', userErr);
     }
 
+    if (!sendEmailInvite && password) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { sendResendInnerHtml } = require('../../lib/resendSend');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { buildCredentialInnerHtml } = require('../../lib/credentialInnerHtml');
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getPublicSiteOrigin } = require('../../lib/emailHtml');
+        const loginUrl = `${getPublicSiteOrigin()}/login`;
+        await sendResendInnerHtml({
+          to: String(email),
+          subject: 'Your PwezaCore login — save your password',
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: name || String(firstName ?? '') || 'there',
+            email: String(email),
+            password: String(password),
+            roleLabel: String(role ?? ''),
+            loginUrl,
+          }),
+        });
+      } catch (mailErr) {
+        console.warn('Could not send credential email:', mailErr);
+      }
+    }
+
     setCors();
     res.status(200).json({
       success: true,

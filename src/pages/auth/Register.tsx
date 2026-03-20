@@ -87,11 +87,15 @@ export default function RegisterPage() {
     }
 
     try {
+      const emailRedirectTo =
+        typeof window !== 'undefined' ? `${window.location.origin}/auth/callback` : undefined;
+
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
         options: {
           ...(captchaToken && { captchaToken }),
+          ...(emailRedirectTo && { emailRedirectTo }),
           data: {
             school_name: formData.schoolName,
             admin_name: formData.adminName,
