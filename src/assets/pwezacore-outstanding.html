@@ -674,7 +674,7 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
       const bal    = row.querySelector('.ob-balance')?.textContent?.trim() || '—';
       const parent = row.querySelectorAll('.ob-td')[6]?.textContent?.trim() || '—';
       const phone  = trigger.dataset.phone || '';
-      _currentTarget = { name: parent, studentName: name, phone, balance: bal, class: cls, parentId: trigger.dataset.parentId || '' };
+      _currentTarget = { name: parent, studentName: name, phone, balance: bal, class: cls };
       return;
     }
 

@@ -66,10 +66,11 @@ function NavGroup({ icon, label, isOpen, onToggle, children, matchPaths = [] }: 
   );
 }
 
-function SubItem({ to, label, onClick }: { to: string; label: string; onClick?: () => void }) {
+function SubItem({ to, label, onClick, end = false }: { to: string; label: string; onClick?: () => void; end?: boolean }) {
   return (
     <NavLink
       to={to}
+      end={end}
       onClick={onClick}
       className={({ isActive }) => ['pw-nav-subitem', isActive ? 'pw-nav-subitem--active' : ''].join(' ')}
     >
@@ -87,6 +88,7 @@ export default function AdminLayout() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMgmtOpen, setUserMgmtOpen] = useState(false);
+  const [financeOpen, setFinanceOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [adminUser, setAdminUser] = useState<AdminUser>({
     name: 'Admin',
@@ -101,6 +103,7 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
+    if (location.pathname.includes('/dashboard/admin/finance')) setFinanceOpen(true);
     if (location.pathname.includes('/reports') || location.pathname.includes('/report-records')) {
       setReportsOpen(true);
     }
@@ -509,14 +512,23 @@ export default function AdminLayout() {
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Finance</span>
-            <NavItem to="/dashboard/admin/finance" icon="💰" label="Finance" onClick={closeSidebar} />
+            <NavGroup
+              icon="💰"
+              label="Finance"
+              isOpen={financeOpen}
+              onToggle={() => setFinanceOpen(!financeOpen)}
+              matchPaths={['/dashboard/admin/finance']}
+            >
+              <SubItem to="/dashboard/admin/finance" label="Overview" end onClick={closeSidebar} />
+              <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} />
+              <SubItem to="/dashboard/admin/finance/receipts" label="Receipts" onClick={closeSidebar} />
+            </NavGroup>
             <NavGroup icon="📊" label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records']}>
               <SubItem to="/dashboard/admin/reports" label="Overview" onClick={closeSidebar} />
               <SubItem to="/dashboard/admin/reports/generate" label="Generate Reports" onClick={closeSidebar} />
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} />
               <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/finance/receipts" icon="🧾" label="Receipts" onClick={closeSidebar} />
           </div>
 
           <div className="pw-nav-section">
