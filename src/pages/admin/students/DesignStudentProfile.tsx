@@ -4,7 +4,11 @@ import { supabase } from '@/lib/supabase';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 
-let cachedBodyHtml: string | null = null;
+const STUDENT_PROFILE_FONT_HREF =
+  'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap';
+
+/** Full template fragment: <head> CSS + <body> markup (scripts stripped). Body-only loses all styles. */
+let cachedInjectedHtml: string | null = null;
 
 const GUARDIAN_GRADIENTS = [
   'linear-gradient(135deg,#f59e0b,#ef4444)',
@@ -73,11 +77,13 @@ function attColor(pct: number): string {
   return 'var(--rose)';
 }
 
-function parseBodyHtml(raw: string): string {
-  const m = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
-  let inner = m ? m[1].trim() : raw;
+function parseInjectedHtml(raw: string): string {
+  const styleMatch = raw.match(/<style[^>]*>([\s\S]*?)<\/style>/i);
+  const bodyMatch = raw.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  let inner = bodyMatch ? bodyMatch[1].trim() : raw;
   inner = inner.replace(/<script[\s\S]*?<\/script>/gi, '');
-  return inner;
+  const styleBlock = styleMatch ? `<style>${styleMatch[1]}</style>` : '';
+  return `${styleBlock}${inner}`;
 }
 
 type ParentRow = Record<string, unknown> & {
@@ -96,12 +102,23 @@ export default function DesignStudentProfile() {
   const [htmlContent, setHtmlContent] = useState('');
 
   useEffect(() => {
-    if (cachedBodyHtml) {
-      setHtmlContent(cachedBodyHtml);
+    const id = 'pweza-student-profile-fonts';
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = STUDENT_PROFILE_FONT_HREF;
+      document.head.appendChild(link);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (cachedInjectedHtml) {
+      setHtmlContent(cachedInjectedHtml);
       return;
     }
-    cachedBodyHtml = parseBodyHtml(templateRaw);
-    setHtmlContent(cachedBodyHtml);
+    cachedInjectedHtml = parseInjectedHtml(templateRaw);
+    setHtmlContent(cachedInjectedHtml);
   }, []);
 
   useEffect(() => {
