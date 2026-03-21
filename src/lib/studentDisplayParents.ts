@@ -21,8 +21,9 @@ export function displayParentsForStudent(
   if (linked.length > 0) {
     return linked.map((p, i) => ({
       name: (p.name?.trim() || (i === 0 ? row.guardian_name?.trim() : '') || '') || '',
-      email: p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : undefined) || undefined,
-      phone: p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : undefined) || undefined,
+      // Prefer portal row; for the first linked parent fall back to enrollment guardian_* on the student row.
+      email: (p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : '')) || undefined,
+      phone: (p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : '')) || undefined,
     }));
   }
   const gn = row.guardian_name?.trim();

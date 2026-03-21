@@ -625,10 +625,12 @@ export default function DesignStudentsPage() {
                             <tr className="bg-white/[0.02]">
                               <td colSpan={7} className="px-4 py-2">
                                 <QuickParentPanel
-                                  studentName={r.name || '—'}
+                                  studentName={displayFullName(r)}
                                   studentClass={r.current_class}
                                   teacher={teacher}
                                   parent={parents[expand.parentIndex]}
+                                  parentIndex={expand.parentIndex}
+                                  studentRow={r}
                                   address={addr}
                                   gradientClass={avatarGradient(globalIdx + 3)}
                                   onClose={closeExpand}
@@ -780,6 +782,14 @@ function CompactInlineField({ label, children }: { label: string; children: Reac
   );
 }
 
+function QuickPanelSectionTitle({ children }: { children: ReactNode }) {
+  return (
+    <div className="col-span-full border-b border-[var(--ac-border)] pb-1.5 pt-2 first:pt-0">
+      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ac-text-muted)]">{children}</span>
+    </div>
+  );
+}
+
 function QuickStudentPanel({
   row,
   parents,
@@ -805,7 +815,14 @@ function QuickStudentPanel({
   const studentAddr = (row.address && row.address.trim()) || '';
   const guardianAddrOnly = (row.guardian_address && row.guardian_address.trim()) || '';
   const fullAddr = studentAddr || guardianAddrOnly || '—';
-  const primaryLabel = (first?.name || row.guardian_name || '').trim() || 'Primary contact';
+  const feeDisc = row.fee_discount_percent;
+  const feeDiscLabel = feeDisc != null && Number(feeDisc) > 0 ? `${Number(feeDisc)}%` : '—';
+
+  // Defensive: show enrollment guardian_* whenever linked parent fields are empty
+  const primaryName = (first?.name?.trim() || row.guardian_name?.trim() || '').trim() || '—';
+  const primaryPhone = (first?.phone?.trim() || row.guardian_phone?.trim() || '').trim();
+  const primaryEmail = (first?.email?.trim() || row.guardian_email?.trim() || '').trim();
+
   const teacherLine =
     teacher.trim() && row.current_class?.trim()
       ? `${teacher.trim()} (${row.current_class.trim()})`
@@ -846,109 +863,198 @@ function QuickStudentPanel({
         <X className="h-3.5 w-3.5" strokeWidth={2} />
       </button>
 
-      <div className="flex flex-col gap-3 p-3 pr-10 sm:flex-row sm:items-start sm:gap-5">
-        {/* Left: photo + primary contact + quick call / email */}
-        <div className="flex gap-3 sm:max-w-[220px] sm:shrink-0 sm:flex-col sm:items-start">
-          {photoUrl ? (
-            <img
-              src={photoUrl}
-              alt=""
-              className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-[var(--ac-border)]"
-            />
-          ) : (
-            <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white ring-1 ring-white/15 ${gradientClass}`}
-            >
-              {initials(row.name || '')}
-            </div>
-          )}
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
-              Primary contact
-            </p>
-            <p className="mt-0.5 text-sm font-semibold leading-tight text-[var(--ac-text-primary)]">{primaryLabel}</p>
-            <div className="mt-2 flex gap-2">
-              {first?.phone?.trim() ? (
-                <a
-                  href={`tel:${first.phone.replace(/\s/g, '')}`}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
-                  title="Call"
-                  aria-label="Call primary contact"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Phone className="h-4 w-4" strokeWidth={2} />
-                </a>
-              ) : null}
-              {first?.email?.trim() ? (
-                <a
-                  href={`mailto:${first.email.trim()}`}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
-                  title="Email"
-                  aria-label="Email primary contact"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Mail className="h-4 w-4" strokeWidth={2} />
-                </a>
-              ) : null}
-            </div>
+      {/* Student-first header — same hierarchy as before (name + photo lead) */}
+      <div className="flex flex-col gap-3 border-b border-[var(--ac-border)] p-3 pr-10 sm:flex-row sm:items-center sm:gap-4">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/30"
+          />
+        ) : (
+          <div
+            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ring-2 ring-white/10 ${gradientClass}`}
+          >
+            {initials(row.name || '')}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-500/90 dark:text-emerald-400/90">
+            Student
+          </p>
+          <h3 className="mt-0.5 text-lg font-semibold leading-snug tracking-tight text-[var(--ac-text-primary)] sm:text-xl">
+            {nameLine}
+          </h3>
+          <p className="mt-0.5 text-xs text-[var(--ac-text-secondary)]">
+            {[row.current_class?.trim(), row.admission_number?.trim() ? `Admission ${row.admission_number.trim()}` : '']
+              .filter(Boolean)
+              .join(' · ') || '—'}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="inline-flex rounded-md border border-[var(--ac-border)] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-[var(--ac-text-secondary)]">
+              {row.status === 'graduated' ? 'Graduated' : 'Active'}
+            </span>
+            {row.boarding_type?.trim() ? (
+              <span className="inline-flex rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-300">
+                {row.boarding_type}
+              </span>
+            ) : null}
+            {row.stream?.trim() ? (
+              <span className="inline-flex rounded-md bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:text-sky-300">
+                {row.stream}
+              </span>
+            ) : null}
           </div>
         </div>
+      </div>
 
-        {/* Three columns — same information architecture as classic school MIS row expansion */}
-        <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--ac-border)] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 md:grid-cols-3">
-          <div className="space-y-3">
-            <CompactInlineField label="Phone number">
-              {first?.phone?.trim() ? (
-                <a
-                  href={`tel:${first.phone.replace(/\s/g, '')}`}
-                  className="text-sky-600 hover:underline dark:text-sky-400"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {first.phone.trim()}
-                </a>
-              ) : (
-                '—'
-              )}
-            </CompactInlineField>
-            <CompactInlineField label={primaryLabel}>
-              {first?.email?.trim() ? (
-                <a
-                  href={`mailto:${first.email.trim()}`}
-                  className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {first.email.trim()}
-                </a>
-              ) : (
-                <span className="text-[var(--ac-text-secondary)]">—</span>
-              )}
-            </CompactInlineField>
-          </div>
-          <div className="space-y-3">
-            <CompactInlineField label="Pupil's name">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onNavigate();
-                }}
-                className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
+      {/* At-a-glance row (compact): primary parent + pupil + teacher + address */}
+      <div className="grid gap-3 border-b border-[var(--ac-border)] bg-black/[0.02] p-3 dark:bg-white/[0.02] sm:grid-cols-3">
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
+            Primary contact
+          </p>
+          <p className="text-sm font-semibold text-[var(--ac-text-primary)]">{primaryName}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {primaryPhone ? (
+              <a
+                href={`tel:${primaryPhone.replace(/\s/g, '')}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
+                title="Call parent"
+                aria-label="Call parent"
+                onClick={(e) => e.stopPropagation()}
               >
-                {nameLine}
-              </button>
-            </CompactInlineField>
-            <CompactInlineField label={second?.name?.trim() || 'Second parent'}>{secondBlock}</CompactInlineField>
+                <Phone className="h-3.5 w-3.5" strokeWidth={2} />
+              </a>
+            ) : null}
+            {primaryEmail ? (
+              <a
+                href={`mailto:${primaryEmail}`}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
+                title="Email parent"
+                aria-label="Email parent"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Mail className="h-3.5 w-3.5" strokeWidth={2} />
+              </a>
+            ) : null}
           </div>
-          <div className="space-y-3">
-            <CompactInlineField label="Teacher">
-              <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
-            </CompactInlineField>
-            <CompactInlineField label="Address">
-              <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-4" title={fullAddr}>
-                {fullAddr}
-              </span>
-            </CompactInlineField>
-          </div>
+          <CompactInlineField label="Parent phone">
+            {primaryPhone ? (
+              <a
+                href={`tel:${primaryPhone.replace(/\s/g, '')}`}
+                className="text-sky-600 hover:underline dark:text-sky-400"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {primaryPhone}
+              </a>
+            ) : (
+              '—'
+            )}
+          </CompactInlineField>
+          <CompactInlineField label="Parent email">
+            {primaryEmail ? (
+              <a
+                href={`mailto:${primaryEmail}`}
+                className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {primaryEmail}
+              </a>
+            ) : (
+              '—'
+            )}
+          </CompactInlineField>
+        </div>
+        <div className="space-y-2">
+          <CompactInlineField label="Pupil's name">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onNavigate();
+              }}
+              className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
+            >
+              {nameLine}
+            </button>
+          </CompactInlineField>
+          <CompactInlineField label={second?.name?.trim() || 'Second parent'}>{secondBlock}</CompactInlineField>
+        </div>
+        <div className="space-y-2">
+          <CompactInlineField label="Teacher">
+            <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
+          </CompactInlineField>
+          <CompactInlineField label="Address">
+            <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-5" title={fullAddr}>
+              {fullAddr}
+            </span>
+          </CompactInlineField>
+        </div>
+      </div>
+
+      {/* Full detail — nothing removed; scroll keeps the row expansion usable */}
+      <div className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain px-3 pb-2 pt-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <QuickPanelSectionTitle>Personal</QuickPanelSectionTitle>
+          <CompactInlineField label="Full name">{nameLine}</CompactInlineField>
+          <CompactInlineField label="Gender">{dash(row.gender)}</CompactInlineField>
+          <CompactInlineField label="Date of birth">{formatDateMaybe(row.date_of_birth)}</CompactInlineField>
+          <CompactInlineField label="Nationality">{dash(row.nationality)}</CompactInlineField>
+          <CompactInlineField label="Religion">{dash(row.religion)}</CompactInlineField>
+
+          <QuickPanelSectionTitle>Contact</QuickPanelSectionTitle>
+          <CompactInlineField label="Student email">
+            {row.student_email?.trim() ? (
+              <a href={`mailto:${row.student_email.trim()}`} className="break-all" onClick={(e) => e.stopPropagation()}>
+                {row.student_email.trim()}
+              </a>
+            ) : (
+              '—'
+            )}
+          </CompactInlineField>
+          <CompactInlineField label="Student phone">
+            {row.student_phone?.trim() ? (
+              <a href={`tel:${row.student_phone.replace(/\s/g, '')}`} onClick={(e) => e.stopPropagation()}>
+                {row.student_phone.trim()}
+              </a>
+            ) : (
+              '—'
+            )}
+          </CompactInlineField>
+          <CompactInlineField label="Address (student)">{studentAddr || '—'}</CompactInlineField>
+          <CompactInlineField label="City">{dash(row.city)}</CompactInlineField>
+          <CompactInlineField label="Country">{dash(row.country)}</CompactInlineField>
+
+          <QuickPanelSectionTitle>Parent / guardian</QuickPanelSectionTitle>
+          <CompactInlineField label="Name">{dash(first?.name || row.guardian_name)}</CompactInlineField>
+          <CompactInlineField label="Relationship">{dash(row.guardian_relationship)}</CompactInlineField>
+          <CompactInlineField label="Phone">{primaryPhone || '—'}</CompactInlineField>
+          <CompactInlineField label="Email">{primaryEmail || '—'}</CompactInlineField>
+          <CompactInlineField label="Occupation">{dash(row.guardian_occupation)}</CompactInlineField>
+          <CompactInlineField label="Guardian address">{guardianAddrOnly || '—'}</CompactInlineField>
+
+          <QuickPanelSectionTitle>Academic & fees</QuickPanelSectionTitle>
+          <CompactInlineField label="Class">{dash(row.current_class)}</CompactInlineField>
+          <CompactInlineField label="Class teacher">{dash(teacher)}</CompactInlineField>
+          <CompactInlineField label="Stream">{dash(row.stream)}</CompactInlineField>
+          <CompactInlineField label="Admission date">{formatDateMaybe(row.admission_date)}</CompactInlineField>
+          <CompactInlineField label="Boarding">{dash(row.boarding_type)}</CompactInlineField>
+          <CompactInlineField label="Previous school">{dash(row.previous_school)}</CompactInlineField>
+          <CompactInlineField label="Tuition / expected fee">
+            <span className="tabular-nums">{row.expected_fee_amount != null ? String(row.expected_fee_amount) : '—'}</span>
+          </CompactInlineField>
+          <CompactInlineField label="Discount / bursary">
+            <span className="tabular-nums">{feeDiscLabel}</span>
+          </CompactInlineField>
+          <CompactInlineField label="Admission fee (enrollment)">
+            <span className="tabular-nums">{row.enrollment_fee != null ? String(row.enrollment_fee) : '—'}</span>
+          </CompactInlineField>
+          <CompactInlineField label="Payment status">{dash(row.payment_status)}</CompactInlineField>
+
+          <QuickPanelSectionTitle>Other</QuickPanelSectionTitle>
+          <CompactInlineField label="Medical / allergies">{dash(row.medical_condition)}</CompactInlineField>
+          <CompactInlineField label="Record created">{formatDateMaybe(row.created_at)}</CompactInlineField>
         </div>
       </div>
 
@@ -986,6 +1092,8 @@ function QuickParentPanel({
   studentClass,
   teacher,
   parent,
+  parentIndex,
+  studentRow,
   address,
   gradientClass,
   onClose,
@@ -996,6 +1104,8 @@ function QuickParentPanel({
   studentClass: string | null;
   teacher: string;
   parent: ParentLite;
+  parentIndex: number;
+  studentRow: StudentListRow;
   address: string;
   gradientClass: string;
   onClose: () => void;
@@ -1007,6 +1117,17 @@ function QuickParentPanel({
       ? `${teacher.trim()} (${studentClass.trim()})`
       : teacher.trim() || studentClass?.trim() || '—';
 
+  const phone =
+    (parent.phone?.trim() ||
+      (parentIndex === 0 ? studentRow.guardian_phone?.trim() : '') ||
+      '') ||
+    '';
+  const email =
+    (parent.email?.trim() ||
+      (parentIndex === 0 ? studentRow.guardian_email?.trim() : '') ||
+      '') ||
+    '';
+
   return (
     <div className="relative overflow-hidden rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left shadow-sm">
       <button
@@ -1017,6 +1138,23 @@ function QuickParentPanel({
       >
         <X className="h-3.5 w-3.5" strokeWidth={2} />
       </button>
+
+      <div className="border-b border-[var(--ac-border)] p-3 pr-10">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ac-text-muted)]">Linked student</p>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewStudent();
+          }}
+          className="mt-0.5 text-left text-base font-semibold text-sky-500 hover:underline dark:text-sky-400"
+        >
+          {studentName}
+        </button>
+        {studentClass?.trim() ? (
+          <p className="text-xs text-[var(--ac-text-secondary)]">{studentClass}</p>
+        ) : null}
+      </div>
 
       <div className="flex flex-col gap-3 p-3 pr-10 sm:flex-row sm:items-start sm:gap-5">
         <div className="flex gap-3 sm:max-w-[220px] sm:shrink-0 sm:flex-col sm:items-start">
@@ -1030,12 +1168,12 @@ function QuickParentPanel({
               Parent / guardian
             </p>
             <p className="mt-0.5 text-sm font-semibold leading-tight text-[var(--ac-text-primary)]">
-              {parent.name || '—'}
+              {parent.name || studentRow.guardian_name || '—'}
             </p>
             <div className="mt-2 flex gap-2">
-              {parent.phone?.trim() ? (
+              {phone ? (
                 <a
-                  href={`tel:${parent.phone.replace(/\s/g, '')}`}
+                  href={`tel:${phone.replace(/\s/g, '')}`}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
                   title="Call"
                   aria-label="Call"
@@ -1044,9 +1182,9 @@ function QuickParentPanel({
                   <Phone className="h-4 w-4" strokeWidth={2} />
                 </a>
               ) : null}
-              {parent.email?.trim() ? (
+              {email ? (
                 <a
-                  href={`mailto:${parent.email.trim()}`}
+                  href={`mailto:${email}`}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
                   title="Email"
                   aria-label="Email"
@@ -1062,26 +1200,26 @@ function QuickParentPanel({
         <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--ac-border)] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 md:grid-cols-3">
           <div className="space-y-3">
             <CompactInlineField label="Phone number">
-              {parent.phone?.trim() ? (
+              {phone ? (
                 <a
-                  href={`tel:${parent.phone.replace(/\s/g, '')}`}
+                  href={`tel:${phone.replace(/\s/g, '')}`}
                   className="text-sky-600 hover:underline dark:text-sky-400"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {parent.phone.trim()}
+                  {phone}
                 </a>
               ) : (
                 '—'
               )}
             </CompactInlineField>
             <CompactInlineField label="Email">
-              {parent.email?.trim() ? (
+              {email ? (
                 <a
-                  href={`mailto:${parent.email.trim()}`}
+                  href={`mailto:${email}`}
                   className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {parent.email.trim()}
+                  {email}
                 </a>
               ) : (
                 '—'
