@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
@@ -93,6 +94,67 @@ function parseInjectedHtml(raw: string): string {
   return `${styleBlock}${inner}`;
 }
 
+function spInline(
+  root: Element,
+  id: string,
+  field: string,
+  value: string,
+  type: 'text' | 'date' | 'tel' | 'email' = 'text'
+) {
+  const el = root.querySelector(id);
+  if (!el) return;
+  const t = type === 'date' ? 'date' : type === 'tel' ? 'tel' : type === 'email' ? 'email' : 'text';
+  (el as HTMLElement).innerHTML = `<input type="${t}" class="pw-inline-input" data-sp-field="${field}" value="${escapeAttr(value)}" style="width:100%"/>`;
+}
+
+function applyStudentEditMode(root: Element, s: Record<string, unknown>) {
+  const fullName = displayFullName(s);
+  const nameEl = root.querySelector('#sp-student-name');
+  if (nameEl) {
+    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-sp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
+  }
+  spInline(root, '#sp-first-name', 'first_name', String(s.first_name ?? '').trim());
+  spInline(root, '#sp-middle-name', 'middle_name', String(s.middle_name ?? '').trim());
+  spInline(root, '#sp-last-name', 'last_name', String(s.last_name ?? '').trim());
+  spInline(root, '#sp-gender', 'gender', String(s.gender ?? '').trim());
+  spInline(root, '#sp-dob', 'date_of_birth', String(s.date_of_birth || '').slice(0, 10), 'date');
+  spInline(root, '#sp-nationality', 'nationality', String(s.nationality ?? '').trim());
+  spInline(root, '#sp-religion', 'religion', String(s.religion ?? '').trim());
+  spInline(root, '#sp-blood-group', 'blood_group', String(s.blood_group ?? '').trim());
+  spInline(root, '#sp-medical-notes', 'medical_notes', String(s.medical_condition ?? s.medical_notes ?? '').trim());
+  spInline(root, '#sp-adm-number', 'admission_number', String(s.admission_number ?? '').trim());
+  spInline(root, '#sp-current-class', 'current_class', String(s.current_class ?? '').trim());
+  spInline(root, '#sp-stream', 'stream', String(s.stream ?? '').trim());
+  spInline(
+    root,
+    '#sp-enrollment-date',
+    'admission_date',
+    String(s.admission_date || s.enrollment_date || '').slice(0, 10),
+    'date'
+  );
+  const status = String(s.status ?? 'active');
+  const stEl = root.querySelector('#sp-student-status');
+  if (stEl) {
+    stEl.innerHTML = `<select class="pw-inline-input" data-sp-field="status" style="width:100%;max-width:220px">
+      <option value="active" ${status === 'active' ? 'selected' : ''}>Active</option>
+      <option value="inactive" ${status === 'inactive' ? 'selected' : ''}>Inactive</option>
+    </select>`;
+  }
+  spInline(root, '#sp-previous-school', 'previous_school', String(s.previous_school ?? '').trim());
+  spInline(root, '#sp-special-needs', 'special_needs', String(s.special_needs ?? '').trim());
+  spInline(root, '#sp-home-address', 'address', String(s.address ?? '').trim());
+  spInline(root, '#sp-guardian-address', 'guardian_address', String(s.guardian_address ?? '').trim());
+  spInline(root, '#sp-district', 'district', String(s.district ?? s.city ?? '').trim());
+  spInline(root, '#sp-guardian-phone', 'guardian_phone', String(s.guardian_phone ?? '').trim(), 'tel');
+  spInline(root, '#sp-guardian-email', 'guardian_email', String(s.guardian_email ?? '').trim(), 'email');
+  spInline(root, '#sp-emergency-contact', 'emergency_contact', String(s.emergency_contact ?? '').trim());
+}
+
+function getSpField(root: Element, field: string): string {
+  const el = root.querySelector(`[data-sp-field="${field}"]`) as HTMLInputElement | HTMLSelectElement | null;
+  return el?.value?.trim() ?? '';
+}
+
 type ParentRow = Record<string, unknown> & {
   parent_id?: string;
   name?: string | null;
@@ -128,6 +190,96 @@ export default function DesignStudentProfile() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const studentCtxRef = useRef<{ schoolId: string } | null>(null);
+  const saveStudentRef = useRef<() => Promise<void>>(async () => {});
+
+  const saveStudent = useCallback(async () => {
+    if (!confirmProfileSave()) return;
+    const ctx = studentCtxRef.current;
+    if (!ctx) return;
+    const root = containerRef.current?.querySelector('.pw-profile');
+    if (!root) return;
+    const fn = getSpField(root, 'first_name');
+    const mn = getSpField(root, 'middle_name');
+    const ln = getSpField(root, 'last_name');
+    const nameHero = getSpField(root, 'name');
+    const combined = [fn, mn, ln].filter(Boolean).join(' ').trim();
+    const name = combined || nameHero;
+    if (!name) {
+      window.alert('Please enter at least a first name or full name.');
+      return;
+    }
+    const payload: Record<string, unknown> = {
+      name,
+      first_name: fn || null,
+      middle_name: mn || null,
+      last_name: ln || null,
+      gender: getSpField(root, 'gender') || null,
+      date_of_birth: getSpField(root, 'date_of_birth') || null,
+      nationality: getSpField(root, 'nationality') || null,
+      religion: getSpField(root, 'religion') || null,
+      blood_group: getSpField(root, 'blood_group') || null,
+      medical_notes: getSpField(root, 'medical_notes') || null,
+      medical_condition: getSpField(root, 'medical_notes') || null,
+      admission_number: getSpField(root, 'admission_number') || null,
+      current_class: getSpField(root, 'current_class') || null,
+      stream: getSpField(root, 'stream') || null,
+      admission_date: getSpField(root, 'admission_date') || null,
+      status: getSpField(root, 'status') || 'active',
+      previous_school: getSpField(root, 'previous_school') || null,
+      special_needs: getSpField(root, 'special_needs') || null,
+      address: getSpField(root, 'address') || null,
+      district: getSpField(root, 'district') || null,
+      city: getSpField(root, 'district') || null,
+      guardian_phone: getSpField(root, 'guardian_phone') || null,
+      guardian_email: getSpField(root, 'guardian_email') || null,
+      guardian_address: getSpField(root, 'guardian_address') || null,
+      emergency_contact: getSpField(root, 'emergency_contact') || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase
+      .from('students')
+      .update(payload)
+      .eq('school_id', ctx.schoolId)
+      .eq('student_id', studentId);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    const photoInp = root.querySelector('#sp-photo-file') as HTMLInputElement | null;
+    const file = photoInp?.files?.[0];
+    if (file) {
+      try {
+        const url = await readFileAsDataURL(file);
+        await supabase
+          .from('student_photos')
+          .delete()
+          .eq('school_id', ctx.schoolId)
+          .eq('student_id', studentId)
+          .eq('is_primary', true);
+        const { error: phErr } = await supabase.from('student_photos').insert({
+          school_id: ctx.schoolId,
+          student_id: studentId,
+          photo_url: url,
+          photo_filename: file.name,
+          photo_size: file.size,
+          photo_type: file.type,
+          is_primary: true,
+        });
+        if (phErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] photo:', phErr.message);
+      } catch {
+        window.alert('Could not save the photo.');
+        return;
+      }
+      if (photoInp) photoInp.value = '';
+    }
+    setEditMode(false);
+    setReloadToken((x) => x + 1);
+  }, [studentId]);
+
+  saveStudentRef.current = saveStudent;
 
   useEffect(() => {
     const id = 'pweza-student-profile-fonts';
@@ -175,6 +327,7 @@ export default function DesignStudentProfile() {
         .maybeSingle();
 
       if (stErr || !student) {
+        studentCtxRef.current = null;
         requestAnimationFrame(() => {
           const el = containerRef.current;
           if (!el) return;
@@ -185,6 +338,7 @@ export default function DesignStudentProfile() {
       }
 
       const s = student as Record<string, unknown>;
+      studentCtxRef.current = { schoolId };
       const today = new Date().toISOString().slice(0, 10);
       const currentClass = (s.current_class as string) || '';
 
@@ -676,13 +830,29 @@ export default function DesignStudentProfile() {
             </div>`
         );
 
+        if (editMode) {
+          applyStudentEditMode(el, s);
+        }
+
         const wire = (sel: string, fn: () => void) => {
           const b = el.querySelector(sel);
           if (b) (b as HTMLElement).onclick = () => fn();
         };
 
         wire('#sp-btn-print', () => window.print());
-        wire('#sp-btn-edit', () => navigate('/dashboard/admin/students'));
+        const spEdit = el.querySelector('#sp-btn-edit') as HTMLElement | null;
+        if (spEdit) {
+          spEdit.textContent = editMode ? '💾 Save' : '✏️ Edit Profile';
+          spEdit.onclick = () => {
+            if (editMode) void saveStudentRef.current();
+            else setEditMode(true);
+          };
+        }
+        const spCancel = el.querySelector('#sp-btn-cancel-edit') as HTMLElement | null;
+        if (spCancel) {
+          spCancel.style.display = editMode ? 'inline-flex' : 'none';
+          spCancel.onclick = () => setEditMode(false);
+        }
         wire('#sp-btn-delete', () => {
           if (window.confirm(`Delete ${fullName}? This cannot be undone.`)) {
             void supabase.from('students').delete().eq('school_id', schoolId).eq('student_id', studentId).then(() => {
@@ -693,7 +863,14 @@ export default function DesignStudentProfile() {
         wire('#sp-btn-link-parent', () => navigate('/dashboard/admin/parents'));
         wire('#sp-btn-record-payment', () => navigate('/dashboard/admin/outstanding'));
         wire('#sp-btn-upload-doc', () => navigate('/dashboard/admin/students'));
-        wire('#sp-btn-change-photo', () => navigate('/dashboard/admin/students'));
+        const spPhotoFile = el.querySelector('#sp-photo-file') as HTMLInputElement | null;
+        const spChangePhoto = el.querySelector('#sp-btn-change-photo') as HTMLElement | null;
+        if (spChangePhoto) {
+          spChangePhoto.onclick = () => {
+            if (editMode) spPhotoFile?.click();
+            else window.alert('Click Edit Profile, then use the camera icon to change the photo.');
+          };
+        }
         wire('#sp-btn-message-parent', () => navigate('/dashboard/admin/parents'));
 
         el.querySelectorAll('[data-nav]').forEach((node) => {
@@ -741,7 +918,7 @@ export default function DesignStudentProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, studentId, navigate]);
+  }, [htmlContent, studentId, navigate, reloadToken, editMode]);
 
   useEffect(() => {
     const syncLight = () => {

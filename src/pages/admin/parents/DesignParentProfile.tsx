@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
 
 import profileTemplateRaw from '@/assets/pwezacore-parent-profile.html?raw';
 
@@ -86,12 +87,120 @@ function pickStr(v: unknown): string | null {
 
 const PP_TABS = ['overview', 'children', 'payments', 'messages', 'activity', 'documents'] as const;
 
+function applyParentEditMode(
+  root: HTMLElement,
+  fullName: string,
+  phone: string,
+  email: string,
+  occupation: string,
+  address: string,
+  nin: string,
+  firstName: string,
+  lastName: string
+) {
+  const nameEl = root.querySelector('#pp-parent-name');
+  if (nameEl) {
+    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
+  }
+  const phoneMeta = root.querySelector('#pp-meta-phone');
+  if (phoneMeta) {
+    phoneMeta.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone" value="${escapeAttr(phone)}" style="width:100%;max-width:280px"/>`;
+  }
+  const emailMeta = root.querySelector('#pp-meta-email');
+  if (emailMeta) {
+    emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email" value="${escapeAttr(email)}" style="width:100%;max-width:320px"/>`;
+  }
+  const occMeta = root.querySelector('#pp-meta-occupation');
+  if (occMeta) {
+    occMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="occupation" value="${escapeAttr(occupation)}" style="width:100%"/>`;
+  }
+  const addrMeta = root.querySelector('#pp-meta-address');
+  if (addrMeta) {
+    addrMeta.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="address" value="${escapeAttr(address)}" style="width:100%"/>`;
+  }
+  setPPFieldInput(root, '#pp-first-name', 'first_name', firstName);
+  setPPFieldInput(root, '#pp-last-name', 'last_name', lastName);
+  setPPFieldInput(root, '#pp-nin', 'nin', nin);
+  const phoneF = root.querySelector('#pp-phone')?.parentElement;
+  if (phoneF) {
+    phoneF.innerHTML = `<input type="tel" class="pw-inline-input" data-pp-field="phone_ov" value="${escapeAttr(phone)}" style="width:100%"/>`;
+  }
+  const emailF = root.querySelector('#pp-email')?.parentElement;
+  if (emailF) {
+    emailF.innerHTML = `<input type="email" class="pw-inline-input" data-pp-field="email_ov" value="${escapeAttr(email)}" style="width:100%"/>`;
+  }
+  setPPFieldInput(root, '#pp-occupation', 'occupation', occupation);
+  setPPFieldInput(root, '#pp-address', 'address', address);
+}
+
+function setPPFieldInput(root: HTMLElement, sel: string, field: string, value: string) {
+  const el = root.querySelector(sel);
+  if (!el) return;
+  el.innerHTML = `<input type="text" class="pw-inline-input" data-pp-field="${field}" value="${escapeAttr(value)}" style="width:100%"/>`;
+}
+
 export default function DesignParentProfile() {
   const navigate = useNavigate();
   const { parent_id: parentIdParam } = useParams<{ parent_id: string }>();
   const parentId = parentIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
+  const [editMode, setEditMode] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+  const saveParentRef = useRef<() => Promise<void>>(async () => {});
+  const parentCtxRef = useRef<{ schoolId: string; hasUser: boolean } | null>(null);
+
+  const saveParent = useCallback(async () => {
+    if (!confirmProfileSave()) return;
+    const ctx = parentCtxRef.current;
+    if (!ctx) return;
+    const root = containerRef.current?.querySelector('.pw-parent-profile');
+    if (!root) return;
+    const get = (field: string) =>
+      (root.querySelector(`[data-pp-field="${field}"]`) as HTMLInputElement | null)?.value?.trim() ?? '';
+    const name = get('name') || `${get('first_name')} ${get('last_name')}`.trim();
+    const phone = get('phone') || get('phone_ov');
+    const email = get('email') || get('email_ov');
+    const occupation = get('occupation');
+    const address = get('address');
+    const nin = get('nin');
+    if (!name) {
+      window.alert('Please enter a name.');
+      return;
+    }
+    const { error: pErr } = await supabase
+      .from('parents')
+      .update({
+        name,
+        phone: phone || null,
+        email: email || null,
+        occupation: occupation || null,
+        address: address || null,
+        nin: nin || null,
+      })
+      .eq('school_id', ctx.schoolId)
+      .eq('parent_id', parentId);
+    if (pErr) {
+      window.alert(pErr.message);
+      return;
+    }
+    if (ctx.hasUser) {
+      const { error: uErr } = await supabase
+        .from('users')
+        .update({
+          name,
+          phone: phone || null,
+          email: email || null,
+        })
+        .eq('user_id', parentId)
+        .eq('school_id', ctx.schoolId);
+      if (uErr && import.meta.env.DEV) console.warn('[DesignParentProfile] users update:', uErr.message);
+    }
+    setEditMode(false);
+    setReloadToken((x) => x + 1);
+  }, [parentId]);
+
+  saveParentRef.current = saveParent;
 
   useEffect(() => {
     const id = 'pweza-parent-profile-fonts';
@@ -137,6 +246,8 @@ export default function DesignParentProfile() {
       ]);
 
       if (cancelled) return;
+
+      parentCtxRef.current = schoolId ? { schoolId, hasUser: !!parentUser } : null;
 
       if ((!linkRows || linkRows.length === 0) && !parentUser) {
         requestAnimationFrame(() => {
@@ -443,6 +554,20 @@ export default function DesignParentProfile() {
           `<div class="pp-empty"><div class="pp-empty-icon">📁</div><div class="pp-empty-title">No documents uploaded</div><div class="pp-empty-sub">Upload ID copies and consent forms when document storage is enabled.</div></div>`
         );
 
+        if (editMode) {
+          applyParentEditMode(
+            root as HTMLElement,
+            fullName,
+            phone || '',
+            email || '',
+            occupation || '',
+            address || '',
+            nin || '',
+            firstName,
+            lastName
+          );
+        }
+
         root.querySelectorAll('[data-nav]').forEach((node) => {
           (node as HTMLElement).onclick = (e) => {
             e.preventDefault();
@@ -467,7 +592,20 @@ export default function DesignParentProfile() {
         root.querySelector('#pp-btn-upload')?.addEventListener('click', () => {
           window.alert('Document uploads can be enabled in a future update.');
         });
-        root.querySelector('#pp-btn-edit')?.addEventListener('click', () => navigate('/dashboard/admin/parents/add'));
+        const ppEdit = root.querySelector('#pp-btn-edit') as HTMLElement | null;
+        if (ppEdit) {
+          ppEdit.textContent = editMode ? '💾 Save' : '✏️ Edit';
+          ppEdit.onclick = (e) => {
+            e.preventDefault();
+            if (editMode) void saveParentRef.current();
+            else setEditMode(true);
+          };
+        }
+        const ppCancel = root.querySelector('#pp-btn-cancel-edit') as HTMLElement | null;
+        if (ppCancel) {
+          ppCancel.style.display = editMode ? 'inline-flex' : 'none';
+          ppCancel.onclick = () => setEditMode(false);
+        }
 
         root.querySelector('#pp-btn-delete')?.addEventListener('click', () => {
           if (!window.confirm(`Remove all links for ${fullName}? This does not delete their login account.`)) return;
@@ -498,7 +636,7 @@ export default function DesignParentProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, parentId, navigate]);
+  }, [htmlContent, parentId, navigate, reloadToken, editMode]);
 
   useEffect(() => {
     if (!containerRef.current) return;

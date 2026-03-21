@@ -214,6 +214,15 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 }
 .pw-profile .sp-btn-danger:hover { background: rgba(244,63,94,.2); }
 .pw-profile .sp-btn-sm { padding: 6px 13px; font-size: 12px; }
+.pw-profile .pw-inline-input {
+  width: 100%; max-width: 100%; box-sizing: border-box;
+  background: var(--surface-2, #1a1f2e); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: inherit;
+  color: var(--text-primary); font-family: inherit;
+}
+.pw-profile .pw-inline-input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.2);
+}
 
 /* ── CONTENT WRAPPER ── */
 .pw-profile .sp-content { padding: 28px 32px 64px; }
@@ -616,8 +625,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
       <span class="sp-bc-current" id="sp-breadcrumb-name">Loading…</span>
     </div>
     <div class="sp-topbar-right">
-      <button class="sp-btn sp-btn-ghost" id="sp-btn-print">🖨 Print</button>
-      <button class="sp-btn sp-btn-ghost" id="sp-btn-edit">✏️ Edit Profile</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-print">🖨 Print</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-cancel-edit" style="display:none">Cancel</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-edit">✏️ Edit Profile</button>
       <button class="sp-btn sp-btn-danger" id="sp-btn-delete">🗑 Delete</button>
     </div>
   </div>
@@ -632,6 +642,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
         <!-- PHOTO -->
         <div class="sp-photo-wrap">
+          <input type="file" id="sp-photo-file" accept="image/*" style="display:none" aria-label="Upload photo">
           <!-- Real photo — shown when student has a photo_url in the database -->
           <img id="sp-photo-img" class="sp-photo-img" src="" alt="" style="display:none;">
           <!-- Initials fallback — shown when no photo exists -->

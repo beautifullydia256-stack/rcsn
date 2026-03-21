@@ -156,6 +156,14 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
 .pw-parent-profile .pp-btn-danger { background:var(--rose-s); color:var(--rose); border:1px solid rgba(255,79,106,.2); }
 .pw-parent-profile .pp-btn-danger:hover { background:rgba(255,79,106,.2); }
 .pw-parent-profile .pp-btn-sm { padding:6px 12px; font-size:12px; }
+.pw-parent-profile .pw-inline-input {
+  width:100%; max-width:100%; box-sizing:border-box;
+  background:var(--s3); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; font-size:inherit; color:var(--t1); font-family:inherit;
+}
+.pw-parent-profile .pw-inline-input:focus {
+  outline:none; border-color:var(--violet); box-shadow:0 0 0 2px rgba(157,126,255,.15);
+}
 
 /* ── CONTENT ── */
 .pw-parent-profile .pp-content {
@@ -601,8 +609,9 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
       <span class="pp-bc-current" id="pp-breadcrumb-name">Kimuli Daudi</span>
     </div>
     <div class="pp-topbar-right">
-      <button class="pp-btn pp-btn-ghost" id="pp-btn-print">🖨 Print</button>
-      <button class="pp-btn pp-btn-ghost" id="pp-btn-edit">✏️ Edit</button>
+      <button type="button" class="pp-btn pp-btn-ghost" id="pp-btn-print">🖨 Print</button>
+      <button type="button" class="pp-btn pp-btn-ghost" id="pp-btn-cancel-edit" style="display:none">Cancel</button>
+      <button type="button" class="pp-btn pp-btn-ghost" id="pp-btn-edit">✏️ Edit</button>
       <button class="pp-btn pp-btn-danger pp-btn-sm" id="pp-btn-delete">🗑 Delete</button>
     </div>
   </div>

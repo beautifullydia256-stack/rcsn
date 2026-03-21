@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 
@@ -101,6 +102,47 @@ function fmtUGX(n: number | null | undefined): string {
   return `UGX ${Number(n).toLocaleString()}`;
 }
 
+/** Swap key display spans for inputs (same layout/CSS shell) */
+function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
+  const fullName = String(t.name || '').trim();
+  const phone = pickStr(t.phone) ?? '';
+  const email = pickStr(t.email) ?? '';
+  const qual = pickStr(t.qualification) ?? '';
+  const exp = pickStr(t.experience) ?? '';
+  const addr = pickStr(t.address) ?? '';
+  const salRaw = t.salary != null && !Number.isNaN(Number(t.salary)) ? String(Number(t.salary)) : '';
+
+  const nameEl = root.querySelector('#tp-teacher-name');
+  if (nameEl) {
+    nameEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="name" value="${escapeAttr(fullName)}" style="font:inherit;width:100%;max-width:420px"/>`;
+  }
+  const phoneMeta = root.querySelector('#tp-meta-phone');
+  if (phoneMeta) {
+    phoneMeta.innerHTML = `<input type="tel" class="pw-inline-input" data-tp-field="phone" value="${escapeAttr(phone)}" style="width:100%;max-width:280px"/>`;
+  }
+  const emailMeta = root.querySelector('#tp-meta-email');
+  if (emailMeta) {
+    emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-tp-field="email" value="${escapeAttr(email)}" style="width:100%;max-width:320px"/>`;
+  }
+
+  const qEl = root.querySelector('#tp-qualification');
+  if (qEl) {
+    qEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="qualification" value="${escapeAttr(qual)}" style="width:100%"/>`;
+  }
+  const eEl = root.querySelector('#tp-years-exp');
+  if (eEl) {
+    eEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="experience" value="${escapeAttr(exp)}" style="width:100%"/>`;
+  }
+  const aEl = root.querySelector('#tp-address');
+  if (aEl) {
+    aEl.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="address" value="${escapeAttr(addr)}" style="width:100%"/>`;
+  }
+  const sEl = root.querySelector('#tp-salary');
+  if (sEl) {
+    sEl.innerHTML = `<input type="number" class="pw-inline-input" data-tp-field="salary" value="${escapeAttr(salRaw)}" min="0" step="1" placeholder="0" style="width:100%;max-width:200px"/>`;
+  }
+}
+
 export default function DesignTeacherProfile() {
   const navigate = useNavigate();
   const { teacher_id: teacherIdParam } = useParams<{ teacher_id: string }>();
@@ -108,6 +150,58 @@ export default function DesignTeacherProfile() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const saveTeacherRef = useRef<() => Promise<void>>(async () => {});
+
+  const saveTeacher = useCallback(async () => {
+    if (!confirmProfileSave()) return;
+    const root = containerRef.current?.querySelector('.pw-teacher-profile');
+    if (!root) return;
+    const name = (root.querySelector('[data-tp-field="name"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const phone = (root.querySelector('[data-tp-field="phone"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const email = (root.querySelector('[data-tp-field="email"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const qualification =
+      (root.querySelector('[data-tp-field="qualification"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const experience =
+      (root.querySelector('[data-tp-field="experience"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const address = (root.querySelector('[data-tp-field="address"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const salaryRaw = (root.querySelector('[data-tp-field="salary"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    if (!name) {
+      window.alert('Please enter a name.');
+      return;
+    }
+    const salary = salaryRaw ? parseFloat(salaryRaw) : null;
+    const payload: Record<string, unknown> = {
+      name,
+      phone: phone || null,
+      email: email || null,
+      qualification: qualification || null,
+      experience: experience || null,
+      address: address || null,
+      salary: salary !== null && !Number.isNaN(salary) ? salary : null,
+      updated_at: new Date().toISOString(),
+    };
+    const photoInp = root.querySelector('#tp-photo-file') as HTMLInputElement | null;
+    const photoFile = photoInp?.files?.[0];
+    if (photoFile) {
+      try {
+        payload.photo_url = await readFileAsDataURL(photoFile);
+      } catch {
+        window.alert('Could not read the photo file.');
+        return;
+      }
+    }
+    const { error } = await supabase.from('teachers').update(payload).eq('teacher_id', teacherId);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    if (photoInp) photoInp.value = '';
+    setEditMode(false);
+    setReloadToken((x) => x + 1);
+  }, [teacherId]);
+
+  saveTeacherRef.current = saveTeacher;
 
   useEffect(() => {
     const id = 'pweza-teacher-profile-fonts';
@@ -543,10 +637,25 @@ export default function DesignTeacherProfile() {
         if (kycBtn) kycBtn.onclick = () => kycIn?.click();
         if (acBtn) acBtn.onclick = () => acIn?.click();
 
+        if (editMode) {
+          applyTeacherEditMode(root as HTMLElement, t);
+        }
+
         const printBtn = root.querySelector('#tp-btn-print') as HTMLElement | null;
         if (printBtn) printBtn.onclick = () => window.print();
         const editBtn = root.querySelector('#tp-btn-edit') as HTMLElement | null;
-        if (editBtn) editBtn.onclick = () => navigate(`/dashboard/admin/teachers/${teacherId}/edit`);
+        if (editBtn) {
+          editBtn.textContent = editMode ? '💾 Save' : '✏️ Edit';
+          editBtn.onclick = () => {
+            if (editMode) void saveTeacherRef.current();
+            else setEditMode(true);
+          };
+        }
+        const cancelEditBtn = root.querySelector('#tp-btn-cancel-edit') as HTMLElement | null;
+        if (cancelEditBtn) {
+          cancelEditBtn.style.display = editMode ? 'inline-flex' : 'none';
+          cancelEditBtn.onclick = () => setEditMode(false);
+        }
         const createLoginBtn = root.querySelector('#tp-btn-create-login') as HTMLElement | null;
         if (createLoginBtn) createLoginBtn.onclick = () => navigate(`/dashboard/admin/teachers/${teacherId}/create-login`);
         const resetBtn = root.querySelector('#tp-btn-reset-pw') as HTMLElement | null;
@@ -570,9 +679,14 @@ export default function DesignTeacherProfile() {
         const managePortal = root.querySelector('#tp-btn-manage-portal') as HTMLElement | null;
         if (managePortal) managePortal.onclick = () => navigate(`/dashboard/admin/teachers/${teacherId}/create-login`);
         const changePhoto = root.querySelector('#tp-btn-change-photo') as HTMLElement | null;
-        if (changePhoto)
-          changePhoto.onclick = () =>
-            window.alert('Photo upload from the profile design can be wired to storage in a future update.');
+        const photoFileInp = root.querySelector('#tp-photo-file') as HTMLInputElement | null;
+        if (changePhoto) {
+          changePhoto.style.opacity = editMode ? '1' : '0.85';
+          changePhoto.onclick = () => {
+            if (editMode) photoFileInp?.click();
+            else window.alert('Click Edit, then use the camera icon to change the photo.');
+          };
+        }
 
         root.querySelectorAll('[data-nav]').forEach((node) => {
           (node as HTMLElement).onclick = (e) => {
@@ -588,7 +702,7 @@ export default function DesignTeacherProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, teacherId, navigate, reloadToken]);
+  }, [htmlContent, teacherId, navigate, reloadToken, editMode]);
 
   useEffect(() => {
     if (!containerRef.current) return;

@@ -168,6 +168,14 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 .pw-teacher-profile .tp-btn-danger{background:var(--rose-s);color:var(--rose);border:1px solid rgba(255,79,106,.2);}
 .pw-teacher-profile .tp-btn-danger:hover{background:rgba(255,79,106,.2);}
 .pw-teacher-profile .tp-btn-sm{padding:6px 12px;font-size:12px;}
+.pw-teacher-profile .pw-inline-input {
+  width:100%; max-width:100%; box-sizing:border-box;
+  background:var(--s3); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; font-size:inherit; color:var(--t1); font-family:inherit;
+}
+.pw-teacher-profile .pw-inline-input:focus {
+  outline:none; border-color:var(--amber); box-shadow:0 0 0 2px rgba(255,181,71,.15);
+}
 
 /* ── CONTENT ── */
 .pw-teacher-profile .tp-content{padding:26px 28px 64px;}
@@ -547,7 +555,8 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
       <button class="tp-btn tp-btn-ghost" id="tp-btn-print">🖨 Print</button>
       <button class="tp-btn tp-btn-blue tp-btn-sm" id="tp-btn-create-login">🔑 Create Login</button>
       <button class="tp-btn tp-btn-violet tp-btn-sm" id="tp-btn-reset-pw">🔄 Reset Password</button>
-      <button class="tp-btn tp-btn-ghost" id="tp-btn-edit">✏️ Edit</button>
+      <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-cancel-edit" style="display:none">Cancel</button>
+      <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-edit">✏️ Edit</button>
       <button class="tp-btn tp-btn-danger tp-btn-sm" id="tp-btn-delete">🗑</button>
     </div>
   </div>
@@ -562,6 +571,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 
         <!-- Photo -->
         <div class="tp-photo-wrap">
+          <input type="file" id="tp-photo-file" accept="image/*" style="display:none" aria-label="Upload photo">
           <img id="tp-photo-img" class="tp-photo-img" src="" alt="" style="display:none">
           <div id="tp-photo-initials" class="tp-photo-initials">MK</div>
           <div class="tp-photo-edit" id="tp-btn-change-photo" title="Change photo">📷</div>
