@@ -1,53 +1,58 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
-import {
-  Search,
-  ChevronRight,
-  Eye,
-  LayoutGrid,
-  List,
-  Printer,
-  Users,
-  UserPlus,
-  GraduationCap,
-  Phone,
-  Mail,
-  X,
-  UserCircle2,
-  CheckCircle2,
-} from 'lucide-react';
+
+import '@/assets/pwezacore-students-scoped.css';
 
 const STALE_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 15;
 
+const STUDENTS_FONT_HREF =
+  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
+
+/** Spec §9 — avatar gradient pool */
 const AVATAR_GRADIENTS = [
-  'from-teal-500 to-cyan-600',
-  'from-violet-500 to-fuchsia-600',
-  'from-amber-500 to-orange-600',
-  'from-sky-500 to-blue-600',
-  'from-emerald-500 to-teal-600',
-  'from-rose-500 to-pink-600',
+  'linear-gradient(135deg, #3d7eff, #9d7eff)',
+  'linear-gradient(135deg, #9d7eff, #ff4f6a)',
+  'linear-gradient(135deg, #00e5c3, #3d7eff)',
+  'linear-gradient(135deg, #ffb547, #ff4f6a)',
+  'linear-gradient(135deg, #27e09f, #3d7eff)',
+  'linear-gradient(135deg, #9d7eff, #00e5c3)',
+  'linear-gradient(135deg, #ff4f6a, #ffb547)',
+  'linear-gradient(135deg, #27e09f, #9d7eff)',
 ];
+
+function gradAt(i: number) {
+  return AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
+}
 
 function initials(name: string) {
   return (name || '?')
     .split(/\s+/)
+    .filter(Boolean)
     .map((w) => w[0])
     .join('')
     .slice(0, 2)
     .toUpperCase();
 }
 
-function avatarGradient(i: number) {
-  return AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
+/** Map class label → chip variant (spec §8) */
+function classChipModifier(className: string | null | undefined): string {
+  const c = (className || '').toLowerCase().trim();
+  if (c.includes('primary 1')) return 'rose';
+  if (c.includes('primary 2')) return 'amber';
+  if (c.includes('primary 3')) return 'blue';
+  if (c.includes('primary 4')) return 'green';
+  if (c.includes('primary 5')) return '';
+  if (c.includes('primary 6')) return 'amber';
+  if (c.includes('primary 7')) return 'violet';
+  return '';
 }
 
-/** Matches Add Student / DB — used for list + quick view */
 type StudentListRow = {
   student_id: string;
   name: string | null;
@@ -90,9 +95,7 @@ type FetchResult = {
   classTeacherNameByClass: Record<string, string>;
   attendedTodayCount: number;
   photoByStudentId: Record<string, string>;
-  /** Today's attendance per student: present | absent; missing key = not marked */
   attendanceTodayByStudentId: Record<string, 'present' | 'absent'>;
-  /** Portal parent_id -> all student_ids linked to that parent */
   studentsByParentId: Record<string, string[]>;
 };
 
@@ -107,36 +110,7 @@ function displayFullName(row: StudentListRow): string {
   return (row.name || '').trim() || '—';
 }
 
-/** Fee chip for quick view — maps DB payment_status strings heuristically */
-function feeBalanceStatus(row: StudentListRow): { label: 'Paid' | 'Owing' | 'Overdue' | 'Not set'; chipClass: string } {
-  const s = (row.payment_status || '').toLowerCase().trim();
-  if (!s) return { label: 'Not set', chipClass: 'bg-white/[0.08] text-[var(--ac-text-muted)]' };
-  if (/paid|complete|cleared|fully|settled/.test(s)) {
-    return { label: 'Paid', chipClass: 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/30' };
-  }
-  if (/overdue|arrears/.test(s)) {
-    return { label: 'Overdue', chipClass: 'bg-rose-500/25 text-rose-200 ring-1 ring-rose-500/35' };
-  }
-  if (/unpaid|owing|partial|balance|pending|due|outstanding/.test(s)) {
-    return { label: 'Owing', chipClass: 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/25' };
-  }
-  return { label: 'Not set', chipClass: 'bg-white/[0.08] text-[var(--ac-text-muted)]' };
-}
-
-function attendanceTodayKind(
-  attendanceTodayByStudentId: Record<string, 'present' | 'absent'>,
-  studentId: string
-): 'present' | 'absent' | 'unmarked' {
-  const v = attendanceTodayByStudentId[studentId];
-  if (v === 'present') return 'present';
-  if (v === 'absent') return 'absent';
-  return 'unmarked';
-}
-
-const STUDENT_NAME_BTN =
-  'cursor-pointer text-left font-semibold ac-text-primary underline-offset-2 decoration-transparent hover:underline hover:decoration-emerald-400/50 hover:text-emerald-400';
-const PARENT_NAME_BTN =
-  'cursor-pointer text-left text-base ac-text-secondary underline-offset-2 decoration-transparent hover:underline hover:decoration-emerald-400/40 hover:text-emerald-400';
+type SortKey = 'name-asc' | 'name-desc' | 'class' | 'recent';
 
 async function fetchStudentsContext(userId: string): Promise<FetchResult> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
@@ -244,11 +218,9 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
     attendedTodayCount: attendedSet.size,
     photoByStudentId,
     attendanceTodayByStudentId,
-    studentsByParentId,
+    studentsByParentId: studentsByParentId,
   };
 }
-
-type ExpandState = { studentId: string; kind: 'student' | 'parent'; parentIndex: number } | null;
 
 export default function DesignStudentsPage() {
   const navigate = useNavigate();
@@ -256,10 +228,20 @@ export default function DesignStudentsPage() {
 
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
-  const [sortKey, setSortKey] = useState<'name-asc' | 'name-desc' | 'class-asc' | 'class-desc'>('name-asc');
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [sortKey, setSortKey] = useState<SortKey>('name-asc');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [page, setPage] = useState(1);
-  const [expand, setExpand] = useState<ExpandState>(null);
+
+  useEffect(() => {
+    const id = 'pweza-students-fonts';
+    if (!document.getElementById(id)) {
+      const link = document.createElement('link');
+      link.id = id;
+      link.rel = 'stylesheet';
+      link.href = STUDENTS_FONT_HREF;
+      document.head.appendChild(link);
+    }
+  }, []);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'students-design', user?.id ?? ''],
@@ -273,8 +255,6 @@ export default function DesignStudentsPage() {
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
-  const attendanceTodayByStudentId = data?.attendanceTodayByStudentId ?? {};
-  const studentsByParentId = data?.studentsByParentId ?? {};
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -290,7 +270,9 @@ export default function DesignStudentsPage() {
     if (t) {
       out = out.filter((r) => {
         const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
+        const full = displayFullName(r).toLowerCase();
         return (
+          full.includes(t) ||
           (r.name || '').toLowerCase().includes(t) ||
           (r.current_class || '').toLowerCase().includes(t) ||
           (r.guardian_name || '').toLowerCase().includes(t) ||
@@ -301,17 +283,20 @@ export default function DesignStudentsPage() {
     if (classFilter) out = out.filter((r) => r.current_class === classFilter);
 
     out.sort((a, b) => {
-      const an = (a.name || '').toLowerCase();
-      const bn = (b.name || '').toLowerCase();
+      const an = displayFullName(a).toLowerCase();
+      const bn = displayFullName(b).toLowerCase();
       const ac = (a.current_class || '').toLowerCase();
       const bc = (b.current_class || '').toLowerCase();
       switch (sortKey) {
         case 'name-desc':
           return bn.localeCompare(an);
-        case 'class-asc':
+        case 'class':
           return ac.localeCompare(bc) || an.localeCompare(bn);
-        case 'class-desc':
-          return bc.localeCompare(ac) || an.localeCompare(bn);
+        case 'recent': {
+          const ta = new Date(a.created_at || 0).getTime();
+          const tb = new Date(b.created_at || 0).getTime();
+          return tb - ta;
+        }
         default:
           return an.localeCompare(bn);
       }
@@ -346,176 +331,94 @@ export default function DesignStudentsPage() {
 
   const loading = isLoading && !data;
 
-  const openStudentQuick = (studentId: string) => {
-    setExpand((prev) =>
-      prev?.studentId === studentId && prev.kind === 'student' ? null : { studentId, kind: 'student', parentIndex: 0 }
-    );
-  };
+  const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
 
-  const openParentQuick = (studentId: string, parentIndex: number) => {
-    setExpand((prev) =>
-      prev?.studentId === studentId && prev.kind === 'parent' && prev.parentIndex === parentIndex
-        ? null
-        : { studentId, kind: 'parent', parentIndex }
-    );
-  };
-
-  const closeExpand = useCallback(() => setExpand(null), []);
-
-  const drawerRow = useMemo(
-    () => (expand?.studentId ? rows.find((r) => r.student_id === expand.studentId) : undefined),
-    [rows, expand?.studentId]
-  );
-
-  const drawerParents = useMemo(() => {
-    if (!drawerRow) return [];
-    return displayParentsForStudent(drawerRow.student_id, drawerRow, parentsByStudent);
-  }, [drawerRow, parentsByStudent]);
-
-  const [drawerEntered, setDrawerEntered] = useState(false);
-  useEffect(() => {
-    if (!expand) {
-      setDrawerEntered(false);
-      return;
-    }
-    setDrawerEntered(false);
-    const id = requestAnimationFrame(() => setDrawerEntered(true));
-    return () => cancelAnimationFrame(id);
-  }, [expand]);
-
-  useEffect(() => {
-    if (!expand) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeExpand();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [expand, closeExpand]);
-
-  useEffect(() => {
-    if (!expand) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [expand]);
+  const sortSelectValue = sortKey === 'name-desc' ? 'name-desc' : sortKey === 'class' ? 'class' : sortKey === 'recent' ? 'recent' : 'name-asc';
 
   return (
-    <AdminPageWrapper
-      title="Students"
-      subtitle="Manage enrolled students, classes, and parent contacts."
-    >
-      <div className="space-y-5 print:space-y-4">
-        {/* Toolbar */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between print:hidden">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--ac-border)] bg-white/5 px-3 py-2 text-sm font-medium ac-text-primary hover:bg-white/10"
-            >
-              <Printer className="h-4 w-4 opacity-80" />
-              Print
-            </button>
-            <button
-              type="button"
-              onClick={() => alert('Export is coming soon.')}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--ac-border)] bg-white/5 px-3 py-2 text-sm font-medium ac-text-secondary hover:bg-white/10"
-            >
-              Export
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/admin/parents')}
-              className="inline-flex items-center gap-2 rounded-lg border border-[var(--ac-border)] bg-white/5 px-3 py-2 text-sm font-medium ac-text-primary hover:bg-white/10"
-            >
-              <Users className="h-4 w-4 opacity-80" />
-              Add family
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/dashboard/admin/students/add')}
-              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500"
-            >
-              <UserPlus className="h-4 w-4" />
-              Add student
-            </button>
+    <AdminPageWrapper>
+      <div className="pw-students print:bg-[#07090f]">
+        <div className="page">
+          <div className="page-header fade-up">
+            <div className="page-title-block">
+              <div className="page-eyebrow">Student Registry</div>
+              <h1 className="page-title">Students</h1>
+              <p className="page-sub">Manage enrolled students, classes, and parent contacts.</p>
+            </div>
+            <div className="page-actions print:hidden">
+              <button type="button" className="btn btn-ghost" onClick={() => window.print()}>
+                🖨 Print
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => alert('Export is coming soon.')}>
+                ⬇ Export
+              </button>
+              <button type="button" className="btn btn-ghost" onClick={() => navigate('/dashboard/admin/parents')}>
+                👨‍👩‍👧 Add Family
+              </button>
+              <button type="button" className="btn btn-teal" onClick={() => navigate('/dashboard/admin/students/add')}>
+                ＋ Add Student
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 rounded-lg border border-[var(--ac-border)] p-1 bg-white/[0.03]">
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'table' ? 'bg-emerald-600/20 text-emerald-400' : 'ac-text-secondary hover:ac-text-primary'
-              }`}
-              aria-pressed={viewMode === 'table'}
-            >
-              <List className="h-4 w-4" />
-              List
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('cards')}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                viewMode === 'cards' ? 'bg-emerald-600/20 text-emerald-400' : 'ac-text-secondary hover:ac-text-primary'
-              }`}
-              aria-pressed={viewMode === 'cards'}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              Grid
-            </button>
-          </div>
-        </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {[
-            { label: 'Total students', value: loading ? '…' : String(stats.total), icon: UserCircle2 },
-            { label: 'Classes', value: loading ? '…' : String(stats.classes), icon: GraduationCap },
-            { label: 'With parents linked', value: loading ? '…' : String(stats.withParents), icon: Users },
-            { label: 'Attended today', value: loading ? '…' : String(stats.attendedToday), icon: CheckCircle2 },
-          ].map(({ label, value, icon: Icon }) => (
-            <div
-              key={label}
-              className="ac-glass-card flex items-center gap-3 rounded-xl border border-[var(--ac-border)] p-4"
-            >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium uppercase tracking-wide ac-text-muted">{label}</p>
-                <p className="text-2xl font-semibold tabular-nums ac-text-primary">{value}</p>
+          <div className="kpi-strip fade-up d1">
+            <div className="kpi-card c-teal">
+              <div className="kpi-ic c-teal">🧑‍🎓</div>
+              <div className="kpi-info">
+                <div className="kpi-label">Total Students</div>
+                <div className="kpi-value c-teal">{loading ? '…' : stats.total}</div>
+                <div className="kpi-sub">Enrolled this term</div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center print:hidden">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ac-text-muted" />
-            <input
-              type="search"
-              placeholder="Search by name, class, or parent…"
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
-              className="ac-input w-full rounded-xl border border-[var(--ac-border)] py-3 pl-10 pr-3 text-base"
-            />
+            <div className="kpi-card c-blue">
+              <div className="kpi-ic c-blue">🏫</div>
+              <div className="kpi-info">
+                <div className="kpi-label">Classes</div>
+                <div className="kpi-value">{loading ? '…' : stats.classes}</div>
+                <div className="kpi-sub">Active class groups</div>
+              </div>
+            </div>
+            <div className="kpi-card c-green">
+              <div className="kpi-ic c-green">👨‍👩‍👧</div>
+              <div className="kpi-info">
+                <div className="kpi-label">Parents Linked</div>
+                <div className="kpi-value c-green">{loading ? '…' : stats.withParents}</div>
+                <div className="kpi-sub">With portal access</div>
+              </div>
+            </div>
+            <div className="kpi-card c-amber">
+              <div className="kpi-ic c-amber">✅</div>
+              <div className="kpi-info">
+                <div className="kpi-label">Attended Today</div>
+                <div className="kpi-value c-amber">{loading ? '…' : stats.attendedToday}</div>
+                <div className="kpi-sub">Present this morning</div>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+
+          <div className="toolbar fade-up d2 print:hidden">
+            <div className="search-bar">
+              <span style={{ color: 'var(--t3)', fontSize: 14 }}>🔍</span>
+              <input
+                placeholder="Search by name, class, or parent…"
+                type="search"
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </div>
             <select
-              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-3 text-base min-w-[140px]"
+              className="filter-select"
               value={classFilter}
               onChange={(e) => {
                 setClassFilter(e.target.value);
                 setPage(1);
               }}
             >
-              <option value="">All classes</option>
+              <option value="">All Classes</option>
               {classOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -523,638 +426,337 @@ export default function DesignStudentsPage() {
               ))}
             </select>
             <select
-              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-3 text-base min-w-[160px]"
-              value={sortKey}
+              className="filter-select"
+              value={sortSelectValue}
               onChange={(e) => {
-                setSortKey(e.target.value as 'name-asc' | 'name-desc' | 'class-asc' | 'class-desc');
+                const v = e.target.value;
+                setSortKey(v === 'name-desc' ? 'name-desc' : v === 'class' ? 'class' : v === 'recent' ? 'recent' : 'name-asc');
                 setPage(1);
               }}
             >
               <option value="name-asc">Name A → Z</option>
               <option value="name-desc">Name Z → A</option>
-              <option value="class-asc">Class A → Z</option>
-              <option value="class-desc">Class Z → A</option>
+              <option value="class">Class</option>
+              <option value="recent">Most Recent</option>
             </select>
-          </div>
-        </div>
-
-        {/* Table view */}
-        {viewMode === 'table' && (
-          <div className="overflow-hidden rounded-xl border border-[var(--ac-border)] bg-white/[0.02]">
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[880px] border-collapse text-base">
-                <thead>
-                  <tr className="border-b border-[var(--ac-border)] bg-white/[0.04]">
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Student</th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Parents / guardian</th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Class</th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Class teacher</th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Address</th>
-                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Phone</th>
-                    <th className="px-4 py-3.5 text-right text-sm font-semibold uppercase tracking-wider ac-text-muted w-[100px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? (
-                    Array.from({ length: 6 }).map((_, i) => (
-                      <tr key={`sk-${i}`} className="border-b border-[var(--ac-border)]">
-                        <td colSpan={7} className="px-4 py-3">
-                          <div className="h-10 animate-pulse rounded-lg bg-white/5" />
-                        </td>
-                      </tr>
-                    ))
-                  ) : pageSlice.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-16 text-center">
-                        <p className="ac-text-secondary">No students match your filters.</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    pageSlice.map((r, idx) => {
-                      const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                      const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
-                      const first = parents[0];
-                      const addr =
-                        (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
-                      const teacher = classTeacherNameByClass[r.current_class || ''] || '';
-                      const isOpen =
-                        expand?.studentId === r.student_id &&
-                        (expand.kind === 'student' || expand.kind === 'parent');
-
-                      return (
-                        <Fragment key={r.student_id}>
-                          <tr
-                            className={`border-b border-[var(--ac-border)] transition-colors ${
-                              isOpen ? 'bg-emerald-500/[0.06]' : 'hover:bg-white/[0.03]'
-                            }`}
-                          >
-                            <td className="px-4 py-3.5 align-middle">
-                              <div className="flex items-center gap-3">
-                                {photoByStudentId[r.student_id] ? (
-                                  <img
-                                    src={photoByStudentId[r.student_id]}
-                                    alt=""
-                                    className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/10 shadow-inner"
-                                  />
-                                ) : (
-                                  <div
-                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-inner ${avatarGradient(globalIdx)}`}
-                                  >
-                                    {initials(r.name || '')}
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => openStudentQuick(r.student_id)}
-                                    className={`block max-w-full truncate ${STUDENT_NAME_BTN}`}
-                                  >
-                                    {r.name || '—'}
-                                  </button>
-                                  {r.current_class && (
-                                    <p className="truncate text-sm font-medium text-sky-500/90 dark:text-sky-400">{r.current_class}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5 align-middle max-w-[200px]">
-                              {parents.length ? (
-                                <div className="flex flex-col gap-0.5">
-                                  {parents.map((p, pi) => (
-                                    <button
-                                      key={pi}
-                                      type="button"
-                                      onClick={() => openParentQuick(r.student_id, pi)}
-                                      className={`truncate ${PARENT_NAME_BTN} text-sm`}
-                                    >
-                                      {p.name || '—'}
-                                    </button>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="ac-text-muted">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 align-middle">
-                              {r.current_class ? (
-                                <span className="inline-flex rounded-full bg-sky-500/15 px-2.5 py-0.5 text-sm font-medium text-sky-700 dark:text-sky-300">
-                                  {r.current_class}
-                                </span>
-                              ) : (
-                                <span className="ac-text-muted">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 align-middle">
-                              <span className="ac-text-secondary">{teacher || '—'}</span>
-                            </td>
-                            <td className="px-4 py-3.5 align-middle max-w-[220px]">
-                              {addr ? (
-                                <span className="line-clamp-2 ac-text-secondary" title={addr}>
-                                  {addr}
-                                </span>
-                              ) : (
-                                <span className="ac-text-muted">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 align-middle">
-                              {first?.phone ? (
-                                <a
-                                  href={`tel:${first.phone.replace(/\s/g, '')}`}
-                                  className="inline-flex items-center gap-1.5 font-medium text-emerald-500 hover:text-emerald-400"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <Phone className="h-3.5 w-3.5 opacity-80" />
-                                  {first.phone}
-                                </a>
-                              ) : (
-                                <span className="ac-text-muted">—</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5 align-middle text-right">
-                              <div className="inline-flex items-center justify-end gap-1">
-                                <button
-                                  type="button"
-                                  onClick={() => openStudentQuick(r.student_id)}
-                                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary ${
-                                    expand?.studentId === r.student_id && expand.kind === 'student' ? 'bg-emerald-500/15 ring-1 ring-emerald-500/30' : ''
-                                  }`}
-                                  title="Quick view"
-                                  aria-label="Quick view"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary"
-                                  title="Open full profile"
-                                  aria-label="Open full profile"
-                                >
-                                  <ChevronRight className="h-4 w-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        </Fragment>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+            <div className="view-toggle">
+              <button
+                type="button"
+                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => setViewMode('list')}
+              >
+                ≡ List
+              </button>
+              <button
+                type="button"
+                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+              >
+                ⊞ Grid
+              </button>
             </div>
           </div>
-        )}
 
-        {/* Card view */}
-        {viewMode === 'cards' && (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 print:hidden">
-            {loading ? (
-              <p className="ac-text-muted col-span-full text-sm">Loading…</p>
-            ) : pageSlice.length === 0 ? (
-              <p className="ac-text-muted col-span-full text-center py-12">No students found.</p>
-            ) : (
-              pageSlice.map((r, idx) => {
-                const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
-                const first = parents[0];
-                const addr =
-                  (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
-                const teacher = classTeacherNameByClass[r.current_class || ''] || '';
-                return (
-                  <div
-                    key={r.student_id}
-                    className="ac-glass-card flex flex-col rounded-xl border border-[var(--ac-border)] p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      {photoByStudentId[r.student_id] ? (
-                        <img
-                          src={photoByStudentId[r.student_id]}
-                          alt=""
-                          className="h-11 w-11 shrink-0 rounded-full object-cover border border-[var(--ac-border)]"
-                        />
-                      ) : (
-                        <div
-                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${avatarGradient(globalIdx)}`}
-                        >
-                          {initials(r.name || '')}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <button
-                          type="button"
-                          onClick={() => openStudentQuick(r.student_id)}
-                          className={`block max-w-full truncate text-left text-lg ${STUDENT_NAME_BTN}`}
-                        >
-                          {r.name || '—'}
-                        </button>
-                        <p className="text-sm ac-text-muted">{r.current_class || 'No class'}</p>
-                      </div>
-                    </div>
-                    <dl className="mt-4 space-y-2 text-base">
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted shrink-0">Parent</dt>
-                        <dd className="min-w-0 flex-1 text-right">
-                          {parents.length ? (
-                            parents.map((p, pi) => (
-                              <button
-                                key={pi}
-                                type="button"
-                                onClick={() => openParentQuick(r.student_id, pi)}
-                                className={`block w-full truncate text-right ${PARENT_NAME_BTN} text-sm`}
-                              >
-                                {p.name || '—'}
-                              </button>
-                            ))
-                          ) : (
-                            <span className="ac-text-muted">—</span>
-                          )}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted shrink-0">Teacher</dt>
-                        <dd className="text-right ac-text-secondary truncate">{teacher || '—'}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted shrink-0">Phone</dt>
-                        <dd className="text-right ac-text-secondary truncate">{first?.phone || '—'}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted shrink-0">Address</dt>
-                        <dd className="text-right ac-text-secondary line-clamp-2">{addr || '—'}</dd>
-                      </div>
-                    </dl>
-                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openStudentQuick(r.student_id)}
-                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary ${
-                          expand?.studentId === r.student_id && expand.kind === 'student' ? 'bg-emerald-500/15 ring-1 ring-emerald-500/30' : ''
-                        }`}
-                        title="Quick view"
-                        aria-label="Quick view"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
-                      <button
-                        type="button"
+          {viewMode === 'list' && (
+            <div className="fade-up d3">
+              <div className="table-wrap">
+                <div className="table-head">
+                  <div className="th active">
+                    Student <span className="sort-ic">▲</span>
+                  </div>
+                  <div className="th">Parent / Guardian</div>
+                  <div className="th">Class</div>
+                  <div className="th">Class Teacher</div>
+                  <div className="th">Address</div>
+                  <div className="th">Phone</div>
+                  <div className="th" style={{ justifyContent: 'flex-end' }}>
+                    Actions
+                  </div>
+                </div>
+
+                {loading ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">⏳</div>
+                    <div className="empty-title">Loading students…</div>
+                  </div>
+                ) : filteredSorted.length === 0 ? (
+                  <div className="empty-state">
+                    <div className="empty-icon">🧑‍🎓</div>
+                    <div className="empty-title">No students match your filters.</div>
+                    <div className="empty-sub">Try adjusting search or class filter.</div>
+                  </div>
+                ) : (
+                  pageSlice.map((r, idx) => {
+                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
+                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
+                    const parentLine = parents.map((p) => p.name).filter(Boolean).join(', ') || '';
+                    const first = parents[0];
+                    const phone = (first?.phone || r.guardian_phone || '').trim();
+                    const addr =
+                      (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
+                    const teacher = classTeacherNameByClass[r.current_class || ''] || '';
+                    const name = displayFullName(r);
+                    const adm = r.admission_number?.trim();
+                    const chipMod = classChipModifier(r.current_class);
+                    const chipCls = chipMod ? `class-chip ${chipMod}` : 'class-chip';
+                    const photo = photoByStudentId[r.student_id];
+                    const filterName = name.toLowerCase();
+                    const filterClass = (r.current_class || '').toLowerCase();
+
+                    return (
+                      <div
+                        key={r.student_id}
+                        className="table-row"
+                        data-name={filterName}
+                        data-class={filterClass}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary"
-                        title="Open full profile"
-                        aria-label="Open full profile"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            navigate(`/dashboard/admin/students/${r.student_id}`);
+                          }
+                        }}
                       >
-                        <ChevronRight className="h-4 w-4" />
+                        <div className="td">
+                          <div className="student-cell">
+                            <div className="student-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
+                              {photo ? (
+                                <img src={photo} alt="" />
+                              ) : (
+                                initials(name)
+                              )}
+                            </div>
+                            <div>
+                              <div className="student-name">{name}</div>
+                              <div className="student-sub">
+                                {adm ? `Admission #${adm}` : '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`td ${parentLine ? '' : 'muted'}`}>{parentLine || '—'}</div>
+                        <div className="td">
+                          {r.current_class ? (
+                            <span className={chipCls}>{r.current_class}</span>
+                          ) : (
+                            <div className="td muted">—</div>
+                          )}
+                        </div>
+                        <div className={`td ${teacher ? '' : 'muted'}`}>{teacher || '—'}</div>
+                        <div className={`td ${addr ? '' : 'muted'}`}>{addr || '—'}</div>
+                        <div className="td" onClick={(e) => e.stopPropagation()}>
+                          {phone ? (
+                            <a href={`tel:${phone.replace(/\s/g, '')}`} className="phone-link">
+                              📞 {phone}
+                            </a>
+                          ) : (
+                            <div className="td muted">—</div>
+                          )}
+                        </div>
+                        <div className="td" onClick={(e) => e.stopPropagation()}>
+                          <div className="row-actions">
+                            <button
+                              type="button"
+                              className="row-btn"
+                              title="View profile"
+                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                            >
+                              👁
+                            </button>
+                            <button
+                              type="button"
+                              className="row-btn arrow"
+                              title="Open profile"
+                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                            >
+                              ›
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+
+                {!loading && filteredSorted.length > 0 && (
+                  <div className="pagination print:hidden">
+                    <div className="pagination-info">
+                      Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of{' '}
+                      <strong>{filteredSorted.length}</strong> students
+                    </div>
+                    <div className="pagination-btns">
+                      <button
+                        type="button"
+                        className="page-btn"
+                        disabled={safePage <= 1}
+                        onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        aria-label="Previous page"
+                      >
+                        ‹
                       </button>
-                      {first?.phone && (
-                        <a
-                          href={`tel:${first.phone.replace(/\s/g, '')}`}
-                          className="rounded-lg border border-[var(--ac-border)] px-3 py-2 text-sm ac-text-primary hover:bg-white/10"
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`page-btn ${n === safePage ? 'active' : ''}`}
+                          onClick={() => setPage(n)}
                         >
-                          Call
-                        </a>
-                      )}
+                          {n}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        className="page-btn"
+                        disabled={safePage >= totalPages}
+                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        aria-label="Next page"
+                      >
+                        ›
+                      </button>
                     </div>
                   </div>
-                );
-              })
-            )}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {!loading && filteredSorted.length > 0 && (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between print:hidden">
-            <p className="text-sm ac-text-muted">
-              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredSorted.length)} of{' '}
-              {filteredSorted.length} students
-            </p>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={safePage <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="rounded-lg border border-[var(--ac-border)] px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-white/10"
-                >
-                  Previous
-                </button>
-                <span className="px-2 text-sm ac-text-secondary">
-                  {safePage} / {totalPages}
-                </span>
-                <button
-                  type="button"
-                  disabled={safePage >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  className="rounded-lg border border-[var(--ac-border)] px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-white/10"
-                >
-                  Next
-                </button>
+                )}
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        {/* Right slide-over quick view */}
-        {expand && drawerRow && (
-          <>
-            <div
-              role="presentation"
-              aria-hidden
-              className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${drawerEntered ? 'opacity-100' : 'opacity-0'}`}
-              onClick={closeExpand}
-            />
-            <aside
-              className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-[var(--ac-border)] bg-[var(--ac-card-bg)] shadow-2xl transition-transform duration-300 ease-out ${drawerEntered ? 'translate-x-0' : 'translate-x-full'}`}
-            >
-              {expand.kind === 'student' ? (
-                <QuickStudentDrawerPanel
-                  row={drawerRow}
-                  parents={drawerParents}
-                  attendanceTodayByStudentId={attendanceTodayByStudentId}
-                  photoUrl={photoByStudentId[drawerRow.student_id]}
-                  gradientClass={avatarGradient(Math.max(0, rows.findIndex((x) => x.student_id === drawerRow.student_id)))}
-                  onClose={closeExpand}
-                  onViewParent={(pi) => openParentQuick(drawerRow.student_id, pi)}
-                  onNavigate={() => navigate(`/dashboard/admin/students/${drawerRow.student_id}`)}
-                />
-              ) : drawerParents[expand.parentIndex] ? (
-                <QuickParentDrawerPanel
-                  parent={drawerParents[expand.parentIndex]}
-                  parentIndex={expand.parentIndex}
-                  studentRow={drawerRow}
-                  linkedStudents={(() => {
-                    const p = drawerParents[expand.parentIndex];
-                    const pid = p?.parent_id;
-                    const ids = pid ? studentsByParentId[pid] || [] : [drawerRow.student_id];
-                    return [...new Set(ids)]
-                      .map((id) => {
-                        const sr = rows.find((x) => x.student_id === id);
-                        return { id, name: sr ? displayFullName(sr) : 'Student' };
-                      })
-                      .sort((a, b) => a.name.localeCompare(b.name));
-                  })()}
-                  gradientClass={avatarGradient(
-                    Math.max(0, rows.findIndex((x) => x.student_id === drawerRow.student_id)) + 3
-                  )}
-                  onClose={closeExpand}
-                  onSelectStudent={(studentId) => openStudentQuick(studentId)}
-                  onNavigate={() => navigate(`/dashboard/admin/students/${drawerRow.student_id}`)}
-                />
-              ) : null}
-            </aside>
-          </>
-        )}
+          {viewMode === 'grid' && (
+            <div className="fade-up d3 print:hidden">
+              {loading ? (
+                <div className="empty-state">
+                  <div className="empty-icon">⏳</div>
+                  <div className="empty-title">Loading…</div>
+                </div>
+              ) : pageSlice.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧑‍🎓</div>
+                  <div className="empty-title">No students found.</div>
+                </div>
+              ) : (
+                <div className="card-grid">
+                  {pageSlice.map((r, idx) => {
+                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
+                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
+                    const first = parents[0];
+                    const phone = (first?.phone || r.guardian_phone || '').trim();
+                    const addr =
+                      (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
+                    const teacher = classTeacherNameByClass[r.current_class || ''] || '';
+                    const name = displayFullName(r);
+                    const adm = r.admission_number?.trim();
+                    const photo = photoByStudentId[r.student_id];
+                    const parentLabel = parents.map((p) => p.name).filter(Boolean).join(', ') || '—';
+
+                    return (
+                      <div key={r.student_id} className="student-card">
+                        <div className="student-card-top">
+                          <div className="sc-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
+                            {photo ? (
+                              <img
+                                src={photo}
+                                alt=""
+                                style={{ width: '100%', height: '100%', borderRadius: 13, objectFit: 'cover' }}
+                              />
+                            ) : (
+                              initials(name)
+                            )}
+                          </div>
+                          <div>
+                            <div className="sc-name">{name}</div>
+                            <div className="sc-sub">
+                              {r.current_class || '—'} · {adm ? `#${adm}` : '—'}
+                            </div>
+                          </div>
+                          <div className="sc-status" title="Active" />
+                        </div>
+                        <div className="student-card-body">
+                          <div className="sc-row">
+                            <span className="sc-row-label">Teacher</span>
+                            <span className="sc-row-value">{teacher || '—'}</span>
+                          </div>
+                          <div className="sc-row">
+                            <span className="sc-row-label">Parent</span>
+                            <span className="sc-row-value">{parentLabel}</span>
+                          </div>
+                          <div className="sc-row">
+                            <span className="sc-row-label">Address</span>
+                            <span className="sc-row-value">{addr || '—'}</span>
+                          </div>
+                          <div className="sc-row">
+                            <span className="sc-row-label">Phone</span>
+                            {phone ? (
+                              <a href={`tel:${phone.replace(/\s/g, '')}`} className="sc-row-value phone">
+                                📞 {phone}
+                              </a>
+                            ) : (
+                              <span className="sc-row-value">—</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="student-card-foot">
+                          <button
+                            type="button"
+                            className="sc-btn sc-btn-ghost"
+                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                          >
+                            👁 View
+                          </button>
+                          <button
+                            type="button"
+                            className="sc-btn sc-btn-primary"
+                            onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                          >
+                            Open Profile →
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {!loading && filteredSorted.length > 0 && (
+                <div className="pagination" style={{ marginTop: 14 }}>
+                  <div className="pagination-info">
+                    Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of{' '}
+                    <strong>{filteredSorted.length}</strong> students
+                  </div>
+                  <div className="pagination-btns">
+                    <button
+                      type="button"
+                      className="page-btn"
+                      disabled={safePage <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    >
+                      ‹
+                    </button>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                      <button
+                        key={n}
+                        type="button"
+                        className={`page-btn ${n === safePage ? 'active' : ''}`}
+                        onClick={() => setPage(n)}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      className="page-btn"
+                      disabled={safePage >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    >
+                      ›
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </AdminPageWrapper>
   );
 }
-
-function QuickStudentDrawerPanel({
-  row,
-  parents,
-  attendanceTodayByStudentId,
-  photoUrl,
-  gradientClass,
-  onClose,
-  onViewParent,
-  onNavigate,
-}: {
-  row: StudentListRow;
-  parents: ParentLite[];
-  attendanceTodayByStudentId: Record<string, 'present' | 'absent'>;
-  photoUrl?: string | null;
-  gradientClass: string;
-  onClose: () => void;
-  onViewParent: (index: number) => void;
-  onNavigate: () => void;
-}) {
-  const first = parents[0];
-  const nameLine = displayFullName(row);
-  const primaryName = (first?.name?.trim() || row.guardian_name?.trim() || '').trim() || '—';
-  const primaryPhone = (first?.phone?.trim() || row.guardian_phone?.trim() || '').trim();
-  const lineAddr = (() => {
-    const bits = [row.address?.trim(), row.city?.trim(), row.country?.trim()].filter(Boolean);
-    if (bits.length) return bits.join(', ');
-    return row.guardian_address?.trim() || '—';
-  })();
-
-  const att = attendanceTodayKind(attendanceTodayByStudentId, row.student_id);
-  const attChip =
-    att === 'present'
-      ? { label: 'Present', cls: 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/35' }
-      : att === 'absent'
-        ? { label: 'Absent', cls: 'bg-rose-500/25 text-rose-200 ring-1 ring-rose-500/35' }
-        : { label: 'Not Marked', cls: 'bg-white/[0.08] text-[var(--ac-text-muted)] ring-1 ring-white/10' };
-
-  const fee = feeBalanceStatus(row);
-
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--ac-card-bg)]">
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--ac-border)] px-4 py-3">
-        <span className="text-sm font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Quick view</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg border border-[var(--ac-border)] p-2 text-[var(--ac-text-muted)] hover:bg-white/10 hover:ac-text-primary"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-        <div className="flex gap-4">
-          {photoUrl ? (
-            <img
-              src={photoUrl}
-              alt=""
-              className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/25"
-            />
-          ) : (
-            <div
-              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-base font-bold text-white ${gradientClass}`}
-            >
-              {initials(row.name || '')}
-            </div>
-          )}
-          <div className="min-w-0 flex-1">
-            <h3 className="text-xl font-semibold leading-tight text-[var(--ac-text-primary)]">{nameLine}</h3>
-            {row.current_class?.trim() ? (
-              <span className="mt-2 inline-flex rounded-full bg-sky-500/15 px-2.5 py-0.5 text-sm font-medium text-sky-700 dark:text-sky-300">
-                {row.current_class}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Primary guardian</p>
-          <p className="mt-1 text-base font-semibold text-[var(--ac-text-primary)]">{primaryName}</p>
-          {primaryPhone ? (
-            <a
-              href={`tel:${primaryPhone.replace(/\s/g, '')}`}
-              className="mt-1 inline-block text-lg font-medium text-sky-500 hover:text-sky-400 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {primaryPhone}
-            </a>
-          ) : (
-            <p className="mt-1 text-sm ac-text-muted">No phone on file</p>
-          )}
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${attChip.cls}`}>
-            Today: {attChip.label}
-          </span>
-          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${fee.chipClass}`}>
-            Fees: {fee.label}
-          </span>
-        </div>
-
-        <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Address</p>
-          <p className="mt-1 text-base leading-snug text-[var(--ac-text-secondary)] line-clamp-2">{lineAddr}</p>
-        </div>
-      </div>
-
-      <div className="shrink-0 border-t border-[var(--ac-border)] bg-black/[0.02] p-4 dark:bg-white/[0.02]">
-        <button
-          type="button"
-          onClick={onNavigate}
-          className="w-full rounded-lg bg-emerald-600 py-2.5 text-base font-semibold text-white hover:bg-emerald-500"
-        >
-          Open full profile
-        </button>
-        {parents.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {parents.map((p, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => onViewParent(i)}
-                className="rounded-lg border border-[var(--ac-border)] px-3 py-1.5 text-sm font-medium text-[var(--ac-text-secondary)] hover:bg-white/[0.06] hover:ac-text-primary"
-              >
-                {p.name?.trim() || `Guardian ${i + 1}`}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function QuickParentDrawerPanel({
-  parent,
-  parentIndex,
-  studentRow,
-  linkedStudents,
-  gradientClass,
-  onClose,
-  onSelectStudent,
-  onNavigate,
-}: {
-  parent: ParentLite;
-  parentIndex: number;
-  studentRow: StudentListRow;
-  linkedStudents: { id: string; name: string }[];
-  gradientClass: string;
-  onClose: () => void;
-  onSelectStudent: (studentId: string) => void;
-  onNavigate: () => void;
-}) {
-  const phone =
-    (parent.phone?.trim() ||
-      (parentIndex === 0 ? studentRow.guardian_phone?.trim() : '') ||
-      '') ||
-    '';
-  const email =
-    (parent.email?.trim() ||
-      (parentIndex === 0 ? studentRow.guardian_email?.trim() : '') ||
-      '') ||
-    '';
-
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--ac-card-bg)]">
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--ac-border)] px-4 py-3">
-        <span className="text-sm font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Parent</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-lg border border-[var(--ac-border)] p-2 text-[var(--ac-text-muted)] hover:bg-white/10 hover:ac-text-primary"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
-        <div className="flex gap-4">
-          <div
-            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-base font-bold text-white ${gradientClass}`}
-          >
-            {initials(parent.name || '')}
-          </div>
-          <div className="min-w-0 flex-1">
-            <h3 className="text-xl font-semibold leading-tight text-[var(--ac-text-primary)]">
-              {parent.name || studentRow.guardian_name || '—'}
-            </h3>
-          </div>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {phone ? (
-            <a
-              href={`tel:${phone.replace(/\s/g, '')}`}
-              className="block text-lg font-medium text-sky-500 hover:text-sky-400 hover:underline"
-            >
-              {phone}
-            </a>
-          ) : (
-            <p className="text-sm ac-text-muted">No phone on file</p>
-          )}
-          {email ? (
-            <a href={`mailto:${email}`} className="block break-all text-base text-emerald-400 hover:underline">
-              {email}
-            </a>
-          ) : (
-            <p className="text-sm ac-text-muted">No email on file</p>
-          )}
-        </div>
-
-        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Students linked</p>
-          <ul className="mt-2 space-y-1">
-            {linkedStudents.map((s) => (
-              <li key={s.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelectStudent(s.id)}
-                  className={`w-full rounded-lg px-2 py-2 text-left text-base ${STUDENT_NAME_BTN}`}
-                >
-                  {s.name}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Last contacted</p>
-          <p className="mt-1 text-sm text-[var(--ac-text-secondary)]">Not tracked in this system</p>
-        </div>
-      </div>
-
-      <div className="shrink-0 border-t border-[var(--ac-border)] bg-black/[0.02] p-4 dark:bg-white/[0.02]">
-        <button
-          type="button"
-          onClick={onNavigate}
-          className="w-full rounded-lg bg-violet-600 py-2.5 text-base font-semibold text-white hover:bg-violet-500"
-        >
-          Open full profile
-        </button>
-      </div>
-    </div>
-  );
-}
-
