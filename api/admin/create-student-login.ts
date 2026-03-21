@@ -137,14 +137,16 @@ export default async function handler(req: Req, res: Res) {
       if (!error) studentData = data;
     }
 
-    const fromBody = email && String(email).trim();
+    const fromBody = email && String(email).trim() ? String(email).trim() : '';
     const fromStudent =
-      studentData?.student_email && String(studentData.student_email).trim();
+      studentData?.student_email != null && String(studentData.student_email).trim() !== ''
+        ? String(studentData.student_email).trim()
+        : '';
     const candidate =
       fromBody && isValidRealEmail(fromBody)
-        ? fromBody.trim()
+        ? fromBody
         : fromStudent && isValidRealEmail(fromStudent)
-          ? fromStudent.trim()
+          ? fromStudent
           : null;
     if (!candidate) {
       setCors();

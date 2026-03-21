@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // API CORS: use root middleware.ts so apex + www + localhost match the request Origin.
+  // Vite is the primary app; API CORS is set per Vercel serverless handler (see api/).
   // Reduce bundle size
   experimental: {
     optimizePackageImports: ['@supabase/supabase-js', 'framer-motion', 'lucide-react'],

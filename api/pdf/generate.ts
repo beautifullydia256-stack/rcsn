@@ -897,10 +897,14 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
   if (inlineReportDataList && inlineReportDataList.length > 0) {
     reportData = inlineReportDataList[0];
     schoolIdForTemplate = inlineSchoolId ?? (inlineReportDataList[0]?.school as any)?.school_id ?? '';
-    allCachedReports = inlineReportDataList.map((rd) => ({
-      report_data: rd,
-      student_id: (rd?.students?.[0] as any)?.student_id ?? '',
-    }));
+    allCachedReports = inlineReportDataList.map((rd) => {
+      const st = rd.students;
+      const first = Array.isArray(st) && st.length > 0 ? (st[0] as Record<string, unknown>) : undefined;
+      return {
+        report_data: rd,
+        student_id: (first?.student_id as string | undefined) ?? '',
+      };
+    });
     if (schoolIdForTemplate) {
       const { data: template } = await supabase
         .from('report_templates')
@@ -920,7 +924,11 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       typeof htmlContent !== 'string' ||
       !htmlContent.trim() ||
       isDefaultPlaceholderTemplate(htmlContent);
-  } else if (inlineReportData && (inlineReportData.students?.length ?? 0) > 0) {
+  } else if (
+    inlineReportData &&
+    Array.isArray(inlineReportData.students) &&
+    inlineReportData.students.length > 0
+  ) {
     reportData = inlineReportData;
     schoolIdForTemplate = inlineSchoolId ?? (inlineReportData.school as any)?.school_id ?? '';
     if (schoolIdForTemplate) {
@@ -977,7 +985,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       typeof htmlContent !== 'string' ||
       !htmlContent.trim() ||
       isDefaultPlaceholderTemplate(htmlContent);
-    const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
+    const stList = reportData?.students;
+    const student =
+      Array.isArray(stList) && stList.length > 0 ? (stList[0] as Record<string, unknown>) : undefined;
     const studentId = first.student_id as string;
     if (student && schoolIdForTemplate) {
       const hasPhoto =
@@ -1044,7 +1054,11 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       allCachedReports.forEach((item) => {
         const sid = item.student_id;
         const rd = item.report_data as Record<string, unknown>;
-        const st = rd?.students?.[0] as Record<string, unknown> | undefined;
+        const rdStudents = rd.students;
+        const st =
+          Array.isArray(rdStudents) && rdStudents.length > 0
+            ? (rdStudents[0] as Record<string, unknown>)
+            : undefined;
         if (!st) return;
         if (!st.profile_photo && !st.photo_url && !st.student_photo_url && photosByStudent[sid]) {
           (st as any).profile_photo = photosByStudent[sid];
@@ -1064,13 +1078,21 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
     }
   }
 
-  const student = reportData?.students?.[0] as Record<string, unknown> | undefined;
+  const stListFinal = reportData?.students;
+  const student =
+    Array.isArray(stListFinal) && stListFinal.length > 0
+      ? (stListFinal[0] as Record<string, unknown>)
+      : undefined;
   const executablePath = await chromium.executablePath();
+  const ch = chromium as typeof chromium & {
+    defaultViewport?: { width: number; height: number };
+    headless?: boolean | 'shell';
+  };
   const browser = await puppeteer.launch({
     args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
+    defaultViewport: ch.defaultViewport,
     executablePath,
-    headless: chromium.headless,
+    headless: ch.headless,
   });
 
   try {
@@ -1081,7 +1103,10 @@ async function generatePDF(options: GeneratePDFOptions): Promise<Buffer> {
       const pageBreak = '\n<div style="page-break-after: always;"></div>\n';
       const chunks = allCachedReports.map((item) => {
         const rd = item.report_data;
-        const cls = (rd?.students?.[0] as any)?.current_class ?? className;
+        const rdSt = rd.students;
+        const rdFirst =
+          Array.isArray(rdSt) && rdSt.length > 0 ? (rdSt[0] as Record<string, unknown>) : undefined;
+        const cls = (rdFirst?.current_class as string | undefined) ?? className;
         return isUpperSectionClass(cls)
           ? buildTemplate4UpperSectionHTML(rd)
           : isLowerSectionPrimary(cls)
@@ -1163,7 +1188,8 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    if (reportData && (reportData.students?.length ?? 0) > 0) {
+    const bodyStudents = reportData?.students;
+    if (reportData && Array.isArray(bodyStudents) && bodyStudents.length > 0) {
       const pdfBuffer = await generatePDF({
         reportData,
         schoolId,

@@ -8,9 +8,49 @@ import { createServerClient } from '@supabase/ssr';
 
 type Req = {
   method?: string;
-  headers?: { cookie?: string; get?: (name: string) => string | null };
+  headers?: {
+    cookie?: string;
+    origin?: string;
+    get?: (name: string) => string | null;
+  };
   body?: string | Record<string, unknown>;
 };
+
+const CORS_ALLOWLIST = new Set([
+  'https://pwezacore.com',
+  'https://www.pwezacore.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173',
+]);
+
+function getRequestOrigin(req: Req): string | undefined {
+  const h = req.headers as
+    | { cookie?: string; origin?: string; get?: (name: string) => string | null }
+    | Record<string, string | string[] | undefined>
+    | undefined;
+  if (!h) return undefined;
+  if (typeof (h as { get?: (name: string) => string | null }).get === 'function') {
+    const get = (h as { get: (name: string) => string | null }).get;
+    return get('origin') ?? get('Origin') ?? undefined;
+  }
+  const o = (h as Record<string, string | string[] | undefined>).origin;
+  if (Array.isArray(o)) return o[0];
+  return typeof o === 'string' ? o : undefined;
+}
+
+function resolveCorsOrigin(req: Req): string {
+  const ro = getRequestOrigin(req);
+  const fallback = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
+  if (ro && CORS_ALLOWLIST.has(ro)) return ro;
+  const extra = (process.env.CORS_EXTRA_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ro && extra.includes(ro)) return ro;
+  return fallback;
+}
 type Res = {
   setHeader: (k: string, v: string | number) => void;
   status: (n: number) => Res;
@@ -50,7 +90,7 @@ function parseBody(req: Req): Record<string, unknown> {
 }
 
 export default async function handler(req: Req, res: Res) {
-  const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
+  const origin = resolveCorsOrigin(req);
   const cors: Record<string, string> = {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -220,8 +260,7 @@ export default async function handler(req: Req, res: Res) {
       parent_id: parentUserId,
     });
   } catch (err: unknown) {
-    const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
-    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', resolveCorsOrigin(req));
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.status(500).json({ error: err instanceof Error ? err.message : 'A server error has occurred' });
   }
