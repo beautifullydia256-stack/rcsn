@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 
@@ -196,7 +197,38 @@ export default function DesignStudentProfile() {
       const balanceRes = { data: balanceQ.error ? null : balanceQ.data };
       const paymentRes = { data: paymentQ.error ? null : paymentQ.data };
 
-      const parents = (parentsRes.data || []) as ParentRow[];
+      /** Same resolution as students list: portal `parents` rows + guardian_* on `students` when unlinked. */
+      if (parentsRes.error && import.meta.env.DEV) {
+        console.warn('[DesignStudentProfile] parents query:', parentsRes.error.message);
+      }
+      const fromDb = (parentsRes.error ? [] : parentsRes.data || []) as ParentRow[];
+      const linkedLite: ParentLite[] = fromDb.map((p) => ({
+        name: p.name || '',
+        email: p.email ?? undefined,
+        phone: p.phone ?? undefined,
+        parent_id: p.parent_id ?? null,
+      }));
+      const parentsByStudent: Record<string, ParentLite[]> = { [studentId]: linkedLite };
+      const mergedLite = displayParentsForStudent(
+        studentId,
+        {
+          guardian_name: s.guardian_name as string | null,
+          guardian_email: s.guardian_email as string | null,
+          guardian_phone: s.guardian_phone as string | null,
+        },
+        parentsByStudent
+      );
+      const parents: ParentRow[] = mergedLite.map((pl, i) => {
+        const dbRow = fromDb[i];
+        const nm = String(pl.name ?? '').trim();
+        return {
+          name: nm || (pl.phone || pl.email ? 'Guardian' : '—'),
+          phone: pl.phone ?? null,
+          email: pl.email ?? null,
+          parent_id: pl.parent_id,
+          relationship: (dbRow?.relationship as string | null) ?? (s.guardian_relationship as string | null) ?? 'Guardian',
+        } as ParentRow;
+      });
       const photoUrl = (photoRes.data as { photo_url?: string } | null)?.photo_url?.trim() || '';
       const attToday = attendanceTodayRes.data as { present?: boolean } | null;
       const attAll = (attendanceAllRes.data || []) as { present?: boolean; date?: string }[];
@@ -255,6 +287,7 @@ export default function DesignStudentProfile() {
       if (cancelled) return;
 
       requestAnimationFrame(() => {
+        if (cancelled) return;
         const root = containerRef.current;
         if (!root) return;
         const el = root.querySelector('.pw-profile') || root;

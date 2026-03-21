@@ -19,21 +19,28 @@ export function displayParentsForStudent(
 ): ParentLite[] {
   const linked = parentsByStudent[studentId] || [];
   if (linked.length > 0) {
-    return linked.map((p, i) => ({
-      name: (p.name?.trim() || (i === 0 ? row.guardian_name?.trim() : '') || '') || '',
-      // Prefer portal row; for the first linked parent fall back to enrollment guardian_* on the student row.
-      email: (p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : '')) || undefined,
-      phone: (p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : '')) || undefined,
-      parent_id: p.parent_id ?? null,
-    }));
+    return linked.map((p, i) => {
+      const name =
+        (p.name?.trim() || (i === 0 ? row.guardian_name?.trim() : '') || '').trim() ||
+        (i === 0 && (row.guardian_phone?.trim() || row.guardian_email?.trim()) ? 'Guardian' : '');
+      return {
+        name,
+        // Prefer portal row; for the first linked parent fall back to enrollment guardian_* on the student row.
+        email: (p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : '')) || undefined,
+        phone: (p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : '')) || undefined,
+        parent_id: p.parent_id ?? null,
+      };
+    });
   }
   const gn = row.guardian_name?.trim();
-  if (gn) {
+  const gp = row.guardian_phone?.trim();
+  const ge = row.guardian_email?.trim();
+  if (gn || gp || ge) {
     return [
       {
-        name: gn,
-        email: row.guardian_email?.trim() || undefined,
-        phone: row.guardian_phone?.trim() || undefined,
+        name: gn || 'Guardian',
+        email: ge || undefined,
+        phone: gp || undefined,
         parent_id: null,
       },
     ];
