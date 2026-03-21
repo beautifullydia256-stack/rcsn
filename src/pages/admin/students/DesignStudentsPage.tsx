@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -90,22 +90,14 @@ type FetchResult = {
   classTeacherNameByClass: Record<string, string>;
   attendedTodayCount: number;
   photoByStudentId: Record<string, string>;
+  /** Today's attendance per student: present | absent; missing key = not marked */
+  attendanceTodayByStudentId: Record<string, 'present' | 'absent'>;
+  /** Portal parent_id -> all student_ids linked to that parent */
+  studentsByParentId: Record<string, string[]>;
 };
 
 const STUDENT_LIST_SELECT =
   'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at';
-
-function dash(v: string | number | null | undefined): string {
-  if (v === null || v === undefined) return '—';
-  const s = String(v).trim();
-  return s || '—';
-}
-
-function formatDateMaybe(v: string | null | undefined): string {
-  if (!v || !String(v).trim()) return '—';
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString();
-}
 
 function displayFullName(row: StudentListRow): string {
   const parts = [row.first_name, row.middle_name, row.last_name]
@@ -114,6 +106,37 @@ function displayFullName(row: StudentListRow): string {
   if (parts.length) return parts.join(' ');
   return (row.name || '').trim() || '—';
 }
+
+/** Fee chip for quick view — maps DB payment_status strings heuristically */
+function feeBalanceStatus(row: StudentListRow): { label: 'Paid' | 'Owing' | 'Overdue' | 'Not set'; chipClass: string } {
+  const s = (row.payment_status || '').toLowerCase().trim();
+  if (!s) return { label: 'Not set', chipClass: 'bg-white/[0.08] text-[var(--ac-text-muted)]' };
+  if (/paid|complete|cleared|fully|settled/.test(s)) {
+    return { label: 'Paid', chipClass: 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/30' };
+  }
+  if (/overdue|arrears/.test(s)) {
+    return { label: 'Overdue', chipClass: 'bg-rose-500/25 text-rose-200 ring-1 ring-rose-500/35' };
+  }
+  if (/unpaid|owing|partial|balance|pending|due|outstanding/.test(s)) {
+    return { label: 'Owing', chipClass: 'bg-amber-500/20 text-amber-100 ring-1 ring-amber-500/25' };
+  }
+  return { label: 'Not set', chipClass: 'bg-white/[0.08] text-[var(--ac-text-muted)]' };
+}
+
+function attendanceTodayKind(
+  attendanceTodayByStudentId: Record<string, 'present' | 'absent'>,
+  studentId: string
+): 'present' | 'absent' | 'unmarked' {
+  const v = attendanceTodayByStudentId[studentId];
+  if (v === 'present') return 'present';
+  if (v === 'absent') return 'absent';
+  return 'unmarked';
+}
+
+const STUDENT_NAME_BTN =
+  'cursor-pointer text-left font-semibold ac-text-primary underline-offset-2 decoration-transparent hover:underline hover:decoration-emerald-400/50 hover:text-emerald-400';
+const PARENT_NAME_BTN =
+  'cursor-pointer text-left text-base ac-text-secondary underline-offset-2 decoration-transparent hover:underline hover:decoration-emerald-400/40 hover:text-emerald-400';
 
 async function fetchStudentsContext(userId: string): Promise<FetchResult> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
@@ -124,6 +147,8 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
       classTeacherNameByClass: {},
       attendedTodayCount: 0,
       photoByStudentId: {},
+      attendanceTodayByStudentId: {},
+      studentsByParentId: {},
     };
   }
 
@@ -131,14 +156,13 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
 
   const [studentsRes, parentsRes, classTeachersRes, attendanceRes, photosRes] = await Promise.all([
     supabase.from('students').select(STUDENT_LIST_SELECT).eq('school_id', u.school_id).order('name'),
-    supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
+    supabase.from('parents').select('parent_id, student_id, name, email, phone').eq('school_id', u.school_id),
     supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', u.school_id),
     supabase
       .from('student_attendance')
-      .select('student_id')
+      .select('student_id, present')
       .eq('school_id', u.school_id)
-      .eq('date', today)
-      .eq('present', true),
+      .eq('date', today),
     supabase
       .from('student_photos')
       .select('student_id, photo_url')
@@ -156,16 +180,25 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
     }
   });
   const parentsByStudent: Record<string, ParentLite[]> = {};
-  (parentsRes.data || []).forEach((p: { student_id?: string; name?: string; email?: string; phone?: string }) => {
-    const sid = p.student_id;
-    if (!sid) return;
-    if (!parentsByStudent[sid]) parentsByStudent[sid] = [];
-    parentsByStudent[sid].push({
-      name: p.name || '',
-      email: p.email || undefined,
-      phone: p.phone || undefined,
-    });
-  });
+  const studentsByParentId: Record<string, string[]> = {};
+  (parentsRes.data || []).forEach(
+    (p: { parent_id?: string; student_id?: string; name?: string; email?: string; phone?: string }) => {
+      const sid = p.student_id;
+      if (!sid) return;
+      if (!parentsByStudent[sid]) parentsByStudent[sid] = [];
+      parentsByStudent[sid].push({
+        name: p.name || '',
+        email: p.email || undefined,
+        phone: p.phone || undefined,
+        parent_id: p.parent_id ?? null,
+      });
+      const pid = p.parent_id;
+      if (pid) {
+        if (!studentsByParentId[pid]) studentsByParentId[pid] = [];
+        if (!studentsByParentId[pid].includes(sid)) studentsByParentId[pid].push(sid);
+      }
+    }
+  );
 
   let classTeacherNameByClass: Record<string, string> = {};
   if (!classTeachersRes.error && classTeachersRes.data?.length) {
@@ -188,7 +221,21 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
     });
   }
 
-  const attendedSet = new Set((attendanceRes.data || []).map((x: { student_id: string }) => x.student_id));
+  const attendanceTodayByStudentId: Record<string, 'present' | 'absent'> = {};
+  for (const row of attendanceRes.data || []) {
+    const sid = (row as { student_id?: string; present?: boolean }).student_id;
+    if (!sid) continue;
+    const present = (row as { present?: boolean }).present;
+    if (present === true) {
+      attendanceTodayByStudentId[sid] = 'present';
+    } else if (present === false && attendanceTodayByStudentId[sid] !== 'present') {
+      attendanceTodayByStudentId[sid] = 'absent';
+    }
+  }
+
+  const attendedSet = new Set(
+    Object.entries(attendanceTodayByStudentId).filter(([, v]) => v === 'present').map(([k]) => k)
+  );
 
   return {
     rows,
@@ -196,6 +243,8 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
     classTeacherNameByClass,
     attendedTodayCount: attendedSet.size,
     photoByStudentId,
+    attendanceTodayByStudentId,
+    studentsByParentId,
   };
 }
 
@@ -224,6 +273,8 @@ export default function DesignStudentsPage() {
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
   const photoByStudentId = data?.photoByStudentId ?? {};
+  const attendanceTodayByStudentId = data?.attendanceTodayByStudentId ?? {};
+  const studentsByParentId = data?.studentsByParentId ?? {};
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -309,7 +360,46 @@ export default function DesignStudentsPage() {
     );
   };
 
-  const closeExpand = () => setExpand(null);
+  const closeExpand = useCallback(() => setExpand(null), []);
+
+  const drawerRow = useMemo(
+    () => (expand?.studentId ? rows.find((r) => r.student_id === expand.studentId) : undefined),
+    [rows, expand?.studentId]
+  );
+
+  const drawerParents = useMemo(() => {
+    if (!drawerRow) return [];
+    return displayParentsForStudent(drawerRow.student_id, drawerRow, parentsByStudent);
+  }, [drawerRow, parentsByStudent]);
+
+  const [drawerEntered, setDrawerEntered] = useState(false);
+  useEffect(() => {
+    if (!expand) {
+      setDrawerEntered(false);
+      return;
+    }
+    setDrawerEntered(false);
+    const id = requestAnimationFrame(() => setDrawerEntered(true));
+    return () => cancelAnimationFrame(id);
+  }, [expand]);
+
+  useEffect(() => {
+    if (!expand) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeExpand();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [expand, closeExpand]);
+
+  useEffect(() => {
+    if (!expand) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [expand]);
 
   return (
     <AdminPageWrapper
@@ -394,8 +484,8 @@ export default function DesignStudentsPage() {
                 <Icon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-medium uppercase tracking-wide ac-text-muted">{label}</p>
-                <p className="text-xl font-semibold tabular-nums ac-text-primary">{value}</p>
+                <p className="text-sm font-medium uppercase tracking-wide ac-text-muted">{label}</p>
+                <p className="text-2xl font-semibold tabular-nums ac-text-primary">{value}</p>
               </div>
             </div>
           ))}
@@ -413,12 +503,12 @@ export default function DesignStudentsPage() {
                 setQ(e.target.value);
                 setPage(1);
               }}
-              className="ac-input w-full rounded-xl border border-[var(--ac-border)] py-2.5 pl-10 pr-3 text-sm"
+              className="ac-input w-full rounded-xl border border-[var(--ac-border)] py-3 pl-10 pr-3 text-base"
             />
           </div>
           <div className="flex flex-wrap gap-2">
             <select
-              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-2.5 text-sm min-w-[140px]"
+              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-3 text-base min-w-[140px]"
               value={classFilter}
               onChange={(e) => {
                 setClassFilter(e.target.value);
@@ -433,7 +523,7 @@ export default function DesignStudentsPage() {
               ))}
             </select>
             <select
-              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-2.5 text-sm min-w-[160px]"
+              className="ac-input rounded-xl border border-[var(--ac-border)] px-3 py-3 text-base min-w-[160px]"
               value={sortKey}
               onChange={(e) => {
                 setSortKey(e.target.value as 'name-asc' | 'name-desc' | 'class-asc' | 'class-desc');
@@ -452,16 +542,16 @@ export default function DesignStudentsPage() {
         {viewMode === 'table' && (
           <div className="overflow-hidden rounded-xl border border-[var(--ac-border)] bg-white/[0.02]">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[880px] border-collapse text-sm">
+              <table className="w-full min-w-[880px] border-collapse text-base">
                 <thead>
                   <tr className="border-b border-[var(--ac-border)] bg-white/[0.04]">
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Student</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Parents / guardian</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Class</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Class teacher</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Address</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider ac-text-muted">Phone</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider ac-text-muted w-[100px]">Actions</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Student</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Parents / guardian</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Class</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Class teacher</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Address</th>
+                    <th className="px-4 py-3.5 text-left text-sm font-semibold uppercase tracking-wider ac-text-muted">Phone</th>
+                    <th className="px-4 py-3.5 text-right text-sm font-semibold uppercase tracking-wider ac-text-muted w-[100px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -498,17 +588,17 @@ export default function DesignStudentsPage() {
                               isOpen ? 'bg-emerald-500/[0.06]' : 'hover:bg-white/[0.03]'
                             }`}
                           >
-                            <td className="px-4 py-2.5 align-middle">
+                            <td className="px-4 py-3.5 align-middle">
                               <div className="flex items-center gap-3">
                                 {photoByStudentId[r.student_id] ? (
                                   <img
                                     src={photoByStudentId[r.student_id]}
                                     alt=""
-                                    className="h-9 w-9 shrink-0 rounded-full object-cover border border-white/10 shadow-inner"
+                                    className="h-10 w-10 shrink-0 rounded-full object-cover border border-white/10 shadow-inner"
                                   />
                                 ) : (
                                   <div
-                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-inner ${avatarGradient(globalIdx)}`}
+                                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-inner ${avatarGradient(globalIdx)}`}
                                   >
                                     {initials(r.name || '')}
                                   </div>
@@ -517,17 +607,17 @@ export default function DesignStudentsPage() {
                                   <button
                                     type="button"
                                     onClick={() => openStudentQuick(r.student_id)}
-                                    className="block truncate text-left font-semibold ac-text-primary hover:text-emerald-400"
+                                    className={`block max-w-full truncate ${STUDENT_NAME_BTN}`}
                                   >
                                     {r.name || '—'}
                                   </button>
                                   {r.current_class && (
-                                    <p className="truncate text-xs font-medium text-sky-500/90 dark:text-sky-400">{r.current_class}</p>
+                                    <p className="truncate text-sm font-medium text-sky-500/90 dark:text-sky-400">{r.current_class}</p>
                                   )}
                                 </div>
                               </div>
                             </td>
-                            <td className="px-4 py-2.5 align-middle max-w-[200px]">
+                            <td className="px-4 py-3.5 align-middle max-w-[200px]">
                               {parents.length ? (
                                 <div className="flex flex-col gap-0.5">
                                   {parents.map((p, pi) => (
@@ -535,7 +625,7 @@ export default function DesignStudentsPage() {
                                       key={pi}
                                       type="button"
                                       onClick={() => openParentQuick(r.student_id, pi)}
-                                      className="truncate text-left text-sm ac-text-secondary hover:text-emerald-400 hover:underline underline-offset-2"
+                                      className={`truncate ${PARENT_NAME_BTN} text-sm`}
                                     >
                                       {p.name || '—'}
                                     </button>
@@ -545,32 +635,32 @@ export default function DesignStudentsPage() {
                                 <span className="ac-text-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 align-middle">
+                            <td className="px-4 py-3.5 align-middle">
                               {r.current_class ? (
-                                <span className="inline-flex rounded-full bg-sky-500/15 px-2.5 py-0.5 text-xs font-medium text-sky-700 dark:text-sky-300">
+                                <span className="inline-flex rounded-full bg-sky-500/15 px-2.5 py-0.5 text-sm font-medium text-sky-700 dark:text-sky-300">
                                   {r.current_class}
                                 </span>
                               ) : (
                                 <span className="ac-text-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 align-middle">
-                              <span className="text-sm ac-text-secondary">{teacher || '—'}</span>
+                            <td className="px-4 py-3.5 align-middle">
+                              <span className="ac-text-secondary">{teacher || '—'}</span>
                             </td>
-                            <td className="px-4 py-2.5 align-middle max-w-[220px]">
+                            <td className="px-4 py-3.5 align-middle max-w-[220px]">
                               {addr ? (
-                                <span className="line-clamp-2 text-sm ac-text-secondary" title={addr}>
+                                <span className="line-clamp-2 ac-text-secondary" title={addr}>
                                   {addr}
                                 </span>
                               ) : (
                                 <span className="ac-text-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 align-middle">
+                            <td className="px-4 py-3.5 align-middle">
                               {first?.phone ? (
                                 <a
                                   href={`tel:${first.phone.replace(/\s/g, '')}`}
-                                  className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-500 hover:text-emerald-400"
+                                  className="inline-flex items-center gap-1.5 font-medium text-emerald-500 hover:text-emerald-400"
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <Phone className="h-3.5 w-3.5 opacity-80" />
@@ -580,66 +670,31 @@ export default function DesignStudentsPage() {
                                 <span className="ac-text-muted">—</span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 align-middle text-right">
+                            <td className="px-4 py-3.5 align-middle text-right">
                               <div className="inline-flex items-center justify-end gap-1">
                                 <button
                                   type="button"
-                                  onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary"
-                                  title="View profile"
-                                  aria-label="View full profile"
+                                  onClick={() => openStudentQuick(r.student_id)}
+                                  className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary ${
+                                    expand?.studentId === r.student_id && expand.kind === 'student' ? 'bg-emerald-500/15 ring-1 ring-emerald-500/30' : ''
+                                  }`}
+                                  title="Quick view"
+                                  aria-label="Quick view"
                                 >
                                   <Eye className="h-4 w-4" />
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => openStudentQuick(r.student_id)}
-                                  className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--ac-border)] transition-transform hover:bg-white/10 ${
-                                    expand?.studentId === r.student_id && expand.kind === 'student' ? 'rotate-90 bg-white/10' : ''
-                                  }`}
-                                  title="Quick view"
-                                  aria-label="Toggle quick view"
+                                  onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary"
+                                  title="Open full profile"
+                                  aria-label="Open full profile"
                                 >
-                                  <ChevronRight className="h-4 w-4 ac-text-secondary" />
+                                  <ChevronRight className="h-4 w-4" />
                                 </button>
                               </div>
                             </td>
                           </tr>
-                          {expand?.studentId === r.student_id && expand.kind === 'student' && (
-                            <tr className="bg-white/[0.02]">
-                              <td colSpan={7} className="px-4 py-2">
-                                <QuickStudentPanel
-                                  row={r}
-                                  parents={parents}
-                                  teacher={teacher}
-                                  photoUrl={photoByStudentId[r.student_id]}
-                                  gradientClass={avatarGradient(globalIdx)}
-                                  onClose={closeExpand}
-                                  onViewParent={(pi) => openParentQuick(r.student_id, pi)}
-                                  onNavigate={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                                />
-                              </td>
-                            </tr>
-                          )}
-                          {expand?.studentId === r.student_id && expand.kind === 'parent' && parents[expand.parentIndex] && (
-                            <tr className="bg-white/[0.02]">
-                              <td colSpan={7} className="px-4 py-2">
-                                <QuickParentPanel
-                                  studentName={displayFullName(r)}
-                                  studentClass={r.current_class}
-                                  teacher={teacher}
-                                  parent={parents[expand.parentIndex]}
-                                  parentIndex={expand.parentIndex}
-                                  studentRow={r}
-                                  address={addr}
-                                  gradientClass={avatarGradient(globalIdx + 3)}
-                                  onClose={closeExpand}
-                                  onViewStudent={() => openStudentQuick(r.student_id)}
-                                  onNavigate={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                                />
-                              </td>
-                            </tr>
-                          )}
                         </Fragment>
                       );
                     })
@@ -685,14 +740,35 @@ export default function DesignStudentsPage() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold ac-text-primary truncate">{r.name || '—'}</h3>
-                        <p className="text-xs ac-text-muted">{r.current_class || 'No class'}</p>
+                        <button
+                          type="button"
+                          onClick={() => openStudentQuick(r.student_id)}
+                          className={`block max-w-full truncate text-left text-lg ${STUDENT_NAME_BTN}`}
+                        >
+                          {r.name || '—'}
+                        </button>
+                        <p className="text-sm ac-text-muted">{r.current_class || 'No class'}</p>
                       </div>
                     </div>
-                    <dl className="mt-4 space-y-2 text-sm">
+                    <dl className="mt-4 space-y-2 text-base">
                       <div className="flex justify-between gap-2">
                         <dt className="ac-text-muted shrink-0">Parent</dt>
-                        <dd className="text-right ac-text-secondary truncate">{first?.name || '—'}</dd>
+                        <dd className="min-w-0 flex-1 text-right">
+                          {parents.length ? (
+                            parents.map((p, pi) => (
+                              <button
+                                key={pi}
+                                type="button"
+                                onClick={() => openParentQuick(r.student_id, pi)}
+                                className={`block w-full truncate text-right ${PARENT_NAME_BTN} text-sm`}
+                              >
+                                {p.name || '—'}
+                              </button>
+                            ))
+                          ) : (
+                            <span className="ac-text-muted">—</span>
+                          )}
+                        </dd>
                       </div>
                       <div className="flex justify-between gap-2">
                         <dt className="ac-text-muted shrink-0">Teacher</dt>
@@ -707,13 +783,26 @@ export default function DesignStudentsPage() {
                         <dd className="text-right ac-text-secondary line-clamp-2">{addr || '—'}</dd>
                       </div>
                     </dl>
-                    <div className="mt-4 flex gap-2">
+                    <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => openStudentQuick(r.student_id)}
+                        className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary ${
+                          expand?.studentId === r.student_id && expand.kind === 'student' ? 'bg-emerald-500/15 ring-1 ring-emerald-500/30' : ''
+                        }`}
+                        title="Quick view"
+                        aria-label="Quick view"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
                       <button
                         type="button"
                         onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                        className="flex-1 rounded-lg bg-emerald-600 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--ac-border)] ac-text-secondary hover:bg-white/10 hover:ac-text-primary"
+                        title="Open full profile"
+                        aria-label="Open full profile"
                       >
-                        View profile
+                        <ChevronRight className="h-4 w-4" />
                       </button>
                       {first?.phone && (
                         <a
@@ -763,37 +852,66 @@ export default function DesignStudentsPage() {
             )}
           </div>
         )}
+
+        {/* Right slide-over quick view */}
+        {expand && drawerRow && (
+          <>
+            <div
+              role="presentation"
+              aria-hidden
+              className={`fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ${drawerEntered ? 'opacity-100' : 'opacity-0'}`}
+              onClick={closeExpand}
+            />
+            <aside
+              className={`fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col border-l border-[var(--ac-border)] bg-[var(--ac-card-bg)] shadow-2xl transition-transform duration-300 ease-out ${drawerEntered ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+              {expand.kind === 'student' ? (
+                <QuickStudentDrawerPanel
+                  row={drawerRow}
+                  parents={drawerParents}
+                  attendanceTodayByStudentId={attendanceTodayByStudentId}
+                  photoUrl={photoByStudentId[drawerRow.student_id]}
+                  gradientClass={avatarGradient(Math.max(0, rows.findIndex((x) => x.student_id === drawerRow.student_id)))}
+                  onClose={closeExpand}
+                  onViewParent={(pi) => openParentQuick(drawerRow.student_id, pi)}
+                  onNavigate={() => navigate(`/dashboard/admin/students/${drawerRow.student_id}`)}
+                />
+              ) : drawerParents[expand.parentIndex] ? (
+                <QuickParentDrawerPanel
+                  parent={drawerParents[expand.parentIndex]}
+                  parentIndex={expand.parentIndex}
+                  studentRow={drawerRow}
+                  linkedStudents={(() => {
+                    const p = drawerParents[expand.parentIndex];
+                    const pid = p?.parent_id;
+                    const ids = pid ? studentsByParentId[pid] || [] : [drawerRow.student_id];
+                    return [...new Set(ids)]
+                      .map((id) => {
+                        const sr = rows.find((x) => x.student_id === id);
+                        return { id, name: sr ? displayFullName(sr) : 'Student' };
+                      })
+                      .sort((a, b) => a.name.localeCompare(b.name));
+                  })()}
+                  gradientClass={avatarGradient(
+                    Math.max(0, rows.findIndex((x) => x.student_id === drawerRow.student_id)) + 3
+                  )}
+                  onClose={closeExpand}
+                  onSelectStudent={(studentId) => openStudentQuick(studentId)}
+                  onNavigate={() => navigate(`/dashboard/admin/students/${drawerRow.student_id}`)}
+                />
+              ) : null}
+            </aside>
+          </>
+        )}
       </div>
     </AdminPageWrapper>
   );
 }
 
-/** Compact label + value for inline row expansion (table-style density) */
-function CompactInlineField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="min-w-0">
-      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
-        {label}
-      </p>
-      <div className="text-sm font-medium leading-snug text-[var(--ac-text-primary)] break-words [&_a]:text-sky-600 [&_a]:underline-offset-2 hover:[&_a]:text-sky-500 dark:[&_a]:text-sky-400">
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function QuickPanelSectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <div className="col-span-full border-b border-[var(--ac-border)] pb-1.5 pt-2 first:pt-0">
-      <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ac-text-muted)]">{children}</span>
-    </div>
-  );
-}
-
-function QuickStudentPanel({
+function QuickStudentDrawerPanel({
   row,
   parents,
-  teacher,
+  attendanceTodayByStudentId,
   photoUrl,
   gradientClass,
   onClose,
@@ -802,7 +920,7 @@ function QuickStudentPanel({
 }: {
   row: StudentListRow;
   parents: ParentLite[];
-  teacher: string;
+  attendanceTodayByStudentId: Record<string, 'present' | 'absent'>;
   photoUrl?: string | null;
   gradientClass: string;
   onClose: () => void;
@@ -810,313 +928,141 @@ function QuickStudentPanel({
   onNavigate: () => void;
 }) {
   const first = parents[0];
-  const second = parents[1];
   const nameLine = displayFullName(row);
-  const studentAddr = (row.address && row.address.trim()) || '';
-  const guardianAddrOnly = (row.guardian_address && row.guardian_address.trim()) || '';
-  const fullAddr = studentAddr || guardianAddrOnly || '—';
-  const feeDisc = row.fee_discount_percent;
-  const feeDiscLabel = feeDisc != null && Number(feeDisc) > 0 ? `${Number(feeDisc)}%` : '—';
-
-  // Defensive: show enrollment guardian_* whenever linked parent fields are empty
   const primaryName = (first?.name?.trim() || row.guardian_name?.trim() || '').trim() || '—';
   const primaryPhone = (first?.phone?.trim() || row.guardian_phone?.trim() || '').trim();
-  const primaryEmail = (first?.email?.trim() || row.guardian_email?.trim() || '').trim();
+  const lineAddr = (() => {
+    const bits = [row.address?.trim(), row.city?.trim(), row.country?.trim()].filter(Boolean);
+    if (bits.length) return bits.join(', ');
+    return row.guardian_address?.trim() || '—';
+  })();
 
-  const teacherLine =
-    teacher.trim() && row.current_class?.trim()
-      ? `${teacher.trim()} (${row.current_class.trim()})`
-      : teacher.trim() || row.current_class?.trim() || '—';
+  const att = attendanceTodayKind(attendanceTodayByStudentId, row.student_id);
+  const attChip =
+    att === 'present'
+      ? { label: 'Present', cls: 'bg-emerald-500/25 text-emerald-200 ring-1 ring-emerald-500/35' }
+      : att === 'absent'
+        ? { label: 'Absent', cls: 'bg-rose-500/25 text-rose-200 ring-1 ring-rose-500/35' }
+        : { label: 'Not Marked', cls: 'bg-white/[0.08] text-[var(--ac-text-muted)] ring-1 ring-white/10' };
 
-  const secondBlock = second
-    ? second.phone?.trim()
-      ? (
-          <a
-            href={`tel:${second.phone.replace(/\s/g, '')}`}
-            className="text-sky-600 hover:underline dark:text-sky-400"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {second.phone.trim()}
-          </a>
-        )
-      : second.email?.trim()
-        ? (
-            <a
-              href={`mailto:${second.email.trim()}`}
-              className="break-all text-sky-600 hover:underline dark:text-sky-400"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {second.email.trim()}
-            </a>
-          )
-        : '—'
-    : '—';
+  const fee = feeBalanceStatus(row);
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left shadow-sm">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-2 top-2 z-10 rounded-md border border-[var(--ac-border)] bg-black/[0.04] p-1.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
-        aria-label="Close panel"
-      >
-        <X className="h-3.5 w-3.5" strokeWidth={2} />
-      </button>
-
-      {/* Student-first header — same hierarchy as before (name + photo lead) */}
-      <div className="flex flex-col gap-3 border-b border-[var(--ac-border)] p-3 pr-10 sm:flex-row sm:items-center sm:gap-4">
-        {photoUrl ? (
-          <img
-            src={photoUrl}
-            alt=""
-            className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/30"
-          />
-        ) : (
-          <div
-            className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ring-2 ring-white/10 ${gradientClass}`}
-          >
-            {initials(row.name || '')}
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-emerald-500/90 dark:text-emerald-400/90">
-            Student
-          </p>
-          <h3 className="mt-0.5 text-lg font-semibold leading-snug tracking-tight text-[var(--ac-text-primary)] sm:text-xl">
-            {nameLine}
-          </h3>
-          <p className="mt-0.5 text-xs text-[var(--ac-text-secondary)]">
-            {[row.current_class?.trim(), row.admission_number?.trim() ? `Admission ${row.admission_number.trim()}` : '']
-              .filter(Boolean)
-              .join(' · ') || '—'}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <span className="inline-flex rounded-md border border-[var(--ac-border)] bg-white/[0.04] px-2 py-0.5 text-[10px] font-medium text-[var(--ac-text-secondary)]">
-              {row.status === 'graduated' ? 'Graduated' : 'Active'}
-            </span>
-            {row.boarding_type?.trim() ? (
-              <span className="inline-flex rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-800 dark:text-emerald-300">
-                {row.boarding_type}
-              </span>
-            ) : null}
-            {row.stream?.trim() ? (
-              <span className="inline-flex rounded-md bg-sky-500/10 px-2 py-0.5 text-[10px] font-medium text-sky-800 dark:text-sky-300">
-                {row.stream}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      {/* At-a-glance row (compact): primary parent + pupil + teacher + address */}
-      <div className="grid gap-3 border-b border-[var(--ac-border)] bg-black/[0.02] p-3 dark:bg-white/[0.02] sm:grid-cols-3">
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
-            Primary contact
-          </p>
-          <p className="text-sm font-semibold text-[var(--ac-text-primary)]">{primaryName}</p>
-          <div className="flex flex-wrap items-center gap-2">
-            {primaryPhone ? (
-              <a
-                href={`tel:${primaryPhone.replace(/\s/g, '')}`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
-                title="Call parent"
-                aria-label="Call parent"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Phone className="h-3.5 w-3.5" strokeWidth={2} />
-              </a>
-            ) : null}
-            {primaryEmail ? (
-              <a
-                href={`mailto:${primaryEmail}`}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
-                title="Email parent"
-                aria-label="Email parent"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Mail className="h-3.5 w-3.5" strokeWidth={2} />
-              </a>
-            ) : null}
-          </div>
-          <CompactInlineField label="Parent phone">
-            {primaryPhone ? (
-              <a
-                href={`tel:${primaryPhone.replace(/\s/g, '')}`}
-                className="text-sky-600 hover:underline dark:text-sky-400"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {primaryPhone}
-              </a>
-            ) : (
-              '—'
-            )}
-          </CompactInlineField>
-          <CompactInlineField label="Parent email">
-            {primaryEmail ? (
-              <a
-                href={`mailto:${primaryEmail}`}
-                className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {primaryEmail}
-              </a>
-            ) : (
-              '—'
-            )}
-          </CompactInlineField>
-        </div>
-        <div className="space-y-2">
-          <CompactInlineField label="Pupil's name">
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onNavigate();
-              }}
-              className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
-            >
-              {nameLine}
-            </button>
-          </CompactInlineField>
-          <CompactInlineField label={second?.name?.trim() || 'Second parent'}>{secondBlock}</CompactInlineField>
-        </div>
-        <div className="space-y-2">
-          <CompactInlineField label="Teacher">
-            <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
-          </CompactInlineField>
-          <CompactInlineField label="Address">
-            <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-5" title={fullAddr}>
-              {fullAddr}
-            </span>
-          </CompactInlineField>
-        </div>
-      </div>
-
-      {/* Full detail — nothing removed; scroll keeps the row expansion usable */}
-      <div className="max-h-[min(420px,55vh)] overflow-y-auto overscroll-contain px-3 pb-2 pt-2">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickPanelSectionTitle>Personal</QuickPanelSectionTitle>
-          <CompactInlineField label="Full name">{nameLine}</CompactInlineField>
-          <CompactInlineField label="Gender">{dash(row.gender)}</CompactInlineField>
-          <CompactInlineField label="Date of birth">{formatDateMaybe(row.date_of_birth)}</CompactInlineField>
-          <CompactInlineField label="Nationality">{dash(row.nationality)}</CompactInlineField>
-          <CompactInlineField label="Religion">{dash(row.religion)}</CompactInlineField>
-
-          <QuickPanelSectionTitle>Contact</QuickPanelSectionTitle>
-          <CompactInlineField label="Student email">
-            {row.student_email?.trim() ? (
-              <a href={`mailto:${row.student_email.trim()}`} className="break-all" onClick={(e) => e.stopPropagation()}>
-                {row.student_email.trim()}
-              </a>
-            ) : (
-              '—'
-            )}
-          </CompactInlineField>
-          <CompactInlineField label="Student phone">
-            {row.student_phone?.trim() ? (
-              <a href={`tel:${row.student_phone.replace(/\s/g, '')}`} onClick={(e) => e.stopPropagation()}>
-                {row.student_phone.trim()}
-              </a>
-            ) : (
-              '—'
-            )}
-          </CompactInlineField>
-          <CompactInlineField label="Address (student)">{studentAddr || '—'}</CompactInlineField>
-          <CompactInlineField label="City">{dash(row.city)}</CompactInlineField>
-          <CompactInlineField label="Country">{dash(row.country)}</CompactInlineField>
-
-          <QuickPanelSectionTitle>Parent / guardian</QuickPanelSectionTitle>
-          <CompactInlineField label="Name">{dash(first?.name || row.guardian_name)}</CompactInlineField>
-          <CompactInlineField label="Relationship">{dash(row.guardian_relationship)}</CompactInlineField>
-          <CompactInlineField label="Phone">{primaryPhone || '—'}</CompactInlineField>
-          <CompactInlineField label="Email">{primaryEmail || '—'}</CompactInlineField>
-          <CompactInlineField label="Occupation">{dash(row.guardian_occupation)}</CompactInlineField>
-          <CompactInlineField label="Guardian address">{guardianAddrOnly || '—'}</CompactInlineField>
-
-          <QuickPanelSectionTitle>Academic & fees</QuickPanelSectionTitle>
-          <CompactInlineField label="Class">{dash(row.current_class)}</CompactInlineField>
-          <CompactInlineField label="Class teacher">{dash(teacher)}</CompactInlineField>
-          <CompactInlineField label="Stream">{dash(row.stream)}</CompactInlineField>
-          <CompactInlineField label="Admission date">{formatDateMaybe(row.admission_date)}</CompactInlineField>
-          <CompactInlineField label="Boarding">{dash(row.boarding_type)}</CompactInlineField>
-          <CompactInlineField label="Previous school">{dash(row.previous_school)}</CompactInlineField>
-          <CompactInlineField label="Tuition / expected fee">
-            <span className="tabular-nums">{row.expected_fee_amount != null ? String(row.expected_fee_amount) : '—'}</span>
-          </CompactInlineField>
-          <CompactInlineField label="Discount / bursary">
-            <span className="tabular-nums">{feeDiscLabel}</span>
-          </CompactInlineField>
-          <CompactInlineField label="Admission fee (enrollment)">
-            <span className="tabular-nums">{row.enrollment_fee != null ? String(row.enrollment_fee) : '—'}</span>
-          </CompactInlineField>
-          <CompactInlineField label="Payment status">{dash(row.payment_status)}</CompactInlineField>
-
-          <QuickPanelSectionTitle>Other</QuickPanelSectionTitle>
-          <CompactInlineField label="Medical / allergies">{dash(row.medical_condition)}</CompactInlineField>
-          <CompactInlineField label="Record created">{formatDateMaybe(row.created_at)}</CompactInlineField>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--ac-border)] bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
+    <div className="flex h-full min-h-0 flex-col bg-[var(--ac-card-bg)]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--ac-border)] px-4 py-3">
+        <span className="text-sm font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Quick view</span>
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onNavigate();
-          }}
-          className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
+          onClick={onClose}
+          className="rounded-lg border border-[var(--ac-border)] p-2 text-[var(--ac-text-muted)] hover:bg-white/10 hover:ac-text-primary"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+        <div className="flex gap-4">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-full object-cover ring-2 ring-emerald-500/25"
+            />
+          ) : (
+            <div
+              className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-base font-bold text-white ${gradientClass}`}
+            >
+              {initials(row.name || '')}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xl font-semibold leading-tight text-[var(--ac-text-primary)]">{nameLine}</h3>
+            {row.current_class?.trim() ? (
+              <span className="mt-2 inline-flex rounded-full bg-sky-500/15 px-2.5 py-0.5 text-sm font-medium text-sky-700 dark:text-sky-300">
+                {row.current_class}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Primary guardian</p>
+          <p className="mt-1 text-base font-semibold text-[var(--ac-text-primary)]">{primaryName}</p>
+          {primaryPhone ? (
+            <a
+              href={`tel:${primaryPhone.replace(/\s/g, '')}`}
+              className="mt-1 inline-block text-lg font-medium text-sky-500 hover:text-sky-400 hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {primaryPhone}
+            </a>
+          ) : (
+            <p className="mt-1 text-sm ac-text-muted">No phone on file</p>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-2">
+          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${attChip.cls}`}>
+            Today: {attChip.label}
+          </span>
+          <span className={`inline-flex rounded-full px-3 py-1 text-sm font-medium ${fee.chipClass}`}>
+            Fees: {fee.label}
+          </span>
+        </div>
+
+        <div className="mt-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Address</p>
+          <p className="mt-1 text-base leading-snug text-[var(--ac-text-secondary)] line-clamp-2">{lineAddr}</p>
+        </div>
+      </div>
+
+      <div className="shrink-0 border-t border-[var(--ac-border)] bg-black/[0.02] p-4 dark:bg-white/[0.02]">
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="w-full rounded-lg bg-emerald-600 py-2.5 text-base font-semibold text-white hover:bg-emerald-500"
         >
           Open full profile
         </button>
-        {parents.map((p, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewParent(i);
-            }}
-            className="rounded-md border border-[var(--ac-border)] px-2.5 py-1 text-xs font-medium text-[var(--ac-text-secondary)] transition hover:bg-white/[0.06] hover:ac-text-primary dark:hover:bg-white/[0.08]"
-          >
-            {p.name?.trim() || `Guardian ${i + 1}`}
-          </button>
-        ))}
+        {parents.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {parents.map((p, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => onViewParent(i)}
+                className="rounded-lg border border-[var(--ac-border)] px-3 py-1.5 text-sm font-medium text-[var(--ac-text-secondary)] hover:bg-white/[0.06] hover:ac-text-primary"
+              >
+                {p.name?.trim() || `Guardian ${i + 1}`}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function QuickParentPanel({
-  studentName,
-  studentClass,
-  teacher,
+function QuickParentDrawerPanel({
   parent,
   parentIndex,
   studentRow,
-  address,
+  linkedStudents,
   gradientClass,
   onClose,
-  onViewStudent,
+  onSelectStudent,
   onNavigate,
 }: {
-  studentName: string;
-  studentClass: string | null;
-  teacher: string;
   parent: ParentLite;
   parentIndex: number;
   studentRow: StudentListRow;
-  address: string;
+  linkedStudents: { id: string; name: string }[];
   gradientClass: string;
   onClose: () => void;
-  onViewStudent: () => void;
+  onSelectStudent: (studentId: string) => void;
   onNavigate: () => void;
 }) {
-  const teacherLine =
-    teacher.trim() && studentClass?.trim()
-      ? `${teacher.trim()} (${studentClass.trim()})`
-      : teacher.trim() || studentClass?.trim() || '—';
-
   const phone =
     (parent.phone?.trim() ||
       (parentIndex === 0 ? studentRow.guardian_phone?.trim() : '') ||
@@ -1129,149 +1075,81 @@ function QuickParentPanel({
     '';
 
   return (
-    <div className="relative overflow-hidden rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left shadow-sm">
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-2 top-2 z-10 rounded-md border border-[var(--ac-border)] bg-black/[0.04] p-1.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
-        aria-label="Close panel"
-      >
-        <X className="h-3.5 w-3.5" strokeWidth={2} />
-      </button>
-
-      <div className="border-b border-[var(--ac-border)] p-3 pr-10">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--ac-text-muted)]">Linked student</p>
+    <div className="flex h-full min-h-0 flex-col bg-[var(--ac-card-bg)]">
+      <div className="flex shrink-0 items-center justify-between border-b border-[var(--ac-border)] px-4 py-3">
+        <span className="text-sm font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Parent</span>
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewStudent();
-          }}
-          className="mt-0.5 text-left text-base font-semibold text-sky-500 hover:underline dark:text-sky-400"
+          onClick={onClose}
+          className="rounded-lg border border-[var(--ac-border)] p-2 text-[var(--ac-text-muted)] hover:bg-white/10 hover:ac-text-primary"
+          aria-label="Close"
         >
-          {studentName}
+          <X className="h-4 w-4" />
         </button>
-        {studentClass?.trim() ? (
-          <p className="text-xs text-[var(--ac-text-secondary)]">{studentClass}</p>
-        ) : null}
       </div>
 
-      <div className="flex flex-col gap-3 p-3 pr-10 sm:flex-row sm:items-start sm:gap-5">
-        <div className="flex gap-3 sm:max-w-[220px] sm:shrink-0 sm:flex-col sm:items-start">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+        <div className="flex gap-4">
           <div
-            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white ring-1 ring-white/15 ${gradientClass}`}
+            className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-base font-bold text-white ${gradientClass}`}
           >
             {initials(parent.name || '')}
           </div>
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
-              Parent / guardian
-            </p>
-            <p className="mt-0.5 text-sm font-semibold leading-tight text-[var(--ac-text-primary)]">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-xl font-semibold leading-tight text-[var(--ac-text-primary)]">
               {parent.name || studentRow.guardian_name || '—'}
-            </p>
-            <div className="mt-2 flex gap-2">
-              {phone ? (
-                <a
-                  href={`tel:${phone.replace(/\s/g, '')}`}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
-                  title="Call"
-                  aria-label="Call"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Phone className="h-4 w-4" strokeWidth={2} />
-                </a>
-              ) : null}
-              {email ? (
-                <a
-                  href={`mailto:${email}`}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
-                  title="Email"
-                  aria-label="Email"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Mail className="h-4 w-4" strokeWidth={2} />
-                </a>
-              ) : null}
-            </div>
+            </h3>
           </div>
         </div>
 
-        <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--ac-border)] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 md:grid-cols-3">
-          <div className="space-y-3">
-            <CompactInlineField label="Phone number">
-              {phone ? (
-                <a
-                  href={`tel:${phone.replace(/\s/g, '')}`}
-                  className="text-sky-600 hover:underline dark:text-sky-400"
-                  onClick={(e) => e.stopPropagation()}
+        <div className="mt-6 space-y-3">
+          {phone ? (
+            <a
+              href={`tel:${phone.replace(/\s/g, '')}`}
+              className="block text-lg font-medium text-sky-500 hover:text-sky-400 hover:underline"
+            >
+              {phone}
+            </a>
+          ) : (
+            <p className="text-sm ac-text-muted">No phone on file</p>
+          )}
+          {email ? (
+            <a href={`mailto:${email}`} className="block break-all text-base text-emerald-400 hover:underline">
+              {email}
+            </a>
+          ) : (
+            <p className="text-sm ac-text-muted">No email on file</p>
+          )}
+        </div>
+
+        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Students linked</p>
+          <ul className="mt-2 space-y-1">
+            {linkedStudents.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelectStudent(s.id)}
+                  className={`w-full rounded-lg px-2 py-2 text-left text-base ${STUDENT_NAME_BTN}`}
                 >
-                  {phone}
-                </a>
-              ) : (
-                '—'
-              )}
-            </CompactInlineField>
-            <CompactInlineField label="Email">
-              {email ? (
-                <a
-                  href={`mailto:${email}`}
-                  className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {email}
-                </a>
-              ) : (
-                '—'
-              )}
-            </CompactInlineField>
-          </div>
-          <div className="space-y-3">
-            <CompactInlineField label="Pupil's name">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewStudent();
-                }}
-                className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
-              >
-                {studentName}
-              </button>
-            </CompactInlineField>
-            <CompactInlineField label="Class">{studentClass?.trim() || '—'}</CompactInlineField>
-          </div>
-          <div className="space-y-3">
-            <CompactInlineField label="Teacher">
-              <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
-            </CompactInlineField>
-            <CompactInlineField label="Address">
-              <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-4" title={address || undefined}>
-                {address.trim() ? address : '—'}
-              </span>
-            </CompactInlineField>
-          </div>
+                  {s.name}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-6 border-t border-[var(--ac-border)] pt-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ac-text-muted)]">Last contacted</p>
+          <p className="mt-1 text-sm text-[var(--ac-text-secondary)]">Not tracked in this system</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--ac-border)] bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
+      <div className="shrink-0 border-t border-[var(--ac-border)] bg-black/[0.02] p-4 dark:bg-white/[0.02]">
         <button
           type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onViewStudent();
-          }}
-          className="rounded-md border border-[var(--ac-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--ac-text-secondary)] transition hover:bg-white/[0.06] hover:ac-text-primary dark:hover:bg-white/[0.08]"
-        >
-          Student overview
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onNavigate();
-          }}
-          className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-500"
+          onClick={onNavigate}
+          className="w-full rounded-lg bg-violet-600 py-2.5 text-base font-semibold text-white hover:bg-violet-500"
         >
           Open full profile
         </button>
@@ -1279,3 +1157,4 @@ function QuickParentPanel({
     </div>
   );
 }
+

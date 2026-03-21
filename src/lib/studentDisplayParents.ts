@@ -3,7 +3,7 @@
  * (CORS, etc.), guardian_* columns on `students` still hold the enrollment data — use
  * this helper so the UI shows the same contact info.
  */
-export type ParentLite = { name: string; email?: string; phone?: string };
+export type ParentLite = { name: string; email?: string; phone?: string; parent_id?: string | null };
 
 type GuardianRow = {
   guardian_name?: string | null;
@@ -24,6 +24,7 @@ export function displayParentsForStudent(
       // Prefer portal row; for the first linked parent fall back to enrollment guardian_* on the student row.
       email: (p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : '')) || undefined,
       phone: (p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : '')) || undefined,
+      parent_id: p.parent_id ?? null,
     }));
   }
   const gn = row.guardian_name?.trim();
@@ -33,6 +34,7 @@ export function displayParentsForStudent(
         name: gn,
         email: row.guardian_email?.trim() || undefined,
         phone: row.guardian_phone?.trim() || undefined,
+        parent_id: null,
       },
     ];
   }
