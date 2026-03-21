@@ -16,6 +16,7 @@ import {
   UserPlus,
   GraduationCap,
   Phone,
+  Mail,
   X,
   UserCircle2,
   CheckCircle2,
@@ -46,36 +47,90 @@ function avatarGradient(i: number) {
   return AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length];
 }
 
+/** Matches Add Student / DB — used for list + quick view */
+type StudentListRow = {
+  student_id: string;
+  name: string | null;
+  first_name?: string | null;
+  middle_name?: string | null;
+  last_name?: string | null;
+  current_class: string | null;
+  status?: string | null;
+  admission_number?: string | null;
+  admission_date?: string | null;
+  gender?: string | null;
+  date_of_birth?: string | null;
+  nationality?: string | null;
+  religion?: string | null;
+  address?: string | null;
+  city?: string | null;
+  country?: string | null;
+  student_phone?: string | null;
+  student_email?: string | null;
+  guardian_name?: string | null;
+  guardian_relationship?: string | null;
+  guardian_phone?: string | null;
+  guardian_email?: string | null;
+  guardian_occupation?: string | null;
+  guardian_address?: string | null;
+  medical_condition?: string | null;
+  stream?: string | null;
+  previous_school?: string | null;
+  boarding_type?: string | null;
+  enrollment_fee?: number | null;
+  payment_status?: string | null;
+  expected_fee_amount?: number | null;
+  fee_discount_percent?: number | null;
+  created_at?: string | null;
+};
+
 type FetchResult = {
-  rows: Array<{
-    student_id: string;
-    name: string;
-    current_class: string | null;
-    address: string | null;
-    guardian_address: string | null;
-    guardian_name?: string | null;
-    guardian_email?: string | null;
-    guardian_phone?: string | null;
-  }>;
+  rows: StudentListRow[];
   parentsByStudent: Record<string, ParentLite[]>;
   classTeacherNameByClass: Record<string, string>;
   attendedTodayCount: number;
+  photoByStudentId: Record<string, string>;
 };
+
+const STUDENT_LIST_SELECT =
+  'student_id, name, first_name, middle_name, last_name, current_class, status, admission_number, admission_date, gender, date_of_birth, nationality, religion, address, city, country, student_phone, student_email, guardian_name, guardian_relationship, guardian_phone, guardian_email, guardian_occupation, guardian_address, medical_condition, stream, previous_school, boarding_type, enrollment_fee, payment_status, expected_fee_amount, fee_discount_percent, created_at';
+
+function dash(v: string | number | null | undefined): string {
+  if (v === null || v === undefined) return '—';
+  const s = String(v).trim();
+  return s || '—';
+}
+
+function formatDateMaybe(v: string | null | undefined): string {
+  if (!v || !String(v).trim()) return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? String(v) : d.toLocaleDateString();
+}
+
+function displayFullName(row: StudentListRow): string {
+  const parts = [row.first_name, row.middle_name, row.last_name]
+    .filter((x) => x != null && String(x).trim())
+    .map((x) => String(x).trim());
+  if (parts.length) return parts.join(' ');
+  return (row.name || '').trim() || '—';
+}
 
 async function fetchStudentsContext(userId: string): Promise<FetchResult> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) {
-    return { rows: [], parentsByStudent: {}, classTeacherNameByClass: {}, attendedTodayCount: 0 };
+    return {
+      rows: [],
+      parentsByStudent: {},
+      classTeacherNameByClass: {},
+      attendedTodayCount: 0,
+      photoByStudentId: {},
+    };
   }
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [studentsRes, parentsRes, classTeachersRes, attendanceRes] = await Promise.all([
-    supabase
-      .from('students')
-      .select('student_id, name, current_class, address, guardian_address, guardian_name, guardian_email, guardian_phone')
-      .eq('school_id', u.school_id)
-      .order('name'),
+  const [studentsRes, parentsRes, classTeachersRes, attendanceRes, photosRes] = await Promise.all([
+    supabase.from('students').select(STUDENT_LIST_SELECT).eq('school_id', u.school_id).order('name'),
     supabase.from('parents').select('student_id, name, email, phone').eq('school_id', u.school_id),
     supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', u.school_id),
     supabase
@@ -84,9 +139,22 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
       .eq('school_id', u.school_id)
       .eq('date', today)
       .eq('present', true),
+    supabase
+      .from('student_photos')
+      .select('student_id, photo_url')
+      .eq('school_id', u.school_id)
+      .eq('is_primary', true),
   ]);
 
-  const rows = studentsRes.data || [];
+  const rows = (studentsRes.data || []) as StudentListRow[];
+  const photoByStudentId: Record<string, string> = {};
+  (photosRes.data || []).forEach((ph: { student_id?: string; photo_url?: string }) => {
+    const sid = ph.student_id;
+    const url = ph.photo_url;
+    if (sid && url && String(url).trim() && !photoByStudentId[sid]) {
+      photoByStudentId[sid] = String(url).trim();
+    }
+  });
   const parentsByStudent: Record<string, ParentLite[]> = {};
   (parentsRes.data || []).forEach((p: { student_id?: string; name?: string; email?: string; phone?: string }) => {
     const sid = p.student_id;
@@ -127,6 +195,7 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
     parentsByStudent,
     classTeacherNameByClass,
     attendedTodayCount: attendedSet.size,
+    photoByStudentId,
   };
 }
 
@@ -154,6 +223,7 @@ export default function DesignStudentsPage() {
   const parentsByStudent = data?.parentsByStudent ?? {};
   const classTeacherNameByClass = data?.classTeacherNameByClass ?? {};
   const attendedToday = data?.attendedTodayCount ?? 0;
+  const photoByStudentId = data?.photoByStudentId ?? {};
 
   const classOptions = useMemo(() => {
     const set = new Set<string>();
@@ -430,11 +500,19 @@ export default function DesignStudentsPage() {
                           >
                             <td className="px-4 py-2.5 align-middle">
                               <div className="flex items-center gap-3">
-                                <div
-                                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-inner ${avatarGradient(globalIdx)}`}
-                                >
-                                  {initials(r.name || '')}
-                                </div>
+                                {photoByStudentId[r.student_id] ? (
+                                  <img
+                                    src={photoByStudentId[r.student_id]}
+                                    alt=""
+                                    className="h-9 w-9 shrink-0 rounded-full object-cover border border-white/10 shadow-inner"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white shadow-inner ${avatarGradient(globalIdx)}`}
+                                  >
+                                    {initials(r.name || '')}
+                                  </div>
+                                )}
                                 <div className="min-w-0">
                                   <button
                                     type="button"
@@ -534,6 +612,7 @@ export default function DesignStudentsPage() {
                                   row={r}
                                   parents={parents}
                                   teacher={teacher}
+                                  photoUrl={photoByStudentId[r.student_id]}
                                   gradientClass={avatarGradient(globalIdx)}
                                   onClose={closeExpand}
                                   onViewParent={(pi) => openParentQuick(r.student_id, pi)}
@@ -590,11 +669,19 @@ export default function DesignStudentsPage() {
                     className="ac-glass-card flex flex-col rounded-xl border border-[var(--ac-border)] p-4"
                   >
                     <div className="flex items-start gap-3">
-                      <div
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${avatarGradient(globalIdx)}`}
-                      >
-                        {initials(r.name || '')}
-                      </div>
+                      {photoByStudentId[r.student_id] ? (
+                        <img
+                          src={photoByStudentId[r.student_id]}
+                          alt=""
+                          className="h-11 w-11 shrink-0 rounded-full object-cover border border-[var(--ac-border)]"
+                        />
+                      ) : (
+                        <div
+                          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${avatarGradient(globalIdx)}`}
+                        >
+                          {initials(r.name || '')}
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <h3 className="font-semibold ac-text-primary truncate">{r.name || '—'}</h3>
                         <p className="text-xs ac-text-muted">{r.current_class || 'No class'}</p>
@@ -679,11 +766,41 @@ export default function DesignStudentsPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+/** Label + value cell — readable, scannable, theme-aware */
+function ProfileField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wider ac-text-muted mb-1">{label}</p>
-      <div className="text-sm ac-text-primary">{children}</div>
+    <div className="rounded-xl border border-[var(--ac-border)] bg-white/[0.04] px-4 py-3.5 shadow-sm transition-colors hover:bg-white/[0.06] dark:bg-black/20 dark:hover:bg-black/30">
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ac-text-muted)]">
+        {label}
+      </p>
+      <div className="text-[0.9375rem] font-medium leading-relaxed text-[var(--ac-text-primary)] [&_a]:font-medium [&_a]:text-emerald-600 [&_a]:underline-offset-2 hover:[&_a]:text-emerald-500 dark:[&_a]:text-emerald-400 dark:hover:[&_a]:text-emerald-300">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ProfileSectionTitle({
+  children,
+  accent = 'emerald',
+}: {
+  children: ReactNode;
+  accent?: 'emerald' | 'violet';
+}) {
+  const dot =
+    accent === 'violet'
+      ? 'bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.45)]'
+      : 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]';
+  return (
+    <div className="col-span-full mb-1 mt-8 flex items-center gap-4 first:mt-0">
+      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--ac-border)] to-[var(--ac-border)]" />
+      <span className="flex shrink-0 items-center gap-2.5">
+        <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
+        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ac-text-muted)]">
+          {children}
+        </span>
+      </span>
+      <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--ac-border)] to-[var(--ac-border)]" />
     </div>
   );
 }
@@ -692,72 +809,189 @@ function QuickStudentPanel({
   row,
   parents,
   teacher,
+  photoUrl,
   gradientClass,
   onClose,
   onViewParent,
   onNavigate,
 }: {
-  row: { name: string | null; current_class: string | null; address: string | null; guardian_address: string | null };
+  row: StudentListRow;
   parents: ParentLite[];
   teacher: string;
+  photoUrl?: string | null;
   gradientClass: string;
   onClose: () => void;
   onViewParent: (index: number) => void;
   onNavigate: () => void;
 }) {
-  const addr = (row.address && row.address.trim()) || (row.guardian_address && row.guardian_address.trim()) || '—';
   const first = parents[0];
+  const nameLine = displayFullName(row);
+  const studentAddr = (row.address && row.address.trim()) || '';
+  const guardianAddrOnly = (row.guardian_address && row.guardian_address.trim()) || '';
+  const feeDisc = row.fee_discount_percent;
+  const feeDiscLabel =
+    feeDisc != null && Number(feeDisc) > 0 ? `${Number(feeDisc)}%` : '—';
+
   return (
-    <div className="relative rounded-xl border border-emerald-500/25 bg-emerald-500/[0.04] p-5 pl-6">
-      <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-emerald-500/80" />
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-3 top-3 rounded-lg p-1.5 ac-text-muted hover:bg-white/10 hover:ac-text-primary"
-        aria-label="Close panel"
-      >
-        <X className="h-4 w-4" />
-      </button>
-      <div className="flex flex-wrap items-start gap-4 pr-8">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${gradientClass}`}>
-          {initials(row.name || '')}
+    <div className="overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)] font-sans antialiased shadow-[var(--ac-shadow-strong)]">
+      {/* Hero */}
+      <div className="relative bg-gradient-to-br from-emerald-500/[0.14] via-teal-600/[0.08] to-transparent px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full border border-[var(--ac-border)] bg-black/[0.04] p-2.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
+          aria-label="Close panel"
+        >
+          <X className="h-4 w-4" strokeWidth={2} />
+        </button>
+
+        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-10">
+          <div className="relative shrink-0">
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt=""
+                className="h-28 w-28 rounded-2xl object-cover shadow-[0_12px_40px_-8px_rgba(0,0,0,0.45)] ring-1 ring-white/20 sm:h-32 sm:w-32"
+              />
+            ) : (
+              <div
+                className={`flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br text-xl font-semibold tracking-tight text-white shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)] ring-1 ring-white/15 sm:h-32 sm:w-32 sm:text-2xl ${gradientClass}`}
+              >
+                {initials(row.name || '')}
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1 space-y-4 pr-10 sm:pr-12">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-600/90 dark:text-emerald-400/85">
+                Student profile
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-[1.75rem] sm:leading-snug">
+                {nameLine}
+              </h3>
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--ac-text-secondary)]">
+                {row.current_class || 'Class not set'}
+                {row.admission_number ? ` · Admission ${row.admission_number}` : ''}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="inline-flex items-center rounded-full border border-[var(--ac-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[var(--ac-text-primary)] backdrop-blur-sm dark:bg-black/25">
+                {row.status === 'graduated' ? 'Graduated' : 'Active enrolment'}
+              </span>
+              {row.boarding_type ? (
+                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
+                  {row.boarding_type}
+                </span>
+              ) : null}
+              {row.stream ? (
+                <span className="inline-flex items-center rounded-full bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-800 dark:text-sky-300">
+                  Stream {row.stream}
+                </span>
+              ) : null}
+            </div>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold ac-text-primary">{row.name || '—'}</p>
-          <p className="text-xs ac-text-muted mt-0.5">Student · {row.current_class || 'No class assigned'}</p>
-        </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-          Student
-        </span>
       </div>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Full name">{row.name || '—'}</Field>
-        <Field label="Class">{row.current_class || '—'}</Field>
-        <Field label="Class teacher">{teacher || '—'}</Field>
-        <Field label="Address">{addr}</Field>
-        <Field label="Parent / guardian">{first?.name || '—'}</Field>
-        <Field label="Parent phone">
-          {first?.phone ? (
-            <a href={`tel:${first.phone.replace(/\s/g, '')}`} className="text-emerald-500 hover:underline">
-              {first.phone}
+
+      <div className="grid gap-3 px-5 pb-2 pt-8 sm:grid-cols-2 sm:gap-4 sm:px-8 lg:grid-cols-3">
+        <ProfileSectionTitle>Personal</ProfileSectionTitle>
+        <ProfileField label="Full name">{nameLine}</ProfileField>
+        <ProfileField label="Gender">{dash(row.gender)}</ProfileField>
+        <ProfileField label="Date of birth">{formatDateMaybe(row.date_of_birth)}</ProfileField>
+        <ProfileField label="Nationality">{dash(row.nationality)}</ProfileField>
+        <ProfileField label="Religion">{dash(row.religion)}</ProfileField>
+
+        <ProfileSectionTitle>Contact</ProfileSectionTitle>
+        <ProfileField label="Student email">
+          {row.student_email?.trim() ? (
+            <a href={`mailto:${row.student_email.trim()}`} className="inline-flex items-center gap-2 break-all">
+              <Mail className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
+              {row.student_email.trim()}
             </a>
           ) : (
             '—'
           )}
-        </Field>
+        </ProfileField>
+        <ProfileField label="Student phone">
+          {row.student_phone?.trim() ? (
+            <a href={`tel:${row.student_phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2">
+              <Phone className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
+              {row.student_phone.trim()}
+            </a>
+          ) : (
+            '—'
+          )}
+        </ProfileField>
+        <ProfileField label="Address (student)">{studentAddr || '—'}</ProfileField>
+        <ProfileField label="City">{dash(row.city)}</ProfileField>
+        <ProfileField label="Country">{dash(row.country)}</ProfileField>
+
+        <ProfileSectionTitle>Parent / guardian</ProfileSectionTitle>
+        <ProfileField label="Name">{dash(first?.name)}</ProfileField>
+        <ProfileField label="Relationship">{dash(row.guardian_relationship)}</ProfileField>
+        <ProfileField label="Phone">
+          {first?.phone?.trim() ? (
+            <a href={`tel:${first.phone.replace(/\s/g, '')}`}>{first.phone.trim()}</a>
+          ) : (
+            '—'
+          )}
+        </ProfileField>
+        <ProfileField label="Email">
+          {first?.email?.trim() ? (
+            <a href={`mailto:${first.email.trim()}`} className="break-all">
+              {first.email.trim()}
+            </a>
+          ) : (
+            '—'
+          )}
+        </ProfileField>
+        <ProfileField label="Occupation">{dash(row.guardian_occupation)}</ProfileField>
+        <ProfileField label="Guardian address">{guardianAddrOnly || '—'}</ProfileField>
+
+        <ProfileSectionTitle>Academic & fees</ProfileSectionTitle>
+        <ProfileField label="Class">{dash(row.current_class)}</ProfileField>
+        <ProfileField label="Class teacher">{dash(teacher)}</ProfileField>
+        <ProfileField label="Stream">{dash(row.stream)}</ProfileField>
+        <ProfileField label="Admission date">{formatDateMaybe(row.admission_date)}</ProfileField>
+        <ProfileField label="Boarding">{dash(row.boarding_type)}</ProfileField>
+        <ProfileField label="Previous school">{dash(row.previous_school)}</ProfileField>
+        <ProfileField label="Tuition / expected fee">
+          <span className="tabular-nums">
+            {row.expected_fee_amount != null ? String(row.expected_fee_amount) : '—'}
+          </span>
+        </ProfileField>
+        <ProfileField label="Discount / bursary">
+          <span className="tabular-nums">{feeDiscLabel}</span>
+        </ProfileField>
+        <ProfileField label="Admission fee (enrollment)">
+          <span className="tabular-nums">
+            {row.enrollment_fee != null ? String(row.enrollment_fee) : '—'}
+          </span>
+        </ProfileField>
+        <ProfileField label="Payment status">{dash(row.payment_status)}</ProfileField>
+
+        <ProfileSectionTitle>Other</ProfileSectionTitle>
+        <ProfileField label="Medical / allergies">{dash(row.medical_condition)}</ProfileField>
+        <ProfileField label="Record created">{formatDateMaybe(row.created_at)}</ProfileField>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--ac-border)] pt-4">
-        <button type="button" onClick={onNavigate} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">
-          View full profile
+
+      <div className="mt-6 flex flex-wrap gap-3 border-t border-[var(--ac-border)] bg-black/[0.02] px-5 py-5 sm:px-8 dark:bg-white/[0.02]">
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[var(--ac-card-bg)] dark:shadow-emerald-950/40"
+        >
+          Open full profile
         </button>
         {parents.map((p, i) => (
           <button
             key={i}
             type="button"
             onClick={() => onViewParent(i)}
-            className="rounded-lg border border-[var(--ac-border)] px-4 py-2 text-sm ac-text-primary hover:bg-white/10"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] bg-transparent px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
           >
-            Parent: {p.name || '—'}
+            Guardian · {p.name || '—'}
           </button>
         ))}
       </div>
@@ -787,71 +1021,97 @@ function QuickParentPanel({
   onNavigate: () => void;
 }) {
   return (
-    <div className="relative rounded-xl border border-violet-500/25 bg-violet-500/[0.04] p-5 pl-6">
-      <div className="absolute left-0 top-0 h-full w-1 rounded-l-xl bg-violet-500/80" />
-      <button
-        type="button"
-        onClick={onClose}
-        className="absolute right-3 top-3 rounded-lg p-1.5 ac-text-muted hover:bg-white/10 hover:ac-text-primary"
-        aria-label="Close panel"
-      >
-        <X className="h-4 w-4" />
-      </button>
-      <div className="flex flex-wrap items-start gap-4 pr-8">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-sm font-bold text-white ${gradientClass}`}>
-          {initials(parent.name || '')}
+    <div className="overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)] font-sans antialiased shadow-[var(--ac-shadow-strong)]">
+      <div className="relative bg-gradient-to-br from-violet-500/[0.14] via-fuchsia-600/[0.07] to-transparent px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 top-3 rounded-full border border-[var(--ac-border)] bg-black/[0.04] p-2.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
+          aria-label="Close panel"
+        >
+          <X className="h-4 w-4" strokeWidth={2} />
+        </button>
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
+          <div
+            className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-lg font-semibold tracking-tight text-white shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)] ring-1 ring-white/15 sm:h-28 sm:w-28 sm:text-xl ${gradientClass}`}
+          >
+            {initials(parent.name || '')}
+          </div>
+          <div className="min-w-0 flex-1 space-y-3 pr-10">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-600/90 dark:text-violet-400/85">
+              Parent / guardian
+            </p>
+            <h3 className="text-2xl font-semibold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-[1.65rem]">
+              {parent.name || '—'}
+            </h3>
+            <p className="text-sm leading-relaxed text-[var(--ac-text-secondary)]">Linked to {studentName}</p>
+            <span className="inline-flex rounded-full border border-[var(--ac-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[var(--ac-text-primary)] dark:bg-black/25">
+              Guardian contact
+            </span>
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-lg font-semibold ac-text-primary">{parent.name || '—'}</p>
-          <p className="text-xs ac-text-muted mt-0.5">Guardian of {studentName}</p>
-        </div>
-        <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/15 px-2.5 py-1 text-xs font-medium text-violet-600 dark:text-violet-400">
-          Parent
-        </span>
       </div>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Field label="Phone">
+
+      <div className="grid gap-3 px-5 pb-2 pt-8 sm:grid-cols-2 sm:gap-4 sm:px-8 lg:grid-cols-3">
+        <ProfileSectionTitle accent="violet">Contact</ProfileSectionTitle>
+        <ProfileField label="Phone">
           {parent.phone ? (
-            <a href={`tel:${parent.phone.replace(/\s/g, '')}`} className="text-emerald-500 hover:underline font-medium">
+            <a href={`tel:${parent.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2">
+              <Phone className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
               {parent.phone}
             </a>
           ) : (
             '—'
           )}
-        </Field>
-        <Field label="Email">
+        </ProfileField>
+        <ProfileField label="Email">
           {parent.email ? (
-            <a href={`mailto:${parent.email}`} className="text-sky-500 hover:underline break-all">
+            <a href={`mailto:${parent.email}`} className="inline-flex items-center gap-2 break-all">
+              <Mail className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
               {parent.email}
             </a>
           ) : (
             '—'
           )}
-        </Field>
-        <Field label="Pupil">{studentName}</Field>
-        <Field label="Class">{studentClass || '—'}</Field>
-        <Field label="Class teacher">{teacher || '—'}</Field>
-        <Field label="Home address">{address || '—'}</Field>
+        </ProfileField>
+
+        <ProfileSectionTitle accent="violet">Student</ProfileSectionTitle>
+        <ProfileField label="Pupil">{studentName}</ProfileField>
+        <ProfileField label="Class">{studentClass || '—'}</ProfileField>
+        <ProfileField label="Class teacher">{teacher || '—'}</ProfileField>
+        <ProfileField label="Home address">{address || '—'}</ProfileField>
       </div>
-      <div className="mt-5 flex flex-wrap gap-2 border-t border-[var(--ac-border)] pt-4">
+
+      <div className="mt-6 flex flex-wrap gap-3 border-t border-[var(--ac-border)] bg-black/[0.02] px-5 py-5 sm:px-8 dark:bg-white/[0.02]">
         {parent.phone && (
           <a
             href={`tel:${parent.phone.replace(/\s/g, '')}`}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:bg-emerald-500 dark:shadow-emerald-950/40"
           >
-            Call parent
+            Call
           </a>
         )}
         {parent.email && (
-          <a href={`mailto:${parent.email}`} className="rounded-lg border border-[var(--ac-border)] px-4 py-2 text-sm ac-text-primary hover:bg-white/10">
-            Email parent
+          <a
+            href={`mailto:${parent.email}`}
+            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
+          >
+            Email
           </a>
         )}
-        <button type="button" onClick={onViewStudent} className="rounded-lg border border-[var(--ac-border)] px-4 py-2 text-sm ac-text-primary hover:bg-white/10">
-          Student quick view
+        <button
+          type="button"
+          onClick={onViewStudent}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
+        >
+          Student overview
         </button>
-        <button type="button" onClick={onNavigate} className="rounded-lg border border-[var(--ac-border)] px-4 py-2 text-sm ac-text-primary hover:bg-white/10">
-          Full profile
+        <button
+          type="button"
+          onClick={onNavigate}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-violet-600 px-6 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:ring-offset-[var(--ac-card-bg)]"
+        >
+          Open full profile
         </button>
       </div>
     </div>

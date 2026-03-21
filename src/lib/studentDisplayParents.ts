@@ -11,13 +11,20 @@ type GuardianRow = {
   guardian_phone?: string | null;
 };
 
+/** Enrich linked parent rows with student.guardian_* when the portal row is blank. */
 export function displayParentsForStudent(
   studentId: string,
   row: GuardianRow,
   parentsByStudent: Record<string, ParentLite[]>
 ): ParentLite[] {
   const linked = parentsByStudent[studentId] || [];
-  if (linked.length > 0) return linked;
+  if (linked.length > 0) {
+    return linked.map((p, i) => ({
+      name: (p.name?.trim() || (i === 0 ? row.guardian_name?.trim() : '') || '') || '',
+      email: p.email?.trim() || (i === 0 ? row.guardian_email?.trim() : undefined) || undefined,
+      phone: p.phone?.trim() || (i === 0 ? row.guardian_phone?.trim() : undefined) || undefined,
+    }));
+  }
   const gn = row.guardian_name?.trim();
   if (gn) {
     return [
