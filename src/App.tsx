@@ -41,7 +41,7 @@ const BulkGenerator = lazyWithRetry(() => import('./pages/admin/reports/BulkGene
 const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportViewer'));
 const DesignStudentsPage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentsPage'));
 const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
-const StudentProfilePage = lazyWithRetry(() => import('./pages/admin/students/StudentProfile'));
+const StudentProfilePage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentProfile'));
 const TeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/TeachersPage'));
 const AddTeacherPage = lazyWithRetry(() => import('./pages/admin/teachers/AddTeacherPage'));
 const TeacherProfilePage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherProfilePage'));
