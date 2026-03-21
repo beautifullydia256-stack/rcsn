@@ -435,6 +435,52 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-guardian-field-value a { color: var(--accent); text-decoration: none; }
 .pw-profile .sp-guardian-field-value a:hover { text-decoration: underline; }
 
+.pw-profile .sp-guardian-siblings {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+.pw-profile .sp-guardian-siblings-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 9px;
+}
+.pw-profile .sp-guardian-sibling-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pw-profile .sp-guardian-sibling-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.pw-profile .sp-guardian-sibling-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.pw-profile .sp-guardian-sibling-name { flex: 1; min-width: 0; }
+.pw-profile .sp-guardian-sibling-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* ── NO PARENT NOTICE ── */
 .pw-profile .sp-no-parent-notice {
   display: flex; align-items: center; gap: 13px;

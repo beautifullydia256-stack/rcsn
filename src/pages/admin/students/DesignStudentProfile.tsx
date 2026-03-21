@@ -47,6 +47,12 @@ function displayFullName(s: Record<string, unknown>): string {
   return String(s.name ?? '').trim() || '—';
 }
 
+function pickStr(v: unknown): string | null {
+  if (v == null) return null;
+  const t = String(v).trim();
+  return t || null;
+}
+
 function calcAge(dob: string | null | undefined): string {
   if (!dob) return '—';
   const t = new Date(dob).getTime();
@@ -92,6 +98,27 @@ type ParentRow = Record<string, unknown> & {
   name?: string | null;
   phone?: string | null;
   email?: string | null;
+};
+
+type ParentSiblingRow = {
+  student_id: string;
+  displayName: string;
+  current_class: string;
+  admission_number: string;
+};
+
+type ParentCardDisplay = {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  parent_id: string | null;
+  relationship: string;
+  occupation: string | null;
+  address: string | null;
+  nin: string | null;
+  is_primary_contact: boolean | null;
+  portal_access: boolean | null;
+  siblings: ParentSiblingRow[];
 };
 
 export default function DesignStudentProfile() {
@@ -218,17 +245,94 @@ export default function DesignStudentProfile() {
         },
         parentsByStudent
       );
-      const parents: ParentRow[] = mergedLite.map((pl, i) => {
-        const dbRow = fromDb[i];
+      const parentCards: ParentCardDisplay[] = mergedLite.map((pl, i) => {
+        const dbRow = fromDb[i] as Record<string, unknown> | undefined;
         const nm = String(pl.name ?? '').trim();
+        const name = nm || (pl.phone || pl.email ? 'Guardian' : '—');
+        const occupation =
+          pickStr(dbRow?.occupation) ?? (i === 0 ? pickStr(s.guardian_occupation) : null);
+        const address = pickStr(dbRow?.address) ?? (i === 0 ? pickStr(s.guardian_address) : null);
+        const nin =
+          pickStr(dbRow?.nin) ??
+          pickStr(dbRow?.national_id) ??
+          pickStr(dbRow?.national_identification_number);
+        let isPrimary: boolean | null = null;
+        if (dbRow && typeof dbRow.is_primary_contact === 'boolean') isPrimary = dbRow.is_primary_contact;
         return {
-          name: nm || (pl.phone || pl.email ? 'Guardian' : '—'),
+          name,
           phone: pl.phone ?? null,
           email: pl.email ?? null,
-          parent_id: pl.parent_id,
-          relationship: (dbRow?.relationship as string | null) ?? (s.guardian_relationship as string | null) ?? 'Guardian',
-        } as ParentRow;
+          parent_id: pl.parent_id ?? null,
+          relationship:
+            pickStr(dbRow?.relationship) ?? (i === 0 ? pickStr(s.guardian_relationship) : null) ?? 'Guardian',
+          occupation,
+          address,
+          nin,
+          is_primary_contact: isPrimary,
+          portal_access: null,
+          siblings: [],
+        };
       });
+
+      const parentIdsForSiblings = [...new Set(parentCards.map((c) => c.parent_id).filter(Boolean))] as string[];
+      if (parentIdsForSiblings.length > 0) {
+        const [linksRes, usersRes] = await Promise.all([
+          supabase
+            .from('parents')
+            .select('parent_id, student_id')
+            .eq('school_id', schoolId)
+            .in('parent_id', parentIdsForSiblings)
+            .neq('student_id', studentId),
+          supabase.from('users').select('user_id, is_active').in('user_id', parentIdsForSiblings).eq('role', 'parent'),
+        ]);
+        if (linksRes.error && import.meta.env.DEV) {
+          console.warn('[DesignStudentProfile] parents sibling links:', linksRes.error.message);
+        }
+        const portalById: Record<string, boolean> = {};
+        for (const u of usersRes.data || []) {
+          const uid = (u as { user_id: string }).user_id;
+          portalById[uid] = (u as { is_active?: boolean }).is_active !== false;
+        }
+        const siblingsByParentId: Record<string, ParentSiblingRow[]> = {};
+        const linkRows = (linksRes.data || []) as { parent_id: string; student_id: string }[];
+        const otherIds = [...new Set(linkRows.map((r) => r.student_id))];
+        if (otherIds.length > 0) {
+          const { data: studRows, error: stErr } = await supabase
+            .from('students')
+            .select('student_id, name, first_name, middle_name, last_name, current_class, admission_number')
+            .eq('school_id', schoolId)
+            .in('student_id', otherIds);
+          if (stErr && import.meta.env.DEV) console.warn('[DesignStudentProfile] sibling students:', stErr.message);
+          const bySid = new Map<string, Record<string, unknown>>();
+          for (const st of studRows || []) {
+            bySid.set(String((st as { student_id: string }).student_id), st as Record<string, unknown>);
+          }
+          for (const link of linkRows) {
+            const rowSt = bySid.get(link.student_id);
+            if (!rowSt) continue;
+            const row: ParentSiblingRow = {
+              student_id: link.student_id,
+              displayName: displayFullName(rowSt),
+              current_class: String(rowSt.current_class ?? '—'),
+              admission_number: String(rowSt.admission_number ?? '—'),
+            };
+            if (!siblingsByParentId[link.parent_id]) siblingsByParentId[link.parent_id] = [];
+            if (!siblingsByParentId[link.parent_id].some((x) => x.student_id === row.student_id)) {
+              siblingsByParentId[link.parent_id].push(row);
+            }
+          }
+        }
+        for (const c of parentCards) {
+          c.portal_access =
+            c.parent_id && Object.prototype.hasOwnProperty.call(portalById, c.parent_id)
+              ? portalById[c.parent_id]
+              : null;
+          const list = c.parent_id ? siblingsByParentId[c.parent_id] : undefined;
+          c.siblings = list
+            ? [...list].sort((a, b) => a.displayName.localeCompare(b.displayName))
+            : [];
+        }
+      }
       const photoUrl = (photoRes.data as { photo_url?: string } | null)?.photo_url?.trim() || '';
       const attToday = attendanceTodayRes.data as { present?: boolean } | null;
       const attAll = (attendanceAllRes.data || []) as { present?: boolean; date?: string }[];
@@ -421,19 +525,47 @@ export default function DesignStudentProfile() {
 
         const noParentNotice = el.querySelector('#sp-no-parent-notice') as HTMLElement | null;
         const parentsBody = el.querySelector('#sp-parents-body') as HTMLElement | null;
-        if (noParentNotice) noParentNotice.style.display = parents.length === 0 ? 'flex' : 'none';
+        if (noParentNotice) noParentNotice.style.display = parentCards.length === 0 ? 'flex' : 'none';
         if (parentsBody) {
-          if (parents.length === 0) {
+          if (parentCards.length === 0) {
             parentsBody.innerHTML = '';
           } else {
-            parentsBody.innerHTML = parents
+            parentsBody.innerHTML = parentCards
               .map((p, i) => {
                 const pname = escapeHtml(String(p.name ?? '—'));
-                const rel = escapeHtml(String(p.relationship ?? s.guardian_relationship ?? 'Guardian'));
+                const rel = escapeHtml(String(p.relationship ?? 'Guardian'));
                 const phone = String(p.phone ?? '').trim();
                 const email = String(p.email ?? '').trim();
                 const pid = String(p.parent_id ?? '');
                 const wa = phone.replace(/\D/g, '');
+                const occ = String(p.occupation ?? '').trim();
+                const addr = String(p.address ?? '').trim();
+                const nin = String(p.nin ?? '').trim();
+                const primaryLabel =
+                  p.is_primary_contact === true ? 'Yes' : p.is_primary_contact === false ? 'No' : '—';
+                const portalHtml =
+                  p.portal_access === true
+                    ? '<span style="color:var(--green)">✓ Active</span>'
+                    : p.portal_access === false
+                      ? '<span style="color:var(--rose)">✗ Inactive</span>'
+                      : '—';
+                const siblingsHtml =
+                  p.siblings.length === 0
+                    ? ''
+                    : `<div class="sp-guardian-siblings">
+              <div class="sp-guardian-siblings-title">Other children (same guardian)</div>
+              <div class="sp-guardian-sibling-list">
+                ${p.siblings
+                  .map(
+                    (ch) =>
+                      `<button type="button" class="sp-guardian-sibling-link" data-nav="/dashboard/admin/students/${escapeHtml(ch.student_id)}">
+                  <span class="sp-guardian-sibling-name">${escapeHtml(ch.displayName)}</span>
+                  <span class="sp-guardian-sibling-meta">${escapeHtml(ch.current_class)} · #${escapeHtml(ch.admission_number)}</span>
+                </button>`
+                  )
+                  .join('')}
+              </div>
+            </div>`;
                 return `
             <div class="sp-guardian-card">
               <div class="sp-guardian-top">
@@ -446,14 +578,20 @@ export default function DesignStudentProfile() {
                   ${phone ? `<button type="button" class="sp-icon-btn" data-tel="${escapeHtml(phone)}" title="Call">📞</button>` : ''}
                   ${email ? `<button type="button" class="sp-icon-btn" data-email="${escapeHtml(email)}" title="Email">✉️</button>` : ''}
                   ${phone && wa ? `<button type="button" class="sp-icon-btn sp-green" data-whatsapp="${wa}" title="WhatsApp">💬</button>` : ''}
-                  <button type="button" class="sp-icon-btn" data-nav="/dashboard/admin/parents" title="Parents">›</button>
+                  <button type="button" class="sp-icon-btn" data-nav="/dashboard/admin/parents" title="Parents directory">›</button>
                 </div>
               </div>
               <div class="sp-guardian-fields">
                 <div><div class="sp-guardian-field-label">Phone</div><div class="sp-guardian-field-value">${phone ? `<a href="tel:${phone.replace(/\s/g, '')}">${escapeHtml(phone)}</a>` : '—'}</div></div>
                 <div><div class="sp-guardian-field-label">Email</div><div class="sp-guardian-field-value">${email ? `<a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a>` : '—'}</div></div>
                 <div><div class="sp-guardian-field-label">Parent ID</div><div class="sp-guardian-field-value" style="font-size:11px;word-break:break-all">${pid ? escapeHtml(pid) : '—'}</div></div>
+                <div><div class="sp-guardian-field-label">Occupation</div><div class="sp-guardian-field-value">${occ ? escapeHtml(occ) : '—'}</div></div>
+                <div><div class="sp-guardian-field-label">NIN / ID</div><div class="sp-guardian-field-value">${nin ? escapeHtml(nin) : '—'}</div></div>
+                <div><div class="sp-guardian-field-label">Address</div><div class="sp-guardian-field-value">${addr ? escapeHtml(addr) : '—'}</div></div>
+                <div><div class="sp-guardian-field-label">Primary contact</div><div class="sp-guardian-field-value">${primaryLabel}</div></div>
+                <div><div class="sp-guardian-field-label">Portal access</div><div class="sp-guardian-field-value">${portalHtml}</div></div>
               </div>
+              ${siblingsHtml}
             </div>`;
               })
               .join('');

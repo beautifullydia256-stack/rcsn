@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Parent Profile · Kimuli Daudi</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*
+ ═══════════════════════════════════════════════════
+  REACT INJECTION FORMAT — Parent Profile Page
+  Scope: .pw-parent-profile  |  No sidebar · No topbar
+  Route: /dashboard/admin/parents/:parent_id
+
+  DOM targets:
+    Topbar:  #pp-breadcrumb-name
+    Hero:    #pp-photo-img, #pp-photo-initials,
+             #pp-parent-name, #pp-chip-relation,
+             #pp-chip-portal, #pp-chip-nin,
+             #pp-meta-phone, #pp-meta-email,
+             #pp-meta-occupation, #pp-meta-address,
+             #pp-meta-children-count, #pp-meta-joined
+
+    Overview tab fields: #pp-first-name … #pp-nin
+    Children list:  #pp-children-body
+    Activity:       #pp-activity-body
+    Messages:       #pp-messages-body
+    Documents:      #pp-documents-body
+    Payments:       #pp-payments-body
+ ═══════════════════════════════════════════════════
+*/
+
+.pw-parent-profile *, .pw-parent-profile *::before, .pw-parent-profile *::after {
+  box-sizing:border-box; margin:0; padding:0;
+}
+
+.pw-parent-profile {
+  -webkit-text-size-adjust: 100%;
+  --bg:       #07090f;
+  --s0:       #0b0e18;
+  --s1:       #10141f;
+  --s2:       #161b2b;
+  --s3:       #1d2438;
+  --s4:       #252d44;
+  --border:   rgba(255,255,255,0.06);
+  --bh:       rgba(255,255,255,0.11);
+  --teal:     #00e5c3;
+  --teal-s:   rgba(0,229,195,0.09);
+  --teal-g:   rgba(0,229,195,0.18);
+  --blue:     #3d7eff;
+  --blue-s:   rgba(61,126,255,0.10);
+  --amber:    #ffb547;
+  --amber-s:  rgba(255,181,71,0.10);
+  --rose:     #ff4f6a;
+  --rose-s:   rgba(255,79,106,0.10);
+  --violet:   #9d7eff;
+  --violet-s: rgba(157,126,255,0.10);
+  --green:    #27e09f;
+  --green-s:  rgba(39,224,159,0.10);
+  --t1: #e8eeff;
+  --t2: #7c89b0;
+  --t3: #3a4468;
+  --r:  12px;
+  --rs: 7px;
+
+  font-family:'Geist',sans-serif;
+  background:var(--bg); color:var(--t1);
+  width:100%; min-height:100vh;
+  font-size:14px; -webkit-font-smoothing:antialiased;
+}
+
+html.light .pw-parent-profile, html[data-theme=light] .pw-parent-profile {
+  --bg:#f0f4ff; --s0:#fff; --s1:#fff; --s2:#f4f7ff;
+  --s3:#e8eeff; --s4:#dce3ff;
+  --border:rgba(0,0,0,0.07); --bh:rgba(0,0,0,0.13);
+  --t1:#0a0e1a; --t2:#3a4880; --t3:#8892b8;
+  background:var(--bg); color:var(--t1);
+}
+
+@keyframes pp-up {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.pp-fu { animation:pp-up .34s ease both; }
+.pp-d1 { animation-delay:.04s; }
+.pp-d2 { animation-delay:.08s; }
+.pp-d3 { animation-delay:.13s; }
+
+/* ── TOPBAR ── */
+.pw-parent-profile .pp-topbar {
+  position:sticky; top:0; z-index:50;
+  background:rgba(7,9,15,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+  padding:12px 28px;
+  padding-left:max(28px, env(safe-area-inset-left, 0px));
+  padding-right:max(28px, env(safe-area-inset-right, 0px));
+  flex-wrap:wrap;
+  row-gap:10px;
+}
+html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
+
+.pw-parent-profile .pp-back {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:7px 14px; border-radius:var(--rs);
+  border:1px solid var(--border); background:var(--s2);
+  color:var(--t2); font-family:'Geist',sans-serif;
+  font-size:13px; font-weight:600; cursor:pointer;
+  transition:all .16s; white-space:nowrap;
+}
+.pw-parent-profile .pp-back:hover { border-color:var(--bh); color:var(--t1); }
+
+.pw-parent-profile .pp-breadcrumb {
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; color:var(--t3);
+  min-width:0;
+  flex:1 1 160px;
+}
+.pw-parent-profile .pp-bc-link { color:var(--t2); cursor:pointer; transition:color .14s; }
+.pw-parent-profile .pp-bc-link:hover { color:var(--violet); }
+.pw-parent-profile .pp-bc-current {
+  color:var(--t1); font-weight:600;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:min(220px, 50vw);
+}
+
+.pw-parent-profile .pp-topbar-right {
+  margin-left:auto; display:flex; align-items:center; gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  min-width:0;
+}
+
+/* ── BUTTONS ── */
+.pw-parent-profile .pp-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:8px 16px; border-radius:var(--rs);
+  font-family:'Geist',sans-serif; font-size:13px;
+  font-weight:600; cursor:pointer; border:none;
+  transition:all .17s; white-space:nowrap;
+  touch-action:manipulation;
+  min-height:40px;
+}
+.pw-parent-profile .pp-btn-ghost {
+  background:var(--s2); color:var(--t2);
+  border:1px solid var(--border);
+}
+.pw-parent-profile .pp-btn-ghost:hover { background:var(--s3); color:var(--t1); border-color:var(--bh); }
+.pw-parent-profile .pp-btn-violet { background:var(--violet); color:#07090f; }
+.pw-parent-profile .pp-btn-violet:hover { background:#b49fff; transform:translateY(-1px); }
+.pw-parent-profile .pp-btn-teal { background:var(--teal); color:#07090f; }
+.pw-parent-profile .pp-btn-teal:hover { background:#1af0cf; transform:translateY(-1px); }
+.pw-parent-profile .pp-btn-danger { background:var(--rose-s); color:var(--rose); border:1px solid rgba(255,79,106,.2); }
+.pw-parent-profile .pp-btn-danger:hover { background:rgba(255,79,106,.2); }
+.pw-parent-profile .pp-btn-sm { padding:6px 12px; font-size:12px; }
+
+/* ── CONTENT ── */
+.pw-parent-profile .pp-content {
+  padding:26px 28px 64px;
+  padding-bottom:max(64px, env(safe-area-inset-bottom, 0px));
+  min-width:0;
+  box-sizing:border-box;
+}
+
+/* ═══ HERO CARD ═══ */
+.pw-parent-profile .pp-hero {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:var(--r); margin-bottom:20px;
+  overflow:hidden; position:relative;
+}
+
+/* banner */
+.pw-parent-profile .pp-banner {
+  height:100px;
+  background:linear-gradient(135deg,#131a36 0%,#0e1228 40%,#1a1235 100%);
+  position:relative; overflow:hidden;
+}
+.pw-parent-profile .pp-banner::before {
+  content:''; position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse at 25% 50%, rgba(157,126,255,.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 75% 20%, rgba(0,229,195,.08) 0%, transparent 50%);
+}
+.pw-parent-profile .pp-banner::after {
+  content:''; position:absolute;
+  bottom:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--violet),transparent);
+  opacity:.4;
+}
+
+/* hero body */
+.pw-parent-profile .pp-hero-body {
+  padding:0 28px 24px;
+  display:flex; align-items:flex-end; gap:22px;
+  position:relative;
+}
+
+/* photo */
+.pw-parent-profile .pp-photo-wrap { margin-top:-48px; flex-shrink:0; position:relative; }
+.pw-parent-profile .pp-photo-img,
+.pw-parent-profile .pp-photo-initials {
+  width:96px; height:96px; border-radius:20px;
+  border:3px solid var(--bg); display:block;
+}
+.pw-parent-profile .pp-photo-img { object-fit:cover; }
+.pw-parent-profile .pp-photo-initials {
+  background:linear-gradient(135deg,#9d7eff,#ff4f6a);
+  display:grid; place-items:center;
+  font-family:'Instrument Serif',serif;
+  font-size:34px; color:#fff; letter-spacing:-1px;
+}
+.pw-parent-profile .pp-photo-edit {
+  position:absolute; bottom:-4px; right:-4px;
+  width:26px; height:26px; border-radius:7px;
+  background:var(--s3); border:2px solid var(--bg);
+  display:grid; place-items:center;
+  cursor:pointer; font-size:12px; transition:background .15s;
+}
+.pw-parent-profile .pp-photo-edit:hover { background:var(--violet); }
+
+/* hero info */
+.pw-parent-profile .pp-hero-info { padding-top:14px; flex:1; min-width:0; }
+.pw-parent-profile .pp-parent-name {
+  font-family:'Instrument Serif',serif;
+  font-size:27px; letter-spacing:-.5px;
+  color:var(--t1); line-height:1.1; margin-bottom:9px;
+}
+.pw-parent-profile .pp-hero-chips {
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+}
+.pw-parent-profile .pp-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:4px 10px; border-radius:20px;
+  font-size:12px; font-weight:600; letter-spacing:.1px;
+}
+.pw-parent-profile .pp-chip.violet { background:var(--violet-s); color:var(--violet); border:1px solid rgba(157,126,255,.15); }
+.pw-parent-profile .pp-chip.green  { background:var(--green-s);  color:var(--green);  border:1px solid rgba(39,224,159,.15); }
+.pw-parent-profile .pp-chip.amber  { background:var(--amber-s);  color:var(--amber);  border:1px solid rgba(255,181,71,.15); }
+.pw-parent-profile .pp-chip.rose   { background:var(--rose-s);   color:var(--rose);   border:1px solid rgba(255,79,106,.15); }
+.pw-parent-profile .pp-chip.teal   { background:var(--teal-s);   color:var(--teal);   border:1px solid rgba(0,229,195,.15); }
+.pw-parent-profile .pp-chip.muted  { background:var(--s3);       color:var(--t3);     border:1px solid var(--border); }
+.pw-parent-profile .pp-chip.blue   { background:var(--blue-s);   color:var(--blue);   border:1px solid rgba(61,126,255,.15); }
+
+/* hero meta strip */
+.pw-parent-profile .pp-hero-meta {
+  display:flex; align-items:center; gap:20px;
+  padding-top:12px; margin-top:12px;
+  border-top:1px solid var(--border); flex-wrap:wrap;
+}
+.pw-parent-profile .pp-meta-item { display:flex; flex-direction:column; gap:2px; }
+.pw-parent-profile .pp-meta-label {
+  font-size:10px; font-weight:700; letter-spacing:1.2px;
+  text-transform:uppercase; color:var(--t3);
+}
+.pw-parent-profile .pp-meta-value {
+  font-size:13.5px; font-weight:600; color:var(--t1);
+}
+.pw-parent-profile .pp-meta-value a { color:var(--teal); text-decoration:none; font-family:'Geist Mono',monospace; font-size:13px; }
+.pw-parent-profile .pp-meta-value a.email { color:var(--blue); font-family:'Geist',sans-serif; font-size:13px; }
+.pw-parent-profile .pp-meta-value a:hover { opacity:.7; }
+.pw-parent-profile .pp-meta-value.violet { color:var(--violet); }
+.pw-parent-profile .pp-meta-value.green  { color:var(--green); }
+.pw-parent-profile .pp-meta-value.amber  { color:var(--amber); }
+
+/* hero actions */
+.pw-parent-profile .pp-hero-actions {
+  display:flex; flex-direction:column; gap:8px;
+  padding-top:18px; flex-shrink:0;
+}
+
+/* ═══ TABS ═══ */
+.pw-parent-profile .pp-tabs {
+  display:flex; gap:4px;
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:var(--r); padding:5px;
+  margin-bottom:20px;
+}
+.pw-parent-profile .pp-tab {
+  flex:1; padding:9px 12px; border-radius:var(--rs);
+  border:none; background:none;
+  color:var(--t2); font-family:'Geist',sans-serif;
+  font-size:13px; font-weight:500; cursor:pointer;
+  transition:all .16s;
+  display:flex; align-items:center; justify-content:center; gap:6px;
+  white-space:nowrap;
+}
+.pw-parent-profile .pp-tab:hover { background:var(--s2); color:var(--t1); }
+.pw-parent-profile .pp-tab.active { background:var(--s3); color:var(--t1); font-weight:600; }
+
+/* ═══ SECTION CARDS ═══ */
+.pw-parent-profile .pp-grid         { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.pw-parent-profile .pp-grid.full    { grid-template-columns:1fr; }
+.pw-parent-profile .pp-grid.three   { grid-template-columns:1fr 1fr 1fr; }
+
+.pw-parent-profile .pp-card {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:var(--r); overflow:hidden;
+}
+.pw-parent-profile .pp-card.span2 { grid-column:span 2; }
+
+.pw-parent-profile .pp-card-head {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:15px 20px 13px; border-bottom:1px solid var(--border);
+}
+.pw-parent-profile .pp-card-title {
+  display:flex; align-items:center; gap:9px;
+  font-size:11px; font-weight:700;
+  letter-spacing:1.6px; text-transform:uppercase; color:var(--t3);
+}
+.pw-parent-profile .pp-card-title-ic {
+  width:28px; height:28px; border-radius:7px;
+  display:grid; place-items:center; font-size:13px; flex-shrink:0;
+}
+.pw-parent-profile .pp-card-body { padding:17px 20px; }
+
+/* field grid */
+.pw-parent-profile .pp-fields      { display:grid; grid-template-columns:1fr 1fr; gap:15px 20px; }
+.pw-parent-profile .pp-fields.one  { grid-template-columns:1fr; }
+.pw-parent-profile .pp-fields.three{ grid-template-columns:1fr 1fr 1fr; }
+
+.pw-parent-profile .pp-field { display:flex; flex-direction:column; gap:4px; }
+.pw-parent-profile .pp-field-label {
+  font-size:10px; font-weight:700; letter-spacing:1px;
+  text-transform:uppercase; color:var(--t3);
+}
+.pw-parent-profile .pp-field-value {
+  font-size:14px; font-weight:500; color:var(--t1); line-height:1.4;
+}
+.pw-parent-profile .pp-field-value.muted  { color:var(--t3); font-style:italic; font-weight:400; }
+.pw-parent-profile .pp-field-value.violet { color:var(--violet); }
+.pw-parent-profile .pp-field-value.green  { color:var(--green); font-weight:600; }
+.pw-parent-profile .pp-field-value.amber  { color:var(--amber); font-weight:600; }
+.pw-parent-profile .pp-field-value.teal   { color:var(--teal); }
+.pw-parent-profile .pp-field-value a { color:var(--teal); text-decoration:none; font-family:'Geist Mono',monospace; }
+.pw-parent-profile .pp-field-value a.email { color:var(--blue); font-family:'Geist',sans-serif; }
+.pw-parent-profile .pp-field-value a:hover { opacity:.7; }
+
+/* ═══ CHILDREN CARDS ═══ */
+.pw-parent-profile .pp-child-cards { display:flex; flex-direction:column; gap:12px; }
+.pw-parent-profile .pp-child-card {
+  border:1px solid var(--border); border-radius:10px;
+  padding:16px 18px; background:var(--s2);
+  display:flex; align-items:center; gap:14px;
+  transition:border-color .16s; cursor:pointer;
+  position:relative; overflow:hidden;
+}
+.pw-parent-profile .pp-child-card::before {
+  content:''; position:absolute;
+  left:0; top:0; bottom:0; width:2.5px;
+  border-radius:0 2px 2px 0;
+}
+.pw-parent-profile .pp-child-card:hover { border-color:var(--bh); }
+.pw-parent-profile .pp-child-card:hover::before { background:var(--teal); }
+
+.pw-parent-profile .pp-child-av {
+  width:46px; height:46px; border-radius:12px;
+  display:grid; place-items:center;
+  font-size:15px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.pw-parent-profile .pp-child-av img { width:100%; height:100%; border-radius:12px; object-fit:cover; }
+.pw-parent-profile .pp-child-name { font-size:14px; font-weight:700; color:var(--t1); letter-spacing:-.1px; }
+.pw-parent-profile .pp-child-sub  { font-size:12px; color:var(--t3); margin-top:2px; }
+
+.pw-parent-profile .pp-child-stats {
+  margin-left:auto; display:flex; gap:18px; flex-shrink:0;
+}
+.pw-parent-profile .pp-child-stat { text-align:center; }
+.pw-parent-profile .pp-child-stat-val {
+  font-family:'Instrument Serif',serif;
+  font-size:18px; letter-spacing:-.5px; line-height:1;
+}
+.pw-parent-profile .pp-child-stat-lbl {
+  font-size:9.5px; font-weight:700; letter-spacing:.8px;
+  text-transform:uppercase; color:var(--t3); margin-top:2px;
+}
+
+.pw-parent-profile .pp-child-actions { display:flex; gap:7px; flex-shrink:0; }
+.pw-parent-profile .pp-child-btn {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:6px 12px; border-radius:7px;
+  font-family:'Geist',sans-serif; font-size:12px;
+  font-weight:600; cursor:pointer; transition:all .15s; border:none;
+}
+.pw-parent-profile .pp-child-btn-ghost { background:var(--s3); color:var(--t2); border:1px solid var(--border); }
+.pw-parent-profile .pp-child-btn-ghost:hover { background:var(--s4); color:var(--t1); }
+.pw-parent-profile .pp-child-btn-teal { background:var(--teal-s); color:var(--teal); border:1px solid rgba(0,229,195,.15); }
+.pw-parent-profile .pp-child-btn-teal:hover { background:var(--teal); color:#07090f; }
+
+/* ═══ ACTIVITY FEED ═══ */
+.pw-parent-profile .pp-act-row {
+  display:flex; gap:12px;
+  padding:11px 0; border-bottom:1px solid var(--border);
+}
+.pw-parent-profile .pp-act-row:last-child { border-bottom:none; }
+.pw-parent-profile .pp-act-dot {
+  width:28px; height:28px; border-radius:50%;
+  display:grid; place-items:center;
+  font-size:11px; font-weight:700; color:#fff;
+  flex-shrink:0; margin-top:1px;
+}
+.pw-parent-profile .pp-act-text { font-size:12.5px; color:var(--t2); line-height:1.5; }
+.pw-parent-profile .pp-act-text strong { color:var(--t1); font-weight:600; }
+.pw-parent-profile .pp-act-time { font-size:11px; color:var(--t3); margin-top:2px; }
+
+/* ═══ MESSAGES ═══ */
+.pw-parent-profile .pp-msg-compose {
+  background:var(--s2); border:1px solid var(--border);
+  border-radius:10px; padding:14px 16px;
+  margin-bottom:14px; display:flex; gap:11px;
+}
+.pw-parent-profile .pp-msg-compose textarea {
+  flex:1; background:none; border:none; outline:none;
+  color:var(--t1); font-family:'Geist',sans-serif; font-size:13px;
+  resize:none; line-height:1.5;
+}
+.pw-parent-profile .pp-msg-compose textarea::placeholder { color:var(--t3); }
+
+.pw-parent-profile .pp-msg-row {
+  display:flex; gap:11px; padding:12px 0;
+  border-bottom:1px solid var(--border);
+}
+.pw-parent-profile .pp-msg-row:last-child { border-bottom:none; }
+.pw-parent-profile .pp-msg-av {
+  width:30px; height:30px; border-radius:50%;
+  display:grid; place-items:center;
+  font-size:11px; font-weight:700; color:#fff; flex-shrink:0;
+}
+.pw-parent-profile .pp-msg-bubble {
+  flex:1; background:var(--s2); border:1px solid var(--border);
+  border-radius:0 10px 10px 10px; padding:10px 14px;
+  font-size:13px; color:var(--t2); line-height:1.5;
+}
+.pw-parent-profile .pp-msg-bubble.sent {
+  background:var(--violet-s); border-color:rgba(157,126,255,.15);
+  border-radius:10px 0 10px 10px; color:var(--t1);
+}
+.pw-parent-profile .pp-msg-meta { font-size:11px; color:var(--t3); margin-top:4px; }
+.pw-parent-profile .pp-msg-row.sent { flex-direction:row-reverse; }
+.pw-parent-profile .pp-msg-row.sent .pp-msg-bubble { border-radius:10px 0 10px 10px; }
+
+/* ═══ PAYMENT HISTORY ═══ */
+.pw-parent-profile .pp-pay-row {
+  display:flex; align-items:center; gap:12px;
+  padding:12px 0; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .13s;
+}
+.pw-parent-profile .pp-pay-row:last-child { border-bottom:none; }
+.pw-parent-profile .pp-pay-ic {
+  width:34px; height:34px; border-radius:9px;
+  display:grid; place-items:center; font-size:15px; flex-shrink:0;
+}
+.pw-parent-profile .pp-pay-name { font-size:13px; font-weight:600; color:var(--t1); }
+.pw-parent-profile .pp-pay-sub  { font-size:11.5px; color:var(--t3); margin-top:1px; }
+.pw-parent-profile .pp-pay-amount {
+  font-family:'Instrument Serif',serif;
+  font-size:17px; letter-spacing:-.3px; margin-left:auto; flex-shrink:0;
+}
+.pw-parent-profile .pp-pay-amount.green { color:var(--green); }
+
+/* ═══ EMPTY STATE ═══ */
+.pw-parent-profile .pp-empty {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:center; padding:40px 22px;
+  gap:10px; color:var(--t3); text-align:center;
+}
+.pw-parent-profile .pp-empty-icon { font-size:30px; opacity:.35; }
+.pw-parent-profile .pp-empty-title { font-size:14px; font-weight:600; color:var(--t2); }
+.pw-parent-profile .pp-empty-sub   { font-size:12.5px; color:var(--t3); }
+
+/* ═══ TAG ═══ */
+.pw-parent-profile .pp-tag {
+  display:inline-flex; align-items:center; gap:4px;
+  padding:2px 8px; border-radius:5px;
+  font-size:11.5px; font-weight:600;
+  background:var(--s3); color:var(--t2); border:1px solid var(--border);
+}
+
+/* scrollbar */
+.pw-parent-profile ::-webkit-scrollbar { width:5px; }
+.pw-parent-profile ::-webkit-scrollbar-track { background:transparent; }
+.pw-parent-profile ::-webkit-scrollbar-thumb { background:var(--s3); border-radius:3px; }
+
+/* responsive */
+@media(max-width:1100px) {
+  .pw-parent-profile .pp-grid { grid-template-columns:1fr; }
+  .pw-parent-profile .pp-card.span2 { grid-column:span 1; }
+  .pw-parent-profile .pp-grid.three { grid-template-columns:1fr 1fr; }
+  .pw-parent-profile .pp-child-stats { display:none; }
+}
+@media(max-width:768px) {
+  .pw-parent-profile .pp-content {
+    padding:14px max(14px, env(safe-area-inset-right, 0px)) max(50px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
+  }
+  .pw-parent-profile .pp-topbar {
+    padding:10px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+    gap:8px;
+  }
+  .pw-parent-profile .pp-back { min-height:44px; touch-action:manipulation; }
+  .pw-parent-profile .pp-hero-body {
+    flex-direction:column;
+    align-items:flex-start;
+    padding:0 max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px));
+    gap:12px;
+  }
+  .pw-parent-profile .pp-parent-name { font-size:23px; word-break:break-word; }
+  .pw-parent-profile .pp-hero-actions {
+    flex-direction:row;
+    flex-wrap:wrap;
+    width:100%;
+    padding-top:0;
+    gap:8px;
+  }
+  .pw-parent-profile .pp-hero-actions .pp-btn {
+    flex:1 1 auto;
+    min-width:min(100%, 160px);
+    min-height:44px;
+    justify-content:center;
+  }
+  .pw-parent-profile .pp-hero-meta {
+    gap:12px 16px;
+  }
+  .pw-parent-profile .pp-tabs {
+    gap:0;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior-x:contain;
+    justify-content:flex-start;
+    flex-wrap:nowrap;
+    margin-bottom:16px;
+    padding-bottom:6px;
+  }
+  .pw-parent-profile .pp-tab {
+    flex:0 0 auto;
+    font-size:12px;
+    padding:10px 14px;
+    min-height:44px;
+    touch-action:manipulation;
+  }
+  .pw-parent-profile .pp-fields.three { grid-template-columns:1fr 1fr; }
+  .pw-parent-profile .pp-fields { grid-template-columns:1fr 1fr; gap:12px; }
+  .pw-parent-profile .pp-child-card {
+    flex-wrap:wrap;
+    align-items:flex-start;
+    gap:12px;
+  }
+  .pw-parent-profile .pp-child-actions {
+    width:100%;
+    justify-content:stretch;
+  }
+  .pw-parent-profile .pp-child-btn {
+    flex:1;
+    min-height:44px;
+    justify-content:center;
+    touch-action:manipulation;
+  }
+  .pw-parent-profile .pp-msg-compose { flex-wrap:wrap; }
+}
+@media(max-width:480px) {
+  .pw-parent-profile .pp-grid.three { grid-template-columns:1fr; }
+  .pw-parent-profile .pp-fields,
+  .pw-parent-profile .pp-fields.three { grid-template-columns:1fr; }
+  .pw-parent-profile .pp-topbar {
+    align-items:flex-start;
+  }
+  .pw-parent-profile .pp-topbar-right {
+    flex:1 1 auto;
+    justify-content:flex-end;
+    gap:6px;
+    order:1;
+  }
+  .pw-parent-profile .pp-topbar-right .pp-btn {
+    min-height:44px;
+    padding:8px 12px;
+    font-size:12px;
+  }
+  .pw-parent-profile .pp-breadcrumb {
+    flex:1 1 100%;
+    order:2;
+    margin-top:4px;
+  }
+  .pw-parent-profile .pp-back { order:0; }
+  .pw-parent-profile .pp-tab {
+    font-size:11px;
+    padding:10px 12px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="pw-parent-profile">
+
+  <!-- ── TOPBAR ── -->
+  <div class="pp-topbar pp-fu">
+    <button class="pp-back" data-nav="/dashboard/admin/parents">← Parents</button>
+    <div class="pp-breadcrumb">
+      <span class="pp-bc-link" data-nav="/dashboard/admin/parents">Parents &amp; Guardians</span>
+      <span style="color:var(--t3)">/</span>
+      <span class="pp-bc-current" id="pp-breadcrumb-name">Kimuli Daudi</span>
+    </div>
+    <div class="pp-topbar-right">
+      <button class="pp-btn pp-btn-ghost" id="pp-btn-print">🖨 Print</button>
+      <button class="pp-btn pp-btn-ghost" id="pp-btn-edit">✏️ Edit</button>
+      <button class="pp-btn pp-btn-danger pp-btn-sm" id="pp-btn-delete">🗑 Delete</button>
+    </div>
+  </div>
+
+  <!-- ── CONTENT ── -->
+  <div class="pp-content">
+
+    <!-- ═══ HERO CARD ═══ -->
+    <div class="pp-hero pp-fu">
+      <div class="pp-banner"></div>
+      <div class="pp-hero-body">
+
+        <!-- Photo -->
+        <div class="pp-photo-wrap">
+          <img id="pp-photo-img" class="pp-photo-img" src="" alt="" style="display:none">
+          <div id="pp-photo-initials" class="pp-photo-initials">KD</div>
+          <div class="pp-photo-edit" title="Change photo">📷</div>
+        </div>
+
+        <!-- Info -->
+        <div class="pp-hero-info">
+          <div class="pp-parent-name" id="pp-parent-name">Kimuli Daudi</div>
+          <div class="pp-hero-chips">
+            <span class="pp-chip violet" id="pp-chip-relation">👨 Father</span>
+            <span class="pp-chip green"  id="pp-chip-portal">🌐 Portal Active</span>
+            <span class="pp-chip muted"  id="pp-chip-nin">🪪 CM9100XXXX</span>
+            <span class="pp-chip blue"   id="pp-chip-children-count">👧 1 Child</span>
+          </div>
+          <div class="pp-hero-meta">
+            <div class="pp-meta-item">
+              <span class="pp-meta-label">Phone</span>
+              <span class="pp-meta-value"><a href="tel:0759881429" id="pp-meta-phone">0759 881 429</a></span>
+            </div>
+            <div class="pp-meta-item">
+              <span class="pp-meta-label">Email</span>
+              <span class="pp-meta-value"><a href="mailto:kimuli@gmail.com" class="email" id="pp-meta-email">kimuli@gmail.com</a></span>
+            </div>
+            <div class="pp-meta-item">
+              <span class="pp-meta-label">Occupation</span>
+              <span class="pp-meta-value" id="pp-meta-occupation">Business Owner</span>
+            </div>
+            <div class="pp-meta-item">
+              <span class="pp-meta-label">Address</span>
+              <span class="pp-meta-value" id="pp-meta-address">Mengo, Kampala</span>
+            </div>
+            <div class="pp-meta-item">
+              <span class="pp-meta-label">Registered</span>
+              <span class="pp-meta-value" id="pp-meta-joined">Nov 2025</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="pp-hero-actions">
+          <button class="pp-btn pp-btn-teal" id="pp-btn-message">📩 Send Message</button>
+          <button class="pp-btn pp-btn-ghost" id="pp-btn-portal">🌐 Manage Portal</button>
+          <button class="pp-btn pp-btn-ghost" id="pp-btn-call" onclick="window.location.href='tel:0759881429'">📞 Call</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ TABS ═══ -->
+    <div class="pp-tabs pp-fu pp-d1" id="pp-tabs">
+      <button class="pp-tab active" data-tab="overview">👤 Overview</button>
+      <button class="pp-tab" data-tab="children">👨‍👩‍👧 Children</button>
+      <button class="pp-tab" data-tab="payments">💳 Payments</button>
+      <button class="pp-tab" data-tab="messages">💬 Messages</button>
+      <button class="pp-tab" data-tab="activity">🕐 Activity</button>
+      <button class="pp-tab" data-tab="documents">📄 Documents</button>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: OVERVIEW                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-overview" class="pp-fu pp-d2">
+      <div class="pp-grid">
+
+        <!-- Personal Details -->
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--violet-s)">👤</div>
+              Personal Details
+            </div>
+          </div>
+          <div class="pp-card-body">
+            <div class="pp-fields">
+              <div class="pp-field">
+                <span class="pp-field-label">First Name</span>
+                <span class="pp-field-value" id="pp-first-name">Kimuli</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Last Name</span>
+                <span class="pp-field-value" id="pp-last-name">Daudi</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Gender</span>
+                <span class="pp-field-value" id="pp-gender">Male</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Relationship</span>
+                <span class="pp-field-value violet" id="pp-relationship">Father</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">NIN / National ID</span>
+                <span class="pp-field-value" id="pp-nin">CM9100XXXX</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Nationality</span>
+                <span class="pp-field-value" id="pp-nationality">Ugandan</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Religion</span>
+                <span class="pp-field-value muted" id="pp-religion">—</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Date of Birth</span>
+                <span class="pp-field-value muted" id="pp-dob">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contact & Work -->
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--teal-s)">📞</div>
+              Contact &amp; Work
+            </div>
+          </div>
+          <div class="pp-card-body">
+            <div class="pp-fields">
+              <div class="pp-field">
+                <span class="pp-field-label">Phone Number</span>
+                <span class="pp-field-value teal"><a href="tel:0759881429" id="pp-phone">0759 881 429</a></span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">WhatsApp</span>
+                <span class="pp-field-value teal" id="pp-whatsapp"><a href="https://wa.me/256759881429" target="_blank">0759 881 429</a></span>
+              </div>
+              <div class="pp-field" style="grid-column:span 2">
+                <span class="pp-field-label">Email Address</span>
+                <span class="pp-field-value"><a href="mailto:kimuli@gmail.com" class="email" id="pp-email">kimuli@gmail.com</a></span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Occupation</span>
+                <span class="pp-field-value" id="pp-occupation">Business Owner</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Employer</span>
+                <span class="pp-field-value muted" id="pp-employer">Self-employed</span>
+              </div>
+              <div class="pp-field" style="grid-column:span 2">
+                <span class="pp-field-label">Home Address</span>
+                <span class="pp-field-value" id="pp-address">Mengo, Kampala</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">District</span>
+                <span class="pp-field-value" id="pp-district">Kampala</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Emergency Contact</span>
+                <span class="pp-field-value muted" id="pp-emergency">—</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portal Access — full width -->
+        <div class="pp-card span2">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--green-s)">🌐</div>
+              Parent Portal Access
+            </div>
+            <button class="pp-btn pp-btn-ghost pp-btn-sm" id="pp-btn-manage-portal">⚙ Manage Access</button>
+          </div>
+          <div class="pp-card-body">
+            <div class="pp-fields three">
+              <div class="pp-field">
+                <span class="pp-field-label">Portal Status</span>
+                <span class="pp-field-value green" id="pp-portal-status">✓ Active</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Account Email</span>
+                <span class="pp-field-value" id="pp-portal-email">kimuli@gmail.com</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Last Login</span>
+                <span class="pp-field-value" id="pp-portal-last-login">2 days ago</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Portal Permissions</span>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="pp-portal-permissions">
+                  <span class="pp-tag">View Grades</span>
+                  <span class="pp-tag">View Attendance</span>
+                  <span class="pp-tag">Pay Fees</span>
+                  <span class="pp-tag">Messages</span>
+                </div>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Registered</span>
+                <span class="pp-field-value" id="pp-portal-registered">November 12, 2025</span>
+              </div>
+              <div class="pp-field">
+                <span class="pp-field-label">Two-Factor Auth</span>
+                <span class="pp-field-value amber" id="pp-portal-2fa">⚠ Not enabled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: CHILDREN                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-children" style="display:none" class="pp-fu pp-d2">
+      <div class="pp-grid full">
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--teal-s)">👧</div>
+              Enrolled Children
+            </div>
+            <button class="pp-btn pp-btn-ghost pp-btn-sm" id="pp-btn-link-child">+ Link Child</button>
+          </div>
+          <div class="pp-card-body">
+            <div class="pp-child-cards" id="pp-children-body">
+
+              <!-- Child card 1 -->
+              <div class="pp-child-card" data-nav="/dashboard/admin/students/STUDENT_ID">
+                <div class="pp-child-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">
+                  <img src="https://i.pravatar.cc/46?img=47" alt="">
+                </div>
+                <div style="flex:1">
+                  <div class="pp-child-name">Jessica Alupo</div>
+                  <div class="pp-child-sub">Primary 1 · Admission #RAK202511004</div>
+                </div>
+                <!-- Quick stats -->
+                <div class="pp-child-stats">
+                  <div class="pp-child-stat">
+                    <div class="pp-child-stat-val" style="color:var(--amber)">UGX 240K</div>
+                    <div class="pp-child-stat-lbl">Fee Balance</div>
+                  </div>
+                  <div class="pp-child-stat">
+                    <div class="pp-child-stat-val" style="color:var(--green)">74%</div>
+                    <div class="pp-child-stat-lbl">Attendance</div>
+                  </div>
+                  <div class="pp-child-stat">
+                    <div class="pp-child-stat-val" style="color:var(--violet)">P1</div>
+                    <div class="pp-child-stat-lbl">Class</div>
+                  </div>
+                </div>
+                <!-- Actions -->
+                <div class="pp-child-actions">
+                  <button class="pp-child-btn pp-child-btn-ghost">📊 Grades</button>
+                  <button class="pp-child-btn pp-child-btn-teal">View Profile →</button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: PAYMENTS                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-payments" style="display:none" class="pp-fu pp-d2">
+      <div class="pp-grid full">
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--amber-s)">💳</div>
+              Payment History
+            </div>
+            <button class="pp-btn pp-btn-ghost pp-btn-sm" id="pp-btn-record-payment">+ Record Payment</button>
+          </div>
+          <div class="pp-card-body">
+
+            <!-- Fee summary strip -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+              <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Total Billed</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px" id="pp-pay-total-billed">UGX 640,000</div>
+              </div>
+              <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Amount Paid</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--green)" id="pp-pay-total-paid">UGX 400,000</div>
+              </div>
+              <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
+                <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Balance Owing</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--amber)" id="pp-pay-balance">UGX 240,000</div>
+              </div>
+            </div>
+
+            <!-- Payment rows -->
+            <div id="pp-payments-body">
+              <div class="pp-pay-row">
+                <div class="pp-pay-ic" style="background:var(--green-s)">💵</div>
+                <div style="flex:1">
+                  <div class="pp-pay-name">Mobile Money Payment</div>
+                  <div class="pp-pay-sub">Jessica Alupo · Term 1 · February 3, 2026</div>
+                </div>
+                <span class="pp-tag">MTN MoMo</span>
+                <div class="pp-pay-amount green">+ UGX 200,000</div>
+              </div>
+              <div class="pp-pay-row">
+                <div class="pp-pay-ic" style="background:var(--green-s)">💵</div>
+                <div style="flex:1">
+                  <div class="pp-pay-name">Cash Payment</div>
+                  <div class="pp-pay-sub">Jessica Alupo · Term 1 · January 15, 2026</div>
+                </div>
+                <span class="pp-tag">Cash</span>
+                <div class="pp-pay-amount green">+ UGX 200,000</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: MESSAGES                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-messages" style="display:none" class="pp-fu pp-d2">
+      <div class="pp-grid full">
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--blue-s)">💬</div>
+              Message Thread
+            </div>
+          </div>
+          <div class="pp-card-body">
+            <!-- Compose -->
+            <div class="pp-msg-compose">
+              <div class="pp-msg-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">A</div>
+              <textarea rows="2" placeholder="Type a message to Kimuli Daudi…"></textarea>
+              <button class="pp-btn pp-btn-violet pp-btn-sm" style="align-self:flex-end">Send</button>
+            </div>
+
+            <!-- Messages -->
+            <div id="pp-messages-body">
+              <div class="pp-msg-row sent">
+                <div class="pp-msg-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">A</div>
+                <div>
+                  <div class="pp-msg-bubble sent">Dear Kimuli, please note that term 2 fees are due by April 14th. Kindly ensure payment is made before the deadline.</div>
+                  <div class="pp-msg-meta" style="text-align:right">Admin · March 18, 2026 · 9:14 AM</div>
+                </div>
+              </div>
+              <div class="pp-msg-row">
+                <div class="pp-msg-av" style="background:linear-gradient(135deg,#9d7eff,#ff4f6a)">KD</div>
+                <div>
+                  <div class="pp-msg-bubble">Thank you for the reminder. I will arrange the payment by end of this week.</div>
+                  <div class="pp-msg-meta">Kimuli Daudi · March 18, 2026 · 11:42 AM</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: ACTIVITY                      -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-activity" style="display:none" class="pp-fu pp-d2">
+      <div class="pp-grid full">
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--violet-s)">🕐</div>
+              Recent Activity
+            </div>
+          </div>
+          <div class="pp-card-body" id="pp-activity-body">
+            <div class="pp-act-row">
+              <div class="pp-act-dot" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">💳</div>
+              <div>
+                <div class="pp-act-text"><strong>Payment received</strong> · UGX 200,000 — Mobile Money for Jessica Alupo Term 1 fees</div>
+                <div class="pp-act-time">February 3, 2026 · 2:18 PM</div>
+              </div>
+            </div>
+            <div class="pp-act-row">
+              <div class="pp-act-dot" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">🌐</div>
+              <div>
+                <div class="pp-act-text"><strong>Portal login</strong> — Logged into parent portal from Kampala, Uganda</div>
+                <div class="pp-act-time">March 16, 2026 · 8:04 AM</div>
+              </div>
+            </div>
+            <div class="pp-act-row">
+              <div class="pp-act-dot" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">📋</div>
+              <div>
+                <div class="pp-act-text"><strong>Attendance viewed</strong> — Checked Jessica Alupo's attendance record</div>
+                <div class="pp-act-time">March 14, 2026 · 7:22 PM</div>
+              </div>
+            </div>
+            <div class="pp-act-row">
+              <div class="pp-act-dot" style="background:linear-gradient(135deg,#9d7eff,#ff4f6a)">💬</div>
+              <div>
+                <div class="pp-act-text"><strong>Message sent</strong> — Replied to admin fee reminder</div>
+                <div class="pp-act-time">March 18, 2026 · 11:42 AM</div>
+              </div>
+            </div>
+            <div class="pp-act-row">
+              <div class="pp-act-dot" style="background:var(--s4)">✉️</div>
+              <div>
+                <div class="pp-act-text"><strong>Portal invite sent</strong> — Email invitation sent to kimuli@gmail.com</div>
+                <div class="pp-act-time">November 12, 2025 · 10:00 AM</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════ -->
+    <!-- TAB: DOCUMENTS                     -->
+    <!-- ══════════════════════════════════ -->
+    <div id="pp-tab-documents" style="display:none" class="pp-fu pp-d2">
+      <div class="pp-grid full">
+        <div class="pp-card">
+          <div class="pp-card-head">
+            <div class="pp-card-title">
+              <div class="pp-card-title-ic" style="background:var(--accent-s,var(--violet-s))">📄</div>
+              Documents &amp; Files
+            </div>
+            <button class="pp-btn pp-btn-ghost pp-btn-sm" id="pp-btn-upload">+ Upload</button>
+          </div>
+          <div class="pp-card-body" id="pp-documents-body">
+            <div class="pp-empty">
+              <div class="pp-empty-icon">📁</div>
+              <div class="pp-empty-title">No documents uploaded yet</div>
+              <div class="pp-empty-sub">Upload ID copies, consent forms, and other guardian documents here.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /pp-content -->
+</div><!-- /pw-parent-profile -->
+
+<script>
+(function(){
+  const TABS = ['overview','children','payments','messages','activity','documents'];
+
+  function switchTab(name) {
+    TABS.forEach(t => {
+      const el = document.getElementById('pp-tab-' + t);
+      if (el) el.style.display = t === name ? '' : 'none';
+    });
+    document.querySelectorAll('.pp-tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === name);
+    });
+  }
+
+  document.querySelectorAll('.pp-tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+})();
+</script>
+</body>
+</html>
