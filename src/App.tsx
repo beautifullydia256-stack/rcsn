@@ -42,9 +42,9 @@ const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportVie
 const DesignStudentsPage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentsPage'));
 const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
 const StudentProfilePage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentProfile'));
-const TeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/TeachersPage'));
+const DesignTeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/DesignTeachersPage'));
 const AddTeacherPage = lazyWithRetry(() => import('./pages/admin/teachers/AddTeacherPage'));
-const TeacherProfilePage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherProfilePage'));
+const DesignTeacherProfile = lazyWithRetry(() => import('./pages/admin/teachers/DesignTeacherProfile'));
 const TeacherEditPage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherEditPage'));
 const CreateTeacherLoginPage = lazyWithRetry(() => import('./pages/admin/teachers/CreateTeacherLoginPage'));
 const DesignParentsPage = lazyWithRetry(() => import('./pages/admin/parents/DesignParentsPage'));
@@ -141,9 +141,9 @@ function App() {
                     <Route path="add" element={<AddStudentPage />} />
                     <Route path=":student_id" element={<StudentProfilePage />} />
                   </Route>
-                  <Route path="teachers" element={<TeachersPage />} />
+                  <Route path="teachers" element={<DesignTeachersPage />} />
                   <Route path="teachers/add" element={<AddTeacherPage />} />
-                  <Route path="teachers/:teacher_id" element={<TeacherProfilePage />} />
+                  <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
                   <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
                   <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
                   <Route path="parents">

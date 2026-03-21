@@ -15,7 +15,7 @@ const AdminDashboard = lazy(() => import('../pages/admin/Dashboard'));
 const BulkGenerator = lazy(() => import('../pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazy(() => import('../pages/admin/reports/ReportViewer'));
 const StudentsPage = lazy(() => import('../pages/admin/students/StudentsPage'));
-const TeachersPage = lazy(() => import('../pages/admin/teachers/TeachersPage'));
+const DesignTeachersPage = lazy(() => import('../pages/admin/teachers/DesignTeachersPage'));
 const DesignParentsPage = lazy(() => import('../pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignParentProfile'));
 const AddParentPage = lazy(() => import('../pages/admin/parents/AddParentPage'));
@@ -82,7 +82,7 @@ export const router: RouteObject[] = [
         children: [
           { index: true, element: <AdminDashboard /> },
           { path: 'students', element: <StudentsPage /> },
-          { path: 'teachers', element: <TeachersPage /> },
+          { path: 'teachers', element: <DesignTeachersPage /> },
           { path: 'parents', element: <DesignParentsPage /> },
           { path: 'parents/add', element: <AddParentPage /> },
           { path: 'parents/:parent_id', element: <DesignParentProfile /> },

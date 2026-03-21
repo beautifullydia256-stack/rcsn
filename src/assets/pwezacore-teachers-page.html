@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Teachers</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*
+ ═══════════════════════════════════════════════════
+  REACT INJECTION FORMAT — Teachers List Page
+  Scope: .pw-teachers  |  No sidebar · No topbar
+  Route: /dashboard/admin/teachers
+  Accent: --amber #ffb547 (teacher module brand color)
+
+  DOM targets:
+   KPIs:   [data-kpi="total-teachers"], [data-kpi="classes-covered"],
+           [data-kpi="with-portal"], [data-kpi="hired-this-year"]
+   Table:  #tch-table-body
+   Cards:  #tch-card-grid
+   Search: #tch-search, #tch-subject-filter, #tch-sort-select
+   Pagination: #tch-page-info, #tch-page-btns
+   Toggles: #tch-list-btn, #tch-grid-btn
+ ═══════════════════════════════════════════════════
+*/
+
+.pw-teachers *, .pw-teachers *::before, .pw-teachers *::after {
+  box-sizing: border-box; margin: 0; padding: 0;
+}
+
+.pw-teachers {
+  --bg:       #07090f;
+  --s0:       #0b0e18;
+  --s1:       #10141f;
+  --s2:       #161b2b;
+  --s3:       #1d2438;
+  --s4:       #252d44;
+  --border:   rgba(255,255,255,0.06);
+  --bh:       rgba(255,255,255,0.11);
+  --amber:    #ffb547;
+  --amber-d:  #e09a2e;
+  --amber-s:  rgba(255,181,71,0.10);
+  --amber-g:  rgba(255,181,71,0.20);
+  --teal:     #00e5c3;
+  --teal-s:   rgba(0,229,195,0.09);
+  --blue:     #3d7eff;
+  --blue-s:   rgba(61,126,255,0.10);
+  --rose:     #ff4f6a;
+  --rose-s:   rgba(255,79,106,0.10);
+  --violet:   #9d7eff;
+  --violet-s: rgba(157,126,255,0.10);
+  --green:    #27e09f;
+  --green-s:  rgba(39,224,159,0.10);
+  --t1: #e8eeff;
+  --t2: #7c89b0;
+  --t3: #3a4468;
+  --r:  12px;
+  --rs: 7px;
+
+  font-family: 'Geist', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  width: 100%;
+  min-height: 100vh;
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+html.light .pw-teachers, html[data-theme=light] .pw-teachers {
+  --bg:#fff8f0; --s0:#fff; --s1:#fff; --s2:#fff5e6;
+  --s3:#ffead0; --s4:#ffdab0;
+  --border:rgba(0,0,0,0.07); --bh:rgba(0,0,0,0.13);
+  --t1:#1a0a00; --t2:#7a4a10; --t3:#b08050;
+  background: var(--bg); color: var(--t1);
+}
+
+@keyframes tch-up {
+  from { opacity:0; transform:translateY(10px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+.tch-fu  { animation: tch-up .32s ease both; }
+.tch-d1  { animation-delay:.03s; }
+.tch-d2  { animation-delay:.07s; }
+.tch-d3  { animation-delay:.11s; }
+.tch-d4  { animation-delay:.15s; }
+
+/* ── LAYOUT ── */
+.pw-teachers .tch-page { padding: 26px 28px 60px; }
+
+/* ── HEADER ── */
+.pw-teachers .tch-header {
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px; gap: 20px;
+}
+.pw-teachers .tch-eyebrow {
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 1.8px; text-transform: uppercase;
+  color: var(--amber); margin-bottom: 5px;
+  display: flex; align-items: center; gap: 7px;
+}
+.pw-teachers .tch-eyebrow::before {
+  content:''; display:inline-block;
+  width:14px; height:2px;
+  background:var(--amber); border-radius:1px;
+}
+.pw-teachers .tch-title {
+  font-family:'Instrument Serif',serif;
+  font-size:32px; letter-spacing:-.5px;
+  color:var(--t1); line-height:1; margin-bottom:5px;
+}
+.pw-teachers .tch-sub { font-size:13px; color:var(--t2); }
+.pw-teachers .tch-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+
+/* ── BUTTONS ── */
+.pw-teachers .tch-btn {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:9px 16px; border-radius:var(--rs);
+  font-family:'Geist',sans-serif; font-size:13px;
+  font-weight:600; cursor:pointer; border:none;
+  transition:all .17s; white-space:nowrap;
+}
+.pw-teachers .tch-btn-ghost {
+  background:var(--s2); color:var(--t2); border:1px solid var(--border);
+}
+.pw-teachers .tch-btn-ghost:hover { background:var(--s3); color:var(--t1); border-color:var(--bh); }
+.pw-teachers .tch-btn-amber {
+  background:var(--amber); color:#07090f;
+}
+.pw-teachers .tch-btn-amber:hover {
+  background:#ffc76a; transform:translateY(-1px);
+  box-shadow:0 4px 20px var(--amber-g);
+}
+
+/* ── KPI STRIP ── */
+.pw-teachers .tch-kpi-strip {
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:12px; margin-bottom:24px;
+}
+.pw-teachers .tch-kpi {
+  background:var(--s1); border:1px solid var(--border);
+  border-radius:var(--r); padding:18px 20px;
+  display:flex; align-items:center; gap:16px;
+  position:relative; overflow:hidden;
+  transition:border-color .2s,transform .2s;
+}
+.pw-teachers .tch-kpi:hover { border-color:var(--bh); transform:translateY(-2px); }
+.pw-teachers .tch-kpi::after {
+  content:''; position:absolute;
+  top:0;left:0;right:0; height:1.5px;
+  border-radius:var(--r) var(--r) 0 0;
+}
+.pw-teachers .tch-kpi.ca::after { background:linear-gradient(90deg,var(--amber),transparent 60%); }
+.pw-teachers .tch-kpi.ct::after { background:linear-gradient(90deg,var(--teal),transparent 60%); }
+.pw-teachers .tch-kpi.cg::after { background:linear-gradient(90deg,var(--green),transparent 60%); }
+.pw-teachers .tch-kpi.cv::after { background:linear-gradient(90deg,var(--violet),transparent 60%); }
+
+.pw-teachers .tch-kpi-ic {
+  width:42px;height:42px; border-radius:11px;
+  display:grid;place-items:center; font-size:18px; flex-shrink:0;
+}
+.pw-teachers .tch-kpi-ic.ca { background:var(--amber-s); }
+.pw-teachers .tch-kpi-ic.ct { background:var(--teal-s); }
+.pw-teachers .tch-kpi-ic.cg { background:var(--green-s); }
+.pw-teachers .tch-kpi-ic.cv { background:var(--violet-s); }
+
+.pw-teachers .tch-kpi-label {
+  font-size:10px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--t3);margin-bottom:5px;
+}
+.pw-teachers .tch-kpi-val {
+  font-family:'Instrument Serif',serif;
+  font-size:34px;letter-spacing:-1px;line-height:1;color:var(--t1);
+}
+.pw-teachers .tch-kpi-val.ca { color:var(--amber); }
+.pw-teachers .tch-kpi-val.ct { color:var(--teal); }
+.pw-teachers .tch-kpi-val.cg { color:var(--green); }
+.pw-teachers .tch-kpi-val.cv { color:var(--violet); }
+.pw-teachers .tch-kpi-sub { font-size:11px;color:var(--t3);margin-top:3px; }
+
+/* ── TOOLBAR ── */
+.pw-teachers .tch-toolbar {
+  display:flex;align-items:center;gap:10px;margin-bottom:18px;
+}
+.pw-teachers .tch-search {
+  flex:1;max-width:380px;
+  display:flex;align-items:center;gap:9px;
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:8px 14px;
+  transition:border-color .15s;
+}
+.pw-teachers .tch-search:focus-within { border-color:rgba(255,181,71,.3); }
+.pw-teachers .tch-search input {
+  background:none;border:none;outline:none;
+  color:var(--t1);font-family:'Geist',sans-serif;
+  font-size:13px;width:100%;
+}
+.pw-teachers .tch-search input::placeholder { color:var(--t3); }
+.pw-teachers .tch-select {
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--rs);padding:8px 28px 8px 14px;
+  font-family:'Geist',sans-serif;font-size:13px;
+  color:var(--t2);cursor:pointer;outline:none;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%233a4468'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+  transition:border-color .15s;
+}
+.pw-teachers .tch-select:hover { border-color:var(--bh); }
+.pw-teachers .tch-view-toggle {
+  display:flex;background:var(--s2);
+  border:1px solid var(--border);
+  border-radius:var(--rs);padding:3px;gap:2px;margin-left:auto;
+}
+.pw-teachers .tch-vbtn {
+  padding:5px 11px;border-radius:5px;
+  background:none;border:none;cursor:pointer;
+  color:var(--t3);font-family:'Geist',sans-serif;
+  font-size:12px;font-weight:600;transition:all .15s;
+  display:flex;align-items:center;gap:5px;
+}
+.pw-teachers .tch-vbtn.active { background:var(--s4);color:var(--t1); }
+
+/* ── TABLE ── */
+.pw-teachers .tch-table-wrap {
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+}
+.pw-teachers .tch-thead, .pw-teachers .tch-trow {
+  display:grid;
+  grid-template-columns: 2.2fr 1.2fr 1.6fr 1fr 1.2fr 1fr 100px;
+  padding:0 18px;align-items:center;
+}
+.pw-teachers .tch-thead {
+  background:var(--s2);border-bottom:1px solid var(--border);
+}
+.pw-teachers .tch-th {
+  padding:12px 8px;font-size:9.5px;font-weight:700;
+  letter-spacing:1.4px;text-transform:uppercase;
+  color:var(--t3);display:flex;align-items:center;gap:5px;
+  cursor:pointer;user-select:none;transition:color .14s;
+}
+.pw-teachers .tch-th:hover { color:var(--t2); }
+.pw-teachers .tch-th.active { color:var(--amber); }
+.pw-teachers .tch-trow {
+  border-bottom:1px solid var(--border);
+  transition:background .13s;cursor:pointer;position:relative;
+}
+.pw-teachers .tch-trow:last-child { border-bottom:none; }
+.pw-teachers .tch-trow::before {
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:0;background:var(--amber);border-radius:0 2px 2px 0;
+  transition:width .15s;
+}
+.pw-teachers .tch-trow:hover { background:var(--s2); }
+.pw-teachers .tch-trow:hover::before { width:2px; }
+.pw-teachers .tch-td { padding:13px 8px;font-size:13px;color:var(--t1); }
+.pw-teachers .tch-td.muted { color:var(--t3);font-style:italic;font-size:12.5px; }
+
+/* teacher cell */
+.pw-teachers .tch-cell { display:flex;align-items:center;gap:11px; }
+.pw-teachers .tch-av {
+  width:38px;height:38px;border-radius:11px;
+  display:grid;place-items:center;
+  font-size:13px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.pw-teachers .tch-av img { width:100%;height:100%;border-radius:11px;object-fit:cover; }
+.pw-teachers .tch-name { font-size:13.5px;font-weight:600;letter-spacing:-.1px;color:var(--t1);line-height:1.2; }
+.pw-teachers .tch-emp-id { font-size:11.5px;color:var(--t3);font-weight:500;margin-top:2px; }
+
+/* chips */
+.pw-teachers .tch-chip {
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:20px;
+  font-size:11.5px;font-weight:600;letter-spacing:.1px;
+}
+.pw-teachers .tch-chip.amber  { background:var(--amber-s);  color:var(--amber);  border:1px solid rgba(255,181,71,.12); }
+.pw-teachers .tch-chip.green  { background:var(--green-s);  color:var(--green);  border:1px solid rgba(39,224,159,.12); }
+.pw-teachers .tch-chip.rose   { background:var(--rose-s);   color:var(--rose);   border:1px solid rgba(255,79,106,.12); }
+.pw-teachers .tch-chip.blue   { background:var(--blue-s);   color:var(--blue);   border:1px solid rgba(61,126,255,.12); }
+.pw-teachers .tch-chip.violet { background:var(--violet-s); color:var(--violet); border:1px solid rgba(157,126,255,.12); }
+.pw-teachers .tch-chip.teal   { background:var(--teal-s);   color:var(--teal);   border:1px solid rgba(0,229,195,.12); }
+.pw-teachers .tch-chip.muted  { background:var(--s3);       color:var(--t3);     border:1px solid var(--border); }
+
+/* subject tags */
+.pw-teachers .tch-stag {
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 7px;border-radius:5px;
+  background:var(--s3);border:1px solid var(--border);
+  font-size:11px;font-weight:600;color:var(--t2);
+  cursor:pointer;transition:all .14s;
+}
+.pw-teachers .tch-stag:hover { background:var(--amber-s);color:var(--amber);border-color:rgba(255,181,71,.2); }
+
+/* phone link */
+.pw-teachers .tch-phone {
+  display:flex;align-items:center;gap:5px;
+  color:var(--teal);text-decoration:none;
+  font-family:'Geist Mono',monospace;font-size:12.5px;
+  transition:opacity .14s;
+}
+.pw-teachers .tch-phone:hover { opacity:.7; }
+
+/* row actions */
+.pw-teachers .tch-row-actions { display:flex;align-items:center;gap:6px;justify-content:flex-end; }
+.pw-teachers .tch-rbtn {
+  width:30px;height:30px;border-radius:7px;
+  background:var(--s3);border:1px solid var(--border);
+  display:grid;place-items:center;cursor:pointer;
+  font-size:13px;transition:all .15s;color:var(--t2);
+}
+.pw-teachers .tch-rbtn:hover { background:var(--amber-s);border-color:rgba(255,181,71,.22);color:var(--amber); }
+.pw-teachers .tch-rbtn.arrow:hover { background:var(--amber);border-color:var(--amber);color:#07090f; }
+
+/* ── CARD GRID ── */
+.pw-teachers .tch-card-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:14px;
+}
+.pw-teachers .tch-card {
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+  transition:border-color .2s,transform .2s;cursor:pointer;
+}
+.pw-teachers .tch-card:hover { border-color:var(--bh);transform:translateY(-2px); }
+.pw-teachers .tch-card-top {
+  background:linear-gradient(135deg,var(--s2),var(--s3));
+  padding:20px 20px 16px;border-bottom:1px solid var(--border);
+  position:relative;
+}
+.pw-teachers .tch-card-av {
+  width:52px;height:52px;border-radius:14px;
+  display:grid;place-items:center;
+  font-size:17px;font-weight:700;color:#fff;
+  margin-bottom:12px;
+}
+.pw-teachers .tch-card-av img { width:100%;height:100%;border-radius:14px;object-fit:cover; }
+.pw-teachers .tch-card-name {
+  font-family:'Instrument Serif',serif;
+  font-size:17px;color:var(--t1);margin-bottom:2px;
+}
+.pw-teachers .tch-card-sub { font-size:12px;color:var(--t3); }
+.pw-teachers .tch-card-corner {
+  position:absolute;top:14px;right:14px;
+  display:flex;gap:6px;
+}
+.pw-teachers .tch-card-body { padding:14px 18px; }
+.pw-teachers .tch-card-row {
+  display:flex;align-items:flex-start;justify-content:space-between;
+  padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);
+  font-size:12.5px;gap:8px;
+}
+.pw-teachers .tch-card-row:last-child { border-bottom:none; }
+.pw-teachers .tch-card-lbl { font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);white-space:nowrap;flex-shrink:0; }
+.pw-teachers .tch-card-val { color:var(--t2);text-align:right;font-size:12.5px; }
+.pw-teachers .tch-card-val a { color:var(--teal);text-decoration:none;font-family:'Geist Mono',monospace;font-size:12px; }
+.pw-teachers .tch-card-classes { padding:10px 18px;border-top:1px solid var(--border);display:flex;gap:5px;flex-wrap:wrap; }
+.pw-teachers .tch-card-foot {
+  padding:11px 16px;border-top:1px solid var(--border);
+  display:flex;gap:7px;
+}
+.pw-teachers .tch-crd-btn {
+  flex:1;display:flex;align-items:center;justify-content:center;
+  gap:5px;padding:7px 10px;border-radius:7px;
+  font-family:'Geist',sans-serif;font-size:12px;
+  font-weight:600;cursor:pointer;transition:all .15s;border:none;
+}
+.pw-teachers .tch-crd-ghost { background:var(--s3);color:var(--t2);border:1px solid var(--border); }
+.pw-teachers .tch-crd-ghost:hover { background:var(--s4);color:var(--t1); }
+.pw-teachers .tch-crd-amber { background:var(--amber-s);color:var(--amber);border:1px solid rgba(255,181,71,.15); }
+.pw-teachers .tch-crd-amber:hover { background:var(--amber);color:#07090f; }
+
+/* ── PAGINATION ── */
+.pw-teachers .tch-pagination {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px;border-top:1px solid var(--border);
+}
+.pw-teachers .tch-page-info { font-size:12.5px;color:var(--t3); }
+.pw-teachers .tch-page-info strong { color:var(--t2); }
+.pw-teachers .tch-page-btns { display:flex;align-items:center;gap:4px; }
+.pw-teachers .tch-pbtn {
+  min-width:30px;height:30px;padding:0 8px;
+  border-radius:7px;background:none;
+  border:1px solid var(--border);color:var(--t2);
+  font-family:'Geist',sans-serif;font-size:12.5px;
+  font-weight:500;cursor:pointer;transition:all .14s;
+  display:grid;place-items:center;
+}
+.pw-teachers .tch-pbtn:hover { background:var(--s2);color:var(--t1);border-color:var(--bh); }
+.pw-teachers .tch-pbtn.active { background:var(--amber-s);color:var(--amber);border-color:rgba(255,181,71,.22);font-weight:700; }
+.pw-teachers .tch-pbtn:disabled { opacity:.3;cursor:not-allowed; }
+
+/* ── EMPTY ── */
+.pw-teachers .tch-empty {
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:60px 24px;
+  gap:12px;color:var(--t3);text-align:center;
+}
+.pw-teachers .tch-empty-icon { font-size:38px;opacity:.35; }
+.pw-teachers .tch-empty-title { font-size:15px;font-weight:600;color:var(--t2); }
+.pw-teachers .tch-empty-sub   { font-size:13px;color:var(--t3); }
+
+/* scrollbar */
+.pw-teachers ::-webkit-scrollbar { width:5px; }
+.pw-teachers ::-webkit-scrollbar-track { background:transparent; }
+.pw-teachers ::-webkit-scrollbar-thumb { background:var(--s3);border-radius:3px; }
+
+/* responsive */
+@media(max-width:1200px) {
+  .pw-teachers .tch-thead,.pw-teachers .tch-trow {
+    grid-template-columns:2fr 1fr 1.4fr 1fr 1fr 90px;
+  }
+  .pw-teachers .tch-td:nth-child(5) { display:none; }
+}
+@media(max-width:768px) {
+  .pw-teachers .tch-page { padding:14px 14px 50px; }
+  .pw-teachers .tch-kpi-strip { grid-template-columns:1fr 1fr; }
+  .pw-teachers .tch-header { flex-direction:column; }
+}
+</style>
+</head>
+<body>
+<div class="pw-teachers">
+<div class="tch-page">
+
+  <!-- HEADER -->
+  <div class="tch-header tch-fu">
+    <div>
+      <div class="tch-eyebrow">Academic Staff</div>
+      <h1 class="tch-title">Teachers</h1>
+      <p class="tch-sub">Manage teaching staff, class assignments, and professional records.</p>
+    </div>
+    <div class="tch-actions">
+      <button class="tch-btn tch-btn-ghost">🖨 Print</button>
+      <button class="tch-btn tch-btn-ghost">⬇ Export</button>
+      <button class="tch-btn tch-btn-amber" id="tch-btn-add">＋ Add Teacher</button>
+    </div>
+  </div>
+
+  <!-- KPI STRIP -->
+  <div class="tch-kpi-strip tch-fu tch-d1">
+    <div class="tch-kpi ca">
+      <div class="tch-kpi-ic ca">👨‍🏫</div>
+      <div>
+        <div class="tch-kpi-label">Total Teachers</div>
+        <div class="tch-kpi-val ca" data-kpi="total-teachers">—</div>
+        <div class="tch-kpi-sub">Active staff members</div>
+      </div>
+    </div>
+    <div class="tch-kpi ct">
+      <div class="tch-kpi-ic ct">🏫</div>
+      <div>
+        <div class="tch-kpi-label">Classes Covered</div>
+        <div class="tch-kpi-val ct" data-kpi="classes-covered">—</div>
+        <div class="tch-kpi-sub">With assigned teacher</div>
+      </div>
+    </div>
+    <div class="tch-kpi cg">
+      <div class="tch-kpi-ic cg">🌐</div>
+      <div>
+        <div class="tch-kpi-label">With Portal</div>
+        <div class="tch-kpi-val cg" data-kpi="with-portal">—</div>
+        <div class="tch-kpi-sub">Active teacher accounts</div>
+      </div>
+    </div>
+    <div class="tch-kpi cv">
+      <div class="tch-kpi-ic cv">📅</div>
+      <div>
+        <div class="tch-kpi-label">Hired This Year</div>
+        <div class="tch-kpi-val cv" data-kpi="hired-this-year">—</div>
+        <div class="tch-kpi-sub">New staff in 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="tch-toolbar tch-fu tch-d2">
+    <div class="tch-search">
+      <span style="color:var(--t3);font-size:14px">🔍</span>
+      <input id="tch-search" placeholder="Search by name, email, or subject…" type="text">
+    </div>
+    <select class="tch-select" id="tch-subject-filter">
+      <option value="">All Subjects</option>
+      <option>Mathematics</option>
+      <option>English</option>
+      <option>Science</option>
+      <option>SST</option>
+      <option>CRE</option>
+    </select>
+    <select class="tch-select" id="tch-sort-select">
+      <option>Name A → Z</option>
+      <option>Name Z → A</option>
+      <option>Most Recent Hire</option>
+      <option>Oldest Hire</option>
+    </select>
+    <div class="tch-view-toggle">
+      <button class="tch-vbtn active" id="tch-list-btn">≡ List</button>
+      <button class="tch-vbtn" id="tch-grid-btn">⊞ Grid</button>
+    </div>
+  </div>
+
+  <!-- LIST VIEW -->
+  <div id="tch-list-view" class="tch-fu tch-d3">
+    <div class="tch-table-wrap">
+      <div class="tch-thead">
+        <div class="tch-th active">Teacher ▲</div>
+        <div class="tch-th">Phone</div>
+        <div class="tch-th">Email</div>
+        <div class="tch-th">Subjects</div>
+        <div class="tch-th">Classes</div>
+        <div class="tch-th">Hired</div>
+        <div class="tch-th" style="justify-content:flex-end">Actions</div>
+      </div>
+      <div id="tch-table-body">
+
+        <!-- ROW 1 -->
+        <div class="tch-trow">
+          <div class="tch-td">
+            <div class="tch-cell">
+              <div class="tch-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">MK</div>
+              <div>
+                <div class="tch-name">Mustafa Kafeero</div>
+                <div class="tch-emp-id">ID: RIPS26262</div>
+              </div>
+            </div>
+          </div>
+          <div class="tch-td"><a href="tel:+256759881420" class="tch-phone">📞 +256 759 881 420</a></div>
+          <div class="tch-td muted">—</div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">Math</span>
+              <span class="tch-stag">Science</span>
+            </div>
+          </div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">Baby Class</span>
+              <span class="tch-stag">Top Class</span>
+            </div>
+          </div>
+          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Mar 16, 2026</div>
+          <div class="tch-td">
+            <div class="tch-row-actions">
+              <div class="tch-rbtn" title="View profile">👁</div>
+              <div class="tch-rbtn arrow" title="Open profile">›</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 2 -->
+        <div class="tch-trow">
+          <div class="tch-td">
+            <div class="tch-cell">
+              <div class="tch-av" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">LM</div>
+              <div>
+                <div class="tch-name">Luuka Musono</div>
+                <div class="tch-emp-id">ID: RIPS22441</div>
+              </div>
+            </div>
+          </div>
+          <div class="tch-td"><a href="tel:+256759881429" class="tch-phone">📞 +256 759 881 429</a></div>
+          <div class="tch-td" style="color:var(--blue);font-size:12.5px">luukamusono@rips.sch</div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">English</span>
+              <span class="tch-stag">SST</span>
+            </div>
+          </div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">Middle Class</span>
+            </div>
+          </div>
+          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Oct 23, 2025</div>
+          <div class="tch-td">
+            <div class="tch-row-actions">
+              <div class="tch-rbtn" title="View profile">👁</div>
+              <div class="tch-rbtn arrow" title="Open profile">›</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ROW 3 -->
+        <div class="tch-trow">
+          <div class="tch-td">
+            <div class="tch-cell">
+              <div class="tch-av" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">MR</div>
+              <div>
+                <div class="tch-name">Musoke Ronald</div>
+                <div class="tch-emp-id">ID: RIPS22440</div>
+              </div>
+            </div>
+          </div>
+          <div class="tch-td"><a href="tel:+256759881429" class="tch-phone">📞 +256 759 881 429</a></div>
+          <div class="tch-td" style="color:var(--blue);font-size:12.5px">musokeronald@rips.sch</div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">Math</span>
+              <span class="tch-stag">CRE</span>
+            </div>
+          </div>
+          <div class="tch-td">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <span class="tch-stag">P7A</span>
+              <span class="tch-stag">P6B</span>
+            </div>
+          </div>
+          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Oct 19, 2025</div>
+          <div class="tch-td">
+            <div class="tch-row-actions">
+              <div class="tch-rbtn" title="View profile">👁</div>
+              <div class="tch-rbtn arrow" title="Open profile">›</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /#tch-table-body -->
+
+      <!-- PAGINATION -->
+      <div class="tch-pagination">
+        <div class="tch-page-info" id="tch-page-info">Showing <strong>1–3</strong> of <strong>3</strong> teachers</div>
+        <div class="tch-page-btns" id="tch-page-btns">
+          <button class="tch-pbtn" disabled>‹</button>
+          <button class="tch-pbtn active">1</button>
+          <button class="tch-pbtn" disabled>›</button>
+        </div>
+      </div>
+    </div>
+  </div><!-- /#tch-list-view -->
+
+  <!-- CARD GRID VIEW -->
+  <div id="tch-grid-view" style="display:none" class="tch-fu tch-d3">
+    <div class="tch-card-grid" id="tch-card-grid">
+
+      <div class="tch-card">
+        <div class="tch-card-top">
+          <div class="tch-card-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">MK</div>
+          <div class="tch-card-name">Mustafa Kafeero</div>
+          <div class="tch-card-sub">ID: RIPS26262 · Hired Mar 2026</div>
+          <div class="tch-card-corner"><span class="tch-chip amber" style="font-size:10.5px;padding:2px 8px">New</span></div>
+        </div>
+        <div class="tch-card-body">
+          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881420">+256 759 881 420</a></span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="color:var(--t3);font-style:italic">Not recorded</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Salary</span><span class="tch-card-val">UGX 100,000</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
+        </div>
+        <div class="tch-card-classes">
+          <span class="tch-stag">Baby Class</span><span class="tch-stag">Top Class</span><span class="tch-stag">Middle Class</span>
+        </div>
+        <div class="tch-card-foot">
+          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
+          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
+        </div>
+      </div>
+
+      <div class="tch-card">
+        <div class="tch-card-top">
+          <div class="tch-card-av" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">LM</div>
+          <div class="tch-card-name">Luuka Musono</div>
+          <div class="tch-card-sub">ID: RIPS22441 · Hired Oct 2025</div>
+          <div class="tch-card-corner"></div>
+        </div>
+        <div class="tch-card-body">
+          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">luukamusono@rips.sch</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Subjects</span><span class="tch-card-val">English, SST</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
+        </div>
+        <div class="tch-card-classes">
+          <span class="tch-stag">Middle Class</span>
+        </div>
+        <div class="tch-card-foot">
+          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
+          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
+        </div>
+      </div>
+
+      <div class="tch-card">
+        <div class="tch-card-top">
+          <div class="tch-card-av" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">MR</div>
+          <div class="tch-card-name">Musoke Ronald</div>
+          <div class="tch-card-sub">ID: RIPS22440 · Hired Oct 2025</div>
+          <div class="tch-card-corner"></div>
+        </div>
+        <div class="tch-card-body">
+          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">musokeronald@rips.sch</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Subjects</span><span class="tch-card-val">Math, CRE</span></div>
+          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
+        </div>
+        <div class="tch-card-classes">
+          <span class="tch-stag">P7A</span><span class="tch-stag">P6B</span>
+        </div>
+        <div class="tch-card-foot">
+          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
+          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+<script>
+(function(){
+  document.getElementById('tch-list-btn').onclick = function(){
+    document.getElementById('tch-list-view').style.display='block';
+    document.getElementById('tch-grid-view').style.display='none';
+    this.classList.add('active');
+    document.getElementById('tch-grid-btn').classList.remove('active');
+  };
+  document.getElementById('tch-grid-btn').onclick = function(){
+    document.getElementById('tch-list-view').style.display='none';
+    document.getElementById('tch-grid-view').style.display='block';
+    this.classList.add('active');
+    document.getElementById('tch-list-btn').classList.remove('active');
+  };
+})();
+</script>
+</body>
+</html>
