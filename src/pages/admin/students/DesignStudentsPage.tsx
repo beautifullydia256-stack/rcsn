@@ -607,7 +607,7 @@ export default function DesignStudentsPage() {
                           </tr>
                           {expand?.studentId === r.student_id && expand.kind === 'student' && (
                             <tr className="bg-white/[0.02]">
-                              <td colSpan={7} className="px-4 py-4">
+                              <td colSpan={7} className="px-4 py-2">
                                 <QuickStudentPanel
                                   row={r}
                                   parents={parents}
@@ -623,7 +623,7 @@ export default function DesignStudentsPage() {
                           )}
                           {expand?.studentId === r.student_id && expand.kind === 'parent' && parents[expand.parentIndex] && (
                             <tr className="bg-white/[0.02]">
-                              <td colSpan={7} className="px-4 py-4">
+                              <td colSpan={7} className="px-4 py-2">
                                 <QuickParentPanel
                                   studentName={r.name || '—'}
                                   studentClass={r.current_class}
@@ -766,41 +766,16 @@ export default function DesignStudentsPage() {
   );
 }
 
-/** Label + value cell — readable, scannable, theme-aware */
-function ProfileField({ label, children }: { label: string; children: ReactNode }) {
+/** Compact label + value for inline row expansion (table-style density) */
+function CompactInlineField({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="rounded-xl border border-[var(--ac-border)] bg-white/[0.04] px-4 py-3.5 shadow-sm transition-colors hover:bg-white/[0.06] dark:bg-black/20 dark:hover:bg-black/30">
-      <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--ac-text-muted)]">
+    <div className="min-w-0">
+      <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
         {label}
       </p>
-      <div className="text-[0.9375rem] font-medium leading-relaxed text-[var(--ac-text-primary)] [&_a]:font-medium [&_a]:text-emerald-600 [&_a]:underline-offset-2 hover:[&_a]:text-emerald-500 dark:[&_a]:text-emerald-400 dark:hover:[&_a]:text-emerald-300">
+      <div className="text-sm font-medium leading-snug text-[var(--ac-text-primary)] break-words [&_a]:text-sky-600 [&_a]:underline-offset-2 hover:[&_a]:text-sky-500 dark:[&_a]:text-sky-400">
         {children}
       </div>
-    </div>
-  );
-}
-
-function ProfileSectionTitle({
-  children,
-  accent = 'emerald',
-}: {
-  children: ReactNode;
-  accent?: 'emerald' | 'violet';
-}) {
-  const dot =
-    accent === 'violet'
-      ? 'bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.45)]'
-      : 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.45)]';
-  return (
-    <div className="col-span-full mb-1 mt-8 flex items-center gap-4 first:mt-0">
-      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[var(--ac-border)] to-[var(--ac-border)]" />
-      <span className="flex shrink-0 items-center gap-2.5">
-        <span className={`h-2 w-2 rounded-full ${dot}`} aria-hidden />
-        <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[var(--ac-text-muted)]">
-          {children}
-        </span>
-      </span>
-      <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[var(--ac-border)] to-[var(--ac-border)]" />
     </div>
   );
 }
@@ -825,162 +800,166 @@ function QuickStudentPanel({
   onNavigate: () => void;
 }) {
   const first = parents[0];
+  const second = parents[1];
   const nameLine = displayFullName(row);
   const studentAddr = (row.address && row.address.trim()) || '';
   const guardianAddrOnly = (row.guardian_address && row.guardian_address.trim()) || '';
-  const feeDisc = row.fee_discount_percent;
-  const feeDiscLabel =
-    feeDisc != null && Number(feeDisc) > 0 ? `${Number(feeDisc)}%` : '—';
+  const fullAddr = studentAddr || guardianAddrOnly || '—';
+  const primaryLabel = (first?.name || row.guardian_name || '').trim() || 'Primary contact';
+  const teacherLine =
+    teacher.trim() && row.current_class?.trim()
+      ? `${teacher.trim()} (${row.current_class.trim()})`
+      : teacher.trim() || row.current_class?.trim() || '—';
+
+  const secondBlock = second
+    ? second.phone?.trim()
+      ? (
+          <a
+            href={`tel:${second.phone.replace(/\s/g, '')}`}
+            className="text-sky-600 hover:underline dark:text-sky-400"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {second.phone.trim()}
+          </a>
+        )
+      : second.email?.trim()
+        ? (
+            <a
+              href={`mailto:${second.email.trim()}`}
+              className="break-all text-sky-600 hover:underline dark:text-sky-400"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {second.email.trim()}
+            </a>
+          )
+        : '—'
+    : '—';
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)] font-sans antialiased shadow-[var(--ac-shadow-strong)]">
-      {/* Hero */}
-      <div className="relative bg-gradient-to-br from-emerald-500/[0.14] via-teal-600/[0.08] to-transparent px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 rounded-full border border-[var(--ac-border)] bg-black/[0.04] p-2.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
-          aria-label="Close panel"
-        >
-          <X className="h-4 w-4" strokeWidth={2} />
-        </button>
+    <div className="relative overflow-hidden rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left shadow-sm">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-2 top-2 z-10 rounded-md border border-[var(--ac-border)] bg-black/[0.04] p-1.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
+        aria-label="Close panel"
+      >
+        <X className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
 
-        <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-10">
-          <div className="relative shrink-0">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt=""
-                className="h-28 w-28 rounded-2xl object-cover shadow-[0_12px_40px_-8px_rgba(0,0,0,0.45)] ring-1 ring-white/20 sm:h-32 sm:w-32"
-              />
-            ) : (
-              <div
-                className={`flex h-28 w-28 items-center justify-center rounded-2xl bg-gradient-to-br text-xl font-semibold tracking-tight text-white shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)] ring-1 ring-white/15 sm:h-32 sm:w-32 sm:text-2xl ${gradientClass}`}
-              >
-                {initials(row.name || '')}
-              </div>
-            )}
-          </div>
-
-          <div className="min-w-0 flex-1 space-y-4 pr-10 sm:pr-12">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-600/90 dark:text-emerald-400/85">
-                Student profile
-              </p>
-              <h3 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-[1.75rem] sm:leading-snug">
-                {nameLine}
-              </h3>
-              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--ac-text-secondary)]">
-                {row.current_class || 'Class not set'}
-                {row.admission_number ? ` · Admission ${row.admission_number}` : ''}
-              </p>
+      <div className="flex flex-col gap-3 p-3 pr-10 sm:flex-row sm:items-start sm:gap-5">
+        {/* Left: photo + primary contact + quick call / email */}
+        <div className="flex gap-3 sm:max-w-[220px] sm:shrink-0 sm:flex-col sm:items-start">
+          {photoUrl ? (
+            <img
+              src={photoUrl}
+              alt=""
+              className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-[var(--ac-border)]"
+            />
+          ) : (
+            <div
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white ring-1 ring-white/15 ${gradientClass}`}
+            >
+              {initials(row.name || '')}
             </div>
-            <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center rounded-full border border-[var(--ac-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[var(--ac-text-primary)] backdrop-blur-sm dark:bg-black/25">
-                {row.status === 'graduated' ? 'Graduated' : 'Active enrolment'}
-              </span>
-              {row.boarding_type ? (
-                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-800 dark:text-emerald-300">
-                  {row.boarding_type}
-                </span>
+          )}
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
+              Primary contact
+            </p>
+            <p className="mt-0.5 text-sm font-semibold leading-tight text-[var(--ac-text-primary)]">{primaryLabel}</p>
+            <div className="mt-2 flex gap-2">
+              {first?.phone?.trim() ? (
+                <a
+                  href={`tel:${first.phone.replace(/\s/g, '')}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
+                  title="Call"
+                  aria-label="Call primary contact"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Phone className="h-4 w-4" strokeWidth={2} />
+                </a>
               ) : null}
-              {row.stream ? (
-                <span className="inline-flex items-center rounded-full bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-800 dark:text-sky-300">
-                  Stream {row.stream}
-                </span>
+              {first?.email?.trim() ? (
+                <a
+                  href={`mailto:${first.email.trim()}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
+                  title="Email"
+                  aria-label="Email primary contact"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Mail className="h-4 w-4" strokeWidth={2} />
+                </a>
               ) : null}
             </div>
           </div>
         </div>
+
+        {/* Three columns — same information architecture as classic school MIS row expansion */}
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--ac-border)] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 md:grid-cols-3">
+          <div className="space-y-3">
+            <CompactInlineField label="Phone number">
+              {first?.phone?.trim() ? (
+                <a
+                  href={`tel:${first.phone.replace(/\s/g, '')}`}
+                  className="text-sky-600 hover:underline dark:text-sky-400"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {first.phone.trim()}
+                </a>
+              ) : (
+                '—'
+              )}
+            </CompactInlineField>
+            <CompactInlineField label={primaryLabel}>
+              {first?.email?.trim() ? (
+                <a
+                  href={`mailto:${first.email.trim()}`}
+                  className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {first.email.trim()}
+                </a>
+              ) : (
+                <span className="text-[var(--ac-text-secondary)]">—</span>
+              )}
+            </CompactInlineField>
+          </div>
+          <div className="space-y-3">
+            <CompactInlineField label="Pupil's name">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onNavigate();
+                }}
+                className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
+              >
+                {nameLine}
+              </button>
+            </CompactInlineField>
+            <CompactInlineField label={second?.name?.trim() || 'Second parent'}>{secondBlock}</CompactInlineField>
+          </div>
+          <div className="space-y-3">
+            <CompactInlineField label="Teacher">
+              <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
+            </CompactInlineField>
+            <CompactInlineField label="Address">
+              <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-4" title={fullAddr}>
+                {fullAddr}
+              </span>
+            </CompactInlineField>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-3 px-5 pb-2 pt-8 sm:grid-cols-2 sm:gap-4 sm:px-8 lg:grid-cols-3">
-        <ProfileSectionTitle>Personal</ProfileSectionTitle>
-        <ProfileField label="Full name">{nameLine}</ProfileField>
-        <ProfileField label="Gender">{dash(row.gender)}</ProfileField>
-        <ProfileField label="Date of birth">{formatDateMaybe(row.date_of_birth)}</ProfileField>
-        <ProfileField label="Nationality">{dash(row.nationality)}</ProfileField>
-        <ProfileField label="Religion">{dash(row.religion)}</ProfileField>
-
-        <ProfileSectionTitle>Contact</ProfileSectionTitle>
-        <ProfileField label="Student email">
-          {row.student_email?.trim() ? (
-            <a href={`mailto:${row.student_email.trim()}`} className="inline-flex items-center gap-2 break-all">
-              <Mail className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
-              {row.student_email.trim()}
-            </a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-        <ProfileField label="Student phone">
-          {row.student_phone?.trim() ? (
-            <a href={`tel:${row.student_phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2">
-              <Phone className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
-              {row.student_phone.trim()}
-            </a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-        <ProfileField label="Address (student)">{studentAddr || '—'}</ProfileField>
-        <ProfileField label="City">{dash(row.city)}</ProfileField>
-        <ProfileField label="Country">{dash(row.country)}</ProfileField>
-
-        <ProfileSectionTitle>Parent / guardian</ProfileSectionTitle>
-        <ProfileField label="Name">{dash(first?.name)}</ProfileField>
-        <ProfileField label="Relationship">{dash(row.guardian_relationship)}</ProfileField>
-        <ProfileField label="Phone">
-          {first?.phone?.trim() ? (
-            <a href={`tel:${first.phone.replace(/\s/g, '')}`}>{first.phone.trim()}</a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-        <ProfileField label="Email">
-          {first?.email?.trim() ? (
-            <a href={`mailto:${first.email.trim()}`} className="break-all">
-              {first.email.trim()}
-            </a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-        <ProfileField label="Occupation">{dash(row.guardian_occupation)}</ProfileField>
-        <ProfileField label="Guardian address">{guardianAddrOnly || '—'}</ProfileField>
-
-        <ProfileSectionTitle>Academic & fees</ProfileSectionTitle>
-        <ProfileField label="Class">{dash(row.current_class)}</ProfileField>
-        <ProfileField label="Class teacher">{dash(teacher)}</ProfileField>
-        <ProfileField label="Stream">{dash(row.stream)}</ProfileField>
-        <ProfileField label="Admission date">{formatDateMaybe(row.admission_date)}</ProfileField>
-        <ProfileField label="Boarding">{dash(row.boarding_type)}</ProfileField>
-        <ProfileField label="Previous school">{dash(row.previous_school)}</ProfileField>
-        <ProfileField label="Tuition / expected fee">
-          <span className="tabular-nums">
-            {row.expected_fee_amount != null ? String(row.expected_fee_amount) : '—'}
-          </span>
-        </ProfileField>
-        <ProfileField label="Discount / bursary">
-          <span className="tabular-nums">{feeDiscLabel}</span>
-        </ProfileField>
-        <ProfileField label="Admission fee (enrollment)">
-          <span className="tabular-nums">
-            {row.enrollment_fee != null ? String(row.enrollment_fee) : '—'}
-          </span>
-        </ProfileField>
-        <ProfileField label="Payment status">{dash(row.payment_status)}</ProfileField>
-
-        <ProfileSectionTitle>Other</ProfileSectionTitle>
-        <ProfileField label="Medical / allergies">{dash(row.medical_condition)}</ProfileField>
-        <ProfileField label="Record created">{formatDateMaybe(row.created_at)}</ProfileField>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-3 border-t border-[var(--ac-border)] bg-black/[0.02] px-5 py-5 sm:px-8 dark:bg-white/[0.02]">
+      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--ac-border)] bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
         <button
           type="button"
-          onClick={onNavigate}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-emerald-600 px-6 text-sm font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-[var(--ac-card-bg)] dark:shadow-emerald-950/40"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate();
+          }}
+          className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500"
         >
           Open full profile
         </button>
@@ -988,10 +967,13 @@ function QuickStudentPanel({
           <button
             key={i}
             type="button"
-            onClick={() => onViewParent(i)}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] bg-transparent px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewParent(i);
+            }}
+            className="rounded-md border border-[var(--ac-border)] px-2.5 py-1 text-xs font-medium text-[var(--ac-text-secondary)] transition hover:bg-white/[0.06] hover:ac-text-primary dark:hover:bg-white/[0.08]"
           >
-            Guardian · {p.name || '—'}
+            {p.name?.trim() || `Guardian ${i + 1}`}
           </button>
         ))}
       </div>
@@ -1020,96 +1002,138 @@ function QuickParentPanel({
   onViewStudent: () => void;
   onNavigate: () => void;
 }) {
+  const teacherLine =
+    teacher.trim() && studentClass?.trim()
+      ? `${teacher.trim()} (${studentClass.trim()})`
+      : teacher.trim() || studentClass?.trim() || '—';
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-[var(--ac-card-bg)] font-sans antialiased shadow-[var(--ac-shadow-strong)]">
-      <div className="relative bg-gradient-to-br from-violet-500/[0.14] via-fuchsia-600/[0.07] to-transparent px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-3 top-3 rounded-full border border-[var(--ac-border)] bg-black/[0.04] p-2.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
-          aria-label="Close panel"
-        >
-          <X className="h-4 w-4" strokeWidth={2} />
-        </button>
-        <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
+    <div className="relative overflow-hidden rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left shadow-sm">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute right-2 top-2 z-10 rounded-md border border-[var(--ac-border)] bg-black/[0.04] p-1.5 text-[var(--ac-text-muted)] transition-colors hover:bg-black/[0.08] hover:text-[var(--ac-text-primary)] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
+        aria-label="Close panel"
+      >
+        <X className="h-3.5 w-3.5" strokeWidth={2} />
+      </button>
+
+      <div className="flex flex-col gap-3 p-3 pr-10 sm:flex-row sm:items-start sm:gap-5">
+        <div className="flex gap-3 sm:max-w-[220px] sm:shrink-0 sm:flex-col sm:items-start">
           <div
-            className={`flex h-24 w-24 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-lg font-semibold tracking-tight text-white shadow-[0_12px_40px_-8px_rgba(0,0,0,0.35)] ring-1 ring-white/15 sm:h-28 sm:w-28 sm:text-xl ${gradientClass}`}
+            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-xs font-bold text-white ring-1 ring-white/15 ${gradientClass}`}
           >
             {initials(parent.name || '')}
           </div>
-          <div className="min-w-0 flex-1 space-y-3 pr-10">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-600/90 dark:text-violet-400/85">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ac-text-muted)]">
               Parent / guardian
             </p>
-            <h3 className="text-2xl font-semibold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-[1.65rem]">
+            <p className="mt-0.5 text-sm font-semibold leading-tight text-[var(--ac-text-primary)]">
               {parent.name || '—'}
-            </h3>
-            <p className="text-sm leading-relaxed text-[var(--ac-text-secondary)]">Linked to {studentName}</p>
-            <span className="inline-flex rounded-full border border-[var(--ac-border)] bg-white/[0.06] px-3 py-1.5 text-xs font-medium text-[var(--ac-text-primary)] dark:bg-black/25">
-              Guardian contact
-            </span>
+            </p>
+            <div className="mt-2 flex gap-2">
+              {parent.phone?.trim() ? (
+                <a
+                  href={`tel:${parent.phone.replace(/\s/g, '')}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-sky-600 text-white shadow-sm transition hover:bg-sky-500"
+                  title="Call"
+                  aria-label="Call"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Phone className="h-4 w-4" strokeWidth={2} />
+                </a>
+              ) : null}
+              {parent.email?.trim() ? (
+                <a
+                  href={`mailto:${parent.email.trim()}`}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm transition hover:bg-emerald-500"
+                  title="Email"
+                  aria-label="Email"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Mail className="h-4 w-4" strokeWidth={2} />
+                </a>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid min-w-0 flex-1 grid-cols-1 gap-x-6 gap-y-3 border-t border-[var(--ac-border)] pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0 md:grid-cols-3">
+          <div className="space-y-3">
+            <CompactInlineField label="Phone number">
+              {parent.phone?.trim() ? (
+                <a
+                  href={`tel:${parent.phone.replace(/\s/g, '')}`}
+                  className="text-sky-600 hover:underline dark:text-sky-400"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {parent.phone.trim()}
+                </a>
+              ) : (
+                '—'
+              )}
+            </CompactInlineField>
+            <CompactInlineField label="Email">
+              {parent.email?.trim() ? (
+                <a
+                  href={`mailto:${parent.email.trim()}`}
+                  className="break-all text-[var(--ac-text-secondary)] hover:text-sky-600 hover:underline dark:hover:text-sky-400"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {parent.email.trim()}
+                </a>
+              ) : (
+                '—'
+              )}
+            </CompactInlineField>
+          </div>
+          <div className="space-y-3">
+            <CompactInlineField label="Pupil's name">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewStudent();
+                }}
+                className="text-left font-semibold text-sky-600 hover:underline dark:text-sky-400"
+              >
+                {studentName}
+              </button>
+            </CompactInlineField>
+            <CompactInlineField label="Class">{studentClass?.trim() || '—'}</CompactInlineField>
+          </div>
+          <div className="space-y-3">
+            <CompactInlineField label="Teacher">
+              <span className="text-sky-600 dark:text-sky-400">{teacherLine}</span>
+            </CompactInlineField>
+            <CompactInlineField label="Address">
+              <span className="whitespace-pre-wrap text-[var(--ac-text-secondary)] line-clamp-4" title={address || undefined}>
+                {address.trim() ? address : '—'}
+              </span>
+            </CompactInlineField>
           </div>
         </div>
       </div>
 
-      <div className="grid gap-3 px-5 pb-2 pt-8 sm:grid-cols-2 sm:gap-4 sm:px-8 lg:grid-cols-3">
-        <ProfileSectionTitle accent="violet">Contact</ProfileSectionTitle>
-        <ProfileField label="Phone">
-          {parent.phone ? (
-            <a href={`tel:${parent.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2">
-              <Phone className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
-              {parent.phone}
-            </a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-        <ProfileField label="Email">
-          {parent.email ? (
-            <a href={`mailto:${parent.email}`} className="inline-flex items-center gap-2 break-all">
-              <Mail className="h-4 w-4 shrink-0 opacity-70" strokeWidth={2} />
-              {parent.email}
-            </a>
-          ) : (
-            '—'
-          )}
-        </ProfileField>
-
-        <ProfileSectionTitle accent="violet">Student</ProfileSectionTitle>
-        <ProfileField label="Pupil">{studentName}</ProfileField>
-        <ProfileField label="Class">{studentClass || '—'}</ProfileField>
-        <ProfileField label="Class teacher">{teacher || '—'}</ProfileField>
-        <ProfileField label="Home address">{address || '—'}</ProfileField>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-3 border-t border-[var(--ac-border)] bg-black/[0.02] px-5 py-5 sm:px-8 dark:bg-white/[0.02]">
-        {parent.phone && (
-          <a
-            href={`tel:${parent.phone.replace(/\s/g, '')}`}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-emerald-600 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/25 transition hover:bg-emerald-500 dark:shadow-emerald-950/40"
-          >
-            Call
-          </a>
-        )}
-        {parent.email && (
-          <a
-            href={`mailto:${parent.email}`}
-            className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
-          >
-            Email
-          </a>
-        )}
+      <div className="flex flex-wrap items-center gap-2 border-t border-[var(--ac-border)] bg-black/[0.02] px-3 py-2 dark:bg-white/[0.02]">
         <button
           type="button"
-          onClick={onViewStudent}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-[var(--ac-border)] px-5 text-sm font-medium text-[var(--ac-text-primary)] transition hover:bg-white/[0.06] dark:hover:bg-white/[0.08]"
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewStudent();
+          }}
+          className="rounded-md border border-[var(--ac-border)] px-2.5 py-1.5 text-xs font-medium text-[var(--ac-text-secondary)] transition hover:bg-white/[0.06] hover:ac-text-primary dark:hover:bg-white/[0.08]"
         >
           Student overview
         </button>
         <button
           type="button"
-          onClick={onNavigate}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-violet-600 px-6 text-sm font-semibold text-white shadow-lg shadow-violet-900/30 transition hover:bg-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:ring-offset-2 focus:ring-offset-[var(--ac-card-bg)]"
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate();
+          }}
+          className="rounded-md bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-violet-500"
         >
           Open full profile
         </button>
