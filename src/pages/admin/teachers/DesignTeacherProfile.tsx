@@ -197,21 +197,6 @@ export default function DesignTeacherProfile() {
 
       const assignments = (tcsRows || []) as { id: string; class_name: string; subject: string }[];
 
-      const subjectParts = new Set<string>();
-      const subsArr = Array.isArray(t.subjects) ? (t.subjects as string[]) : [];
-      subsArr.forEach((s) => {
-        const x = String(s || '').trim();
-        if (x) subjectParts.add(x);
-      });
-      assignments.forEach((a) => {
-        String(a.subject || '')
-          .split(',')
-          .map((x) => x.trim())
-          .filter(Boolean)
-          .forEach((s) => subjectParts.add(s));
-      });
-      const subjectList = [...subjectParts].sort((a, b) => a.localeCompare(b)).join(', ') || '—';
-
       const classFromTcs = [...new Set(assignments.map((a) => a.class_name).filter(Boolean))];
       const classNames = [...new Set([...classTeacherNames, ...classFromTcs])];
       const pu = portalUser as { email?: string; is_active?: boolean; updated_at?: string } | null;
@@ -323,7 +308,6 @@ export default function DesignTeacherProfile() {
           '#tp-meta-classes-count',
           `${classNames.length} class${classNames.length !== 1 ? 'es' : ''}`
         );
-        set('#tp-meta-subjects', subjectList);
         set('#tp-meta-salary', fmtUGX(t.salary != null ? Number(t.salary) : null));
         set('#tp-meta-hire-date', fmtDate(pickStr(t.date_of_hire)));
 

@@ -61,7 +61,10 @@ const SettingsPage = lazyWithRetry(() => import('./pages/admin/settings/Settings
 const SettingsClassesPage = lazyWithRetry(() => import('./pages/admin/settings/ClassesPage'));
 const ClassDetailPage = lazyWithRetry(() => import('./pages/admin/settings/ClassDetailPage'));
 const LocationSettingsPage = lazyWithRetry(() => import('./pages/admin/settings/LocationSettingsPage'));
-const OutstandingPage = lazyWithRetry(() => import('./pages/admin/outstanding/OutstandingPage'));
+const FinanceLayout = lazyWithRetry(() => import('./pages/admin/finance/FinanceLayout'));
+const DesignFinanceDashboard = lazyWithRetry(() => import('./pages/admin/finance/DesignFinanceDashboard'));
+const DesignOutstandingPage = lazyWithRetry(() => import('./pages/admin/finance/DesignOutstandingPage'));
+const FinanceSubPagePlaceholder = lazyWithRetry(() => import('./pages/admin/finance/FinanceSubPagePlaceholder'));
 const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPage'));
 const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
 const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
@@ -160,7 +163,18 @@ function App() {
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
                   <Route path="identity" element={<IdentityPage />} />
                   <Route path="identity/:id" element={<StudentIDCardPage />} />
-                  <Route path="outstanding" element={<OutstandingPage />} />
+                  <Route path="finance" element={<FinanceLayout />}>
+                    <Route index element={<DesignFinanceDashboard />} />
+                    <Route path="outstanding" element={<DesignOutstandingPage />} />
+                    <Route path="payments" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="payments/new" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="expenses" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="fee-structure" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="receipts" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="receipts/:payment_id" element={<FinanceSubPagePlaceholder />} />
+                    <Route path="reports" element={<FinanceSubPagePlaceholder />} />
+                  </Route>
+                  <Route path="outstanding" element={<Navigate to="/dashboard/admin/finance/outstanding" replace />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="settings/classes" element={<SettingsClassesPage />} />
                   <Route path="settings/classes/:className" element={<ClassDetailPage />} />

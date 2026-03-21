@@ -18,7 +18,7 @@
            [data-kpi="with-portal"], [data-kpi="hired-this-year"]
    Table:  #tch-table-body
    Cards:  #tch-card-grid
-   Search: #tch-search, #tch-subject-filter, #tch-sort-select
+   Search: #tch-search, #tch-sort-select
    Pagination: #tch-page-info, #tch-page-btns
    Toggles: #tch-list-btn, #tch-grid-btn
  ═══════════════════════════════════════════════════
@@ -228,7 +228,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
 }
 .pw-teachers .tch-thead, .pw-teachers .tch-trow {
   display:grid;
-  grid-template-columns: 2.2fr 1.2fr 1.6fr 1fr 1.2fr 1fr 100px;
+  grid-template-columns: 2.2fr 1.2fr 1.6fr 1.2fr 1fr 100px;
   padding:0 18px;align-items:center;
 }
 .pw-teachers .tch-thead {
@@ -444,7 +444,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <div class="tch-kpi-ic ca">👨‍🏫</div>
       <div>
         <div class="tch-kpi-label">Total Teachers</div>
-        <div class="tch-kpi-val ca" data-kpi="total-teachers">—</div>
+        <div class="tch-kpi-val ca" data-kpi="total-teachers">0</div>
         <div class="tch-kpi-sub">Active staff members</div>
       </div>
     </div>
@@ -452,7 +452,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <div class="tch-kpi-ic ct">🏫</div>
       <div>
         <div class="tch-kpi-label">Classes Covered</div>
-        <div class="tch-kpi-val ct" data-kpi="classes-covered">—</div>
+        <div class="tch-kpi-val ct" data-kpi="classes-covered">0</div>
         <div class="tch-kpi-sub">With assigned teacher</div>
       </div>
     </div>
@@ -460,7 +460,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <div class="tch-kpi-ic cg">🌐</div>
       <div>
         <div class="tch-kpi-label">With Portal</div>
-        <div class="tch-kpi-val cg" data-kpi="with-portal">—</div>
+        <div class="tch-kpi-val cg" data-kpi="with-portal">0</div>
         <div class="tch-kpi-sub">Active teacher accounts</div>
       </div>
     </div>
@@ -468,7 +468,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <div class="tch-kpi-ic cv">📅</div>
       <div>
         <div class="tch-kpi-label">Hired This Year</div>
-        <div class="tch-kpi-val cv" data-kpi="hired-this-year">—</div>
+        <div class="tch-kpi-val cv" data-kpi="hired-this-year">0</div>
         <div class="tch-kpi-sub">New staff in 2026</div>
       </div>
     </div>
@@ -478,16 +478,8 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
   <div class="tch-toolbar tch-fu tch-d2">
     <div class="tch-search">
       <span style="color:var(--t3);font-size:14px">🔍</span>
-      <input id="tch-search" placeholder="Search by name, email, or subject…" type="text">
+      <input id="tch-search" placeholder="Search by name, email, or class…" type="text">
     </div>
-    <select class="tch-select" id="tch-subject-filter">
-      <option value="">All Subjects</option>
-      <option>Mathematics</option>
-      <option>English</option>
-      <option>Science</option>
-      <option>SST</option>
-      <option>CRE</option>
-    </select>
     <select class="tch-select" id="tch-sort-select">
       <option>Name A → Z</option>
       <option>Name Z → A</option>
@@ -507,7 +499,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
         <div class="tch-th active">Teacher ▲</div>
         <div class="tch-th">Phone</div>
         <div class="tch-th">Email</div>
-        <div class="tch-th">Subjects</div>
         <div class="tch-th">Classes</div>
         <div class="tch-th">Hired</div>
         <div class="tch-th" style="justify-content:flex-end">Actions</div>
@@ -527,12 +518,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
           </div>
           <div class="tch-td"><a href="tel:+256759881420" class="tch-phone">📞 +256 759 881 420</a></div>
           <div class="tch-td muted">—</div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">Math</span>
-              <span class="tch-stag">Science</span>
-            </div>
-          </div>
           <div class="tch-td">
             <div style="display:flex;gap:4px;flex-wrap:wrap">
               <span class="tch-stag">Baby Class</span>
@@ -563,12 +548,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
           <div class="tch-td" style="color:var(--blue);font-size:12.5px">luukamusono@rips.sch</div>
           <div class="tch-td">
             <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">English</span>
-              <span class="tch-stag">SST</span>
-            </div>
-          </div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
               <span class="tch-stag">Middle Class</span>
             </div>
           </div>
@@ -594,12 +573,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
           </div>
           <div class="tch-td"><a href="tel:+256759881429" class="tch-phone">📞 +256 759 881 429</a></div>
           <div class="tch-td" style="color:var(--blue);font-size:12.5px">musokeronald@rips.sch</div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">Math</span>
-              <span class="tch-stag">CRE</span>
-            </div>
-          </div>
           <div class="tch-td">
             <div style="display:flex;gap:4px;flex-wrap:wrap">
               <span class="tch-stag">P7A</span>
@@ -665,7 +638,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
         <div class="tch-card-body">
           <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
           <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">luukamusono@rips.sch</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Subjects</span><span class="tch-card-val">English, SST</span></div>
           <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
         </div>
         <div class="tch-card-classes">
@@ -687,7 +659,6 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
         <div class="tch-card-body">
           <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
           <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">musokeronald@rips.sch</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Subjects</span><span class="tch-card-val">Math, CRE</span></div>
           <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
         </div>
         <div class="tch-card-classes">

@@ -16,6 +16,10 @@ const BulkGenerator = lazy(() => import('../pages/admin/reports/BulkGenerator'))
 const ReportViewer = lazy(() => import('../pages/admin/reports/ReportViewer'));
 const StudentsPage = lazy(() => import('../pages/admin/students/StudentsPage'));
 const DesignTeachersPage = lazy(() => import('../pages/admin/teachers/DesignTeachersPage'));
+const FinanceLayout = lazy(() => import('../pages/admin/finance/FinanceLayout'));
+const DesignFinanceDashboard = lazy(() => import('../pages/admin/finance/DesignFinanceDashboard'));
+const DesignOutstandingPage = lazy(() => import('../pages/admin/finance/DesignOutstandingPage'));
+const FinanceSubPagePlaceholder = lazy(() => import('../pages/admin/finance/FinanceSubPagePlaceholder'));
 const DesignParentsPage = lazy(() => import('../pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignParentProfile'));
 const AddParentPage = lazy(() => import('../pages/admin/parents/AddParentPage'));
@@ -83,6 +87,22 @@ export const router: RouteObject[] = [
           { index: true, element: <AdminDashboard /> },
           { path: 'students', element: <StudentsPage /> },
           { path: 'teachers', element: <DesignTeachersPage /> },
+          {
+            path: 'finance',
+            element: <FinanceLayout />,
+            children: [
+              { index: true, element: <DesignFinanceDashboard /> },
+              { path: 'outstanding', element: <DesignOutstandingPage /> },
+              { path: 'payments', element: <FinanceSubPagePlaceholder /> },
+              { path: 'payments/new', element: <FinanceSubPagePlaceholder /> },
+              { path: 'expenses', element: <FinanceSubPagePlaceholder /> },
+              { path: 'fee-structure', element: <FinanceSubPagePlaceholder /> },
+              { path: 'receipts', element: <FinanceSubPagePlaceholder /> },
+              { path: 'receipts/:payment_id', element: <FinanceSubPagePlaceholder /> },
+              { path: 'reports', element: <FinanceSubPagePlaceholder /> },
+            ],
+          },
+          { path: 'outstanding', element: <Navigate to="/dashboard/admin/finance/outstanding" replace /> },
           { path: 'parents', element: <DesignParentsPage /> },
           { path: 'parents/add', element: <AddParentPage /> },
           { path: 'parents/:parent_id', element: <DesignParentProfile /> },

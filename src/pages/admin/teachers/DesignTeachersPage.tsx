@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 
@@ -8,6 +8,8 @@ import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
 const PAGE_SIZE = 12;
 const STALE_MS = 5 * 60 * 1000;
+/** Avoid losing directory data after idle; prevents KPI/table flashing to placeholders */
+const TEACHERS_GC_MS = 1000 * 60 * 60 * 24;
 
 const TEACHERS_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -78,8 +80,6 @@ export type TeacherDirectoryRow = {
   employee_id: string | null;
   date_of_hire: string | null;
   created_at: string | null;
-  subjectsDisplay: string;
-  subjectsLower: string;
   classes: string[];
   portal_active: boolean;
 };
@@ -94,14 +94,13 @@ type Stats = {
 const SORT_LABELS = ['Name A → Z', 'Name Z → A', 'Most Recent Hire', 'Oldest Hire'] as const;
 type SortLabel = (typeof SORT_LABELS)[number];
 
-async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: Stats; subjectOptions: string[] }> {
+async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: Stats }> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   const schoolId = userData?.school_id as string | undefined;
   if (!schoolId) {
     return {
       rows: [],
       stats: { totalTeachers: 0, classesCovered: 0, withPortal: 0, hiredThisYear: 0 },
-      subjectOptions: [],
     };
   }
 
@@ -110,7 +109,7 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
   const [{ data: teacherRows }, { data: ctRows }, { data: tcsRows }, { data: portalUsers }] = await Promise.all([
     supabase
       .from('teachers')
-      .select('teacher_id, name, phone, email, employee_id, date_of_hire, subjects, created_at')
+      .select('teacher_id, name, phone, email, employee_id, date_of_hire, created_at')
       .eq('school_id', schoolId)
       .order('name'),
     supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', schoolId),
@@ -151,7 +150,6 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
     if (cn?.trim()) coveredClasses.add(cn.trim());
   }
 
-  const subjectSet = new Set<string>();
   const rows: TeacherDirectoryRow[] = (teacherRows || []).map((raw) => {
     const t = raw as {
       teacher_id: string;
@@ -160,28 +158,10 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
       email?: string | null;
       employee_id?: string | null;
       date_of_hire?: string | null;
-      subjects?: string[] | null;
       created_at?: string | null;
     };
-    const subsArr = Array.isArray(t.subjects) ? t.subjects : [];
-    for (const s of subsArr) {
-      const x = String(s || '').trim();
-      if (x) subjectSet.add(x);
-    }
 
     const tid = t.teacher_id;
-    for (const r of tcsRows || []) {
-      const row = r as { teacher_id?: string; subject?: string };
-      if (row.teacher_id === tid && row.subject?.trim()) subjectSet.add(row.subject.trim());
-    }
-
-    const subsJoined = subsArr.filter(Boolean).join(', ') || '';
-    const tcsSubjects = (tcsRows || [])
-      .filter((r) => (r as { teacher_id?: string }).teacher_id === tid)
-      .map((r) => String((r as { subject?: string }).subject || '').trim())
-      .filter(Boolean);
-    const mergedSubjects = subsJoined || tcsSubjects.join(', ') || '';
-    const subjectsLower = `${mergedSubjects} ${subsArr.join(' ')} ${tcsSubjects.join(' ')}`.toLowerCase();
 
     const cls = classesByTeacher[tid] ? [...classesByTeacher[tid]].sort() : [];
 
@@ -193,8 +173,6 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
       employee_id: t.employee_id ?? null,
       date_of_hire: t.date_of_hire ?? null,
       created_at: t.created_at ?? null,
-      subjectsDisplay: mergedSubjects || '—',
-      subjectsLower,
       classes: cls,
       portal_active: !!(t.email && portalEmails.has(normEmail(t.email))),
     };
@@ -202,8 +180,6 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
 
   const hiredThisYear = rows.filter((r) => r.date_of_hire && String(r.date_of_hire).startsWith(y)).length;
   const withPortal = rows.filter((r) => r.portal_active).length;
-
-  const subjectOptions = [...subjectSet].sort((a, b) => a.localeCompare(b));
 
   return {
     rows,
@@ -213,7 +189,6 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
       withPortal,
       hiredThisYear,
     },
-    subjectOptions,
   };
 }
 
@@ -224,7 +199,6 @@ export default function DesignTeachersPage() {
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [subjectFilter, setSubjectFilter] = useState('');
   const [sortLabel, setSortLabel] = useState<SortLabel>('Name A → Z');
   const [page, setPage] = useState(1);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
@@ -249,16 +223,18 @@ export default function DesignTeachersPage() {
     setHtmlContent(cachedTeachersPageHtml);
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: ['admin', 'teachers-design', user?.id ?? ''],
     queryFn: () => fetchTeachersDirectory(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_MS,
+    gcTime: TEACHERS_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
-  const subjectOptions = data?.subjectOptions ?? [];
 
   const filteredSorted = useMemo(() => {
     let out = [...allRows];
@@ -268,13 +244,8 @@ export default function DesignTeachersPage() {
         (t) =>
           (t.name || '').toLowerCase().includes(q) ||
           (t.email || '').toLowerCase().includes(q) ||
-          t.subjectsLower.includes(q) ||
           t.classes.some((c) => c.toLowerCase().includes(q))
       );
-    }
-    if (subjectFilter.trim()) {
-      const sf = subjectFilter.trim().toLowerCase();
-      out = out.filter((t) => t.subjectsLower.includes(sf));
     }
 
     out.sort((a, b) => {
@@ -294,7 +265,7 @@ export default function DesignTeachersPage() {
       }
     });
     return out;
-  }, [allRows, searchQuery, subjectFilter, sortLabel]);
+  }, [allRows, searchQuery, sortLabel]);
 
   const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -317,20 +288,17 @@ export default function DesignTeachersPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const loading = isLoading && !data;
-    setKpi('[data-kpi="total-teachers"]', loading ? '…' : String(stats?.totalTeachers ?? 0));
-    setKpi('[data-kpi="classes-covered"]', loading ? '…' : String(stats?.classesCovered ?? 0));
-    setKpi('[data-kpi="with-portal"]', loading ? '…' : String(stats?.withPortal ?? 0));
-    setKpi('[data-kpi="hired-this-year"]', loading ? '…' : String(stats?.hiredThisYear ?? 0));
-
-    const subSel = root.querySelector('#tch-subject-filter') as HTMLSelectElement | null;
-    if (subSel) {
-      const cur = subjectFilter;
-      subSel.innerHTML =
-        `<option value="">All Subjects</option>` +
-        subjectOptions.map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
-      subSel.value = cur && subjectOptions.includes(cur) ? cur : '';
-    }
+    const initialLoad = isPending && !data;
+    const kpiVals = {
+      total: initialLoad ? '0' : String(stats?.totalTeachers ?? 0),
+      classes: initialLoad ? '0' : String(stats?.classesCovered ?? 0),
+      portal: initialLoad ? '0' : String(stats?.withPortal ?? 0),
+      hired: initialLoad ? '0' : String(stats?.hiredThisYear ?? 0),
+    };
+    setKpi('[data-kpi="total-teachers"]', kpiVals.total);
+    setKpi('[data-kpi="classes-covered"]', kpiVals.classes);
+    setKpi('[data-kpi="with-portal"]', kpiVals.portal);
+    setKpi('[data-kpi="hired-this-year"]', kpiVals.hired);
 
     const sortSel = root.querySelector('#tch-sort-select') as HTMLSelectElement | null;
     if (sortSel) sortSel.value = sortLabel;
@@ -346,19 +314,14 @@ export default function DesignTeachersPage() {
     const tbody = root.querySelector('#tch-table-body');
     if (tbody) {
       if (pageSlice.length === 0) {
-        tbody.innerHTML = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
+        tbody.innerHTML = initialLoad
+          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
+          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
       } else {
         tbody.innerHTML = pageSlice
           .map((t, i) => {
             const ini = initials(t.name);
             const bg = grad(start + i);
-            const subjects =
-              t.subjectsDisplay && t.subjectsDisplay !== '—'
-                ? t.subjectsDisplay
-                    .split(',')
-                    .map((s) => `<span class="tch-stag">${escapeHtml(s.trim())}</span>`)
-                    .join('')
-                : '<span style="color:var(--t3);font-style:italic">—</span>';
             const classes =
               t.classes.length > 0
                 ? t.classes
@@ -388,7 +351,6 @@ export default function DesignTeachersPage() {
                 <div class="tch-td" style="color:var(--blue);font-size:12.5px">${
                   email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'
                 }</div>
-                <div class="tch-td"><div style="display:flex;gap:4px;flex-wrap:wrap">${subjects}</div></div>
                 <div class="tch-td"><div style="display:flex;gap:4px;flex-wrap:wrap">${classes}</div></div>
                 <div class="tch-td" style="color:var(--t2);font-size:12.5px">${fmtDate(t.date_of_hire)}</div>
                 <div class="tch-td">
@@ -405,6 +367,11 @@ export default function DesignTeachersPage() {
 
     const cardGrid = root.querySelector('#tch-card-grid');
     if (cardGrid) {
+      if (pageSlice.length === 0) {
+        cardGrid.innerHTML = initialLoad
+          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading teachers…</div>`
+          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No teachers found.</div>`;
+      } else {
       cardGrid.innerHTML = pageSlice
         .map((t, i) => {
           const ini = initials(t.name);
@@ -427,9 +394,6 @@ export default function DesignTeachersPage() {
               <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">${
                 email ? escapeHtml(email) : '<span style="color:var(--t3);font-style:italic">—</span>'
               }</span></div>
-              <div class="tch-card-row"><span class="tch-card-lbl">Subjects</span><span class="tch-card-val">${escapeHtml(
-                t.subjectsDisplay === '—' ? '—' : t.subjectsDisplay
-              )}</span></div>
               <div class="tch-card-row"><span class="tch-card-lbl">Portal</span><span class="tch-chip ${t.portal_active ? 'green' : 'rose'}" style="font-size:11px;padding:2px 8px">${
                 t.portal_active ? '✓ Active' : '✗ None'
               }</span></div>
@@ -448,6 +412,7 @@ export default function DesignTeachersPage() {
           </div>`;
         })
         .join('');
+      }
     }
 
     const pageBtns = root.querySelector('#tch-page-btns');
@@ -477,20 +442,7 @@ export default function DesignTeachersPage() {
     }
     root.querySelector('#tch-list-btn')?.classList.toggle('active', viewMode === 'list');
     root.querySelector('#tch-grid-btn')?.classList.toggle('active', viewMode === 'grid');
-  }, [
-    data,
-    isLoading,
-    stats,
-    filteredSorted,
-    safePage,
-    startIdx,
-    endIdx,
-    totalPages,
-    viewMode,
-    sortLabel,
-    subjectFilter,
-    subjectOptions,
-  ]);
+  }, [data, isPending, stats, filteredSorted, safePage, startIdx, endIdx, totalPages, viewMode, sortLabel]);
 
   useEffect(() => {
     if (!htmlContent) return;
@@ -511,15 +463,10 @@ export default function DesignTeachersPage() {
     root.addEventListener('click', onNav);
 
     const searchEl = root.querySelector('#tch-search') as HTMLInputElement | null;
-    const subEl = root.querySelector('#tch-subject-filter') as HTMLSelectElement | null;
     const sortEl = root.querySelector('#tch-sort-select') as HTMLSelectElement | null;
 
     const onSearch = () => {
       if (searchEl) setSearchQuery(searchEl.value);
-      setPage(1);
-    };
-    const onSub = () => {
-      if (subEl) setSubjectFilter(subEl.value);
       setPage(1);
     };
     const onSort = () => {
@@ -528,7 +475,6 @@ export default function DesignTeachersPage() {
     };
 
     searchEl?.addEventListener('input', onSearch);
-    subEl?.addEventListener('change', onSub);
     sortEl?.addEventListener('change', onSort);
 
     const onPageClick = (e: Event) => {
@@ -553,7 +499,6 @@ export default function DesignTeachersPage() {
     return () => {
       root.removeEventListener('click', onNav);
       searchEl?.removeEventListener('input', onSearch);
-      subEl?.removeEventListener('change', onSub);
       sortEl?.removeEventListener('change', onSort);
       pageBtnsEl?.removeEventListener('click', onPageClick);
       root.querySelector('#tch-list-btn')?.removeEventListener('click', onList);
