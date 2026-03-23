@@ -9,7 +9,7 @@ interface NativeModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'full';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
 }
@@ -39,6 +39,7 @@ export default function NativeModal({
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
+    xl: 'max-w-4xl max-h-[min(92vh,900px)] flex flex-col',
     full: 'max-w-full mx-4',
   };
 
@@ -64,12 +65,30 @@ export default function NativeModal({
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className={`relative w-full ${sizeClasses[size]} pointer-events-auto`}
             >
-              <div className="relative group overflow-hidden">
+              <div
+                className={
+                  size === 'xl'
+                    ? 'relative group flex min-h-0 flex-1 flex-col overflow-hidden'
+                    : 'relative group overflow-hidden'
+                }
+              >
                 <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl"></div>
-                <div className="relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 shadow-lg">
+                <div
+                  className={
+                    size === 'xl'
+                      ? 'relative flex min-h-0 flex-1 flex-col bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 shadow-lg'
+                      : 'relative bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-2xl border border-white/30 dark:border-white/10 shadow-lg'
+                  }
+                >
                   {/* Header */}
                   {(title || showCloseButton) && (
-                    <div className="flex items-center justify-between p-6 border-b border-white/20 dark:border-white/10">
+                    <div
+                      className={
+                        size === 'xl'
+                          ? 'flex shrink-0 items-center justify-between border-b border-white/20 p-6 dark:border-white/10'
+                          : 'flex items-center justify-between border-b border-white/20 p-6 dark:border-white/10'
+                      }
+                    >
                       {title && (
                         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                           {title}
@@ -87,7 +106,15 @@ export default function NativeModal({
                   )}
 
                   {/* Content */}
-                  <div className="p-6">{children}</div>
+                  <div
+                    className={
+                      size === 'xl'
+                        ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-6'
+                        : 'p-6'
+                    }
+                  >
+                    {children}
+                  </div>
                 </div>
               </div>
             </motion.div>

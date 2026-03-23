@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
@@ -8,6 +8,8 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults'
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
+import NativeModal from '@/components/NativeModal';
+import { AddStudentForm } from './AddStudentForm';
 
 import '@/assets/pwezacore-students-scoped.css';
 
@@ -226,7 +228,32 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
 
 export default function DesignStudentsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+
+  const addModalOpen = searchParams.get('add') === '1';
+
+  const closeAddStudentModal = () => {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete('add');
+        return p;
+      },
+      { replace: true }
+    );
+  };
+
+  const openAddStudentModal = () => {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.set('add', '1');
+        return p;
+      },
+      { replace: true }
+    );
+  };
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
@@ -371,7 +398,7 @@ export default function DesignStudentsPage() {
               <button type="button" className="btn btn-ghost" onClick={() => navigate('/dashboard/admin/parents')}>
                 👨‍👩‍👧 Add Family
               </button>
-              <button type="button" className="btn btn-teal" onClick={() => navigate('/dashboard/admin/students/add')}>
+              <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student
               </button>
             </div>
@@ -772,6 +799,19 @@ export default function DesignStudentsPage() {
           )}
         </div>
       </div>
+
+      <NativeModal
+        isOpen={addModalOpen}
+        onClose={closeAddStudentModal}
+        title="Add student"
+        size="xl"
+      >
+        <AddStudentForm
+          mode="modal"
+          onCompleted={closeAddStudentModal}
+          onCancel={closeAddStudentModal}
+        />
+      </NativeModal>
     </AdminPageWrapper>
   );
 }

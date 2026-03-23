@@ -97,7 +97,7 @@ function mapNavPath(path: string) {
   // The design HTML uses some route names that don't match the current React Router paths.
   // Map them to existing routes so clicks always navigate correctly.
   const MAP: Record<string, string> = {
-    '/dashboard/admin/students/new': '/dashboard/admin/students/add',
+    '/dashboard/admin/students/new': '/dashboard/admin/students?add=1',
     '/dashboard/admin/teachers/new': '/dashboard/admin/teachers/add',
     '/dashboard/admin/parents/new': '/dashboard/admin/parents/add',
     '/dashboard/admin/user-management': '/dashboard/admin/accounts',

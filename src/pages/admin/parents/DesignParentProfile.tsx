@@ -595,7 +595,7 @@ export default function DesignParentProfile() {
         root.querySelector('#pp-btn-message')?.addEventListener('click', () => navigate('/dashboard/admin/notifications'));
         root.querySelector('#pp-btn-portal')?.addEventListener('click', () => navigate('/dashboard/admin/parents/add'));
         root.querySelector('#pp-btn-manage-portal')?.addEventListener('click', () => navigate('/dashboard/admin/parents/add'));
-        root.querySelector('#pp-btn-link-child')?.addEventListener('click', () => navigate('/dashboard/admin/students/add'));
+        root.querySelector('#pp-btn-link-child')?.addEventListener('click', () => navigate('/dashboard/admin/students?add=1'));
         root.querySelector('#pp-btn-record-payment')?.addEventListener('click', () => navigate('/dashboard/admin/outstanding'));
         root.querySelector('#pp-btn-upload')?.addEventListener('click', () => {
           window.alert('Document uploads can be enabled in a future update.');

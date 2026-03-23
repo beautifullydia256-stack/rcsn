@@ -18,7 +18,7 @@ export default function AdminQuickActions() {
   const navigate = useNavigate();
 
   const actions = [
-    { icon: UserPlus, label: 'Add Student', color: '#16a34a', path: '/dashboard/admin/students/add' },
+    { icon: UserPlus, label: 'Add Student', color: '#16a34a', path: '/dashboard/admin/students?add=1' },
     { icon: GraduationCap, label: 'Add Teacher', color: '#16a34a', path: '/dashboard/admin/teachers' },
     { icon: Users, label: 'Add Parent', color: '#16a34a', path: '/dashboard/admin/parents' },
     { icon: Briefcase, label: 'Add Accounts Manager', color: '#6b7280', path: '/dashboard/admin/accounts' },

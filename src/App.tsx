@@ -141,7 +141,7 @@ function App() {
                   <Route index element={<AdminDashboard />} />
                   <Route path="students">
                     <Route index element={<DesignStudentsPage />} />
-                    <Route path="add" element={<AddStudentPage />} />
+                    <Route path="add" element={<Navigate to="/dashboard/admin/students?add=1" replace />} />
                     <Route path=":student_id" element={<StudentProfilePage />} />
                   </Route>
                   <Route path="teachers" element={<DesignTeachersPage />} />

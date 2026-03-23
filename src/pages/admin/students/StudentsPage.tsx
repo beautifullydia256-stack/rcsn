@@ -199,7 +199,7 @@ export default function StudentsPage() {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/admin/students/add')}
+            onClick={() => navigate('/dashboard/admin/students?add=1')}
             className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
           >
             <UserPlus className="w-4 h-4" />
