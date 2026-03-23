@@ -1,8 +1,7 @@
-import { Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
-import { useTheme } from '../../lib/theme-provider';
 import { usePwezaStore } from '../../store/pwezaStore';
 
 interface AdminUser {
@@ -100,8 +99,28 @@ function SubItem({
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { theme, toggleTheme } = useTheme();
+  const themeBeforeAdminRef = useRef<'light' | 'dark' | null>(null);
   const prefetchAll = usePwezaStore((s) => s.prefetchAll); // pweza speed system
+
+  /** Admin UI is dark-only; restore previous html theme when leaving admin. */
+  useEffect(() => {
+    const root = document.documentElement;
+    themeBeforeAdminRef.current = root.classList.contains('dark') ? 'dark' : 'light';
+    root.classList.remove('light');
+    root.classList.add('dark');
+    localStorage.setItem('pwezacore-theme', 'dark');
+    return () => {
+      const prev = themeBeforeAdminRef.current;
+      root.classList.remove('dark', 'light');
+      if (prev === 'light') {
+        root.classList.add('light');
+        localStorage.setItem('pwezacore-theme', 'light');
+      } else {
+        root.classList.add('dark');
+        localStorage.setItem('pwezacore-theme', 'dark');
+      }
+    };
+  }, []);
   const onPrefetchNav = () => {
     void prefetchAll();
   }; // pweza speed system
@@ -448,25 +467,6 @@ export default function AdminLayout() {
         }
         .pw-hamburger:hover { border-color: var(--pw-bh, rgba(255,255,255,0.12)); }
         @media (max-width: 768px) { .pw-hamburger { display: flex; } }
-        .pw-theme-toggle {
-          position: fixed;
-          top: 14px;
-          right: 14px;
-          z-index: 300;
-          width: 36px;
-          height: 36px;
-          border-radius: 8px;
-          background: var(--pw-s2, #101828);
-          border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
-          color: var(--pw-t1, #eef3ff);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-          cursor: pointer;
-          transition: border-color 0.14s;
-        }
-        .pw-theme-toggle:hover { border-color: var(--pw-bh, rgba(255,255,255,0.12)); }
         .pw-main {
           margin-left: var(--pw-sidebar-width, 232px);
           flex: 1;
@@ -511,9 +511,6 @@ export default function AdminLayout() {
       <div className="pw-layout">
         <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
           {sidebarOpen ? '✕' : '☰'}
-        </button>
-        <button type="button" className="pw-theme-toggle" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? '☀️' : '🌙'}
         </button>
 
         {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} />}
