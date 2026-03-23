@@ -39,7 +39,7 @@ type OtherStaffRow = {
   created_at: string;
 };
 
-async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]> {
+export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]> {
   const { data, error } = await supabase
     .from('other_staff_members')
     .select(

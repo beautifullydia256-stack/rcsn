@@ -6,7 +6,7 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-async function fetchNotificationsPage(userId: string): Promise<{ schoolId: string; classes: string[] }> {
+export async function fetchNotificationsPage(userId: string): Promise<{ schoolId: string; classes: string[] }> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return { schoolId: '', classes: [] };
   const { data: classData } = await supabase

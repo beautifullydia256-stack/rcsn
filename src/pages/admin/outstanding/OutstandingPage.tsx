@@ -18,7 +18,7 @@ interface Row {
   has_pending: boolean;
 }
 
-async function fetchOutstanding(userId: string): Promise<Row[]> {
+export async function fetchOutstanding(userId: string): Promise<Row[]> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return [];
 

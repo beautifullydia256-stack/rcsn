@@ -35,7 +35,7 @@ type PageData = {
   examSets: any[];
 };
 
-async function fetchPageData(userId: string): Promise<PageData | null> {
+export async function fetchPageData(userId: string): Promise<PageData | null> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return null;
 

@@ -18,7 +18,7 @@ type PaymentRow = {
 type Payment = { payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } };
 type Notification = { id: string; title: string; message: string; created_at: string };
 
-async function fetchPaymentsNotifications(userId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
+export async function fetchPaymentsNotifications(userId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
   const today = new Date().toISOString().slice(0, 10);
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return { payments: [], notifications: [] };

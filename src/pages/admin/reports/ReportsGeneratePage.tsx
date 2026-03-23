@@ -9,7 +9,7 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 
 const cardClass = 'rounded-xl border border-gray-200 bg-white shadow-sm p-6';
 
-async function fetchExamSets(userId: string): Promise<{ schoolId: string; examSets: any[] }> {
+export async function fetchReportsGenerateExamSetsPage(userId: string): Promise<{ schoolId: string; examSets: any[] }> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return { schoolId: '', examSets: [] };
   const { data: sets } = await supabase
@@ -30,7 +30,7 @@ export default function ReportsGeneratePage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'reports-generate-examsets', user?.id ?? ''],
-    queryFn: () => fetchExamSets(user!.id),
+    queryFn: () => fetchReportsGenerateExamSetsPage(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });

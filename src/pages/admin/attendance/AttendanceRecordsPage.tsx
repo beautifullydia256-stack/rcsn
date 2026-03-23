@@ -7,7 +7,7 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-async function fetchAttendance(userId: string, date: string) {
+export async function fetchAttendance(userId: string, date: string) {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return [] as any[];
   const { data: att } = await supabase

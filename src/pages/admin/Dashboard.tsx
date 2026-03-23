@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import DesignAdminDashboard from './components/DesignAdminDashboard';
 
-async function fetchDashboardAuth(userId: string) {
+export async function fetchDashboardAuth(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error('Not authenticated');
 

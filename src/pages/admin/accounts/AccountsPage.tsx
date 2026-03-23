@@ -32,7 +32,7 @@ interface UserAccount {
   is_active?: boolean;
 }
 
-async function fetchAccounts(userId: string): Promise<UserAccount[]> {
+export async function fetchAccounts(userId: string): Promise<UserAccount[]> {
   const { data: userData } = await supabase.from('users').select('school_id, role').eq('user_id', userId).single();
   const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
   if (!userData?.school_id || !MANAGER_ROLES.includes(String(userData.role ?? ''))) return [];

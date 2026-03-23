@@ -3,6 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { prefetchAdminSidebarRoutes } from '@/pages/admin/api/prefetchAdminSidebarRoutes';
 import type { StudentsFetchResult } from '@/pages/admin/students/DesignStudentsPage';
 import type { TeacherDirectoryRow, TeachersStats } from '@/pages/admin/teachers/DesignTeachersPage';
 import type { ParentDirectoryRow, ParentsStats } from '@/pages/admin/parents/DesignParentsPage';
@@ -214,15 +215,18 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     // Already warmed after login — avoid re-fetching all slices on every sidebar hover (causes full-page "reload" on list UIs).
     if (get().prefetchDone) return;
     try {
-      const [[studentsContext, teachersDirectory, parentsDirectory, financeDashboard, outstanding], adminKpis] =
-        await Promise.all([
-          loadAllData(userId),
-          schoolId
-            ? import('@/pages/admin/api/fetchAdminDesignDashboardKpis').then(({ fetchAdminDesignDashboardKpis }) =>
-                fetchAdminDesignDashboardKpis(schoolId)
-              )
-            : Promise.resolve(null),
-        ]);
+      const prefetchResults = await Promise.all([
+        loadAllData(userId),
+        schoolId
+          ? import('@/pages/admin/api/fetchAdminDesignDashboardKpis').then(({ fetchAdminDesignDashboardKpis }) =>
+              fetchAdminDesignDashboardKpis(schoolId)
+            )
+          : Promise.resolve(null),
+        schoolId ? prefetchAdminSidebarRoutes(userId, schoolId) : Promise.resolve(),
+      ]);
+      const [studentsContext, teachersDirectory, parentsDirectory, financeDashboard, outstanding] = prefetchResults[0];
+      const adminKpis = prefetchResults[1];
+
       set({
         studentsContext,
         teachersDirectory,

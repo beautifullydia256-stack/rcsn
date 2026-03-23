@@ -16,7 +16,7 @@ type SchoolUser = {
   role: string;
 };
 
-async function fetchSchoolUsers(adminUserId: string): Promise<SchoolUser[]> {
+export async function fetchSchoolUsers(adminUserId: string): Promise<SchoolUser[]> {
   const { data: me } = await supabase.from('users').select('school_id, role').eq('user_id', adminUserId).single();
   if (!me?.school_id || !['admin', 'owner', 'head_teacher'].includes(me.role ?? '')) return [];
   const { data, error } = await supabase

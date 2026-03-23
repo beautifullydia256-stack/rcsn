@@ -13,7 +13,7 @@ interface ClassItem {
   teacherName?: string;
 }
 
-async function fetchClassesPage(userId: string): Promise<ClassItem[]> {
+export async function fetchClassesPage(userId: string): Promise<ClassItem[]> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return [];
 

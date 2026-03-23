@@ -8,7 +8,7 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 
 type ReportRow = { report_id: string; template_name?: string; file_url?: string; created_at: string; students?: { name?: string; current_class?: string } };
 
-async function fetchReports(userId: string): Promise<ReportRow[]> {
+export async function fetchRecentDashboardReports(userId: string): Promise<ReportRow[]> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return [];
   const { data } = await supabase
@@ -26,7 +26,7 @@ export default function RecentReportsSystemHealth() {
 
   const { data: reports = [], isLoading } = useQuery({
     queryKey: ['dashboard', 'admin', 'reports', user?.id ?? ''],
-    queryFn: () => fetchReports(user!.id),
+    queryFn: () => fetchRecentDashboardReports(user!.id),
     enabled: !!user?.id,
     staleTime: STALE_TIME_MS,
   });

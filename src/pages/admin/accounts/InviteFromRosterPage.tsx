@@ -27,7 +27,7 @@ type OtherStaffRow = {
 
 type UserEmailRow = { email: string | null; role: string };
 
-async function fetchInviteContext(schoolId: string) {
+export async function fetchInviteContext(schoolId: string) {
   const [teachersRes, staffRes, usersRes] = await Promise.all([
     supabase.from('teachers').select('teacher_id, name, email, school_id').eq('school_id', schoolId).order('name'),
     supabase

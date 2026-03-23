@@ -6,7 +6,7 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-async function fetchReportStats(userId: string): Promise<{ today: number; term: number; pending: number }> {
+export async function fetchReportStats(userId: string): Promise<{ today: number; term: number; pending: number }> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return { today: 0, term: 0, pending: 0 };
 
