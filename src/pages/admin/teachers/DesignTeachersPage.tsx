@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -16,7 +16,26 @@ const TEACHERS_GC_MS = 1000 * 60 * 60 * 24;
 const TEACHERS_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
-let cachedTeachersPageHtml: string | null = null;
+const TEACHERS_MOTION_KILL = `
+.pw-teachers .tch-fu,
+.pw-teachers .tch-d1,
+.pw-teachers .tch-d2,
+.pw-teachers .tch-d3,
+.pw-teachers .tch-d4 {
+  animation: none !important;
+  animation-delay: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.pw-teachers .tch-kpi:hover,
+.pw-teachers .tch-card:hover {
+  transform: none !important;
+}
+.pw-teachers .tch-kpi,
+.pw-teachers .tch-card {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+`;
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ffb547,#ff4f6a)',
@@ -201,6 +220,7 @@ export default function DesignTeachersPage() {
   const teachersDirectory = usePwezaStore((s) => s.teachersDirectory); // pweza speed system
   const hasStoreData = prefetchDone && !!teachersDirectory; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastInjectedHtmlRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -220,12 +240,7 @@ export default function DesignTeachersPage() {
   }, []);
 
   useEffect(() => {
-    if (cachedTeachersPageHtml) {
-      setHtmlContent(cachedTeachersPageHtml);
-      return;
-    }
-    cachedTeachersPageHtml = parseInjectedHtml(teachersTemplateRaw);
-    setHtmlContent(cachedTeachersPageHtml);
+    setHtmlContent(parseInjectedHtml(teachersTemplateRaw));
   }, []);
 
   const { data: queryData, isPending } = useQuery({
@@ -242,6 +257,28 @@ export default function DesignTeachersPage() {
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
+
+  /** If React ever dropped imperative KPI updates, derive from rows so counts never show 0 with a non-empty table. */
+  const effectiveStats = useMemo((): TeachersStats | null => {
+    if (stats) return stats;
+    if (!allRows.length) return null;
+    const y = new Date().getFullYear().toString();
+    const covered = new Set<string>();
+    allRows.forEach((r) => {
+      r.classes.forEach((c) => {
+        const t = String(c || '').trim();
+        if (t) covered.add(t);
+      });
+    });
+    const withPortal = allRows.filter((r) => r.portal_active).length;
+    const hiredThisYear = allRows.filter((r) => r.date_of_hire && String(r.date_of_hire).startsWith(y)).length;
+    return {
+      totalTeachers: allRows.length,
+      classesCovered: covered.size,
+      withPortal,
+      hiredThisYear,
+    };
+  }, [stats, allRows]);
 
   const filteredSorted = useMemo(() => {
     let out = [...allRows];
@@ -295,12 +332,14 @@ export default function DesignTeachersPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const initialLoad = !data && (isPending || (!prefetchDone && !hasStoreData));
+    const initialLoad =
+      !data && allRows.length === 0 && (isPending || (!prefetchDone && !hasStoreData));
+    const k = effectiveStats;
     const kpiVals = {
-      total: initialLoad ? '0' : String(stats?.totalTeachers ?? 0),
-      classes: initialLoad ? '0' : String(stats?.classesCovered ?? 0),
-      portal: initialLoad ? '0' : String(stats?.withPortal ?? 0),
-      hired: initialLoad ? '0' : String(stats?.hiredThisYear ?? 0),
+      total: initialLoad ? '—' : String(k?.totalTeachers ?? allRows.length),
+      classes: initialLoad ? '—' : String(k?.classesCovered ?? 0),
+      portal: initialLoad ? '—' : String(k?.withPortal ?? 0),
+      hired: initialLoad ? '—' : String(k?.hiredThisYear ?? 0),
     };
     setKpi('[data-kpi="total-teachers"]', kpiVals.total);
     setKpi('[data-kpi="classes-covered"]', kpiVals.classes);
@@ -449,10 +488,31 @@ export default function DesignTeachersPage() {
     }
     root.querySelector('#tch-list-btn')?.classList.toggle('active', viewMode === 'list');
     root.querySelector('#tch-grid-btn')?.classList.toggle('active', viewMode === 'grid');
-  }, [data, isPending, stats, filteredSorted, safePage, startIdx, endIdx, totalPages, viewMode, sortLabel, prefetchDone, hasStoreData]);
+  }, [
+    data,
+    isPending,
+    effectiveStats,
+    allRows.length,
+    filteredSorted,
+    safePage,
+    startIdx,
+    endIdx,
+    totalPages,
+    viewMode,
+    sortLabel,
+    prefetchDone,
+    hasStoreData,
+  ]);
 
-  useEffect(() => {
-    if (!htmlContent) return;
+  // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
+  // state change or KPI/table updates are wiped (same fix as admin design dashboard).
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !htmlContent) return;
+    if (lastInjectedHtmlRef.current !== htmlContent) {
+      el.innerHTML = htmlContent;
+      lastInjectedHtmlRef.current = htmlContent;
+    }
     requestAnimationFrame(() => renderTableAndGrid());
   }, [htmlContent, renderTableAndGrid]);
 
@@ -534,10 +594,9 @@ export default function DesignTeachersPage() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-    />
+    <>
+      <style>{TEACHERS_MOTION_KILL}</style>
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
+    </>
   );
 }

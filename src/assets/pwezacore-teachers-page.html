@@ -469,7 +469,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <div>
         <div class="tch-kpi-label">Hired This Year</div>
         <div class="tch-kpi-val cv" data-kpi="hired-this-year">0</div>
-        <div class="tch-kpi-sub">New staff in 2026</div>
+        <div class="tch-kpi-sub">New staff this year</div>
       </div>
     </div>
   </div>
@@ -503,96 +503,11 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
         <div class="tch-th">Hired</div>
         <div class="tch-th" style="justify-content:flex-end">Actions</div>
       </div>
-      <div id="tch-table-body">
-
-        <!-- ROW 1 -->
-        <div class="tch-trow">
-          <div class="tch-td">
-            <div class="tch-cell">
-              <div class="tch-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">MK</div>
-              <div>
-                <div class="tch-name">Mustafa Kafeero</div>
-                <div class="tch-emp-id">ID: RIPS26262</div>
-              </div>
-            </div>
-          </div>
-          <div class="tch-td"><a href="tel:+256759881420" class="tch-phone">📞 +256 759 881 420</a></div>
-          <div class="tch-td muted">—</div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">Baby Class</span>
-              <span class="tch-stag">Top Class</span>
-            </div>
-          </div>
-          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Mar 16, 2026</div>
-          <div class="tch-td">
-            <div class="tch-row-actions">
-              <div class="tch-rbtn" title="View profile">👁</div>
-              <div class="tch-rbtn arrow" title="Open profile">›</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ROW 2 -->
-        <div class="tch-trow">
-          <div class="tch-td">
-            <div class="tch-cell">
-              <div class="tch-av" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">LM</div>
-              <div>
-                <div class="tch-name">Luuka Musono</div>
-                <div class="tch-emp-id">ID: RIPS22441</div>
-              </div>
-            </div>
-          </div>
-          <div class="tch-td"><a href="tel:+256759881429" class="tch-phone">📞 +256 759 881 429</a></div>
-          <div class="tch-td" style="color:var(--blue);font-size:12.5px">luukamusono@rips.sch</div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">Middle Class</span>
-            </div>
-          </div>
-          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Oct 23, 2025</div>
-          <div class="tch-td">
-            <div class="tch-row-actions">
-              <div class="tch-rbtn" title="View profile">👁</div>
-              <div class="tch-rbtn arrow" title="Open profile">›</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ROW 3 -->
-        <div class="tch-trow">
-          <div class="tch-td">
-            <div class="tch-cell">
-              <div class="tch-av" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">MR</div>
-              <div>
-                <div class="tch-name">Musoke Ronald</div>
-                <div class="tch-emp-id">ID: RIPS22440</div>
-              </div>
-            </div>
-          </div>
-          <div class="tch-td"><a href="tel:+256759881429" class="tch-phone">📞 +256 759 881 429</a></div>
-          <div class="tch-td" style="color:var(--blue);font-size:12.5px">musokeronald@rips.sch</div>
-          <div class="tch-td">
-            <div style="display:flex;gap:4px;flex-wrap:wrap">
-              <span class="tch-stag">P7A</span>
-              <span class="tch-stag">P6B</span>
-            </div>
-          </div>
-          <div class="tch-td" style="color:var(--t2);font-size:12.5px">Oct 19, 2025</div>
-          <div class="tch-td">
-            <div class="tch-row-actions">
-              <div class="tch-rbtn" title="View profile">👁</div>
-              <div class="tch-rbtn arrow" title="Open profile">›</div>
-            </div>
-          </div>
-        </div>
-
-      </div><!-- /#tch-table-body -->
+      <div id="tch-table-body"></div><!-- filled by DesignTeachersPage.tsx -->
 
       <!-- PAGINATION -->
       <div class="tch-pagination">
-        <div class="tch-page-info" id="tch-page-info">Showing <strong>1–3</strong> of <strong>3</strong> teachers</div>
+        <div class="tch-page-info" id="tch-page-info"></div>
         <div class="tch-page-btns" id="tch-page-btns">
           <button class="tch-pbtn" disabled>‹</button>
           <button class="tch-pbtn active">1</button>
@@ -604,73 +519,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
 
   <!-- CARD GRID VIEW -->
   <div id="tch-grid-view" style="display:none" class="tch-fu tch-d3">
-    <div class="tch-card-grid" id="tch-card-grid">
-
-      <div class="tch-card">
-        <div class="tch-card-top">
-          <div class="tch-card-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">MK</div>
-          <div class="tch-card-name">Mustafa Kafeero</div>
-          <div class="tch-card-sub">ID: RIPS26262 · Hired Mar 2026</div>
-          <div class="tch-card-corner"><span class="tch-chip amber" style="font-size:10.5px;padding:2px 8px">New</span></div>
-        </div>
-        <div class="tch-card-body">
-          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881420">+256 759 881 420</a></span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="color:var(--t3);font-style:italic">Not recorded</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Salary</span><span class="tch-card-val">UGX 100,000</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
-        </div>
-        <div class="tch-card-classes">
-          <span class="tch-stag">Baby Class</span><span class="tch-stag">Top Class</span><span class="tch-stag">Middle Class</span>
-        </div>
-        <div class="tch-card-foot">
-          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
-          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
-        </div>
-      </div>
-
-      <div class="tch-card">
-        <div class="tch-card-top">
-          <div class="tch-card-av" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">LM</div>
-          <div class="tch-card-name">Luuka Musono</div>
-          <div class="tch-card-sub">ID: RIPS22441 · Hired Oct 2025</div>
-          <div class="tch-card-corner"></div>
-        </div>
-        <div class="tch-card-body">
-          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">luukamusono@rips.sch</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
-        </div>
-        <div class="tch-card-classes">
-          <span class="tch-stag">Middle Class</span>
-        </div>
-        <div class="tch-card-foot">
-          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
-          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
-        </div>
-      </div>
-
-      <div class="tch-card">
-        <div class="tch-card-top">
-          <div class="tch-card-av" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">MR</div>
-          <div class="tch-card-name">Musoke Ronald</div>
-          <div class="tch-card-sub">ID: RIPS22440 · Hired Oct 2025</div>
-          <div class="tch-card-corner"></div>
-        </div>
-        <div class="tch-card-body">
-          <div class="tch-card-row"><span class="tch-card-lbl">Phone</span><span class="tch-card-val"><a href="tel:+256759881429">+256 759 881 429</a></span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Email</span><span class="tch-card-val" style="font-size:12px;color:var(--blue)">musokeronald@rips.sch</span></div>
-          <div class="tch-card-row"><span class="tch-card-lbl">Status</span><span class="tch-chip green" style="font-size:11px;padding:2px 8px">✓ Active</span></div>
-        </div>
-        <div class="tch-card-classes">
-          <span class="tch-stag">P7A</span><span class="tch-stag">P6B</span>
-        </div>
-        <div class="tch-card-foot">
-          <button class="tch-crd-btn tch-crd-ghost">📋 Schedule</button>
-          <button class="tch-crd-btn tch-crd-amber">View Profile →</button>
-        </div>
-      </div>
-
-    </div>
+    <div class="tch-card-grid" id="tch-card-grid"></div><!-- filled by DesignTeachersPage.tsx -->
   </div>
 
 </div>
