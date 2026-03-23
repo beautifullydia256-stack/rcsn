@@ -555,18 +555,18 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/receipts" label="Receipts" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavGroup icon="📊" label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records']}>
-              <SubItem to="/dashboard/admin/reports" label="Overview" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/reports/generate" label="Generate Reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-              <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            </NavGroup>
           </div>
 
           <div className="pw-nav-section">
             <span className="pw-nav-label">Academic</span>
             <NavItem to="/dashboard/admin/attendance" icon="📋" label="Attendance" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/exam-sets" icon="📝" label="Exam Sets" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavGroup icon="📊" label="Reports" isOpen={reportsOpen} onToggle={() => setReportsOpen(!reportsOpen)} matchPaths={['/dashboard/admin/reports', '/dashboard/admin/report-records']}>
+              <SubItem to="/dashboard/admin/reports" label="Overview" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/reports/generate" label="Generate Reports" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            </NavGroup>
             <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
