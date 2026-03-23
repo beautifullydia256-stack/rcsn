@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import {
+  fetchAdminDesignDashboardKpis,
+  type AdminDesignDashboardKpis,
+} from '@/pages/admin/api/fetchAdminDesignDashboardKpis';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
 
@@ -225,121 +233,30 @@ async function runSearch(query: string, container: HTMLElement) {
   }
 }
 
-async function loadKPIs(schoolId: string, setText: (sel: string, val: string) => void, el: HTMLElement) {
-  try {
-    const todayIso = new Date().toISOString().slice(0, 10);
+function applyAdminDesignKpisToDom(el: HTMLElement, kpis: AdminDesignDashboardKpis) {
+  const setText = (sel: string, val: string) => {
+    const node = el.querySelector(sel) as HTMLElement | null;
+    if (node) node.textContent = val;
+  };
 
-    const { data: terms } = await supabase
-      .from('school_terms')
-      .select('id, start_date, end_date')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: false });
+  setText('[data-kpi="total-students"]', String(kpis.totalStudents));
+  setText('[data-kpi="students-sub"]', 'Active enrollments');
 
-    const currentTerm =
-      (terms || []).find((t: any) =>
-        t.start_date ? t.start_date <= todayIso && t.end_date >= todayIso : t.end_date >= todayIso
-      ) || terms?.[0] || null;
+  setText('[data-kpi="total-teachers"]', String(kpis.totalTeachers));
+  setText('[data-kpi="teachers-sub"]', 'Staff members');
 
-    const termStart = currentTerm?.start_date || '1900-01-01';
-    const termEnd = currentTerm?.end_date || '2100-12-31';
+  setText('[data-kpi="fees-collected"]', formatUShCompact(kpis.feesCollected));
+  setText('[data-kpi="outstanding-fees"]', formatUShCompact(kpis.outstanding));
 
-    const [
-      studentsCountRes,
-      teachersCountRes,
-      attendanceRes,
-      paymentsRes,
-      pendingExpensesCountRes,
-      activeClassesRowsRes,
-      jobsCountRes,
-    ] = await Promise.all([
-      supabase
-        .from('students')
-        .select('student_id', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('status', 'active'),
-      supabase
-        .from('teachers')
-        .select('teacher_id', { count: 'exact', head: true })
-        .eq('school_id', schoolId),
-      supabase
-        .from('student_attendance')
-        .select('student_id, present')
-        .eq('school_id', schoolId)
-        .eq('date', todayIso),
-      supabase
-        .from('student_payments')
-        .select('student_id, amount_paid')
-        .eq('school_id', schoolId)
-        .gte('payment_date', termStart)
-        .lte('payment_date', termEnd),
-      supabase
-        .from('school_expenses')
-        .select('expense_id', { count: 'exact', head: true })
-        .eq('school_id', schoolId)
-        .eq('status', 'pending'),
-      supabase
-        .from('students')
-        .select('current_class')
-        .eq('school_id', schoolId)
-        .eq('status', 'active')
-        .limit(5000),
-      supabase
-        .from('jobs')
-        .select('job_id', { count: 'exact', head: true })
-        .eq('school_id', schoolId),
-    ]);
+  setText('[data-kpi="attendance-today"]', `${kpis.attendancePct}%`);
+  setText('[data-kpi="attendance-sub"]', `${kpis.present} / ${kpis.totalAttendance} present`);
 
-    const totalStudents = studentsCountRes.count ?? 0;
-    const totalTeachers = teachersCountRes.count ?? 0;
-    const present = (attendanceRes.data || []).filter((r: any) => r.present === true).length;
-    const totalAttendance = (attendanceRes.data || []).length;
-    const pct = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
+  setText('[data-kpi="pending-expenses"]', String(kpis.expensesCount));
+  setText('[data-kpi="active-classes"]', String(kpis.activeClasses));
+  setText('[data-kpi="job-applications"]', String(kpis.jobApps));
 
-    const balances = await supabase
-      .from('students')
-      .select('student_id, expected_fee_amount')
-      .eq('school_id', schoolId)
-      .eq('status', 'active');
-
-    const payments = (paymentsRes.data || []) as any[];
-    const paidByStudent: Record<string, number> = {};
-    payments.forEach((p: any) => {
-      paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
-    });
-
-    const feesCollected = payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-
-    const outstanding = (balances.data || [])
-      .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
-      .reduce((sum: number, b: number) => sum + b, 0);
-
-    const expensesCount = pendingExpensesCountRes.count ?? 0;
-    const activeClasses = new Set((activeClassesRowsRes.data || []).map((r: any) => r.current_class).filter(Boolean)).size;
-
-    const jobApps = jobsCountRes.count ?? 0;
-
-    setText('[data-kpi="total-students"]', String(totalStudents));
-    setText('[data-kpi="students-sub"]', 'Active enrollments');
-
-    setText('[data-kpi="total-teachers"]', String(totalTeachers));
-    setText('[data-kpi="teachers-sub"]', 'Staff members');
-
-    setText('[data-kpi="fees-collected"]', formatUShCompact(feesCollected));
-    setText('[data-kpi="outstanding-fees"]', formatUShCompact(outstanding));
-
-    setText('[data-kpi="attendance-today"]', `${pct}%`);
-    setText('[data-kpi="attendance-sub"]', `${present} / ${totalAttendance} present`);
-
-    setText('[data-kpi="pending-expenses"]', String(expensesCount));
-    setText('[data-kpi="active-classes"]', String(activeClasses));
-    setText('[data-kpi="job-applications"]', String(jobApps));
-
-    const expCountEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
-    if (expCountEl) expCountEl.textContent = `${expensesCount} pending`;
-  } catch (err) {
-    console.error('KPI load error:', err);
-  }
+  const expCountEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
+  if (expCountEl) expCountEl.textContent = `${kpis.expensesCount} pending`;
 }
 
 async function loadStaff(schoolId: string, setHtml: (id: string, html: string) => void) {
@@ -657,8 +574,15 @@ const DASHBOARD_MOTION_KILL = `
 export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const navigate = useNavigate();
   const location = useLocation();
-  /** AdminLayout keeps a cached dashboard node and moves it between visible main and display:none; remounts reset HTML to placeholders. */
   const isDashboardRoute = location.pathname === '/dashboard/admin';
+
+  const { data: kpiData } = useQuery({
+    queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
+    queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
+    enabled: !!schoolId,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
+  });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -718,7 +642,12 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     };
 
     await Promise.all([
-      loadKPIs(schoolId, setText, el),
+      queryClient.fetchQuery({
+        queryKey: adminQueryKeys.adminDashboardKpis(schoolId),
+        queryFn: () => fetchAdminDesignDashboardKpis(schoolId),
+        staleTime: ADMIN_STALE_TIME_MS,
+        gcTime: ADMIN_GC_TIME_MS,
+      }),
       loadStaff(schoolId, setHtml),
       loadExpenses(schoolId, setHtml, setText, el),
       loadPayments(schoolId, setHtml),
@@ -727,6 +656,12 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       loadJobVacancies(schoolId, setHtml),
     ]);
   }, [schoolId]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !kpiData || !el.querySelector('.pweza-admin')) return;
+    applyAdminDesignKpisToDom(el, kpiData);
+  }, [kpiData]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -803,6 +738,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
             const next = Math.max(0, current - 1);
             countEl.textContent = `${next} pending`;
           }
+          void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
         } catch {
           row.style.opacity = '1';
           row.style.pointerEvents = '';

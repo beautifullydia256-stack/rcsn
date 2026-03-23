@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
@@ -186,6 +189,8 @@ type ParentCardDisplay = {
 
 export default function DesignStudentProfile() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const authUserId = useAuthStore((s) => s.user?.id);
   const { student_id: studentIdParam } = useParams<{ student_id: string }>();
   const studentId = Array.isArray(studentIdParam) ? studentIdParam[0] : studentIdParam || '';
 
@@ -276,9 +281,12 @@ export default function DesignStudentProfile() {
       }
       if (photoInp) photoInp.value = '';
     }
+    if (authUserId) {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(authUserId) });
+    }
     setEditMode(false);
     setReloadToken((x) => x + 1);
-  }, [studentId]);
+  }, [studentId, authUserId, queryClient]);
 
   saveStudentRef.current = saveStudent;
 

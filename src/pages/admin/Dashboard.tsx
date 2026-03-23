@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import DesignAdminDashboard from './components/DesignAdminDashboard';
-
-const STALE_TIME_MS = 5 * 60 * 1000; // 5 min
 
 async function fetchDashboardAuth(userId: string) {
   const { data: { user } } = await supabase.auth.getUser();
@@ -49,7 +48,8 @@ export default function AdminDashboard() {
     queryKey: ['dashboard', 'admin', 'auth', user?.id ?? ''],
     queryFn: () => fetchDashboardAuth(user!.id),
     enabled: !!user?.id,
-    staleTime: STALE_TIME_MS,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
     retry: false,
   });
 

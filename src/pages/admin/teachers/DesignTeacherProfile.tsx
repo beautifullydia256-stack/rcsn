@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 
@@ -146,6 +149,8 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
 
 export default function DesignTeacherProfile() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const authUserId = useAuthStore((s) => s.user?.id);
   const { teacher_id: teacherIdParam } = useParams<{ teacher_id: string }>();
   const teacherId = teacherIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -197,10 +202,13 @@ export default function DesignTeacherProfile() {
       window.alert(error.message);
       return;
     }
+    if (authUserId) {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
+    }
     if (photoInp) photoInp.value = '';
     setEditMode(false);
     setReloadToken((x) => x + 1);
-  }, [teacherId]);
+  }, [teacherId, authUserId, queryClient]);
 
   saveTeacherRef.current = saveTeacher;
 

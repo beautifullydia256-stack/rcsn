@@ -3,15 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { usePwezaStore } from '@/store/pwezaStore';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
 const PAGE_SIZE = 12;
-const STALE_MS = 5 * 60 * 1000;
-/** Avoid losing directory data after idle; prevents KPI/table flashing to placeholders */
-const PARENTS_GC_MS = 1000 * 60 * 60 * 24;
 
 const PARENTS_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
@@ -239,9 +237,6 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
 export default function DesignParentsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
-  const parentsDirectory = usePwezaStore((s) => s.parentsDirectory); // pweza speed system
-  const hasStoreData = prefetchDone && !!parentsDirectory; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
@@ -267,17 +262,15 @@ export default function DesignParentsPage() {
     setHtmlContent(parseInjectedHtml(parentsTemplateRaw));
   }, []);
 
-  const { data: queryData, isPending } = useQuery({
-    queryKey: ['admin', 'parents-design', user?.id ?? ''],
+  const { data, isPending } = useQuery({
+    queryKey: adminQueryKeys.parentsDesign(user?.id ?? ''),
     queryFn: () => fetchParentsDirectory(user!.id),
-    enabled: !!user?.id && !hasStoreData,
-    staleTime: STALE_MS,
-    gcTime: PARENTS_GC_MS,
+    enabled: !!user?.id,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   });
-
-  const data = hasStoreData ? parentsDirectory! : queryData;
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
@@ -354,8 +347,7 @@ export default function DesignParentsPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const initialLoad =
-      !data && allRows.length === 0 && (isPending || (!prefetchDone && !hasStoreData));
+    const initialLoad = !data && allRows.length === 0 && isPending;
     const k = effectiveStats;
     const kpiVals = {
       total: initialLoad ? '—' : String(k?.totalParents ?? allRows.length),
@@ -554,8 +546,6 @@ export default function DesignParentsPage() {
     totalPages,
     viewMode,
     sortKey,
-    prefetchDone,
-    hasStoreData,
   ]);
 
   // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
@@ -652,7 +642,7 @@ export default function DesignParentsPage() {
     return () => obs.disconnect();
   }, [htmlContent]);
 
-  if (user?.id && !prefetchDone && !data) {
+  if (user?.id && isPending && !data) {
     return (
       <div style={{ padding: '26px 28px' }}>
         <SkeletonKPIStrip count={4} />

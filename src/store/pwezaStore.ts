@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { queryClient } from '@/lib/queryClient';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import type { StudentsFetchResult } from '@/pages/admin/students/DesignStudentsPage';
 import type { TeacherDirectoryRow, TeachersStats } from '@/pages/admin/teachers/DesignTeachersPage';
 import type { ParentDirectoryRow, ParentsStats } from '@/pages/admin/parents/DesignParentsPage';
@@ -207,12 +209,20 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
 
   prefetchAll: async () => {
     const userId = get().userId;
+    const schoolId = get().schoolId;
     if (!userId) return;
     // Already warmed after login — avoid re-fetching all slices on every sidebar hover (causes full-page "reload" on list UIs).
     if (get().prefetchDone) return;
     try {
-      const [studentsContext, teachersDirectory, parentsDirectory, financeDashboard, outstanding] =
-        await loadAllData(userId);
+      const [[studentsContext, teachersDirectory, parentsDirectory, financeDashboard, outstanding], adminKpis] =
+        await Promise.all([
+          loadAllData(userId),
+          schoolId
+            ? import('@/pages/admin/api/fetchAdminDesignDashboardKpis').then(({ fetchAdminDesignDashboardKpis }) =>
+                fetchAdminDesignDashboardKpis(schoolId)
+              )
+            : Promise.resolve(null),
+        ]);
       set({
         studentsContext,
         teachersDirectory,
@@ -221,6 +231,14 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
         outstanding,
         prefetchDone: true,
       });
+      queryClient.setQueryData(adminQueryKeys.studentsDesign(userId), studentsContext);
+      queryClient.setQueryData(adminQueryKeys.teachersDesign(userId), teachersDirectory);
+      queryClient.setQueryData(adminQueryKeys.parentsDesign(userId), parentsDirectory);
+      queryClient.setQueryData(adminQueryKeys.financeDashboard(userId), financeDashboard);
+      queryClient.setQueryData(adminQueryKeys.financeOutstanding(userId), outstanding);
+      if (schoolId && adminKpis) {
+        queryClient.setQueryData(adminQueryKeys.adminDashboardKpis(schoolId), adminKpis);
+      }
     } catch (e) {
       console.error('[pwezaStore] prefetchAll failed', e);
     }
@@ -234,22 +252,27 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
         const { fetchStudentsContext } = await import('@/pages/admin/students/DesignStudentsPage');
         const studentsContext = await fetchStudentsContext(userId);
         set({ studentsContext });
+        queryClient.setQueryData(adminQueryKeys.studentsDesign(userId), studentsContext);
       } else if (page === 'teachers') {
         const { fetchTeachersDirectory } = await import('@/pages/admin/teachers/DesignTeachersPage');
         const teachersDirectory = await fetchTeachersDirectory(userId);
         set({ teachersDirectory });
+        queryClient.setQueryData(adminQueryKeys.teachersDesign(userId), teachersDirectory);
       } else if (page === 'parents') {
         const { fetchParentsDirectory } = await import('@/pages/admin/parents/DesignParentsPage');
         const parentsDirectory = await fetchParentsDirectory(userId);
         set({ parentsDirectory });
+        queryClient.setQueryData(adminQueryKeys.parentsDesign(userId), parentsDirectory);
       } else if (page === 'finance') {
         const { fetchFinanceDashboard } = await import('@/pages/admin/finance/DesignFinanceDashboard');
         const financeDashboard = await fetchFinanceDashboard(userId);
         set({ financeDashboard });
+        queryClient.setQueryData(adminQueryKeys.financeDashboard(userId), financeDashboard);
       } else if (page === 'outstanding') {
         const { fetchOutstandingData } = await import('@/pages/admin/finance/DesignOutstandingPage');
         const outstanding = await fetchOutstandingData(userId);
         set({ outstanding });
+        queryClient.setQueryData(adminQueryKeys.financeOutstanding(userId), outstanding);
       }
     } catch (e) {
       console.error('[pwezaStore] refreshPage', page, e);
@@ -262,5 +285,9 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     const pages = pagesForTables(tables);
     if (pages.length === 0) return;
     await Promise.all(pages.map((p) => get().refreshPage(p)));
+    const schoolId = get().schoolId;
+    if (schoolId) {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+    }
   },
 }));

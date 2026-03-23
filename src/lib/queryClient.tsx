@@ -1,30 +1,27 @@
-
-import { PropsWithChildren, useState } from "react";
+import { PropsWithChildren } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from "@/lib/adminQueryDefaults";
+
+/** App-wide client — also used from pwezaStore to sync prefetch into the same cache as useQuery. */
+export const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      /** Align with accountant admin surfaces (~2 min); routes may override. */
+      staleTime: ADMIN_STALE_TIME_MS,
+      gcTime: ADMIN_GC_TIME_MS,
+      retry: 1,
+      refetchOnMount: true,
+    },
+  },
+});
 
 export function ReactQueryProvider({ children }: PropsWithChildren) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000, // 5 min — show cached first, revalidate in background
-            gcTime: 10 * 60 * 1000, // 10 min cache (formerly cacheTime)
-            retry: 1,
-            refetchOnMount: true, // refetch when stale, but staleTime avoids constant refetch
-          },
-        },
-      })
-  );
-
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       {children}
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
   );
 }
-
-

@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate, useOutlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import { supabase } from '../../lib/supabase';
 import { useTheme } from '../../lib/theme-provider';
@@ -100,7 +100,6 @@ function SubItem({
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const outlet = useOutlet();
   const { theme, toggleTheme } = useTheme();
   const prefetchAll = usePwezaStore((s) => s.prefetchAll); // pweza speed system
   const onPrefetchNav = () => {
@@ -119,9 +118,6 @@ export default function AdminLayout() {
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [jobCount, setJobCount] = useState<number | null>(null);
   const [notifCount, setNotifCount] = useState<number | null>(null);
-  const [dashboardElement, setDashboardElement] = useState<ReactNode | null>(null);
-  const isAdminDashboardRoute = location.pathname === '/dashboard/admin';
-
   useEffect(() => {
     if (location.pathname.includes('/accounts') || location.pathname.includes('/permissions')) setUserMgmtOpen(true);
     if (location.pathname.includes('/dashboard/admin/finance')) setFinanceOpen(true);
@@ -133,12 +129,6 @@ export default function AdminLayout() {
   useEffect(() => {
     setSidebarOpen(false);
   }, [location.pathname]);
-
-  useEffect(() => {
-    if (isAdminDashboardRoute && outlet) {
-      setDashboardElement(outlet);
-    }
-  }, [isAdminDashboardRoute, outlet]);
 
   useEffect(() => {
     async function loadUserAndCounts() {
@@ -584,18 +574,7 @@ export default function AdminLayout() {
 
         <main className="pw-main">
           <Suspense fallback={<AdminContentSkeleton />}>
-            {isAdminDashboardRoute ? (
-              <div style={{ width: '100%', minHeight: '100%' }}>{dashboardElement ?? outlet}</div>
-            ) : (
-              <>
-                {dashboardElement && (
-                  <div style={{ display: 'none', width: '100%', minHeight: '100%' }}>
-                    {dashboardElement}
-                  </div>
-                )}
-                {outlet}
-              </>
-            )}
+            <Outlet />
           </Suspense>
         </main>
       </div>

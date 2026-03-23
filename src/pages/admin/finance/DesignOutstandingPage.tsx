@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import { usePwezaStore } from '@/store/pwezaStore';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import outstandingTemplateRaw from '@/assets/pwezacore-outstanding.html?raw';
 
 const PAGE_SIZE = 15;
-const STALE_MS = 5 * 60 * 1000;
 const OUTSTANDING_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
@@ -25,7 +25,6 @@ function parseOutstandingBody(raw: string): { html: string; script: string } {
 }
 
 const OUTSTANDING_PARSED = parseOutstandingBody(outstandingTemplateRaw);
-let cachedOutstandingHtml: string | null = null;
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ff4f6a,#9d7eff)',
@@ -170,10 +169,8 @@ type SortLabel =
 export default function DesignOutstandingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
-  const outstandingFromStore = usePwezaStore((s) => s.outstanding); // pweza speed system
-  const hasStoreData = prefetchDone && !!outstandingFromStore; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastInjectedHtmlRef = useRef<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
@@ -196,21 +193,18 @@ export default function DesignOutstandingPage() {
   }, []);
 
   useEffect(() => {
-    if (cachedOutstandingHtml) {
-      setHtmlContent(cachedOutstandingHtml);
-      return;
-    }
-    cachedOutstandingHtml = OUTSTANDING_PARSED.html;
-    setHtmlContent(cachedOutstandingHtml);
+    setHtmlContent(OUTSTANDING_PARSED.html);
   }, []);
 
-  const { data: queryOutstanding, isLoading } = useQuery({
-    queryKey: ['admin', 'finance-outstanding', user?.id ?? ''],
+  const { data: outstandingData, isPending } = useQuery({
+    queryKey: adminQueryKeys.financeOutstanding(user?.id ?? ''),
     queryFn: () => fetchOutstandingData(user!.id),
-    enabled: !!user?.id && !hasStoreData,
-    staleTime: STALE_MS,
+    enabled: !!user?.id,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
-  const outstandingData = hasStoreData ? outstandingFromStore! : queryOutstanding;
   const allRows = outstandingData?.rows ?? [];
   const clearedCountTotal = outstandingData?.clearedCount ?? 0;
 
@@ -322,7 +316,7 @@ export default function DesignOutstandingPage() {
     const el = containerRef.current;
     if (!el) return;
     const root = el.querySelector('.pw-outstanding') || el;
-    const loading = !outstandingData && (isLoading || (!prefetchDone && !hasStoreData));
+    const loading = !outstandingData && isPending;
     const start = (safePage - 1) * PAGE_SIZE;
     const pageData = filteredSorted.slice(start, start + PAGE_SIZE);
     const total = filteredSorted.length;
@@ -460,19 +454,22 @@ export default function DesignOutstandingPage() {
     startIdx,
     endIdx,
     totalPages,
-    isLoading,
+    isPending,
     classFilter,
     classOptions,
     sortLabel,
     selectedIds,
     clearedCountTotal,
     outstandingData,
-    prefetchDone,
-    hasStoreData,
   ]);
 
-  useEffect(() => {
-    if (!htmlContent) return;
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !htmlContent) return;
+    if (lastInjectedHtmlRef.current !== htmlContent) {
+      el.innerHTML = htmlContent;
+      lastInjectedHtmlRef.current = htmlContent;
+    }
     requestAnimationFrame(() => renderTable());
   }, [htmlContent, renderTable]);
 
@@ -576,7 +573,7 @@ export default function DesignOutstandingPage() {
     return () => obs.disconnect();
   }, [htmlContent]);
 
-  if (user?.id && !prefetchDone && !outstandingData) {
+  if (user?.id && isPending && !outstandingData) {
     return (
       <div style={{ padding: '26px 28px' }}>
         <SkeletonKPIStrip count={4} />
@@ -587,11 +584,7 @@ export default function DesignOutstandingPage() {
 
   return (
     <div ref={wrapRef} style={{ width: '100%', minHeight: '100vh' }}>
-      <div
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-      />
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
     </div>
   );
 }

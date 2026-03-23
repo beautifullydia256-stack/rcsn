@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
+import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
 
@@ -142,6 +145,8 @@ function setPPFieldInput(root: HTMLElement, sel: string, field: string, value: s
 
 export default function DesignParentProfile() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const authUserId = useAuthStore((s) => s.user?.id);
   const { parent_id: parentIdParam } = useParams<{ parent_id: string }>();
   const parentId = parentIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
@@ -197,9 +202,12 @@ export default function DesignParentProfile() {
         .eq('school_id', ctx.schoolId);
       if (uErr && import.meta.env.DEV) console.warn('[DesignParentProfile] users update:', uErr.message);
     }
+    if (authUserId) {
+      void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(authUserId) });
+    }
     setEditMode(false);
     setReloadToken((x) => x + 1);
-  }, [parentId]);
+  }, [parentId, authUserId, queryClient]);
 
   saveParentRef.current = saveParent;
 

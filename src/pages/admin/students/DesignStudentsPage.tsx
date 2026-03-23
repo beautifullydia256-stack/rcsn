@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
-import { usePwezaStore } from '@/store/pwezaStore';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 
 import '@/assets/pwezacore-students-scoped.css';
 
-const STALE_MS = 5 * 60 * 1000;
 const PAGE_SIZE = 15;
 
 const STUDENTS_FONT_HREF =
@@ -227,10 +227,6 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
 export default function DesignStudentsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
-  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
-  const studentsContext = usePwezaStore((s) => s.studentsContext); // pweza speed system
-  const hasStoreData = prefetchDone && !!studentsContext; // pweza speed system
-
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
@@ -248,14 +244,15 @@ export default function DesignStudentsPage() {
     }
   }, []);
 
-  const { data: queryData, isLoading } = useQuery({
-    queryKey: ['admin', 'students-design', user?.id ?? ''],
+  const { data, isPending } = useQuery({
+    queryKey: adminQueryKeys.studentsDesign(user?.id ?? ''),
     queryFn: () => fetchStudentsContext(user!.id),
-    enabled: !!user?.id && !hasStoreData,
-    staleTime: STALE_MS,
+    enabled: !!user?.id,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
-
-  const data = hasStoreData ? studentsContext! : queryData;
 
   const rows = data?.rows ?? [];
   const parentsByStudent = data?.parentsByStudent ?? {};
@@ -336,14 +333,14 @@ export default function DesignStudentsPage() {
     };
   }, [rows, parentsByStudent, attendedToday]);
 
-  const loading = !!user?.id && !data && (isLoading || !prefetchDone);
+  const loading = !!user?.id && !data && isPending;
 
   const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
 
   const sortSelectValue = sortKey === 'name-desc' ? 'name-desc' : sortKey === 'class' ? 'class' : sortKey === 'recent' ? 'recent' : 'name-asc';
 
-  if (user?.id && !prefetchDone && !data) {
+  if (user?.id && isPending && !data) {
     return (
       <AdminPageWrapper>
         <div style={{ padding: '26px 28px' }}>

@@ -1,11 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { Key, UserX, UserCheck } from 'lucide-react';
-
-const STALE_TIME_MS = 5 * 60 * 1000;
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -70,7 +69,8 @@ export default function AccountsPage() {
     queryKey: ['admin', 'accounts', authUser?.id ?? ''],
     queryFn: () => fetchAccounts(authUser!.id),
     enabled: !!authUser?.id,
-    staleTime: STALE_TIME_MS,
+    staleTime: ADMIN_STALE_TIME_MS,
+    gcTime: ADMIN_GC_TIME_MS,
   });
 
   const filteredAccounts = useMemo(() => {
