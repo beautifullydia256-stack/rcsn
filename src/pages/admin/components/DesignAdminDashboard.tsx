@@ -585,7 +585,6 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   });
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const overlayRef = useRef<HTMLDivElement | null>(null);
   /** Avoid re-injecting the same template; React must not use dangerouslySetInnerHTML or re-renders wipe KPI DOM updates. */
   const lastInjectedBodyRef = useRef<string | null>(null);
   const adminNameRef = useRef(adminName);
@@ -770,6 +769,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   }, [navigate, schoolId, syncTheme]);
 
   // Inject static HTML only (no React dangerouslySetInnerHTML on re-renders).
+  // Keep the shell visible immediately — do not gate on runAllDataLoads() (that caused a multi-second dark overlay on return navigation).
   useLayoutEffect(() => {
     if (!schoolId) return;
     const el = containerRef.current;
@@ -779,44 +779,16 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       el.innerHTML = scopedBody;
       lastInjectedBodyRef.current = scopedBody;
     }
+    el.style.opacity = '1';
+    el.style.pointerEvents = 'auto';
   }, [schoolId, scopedBody, isDashboardRoute]);
 
-  // Reload KPI values whenever the user is on this route. schoolId alone does not change when navigating back from Students/Teachers;
-  // AdminLayout also moves this subtree, which can remount with empty placeholders.
+  // Refresh widgets in the background; KPIs also hydrate from React Query cache when warm.
   useEffect(() => {
     if (!schoolId || !isDashboardRoute) return;
-    let cancelled = false;
-
-    const el = containerRef.current;
-    if (!el) return;
-
-    const ov = overlayRef.current;
-    el.style.opacity = '0';
-    el.style.pointerEvents = 'none';
-    if (ov) ov.style.display = 'flex';
-
-    const run = async () => {
-      await new Promise<void>((r) => requestAnimationFrame(() => r()));
-      if (cancelled || !containerRef.current) return;
-      try {
-        await runAllDataLoads();
-      } catch (e) {
-        console.error('Dashboard load error:', e);
-      }
-      if (cancelled) return;
-      const root = containerRef.current;
-      const layer = overlayRef.current;
-      if (root) {
-        root.style.opacity = '1';
-        root.style.pointerEvents = 'auto';
-      }
-      if (layer) layer.style.display = 'none';
-    };
-
-    void run();
-    return () => {
-      cancelled = true;
-    };
+    void runAllDataLoads().catch((e) => {
+      console.error('Dashboard load error:', e);
+    });
   }, [schoolId, runAllDataLoads, isDashboardRoute]);
 
   useEffect(() => {
@@ -837,24 +809,13 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       <style>{DASHBOARD_MOTION_KILL}</style>
       <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
         <div
-          ref={overlayRef}
-          className="absolute inset-0 z-10 flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-[#f0f4f8] dark:bg-[#05080f]"
-          aria-busy="true"
-          aria-live="polite"
-          style={{ display: 'flex' }}
-        >
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          <p className="ac-text-secondary">Loading dashboard…</p>
-        </div>
-        <div
           ref={containerRef}
           style={{
             width: '100%',
             minHeight: '100vh',
             display: 'block',
-            opacity: 0,
-            transition: 'opacity 0.2s ease-out',
-            pointerEvents: 'none',
+            opacity: 1,
+            pointerEvents: 'auto',
           }}
         />
       </div>
