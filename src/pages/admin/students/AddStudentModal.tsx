@@ -106,16 +106,14 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
       return;
     }
     const trimEmail = studentEmail.trim();
-    if (!trimEmail || !isValidRealEmail(trimEmail)) {
-      setError('Enter a valid real email address for the student.');
+    if (trimEmail && !isValidRealEmail(trimEmail)) {
+      setError('If you enter a student email, use a valid address.');
       return;
     }
-    if (guardianName.trim()) {
-      const ge = guardianEmail.trim();
-      if (!ge || !isValidRealEmail(ge)) {
-        setError('When a guardian name is provided, enter a valid real parent email.');
-        return;
-      }
+    const trimGuardianEmail = guardianEmail.trim();
+    if (trimGuardianEmail && !isValidRealEmail(trimGuardianEmail)) {
+      setError('If you enter a parent email, use a valid address.');
+      return;
     }
     setSubmitting(true);
     try {
@@ -129,7 +127,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
         .insert({
           school_id: schoolId,
           name: trimmedName,
-          student_email: trimEmail,
+          student_email: trimEmail || null,
           current_class: currentClass || classOptions[0],
           status: 'active',
           ...(admissionNumber.trim() ? { admission_number: admissionNumber.trim() } : {}),
@@ -146,7 +144,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
           student_id: studentId,
           school_id: schoolId,
           name: guardianName.trim(),
-          email: guardianEmail.trim(),
+          email: trimGuardianEmail || undefined,
           phone: guardianPhone.trim() || undefined,
         });
         if (!linkRes.ok) {
@@ -237,7 +235,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
             </div>
             <div>
               <label htmlFor="modal-student-email" className="mb-1 block text-sm font-medium text-gray-700">
-                Student email <span className="text-red-500">*</span>
+                Student email <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <input
                 id="modal-student-email"
@@ -245,8 +243,7 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
                 value={studentEmail}
                 onChange={(e) => setStudentEmail(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                placeholder="Real email for invitations"
-                required
+                placeholder="Leave blank if no email yet"
                 autoComplete="email"
               />
             </div>
@@ -356,13 +353,15 @@ export default function AddStudentModal({ open, onClose }: AddStudentModalProps)
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Parent email <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
                   <input
                     type="email"
                     value={guardianEmail}
                     onChange={(e) => setGuardianEmail(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                    placeholder="e.g. guardian@example.com"
+                    placeholder="Only if you want a parent login later"
                   />
                 </div>
                 <div>
