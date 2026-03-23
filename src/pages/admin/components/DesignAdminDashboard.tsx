@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
@@ -656,9 +656,14 @@ const DASHBOARD_MOTION_KILL = `
 
 export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const navigate = useNavigate();
+  const location = useLocation();
+  /** AdminLayout keeps a cached dashboard node and moves it between visible main and display:none; remounts reset HTML to placeholders. */
+  const isDashboardRoute = location.pathname === '/dashboard/admin';
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  /** Avoid re-injecting the same template; React must not use dangerouslySetInnerHTML or re-renders wipe KPI DOM updates. */
+  const lastInjectedBodyRef = useRef<string | null>(null);
   const adminNameRef = useRef(adminName);
   useEffect(() => {
     adminNameRef.current = adminName;
@@ -828,21 +833,31 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     };
   }, [navigate, schoolId, syncTheme]);
 
-  // Load KPIs/lists with imperative DOM updates. Do NOT call setState after loads — a re-render re-applies
-  // dangerouslySetInnerHTML and wipes those updates (user only saw the greeting).
+  // Inject static HTML only (no React dangerouslySetInnerHTML on re-renders).
   useLayoutEffect(() => {
     if (!schoolId) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const missingShell = !el.querySelector('.pweza-admin');
+    if (lastInjectedBodyRef.current !== scopedBody || missingShell) {
+      el.innerHTML = scopedBody;
+      lastInjectedBodyRef.current = scopedBody;
+    }
+  }, [schoolId, scopedBody, isDashboardRoute]);
+
+  // Reload KPI values whenever the user is on this route. schoolId alone does not change when navigating back from Students/Teachers;
+  // AdminLayout also moves this subtree, which can remount with empty placeholders.
+  useEffect(() => {
+    if (!schoolId || !isDashboardRoute) return;
     let cancelled = false;
 
     const el = containerRef.current;
+    if (!el) return;
+
     const ov = overlayRef.current;
-    if (el) {
-      el.style.opacity = '0';
-      el.style.pointerEvents = 'none';
-    }
-    if (ov) {
-      ov.style.display = 'flex';
-    }
+    el.style.opacity = '0';
+    el.style.pointerEvents = 'none';
+    if (ov) ov.style.display = 'flex';
 
     const run = async () => {
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -866,7 +881,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [schoolId, runAllDataLoads]);
+  }, [schoolId, runAllDataLoads, isDashboardRoute]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -905,7 +920,6 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
             transition: 'opacity 0.2s ease-out',
             pointerEvents: 'none',
           }}
-          dangerouslySetInnerHTML={{ __html: scopedBody }}
         />
       </div>
     </>
