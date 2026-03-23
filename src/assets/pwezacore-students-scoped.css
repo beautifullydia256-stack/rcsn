@@ -696,10 +696,7 @@
 .pw-students .d4 { animation-delay: .15s; }
 .pw-students .d5 { animation-delay: .19s; }
 
-/* ── scrollbar ── */
-.pw-students ::-webkit-scrollbar { width: 5px; }
-.pw-students ::-webkit-scrollbar-track { background: transparent; }
-.pw-students ::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 3px; }
+/* Scrollbars: hidden globally under admin .pw-layout (AdminLayout); list stays scrollable. */
 
 /* ── RESPONSIVE ── */
 @media(max-width:1200px) {

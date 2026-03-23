@@ -226,9 +226,13 @@ export default function AdminLayout() {
           --pw-border: rgba(0,0,0,0.08);
           --pw-bh: rgba(0,0,0,0.14);
         }
+        /* Admin shell: single scroll region in .pw-main; hide scrollbars everywhere under .pw-layout (scroll still works). */
         .pw-layout {
           display: flex;
           min-height: 100vh;
+          height: 100vh;
+          max-height: 100vh;
+          overflow: hidden;
           background: var(--pw-bg, #05080f);
           font-family: 'Instrument Sans', 'Cabinet Grotesk', system-ui, sans-serif;
         }
@@ -244,9 +248,15 @@ export default function AdminLayout() {
           z-index: 200;
           overflow-y: auto;
           overflow-x: hidden;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           transition: transform 0.28s cubic-bezier(.4,0,.2,1);
         }
-        .pw-sidebar::-webkit-scrollbar { width: 0; }
+        .pw-sidebar::-webkit-scrollbar {
+          width: 0;
+          height: 0;
+          display: none;
+        }
         @media (max-width: 768px) {
           .pw-sidebar { transform: translateX(-100%); }
           .pw-sidebar.pw-sidebar--open { transform: translateX(0); }
@@ -460,11 +470,25 @@ export default function AdminLayout() {
         .pw-main {
           margin-left: var(--pw-sidebar-width, 232px);
           flex: 1;
-          min-height: 100vh;
+          min-height: 0;
           width: calc(100% - var(--pw-sidebar-width, 232px));
           overflow-x: hidden;
+          overflow-y: auto;
           background: var(--pw-bg, #05080f);
           color: var(--pw-t1, #eef3ff);
+        }
+        .pw-layout * {
+          scrollbar-width: none !important;
+          -ms-overflow-style: none !important;
+        }
+        .pw-layout *::-webkit-scrollbar {
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
+        }
+        .pw-layout *::-webkit-scrollbar-track,
+        .pw-layout *::-webkit-scrollbar-thumb {
+          display: none !important;
         }
         @media (max-width: 768px) {
           .pw-main {
