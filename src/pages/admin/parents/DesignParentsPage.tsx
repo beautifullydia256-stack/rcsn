@@ -8,6 +8,11 @@ import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import NativeModal from '@/components/NativeModal';
 import { AddParentForm } from './AddParentForm';
+import {
+  addParentSchoolQueryKey,
+  addParentSchoolStaleOptions,
+  fetchAddParentSchoolContext,
+} from './addParentSchoolQuery';
 
 import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
@@ -241,6 +246,15 @@ export default function DesignParentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+
+  /** Same query key as AddParentForm — runs as soon as this page mounts so the modal hits a warm cache. */
+  useQuery({
+    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddParentSchoolContext(user!.id),
+    enabled: !!user?.id,
+    ...addParentSchoolStaleOptions,
+  });
+
   const addParentModalOpen = searchParams.get('add') === '1';
 
   const closeAddParentModal = () => {
@@ -695,7 +709,7 @@ export default function DesignParentsPage() {
             closeAddParentModal();
             if (user?.id) {
               void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(user.id) });
-              void queryClient.invalidateQueries({ queryKey: ['admin', 'add-parent', 'school', user.id] });
+              void queryClient.invalidateQueries({ queryKey: addParentSchoolQueryKey(user.id) });
             }
           }}
           onCancel={closeAddParentModal}

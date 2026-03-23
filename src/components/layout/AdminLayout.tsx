@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminContentSkeleton from './AdminContentSkeleton';
+import AdminMobileBottomNav from './AdminMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { usePwezaStore } from '../../store/pwezaStore';
 
@@ -600,6 +601,8 @@ export default function AdminLayout() {
             <Outlet />
           </Suspense>
         </main>
+
+        <AdminMobileBottomNav notifCount={notifCount} onPrefetch={onPrefetchNav} />
       </div>
     </>
   );

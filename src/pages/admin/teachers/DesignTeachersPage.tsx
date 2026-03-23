@@ -8,6 +8,11 @@ import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import NativeModal from '@/components/NativeModal';
 import { AddTeacherForm } from './AddTeacherForm';
+import {
+  addParentSchoolQueryKey,
+  addParentSchoolStaleOptions,
+  fetchAddParentSchoolContext,
+} from '@/pages/admin/parents/addParentSchoolQuery';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -218,6 +223,15 @@ export default function DesignTeachersPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+
+  /** Warm cache for Add Parent when navigating from teachers (same pattern as students/parents pages). */
+  useQuery({
+    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddParentSchoolContext(user!.id),
+    enabled: !!user?.id,
+    ...addParentSchoolStaleOptions,
+  });
+
   const addTeacherModalOpen = searchParams.get('add') === '1';
 
   const closeAddTeacherModal = () => {

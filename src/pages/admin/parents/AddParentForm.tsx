@@ -1,29 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { ArrowLeft } from 'lucide-react';
-
-const STALE_TIME_MS = 5 * 60 * 1000;
-
-async function fetchSchoolAndStudents(userId: string) {
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolId: null as string | null, students: [] as { student_id: string; name: string; current_class: string }[] };
-
-  const { data: students } = await supabase
-    .from('students')
-    .select('student_id, name, current_class')
-    .eq('school_id', u.school_id)
-    .eq('status', 'active')
-    .order('name');
-
-  return {
-    schoolId: u.school_id,
-    students: (students || []) as { student_id: string; name: string; current_class: string }[],
-  };
-}
+import {
+  addParentSchoolQueryKey,
+  addParentSchoolStaleOptions,
+  fetchAddParentSchoolContext,
+} from './addParentSchoolQuery';
 
 export type AddParentFormProps = {
   mode: 'page' | 'modal';
@@ -41,11 +26,13 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'add-parent', 'school', user?.id ?? ''],
-    queryFn: () => fetchSchoolAndStudents(user!.id),
+  const { data, isPending } = useQuery({
+    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddParentSchoolContext(user!.id),
     enabled: !!user?.id,
-    staleTime: STALE_TIME_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+    ...addParentSchoolStaleOptions,
   });
 
   const schoolId = data?.schoolId ?? null;
@@ -123,7 +110,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
     else navigate('/dashboard/admin/parents');
   };
 
-  if (isLoading && !data) {
+  if (isPending && data === undefined) {
     const spinner = (
       <div className="flex items-center justify-center py-12 ac-text-muted">Loading…</div>
     );

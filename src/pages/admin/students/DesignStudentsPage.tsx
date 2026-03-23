@@ -11,6 +11,11 @@ import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from './AddStudentForm';
 import {
+  addParentSchoolQueryKey,
+  addParentSchoolStaleOptions,
+  fetchAddParentSchoolContext,
+} from '@/pages/admin/parents/addParentSchoolQuery';
+import {
   addStudentSchoolQueryKey,
   addStudentSchoolStaleOptions,
   fetchAddStudentSchoolContext,
@@ -242,6 +247,14 @@ export default function DesignStudentsPage() {
     queryFn: () => fetchAddStudentSchoolContext(user!.id),
     enabled: !!user?.id,
     ...addStudentSchoolStaleOptions,
+  });
+
+  /** Warm cache for Add Parent modal when opened from this page (same pattern as parents list). */
+  useQuery({
+    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddParentSchoolContext(user!.id),
+    enabled: !!user?.id,
+    ...addParentSchoolStaleOptions,
   });
 
   const addModalOpen = searchParams.get('add') === '1';
