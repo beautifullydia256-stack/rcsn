@@ -237,7 +237,9 @@ export default function DesignTeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortLabel, setSortLabel] = useState<SortLabel>('Name A → Z');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 'grid' : 'list'
+  );
 
   useEffect(() => {
     const id = 'pweza-teachers-fonts';
@@ -576,7 +578,11 @@ export default function DesignTeachersPage() {
         { replace: true }
       );
     };
+    const onAddStudent = () => navigate('/dashboard/admin/students?add=1');
+    const onAddParent = () => navigate('/dashboard/admin/parents?add=1');
     root.querySelector('#tch-btn-add')?.addEventListener('click', onAdd);
+    root.querySelector('#tch-btn-add-student')?.addEventListener('click', onAddStudent);
+    root.querySelector('#tch-btn-add-parent')?.addEventListener('click', onAddParent);
 
     return () => {
       root.removeEventListener('click', onNav);
@@ -586,6 +592,8 @@ export default function DesignTeachersPage() {
       root.querySelector('#tch-list-btn')?.removeEventListener('click', onList);
       root.querySelector('#tch-grid-btn')?.removeEventListener('click', onGrid);
       root.querySelector('#tch-btn-add')?.removeEventListener('click', onAdd);
+      root.querySelector('#tch-btn-add-student')?.removeEventListener('click', onAddStudent);
+      root.querySelector('#tch-btn-add-parent')?.removeEventListener('click', onAddParent);
     };
   }, [htmlContent, navigate, totalPages, setSearchParams]);
 

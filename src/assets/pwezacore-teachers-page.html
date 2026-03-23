@@ -110,7 +110,10 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
   color:var(--t1); line-height:1; margin-bottom:5px;
 }
 .pw-teachers .tch-sub { font-size:13px; color:var(--t2); }
-.pw-teachers .tch-actions { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.pw-teachers .tch-actions {
+  display:flex; align-items:center; gap:8px; flex-shrink:0;
+  flex-wrap:wrap; max-width:100%;
+}
 
 /* ── BUTTONS ── */
 .pw-teachers .tch-btn {
@@ -177,6 +180,7 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
 .pw-teachers .tch-kpi-val.cg { color:var(--green); }
 .pw-teachers .tch-kpi-val.cv { color:var(--violet); }
 .pw-teachers .tch-kpi-sub { font-size:11px;color:var(--t3);margin-top:3px; }
+.pw-teachers .tch-kpi > div:last-child { flex:1; min-width:0; }
 
 /* ── TOOLBAR ── */
 .pw-teachers .tch-toolbar {
@@ -410,8 +414,53 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
 }
 @media(max-width:768px) {
   .pw-teachers .tch-page { padding:14px 14px 50px; }
-  .pw-teachers .tch-kpi-strip { grid-template-columns:1fr 1fr; }
-  .pw-teachers .tch-header { flex-direction:column; }
+  .pw-teachers .tch-kpi-strip { grid-template-columns:1fr 1fr; gap:10px; }
+  .pw-teachers .tch-header { flex-direction:column; align-items:stretch; gap:14px; }
+  .pw-teachers .tch-title { font-size:26px; }
+  .pw-teachers .tch-actions { width:100%; justify-content:flex-start; }
+  .pw-teachers .tch-btn {
+    flex:1 1 calc(50% - 4px);
+    min-width:0;
+    min-height:44px;
+    justify-content:center;
+    font-size:12.5px;
+    padding-left:10px;
+    padding-right:10px;
+    white-space:normal;
+    text-align:center;
+    line-height:1.25;
+  }
+  .pw-teachers .tch-toolbar {
+    flex-wrap:wrap;
+    align-items:stretch;
+    gap:8px;
+  }
+  .pw-teachers .tch-search {
+    flex:1 1 100%;
+    max-width:none;
+    min-width:0;
+    min-height:44px;
+  }
+  .pw-teachers .tch-search input { font-size:16px; }
+  .pw-teachers .tch-select {
+    flex:1 1 calc(50% - 4px);
+    min-width:0;
+    min-height:44px;
+    font-size:16px;
+  }
+  .pw-teachers .tch-view-toggle {
+    margin-left:0;
+    align-self:flex-start;
+    min-height:44px;
+  }
+  .pw-teachers .tch-kpi { padding:14px; }
+  .pw-teachers .tch-kpi-val { font-size:26px; }
+}
+@media(max-width:480px) {
+  .pw-teachers .tch-kpi-strip { grid-template-columns:1fr; }
+  .pw-teachers .tch-title { font-size:22px; }
+  .pw-teachers .tch-btn { flex:1 1 100%; }
+  .pw-teachers .tch-toolbar .tch-select { flex:1 1 100%; }
 }
 </style>
 </head>
@@ -427,9 +476,11 @@ html.light .pw-teachers, html[data-theme=light] .pw-teachers {
       <p class="tch-sub">Manage teaching staff, class assignments, and professional records.</p>
     </div>
     <div class="tch-actions">
-      <button class="tch-btn tch-btn-ghost">🖨 Print</button>
-      <button class="tch-btn tch-btn-ghost">⬇ Export</button>
-      <button class="tch-btn tch-btn-amber" id="tch-btn-add">＋ Add Teacher</button>
+      <button type="button" class="tch-btn tch-btn-ghost">🖨 Print</button>
+      <button type="button" class="tch-btn tch-btn-ghost">⬇ Export</button>
+      <button type="button" class="tch-btn tch-btn-ghost" id="tch-btn-add-student">＋ Add Student</button>
+      <button type="button" class="tch-btn tch-btn-ghost" id="tch-btn-add-parent">＋ Add Parent</button>
+      <button type="button" class="tch-btn tch-btn-amber" id="tch-btn-add">＋ Add Teacher</button>
     </div>
   </div>
 

@@ -261,7 +261,9 @@ export default function DesignParentsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 'grid' : 'list'
+  );
 
   useEffect(() => {
     const id = 'pweza-parents-fonts';
@@ -640,8 +642,12 @@ export default function DesignParentsPage() {
         { replace: true }
       );
     };
+    const onAddStudent = () => navigate('/dashboard/admin/students?add=1');
+    const onAddTeacher = () => navigate('/dashboard/admin/teachers?add=1');
     const onInvite = () => window.alert('Bulk portal invite will be available in a future update.');
     root.querySelector('#par-btn-add')?.addEventListener('click', onAdd);
+    root.querySelector('#par-btn-add-student')?.addEventListener('click', onAddStudent);
+    root.querySelector('#par-btn-add-teacher')?.addEventListener('click', onAddTeacher);
     root.querySelector('#par-btn-invite')?.addEventListener('click', onInvite);
 
     return () => {
@@ -653,6 +659,8 @@ export default function DesignParentsPage() {
       root.querySelector('#par-list-btn')?.removeEventListener('click', onList);
       root.querySelector('#par-grid-btn')?.removeEventListener('click', onGrid);
       root.querySelector('#par-btn-add')?.removeEventListener('click', onAdd);
+      root.querySelector('#par-btn-add-student')?.removeEventListener('click', onAddStudent);
+      root.querySelector('#par-btn-add-teacher')?.removeEventListener('click', onAddTeacher);
       root.querySelector('#par-btn-invite')?.removeEventListener('click', onInvite);
     };
   }, [htmlContent, navigate, totalPages, setSearchParams]);

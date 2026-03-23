@@ -270,7 +270,9 @@ export default function DesignStudentsPage() {
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 'grid' : 'list'
+  );
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -408,11 +410,14 @@ export default function DesignStudentsPage() {
               <button type="button" className="btn btn-ghost" onClick={() => alert('Export is coming soon.')}>
                 ⬇ Export
               </button>
-              <button type="button" className="btn btn-ghost" onClick={() => navigate('/dashboard/admin/parents')}>
-                👨‍👩‍👧 Add Family
-              </button>
               <button type="button" className="btn btn-teal" onClick={openAddStudentModal}>
                 ＋ Add Student
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/teachers?add=1')}>
+                ＋ Add Teacher
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => navigate('/dashboard/admin/parents?add=1')}>
+                ＋ Add Parent
               </button>
             </div>
           </div>

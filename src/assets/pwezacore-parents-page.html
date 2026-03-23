@@ -187,6 +187,7 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
 .pw-parents .par-kpi-val.cg { color:var(--green); }
 .pw-parents .par-kpi-val.ca { color:var(--amber); }
 .pw-parents .par-kpi-sub { font-size:11px; color:var(--t3); margin-top:3px; }
+.pw-parents .par-kpi > div:last-child { flex:1; min-width:0; }
 
 /* ── TOOLBAR ── */
 .pw-parents .par-toolbar {
@@ -461,6 +462,18 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
     flex-wrap:wrap;
     justify-content:flex-start;
     gap:8px;
+    width:100%;
+  }
+  .pw-parents .par-actions .par-btn {
+    flex:1 1 calc(50% - 4px);
+    min-width:0;
+    justify-content:center;
+    font-size:12.5px;
+    padding-left:10px;
+    padding-right:10px;
+    white-space:normal;
+    text-align:center;
+    line-height:1.25;
   }
   .pw-parents .par-toolbar {
     flex-wrap:wrap;
@@ -533,6 +546,7 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
   .pw-parents .par-title { font-size:22px; }
   .pw-parents .par-sub { font-size:12.5px; }
   .pw-parents .par-kpi-val { font-size:26px; }
+  .pw-parents .par-actions .par-btn { flex:1 1 100%; }
   .pw-parents .par-toolbar .par-select {
     flex:1 1 100%;
   }
@@ -558,10 +572,12 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
       <p class="par-sub">View, manage and contact all parent and guardian accounts linked to enrolled students.</p>
     </div>
     <div class="par-actions">
-      <button class="par-btn par-btn-ghost">🖨 Print</button>
-      <button class="par-btn par-btn-ghost">⬇ Export</button>
-      <button class="par-btn par-btn-ghost" id="par-btn-invite">📨 Send Portal Invite</button>
-      <button class="par-btn par-btn-violet" id="par-btn-add">＋ Add Parent</button>
+      <button type="button" class="par-btn par-btn-ghost">🖨 Print</button>
+      <button type="button" class="par-btn par-btn-ghost">⬇ Export</button>
+      <button type="button" class="par-btn par-btn-ghost" id="par-btn-invite">📨 Send Portal Invite</button>
+      <button type="button" class="par-btn par-btn-ghost" id="par-btn-add-student">＋ Add Student</button>
+      <button type="button" class="par-btn par-btn-ghost" id="par-btn-add-teacher">＋ Add Teacher</button>
+      <button type="button" class="par-btn par-btn-violet" id="par-btn-add">＋ Add Parent</button>
     </div>
   </div>
 
