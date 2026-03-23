@@ -552,6 +552,7 @@ export default function AdminLayout() {
               matchPaths={['/dashboard/admin/finance']}
             >
               <SubItem to="/dashboard/admin/finance" label="Overview" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+              <SubItem to="/dashboard/admin/finance/financial-analytics" label="Financial Analytics" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/outstanding" label="Outstanding balances" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/finance/receipts" label="Receipts" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>

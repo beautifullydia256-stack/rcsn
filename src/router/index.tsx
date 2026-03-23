@@ -20,6 +20,7 @@ const FinanceLayout = lazy(() => import('../pages/admin/finance/FinanceLayout'))
 const DesignFinanceDashboard = lazy(() => import('../pages/admin/finance/DesignFinanceDashboard'));
 const DesignOutstandingPage = lazy(() => import('../pages/admin/finance/DesignOutstandingPage'));
 const FinanceSubPagePlaceholder = lazy(() => import('../pages/admin/finance/FinanceSubPagePlaceholder'));
+const FinancialAnalyticsPage = lazy(() => import('../pages/finance/FinancialAnalyticsPage'));
 const DesignParentsPage = lazy(() => import('../pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignParentProfile'));
 const AddParentPage = lazy(() => import('../pages/admin/parents/AddParentPage'));
@@ -92,6 +93,7 @@ export const router: RouteObject[] = [
             element: <FinanceLayout />,
             children: [
               { index: true, element: <DesignFinanceDashboard /> },
+              { path: 'financial-analytics', element: <FinancialAnalyticsPage /> },
               { path: 'outstanding', element: <DesignOutstandingPage /> },
               { path: 'payments', element: <FinanceSubPagePlaceholder /> },
               { path: 'payments/new', element: <FinanceSubPagePlaceholder /> },

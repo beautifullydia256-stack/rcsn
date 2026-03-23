@@ -14,6 +14,12 @@ export type AdminDesignDashboardKpis = {
   jobApps: number;
 };
 
+/**
+ * Finance KPIs for the current school term:
+ * - feesCollected: sum of student_payments.amount_paid for this term_id (excludes reversals).
+ * - outstanding: sum of student_balances.balance for this term_id.
+ * This matches the ledger + balance snapshot and stays aligned with accountant when both use term_id.
+ */
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -25,18 +31,18 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     .order('term', { ascending: false });
 
   const currentTerm =
-    (terms || []).find((t: any) =>
-      t.start_date ? t.start_date <= todayIso && t.end_date >= todayIso : t.end_date >= todayIso
+    (terms || []).find((t: { start_date?: string; end_date?: string }) =>
+      t.start_date ? t.start_date <= todayIso && t.end_date! >= todayIso : t.end_date! >= todayIso
     ) || terms?.[0] || null;
 
-  const termStart = currentTerm?.start_date || '1900-01-01';
-  const termEnd = currentTerm?.end_date || '2100-12-31';
+  const termId = currentTerm?.id ?? null;
 
   const [
     studentsCountRes,
     teachersCountRes,
     attendanceRes,
     paymentsRes,
+    balanceRowsRes,
     pendingExpensesCountRes,
     activeClassesRowsRes,
     jobsCountRes,
@@ -55,12 +61,21 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
       .select('student_id, present')
       .eq('school_id', schoolId)
       .eq('date', todayIso),
-    supabase
-      .from('student_payments')
-      .select('student_id, amount_paid')
-      .eq('school_id', schoolId)
-      .gte('payment_date', termStart)
-      .lte('payment_date', termEnd),
+    termId
+      ? supabase
+          .from('student_payments')
+          .select('amount_paid')
+          .eq('school_id', schoolId)
+          .eq('term_id', termId)
+          .is('reversed_at', null)
+      : Promise.resolve({ data: [] as { amount_paid: number }[] }),
+    termId
+      ? supabase
+          .from('student_balances')
+          .select('balance')
+          .eq('school_id', schoolId)
+          .eq('term_id', termId)
+      : Promise.resolve({ data: [] as { balance: number }[] }),
     supabase
       .from('school_expenses')
       .select('expense_id', { count: 'exact', head: true })
@@ -80,30 +95,20 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
 
   const totalStudents = studentsCountRes.count ?? 0;
   const totalTeachers = teachersCountRes.count ?? 0;
-  const present = (attendanceRes.data || []).filter((r: any) => r.present === true).length;
+  const present = (attendanceRes.data || []).filter((r: { present?: boolean }) => r.present === true).length;
   const totalAttendance = (attendanceRes.data || []).length;
   const attendancePct = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
 
-  const balances = await supabase
-    .from('students')
-    .select('student_id, expected_fee_amount')
-    .eq('school_id', schoolId)
-    .eq('status', 'active');
-
-  const payments = (paymentsRes.data || []) as any[];
-  const paidByStudent: Record<string, number> = {};
-  payments.forEach((p: any) => {
-    paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + Number(p.amount_paid || 0);
-  });
-
+  const payments = (paymentsRes.data || []) as { amount_paid?: number }[];
   const feesCollected = payments.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
 
-  const outstanding = (balances.data || [])
-    .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
-    .reduce((sum: number, b: number) => sum + b, 0);
+  const balanceRows = (balanceRowsRes.data || []) as { balance?: number }[];
+  const outstanding = balanceRows.reduce((sum, r) => sum + Math.max(0, Number(r.balance ?? 0)), 0);
 
   const expensesCount = pendingExpensesCountRes.count ?? 0;
-  const activeClasses = new Set((activeClassesRowsRes.data || []).map((r: any) => r.current_class).filter(Boolean)).size;
+  const activeClasses = new Set(
+    (activeClassesRowsRes.data || []).map((r: { current_class?: string }) => r.current_class).filter(Boolean)
+  ).size;
 
   const jobApps = jobsCountRes.count ?? 0;
 

@@ -65,6 +65,7 @@ const FinanceLayout = lazyWithRetry(() => import('./pages/admin/finance/FinanceL
 const DesignFinanceDashboard = lazyWithRetry(() => import('./pages/admin/finance/DesignFinanceDashboard'));
 const DesignOutstandingPage = lazyWithRetry(() => import('./pages/admin/finance/DesignOutstandingPage'));
 const FinanceSubPagePlaceholder = lazyWithRetry(() => import('./pages/admin/finance/FinanceSubPagePlaceholder'));
+const FinancialAnalyticsPage = lazyWithRetry(() => import('./pages/finance/FinancialAnalyticsPage'));
 const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPage'));
 const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
 const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
@@ -87,7 +88,8 @@ const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/DesignStudentDashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazyWithRetry(() => import('./pages/parent/DesignParentDashboard'));
-const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/DesignAccountantDashboard'));
+/** Accountant home uses FinancialOverview (same fee KPI logic as admin); DesignAccountantDashboard is HTML-only and unused here. */
+const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
 const AccountantOutstandingPage = lazyWithRetry(() => import('./pages/accountant/OutstandingPage'));
 const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/ReceiptsPage'));
@@ -165,6 +167,7 @@ function App() {
                   <Route path="identity/:id" element={<StudentIDCardPage />} />
                   <Route path="finance" element={<FinanceLayout />}>
                     <Route index element={<DesignFinanceDashboard />} />
+                    <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
                     <Route path="outstanding" element={<DesignOutstandingPage />} />
                     <Route path="payments" element={<FinanceSubPagePlaceholder />} />
                     <Route path="payments/new" element={<FinanceSubPagePlaceholder />} />
@@ -213,6 +216,7 @@ function App() {
                 <Route path="parent" element={<ParentDashboard />} />
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
+                  <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
                   <Route path="fee-structure" element={<AccountantFeeStructurePage />} />
                   <Route path="billing" element={<AccountantBillingPage />} />
                   <Route path="payments" element={<AccountantPaymentsPage />} />

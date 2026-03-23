@@ -329,10 +329,8 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   const termLabel = currentTerm
     ? `Term ${(currentTerm as { term: number }).term}, ${(currentTerm as { year: number }).year}`
     : "No term";
-  const termStart = (currentTerm as { start_date?: string })?.start_date ?? "1900-01-01";
-  const termEnd = (currentTerm as { end_date: string })?.end_date ?? "2100-12-31";
 
-  const [balancesRes, paymentsRes, expensesRes, discountsRes, recentPaymentsRes, studentsForOutstandingRes] = await Promise.all([
+  const [balancesRes, paymentsRes, expensesRes, discountsRes, recentPaymentsRes] = await Promise.all([
     termId
       ? supabase
           .from("student_balances")
@@ -342,7 +340,7 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
       : { data: [] as { total_fees: number; total_paid: number; balance: number }[] },
     supabase
       .from("student_payments")
-      .select("amount_paid, payment_date, payment_method, student_id, reversed_at")
+      .select("amount_paid, payment_date, payment_method, student_id, reversed_at, term_id")
       .eq("school_id", schoolId),
     termId
       ? supabase
@@ -361,7 +359,6 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
       .order("payment_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(10),
-    supabase.from("students").select("student_id, expected_fee_amount").eq("school_id", schoolId).eq("status", "active"),
   ]);
 
   const balances = balancesRes.data || [];
@@ -372,27 +369,19 @@ async function fetchFinancialOverview(schoolId: string): Promise<OverviewData> {
   const recentPaymentsRows = (recentPaymentsRes.data || []).filter((p: Record<string, unknown>) => !p.reversed_at);
 
   type Bal = { total_fees?: number; total_paid?: number; balance?: number };
-  type Pay = { payment_date: string; amount_paid?: number; student_id?: string };
+  type Pay = { payment_date: string; amount_paid?: number; student_id?: string; term_id?: string };
   type Disc = { amount?: number };
   type Exp = { status: string; amount?: number };
 
   const totalFeesExpected = balances.reduce((s: number, b: Bal) => s + Number(b.total_fees || 0), 0);
 
-  const paymentsInTerm = payments.filter((p: Pay) => p.payment_date >= termStart && p.payment_date <= termEnd);
-  /** Match admin dashboard: sum live payments in the current term (student_balances.total_paid can be stale). */
+  /** Same as admin design KPIs: attribute collections to school term via term_id (not payment_date alone). */
+  const paymentsInTerm = termId
+    ? payments.filter((p: Pay) => p.term_id === termId)
+    : [];
   const totalFeesCollected = paymentsInTerm.reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);
-  /** Match admin dashboard: per-student expected_fee_amount minus payments in term (same as fetchAdminDesignDashboardKpis). */
-  const paidByStudent: Record<string, number> = {};
-  paymentsInTerm.forEach((p: Pay) => {
-    const id = p.student_id;
-    if (!id) return;
-    paidByStudent[id] = (paidByStudent[id] || 0) + Number(p.amount_paid || 0);
-  });
-  const outstandingBalances = (studentsForOutstandingRes.data || []).reduce(
-    (sum: number, s: { student_id: string; expected_fee_amount?: number }) =>
-      sum + Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)),
-    0
-  );
+  /** Sum of balance rows for this term — matches student_balances snapshot. */
+  const outstandingBalances = balances.reduce((s: number, b: Bal) => s + Math.max(0, Number(b.balance ?? 0)), 0);
   const todayCollections = payments
     .filter((p: Pay) => p.payment_date === today)
     .reduce((s: number, p: Pay) => s + Number(p.amount_paid || 0), 0);

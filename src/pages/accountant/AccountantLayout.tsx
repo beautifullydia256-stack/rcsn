@@ -62,6 +62,7 @@ const ACCOUNTANT_ROUTE_CHUNKS = [
   () => import("./BankPage"),
   () => import("./ReportsPage"),
   () => import("./AdjustmentsPage"),
+  () => import("../finance/FinancialAnalyticsPage"),
 ];
 
 /** Inline styles aligned with `AdminLayout` sidebar shell (pw-* tokens), scoped to accountant + data-theme. */
@@ -615,6 +616,7 @@ export default function AccountantLayout() {
           <NavItem to="/dashboard/accountant/bank" icon="🏦" label="Bank & Cash" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[7])} />
           <NavItem to="/dashboard/accountant/reports" icon="📊" label="Reports" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[8])} />
           <NavItem to="/dashboard/accountant/adjustments" icon="🔄" label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
+          <NavItem to="/dashboard/accountant/financial-analytics" icon="📉" label="Financial Analytics" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[10])} />
         </div>
 
         <div className="pw-nav-section">
