@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
@@ -563,30 +563,6 @@ export default function AddStudentPage() {
               {error}
             </div>
           )}
-
-          <div className={`${adminCardClass} border-[var(--ac-border)]`}>
-            <h2 className="text-sm font-semibold ac-text-primary">Before you start</h2>
-            <p className="mt-2 text-sm leading-relaxed ac-text-secondary">
-              Emails are optional. Many families have no address yet, or parents may not want a login — that is fine. If you add an email, use a real one
-              (not a placeholder). When you are ready for portal access, invite users from{' '}
-              <Link
-                to="/dashboard/admin/accounts"
-                className="text-emerald-600 underline underline-offset-2 hover:text-emerald-700 dark:text-emerald-400"
-              >
-                User Management
-              </Link>
-              .
-            </p>
-            <p className="mt-4 text-sm font-medium ac-text-primary">Required to save</p>
-            <ul className="mt-2 list-inside list-disc space-y-1 text-sm ac-text-secondary">
-              <li>First name and last name</li>
-              <li>Class and admission date</li>
-            </ul>
-            <p className="mt-3 text-sm leading-relaxed ac-text-secondary">
-              Student and parent emails are optional. If you type an email, it must look like a valid address. Everything else is optional unless your school
-              says otherwise.
-            </p>
-          </div>
 
           <Section
             id="personal"
