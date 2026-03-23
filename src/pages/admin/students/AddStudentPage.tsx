@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type ComponentType, type ReactNode } from 'react';
+import { useState, useEffect, useMemo, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -46,35 +46,23 @@ const EAC_COUNTRIES = [
 
 const COUNTRY_CUSTOM = '__custom__';
 
-const MONTH_OPTIONS = [
-  { value: '01', label: 'Jan' },
-  { value: '02', label: 'Feb' },
-  { value: '03', label: 'Mar' },
-  { value: '04', label: 'Apr' },
-  { value: '05', label: 'May' },
-  { value: '06', label: 'Jun' },
-  { value: '07', label: 'Jul' },
-  { value: '08', label: 'Aug' },
-  { value: '09', label: 'Sep' },
-  { value: '10', label: 'Oct' },
-  { value: '11', label: 'Nov' },
-  { value: '12', label: 'Dec' },
+/** Nationality labels aligned with East African / regional countries; custom text if not listed. */
+const NATIONALITY_CUSTOM = '__nat_custom__';
+const EAC_NATIONALITIES = [
+  'Ugandan',
+  'Kenyan',
+  'Tanzanian',
+  'Rwandan',
+  'Burundian',
+  'South Sudanese',
+  'Ethiopian',
+  'Somali',
+  'Eritrean',
+  'Djiboutian',
+  'Congolese (DRC)',
+  'Malawian',
+  'Zambian',
 ] as const;
-
-function daysInMonth(year: number, month1to12: number): number {
-  return new Date(year, month1to12, 0).getDate();
-}
-
-function buildDobIso(y: string, m: string, d: string): string {
-  if (!y || !m || !d) return '';
-  const yi = parseInt(y, 10);
-  const mi = parseInt(m, 10);
-  const di = parseInt(d, 10);
-  if (Number.isNaN(yi) || Number.isNaN(mi) || Number.isNaN(di)) return '';
-  const max = daysInMonth(yi, mi);
-  const day = Math.min(di, max);
-  return `${yi}-${String(mi).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
 
 const NURSERY_PRIMARY_CLASSES = [
   'Baby Class',
@@ -84,6 +72,47 @@ const NURSERY_PRIMARY_CLASSES = [
 ];
 
 const SECONDARY_CLASSES = Array.from({ length: 6 }, (_, i) => `Senior ${i + 1}`);
+
+/** Native `<select>` with visible chevron; avoids unreadable OS dropdown styling in dark mode when paired with `selectFieldClass`. */
+function SelectField({
+  id,
+  value,
+  onChange,
+  children,
+  className,
+  disabled,
+  required,
+  'aria-label': ariaLabel,
+}: {
+  id?: string;
+  value: string;
+  onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
+  children: ReactNode;
+  className: string;
+  disabled?: boolean;
+  required?: boolean;
+  'aria-label'?: string;
+}) {
+  return (
+    <div className="relative">
+      <select
+        id={id}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        required={required}
+        aria-label={ariaLabel}
+        className={className}
+      >
+        {children}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400"
+        aria-hidden
+      />
+    </div>
+  );
+}
 
 function Section({
   id,
@@ -181,12 +210,10 @@ export default function AddStudentPage() {
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
-  /** Synced from DOB row (year / month / day) for validation. */
+  /** Date of birth — browser calendar picker (`input type="date"`). */
   const [dob, setDob] = useState('');
-  const [dobYear, setDobYear] = useState('');
-  const [dobMonth, setDobMonth] = useState('');
-  const [dobDay, setDobDay] = useState('');
-  const [nationality, setNationality] = useState('');
+  const [nationalityChoice, setNationalityChoice] = useState('');
+  const [nationalityCustomText, setNationalityCustomText] = useState('');
   const [religion, setReligion] = useState('');
 
   // Contact & Address
@@ -234,37 +261,14 @@ export default function AddStudentPage() {
   // Collapsible sections: multiple can be open; user closes when they want
   const [openSections, setOpenSections] = useState<string[]>(['personal']);
 
-  const dobYearOptions = useMemo(() => {
-    const cy = new Date().getFullYear();
-    const out: number[] = [];
-    for (let y = cy - 3; y >= cy - 40; y--) out.push(y);
-    return out;
+  const { dobMin, dobMax } = useMemo(() => {
+    const t = new Date();
+    const maxD = new Date(t);
+    maxD.setFullYear(maxD.getFullYear() - 3);
+    const minD = new Date(t);
+    minD.setFullYear(minD.getFullYear() - 40);
+    return { dobMin: minD.toISOString().slice(0, 10), dobMax: maxD.toISOString().slice(0, 10) };
   }, []);
-
-  const dobDayOptions = useMemo(() => {
-    if (!dobYear || !dobMonth) return [] as string[];
-    const y = parseInt(dobYear, 10);
-    const m = parseInt(dobMonth, 10);
-    if (Number.isNaN(y) || Number.isNaN(m)) return [];
-    const n = daysInMonth(y, m);
-    return Array.from({ length: n }, (_, i) => String(i + 1));
-  }, [dobYear, dobMonth]);
-
-  useEffect(() => {
-    if (!dobYear || !dobMonth || !dobDay) {
-      setDob('');
-      return;
-    }
-    const y = parseInt(dobYear, 10);
-    const m = parseInt(dobMonth, 10);
-    const max = daysInMonth(y, m);
-    const d = parseInt(dobDay, 10);
-    if (d > max) {
-      setDobDay(String(max));
-      return;
-    }
-    setDob(buildDobIso(dobYear, dobMonth, dobDay));
-  }, [dobYear, dobMonth, dobDay]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'add-student', 'school', user?.id ?? ''],
@@ -353,6 +357,10 @@ export default function AddStudentPage() {
     try {
       const resolvedCountry =
         countryChoice === COUNTRY_CUSTOM ? countryCustomText.trim() : countryChoice.trim();
+      const resolvedNationality =
+        nationalityChoice === NATIONALITY_CUSTOM
+          ? nationalityCustomText.trim()
+          : nationalityChoice.trim();
 
       // Admission number: DB trigger assigns in the same transaction as INSERT (avoids
       // duplicate numbers when RPC + INSERT were separate transactions).
@@ -380,7 +388,7 @@ export default function AddStudentPage() {
           last_name: trimLast,
           gender: gender || null,
           date_of_birth: dob || null,
-          nationality: nationality || null,
+          nationality: resolvedNationality || null,
           religion: religion || null,
           address: studentAddress,
           city: city || null,
@@ -488,8 +496,20 @@ export default function AddStudentPage() {
     );
   };
 
-  const inputClass =
-    'w-full min-h-[48px] rounded-xl border border-[var(--ac-border)] bg-white/90 px-3 py-2.5 text-base ac-text-primary shadow-sm placeholder:text-[var(--ac-text-muted)] focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 dark:bg-white/5';
+  /** Solid light/dark backgrounds so native selects & date pickers stay readable (not white-on-white in dark UI). */
+  const fieldBase =
+    'w-full min-h-[48px] rounded-xl border border-slate-300 px-3 py-2.5 text-base shadow-sm ' +
+    'bg-white text-slate-900 placeholder:text-slate-400 ' +
+    'dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 ' +
+    'focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/35';
+
+  const inputClass = fieldBase;
+
+  const selectFieldClass =
+    `${fieldBase} cursor-pointer appearance-none pr-10 [color-scheme:light] dark:[color-scheme:dark]`;
+
+  const dateFieldClass = `${fieldBase} [color-scheme:light] dark:[color-scheme:dark]`;
+
   const labelClass = 'mb-1.5 block text-sm font-medium ac-text-primary';
   const hintClass = 'mt-1 text-xs text-[var(--ac-text-muted)]';
 
@@ -497,7 +517,7 @@ export default function AddStudentPage() {
 
   if (isLoading && !data) {
     return (
-      <AdminPageWrapper title="Add student" subtitle="Enrol a new learner">
+      <AdminPageWrapper title="Add student">
         <div className="flex min-h-[40vh] items-center justify-center">
           <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
         </div>
@@ -516,10 +536,7 @@ export default function AddStudentPage() {
   }
 
   return (
-    <AdminPageWrapper
-      title="Add student"
-      subtitle="Enrol a new learner — works on phone and desktop. Required fields are marked with *."
-    >
+    <AdminPageWrapper title="Add student">
       <div className="mx-auto w-full max-w-3xl space-y-6 pb-28 sm:pb-8">
         <div className="flex flex-wrap items-center gap-3">
           <button
@@ -532,7 +549,13 @@ export default function AddStudentPage() {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="add-student-form space-y-5">
+          <style>{`
+            .dark .add-student-form input[type='date']::-webkit-calendar-picker-indicator {
+              filter: invert(1);
+              opacity: 0.8;
+            }
+          `}</style>
           {error && (
             <div
               className={`${adminCardClass} border-rose-500/40 bg-rose-500/10 text-sm text-rose-800 dark:text-rose-100 whitespace-pre-wrap`}
@@ -541,40 +564,27 @@ export default function AddStudentPage() {
             </div>
           )}
 
-          <div
-            className={`${adminCardClass} border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-transparent to-teal-500/5`}
-          >
+          <div className={`${adminCardClass} border-[var(--ac-border)]`}>
             <h2 className="text-sm font-semibold ac-text-primary">Before you start</h2>
             <p className="mt-2 text-sm leading-relaxed ac-text-secondary">
-              Emails are <strong className="ac-text-primary">optional</strong>. Many families have no address yet, or parents may not want a login — that is fine.
-              If you add an email, use a real one (not a placeholder). When you are ready for portal access, invite users from{' '}
+              Emails are optional. Many families have no address yet, or parents may not want a login — that is fine. If you add an email, use a real one
+              (not a placeholder). When you are ready for portal access, invite users from{' '}
               <Link
                 to="/dashboard/admin/accounts"
-                className="font-medium text-emerald-600 underline decoration-emerald-500/50 underline-offset-2 hover:text-emerald-700 dark:text-emerald-400"
+                className="text-emerald-600 underline underline-offset-2 hover:text-emerald-700 dark:text-emerald-400"
               >
                 User Management
               </Link>
               .
             </p>
-          </div>
-
-          <div className={`${adminCardClass} border-[var(--ac-border)]`}>
-            <h2 className="flex items-center gap-2 text-sm font-semibold ac-text-primary">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400">
-                *
-              </span>
-              Required to save
-            </h2>
-            <ul className="mt-3 list-inside list-disc space-y-1.5 text-sm ac-text-secondary">
-              <li>
-                <span className="font-medium ac-text-primary">First name</span> and <span className="font-medium ac-text-primary">last name</span>
-              </li>
-              <li>
-                <span className="font-medium ac-text-primary">Class</span> and <span className="font-medium ac-text-primary">admission date</span>
-              </li>
+            <p className="mt-4 text-sm font-medium ac-text-primary">Required to save</p>
+            <ul className="mt-2 list-inside list-disc space-y-1 text-sm ac-text-secondary">
+              <li>First name and last name</li>
+              <li>Class and admission date</li>
             </ul>
-            <p className={`${hintClass} mt-3`}>
-              Student and parent emails are optional. If you type an email, it must look like a valid address. Everything else is optional unless your school says otherwise.
+            <p className="mt-3 text-sm leading-relaxed ac-text-secondary">
+              Student and parent emails are optional. If you type an email, it must look like a valid address. Everything else is optional unless your school
+              says otherwise.
             </p>
           </div>
 
@@ -629,80 +639,61 @@ export default function AddStudentPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Gender</label>
-                <select value={gender} onChange={(e) => setGender(e.target.value)} className={inputClass}>
+                <SelectField value={gender} onChange={(e) => setGender(e.target.value)} className={selectFieldClass}>
                   <option value="">Select</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
-                </select>
+                </SelectField>
               </div>
               <div className="sm:col-span-2">
-                <label className={labelClass}>
+                <label className={labelClass} htmlFor="add-student-dob">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
                     Date of birth
                   </span>
                 </label>
-                <p className={hintClass}>Pick year, then month, then day — easy on mobile.</p>
-                <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-3">
-                  <select
-                    value={dobYear}
-                    onChange={(e) => {
-                      setDobYear(e.target.value);
-                      setDobDay('');
-                    }}
-                    className={inputClass}
-                    aria-label="Birth year"
-                  >
-                    <option value="">Year</option>
-                    {dobYearOptions.map((y) => (
-                      <option key={y} value={String(y)}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={dobMonth}
-                    onChange={(e) => {
-                      setDobMonth(e.target.value);
-                      setDobDay('');
-                    }}
-                    className={inputClass}
-                    aria-label="Birth month"
-                  >
-                    <option value="">Month</option>
-                    {MONTH_OPTIONS.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    value={dobDay}
-                    onChange={(e) => setDobDay(e.target.value)}
-                    className={inputClass}
-                    disabled={!dobYear || !dobMonth}
-                    aria-label="Birth day"
-                  >
-                    <option value="">Day</option>
-                    {dobDayOptions.map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <input
+                  id="add-student-dob"
+                  type="date"
+                  value={dob}
+                  min={dobMin}
+                  max={dobMax}
+                  onChange={(e) => setDob(e.target.value)}
+                  className={`${dateFieldClass} mt-1`}
+                  aria-label="Date of birth"
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Nationality</label>
-                <input
-                  type="text"
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. Ugandan"
-                />
+                <SelectField
+                  value={nationalityChoice}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setNationalityChoice(v);
+                    if (v !== NATIONALITY_CUSTOM) setNationalityCustomText('');
+                  }}
+                  className={selectFieldClass}
+                >
+                  <option value="">Select nationality</option>
+                  {EAC_NATIONALITIES.map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                  <option value={NATIONALITY_CUSTOM}>Other — type manually</option>
+                </SelectField>
+                {nationalityChoice === NATIONALITY_CUSTOM && (
+                  <input
+                    type="text"
+                    value={nationalityCustomText}
+                    onChange={(e) => setNationalityCustomText(e.target.value)}
+                    className={`${inputClass} mt-2`}
+                    placeholder="Type nationality"
+                    autoComplete="off"
+                  />
+                )}
               </div>
               <div>
                 <label className={labelClass}>Religion</label>
@@ -742,14 +733,14 @@ export default function AddStudentPage() {
               </div>
               <div>
                 <label className={labelClass}>Country</label>
-                <select
+                <SelectField
                   value={countryChoice}
                   onChange={(e) => {
                     const v = e.target.value;
                     setCountryChoice(v);
                     if (v !== COUNTRY_CUSTOM) setCountryCustomText('');
                   }}
-                  className={inputClass}
+                  className={selectFieldClass}
                 >
                   <option value="">Select country</option>
                   {EAC_COUNTRIES.map((c) => (
@@ -758,7 +749,7 @@ export default function AddStudentPage() {
                     </option>
                   ))}
                   <option value={COUNTRY_CUSTOM}>Other — type manually</option>
-                </select>
+                </SelectField>
                 {countryChoice === COUNTRY_CUSTOM && (
                   <input
                     type="text"
@@ -774,13 +765,12 @@ export default function AddStudentPage() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Student email</label>
-                <p className={hintClass}>Optional — add when you have one; needed only if you plan to invite this student to the portal.</p>
                 <input
                   type="email"
                   value={studentEmail}
                   onChange={(e) => setStudentEmail(e.target.value)}
                   className={inputClass}
-                  placeholder="Leave blank if no email yet"
+                  placeholder="Optional"
                   autoComplete="email"
                   inputMode="email"
                 />
@@ -811,19 +801,19 @@ export default function AddStudentPage() {
                 placeholder="e.g. Jane Doe"
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Relationship</label>
-                <select
+                <SelectField
                   value={guardianRelationship}
                   onChange={(e) => setGuardianRelationship(e.target.value)}
-                  className={inputClass}
+                  className={selectFieldClass}
                 >
                   <option value="">Select</option>
                   <option value="Father">Father</option>
                   <option value="Mother">Mother</option>
                   <option value="Guardian">Guardian</option>
-                </select>
+                </SelectField>
               </div>
               <div>
                 <label className={labelClass}>Phone</label>
@@ -838,13 +828,12 @@ export default function AddStudentPage() {
             </div>
             <div>
               <label className={labelClass}>Parent / guardian email</label>
-              <p className={hintClass}>Optional — only needed if you want this parent to receive a portal login later.</p>
               <input
                 type="email"
                 value={guardianEmail}
                 onChange={(e) => setGuardianEmail(e.target.value)}
                 className={inputClass}
-                placeholder="Leave blank if no email or no parent login"
+                placeholder="Optional"
               />
             </div>
             <div>
@@ -881,27 +870,30 @@ export default function AddStudentPage() {
                 <label className={labelClass}>
                   Class <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <SelectField
                   value={currentClass}
                   onChange={(e) => setCurrentClass(e.target.value)}
-                  className={inputClass}
+                  className={selectFieldClass}
                   required
+                  aria-label="Class"
                 >
                   {classOptions.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
-                </select>
+                </SelectField>
               </div>
               <div>
                 <label className={labelClass}>Boarding type</label>
-                <select
+                <SelectField
                   value={boardingType}
                   onChange={(e) => setBoardingType(e.target.value as 'Day Scholar' | 'Boarding')}
-                  className={inputClass}
+                  className={selectFieldClass}
                 >
                   <option value="Day Scholar">Day Scholar</option>
                   <option value="Boarding">Boarding</option>
-                </select>
+                </SelectField>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -933,12 +925,11 @@ export default function AddStudentPage() {
                   Admission date <span className="text-rose-500">*</span>
                 </span>
               </label>
-              <p className={hintClass}>Opens the native calendar on your phone (year/month/day).</p>
               <input
                 type="date"
                 value={admissionDate}
                 onChange={(e) => setAdmissionDate(e.target.value)}
-                className={inputClass}
+                className={dateFieldClass}
                 required
                 min="2000-01-01"
                 max={todayIso}
@@ -1006,10 +997,10 @@ export default function AddStudentPage() {
               </div>
               <div>
                 <label className={labelClass}>Admission fee status</label>
-                <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={inputClass}>
+                <SelectField value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} className={selectFieldClass}>
                   <option value="Pending">Pending</option>
                   <option value="Paid">Paid</option>
-                </select>
+                </SelectField>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
