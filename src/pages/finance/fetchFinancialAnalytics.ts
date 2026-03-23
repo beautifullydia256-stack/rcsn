@@ -4,18 +4,32 @@ export const FINANCIAL_ANALYTICS_QUERY_KEY = ["financial-analytics"] as const;
 
 export type PeriodType = "week" | "month" | "year" | "custom";
 
-export type SchoolTermOption = {
+/** Calendar financial year (Jan–Dec), aligned to school_terms.year */
+export type SchoolTermRow = {
   id: string;
   term: number;
   year: number;
   label: string;
+  start_date: string;
+  end_date: string;
+  is_current: boolean | null;
 };
+
+export type TermScope = "one" | "all";
 
 function toIsoDate(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-/** Monday-start week in local time; end is today if week includes today. */
+function maxDate(a: string, b: string): string {
+  return a >= b ? a : b;
+}
+
+function minDate(a: string, b: string): string {
+  return a <= b ? a : b;
+}
+
+/** Monday-start week in local time; end is today. */
 export function getDateRange(
   period: PeriodType,
   custom?: { start: string; end: string }
@@ -46,6 +60,43 @@ export function getDateRange(
   }
 
   return { start: today, end: today };
+}
+
+/** Jan 1 – Dec 31 for the given calendar year. */
+export function financialYearBounds(year: number): { start: string; end: string } {
+  return {
+    start: `${year}-01-01`,
+    end: `${year}-12-31`,
+  };
+}
+
+export function currentCalendarYear(): number {
+  return new Date().getFullYear();
+}
+
+/** Prefer term containing today; else is_current; else latest year/term. */
+export function pickCurrentTermId(terms: SchoolTermRow[], today: string): string | null {
+  if (!terms.length) return null;
+  const inRange = terms.filter((t) => t.start_date <= today && t.end_date >= today);
+  if (inRange.length) {
+    const sorted = [...inRange].sort((a, b) => b.year - a.year || b.term - a.term);
+    return sorted[0].id;
+  }
+  const flagged = terms.filter((t) => t.is_current === true);
+  if (flagged.length) return flagged[0].id;
+  const sorted = [...terms].sort((a, b) => b.year - a.year || b.term - a.term);
+  return sorted[0]?.id ?? null;
+}
+
+export function termIdsForFinancialYear(terms: SchoolTermRow[], financialYear: number): string[] {
+  return terms.filter((t) => t.year === financialYear).map((t) => t.id);
+}
+
+export function financialYearOptionsFromTerms(terms: SchoolTermRow[]): number[] {
+  const years = new Set<number>();
+  terms.forEach((t) => years.add(t.year));
+  years.add(currentCalendarYear());
+  return [...years].sort((a, b) => b - a);
 }
 
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -91,6 +142,9 @@ export type FinancialAnalyticsData = {
   verdict: string;
   categories: CategorySpendRow[];
   trend: TrendMonthRow[];
+  /** Effective date window after FY / term / period clipping */
+  effectiveStart: string;
+  effectiveEnd: string;
 };
 
 const BAR_ROTATION: CategorySpendRow["barClass"][] = ["bar-green", "bar-red", "bar-blue", "bar-gold"];
@@ -103,24 +157,33 @@ function formatNetK(n: number): string {
   return `${sign}${v}`;
 }
 
-export async function fetchSchoolTerms(schoolId: string): Promise<SchoolTermOption[]> {
+export async function fetchSchoolTerms(schoolId: string): Promise<SchoolTermRow[]> {
   const { data } = await supabase
     .from("school_terms")
-    .select("id, term, year")
+    .select("id, term, year, start_date, end_date, is_current")
     .eq("school_id", schoolId)
     .order("year", { ascending: false })
     .order("term", { ascending: false });
 
-  const rows = (data || []) as { id: string; term: number; year: number }[];
+  const rows = (data || []) as {
+    id: string;
+    term: number;
+    year: number;
+    start_date: string;
+    end_date: string;
+    is_current: boolean | null;
+  }[];
   return rows.map((t) => ({
     id: t.id,
     term: t.term,
     year: t.year,
     label: `Term ${t.term}, ${t.year}`,
+    start_date: t.start_date,
+    end_date: t.end_date,
+    is_current: t.is_current,
   }));
 }
 
-/** Last 6 calendar months (oldest first), with start/end date strings per month. */
 function lastSixMonthRanges(): { label: string; start: string; end: string }[] {
   const out: { label: string; start: string; end: string }[] = [];
   const now = new Date();
@@ -137,21 +200,127 @@ function lastSixMonthRanges(): { label: string; start: string; end: string }[] {
   return out;
 }
 
+function buildPaymentFilter(
+  schoolId: string,
+  termScope: TermScope,
+  termIds: string[],
+  singleTermId: string | undefined
+) {
+  let q = supabase
+    .from("student_payments")
+    .select("amount_paid, payment_date")
+    .eq("school_id", schoolId)
+    .is("reversed_at", null);
+  if (termScope === "all") {
+    if (!termIds.length) return null;
+    q = q.in("term_id", termIds);
+  } else if (singleTermId) {
+    q = q.eq("term_id", singleTermId);
+  } else {
+    return null;
+  }
+  return q;
+}
+
 export async function fetchFinancialAnalytics(params: {
   schoolId: string;
-  termId: string;
+  financialYear: number;
+  termScope: TermScope;
+  /** Required when termScope === 'one' */
+  termId?: string;
   period: PeriodType;
   customRange?: { start: string; end: string };
+  terms: SchoolTermRow[];
 }): Promise<FinancialAnalyticsData> {
-  const { schoolId, termId, period, customRange } = params;
-  const { start, end } = getDateRange(period, customRange);
+  const { schoolId, financialYear, termScope, termId, period, customRange, terms } = params;
 
+  const fy = financialYearBounds(financialYear);
+  const todayStr = toIsoDate(new Date());
+  const periodRange = getDateRange(period, customRange);
+
+  let clipStart = maxDate(periodRange.start, fy.start);
+  let clipEnd = minDate(minDate(periodRange.end, fy.end), todayStr);
+
+  const yearTermIds = termIdsForFinancialYear(terms, financialYear);
+
+  if (termScope === "one" && termId) {
+    const row = terms.find((t) => t.id === termId);
+    if (row) {
+      clipStart = maxDate(clipStart, row.start_date);
+      clipEnd = minDate(clipEnd, row.end_date);
+    }
+  }
+
+  if (clipStart > clipEnd) {
+    return {
+      totalIncome: 0,
+      totalSpent: 0,
+      net: 0,
+      payroll: 0,
+      scholarships: 0,
+      incomeBarPct: 100,
+      expenseBarPct: 0,
+      payrollBarPct: 0,
+      scholarshipBarPct: 0,
+      verdict: "No data in this date range.",
+      categories: [],
+      trend: lastSixMonthRanges().map((r) => ({
+        label: r.label,
+        income: 0,
+        spent: 0,
+        net: 0,
+        netLabel: formatNetK(0),
+      })),
+      effectiveStart: clipStart,
+      effectiveEnd: clipEnd,
+    };
+  }
+
+  const start = clipStart;
+  const end = clipEnd;
   const startTs = `${start}T00:00:00.000Z`;
   const endTs = `${end}T23:59:59.999Z`;
 
   const trendRanges = lastSixMonthRanges();
   const trendStart = trendRanges[0]?.start ?? start;
-  const todayStr = toIsoDate(new Date());
+
+  const mainPayFilter = buildPaymentFilter(
+    schoolId,
+    termScope,
+    yearTermIds,
+    termScope === "one" ? termId : undefined
+  );
+  const trendPayFilter = buildPaymentFilter(
+    schoolId,
+    termScope,
+    yearTermIds,
+    termScope === "one" ? termId : undefined
+  );
+
+  if (!mainPayFilter || !trendPayFilter) {
+    return {
+      totalIncome: 0,
+      totalSpent: 0,
+      net: 0,
+      payroll: 0,
+      scholarships: 0,
+      incomeBarPct: 100,
+      expenseBarPct: 0,
+      payrollBarPct: 0,
+      scholarshipBarPct: 0,
+      verdict: "Select a financial year with configured terms.",
+      categories: [],
+      trend: lastSixMonthRanges().map((r) => ({
+        label: r.label,
+        income: 0,
+        spent: 0,
+        net: 0,
+        netLabel: formatNetK(0),
+      })),
+      effectiveStart: start,
+      effectiveEnd: end,
+    };
+  }
 
   const [
     paymentsRes,
@@ -160,14 +329,7 @@ export async function fetchFinancialAnalytics(params: {
     trendPaymentsRes,
     trendExpensesRes,
   ] = await Promise.all([
-    supabase
-      .from("student_payments")
-      .select("amount_paid, payment_date")
-      .eq("school_id", schoolId)
-      .eq("term_id", termId)
-      .is("reversed_at", null)
-      .gte("payment_date", start)
-      .lte("payment_date", end),
+    mainPayFilter.gte("payment_date", start).lte("payment_date", end),
     supabase
       .from("school_expenses")
       .select("amount, expense_date, status, category_name, description, linked_teacher_id, linked_other_staff_id")
@@ -180,14 +342,7 @@ export async function fetchFinancialAnalytics(params: {
       .eq("school_id", schoolId)
       .gte("created_at", startTs)
       .lte("created_at", endTs),
-    supabase
-      .from("student_payments")
-      .select("amount_paid, payment_date")
-      .eq("school_id", schoolId)
-      .eq("term_id", termId)
-      .is("reversed_at", null)
-      .gte("payment_date", trendStart)
-      .lte("payment_date", todayStr),
+    trendPayFilter.gte("payment_date", trendStart).lte("payment_date", todayStr),
     supabase
       .from("school_expenses")
       .select("amount, expense_date, status")
@@ -210,8 +365,8 @@ export async function fetchFinancialAnalytics(params: {
   }[];
 
   const expenses = expensesRaw.filter((e) => {
-    const s = (e.status || "").toLowerCase();
-    return s === "approved" || s === "paid";
+    const st = (e.status || "").toLowerCase();
+    return st === "approved" || st === "paid";
   });
   const totalSpent = Math.round(expenses.reduce((s, e) => s + Number(e.amount || 0), 0));
 
@@ -309,5 +464,7 @@ export async function fetchFinancialAnalytics(params: {
     verdict,
     categories,
     trend,
+    effectiveStart: start,
+    effectiveEnd: end,
   };
 }

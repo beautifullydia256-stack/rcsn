@@ -1,5 +1,12 @@
 /* Scoped Nze-style analytics — only affects .fa-nze descendants */
 
+.pw-students .fa-nze {
+  background: transparent;
+  padding: 0 0 48px;
+  max-width: none;
+  margin: 0;
+}
+
 .fa-nze {
   --fa-navy: #0b1f3b;
   --fa-green: #0f9d58;
