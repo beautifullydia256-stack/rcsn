@@ -109,7 +109,7 @@ export default function NativeModal({
                   <div
                     className={
                       size === 'xl'
-                        ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-6'
+                        ? 'min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden'
                         : 'p-6'
                     }
                   >
