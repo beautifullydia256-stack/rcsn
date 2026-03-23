@@ -10,6 +10,11 @@ import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import NativeModal from '@/components/NativeModal';
 import { AddStudentForm } from './AddStudentForm';
+import {
+  addStudentSchoolQueryKey,
+  addStudentSchoolStaleOptions,
+  fetchAddStudentSchoolContext,
+} from './addStudentSchoolQuery';
 
 import '@/assets/pwezacore-students-scoped.css';
 
@@ -230,6 +235,14 @@ export default function DesignStudentsPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const user = useAuthStore((s) => s.user);
+
+  /** Same query key as AddStudentForm — runs as soon as this page mounts so the modal hits a warm cache. */
+  useQuery({
+    queryKey: addStudentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddStudentSchoolContext(user!.id),
+    enabled: !!user?.id,
+    ...addStudentSchoolStaleOptions,
+  });
 
   const addModalOpen = searchParams.get('add') === '1';
 

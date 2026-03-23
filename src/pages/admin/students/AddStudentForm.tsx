@@ -1,5 +1,10 @@
 import { useState, useEffect, useMemo, type ChangeEvent, type ComponentType, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  addStudentSchoolQueryKey,
+  addStudentSchoolStaleOptions,
+  fetchAddStudentSchoolContext,
+} from '@/pages/admin/students/addStudentSchoolQuery';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
@@ -22,7 +27,6 @@ import { useToast } from '@/components/Toast';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 import { isValidRealEmail } from '@/lib/realEmail';
 import { formatStudentSaveError } from '@/lib/supabaseError';
-import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 
 /** East Africa–focused list; “Other” enables manual entry. */
@@ -153,44 +157,6 @@ function Section({
   );
 }
 
-type FeeStructure = {
-  feeByClass: Record<string, number>;
-  boardingByClass: Record<string, number>;
-  admissionFee: number;
-};
-
-async function fetchSchoolAndFees(userId: string) {
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id)
-    return {
-      schoolId: null as string | null,
-      schoolType: null as 'Nursery/Primary' | 'Secondary' | null,
-      feeStructure: { feeByClass: {}, boardingByClass: {}, admissionFee: 0 } as FeeStructure,
-    };
-
-  const [schoolRes, feeRes] = await Promise.all([
-    supabase.from('schools').select('type').eq('school_id', u.school_id).single(),
-    supabase.from('school_fee_structure').select('class_name, tuition_amount, boarding_tuition_amount').eq('school_id', u.school_id),
-  ]);
-  const schoolType = (schoolRes.data?.type as 'Nursery/Primary' | 'Secondary') || null;
-  const feeByClass: Record<string, number> = {};
-  const boardingByClass: Record<string, number> = {};
-  let admissionFee = 0;
-  (feeRes.data || []).forEach((row: { class_name: string; tuition_amount?: number; boarding_tuition_amount?: number }) => {
-    if (row.class_name === 'ADMISSION') {
-      admissionFee = Number(row.tuition_amount || 0) || 0;
-    } else if (row.class_name) {
-      feeByClass[row.class_name] = Number(row.tuition_amount || 0) || 0;
-      boardingByClass[row.class_name] = Number(row.boarding_tuition_amount || 0) || 0;
-    }
-  });
-  return {
-    schoolId: u.school_id,
-    schoolType,
-    feeStructure: { feeByClass, boardingByClass, admissionFee },
-  };
-}
-
 export type AddStudentFormProps = {
   mode: 'page' | 'modal';
   onCompleted?: () => void;
@@ -266,12 +232,11 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     return { dobMin: minD.toISOString().slice(0, 10), dobMax: maxD.toISOString().slice(0, 10) };
   }, []);
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'add-student', 'school', user?.id ?? ''],
-    queryFn: () => fetchSchoolAndFees(user!.id),
+  const { data, isPending } = useQuery({
+    queryKey: addStudentSchoolQueryKey(user?.id ?? ''),
+    queryFn: () => fetchAddStudentSchoolContext(user!.id),
     enabled: !!user?.id,
-    staleTime: ADMIN_STALE_TIME_MS,
-    gcTime: ADMIN_GC_TIME_MS,
+    ...addStudentSchoolStaleOptions,
   });
 
   const schoolId = data?.schoolId ?? null;
@@ -516,7 +481,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
     onCancel?.();
   };
 
-  if (isLoading && !data) {
+  if (isPending && !data) {
     const spinner = (
       <div className="flex min-h-[40vh] items-center justify-center">
         <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
