@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
+import NativeModal from '@/components/NativeModal';
+import { AddParentForm } from './AddParentForm';
 
 import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
@@ -236,7 +238,21 @@ export async function fetchParentsDirectory(userId: string): Promise<{ rows: Par
 
 export default function DesignParentsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const addParentModalOpen = searchParams.get('add') === '1';
+
+  const closeAddParentModal = () => {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete('add');
+        return p;
+      },
+      { replace: true }
+    );
+  };
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
@@ -614,7 +630,16 @@ export default function DesignParentsPage() {
     root.querySelector('#par-list-btn')?.addEventListener('click', onList);
     root.querySelector('#par-grid-btn')?.addEventListener('click', onGrid);
 
-    const onAdd = () => navigate('/dashboard/admin/parents/add');
+    const onAdd = () => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          p.set('add', '1');
+          return p;
+        },
+        { replace: true }
+      );
+    };
     const onInvite = () => window.alert('Bulk portal invite will be available in a future update.');
     root.querySelector('#par-btn-add')?.addEventListener('click', onAdd);
     root.querySelector('#par-btn-invite')?.addEventListener('click', onInvite);
@@ -630,7 +655,7 @@ export default function DesignParentsPage() {
       root.querySelector('#par-btn-add')?.removeEventListener('click', onAdd);
       root.querySelector('#par-btn-invite')?.removeEventListener('click', onInvite);
     };
-  }, [htmlContent, navigate, totalPages]);
+  }, [htmlContent, navigate, totalPages, setSearchParams]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -655,6 +680,19 @@ export default function DesignParentsPage() {
     <>
       <style>{PARENTS_MOTION_KILL}</style>
       <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
+      <NativeModal isOpen={addParentModalOpen} onClose={closeAddParentModal} title="Add parent" size="lg">
+        <AddParentForm
+          mode="modal"
+          onCompleted={() => {
+            closeAddParentModal();
+            if (user?.id) {
+              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.parentsDesign(user.id) });
+              void queryClient.invalidateQueries({ queryKey: ['admin', 'add-parent', 'school', user.id] });
+            }
+          }}
+          onCancel={closeAddParentModal}
+        />
+      </NativeModal>
     </>
   );
 }

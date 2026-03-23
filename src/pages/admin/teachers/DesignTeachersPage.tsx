@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
+import NativeModal from '@/components/NativeModal';
+import { AddTeacherForm } from './AddTeacherForm';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -213,7 +215,21 @@ export async function fetchTeachersDirectory(userId: string): Promise<{ rows: Te
 
 export default function DesignTeachersPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
+  const addTeacherModalOpen = searchParams.get('add') === '1';
+
+  const closeAddTeacherModal = () => {
+    setSearchParams(
+      (prev) => {
+        const p = new URLSearchParams(prev);
+        p.delete('add');
+        return p;
+      },
+      { replace: true }
+    );
+  };
   const containerRef = useRef<HTMLDivElement>(null);
   const lastInjectedHtmlRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
@@ -550,7 +566,16 @@ export default function DesignTeachersPage() {
     root.querySelector('#tch-list-btn')?.addEventListener('click', onList);
     root.querySelector('#tch-grid-btn')?.addEventListener('click', onGrid);
 
-    const onAdd = () => navigate('/dashboard/admin/teachers/add');
+    const onAdd = () => {
+      setSearchParams(
+        (prev) => {
+          const p = new URLSearchParams(prev);
+          p.set('add', '1');
+          return p;
+        },
+        { replace: true }
+      );
+    };
     root.querySelector('#tch-btn-add')?.addEventListener('click', onAdd);
 
     return () => {
@@ -562,7 +587,7 @@ export default function DesignTeachersPage() {
       root.querySelector('#tch-grid-btn')?.removeEventListener('click', onGrid);
       root.querySelector('#tch-btn-add')?.removeEventListener('click', onAdd);
     };
-  }, [htmlContent, navigate, totalPages]);
+  }, [htmlContent, navigate, totalPages, setSearchParams]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -587,6 +612,23 @@ export default function DesignTeachersPage() {
     <>
       <style>{TEACHERS_MOTION_KILL}</style>
       <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
+      <NativeModal
+        isOpen={addTeacherModalOpen}
+        onClose={closeAddTeacherModal}
+        title="Add teacher"
+        size="xl"
+      >
+        <AddTeacherForm
+          mode="modal"
+          onCompleted={() => {
+            closeAddTeacherModal();
+            if (user?.id) {
+              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(user.id) });
+            }
+          }}
+          onCancel={closeAddTeacherModal}
+        />
+      </NativeModal>
     </>
   );
 }

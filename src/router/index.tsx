@@ -23,7 +23,6 @@ const FinanceSubPagePlaceholder = lazy(() => import('../pages/admin/finance/Fina
 const FinancialAnalyticsPage = lazy(() => import('../pages/finance/FinancialAnalyticsPage'));
 const DesignParentsPage = lazy(() => import('../pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazy(() => import('../pages/admin/parents/DesignParentProfile'));
-const AddParentPage = lazy(() => import('../pages/admin/parents/AddParentPage'));
 const AccountsPage = lazy(() => import('../pages/admin/accounts/AccountsPage'));
 const ExamSetsPage = lazy(() => import('../pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazy(() => import('../pages/admin/attendance/AttendanceRecordsPage'));
@@ -88,6 +87,7 @@ export const router: RouteObject[] = [
           { index: true, element: <AdminDashboard /> },
           { path: 'students', element: <StudentsPage /> },
           { path: 'teachers', element: <DesignTeachersPage /> },
+          { path: 'teachers/add', element: <Navigate to="/dashboard/admin/teachers?add=1" replace /> },
           {
             path: 'finance',
             element: <FinanceLayout />,
@@ -106,7 +106,7 @@ export const router: RouteObject[] = [
           },
           { path: 'outstanding', element: <Navigate to="/dashboard/admin/finance/outstanding" replace /> },
           { path: 'parents', element: <DesignParentsPage /> },
-          { path: 'parents/add', element: <AddParentPage /> },
+          { path: 'parents/add', element: <Navigate to="/dashboard/admin/parents?add=1" replace /> },
           { path: 'parents/:parent_id', element: <DesignParentProfile /> },
           { path: 'accounts', element: <AccountsPage /> },
           { path: 'exam-sets', element: <ExamSetsPage /> },

@@ -211,7 +211,7 @@ export default function InviteFromRosterPage() {
             Staff (other roles)
           </Link>
           <Link
-            to="/dashboard/admin/teachers/add"
+            to="/dashboard/admin/teachers?add=1"
             className="inline-flex items-center gap-2 rounded-xl border border-[var(--ac-border)] bg-white/5 px-4 py-2 font-medium ac-text-primary hover:bg-white/10"
           >
             Add teacher

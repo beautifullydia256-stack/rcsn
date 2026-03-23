@@ -3,12 +3,19 @@
  * and legacy flat categories if hierarchy tables are not seeded yet.
  */
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
-import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
+import NativeModal from "@/components/NativeModal";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
+import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
 import { FINANCIAL_ANALYTICS_QUERY_KEY } from "../../pages/finance/fetchFinancialAnalytics";
+import {
+  fetchExistingSalaryForPeriod,
+  salaryPeriodLabel,
+  type ExistingSalaryRow,
+} from "../../pages/accountant/api/expensePayroll";
 import {
   fetchExpenseMainCategories,
   fetchExpenseSubcategories,
@@ -16,7 +23,7 @@ import {
   type ExpenseMainCategoryRow,
   type ExpenseSubcategoryRow,
 } from "../../pages/accountant/api/expenseHierarchy";
-import { DollarSign, X, Info, Zap } from "lucide-react";
+import { Info, Zap } from "lucide-react";
 
 export type RecordExpenseModalProps = {
   open: boolean;
@@ -62,6 +69,13 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
+  const role = useAuthStore((s) => s.role);
+  const delegatedPermissions = useAuthStore((s) => s.permissions);
+
+  const canDirectApproveExpense = useMemo(() => {
+    if (role === "admin" || role === "owner") return true;
+    return hasPermission(delegatedPermissions, PERMISSION_KEYS.expensesDirectApprove);
+  }, [role, delegatedPermissions]);
 
   const [mainCategories, setMainCategories] = useState<ExpenseMainCategoryRow[]>([]);
   const [subcategories, setSubcategories] = useState<ExpenseSubcategoryRow[]>([]);
@@ -77,7 +91,8 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   const [amount, setAmount] = useState("");
   const [expenseDate, setExpenseDate] = useState(() => localTodayIso());
   const [paymentMethod, setPaymentMethod] = useState<string>("bank");
-  const [submitForApprovalOnly, setSubmitForApprovalOnly] = useState(false);
+  /** When true, expense is pending (default — all entries require admin approval unless user can direct-approve and unchecks). */
+  const [submitForApprovalOnly, setSubmitForApprovalOnly] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -89,6 +104,9 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   const [selectedStaff, setSelectedStaff] = useState<StaffPick | null>(null);
   const [salaryMonth, setSalaryMonth] = useState(() => new Date().getMonth());
   const [salaryYear, setSalaryYear] = useState(() => new Date().getFullYear());
+  const [existingSalaryRows, setExistingSalaryRows] = useState<ExistingSalaryRow[]>([]);
+  const [salaryDuplicateAck, setSalaryDuplicateAck] = useState(false);
+  const [savedExpenseId, setSavedExpenseId] = useState<string | null>(null);
 
   const resetForm = useCallback(() => {
     setMainCode("");
@@ -98,12 +116,15 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     setAmount("");
     setMessage("");
     setExpenseDate(localTodayIso());
-    setSubmitForApprovalOnly(false);
+    setSubmitForApprovalOnly(true);
     setReceiptUrl("");
     setStaffSearch("");
     setSelectedStaff(null);
     setSalaryMonth(new Date().getMonth());
     setSalaryYear(new Date().getFullYear());
+    setExistingSalaryRows([]);
+    setSalaryDuplicateAck(false);
+    setSavedExpenseId(null);
   }, []);
 
   useEffect(() => {
@@ -240,6 +261,40 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional when staff/period changes
   }, [selectedStaff?.id, selectedStaff?.kind, selectedSub?.subcategory_id, salaryMonth, salaryYear]);
 
+  useEffect(() => {
+    setSalaryDuplicateAck(false);
+  }, [salaryMonth, salaryYear, selectedStaff?.id, selectedStaff?.kind]);
+
+  useEffect(() => {
+    if (!open || !schoolId || !selectedSub?.is_salary || !selectedStaff || useLegacyCategories) {
+      setExistingSalaryRows([]);
+      return;
+    }
+    const period = salaryPeriodLabel(salaryMonth, salaryYear, MONTH_NAMES);
+    void (async () => {
+      try {
+        const rows = await fetchExistingSalaryForPeriod(
+          schoolId,
+          period,
+          selectedStaff.kind === "teacher" ? { teacherId: selectedStaff.id } : { otherStaffId: selectedStaff.id }
+        );
+        setExistingSalaryRows(rows);
+      } catch {
+        setExistingSalaryRows([]);
+      }
+    })();
+  }, [open, schoolId, selectedSub?.is_salary, selectedStaff, salaryMonth, salaryYear, useLegacyCategories]);
+
+  const expectedSalaryUgx = useMemo(() => {
+    if (!selectedStaff || !selectedSub?.is_salary) return null;
+    if (selectedStaff.kind === "teacher") {
+      const row = teachers.find((t) => t.teacher_id === selectedStaff.id);
+      return row?.salary != null ? Math.round(Number(row.salary)) : null;
+    }
+    const row = otherStaff.find((x) => x.id === selectedStaff.id);
+    return row?.salary_amount != null ? Math.round(Number(row.salary_amount)) : null;
+  }, [selectedStaff, selectedSub, teachers, otherStaff]);
+
   const handleClose = useCallback(() => {
     if (submitting) return;
     setMessage("");
@@ -295,12 +350,21 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       }
     }
 
+    if (!useLegacyCategories && selectedSub?.is_salary && selectedStaff && existingSalaryRows.length > 0 && !salaryDuplicateAck) {
+      setMessage(
+        "This month is already catered for — this person has a salary line for this pay period. Change the month/year, or tick the box below only if you must add another line (e.g. split payment across mobile money and bank)."
+      );
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const status = submitForApprovalOnly ? "pending" : "approved";
+      const status =
+        canDirectApproveExpense && !submitForApprovalOnly ? "approved" : "pending";
+      const descWithExternal = receiptUrl.trim() ? `${desc}\n\nExternal receipt / proof: ${receiptUrl.trim()}` : desc;
       const payload: Record<string, unknown> = {
         school_id: schoolId,
-        description: desc,
+        description: descWithExternal,
         amount: amt,
         expense_date: expenseDate,
         payment_method: paymentMethod,
@@ -308,16 +372,18 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
         recorded_by: userId,
       };
       if (termId) payload.term_id = termId;
-      if (receiptUrl.trim()) payload.receipt_attachment = receiptUrl.trim();
 
+      let categoryNameForRef = "";
       if (useLegacyCategories) {
         const leg = legacyCategories.find((c) => c.category_id === legacyCategoryId)!;
         payload.category_id = leg.category_id;
         payload.category_name = leg.category_name;
+        categoryNameForRef = leg.category_name;
       } else {
         payload.subcategory_id = selectedSub!.subcategory_id;
         payload.category_id = null;
-        payload.category_name = `${mainLabel} — ${selectedSub!.name}`;
+        categoryNameForRef = `${mainLabel} — ${selectedSub!.name}`;
+        payload.category_name = categoryNameForRef;
         if (selectedSub!.is_salary) {
           payload.salary_period_label = `${MONTH_NAMES[salaryMonth]} ${salaryYear}`;
           if (selectedStaff) {
@@ -327,11 +393,22 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
         }
       }
 
-      const { error } = await supabase.from("school_expenses").insert(payload);
+      const { data: refNum, error: refErr } = await supabase.rpc("generate_expense_reference", {
+        p_school_id: schoolId,
+        p_expense_date: expenseDate,
+        p_category_name: categoryNameForRef,
+      });
+      if (refErr) console.warn("generate_expense_reference", refErr);
+      if (typeof refNum === "string" && refNum.trim()) payload.reference_number = refNum.trim();
+
+      const { data: inserted, error } = await supabase.from("school_expenses").insert(payload).select("expense_id").single();
       if (error) throw error;
+
+      const newId = inserted?.expense_id;
 
       setDescription("");
       setAmount("");
+      setSavedExpenseId(newId ?? null);
       setMessage(
         status === "pending"
           ? "Expense submitted for approval. It will appear in reports after an admin approves it."
@@ -340,6 +417,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       queryClient.invalidateQueries({ queryKey: EXPENSES_QUERY_KEY });
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
       queryClient.invalidateQueries({ queryKey: FINANCIAL_ANALYTICS_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: ["teacher", "dashboard-stats"] });
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"
@@ -351,63 +429,40 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     }
   };
 
-  const inputClass =
-    "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500";
+  const fieldBase =
+    "w-full min-h-[44px] rounded-xl border border-slate-300 px-3 py-2 text-sm shadow-sm " +
+    "bg-white text-slate-900 placeholder:text-slate-400 " +
+    "dark:border-slate-600 dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 " +
+    "focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/35";
+  const selectFieldClass =
+    `${fieldBase} cursor-pointer appearance-none pr-10 [color-scheme:light] dark:[color-scheme:dark]`;
+  const inputClass = fieldBase;
+  const labelClass = "mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200";
 
   const hierarchyReady = !useLegacyCategories && subcategories.length > 0 && mainCategories.length > 0;
 
   if (!open) return null;
 
-  const modal = (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
-      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Record expense"
-      onClick={handleClose}
-    >
-      <div
-        className="relative max-h-[92vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-        onClick={(ev) => ev.stopPropagation()}
-      >
-        <div className="overflow-y-auto max-h-[92vh]">
-          <div className="flex items-start gap-3 rounded-t-2xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-4 sm:px-5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
-              <DollarSign className="h-5 w-5 text-white" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-lg font-bold text-white">Record expense</h2>
-              <p className="mt-0.5 text-sm text-white/90">
-                Structured categories (main → sub) for reporting. Salary lines link to staff. Fees use Record payment.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleClose}
-              className="shrink-0 rounded-lg p-1.5 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
-              aria-label="Close"
-            >
-              <X className="h-5 w-5" />
-            </button>
+  return (
+    <NativeModal isOpen={open} onClose={handleClose} title="Record expense" size="xl">
+      <p className="-mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
+        Structured categories (main → sub) for reporting. Salary lines link to staff. Fees use Record payment.
+      </p>
+      <form onSubmit={handleSubmit} className="flex flex-col">
+        <div className="space-y-4">
+          <div className="flex gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3 text-sm text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-100">
+            <Info className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400 mt-0.5" aria-hidden />
+            <p>
+              <strong className="font-semibold">Fees vs expenses:</strong> Student fees are <em>Record payment</em>. Everything here is
+              school spending (salaries, fuel, food, etc.). New expenses are <strong>pending</strong> until an admin approves them (unless your school granted you “Approve expenses on entry” on Access & permissions). Cashflow and analytics use <strong>approved</strong> or <strong>paid</strong> lines only.
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex flex-col">
-            <div className="space-y-4 p-4 sm:p-5">
-              <div className="flex gap-2 rounded-lg border border-amber-100 bg-amber-50/90 p-3 text-sm text-amber-950">
-                <Info className="h-4 w-4 shrink-0 text-amber-700 mt-0.5" aria-hidden />
-                <p>
-                  <strong className="font-semibold">Fees vs expenses:</strong> Student fees are <em>Record payment</em>. Everything here is
-                  school spending (salaries, fuel, food, etc.). Cashflow and Financial Analytics include <strong>approved</strong> or{" "}
-                  <strong>paid</strong> lines only.
-                </p>
-              </div>
-
-              {useLegacyCategories && (
-                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                  Hierarchy not seeded for this school — using legacy categories. Run the latest Supabase migration for full main/sub reporting.
-                </p>
-              )}
+          {useLegacyCategories && (
+            <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-100">
+              Hierarchy not seeded for this school — using legacy categories. Run the latest Supabase migration for full main/sub reporting.
+            </p>
+          )}
 
               {hierarchyReady && (
                 <>
@@ -422,7 +477,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                           key={q.label}
                           type="button"
                           onClick={() => applyQuickAction(q.main, q.subName)}
-                          className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100"
+                          className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100"
                         >
                           {q.label}
                         </button>
@@ -433,7 +488,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-sm font-medium text-slate-700">Main category</label>
-                      <select className={inputClass} value={mainCode} onChange={(e) => setMainCode(e.target.value)} required>
+                      <select className={selectFieldClass} value={mainCode} onChange={(e) => setMainCode(e.target.value)} required>
                         {mainCategories.map((m) => (
                           <option key={m.code} value={m.code}>
                             {m.label_en}
@@ -443,7 +498,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                     </div>
                     <div>
                       <label className="mb-1 block text-sm font-medium text-slate-700">Subcategory</label>
-                      <select className={inputClass} value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} required>
+                      <select className={selectFieldClass} value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} required>
                         {filteredSubs.map((s) => (
                           <option key={s.subcategory_id} value={s.subcategory_id}>
                             {s.name}
@@ -480,7 +535,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-600">Pay period (month)</label>
-                      <select className={inputClass} value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
+                      <select className={selectFieldClass} value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
                         {MONTH_NAMES.map((name, i) => (
                           <option key={name} value={i}>
                             {name}
@@ -563,9 +618,54 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                     </div>
                   </div>
                   {selectedStaff && (
-                    <p className="text-xs text-slate-600">
-                      Selected: <strong>{selectedStaff.name}</strong> ({selectedStaff.kind === "teacher" ? "Teacher" : "Other staff"})
-                    </p>
+                    <div className="space-y-2 text-xs text-slate-600">
+                      <p>
+                        Selected: <strong>{selectedStaff.name}</strong> ({selectedStaff.kind === "teacher" ? "Teacher" : "Other staff"})
+                      </p>
+                      {expectedSalaryUgx != null && (
+                        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50/80 px-3 py-2 text-emerald-950">
+                          <span>
+                            Monthly salary on file: <strong>{expectedSalaryUgx.toLocaleString()} UGX</strong>
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded-md border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-emerald-900 hover:bg-emerald-100"
+                            onClick={() => setAmount(String(expectedSalaryUgx))}
+                          >
+                            Fill full amount
+                          </button>
+                        </div>
+                      )}
+                      {expectedSalaryUgx == null && (
+                        <p className="text-amber-900">No salary on file for this person — enter the amount manually (e.g. partial pay).</p>
+                      )}
+                    </div>
+                  )}
+                  {existingSalaryRows.length > 0 && selectedStaff && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
+                      <p className="font-medium">This month is already catered for</p>
+                      <p className="mt-1 text-xs opacity-90">
+                        A salary entry already exists for {MONTH_NAMES[salaryMonth]} {salaryYear}. To avoid double payment, pick a different month or use the checkbox only for a deliberate second line.
+                      </p>
+                      <ul className="mt-1 list-disc pl-5 text-xs">
+                        {existingSalaryRows.map((r) => (
+                          <li key={r.expense_id}>
+                            {r.description} — {Number(r.amount).toLocaleString()} UGX ({r.status})
+                          </li>
+                        ))}
+                      </ul>
+                      <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                          checked={salaryDuplicateAck}
+                          onChange={(e) => setSalaryDuplicateAck(e.target.checked)}
+                        />
+                        <span>
+                          I need to add another line for this same period (correction, or split across mobile money and bank).
+                        </span>
+                      </label>
+                    </div>
                   )}
                 </div>
               )}
@@ -591,6 +691,9 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Amount (UGX)</label>
+                  {selectedSub?.is_salary && hierarchyReady && (
+                    <p className="mb-1 text-xs text-slate-500">Adjust for partial pay, or use “Fill full amount” in the salary section.</p>
+                  )}
                   <input
                     type="text"
                     inputMode="decimal"
@@ -615,7 +718,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Payment method</label>
-                <select className={inputClass} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                <select className={selectFieldClass} value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
                   {PAYMENT_METHODS.map((m) => (
                     <option key={m.value} value={m.value}>
                       {m.label}
@@ -625,7 +728,10 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Receipt link (optional)</label>
+                <label className="mb-1 block text-sm font-medium text-slate-700">External receipt / proof (optional)</label>
+                <p className="mb-1 text-xs text-slate-500">
+                  A permanent <strong>payment voucher link</strong> is saved automatically when you save. Add a URL here only for an extra external proof (e.g. mobile money screenshot hosted online).
+                </p>
                 <input
                   type="url"
                   className={inputClass}
@@ -637,7 +743,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Term (optional)</label>
-                <select className={inputClass} value={termId} onChange={(e) => setTermId(e.target.value)}>
+                <select className={selectFieldClass} value={termId} onChange={(e) => setTermId(e.target.value)}>
                   <option value="">— Not linked to a term —</option>
                   {terms.map((t) => (
                     <option key={t.id} value={t.id}>
@@ -647,15 +753,23 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                 </select>
               </div>
 
-              <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
-                  checked={submitForApprovalOnly}
-                  onChange={(e) => setSubmitForApprovalOnly(e.target.checked)}
-                />
-                <span>Submit for approval only (pending). Admin must approve before it appears in cashflow and analytics.</span>
-              </label>
+              {!canDirectApproveExpense ? (
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  This expense will be saved as <strong>pending</strong>. An admin must approve it on the admin dashboard before it appears in cashflow and financial analytics.
+                </p>
+              ) : (
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                    checked={submitForApprovalOnly}
+                    onChange={(e) => setSubmitForApprovalOnly(e.target.checked)}
+                  />
+                  <span>
+                    Submit for approval only (recommended). Uncheck to record as <strong>approved</strong> immediately — use only when you are allowed to skip the admin review step.
+                  </span>
+                </label>
+              )}
 
               {message && (
                 <p
@@ -664,29 +778,41 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                   {message}
                 </p>
               )}
+              {savedExpenseId && (
+                <p className="text-sm text-emerald-800">
+                  <Link
+                    to={`/dashboard/expense-receipt/${savedExpenseId}`}
+                    className="font-medium underline"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open payment voucher (print or save as PDF)
+                  </Link>
+                </p>
+              )}
 
               <div className="flex flex-wrap gap-3 pt-1">
                 <button
                   type="submit"
                   disabled={submitting || (useLegacyCategories && !legacyCategories.length) || (!useLegacyCategories && !subcategories.length)}
-                  className="inline-flex flex-1 min-w-[140px] items-center justify-center rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:from-amber-500 hover:to-orange-500 disabled:opacity-50"
+                  className="inline-flex flex-1 min-w-[140px] items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50"
                 >
-                  {submitting ? "Saving…" : submitForApprovalOnly ? "Submit for approval" : "Save expense"}
+                  {submitting
+                    ? "Saving…"
+                    : !canDirectApproveExpense || submitForApprovalOnly
+                      ? "Submit for approval"
+                      : "Save as approved"}
                 </button>
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>
               </div>
-            </div>
-          </form>
         </div>
-      </div>
-    </div>
+      </form>
+    </NativeModal>
   );
-
-  return createPortal(modal, document.body);
 }

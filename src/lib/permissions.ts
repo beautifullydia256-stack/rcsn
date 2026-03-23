@@ -5,6 +5,8 @@
 export const PERMISSION_KEYS = {
   studentsManage: 'students.manage',
   accountingFull: 'accounting.full',
+  /** When granted, user may record an expense as approved immediately (default is pending until admin approves). */
+  expensesDirectApprove: 'accounting.expenses_direct_approve',
 } as const;
 
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
@@ -19,6 +21,12 @@ export const PERMISSION_CATALOG: { key: PermissionKey; label: string; descriptio
     key: PERMISSION_KEYS.accountingFull,
     label: 'Finance & accounting',
     description: 'Use the full accountant dashboard (fees, payments, expenses, reports).',
+  },
+  {
+    key: PERMISSION_KEYS.expensesDirectApprove,
+    label: 'Approve expenses on entry',
+    description:
+      'Allow recording expenses as approved immediately. Without this, new expenses stay pending until an admin approves them (default off).',
   },
 ];
 

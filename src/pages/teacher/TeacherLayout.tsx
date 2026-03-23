@@ -48,7 +48,7 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./ai-planner/AiPlannerPage"),
   () => import("./assignments/AssignmentsPage"),
   () => import("./resources/ResourcesPage"),
-  () => import("./messages/MessagesPage"),
+  () => import("../chat/SchoolChatPage"),
   () => import("./notifications/NotificationsPage"),
   () => import("./settings/SettingsPage"),
   () => import("../admin/students/AddStudentPage"),
@@ -280,7 +280,7 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/resources" icon={Book} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}>
             Resources
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/teacher/messages" icon={MessageSquare} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}>
+          <NavLinkStyle to="/dashboard/chat" icon={MessageSquare} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}>
             Messages
           </NavLinkStyle>
           <NavLinkStyle to="/dashboard/teacher/notifications" icon={Bell} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}>

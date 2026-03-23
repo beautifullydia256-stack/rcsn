@@ -608,6 +608,7 @@ export default function AccountantLayout() {
             onClick={closeSidebar}
             onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}
           />
+          <NavItem to="/dashboard/chat" icon="💬" label="Messages" onClick={closeSidebar} />
         </div>
 
         <div className="pw-nav-section">

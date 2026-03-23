@@ -107,7 +107,7 @@ export default function ParentsPage() {
         <div />
         <button
           type="button"
-          onClick={() => navigate('/dashboard/admin/parents/add')}
+          onClick={() => navigate('/dashboard/admin/parents?add=1')}
           className="ac-glass-btn flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium"
         >
           <UserPlus className="w-5 h-5" />
@@ -143,7 +143,7 @@ export default function ParentsPage() {
             {!searchQuery && (
               <button
                 type="button"
-                onClick={() => navigate('/dashboard/admin/parents/add')}
+                onClick={() => navigate('/dashboard/admin/parents?add=1')}
                 className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium"
               >
                 Add Parent

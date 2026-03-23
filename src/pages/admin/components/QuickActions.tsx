@@ -19,8 +19,8 @@ export default function AdminQuickActions() {
 
   const actions = [
     { icon: UserPlus, label: 'Add Student', color: '#16a34a', path: '/dashboard/admin/students?add=1' },
-    { icon: GraduationCap, label: 'Add Teacher', color: '#16a34a', path: '/dashboard/admin/teachers' },
-    { icon: Users, label: 'Add Parent', color: '#16a34a', path: '/dashboard/admin/parents' },
+    { icon: GraduationCap, label: 'Add Teacher', color: '#16a34a', path: '/dashboard/admin/teachers?add=1' },
+    { icon: Users, label: 'Add Parent', color: '#16a34a', path: '/dashboard/admin/parents?add=1' },
     { icon: Briefcase, label: 'Add Accounts Manager', color: '#6b7280', path: '/dashboard/admin/accounts' },
     { icon: FileText, label: 'Generate Reports', color: '#6b7280', path: '/dashboard/admin/reports' },
     { icon: Receipt, label: 'Generate Receipts', color: '#6b7280', path: '/dashboard/admin/outstanding' },

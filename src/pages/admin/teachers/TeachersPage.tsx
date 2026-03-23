@@ -51,7 +51,7 @@ export default function TeachersPage() {
         <button
           type="button"
           className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
-          onClick={() => navigate('/dashboard/admin/teachers/add')}
+          onClick={() => navigate('/dashboard/admin/teachers?add=1')}
         >
           Add Teacher
         </button>

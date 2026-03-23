@@ -43,13 +43,11 @@ const DesignStudentsPage = lazyWithRetry(() => import('./pages/admin/students/De
 const AddStudentPage = lazyWithRetry(() => import('./pages/admin/students/AddStudentPage'));
 const StudentProfilePage = lazyWithRetry(() => import('./pages/admin/students/DesignStudentProfile'));
 const DesignTeachersPage = lazyWithRetry(() => import('./pages/admin/teachers/DesignTeachersPage'));
-const AddTeacherPage = lazyWithRetry(() => import('./pages/admin/teachers/AddTeacherPage'));
 const DesignTeacherProfile = lazyWithRetry(() => import('./pages/admin/teachers/DesignTeacherProfile'));
 const TeacherEditPage = lazyWithRetry(() => import('./pages/admin/teachers/TeacherEditPage'));
 const CreateTeacherLoginPage = lazyWithRetry(() => import('./pages/admin/teachers/CreateTeacherLoginPage'));
 const DesignParentsPage = lazyWithRetry(() => import('./pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazyWithRetry(() => import('./pages/admin/parents/DesignParentProfile'));
-const AddParentPage = lazyWithRetry(() => import('./pages/admin/parents/AddParentPage'));
 const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
 const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/CreateStaffPage'));
 const InviteFromRosterPage = lazyWithRetry(() => import('./pages/admin/accounts/InviteFromRosterPage'));
@@ -82,7 +80,8 @@ const TeacherGradingSystemPage = lazyWithRetry(() => import('./pages/teacher/gra
 const TeacherAiPlannerPage = lazyWithRetry(() => import('./pages/teacher/ai-planner/AiPlannerPage'));
 const TeacherAssignmentsPage = lazyWithRetry(() => import('./pages/teacher/assignments/AssignmentsPage'));
 const TeacherResourcesPage = lazyWithRetry(() => import('./pages/teacher/resources/ResourcesPage'));
-const TeacherMessagesPage = lazyWithRetry(() => import('./pages/teacher/messages/MessagesPage'));
+const SchoolChatPage = lazyWithRetry(() => import('./pages/chat/SchoolChatPage'));
+const ParentLayout = lazyWithRetry(() => import('./components/layout/ParentLayout'));
 const TeacherNotificationsPage = lazyWithRetry(() => import('./pages/teacher/notifications/NotificationsPage'));
 const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/DesignStudentDashboard'));
@@ -94,6 +93,7 @@ const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/Bil
 const AccountantOutstandingPage = lazyWithRetry(() => import('./pages/accountant/OutstandingPage'));
 const AccountantReceiptsPage = lazyWithRetry(() => import('./pages/accountant/ReceiptsPage'));
 const AccountantExpensesPage = lazyWithRetry(() => import('./pages/accountant/ExpensesPage'));
+const AccountantExpenseReceiptPage = lazyWithRetry(() => import('./pages/accountant/ExpenseReceiptPage'));
 const AccountantReportsPage = lazyWithRetry(() => import('./pages/accountant/ReportsPage'));
 const AccountantBankPage = lazyWithRetry(() => import('./pages/accountant/BankPage'));
 const AccountantFeeStructurePage = lazyWithRetry(() => import('./pages/accountant/FeeStructurePage'));
@@ -139,6 +139,8 @@ function App() {
               <Route path="/security-letter" element={<SecurityLetterPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
+                <Route path="chat" element={<SchoolChatPage />} />
+                <Route path="expense-receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
                   <Route path="students">
@@ -147,13 +149,13 @@ function App() {
                     <Route path=":student_id" element={<StudentProfilePage />} />
                   </Route>
                   <Route path="teachers" element={<DesignTeachersPage />} />
-                  <Route path="teachers/add" element={<AddTeacherPage />} />
+                  <Route path="teachers/add" element={<Navigate to="/dashboard/admin/teachers?add=1" replace />} />
                   <Route path="teachers/:teacher_id" element={<DesignTeacherProfile />} />
                   <Route path="teachers/:teacher_id/edit" element={<TeacherEditPage />} />
                   <Route path="teachers/:teacher_id/create-login" element={<CreateTeacherLoginPage />} />
                   <Route path="parents">
                     <Route index element={<DesignParentsPage />} />
-                    <Route path="add" element={<AddParentPage />} />
+                    <Route path="add" element={<Navigate to="/dashboard/admin/parents?add=1" replace />} />
                     <Route path=":parent_id" element={<DesignParentProfile />} />
                   </Route>
                   <Route path="accounts" element={<AccountsPage />} />
@@ -204,7 +206,7 @@ function App() {
                   <Route path="ai-planner" element={<TeacherAiPlannerPage />} />
                   <Route path="assignments" element={<TeacherAssignmentsPage />} />
                   <Route path="resources" element={<TeacherResourcesPage />} />
-                  <Route path="messages" element={<TeacherMessagesPage />} />
+                  <Route path="messages" element={<SchoolChatPage />} />
                   <Route path="notifications" element={<TeacherNotificationsPage />} />
                   <Route path="settings" element={<TeacherSettingsPage />} />
                   <Route path="school/add-student" element={<AddStudentPage />} />
@@ -212,8 +214,12 @@ function App() {
                 <Route path="student" element={<StudentLayout />}>
                   <Route index element={<StudentDashboard />} />
                   <Route path="fees" element={<StudentFeesPage />} />
+                  <Route path="messages" element={<SchoolChatPage />} />
                 </Route>
-                <Route path="parent" element={<ParentDashboard />} />
+                <Route path="parent" element={<ParentLayout />}>
+                  <Route index element={<ParentDashboard />} />
+                  <Route path="messages" element={<SchoolChatPage />} />
+                </Route>
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
                   <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />
@@ -222,6 +228,7 @@ function App() {
                   <Route path="payments" element={<AccountantPaymentsPage />} />
                   <Route path="receipts" element={<AccountantReceiptsPage />} />
                   <Route path="outstanding" element={<AccountantOutstandingPage />} />
+                  <Route path="expenses/receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
                   <Route path="expenses" element={<AccountantExpensesPage />} />
                   <Route path="bank" element={<AccountantBankPage />} />
                   <Route path="reports" element={<AccountantReportsPage />} />
