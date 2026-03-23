@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
@@ -10,11 +10,32 @@ import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
 const PAGE_SIZE = 12;
 const STALE_MS = 5 * 60 * 1000;
+/** Avoid losing directory data after idle; prevents KPI/table flashing to placeholders */
+const PARENTS_GC_MS = 1000 * 60 * 60 * 24;
 
 const PARENTS_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
-let cachedParentsPageHtml: string | null = null;
+const PARENTS_MOTION_KILL = `
+.pw-parents .par-fu,
+.pw-parents .par-d1,
+.pw-parents .par-d2,
+.pw-parents .par-d3,
+.pw-parents .par-d4 {
+  animation: none !important;
+  animation-delay: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.pw-parents .par-kpi:hover,
+.pw-parents .par-pcard:hover {
+  transform: none !important;
+}
+.pw-parents .par-kpi,
+.pw-parents .par-pcard {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+`;
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ffb547,#ff4f6a)',
@@ -222,6 +243,7 @@ export default function DesignParentsPage() {
   const parentsDirectory = usePwezaStore((s) => s.parentsDirectory); // pweza speed system
   const hasStoreData = prefetchDone && !!parentsDirectory; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastInjectedHtmlRef = useRef<string | null>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -242,25 +264,35 @@ export default function DesignParentsPage() {
   }, []);
 
   useEffect(() => {
-    if (cachedParentsPageHtml) {
-      setHtmlContent(cachedParentsPageHtml);
-      return;
-    }
-    cachedParentsPageHtml = parseInjectedHtml(parentsTemplateRaw);
-    setHtmlContent(cachedParentsPageHtml);
+    setHtmlContent(parseInjectedHtml(parentsTemplateRaw));
   }, []);
 
-  const { data: queryData, isLoading } = useQuery({
+  const { data: queryData, isPending } = useQuery({
     queryKey: ['admin', 'parents-design', user?.id ?? ''],
     queryFn: () => fetchParentsDirectory(user!.id),
     enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
+    gcTime: PARENTS_GC_MS,
+    placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
   });
 
   const data = hasStoreData ? parentsDirectory! : queryData;
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
+
+  /** If React ever dropped imperative KPI updates, derive from rows so counts stay consistent with the table. */
+  const effectiveStats = useMemo((): ParentsStats | null => {
+    if (stats) return stats;
+    if (!allRows.length) return null;
+    return {
+      totalParents: allRows.length,
+      linkedParents: allRows.filter((r) => r.has_linked_students).length,
+      portalParents: allRows.filter((r) => r.portal_active).length,
+      unlinkedParents: allRows.filter((r) => !r.has_linked_students).length,
+    };
+  }, [stats, allRows]);
 
   const filteredSorted = useMemo(() => {
     let out = [...allRows];
@@ -322,11 +354,19 @@ export default function DesignParentsPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const loading = !data && (isLoading || (!prefetchDone && !hasStoreData));
-    setKpi('[data-kpi="total-parents"]', loading ? '…' : String(stats?.totalParents ?? 0));
-    setKpi('[data-kpi="linked-parents"]', loading ? '…' : String(stats?.linkedParents ?? 0));
-    setKpi('[data-kpi="portal-parents"]', loading ? '…' : String(stats?.portalParents ?? 0));
-    setKpi('[data-kpi="unlinked-parents"]', loading ? '…' : String(stats?.unlinkedParents ?? 0));
+    const initialLoad =
+      !data && allRows.length === 0 && (isPending || (!prefetchDone && !hasStoreData));
+    const k = effectiveStats;
+    const kpiVals = {
+      total: initialLoad ? '—' : String(k?.totalParents ?? allRows.length),
+      linked: initialLoad ? '—' : String(k?.linkedParents ?? 0),
+      portal: initialLoad ? '—' : String(k?.portalParents ?? 0),
+      unlinked: initialLoad ? '—' : String(k?.unlinkedParents ?? 0),
+    };
+    setKpi('[data-kpi="total-parents"]', kpiVals.total);
+    setKpi('[data-kpi="linked-parents"]', kpiVals.linked);
+    setKpi('[data-kpi="portal-parents"]', kpiVals.portal);
+    setKpi('[data-kpi="unlinked-parents"]', kpiVals.unlinked);
 
     const info = root.querySelector('#par-page-info');
     if (info) {
@@ -339,7 +379,9 @@ export default function DesignParentsPage() {
     const tbody = root.querySelector('#par-table-body');
     if (tbody) {
       if (pageSlice.length === 0) {
-        tbody.innerHTML = `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
+        tbody.innerHTML = initialLoad
+          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
+          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
       } else {
         tbody.innerHTML = pageSlice
           .map((p, i) => {
@@ -400,6 +442,11 @@ export default function DesignParentsPage() {
 
     const cardGrid = root.querySelector('#par-card-grid');
     if (cardGrid) {
+      if (pageSlice.length === 0) {
+        cardGrid.innerHTML = initialLoad
+          ? `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
+          : `<div style="grid-column:1/-1;padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
+      } else {
       cardGrid.innerHTML = pageSlice
         .map((p, i) => {
           const ini = initials(p.name);
@@ -460,6 +507,7 @@ export default function DesignParentsPage() {
             </div>`;
         })
         .join('');
+      }
     }
 
     const pageBtns = root.querySelector('#par-page-btns');
@@ -496,8 +544,9 @@ export default function DesignParentsPage() {
     if (sortSel) sortSel.value = sortKey;
   }, [
     data,
-    isLoading,
-    stats,
+    isPending,
+    effectiveStats,
+    allRows.length,
     filteredSorted,
     safePage,
     startIdx,
@@ -509,8 +558,15 @@ export default function DesignParentsPage() {
     hasStoreData,
   ]);
 
-  useEffect(() => {
-    if (!htmlContent) return;
+  // Inject template once per htmlContent string — React must NOT re-apply dangerouslySetInnerHTML on every
+  // state change or KPI/table updates are wiped (same fix as teachers / admin design dashboard).
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !htmlContent) return;
+    if (lastInjectedHtmlRef.current !== htmlContent) {
+      el.innerHTML = htmlContent;
+      lastInjectedHtmlRef.current = htmlContent;
+    }
     requestAnimationFrame(() => renderTableAndGrid());
   }, [htmlContent, renderTableAndGrid]);
 
@@ -606,10 +662,9 @@ export default function DesignParentsPage() {
   }
 
   return (
-    <div
-      ref={containerRef}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-    />
+    <>
+      <style>{PARENTS_MOTION_KILL}</style>
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
+    </>
   );
 }
