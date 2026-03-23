@@ -208,6 +208,8 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
   prefetchAll: async () => {
     const userId = get().userId;
     if (!userId) return;
+    // Already warmed after login — avoid re-fetching all slices on every sidebar hover (causes full-page "reload" on list UIs).
+    if (get().prefetchDone) return;
     try {
       const [studentsContext, teachersDirectory, parentsDirectory, financeDashboard, outstanding] =
         await loadAllData(userId);

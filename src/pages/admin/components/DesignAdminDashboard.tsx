@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
@@ -658,7 +658,11 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const navigate = useNavigate();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [dashboardReady, setDashboardReady] = useState(false);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const adminNameRef = useRef(adminName);
+  useEffect(() => {
+    adminNameRef.current = adminName;
+  }, [adminName]);
 
   const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
 
@@ -697,7 +701,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     const el = containerRef.current;
     if (!el || !schoolId) return;
 
-    updateGreeting(el, adminName);
+    updateGreeting(el, adminNameRef.current);
 
     const setText = (sel: string, val: string) => {
       const node = el.querySelector(sel) as HTMLElement | null;
@@ -717,7 +721,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       loadReminder(schoolId, setText),
       loadJobVacancies(schoolId, setHtml),
     ]);
-  }, [schoolId, adminName]);
+  }, [schoolId]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -824,13 +828,21 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     };
   }, [navigate, schoolId, syncTheme]);
 
-  useEffect(() => {
-    setDashboardReady(false);
-  }, [schoolId]);
-
-  useEffect(() => {
+  // Load KPIs/lists with imperative DOM updates. Do NOT call setState after loads — a re-render re-applies
+  // dangerouslySetInnerHTML and wipes those updates (user only saw the greeting).
+  useLayoutEffect(() => {
     if (!schoolId) return;
     let cancelled = false;
+
+    const el = containerRef.current;
+    const ov = overlayRef.current;
+    if (el) {
+      el.style.opacity = '0';
+      el.style.pointerEvents = 'none';
+    }
+    if (ov) {
+      ov.style.display = 'flex';
+    }
 
     const run = async () => {
       await new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -840,9 +852,14 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       } catch (e) {
         console.error('Dashboard load error:', e);
       }
-      if (!cancelled) {
-        setDashboardReady(true);
+      if (cancelled) return;
+      const root = containerRef.current;
+      const layer = overlayRef.current;
+      if (root) {
+        root.style.opacity = '1';
+        root.style.pointerEvents = 'auto';
       }
+      if (layer) layer.style.display = 'none';
     };
 
     void run();
@@ -853,40 +870,40 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || !dashboardReady) return;
+    if (!el) return;
 
-    updateGreeting(el, adminName);
+    updateGreeting(el, adminNameRef.current);
     const timer = window.setInterval(() => {
-      updateGreeting(el, adminName);
+      updateGreeting(el, adminNameRef.current);
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [adminName, dashboardReady]);
+  }, [adminName, schoolId]);
 
   return (
     <>
       <style>{scopedStyle}</style>
       <style>{DASHBOARD_MOTION_KILL}</style>
       <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
-        {!dashboardReady && (
-          <div
-            className="absolute inset-0 z-10 flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-[#f0f4f8] dark:bg-[#05080f]"
-            aria-busy="true"
-            aria-live="polite"
-          >
-            <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
-            <p className="ac-text-secondary">Loading dashboard…</p>
-          </div>
-        )}
+        <div
+          ref={overlayRef}
+          className="absolute inset-0 z-10 flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-[#f0f4f8] dark:bg-[#05080f]"
+          aria-busy="true"
+          aria-live="polite"
+          style={{ display: 'flex' }}
+        >
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
+          <p className="ac-text-secondary">Loading dashboard…</p>
+        </div>
         <div
           ref={containerRef}
           style={{
             width: '100%',
             minHeight: '100vh',
             display: 'block',
-            opacity: dashboardReady ? 1 : 0,
+            opacity: 0,
             transition: 'opacity 0.2s ease-out',
-            pointerEvents: dashboardReady ? 'auto' : 'none',
+            pointerEvents: 'none',
           }}
           dangerouslySetInnerHTML={{ __html: scopedBody }}
         />

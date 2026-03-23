@@ -39,13 +39,23 @@ export default function DesignStudentDashboard() {
       const scores: number[] = [];
       let results: { subject?: string; marks_obtained?: number; total_marks?: number }[] | null = null;
 
+      let attendPct = 0;
       if (schoolId && studentId) {
-        const res = await supabase
-          .from('exam_results')
-          .select('subject, marks_obtained, total_marks')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId);
-        results = res.data || [];
+        const [examRes, attRes] = await Promise.all([
+          supabase
+            .from('exam_results')
+            .select('subject, marks_obtained, total_marks')
+            .eq('school_id', schoolId)
+            .eq('student_id', studentId),
+          supabase
+            .from('student_attendance')
+            .select('present')
+            .eq('school_id', schoolId)
+            .eq('student_id', studentId)
+            .limit(4000),
+        ]);
+
+        results = examRes.data || [];
 
         (results || []).forEach((r: { marks_obtained?: number; total_marks?: number; subject?: string }) => {
           const tot = Number(r.total_marks || 0);
@@ -61,19 +71,9 @@ export default function DesignStudentDashboard() {
           const lowIdx = scores.indexOf(lowPct);
           weakSubject = results?.[lowIdx]?.subject || '—';
         }
-      }
 
-      let attendPct = 0;
-      if (schoolId && studentId) {
-        const { data: att } = await supabase
-          .from('student_attendance')
-          .select('present')
-          .eq('school_id', schoolId)
-          .eq('student_id', studentId);
-        const rows = att || [];
-        const present = rows.filter(
-          (r: { present?: boolean }) => r.present === true
-        ).length;
+        const rows = attRes.data || [];
+        const present = rows.filter((r: { present?: boolean }) => r.present === true).length;
         attendPct = rows.length ? Math.round((present / rows.length) * 100) : 0;
       }
 
