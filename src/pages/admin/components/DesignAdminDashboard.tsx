@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 import designRaw from '../../../../new designs/files (3)/pwezacore-admin-dashboard-react.html?raw';
@@ -103,18 +103,32 @@ function mapNavPath(path: string) {
   return MAP[path] ?? path;
 }
 
+function updateDateLine(el: HTMLElement) {
+  const line = el.querySelector('#pa-date-line');
+  if (!line) return;
+  try {
+    line.textContent = new Date().toLocaleDateString('en-UG', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  } catch {
+    line.textContent = '';
+  }
+}
+
 function updateGreeting(el: HTMLElement, adminName?: string) {
-  const cleanName = (adminName || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)[0] || '';
+  const displayName = (adminName || '').trim();
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const titleEl = el.querySelector('.pa-page-title') as HTMLElement | null;
   const subEl = el.querySelector('.pa-page-sub') as HTMLElement | null;
 
+  updateDateLine(el);
+
   if (titleEl) {
-    titleEl.textContent = cleanName ? `${greeting}, ${cleanName} 👋` : `${greeting} 👋`;
+    titleEl.textContent = displayName ? `${greeting}, ${displayName} 👋` : `${greeting} 👋`;
   }
   if (subEl) {
     subEl.textContent = "Here's what's happening across your school today.";
@@ -617,13 +631,34 @@ async function loadJobVacancies(schoolId: string, setHtml: (id: string, html: st
   }
 }
 
+const DASHBOARD_MOTION_KILL = `
+.pweza-admin .pa-fu,
+.pweza-admin .pa-d1,
+.pweza-admin .pa-d2,
+.pweza-admin .pa-d3,
+.pweza-admin .pa-d4,
+.pweza-admin .pa-d5 {
+  animation: none !important;
+  animation-delay: 0 !important;
+  opacity: 1 !important;
+  transform: none !important;
+}
+.pweza-admin .pa-kpi:hover {
+  transform: none !important;
+}
+.pweza-admin .pa-kpi {
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pweza-admin .pa-qa-btn:hover {
+  transform: none !important;
+}
+`;
+
 export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   const navigate = useNavigate();
-  const location = useLocation();
 
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const dataLoadedRef = useRef(false);
-  const lastReloadAtRef = useRef(0);
+  const [dashboardReady, setDashboardReady] = useState(false);
 
   const { style: scopedStyle, body: scopedBody } = CACHED_DESIGN;
 
@@ -658,7 +693,7 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     }
   }, []);
 
-  const runAllDataLoads = useCallback(() => {
+  const runAllDataLoads = useCallback(async () => {
     const el = containerRef.current;
     if (!el || !schoolId) return;
 
@@ -673,25 +708,16 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       if (node) node.innerHTML = html;
     };
 
-    void loadKPIs(schoolId, setText, el);
-    void loadStaff(schoolId, setHtml);
-    void loadExpenses(schoolId, setHtml, setText, el);
-    void loadPayments(schoolId, setHtml);
-    void loadUpcoming(schoolId, setHtml);
-    void loadReminder(schoolId, setText);
-    void loadJobVacancies(schoolId, setHtml);
+    await Promise.all([
+      loadKPIs(schoolId, setText, el),
+      loadStaff(schoolId, setHtml),
+      loadExpenses(schoolId, setHtml, setText, el),
+      loadPayments(schoolId, setHtml),
+      loadUpcoming(schoolId, setHtml),
+      loadReminder(schoolId, setText),
+      loadJobVacancies(schoolId, setHtml),
+    ]);
   }, [schoolId, adminName]);
-
-  const reloadDashboardData = useCallback((force = false) => {
-    if (!dataLoadedRef.current && !force) return;
-    const now = Date.now();
-    // Prevent accidental rapid-fire reload storms from multiple browser events.
-    if (!force && now - lastReloadAtRef.current < 1200) return;
-    lastReloadAtRef.current = now;
-    requestAnimationFrame(() => {
-      runAllDataLoads();
-    });
-  }, [runAllDataLoads]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -799,32 +825,35 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
   }, [navigate, schoolId, syncTheme]);
 
   useEffect(() => {
-    if (!containerRef.current || !schoolId) return;
-    const raf = requestAnimationFrame(() => {
-      runAllDataLoads();
-      dataLoadedRef.current = true;
-    });
-    return () => cancelAnimationFrame(raf);
+    setDashboardReady(false);
+  }, [schoolId]);
+
+  useEffect(() => {
+    if (!schoolId) return;
+    let cancelled = false;
+
+    const run = async () => {
+      await new Promise<void>((r) => requestAnimationFrame(() => r()));
+      if (cancelled || !containerRef.current) return;
+      try {
+        await runAllDataLoads();
+      } catch (e) {
+        console.error('Dashboard load error:', e);
+      }
+      if (!cancelled) {
+        setDashboardReady(true);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [schoolId, runAllDataLoads]);
 
   useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === 'visible' && dataLoadedRef.current) {
-        reloadDashboardData();
-      }
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [reloadDashboardData]);
-
-  useEffect(() => {
-    if (location.pathname !== '/dashboard/admin' || !dataLoadedRef.current) return;
-    reloadDashboardData(true);
-  }, [location.pathname, reloadDashboardData]);
-
-  useEffect(() => {
     const el = containerRef.current;
-    if (!el) return;
+    if (!el || !dashboardReady) return;
 
     updateGreeting(el, adminName);
     const timer = window.setInterval(() => {
@@ -832,36 +861,36 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
     }, 60000);
 
     return () => clearInterval(timer);
-  }, [adminName]);
-
-  useEffect(() => {
-    const onFocus = () => reloadDashboardData();
-    const onPageShow = () => reloadDashboardData();
-    const onOnline = () => reloadDashboardData(true);
-    const interval = window.setInterval(() => {
-      if (document.visibilityState === 'visible') reloadDashboardData();
-    }, 120000);
-
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('pageshow', onPageShow);
-    window.addEventListener('online', onOnline);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('pageshow', onPageShow);
-      window.removeEventListener('online', onOnline);
-    };
-  }, [reloadDashboardData]);
+  }, [adminName, dashboardReady]);
 
   return (
     <>
       <style>{scopedStyle}</style>
-      <div
-        ref={containerRef}
-        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-        dangerouslySetInnerHTML={{ __html: scopedBody }}
-      />
+      <style>{DASHBOARD_MOTION_KILL}</style>
+      <div style={{ position: 'relative', width: '100%', minHeight: '100vh' }}>
+        {!dashboardReady && (
+          <div
+            className="absolute inset-0 z-10 flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-[#f0f4f8] dark:bg-[#05080f]"
+            aria-busy="true"
+            aria-live="polite"
+          >
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
+            <p className="ac-text-secondary">Loading dashboard…</p>
+          </div>
+        )}
+        <div
+          ref={containerRef}
+          style={{
+            width: '100%',
+            minHeight: '100vh',
+            display: 'block',
+            opacity: dashboardReady ? 1 : 0,
+            transition: 'opacity 0.2s ease-out',
+            pointerEvents: dashboardReady ? 'auto' : 'none',
+          }}
+          dangerouslySetInnerHTML={{ __html: scopedBody }}
+        />
+      </div>
     </>
   );
 }

@@ -8,8 +8,51 @@ import type { FinanceDashboardData } from '@/pages/admin/finance/DesignFinanceDa
 import type { FetchOutstandingResult } from '@/pages/admin/finance/DesignOutstandingPage';
 
 const PREFETCH_DELAY_MS = 800;
+/** Batch rapid realtime events; refresh only affected list slices (not full prefetch). */
+const REALTIME_DEBOUNCE_MS = 900;
 
 type PageKey = 'students' | 'teachers' | 'parents' | 'finance' | 'outstanding';
+
+let realtimeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const realtimePendingTables = new Set<string>();
+
+function clearRealtimeDebounce() {
+  if (realtimeDebounceTimer) {
+    clearTimeout(realtimeDebounceTimer);
+    realtimeDebounceTimer = null;
+  }
+  realtimePendingTables.clear();
+}
+
+/** Map Supabase table names to which admin list slices should reload. */
+function pagesForTables(tables: string[]): PageKey[] {
+  const keys = new Set<PageKey>();
+  for (const t of tables) {
+    switch (t) {
+      case 'students':
+        keys.add('students');
+        break;
+      case 'teachers':
+      case 'class_teachers':
+      case 'teacher_class_subjects':
+        keys.add('teachers');
+        break;
+      case 'parents':
+        keys.add('parents');
+        break;
+      case 'student_payments':
+        keys.add('finance');
+        keys.add('outstanding');
+        break;
+      case 'school_expenses':
+        keys.add('finance');
+        break;
+      default:
+        break;
+    }
+  }
+  return [...keys];
+}
 
 interface PwezaState {
   schoolId: string | null;
@@ -27,6 +70,8 @@ interface PwezaState {
   stopRealtime: () => void;
   prefetchAll: () => Promise<void>;
   refreshPage: (page: PageKey) => Promise<void>;
+  /** Refresh only list slices affected by these DB tables (used after debounced realtime). */
+  refreshAfterRealtime: (tables: string[]) => Promise<void>;
   reset: () => void;
 }
 
@@ -54,9 +99,17 @@ async function loadAllData(userId: string) {
   ]);
 }
 
-function subscribeSchool(schoolId: string, onChange: () => void) {
+function subscribeSchool(schoolId: string, onTableEvent: (table: string) => void) {
   const filter = `school_id=eq.${schoolId}`;
-  const tables = ['students', 'teachers', 'parents', 'student_payments', 'school_expenses'] as const;
+  const tables = [
+    'students',
+    'teachers',
+    'parents',
+    'student_payments',
+    'school_expenses',
+    'class_teachers',
+    'teacher_class_subjects',
+  ] as const;
   const channels: RealtimeChannel[] = [];
 
   for (const table of tables) {
@@ -66,7 +119,7 @@ function subscribeSchool(schoolId: string, onChange: () => void) {
         'postgres_changes',
         { event: '*', schema: 'public', table, filter },
         () => {
-          onChange();
+          onTableEvent(table);
         }
       )
       .subscribe();
@@ -89,6 +142,7 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
   prefetchTimer: null,
 
   reset: () => {
+    clearRealtimeDebounce();
     const t = get().prefetchTimer;
     if (t) clearTimeout(t);
     get().stopRealtime();
@@ -106,6 +160,7 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
   },
 
   init: (schoolId: string, userId: string) => {
+    clearRealtimeDebounce();
     const prev = get().prefetchTimer;
     if (prev) clearTimeout(prev);
     get().stopRealtime();
@@ -126,13 +181,21 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     }, PREFETCH_DELAY_MS);
     set({ prefetchTimer: timer });
 
-    const channels = subscribeSchool(schoolId, () => {
-      void get().prefetchAll();
+    const channels = subscribeSchool(schoolId, (table) => {
+      realtimePendingTables.add(table);
+      if (realtimeDebounceTimer) clearTimeout(realtimeDebounceTimer);
+      realtimeDebounceTimer = setTimeout(() => {
+        const batch = [...realtimePendingTables];
+        realtimePendingTables.clear();
+        realtimeDebounceTimer = null;
+        void get().refreshAfterRealtime(batch);
+      }, REALTIME_DEBOUNCE_MS);
     });
     set({ realtimeChannels: channels });
   },
 
   stopRealtime: () => {
+    clearRealtimeDebounce();
     const channels = get().realtimeChannels;
     for (const ch of channels) {
       void supabase.removeChannel(ch);
@@ -189,5 +252,13 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     } catch (e) {
       console.error('[pwezaStore] refreshPage', page, e);
     }
+  },
+
+  refreshAfterRealtime: async (tables: string[]) => {
+    const userId = get().userId;
+    if (!userId || tables.length === 0) return;
+    const pages = pagesForTables(tables);
+    if (pages.length === 0) return;
+    await Promise.all(pages.map((p) => get().refreshPage(p)));
   },
 }));

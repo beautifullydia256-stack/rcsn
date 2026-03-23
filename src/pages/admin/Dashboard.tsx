@@ -45,7 +45,7 @@ export default function AdminDashboard() {
 
   const schoolId = schoolIdFromStore ?? undefined;
 
-  const { data: authData, isError, error } = useQuery({
+  const { data: authData, isPending, isError, error } = useQuery({
     queryKey: ['dashboard', 'admin', 'auth', user?.id ?? ''],
     queryFn: () => fetchDashboardAuth(user!.id),
     enabled: !!user?.id,
@@ -124,24 +124,19 @@ export default function AdminDashboard() {
     );
   }
 
-  const effectiveSchoolId = schoolId ?? authData?.schoolId;
-  if (!effectiveSchoolId) {
+  if (isPending || !authData?.schoolId) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          <p className="ac-text-secondary">Loading your school...</p>
+          <p className="ac-text-secondary">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // Strict HTML body replacement (sidebar + topbar + sections) for `/dashboard/admin`.
-  // Backend logic stays the same; values are injected into the provided HTML.
-  const fallbackName =
-    ((user as any)?.user_metadata?.name as string | undefined) ||
-    ((user as any)?.user_metadata?.full_name as string | undefined) ||
-    (user.email ? user.email.split('@')[0] : undefined);
-
-  return <DesignAdminDashboard schoolId={effectiveSchoolId} adminName={authData?.adminName ?? fallbackName} />;
+  // Greeting uses `users.name` from fetchDashboardAuth — no placeholder metadata.
+  return (
+    <DesignAdminDashboard schoolId={authData.schoolId} adminName={authData.adminName ?? ''} />
+  );
 }
