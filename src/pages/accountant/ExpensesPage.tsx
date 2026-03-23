@@ -1,12 +1,16 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 
 const STALE_MS = 2 * 60 * 1000;
 
+type AccountantOutletContext = { openRecordExpense?: () => void };
+
 export default function ExpensesPage() {
   const navigate = useNavigate();
+  const { openRecordExpense } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
   const { data: expenses = [], isLoading } = useQuery({
     queryKey: [...EXPENSES_QUERY_KEY, schoolId],
@@ -18,9 +22,32 @@ export default function ExpensesPage() {
 
   return (
     <div className="ac-page-content mx-auto max-w-7xl">
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="ac-text-primary text-2xl font-semibold">Expenses</h1>
-        <button type="button" onClick={() => navigate("/dashboard/accountant")} className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium">Back to Dashboard</button>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="ac-text-primary text-2xl font-semibold">Expenses</h1>
+          <p className="ac-text-secondary mt-1 max-w-xl text-sm">
+            Record salaries, utilities, and other school spending. Fee income is recorded under Payments — not here.
+            Cashflow and Financial Analytics include expenses with status <strong className="text-emerald-600">approved</strong> or{" "}
+            <strong className="text-emerald-600">paid</strong>.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => openRecordExpense?.()}
+            className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold ac-text-primary"
+          >
+            <Plus className="h-4 w-4 shrink-0 text-amber-600" />
+            Record expense
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard/accountant")}
+            className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium"
+          >
+            Back to Dashboard
+          </button>
+        </div>
       </div>
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
         {isLoading ? (

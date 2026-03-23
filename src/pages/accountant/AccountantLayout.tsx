@@ -8,6 +8,7 @@ import { useCanAccessAccountantDashboard } from "../../hooks/usePermission";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
 import { useUIStore } from "../../store/uiStore";
 import RecordPaymentModal from "../../components/accountant/RecordPaymentModal";
+import RecordExpenseModal from "../../components/accountant/RecordExpenseModal";
 import { fetchDebtors, OUTSTANDING_QUERY_KEY } from "./api/outstanding";
 import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
@@ -379,6 +380,7 @@ export default function AccountantLayout() {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [recordPaymentInitialStudentId, setRecordPaymentInitialStudentId] = useState<string | null>(null);
+  const [recordExpenseOpen, setRecordExpenseOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -388,6 +390,8 @@ export default function AccountantLayout() {
     setRecordPaymentInitialStudentId(initialStudentId ?? null);
     setRecordPaymentOpen(true);
   };
+
+  const openRecordExpense = () => setRecordExpenseOpen(true);
 
   const displayName = user?.user_metadata?.name ?? user?.email ?? "Accountant";
   const userInitials = displayName
@@ -513,6 +517,7 @@ export default function AccountantLayout() {
         }}
         initialStudentId={recordPaymentInitialStudentId ?? undefined}
       />
+      <RecordExpenseModal open={recordExpenseOpen} onClose={() => setRecordExpenseOpen(false)} />
 
       {searchModalOpen && (
         <div
@@ -670,7 +675,7 @@ export default function AccountantLayout() {
             </div>
           }
         >
-          <Outlet context={{ openRecordPayment }} />
+          <Outlet context={{ openRecordPayment, openRecordExpense }} />
         </Suspense>
       </main>
     </div>

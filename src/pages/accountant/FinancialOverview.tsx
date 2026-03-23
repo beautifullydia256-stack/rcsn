@@ -516,12 +516,12 @@ function KPICard({
   );
 }
 
-type AccountantOutletContext = { openRecordPayment?: () => void };
+type AccountantOutletContext = { openRecordPayment?: () => void; openRecordExpense?: () => void };
 
 export default function FinancialOverview() {
   const navigate = useNavigate();
   const theme = useUIStore((s) => s.theme);
-  const { openRecordPayment } = useOutletContext<AccountantOutletContext>();
+  const { openRecordPayment, openRecordExpense } = useOutletContext<AccountantOutletContext>();
   const schoolId = useAuthStore((s) => s.schoolId);
   const chartColors = CHART_THEME[theme];
 
@@ -601,7 +601,7 @@ export default function FinancialOverview() {
             </button>
             <button
               type="button"
-              onClick={() => navigate("/dashboard/accountant/expenses")}
+              onClick={() => openRecordExpense?.()}
               className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-[14px] px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
               <DollarSign className="h-4 w-4 shrink-0 text-amber-600" />

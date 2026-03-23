@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingDown, TrendingUp, PiggyBank, Landmark, Scale, Percent, Wallet } from "lucide-react";
+import { TrendingDown, TrendingUp, Banknote, Landmark, Scale, Percent, Wallet } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import AdminPageWrapper from "../../components/layout/AdminPageWrapper";
 import { ADMIN_STALE_TIME_MS } from "../../lib/adminQueryDefaults";
@@ -65,11 +65,12 @@ function KpiDelta({
   variant?: "pct" | "pp";
 }) {
   const tone = deltaTone(pct, goodWhenUp);
-  const cls = tone === "good" ? "green" : tone === "bad" ? "red" : "muted";
+  const cls =
+    tone === "good" ? "kpi-fa-delta--good" : tone === "bad" ? "kpi-fa-delta--bad" : "kpi-fa-delta--muted";
   if (pct == null) {
     return (
-      <div className="kpi-delta muted">
-        <span className="kpi-delta__txt">No prior period to compare</span>
+      <div className="kpi-fa-delta kpi-fa-delta--muted">
+        <span>No prior period to compare</span>
       </div>
     );
   }
@@ -77,8 +78,8 @@ function KpiDelta({
   const label = variant === "pp" ? ppFmt(pct) : pctFmt(pct);
   const suffix = variant === "pp" ? " vs prior margin" : " vs prior";
   return (
-    <div className={`kpi-delta ${cls}`}>
-      {Icon && <Icon className="kpi-delta__ic" aria-hidden />}
+    <div className={`kpi-fa-delta ${cls}`}>
+      {Icon && <Icon className="kpi-fa-delta__ic" aria-hidden />}
       <span>
         {label}
         {suffix}
@@ -435,11 +436,14 @@ export default function FinancialAnalyticsPage() {
 
       {loading && (
         <>
-          <div className="fa-kpi-grid mb-4">
+          <div className="kpi-strip fade-up d1 mb-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="kpi kpi-card">
-                <div className="fa-skel" style={{ width: "40%" }} />
-                <div className="fa-skel" style={{ width: "70%", marginTop: 10 }} />
+              <div key={i} className="kpi-card c-teal">
+                <div className="fa-skel kpi-ic c-teal" style={{ borderRadius: 11 }} />
+                <div className="kpi-info" style={{ flex: 1 }}>
+                  <div className="fa-skel" style={{ width: "50%", height: 10, marginBottom: 8 }} />
+                  <div className="fa-skel" style={{ width: "65%", height: 28 }} />
+                </div>
               </div>
             ))}
           </div>
@@ -471,61 +475,71 @@ export default function FinancialAnalyticsPage() {
             </div>
           )}
 
-          <div className="fa-kpi-grid mb-4">
-            <div className="kpi kpi-card">
-              <div className="kpi-card__head">
-                <PiggyBank className="kpi-card__ic" aria-hidden />
+          <div className="kpi-strip fade-up d1 mb-4">
+            <div className="kpi-card c-teal">
+              <div className="kpi-ic c-teal" aria-hidden>
+                <Banknote className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
                 <div className="kpi-label">Total income</div>
+                <div className="kpi-value c-teal">{formatUGX(data.totalIncome)}</div>
+                <div className="kpi-sub">Fee collections in range</div>
+                <KpiDelta pct={data.comparison?.incomeChangePct ?? null} goodWhenUp />
               </div>
-              <div className="kpi-val green">{formatUGX(data.totalIncome)}</div>
-              <div className="kpi-sub muted">Fee collections in range</div>
-              <KpiDelta pct={data.comparison?.incomeChangePct ?? null} goodWhenUp />
             </div>
-            <div className="kpi kpi-card">
-              <div className="kpi-card__head">
-                <Landmark className="kpi-card__ic" aria-hidden />
+            <div className="kpi-card c-amber">
+              <div className="kpi-ic c-amber" aria-hidden>
+                <Landmark className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
                 <div className="kpi-label">Total spent</div>
+                <div className="kpi-value c-amber">{formatUGX(data.totalSpent)}</div>
+                <div className="kpi-sub">Operating &amp; payroll</div>
+                <KpiDelta pct={data.comparison?.spentChangePct ?? null} goodWhenUp={false} />
               </div>
-              <div className="kpi-val red">{formatUGX(data.totalSpent)}</div>
-              <div className="kpi-sub muted">Operating &amp; payroll</div>
-              <KpiDelta pct={data.comparison?.spentChangePct ?? null} goodWhenUp={false} />
             </div>
-            <div className="kpi kpi-card">
-              <div className="kpi-card__head">
-                <Wallet className="kpi-card__ic" aria-hidden />
+            <div className="kpi-card c-green">
+              <div className="kpi-ic c-green" aria-hidden>
+                <Wallet className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
                 <div className="kpi-label">Net position</div>
-              </div>
-              <div className={`kpi-val ${data.net >= 0 ? "green" : "red"}`}>
-                {data.net >= 0 ? "+" : "-"}
-                {formatUGX(Math.abs(data.net))}
-              </div>
-              <div className="kpi-sub muted">{data.net >= 0 ? "Surplus after expenses" : "Deficit — review costs"}</div>
-              <KpiDelta pct={data.comparison?.netChangePct ?? null} goodWhenUp />
-            </div>
-            <div className="kpi kpi-card">
-              <div className="kpi-card__head">
-                <Percent className="kpi-card__ic" aria-hidden />
-                <div className="kpi-label">Operating margin</div>
-              </div>
-              <div className={`kpi-val ${operatingMarginPct != null && operatingMarginPct >= 0 ? "green" : "red"}`}>
-                {operatingMarginPct != null ? `${operatingMarginPct}%` : "—"}
-              </div>
-              <div className="kpi-sub muted">Net ÷ income (same period)</div>
-              {data.comparison && data.comparison.marginChangePp != null ? (
-                <KpiDelta pct={data.comparison.marginChangePp} goodWhenUp variant="pp" />
-              ) : (
-                <div className="kpi-delta muted">
-                  <span className="kpi-delta__txt">
-                    {!data.comparison
-                      ? "Benchmark for sustainability"
-                      : data.totalIncome <= 0
-                        ? "No fee income this period — margin not applicable"
-                        : data.comparison.prevIncome <= 0
-                          ? "Prior period had no fee income — margin not comparable"
-                          : "Margin change not available"}
-                  </span>
+                <div className={`kpi-value ${data.net >= 0 ? "c-green" : "c-rose"}`}>
+                  {data.net >= 0 ? "+" : "−"}
+                  {formatUGX(Math.abs(data.net))}
                 </div>
-              )}
+                <div className="kpi-sub">{data.net >= 0 ? "Surplus after expenses" : "Deficit — review costs"}</div>
+                <KpiDelta pct={data.comparison?.netChangePct ?? null} goodWhenUp />
+              </div>
+            </div>
+            <div className="kpi-card c-blue">
+              <div className="kpi-ic c-blue" aria-hidden>
+                <Percent className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
+                <div className="kpi-label">Operating margin</div>
+                <div
+                  className={`kpi-value ${operatingMarginPct != null && operatingMarginPct >= 0 ? "c-green" : operatingMarginPct != null ? "c-rose" : ""}`}
+                >
+                  {operatingMarginPct != null ? `${operatingMarginPct}%` : "—"}
+                </div>
+                <div className="kpi-sub">Net ÷ income (same period)</div>
+                {data.comparison && data.comparison.marginChangePp != null ? (
+                  <KpiDelta pct={data.comparison.marginChangePp} goodWhenUp variant="pp" />
+                ) : (
+                  <div className="kpi-fa-delta kpi-fa-delta--muted">
+                    <span>
+                      {!data.comparison
+                        ? "Benchmark for sustainability"
+                        : data.totalIncome <= 0
+                          ? "No fee income this period — margin not applicable"
+                          : data.comparison.prevIncome <= 0
+                            ? "Prior period had no fee income — margin not comparable"
+                            : "Margin change not available"}
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

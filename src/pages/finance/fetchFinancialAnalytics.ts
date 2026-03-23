@@ -17,8 +17,12 @@ export type SchoolTermRow = {
 
 export type TermScope = "one" | "all";
 
+/** Local calendar date as YYYY-MM-DD (avoid UTC drift from toISOString for non-UTC users). */
 function toIsoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function maxDate(a: string, b: string): string {
