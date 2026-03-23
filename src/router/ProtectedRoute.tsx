@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { usePwezaStore } from '../store/pwezaStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
 import { refreshPermissionsForSession } from '../lib/refreshPermissions';
 import ThemedLoadingView from '../components/ui/ThemedLoadingView';
@@ -10,6 +11,8 @@ export default function ProtectedRoute() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const { user, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const initPweza = usePwezaStore((s) => s.init); // pweza speed system
+  const resetPweza = usePwezaStore((s) => s.reset); // pweza speed system
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -37,6 +40,9 @@ export default function ProtectedRoute() {
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id); // Set schoolId in store
+          if (userData.school_id && String(userData.role).toLowerCase() === 'admin') {
+            initPweza(userData.school_id, session.user.id); // pweza speed system
+          }
           await refreshPermissionsForSession(supabase, setPermissions);
           void ensureCurrentAndNextAcademicYears(); // Keep academic calendar ahead
         } else {
@@ -61,6 +67,7 @@ export default function ProtectedRoute() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (event === 'SIGNED_OUT' || !session) {
+          resetPweza(); // pweza speed system
           navigate('/login');
         } else if (session) {
           setUser(session.user);
@@ -71,7 +78,7 @@ export default function ProtectedRoute() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate, setUser, setRole, setSchoolId]);
+  }, [navigate, setUser, setRole, setSchoolId, initPweza, resetPweza]);
 
   if (loading) {
     return <ThemedLoadingView />;

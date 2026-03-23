@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 
@@ -315,8 +316,7 @@ export default function DesignStudentProfile() {
         return;
       }
 
-      const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      const schoolId = userData?.school_id as string | undefined;
+      const schoolId = usePwezaStore.getState().schoolId as string | undefined; // pweza speed system
       if (!schoolId) return;
 
       const { data: student, error: stErr } = await supabase

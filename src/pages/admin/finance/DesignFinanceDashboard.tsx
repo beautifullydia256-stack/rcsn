@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { usePwezaStore } from '@/store/pwezaStore';
+import { SkeletonKPIStrip } from '@/components/PwezaSkeleton';
 
 import financeTemplateRaw from '@/assets/pwezacore-finance-dashboard.html?raw';
 
@@ -52,7 +54,7 @@ function fmt(n: number): string {
   return `UGX ${Math.round(n).toLocaleString()}`;
 }
 
-type DashboardData = {
+export type FinanceDashboardData = {
   totalExpected: number;
   totalCollected: number;
   totalOutstanding: number;
@@ -80,7 +82,7 @@ type DashboardData = {
   topOutstanding: { student_id: string; name: string; current_class: string; balance: number }[];
 };
 
-async function fetchFinanceDashboard(userId: string): Promise<DashboardData> {
+export async function fetchFinanceDashboard(userId: string): Promise<FinanceDashboardData> {
   const { data: me } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   const schoolId = me?.school_id as string | undefined;
   if (!schoolId) {
@@ -320,6 +322,9 @@ async function fetchFinanceDashboard(userId: string): Promise<DashboardData> {
 export default function DesignFinanceDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
+  const financeFromStore = usePwezaStore((s) => s.financeDashboard); // pweza speed system
+  const hasStoreData = prefetchDone && !!financeFromStore; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
@@ -343,19 +348,21 @@ export default function DesignFinanceDashboard() {
     setHtmlContent(cachedFinanceHtml);
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data: queryData, isLoading } = useQuery({
     queryKey: ['admin', 'finance-dashboard', user?.id ?? ''],
     queryFn: () => fetchFinanceDashboard(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
   });
+
+  const data = hasStoreData ? financeFromStore! : queryData;
 
   const render = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
     const root = el.querySelector('.pw-finance') || el;
     const d = data;
-    const loading = isLoading && !d;
+    const loading = !d && (isLoading || (!prefetchDone && !hasStoreData));
 
     const set = (sel: string, val: string) => {
       const n = root.querySelector(sel);
@@ -492,7 +499,7 @@ export default function DesignFinanceDashboard() {
           }).join('')
     );
 
-  }, [data, isLoading]);
+  }, [data, isLoading, prefetchDone, hasStoreData]);
 
   useEffect(() => {
     if (!htmlContent) return;
@@ -528,6 +535,16 @@ export default function DesignFinanceDashboard() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => obs.disconnect();
   }, [htmlContent]);
+
+  if (user?.id && !prefetchDone && !data) {
+    return (
+      <div style={{ padding: '26px 28px' }}>
+        <SkeletonKPIStrip count={4} />
+        <SkeletonKPIStrip count={4} />
+        <div style={{ height: '120px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', marginBottom: '24px' }} />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { usePwezaStore } from '@/store/pwezaStore';
+import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import outstandingTemplateRaw from '@/assets/pwezacore-outstanding.html?raw';
 
@@ -88,9 +90,9 @@ export type OutstandingRow = {
   parent_id: string | null;
 };
 
-type FetchOutstandingResult = { rows: OutstandingRow[]; clearedCount: number };
+export type FetchOutstandingResult = { rows: OutstandingRow[]; clearedCount: number };
 
-async function fetchOutstandingData(userId: string): Promise<FetchOutstandingResult> {
+export async function fetchOutstandingData(userId: string): Promise<FetchOutstandingResult> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return { rows: [], clearedCount: 0 };
   const schoolId = data.school_id as string;
@@ -168,6 +170,9 @@ type SortLabel =
 export default function DesignOutstandingPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
+  const outstandingFromStore = usePwezaStore((s) => s.outstanding); // pweza speed system
+  const hasStoreData = prefetchDone && !!outstandingFromStore; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
@@ -199,12 +204,13 @@ export default function DesignOutstandingPage() {
     setHtmlContent(cachedOutstandingHtml);
   }, []);
 
-  const { data: outstandingData, isLoading } = useQuery({
+  const { data: queryOutstanding, isLoading } = useQuery({
     queryKey: ['admin', 'finance-outstanding', user?.id ?? ''],
     queryFn: () => fetchOutstandingData(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
   });
+  const outstandingData = hasStoreData ? outstandingFromStore! : queryOutstanding;
   const allRows = outstandingData?.rows ?? [];
   const clearedCountTotal = outstandingData?.clearedCount ?? 0;
 
@@ -316,7 +322,7 @@ export default function DesignOutstandingPage() {
     const el = containerRef.current;
     if (!el) return;
     const root = el.querySelector('.pw-outstanding') || el;
-    const loading = isLoading;
+    const loading = !outstandingData && (isLoading || (!prefetchDone && !hasStoreData));
     const start = (safePage - 1) * PAGE_SIZE;
     const pageData = filteredSorted.slice(start, start + PAGE_SIZE);
     const total = filteredSorted.length;
@@ -460,6 +466,9 @@ export default function DesignOutstandingPage() {
     sortLabel,
     selectedIds,
     clearedCountTotal,
+    outstandingData,
+    prefetchDone,
+    hasStoreData,
   ]);
 
   useEffect(() => {
@@ -566,6 +575,15 @@ export default function DesignOutstandingPage() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => obs.disconnect();
   }, [htmlContent]);
+
+  if (user?.id && !prefetchDone && !outstandingData) {
+    return (
+      <div style={{ padding: '26px 28px' }}>
+        <SkeletonKPIStrip count={4} />
+        <SkeletonTable rows={8} cols={8} />
+      </div>
+    );
+  }
 
   return (
     <div ref={wrapRef} style={{ width: '100%', minHeight: '100vh' }}>

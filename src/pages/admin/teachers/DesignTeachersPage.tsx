@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { usePwezaStore } from '@/store/pwezaStore';
+import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import teachersTemplateRaw from '@/assets/pwezacore-teachers-page.html?raw';
 
@@ -84,7 +86,7 @@ export type TeacherDirectoryRow = {
   portal_active: boolean;
 };
 
-type Stats = {
+export type TeachersStats = {
   totalTeachers: number;
   classesCovered: number;
   withPortal: number;
@@ -94,7 +96,7 @@ type Stats = {
 const SORT_LABELS = ['Name A → Z', 'Name Z → A', 'Most Recent Hire', 'Oldest Hire'] as const;
 type SortLabel = (typeof SORT_LABELS)[number];
 
-async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: Stats }> {
+export async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDirectoryRow[]; stats: TeachersStats }> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   const schoolId = userData?.school_id as string | undefined;
   if (!schoolId) {
@@ -195,6 +197,9 @@ async function fetchTeachersDirectory(userId: string): Promise<{ rows: TeacherDi
 export default function DesignTeachersPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
+  const teachersDirectory = usePwezaStore((s) => s.teachersDirectory); // pweza speed system
+  const hasStoreData = prefetchDone && !!teachersDirectory; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
@@ -223,15 +228,17 @@ export default function DesignTeachersPage() {
     setHtmlContent(cachedTeachersPageHtml);
   }, []);
 
-  const { data, isPending } = useQuery({
+  const { data: queryData, isPending } = useQuery({
     queryKey: ['admin', 'teachers-design', user?.id ?? ''],
     queryFn: () => fetchTeachersDirectory(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
     gcTime: TEACHERS_GC_MS,
     placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
   });
+
+  const data = hasStoreData ? teachersDirectory! : queryData;
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
@@ -288,7 +295,7 @@ export default function DesignTeachersPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const initialLoad = isPending && !data;
+    const initialLoad = !data && (isPending || (!prefetchDone && !hasStoreData));
     const kpiVals = {
       total: initialLoad ? '0' : String(stats?.totalTeachers ?? 0),
       classes: initialLoad ? '0' : String(stats?.classesCovered ?? 0),
@@ -442,7 +449,7 @@ export default function DesignTeachersPage() {
     }
     root.querySelector('#tch-list-btn')?.classList.toggle('active', viewMode === 'list');
     root.querySelector('#tch-grid-btn')?.classList.toggle('active', viewMode === 'grid');
-  }, [data, isPending, stats, filteredSorted, safePage, startIdx, endIdx, totalPages, viewMode, sortLabel]);
+  }, [data, isPending, stats, filteredSorted, safePage, startIdx, endIdx, totalPages, viewMode, sortLabel, prefetchDone, hasStoreData]);
 
   useEffect(() => {
     if (!htmlContent) return;
@@ -516,6 +523,15 @@ export default function DesignTeachersPage() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => obs.disconnect();
   }, [htmlContent]);
+
+  if (user?.id && !prefetchDone && !data) {
+    return (
+      <div style={{ padding: '26px 28px' }}>
+        <SkeletonKPIStrip count={4} />
+        <SkeletonTable rows={6} cols={7} />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { usePwezaStore } from '@/store/pwezaStore';
+import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import parentsTemplateRaw from '@/assets/pwezacore-parents-page.html?raw';
 
@@ -82,7 +84,7 @@ export type ParentDirectoryRow = {
   created_at: string | null;
 };
 
-type Stats = {
+export type ParentsStats = {
   totalParents: number;
   linkedParents: number;
   portalParents: number;
@@ -91,7 +93,7 @@ type Stats = {
 
 type SortKey = 'name-asc' | 'name-desc' | 'children' | 'recent';
 
-async function fetchParentsDirectory(userId: string): Promise<{ rows: ParentDirectoryRow[]; stats: Stats }> {
+export async function fetchParentsDirectory(userId: string): Promise<{ rows: ParentDirectoryRow[]; stats: ParentsStats }> {
   const { data: userData } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   const schoolId = userData?.school_id as string | undefined;
   if (!schoolId) return { rows: [], stats: { totalParents: 0, linkedParents: 0, portalParents: 0, unlinkedParents: 0 } };
@@ -216,6 +218,9 @@ async function fetchParentsDirectory(userId: string): Promise<{ rows: ParentDire
 export default function DesignParentsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
+  const parentsDirectory = usePwezaStore((s) => s.parentsDirectory); // pweza speed system
+  const hasStoreData = prefetchDone && !!parentsDirectory; // pweza speed system
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
 
@@ -245,12 +250,14 @@ export default function DesignParentsPage() {
     setHtmlContent(cachedParentsPageHtml);
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data: queryData, isLoading } = useQuery({
     queryKey: ['admin', 'parents-design', user?.id ?? ''],
     queryFn: () => fetchParentsDirectory(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
   });
+
+  const data = hasStoreData ? parentsDirectory! : queryData;
 
   const allRows = data?.rows ?? [];
   const stats = data?.stats;
@@ -315,7 +322,7 @@ export default function DesignParentsPage() {
       const n = root.querySelector(sel);
       if (n) n.textContent = val;
     };
-    const loading = isLoading && !data;
+    const loading = !data && (isLoading || (!prefetchDone && !hasStoreData));
     setKpi('[data-kpi="total-parents"]', loading ? '…' : String(stats?.totalParents ?? 0));
     setKpi('[data-kpi="linked-parents"]', loading ? '…' : String(stats?.linkedParents ?? 0));
     setKpi('[data-kpi="portal-parents"]', loading ? '…' : String(stats?.portalParents ?? 0));
@@ -498,6 +505,8 @@ export default function DesignParentsPage() {
     totalPages,
     viewMode,
     sortKey,
+    prefetchDone,
+    hasStoreData,
   ]);
 
   useEffect(() => {
@@ -586,6 +595,15 @@ export default function DesignParentsPage() {
     obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
     return () => obs.disconnect();
   }, [htmlContent]);
+
+  if (user?.id && !prefetchDone && !data) {
+    return (
+      <div style={{ padding: '26px 28px' }}>
+        <SkeletonKPIStrip count={4} />
+        <SkeletonTable rows={6} cols={7} />
+      </div>
+    );
+  }
 
   return (
     <div

@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
+import { usePwezaStore } from '@/store/pwezaStore';
+import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 
 import '@/assets/pwezacore-students-scoped.css';
@@ -89,7 +91,7 @@ type StudentListRow = {
   created_at?: string | null;
 };
 
-type FetchResult = {
+export type StudentsFetchResult = {
   rows: StudentListRow[];
   parentsByStudent: Record<string, ParentLite[]>;
   classTeacherNameByClass: Record<string, string>;
@@ -112,7 +114,7 @@ function displayFullName(row: StudentListRow): string {
 
 type SortKey = 'name-asc' | 'name-desc' | 'class' | 'recent';
 
-async function fetchStudentsContext(userId: string): Promise<FetchResult> {
+export async function fetchStudentsContext(userId: string): Promise<StudentsFetchResult> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) {
     return {
@@ -225,6 +227,9 @@ async function fetchStudentsContext(userId: string): Promise<FetchResult> {
 export default function DesignStudentsPage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const prefetchDone = usePwezaStore((s) => s.prefetchDone); // pweza speed system
+  const studentsContext = usePwezaStore((s) => s.studentsContext); // pweza speed system
+  const hasStoreData = prefetchDone && !!studentsContext; // pweza speed system
 
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
@@ -243,12 +248,14 @@ export default function DesignStudentsPage() {
     }
   }, []);
 
-  const { data, isLoading } = useQuery({
+  const { data: queryData, isLoading } = useQuery({
     queryKey: ['admin', 'students-design', user?.id ?? ''],
     queryFn: () => fetchStudentsContext(user!.id),
-    enabled: !!user?.id,
+    enabled: !!user?.id && !hasStoreData,
     staleTime: STALE_MS,
   });
+
+  const data = hasStoreData ? studentsContext! : queryData;
 
   const rows = data?.rows ?? [];
   const parentsByStudent = data?.parentsByStudent ?? {};
@@ -329,12 +336,23 @@ export default function DesignStudentsPage() {
     };
   }, [rows, parentsByStudent, attendedToday]);
 
-  const loading = isLoading && !data;
+  const loading = !!user?.id && !data && (isLoading || !prefetchDone);
 
   const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
   const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
 
   const sortSelectValue = sortKey === 'name-desc' ? 'name-desc' : sortKey === 'class' ? 'class' : sortKey === 'recent' ? 'recent' : 'name-asc';
+
+  if (user?.id && !prefetchDone && !data) {
+    return (
+      <AdminPageWrapper>
+        <div style={{ padding: '26px 28px' }}>
+          <SkeletonKPIStrip count={4} />
+          <SkeletonTable rows={8} cols={7} />
+        </div>
+      </AdminPageWrapper>
+    );
+  }
 
   return (
     <AdminPageWrapper>

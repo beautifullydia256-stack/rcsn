@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr } from '@/lib/profileInlineEdit';
 
 import profileTemplateRaw from '@/assets/pwezacore-parent-profile.html?raw';
@@ -236,8 +237,7 @@ export default function DesignParentProfile() {
         return;
       }
 
-      const { data: me } = await supabase.from('users').select('school_id').eq('user_id', user.id).single();
-      const schoolId = me?.school_id as string | undefined;
+      const schoolId = usePwezaStore.getState().schoolId as string | undefined; // pweza speed system
       if (!schoolId) return;
 
       const [{ data: linkRows }, { data: parentUser }] = await Promise.all([
