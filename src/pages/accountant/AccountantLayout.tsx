@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState, useRef } from "react";
-import { Outlet, NavLink, Link, useNavigate, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
@@ -13,6 +13,7 @@ import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 import { fetchExpenses, EXPENSES_QUERY_KEY } from "./api/expenses";
 import { fetchFeeCollectionReport, REPORTS_FEE_COLLECTION_QUERY_KEY } from "./api/reports";
+import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 
 type StudentHit = { student_id: string; name: string; current_class: string; admission_number?: string };
 
@@ -95,7 +96,7 @@ const ACCOUNTANT_PW_SHELL_CSS = `
     height: 100vh;
     max-height: 100vh;
     overflow: hidden;
-    background: var(--ac-page-bg);
+    background: var(--pw-bg, #05080f);
     font-family: 'Instrument Sans', 'Cabinet Grotesk', system-ui, sans-serif;
   }
   .accountant-glass .pw-sidebar {
@@ -266,8 +267,8 @@ const ACCOUNTANT_PW_SHELL_CSS = `
     width: calc(100% - var(--pw-sidebar-width, 232px));
     overflow-x: hidden;
     overflow-y: auto;
-    background: var(--ac-page-bg);
-    color: var(--ac-text-primary);
+    background: var(--pw-bg, #05080f);
+    color: var(--pw-t1, #eef3ff);
   }
   @media (max-width: 768px) {
     .accountant-glass .pw-main {
@@ -281,6 +282,85 @@ const ACCOUNTANT_PW_SHELL_CSS = `
   .accountant-glass[data-theme="light"] .pw-main table,
   .accountant-glass[data-theme="light"] .pw-main th,
   .accountant-glass[data-theme="light"] .pw-main td { color: #0d1c2e; }
+  .accountant-glass .pw-search-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 400;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 72px 16px 18px;
+  }
+  .accountant-glass .pw-search-panel {
+    width: 100%;
+    max-width: 420px;
+    background: var(--pw-s2, #101828);
+    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    border-radius: 12px;
+    padding: 14px 14px 10px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+  }
+  .accountant-glass .pw-search-panel input {
+    width: 100%;
+    padding: 10px 12px 10px 38px;
+    border-radius: 8px;
+    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    background: var(--pw-s1, #0b1120);
+    color: var(--pw-t1, #eef3ff);
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .accountant-glass .pw-search-panel input::placeholder { color: var(--pw-t3, #3d5278); }
+  .accountant-glass .pw-search-panel input:focus {
+    outline: none;
+    border-color: rgba(16,217,168,0.35);
+    box-shadow: 0 0 0 2px rgba(16,217,168,0.12);
+  }
+  .accountant-glass .pw-sidebar-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 12px 10px;
+  }
+  .accountant-glass .pw-sidebar-tools button {
+    flex: 1;
+    min-width: 72px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    background: var(--pw-s2, #101828);
+    color: var(--pw-t2, #8296be);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .accountant-glass .pw-sidebar-tools button:hover {
+    background: var(--pw-s3, #141c2e);
+    color: var(--pw-t1, #eef3ff);
+    border-color: var(--pw-bh, rgba(255,255,255,0.12));
+  }
+  .accountant-glass .pw-search-results {
+    margin-top: 10px;
+    max-height: 260px;
+    overflow-y: auto;
+    border-radius: 8px;
+    border: 1px solid var(--pw-border, rgba(255,255,255,0.07));
+    background: var(--pw-s1, #0b1120);
+  }
+  .accountant-glass .pw-search-results button {
+    font-family: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
 `;
 
 export default function AccountantLayout() {
@@ -295,9 +375,11 @@ export default function AccountantLayout() {
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<StudentHit[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [recordPaymentInitialStudentId, setRecordPaymentInitialStudentId] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const closeSidebar = () => setSidebarOpen(false);
 
@@ -337,12 +419,21 @@ export default function AccountantLayout() {
   }, [searchQ, schoolId]);
 
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) setSearchOpen(false);
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+    if (!searchModalOpen) return;
+    const t = window.setTimeout(() => searchInputRef.current?.focus(), 50);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setSearchModalOpen(false);
+        setSearchQ("");
+        setSearchOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [searchModalOpen]);
 
   useEffect(() => {
     if (!canAccessAccountant) {
@@ -404,12 +495,14 @@ export default function AccountantLayout() {
     return <ThemedLoadingView />;
   }
 
+  const closeSearchModal = () => {
+    setSearchModalOpen(false);
+    setSearchQ("");
+    setSearchOpen(false);
+  };
+
   return (
-    <div
-      className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden"
-      data-theme={theme}
-      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
-    >
+    <div className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden" data-theme={theme}>
       <style>{ACCOUNTANT_PW_SHELL_CSS}</style>
       <RecordPaymentModal
         open={recordPaymentOpen}
@@ -420,6 +513,72 @@ export default function AccountantLayout() {
         initialStudentId={recordPaymentInitialStudentId ?? undefined}
       />
 
+      {searchModalOpen && (
+        <div
+          className="pw-search-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Search students"
+          onClick={closeSearchModal}
+        >
+          <div ref={searchRef} className="pw-search-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60"
+                style={{ color: "var(--pw-t3, #3d5278)" }}
+              />
+              <input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search students, receipts, invoices..."
+                value={searchQ}
+                onChange={(e) => setSearchQ(e.target.value)}
+                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
+              />
+            </div>
+            {searchOpen && searchResults.length > 0 && (
+              <div className="pw-search-results">
+                {searchResults.map((st) => (
+                  <div
+                    key={st.student_id}
+                    style={{ borderBottom: "1px solid var(--pw-border, rgba(255,255,255,0.07))" }}
+                    className="last:border-b-0"
+                  >
+                    <div className="px-3 py-2 text-sm font-medium" style={{ color: "var(--pw-t1, #eef3ff)" }}>
+                      {st.name} ({st.current_class})
+                    </div>
+                    <div className="flex gap-3 px-3 pb-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openRecordPayment(st.student_id);
+                          closeSearchModal();
+                        }}
+                        className="text-xs font-medium"
+                        style={{ color: "var(--pw-teal, #10d9a8)" }}
+                      >
+                        Record payment
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigate("/dashboard/accountant/outstanding");
+                          closeSearchModal();
+                        }}
+                        className="text-xs font-medium"
+                        style={{ color: "var(--pw-t2, #8296be)" }}
+                      >
+                        View balance
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       <button type="button" className="pw-hamburger" onClick={() => setSidebarOpen(!sidebarOpen)} aria-label="Toggle sidebar">
         {sidebarOpen ? "✕" : "☰"}
       </button>
@@ -428,7 +587,7 @@ export default function AccountantLayout() {
 
       <aside className={`pw-sidebar ${sidebarOpen ? "pw-sidebar--open" : ""}`}>
         <div className="pw-brand">
-          <div className="pw-brand-logo">💳</div>
+          <div className="pw-brand-logo">🎓</div>
           <span className="pw-brand-name">PwezaCore</span>
           <span className="pw-brand-pill">Accounts</span>
         </div>
@@ -458,6 +617,34 @@ export default function AccountantLayout() {
           <NavItem to="/dashboard/accountant/adjustments" icon="🔄" label="Adjustments" onClick={closeSidebar} onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[9])} />
         </div>
 
+        <div className="pw-nav-section">
+          <span className="pw-nav-label">Quick</span>
+          <button
+            type="button"
+            className="pw-nav-link"
+            onClick={() => {
+              setSearchModalOpen(true);
+              closeSidebar();
+            }}
+          >
+            <span className="pw-nav-ic">🔍</span>
+            <span className="pw-nav-text">Search students</span>
+          </button>
+        </div>
+
+        <div className="pw-sidebar-tools">
+          <button type="button" onClick={toggleTheme} title={theme === "light" ? "Switch to dark" : "Switch to light"}>
+            {theme === "light" ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
+            <span>Theme</span>
+          </button>
+          <button type="button" aria-label="Messages" title="Messages">
+            <MessageCircle className="h-4 w-4 shrink-0" />
+          </button>
+          <button type="button" aria-label="Notifications" title="Notifications">
+            <Bell className="h-4 w-4 shrink-0" />
+          </button>
+        </div>
+
         <div className="pw-sidebar-bottom">
           <div className="pw-admin-card">
             <div className="pw-admin-av">{userInitials}</div>
@@ -473,121 +660,16 @@ export default function AccountantLayout() {
         </div>
       </aside>
 
-      <main className="pw-main flex flex-col min-h-0">
-        <header className="ac-glass-header flex-shrink-0 px-6 py-4 max-md:pl-14">
-          <div className="flex items-center justify-end gap-4">
-            <div ref={searchRef} className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search students, receipts, invoices..."
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onFocus={() => searchResults.length > 0 && setSearchOpen(true)}
-                className="ac-glass-card w-full rounded-xl py-2.5 pl-4 pr-10 text-sm ac-text-primary placeholder-slate-400 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-              />
-              <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-              {searchOpen && searchResults.length > 0 && (
-                <div className="ac-glass-card absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-hidden overflow-y-auto rounded-xl shadow-lg">
-                  {searchResults.map((st) => (
-                    <div key={st.student_id} className="border-b border-slate-200/50 last:border-0">
-                      <div className="ac-text-primary px-3 py-2 text-sm font-medium">
-                        {st.name} ({st.current_class})
-                      </div>
-                      <div className="flex gap-2 px-3 pb-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            openRecordPayment(st.student_id);
-                            setSearchOpen(false);
-                            setSearchQ("");
-                          }}
-                          className="text-xs font-medium text-emerald-600 hover:text-emerald-700"
-                        >
-                          Record payment
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            navigate("/dashboard/accountant/outstanding");
-                            setSearchOpen(false);
-                            setSearchQ("");
-                          }}
-                          className="text-xs font-medium text-slate-600 hover:text-slate-700"
-                        >
-                          View balance
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+      <main className="pw-main">
+        <Suspense
+          fallback={
+            <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+              <AdminContentSkeleton />
             </div>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
-              title={theme === "light" ? "Switch to dark" : "Switch to light"}
-            >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </button>
-            <button
-              type="button"
-              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
-            >
-              <MessageCircle className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              className="ac-glass-card relative flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
-            >
-              <Bell className="h-5 w-5" />
-            </button>
-            <div className="hidden sm:flex items-center gap-2 pl-2">
-              <span className="ac-text-primary text-sm font-medium">{displayName}</span>
-              <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
-            </div>
-          </div>
-        </header>
-        <div className="flex-1 overflow-y-auto min-h-0">
-          <Suspense
-            fallback={
-              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                <div className="animate-pulse space-y-6">
-                  <div className="h-8 w-56 rounded bg-slate-200" />
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-28 rounded-xl bg-slate-200" />
-                    ))}
-                  </div>
-                  <div className="h-64 rounded-xl bg-slate-200" />
-                </div>
-              </div>
-            }
-          >
-            <Outlet context={{ openRecordPayment }} />
-          </Suspense>
-        </div>
-        <footer className="ac-glass-footer flex-shrink-0 px-6 py-4">
-          <div className="ac-text-secondary flex flex-wrap items-center justify-between gap-3 text-sm">
-            <span>Copyright © {new Date().getFullYear()} PwezaCore</span>
-            <div className="flex flex-wrap items-center gap-6">
-              <Link to="/privacy-policy" className="hover:opacity-100 opacity-80">
-                Privacy Policy
-              </Link>
-              <Link to="/affiliate-terms" className="hover:opacity-100 opacity-80">
-                Terms and conditions
-              </Link>
-              <Link to="/contact" className="hover:opacity-100 opacity-80">
-                Contact
-              </Link>
-            </div>
-            <div className="flex items-center gap-3 text-slate-400">
-              <span className="font-bold">f</span>
-              <span>𝕏</span>
-              <span className="font-bold">in</span>
-            </div>
-          </div>
-        </footer>
+          }
+        >
+          <Outlet context={{ openRecordPayment }} />
+        </Suspense>
       </main>
     </div>
   );
