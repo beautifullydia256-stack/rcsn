@@ -3,7 +3,7 @@
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
@@ -14,6 +14,34 @@ import { Eye, Download, FileDown } from 'lucide-react';
 import JSZip from 'jszip';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
+
+/** Stable key for React Query + preview / PDF (must match edge payload). */
+export function reportPreviewQueryKey(
+  schoolId: string,
+  term: number,
+  year: number,
+  examSetId: string,
+  className: string,
+  reportType: 'single' | 'class',
+  studentIdForKey: string
+) {
+  return ['admin', 'report-preview', schoolId, term, year, examSetId, className, reportType, studentIdForKey] as const;
+}
+
+type PreviewInvokeBody = {
+  schoolId: string;
+  term: number;
+  year: number;
+  examSetId: string;
+  className: string;
+  studentId?: string;
+};
+
+async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
+  const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
+  if (fnError) throw new Error(fnError.message || 'Preview failed');
+  return (data?.reports ?? []) as any[];
+}
 
 async function fetchGeneratedReports(snapshotId: string) {
   const { data, error } = await supabase
@@ -141,6 +169,7 @@ async function fetchStudentsWithResultsInClass(
 
 export default function GenerateReportsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
   const [selectedTermKey, setSelectedTermKey] = useState('');
@@ -237,7 +266,9 @@ export default function GenerateReportsPage() {
   useEffect(() => {
     setCompletedSnapshotId(null);
     setLastGenerateFingerprint(null);
-  }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent]);
+    setPreviewReports([]);
+    queryClient.removeQueries({ queryKey: ['admin', 'report-preview'] });
+  }, [selectedTermKey, selectedExamSetId, selectedClass, reportType, selectedStudent, queryClient]);
 
   const { data: studentsInClass = [] } = useQuery({
     queryKey: ['admin', 'students-in-class', pageData?.schoolId ?? '', selectedClass, effectiveExamSetId ?? ''],
@@ -315,6 +346,67 @@ export default function GenerateReportsPage() {
     return sorted[0];
   };
 
+  /** Shared key + body for preview / PDF; null if selection incomplete. */
+  const getPreviewKeyAndPayload = (): {
+    key: ReturnType<typeof reportPreviewQueryKey>;
+    payload: PreviewInvokeBody;
+  } | null => {
+    if (!pageData?.schoolId || !selectedClass) return null;
+    const term = selectedTerm || pageData.currentTerm;
+    const examSet = getEffectiveExamSet();
+    if (!examSet) return null;
+    if (reportType === 'single' && !selectedStudent) return null;
+    const payload: PreviewInvokeBody = {
+      schoolId: pageData.schoolId,
+      term: term.term,
+      year: term.year,
+      examSetId: examSet.id,
+      className: selectedClass,
+      ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
+    };
+    const key = reportPreviewQueryKey(
+      pageData.schoolId,
+      term.term,
+      term.year,
+      examSet.id,
+      selectedClass,
+      reportType,
+      reportType === 'single' ? selectedStudent : ''
+    );
+    return { key, payload };
+  };
+
+  /** Debounced prefetch for single-student reports once class + student + exam context are known. */
+  useEffect(() => {
+    if (!pageData?.schoolId || !selectedClass) return;
+    if (reportType !== 'single' || !selectedStudent) return;
+    const ctx = getPreviewKeyAndPayload();
+    if (!ctx) return;
+
+    const timer = window.setTimeout(() => {
+      void queryClient.prefetchQuery({
+        queryKey: ctx.key,
+        queryFn: () => invokeReportPreview(ctx.payload),
+        staleTime: STALE_TIME_MS,
+      });
+    }, 450);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selection inputs; pageData refetch updates exam sets
+  }, [
+    pageData?.schoolId,
+    pageData,
+    selectedTermKey,
+    selectedExamSetId,
+    effectiveExamSetId,
+    selectedClass,
+    reportType,
+    selectedStudent,
+    queryClient,
+    pageData?.currentTerm,
+    selectedTerm,
+  ]);
+
   const handleGenerateAndSave = async () => {
     if (!pageData?.schoolId || !selectedClass) return;
     const examSet = getEffectiveExamSet();
@@ -366,41 +458,14 @@ export default function GenerateReportsPage() {
       setError('Please select a class');
       return;
     }
-    const term = selectedTerm || pageData.currentTerm;
-    let examSet: any | undefined;
-
-    if (selectedExamSetId) {
-      examSet = pageData.examSets.find((es: any) => es.id === selectedExamSetId);
-    } else {
-      // Auto (primary): one set → use it; both Mid + End of Term → prefer End of Term so report shows both columns
-      const forTerm = (pageData.examSets || []).filter(
-        (es: any) => es.term === term.term && es.year === term.year
-      );
-      const isMidTerm = (name: string) => /mid|midterm|mid-term/i.test(String(name || '').trim());
-      if (forTerm.length === 0) {
-        // No exam set for this term — do not use another term's data; show error below
-        examSet = undefined;
-      } else if (forTerm.length === 1) {
-        examSet = forTerm[0];
-      } else {
-        // Multiple sets: put non–Mid Term first, then take first (so we always pick End of Term when both exist)
-        const sorted = [...forTerm].sort((a, b) => {
-          const aMid = isMidTerm(a.name || '');
-          const bMid = isMidTerm(b.name || '');
-          if (aMid === bMid) return 0;
-          return aMid ? 1 : -1; // non-Mid (End of Term) first
-        });
-        examSet = sorted[0];
-      }
-    }
-
-    if (!examSet) {
-      setError('');
-      setShowNoResultsModal(true);
-      return;
-    }
     if (reportType === 'single' && !selectedStudent) {
       setError('Please select a student');
+      return;
+    }
+    const ctx = getPreviewKeyAndPayload();
+    if (!ctx) {
+      setError('');
+      setShowNoResultsModal(true);
       return;
     }
     setPreviewing(true);
@@ -409,17 +474,11 @@ export default function GenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
-      const payload = {
-        schoolId: pageData.schoolId,
-        term: term.term,
-        year: term.year,
-        examSetId: examSet.id,
-        className: selectedClass,
-        ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
-      };
-      const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
-      if (fnError) throw new Error(fnError.message || 'Preview failed');
-      const reports = (data?.reports ?? []) as any[];
+      const reports = await queryClient.fetchQuery({
+        queryKey: ctx.key,
+        queryFn: () => invokeReportPreview(ctx.payload),
+        staleTime: STALE_TIME_MS,
+      });
       setPreviewReports(reports);
       setGeneratingStep('completed');
     } catch (err: any) {
@@ -437,12 +496,6 @@ export default function GenerateReportsPage() {
 
   const handleDownloadSavedPdf = async () => {
     if (!pageData?.schoolId || !selectedClass) return;
-    const examSet = getEffectiveExamSet();
-    if (!examSet) {
-      setError('');
-      setShowNoResultsModal(true);
-      return;
-    }
     if (reportType === 'single' && !selectedStudent) {
       setError('Please select a student');
       return;
@@ -457,22 +510,23 @@ export default function GenerateReportsPage() {
     setGenerationError('');
 
     try {
-      setDownloadPdfStatus('Generating reports…');
-      const term = selectedTerm || pageData.currentTerm;
-      const payload = {
-        schoolId: pageData.schoolId,
-        term: term.term,
-        year: term.year,
-        examSetId: examSet.id,
-        className: selectedClass,
-        ...(reportType === 'single' && selectedStudent ? { studentId: selectedStudent } : {}),
-      };
-      const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
-      if (fnError) throw new Error(fnError.message || 'Failed to load reports');
-      const reports = (data?.reports ?? []) as any[];
-      if (!reports.length) throw new Error('No reports to download');
+      const ctx = getPreviewKeyAndPayload();
+      if (!ctx) {
+        setError('');
+        setShowNoResultsModal(true);
+        return;
+      }
 
-      setDownloadPdfStatus('Preparing PDF…');
+      const cachedReports = queryClient.getQueryData(ctx.key);
+      const hadCachedPreview = Array.isArray(cachedReports) && cachedReports.length > 0;
+      setDownloadPdfStatus(hadCachedPreview ? 'Preparing PDF…' : 'Generating reports…');
+
+      const reports = await queryClient.fetchQuery({
+        queryKey: ctx.key,
+        queryFn: () => invokeReportPreview(ctx.payload),
+        staleTime: STALE_TIME_MS,
+      });
+      if (!reports.length) throw new Error('No reports to download');
 
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',
