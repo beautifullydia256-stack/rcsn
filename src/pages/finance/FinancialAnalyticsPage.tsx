@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { TrendingDown, TrendingUp, PiggyBank, Landmark, Scale, Percent, Wallet } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import AdminPageWrapper from "../../components/layout/AdminPageWrapper";
 import { ADMIN_STALE_TIME_MS } from "../../lib/adminQueryDefaults";
@@ -14,9 +15,11 @@ import {
   pickCurrentTermId,
   termIdsForFinancialYear,
   type PeriodType,
-  type SchoolTermRow,
   type TermScope,
 } from "./fetchFinancialAnalytics";
+import { downloadFinancialAnalyticsCsv } from "./financialAnalyticsExport";
+import { loadFaPrefs, saveFaPrefs } from "./financialAnalyticsPrefs";
+import FinancialAnalyticsToolbar from "./FinancialAnalyticsToolbar";
 import "./financialAnalytics.css";
 import "@/assets/pwezacore-students-scoped.css";
 
@@ -31,12 +34,69 @@ function toTodayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+function pctFmt(n: number | null): string {
+  if (n == null) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(1)}%`;
+}
+
+function ppFmt(n: number | null): string {
+  if (n == null) return "—";
+  const sign = n > 0 ? "+" : "";
+  return `${sign}${n.toFixed(1)} pp`;
+}
+
+type DeltaTone = "good" | "bad" | "neutral";
+
+function deltaTone(pct: number | null, goodWhenUp: boolean): DeltaTone {
+  if (pct == null || pct === 0) return "neutral";
+  const up = pct > 0;
+  const good = goodWhenUp ? up : !up;
+  return good ? "good" : "bad";
+}
+
+function KpiDelta({
+  pct,
+  goodWhenUp,
+  variant = "pct",
+}: {
+  pct: number | null;
+  goodWhenUp: boolean;
+  variant?: "pct" | "pp";
+}) {
+  const tone = deltaTone(pct, goodWhenUp);
+  const cls = tone === "good" ? "green" : tone === "bad" ? "red" : "muted";
+  if (pct == null) {
+    return (
+      <div className="kpi-delta muted">
+        <span className="kpi-delta__txt">No prior period to compare</span>
+      </div>
+    );
+  }
+  const Icon = pct > 0 ? TrendingUp : pct < 0 ? TrendingDown : null;
+  const label = variant === "pp" ? ppFmt(pct) : pctFmt(pct);
+  const suffix = variant === "pp" ? " vs prior margin" : " vs prior";
+  return (
+    <div className={`kpi-delta ${cls}`}>
+      {Icon && <Icon className="kpi-delta__ic" aria-hidden />}
+      <span>
+        {label}
+        {suffix}
+      </span>
+    </div>
+  );
+}
+
 export default function FinancialAnalyticsPage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const isAdmin = pathname.includes("/dashboard/admin/");
   const backTo = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
+  const financeBase = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
+  const receiptsTo = `${financeBase}/receipts`;
+  const paymentsTo = `${financeBase}/payments`;
+  const expensesTo = `${financeBase}/expenses`;
 
   useEffect(() => {
     const id = "pweza-students-fonts";
@@ -59,18 +119,38 @@ export default function FinancialAnalyticsPage() {
   const [financialYear, setFinancialYear] = useState<number>(() => currentCalendarYear());
   const [termScope, setTermScope] = useState<TermScope>("one");
   const [termId, setTermId] = useState<string>("");
-  const defaultsAppliedRef = useRef(false);
+  const [period, setPeriod] = useState<PeriodType>("month");
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+  const initPrefsRef = useRef(false);
 
   useEffect(() => {
-    if (!terms.length || defaultsAppliedRef.current) return;
-    const fy = currentCalendarYear();
-    setFinancialYear(fy);
-    const today = toTodayIso();
-    const tid = pickCurrentTermId(terms, today);
-    if (tid) setTermId(tid);
-    setTermScope("one");
-    defaultsAppliedRef.current = true;
+    if (!terms.length || initPrefsRef.current) return;
+    initPrefsRef.current = true;
+    const saved = loadFaPrefs() ?? {};
+    if (saved.financialYear != null) setFinancialYear(saved.financialYear);
+    else setFinancialYear(currentCalendarYear());
+    if (saved.termScope === "all" || saved.termScope === "one") setTermScope(saved.termScope);
+    if (saved.termId && terms.some((t) => t.id === saved.termId)) {
+      setTermId(saved.termId);
+    } else {
+      const today = toTodayIso();
+      const tid = pickCurrentTermId(terms, today);
+      if (tid) setTermId(tid);
+      setTermScope("one");
+    }
+    if (saved.period) setPeriod(saved.period);
   }, [terms]);
+
+  useEffect(() => {
+    if (!schoolId || !terms.length) return;
+    saveFaPrefs({
+      financialYear,
+      termScope,
+      termId,
+      period,
+    });
+  }, [schoolId, terms.length, financialYear, termScope, termId, period]);
 
   const yearOptions = useMemo(() => financialYearOptionsFromTerms(terms), [terms]);
 
@@ -93,10 +173,6 @@ export default function FinancialAnalyticsPage() {
     setTermId(pick);
   }, [financialYear, terms, termScope, termId]);
 
-  const [period, setPeriod] = useState<PeriodType>("month");
-  const [customStart, setCustomStart] = useState("");
-  const [customEnd, setCustomEnd] = useState("");
-
   const customRange = useMemo(() => {
     if (period !== "custom" || !customStart || !customEnd) return undefined;
     return { start: customStart, end: customEnd };
@@ -107,11 +183,22 @@ export default function FinancialAnalyticsPage() {
     [terms, financialYear]
   );
 
+  /** Week/month/year/custom only when FY has terms and a single term is chosen (not "All terms"). */
+  const showPeriodFilters =
+    termsInSelectedYear.length > 0 && termScope === "one" && !!termId;
+
+  /** "All terms" uses full financial year to date; single term uses selected period. */
+  const effectivePeriod: PeriodType = termScope === "all" ? "year" : period;
+  const effectiveCustomRange = termScope === "all" ? undefined : customRange;
+
   const analyticsEnabled =
     !!schoolId &&
     !!terms.length &&
-    (termScope === "all" ? termIdsInYear.length > 0 : !!termId) &&
-    (period !== "custom" || (!!customStart && !!customEnd));
+    (termScope === "all"
+      ? termIdsInYear.length > 0
+      : !!termId &&
+        termsInSelectedYear.length > 0 &&
+        (period !== "custom" || (!!customStart && !!customEnd)));
 
   const { data: rawData, isLoading: dataLoading, isFetching } = useQuery({
     queryKey: [
@@ -120,9 +207,9 @@ export default function FinancialAnalyticsPage() {
       financialYear,
       termScope,
       termId,
-      period,
-      customRange?.start,
-      customRange?.end,
+      effectivePeriod,
+      effectiveCustomRange?.start,
+      effectiveCustomRange?.end,
     ],
     queryFn: () =>
       fetchFinancialAnalytics({
@@ -130,15 +217,46 @@ export default function FinancialAnalyticsPage() {
         financialYear,
         termScope,
         termId: termScope === "one" ? termId : undefined,
-        period,
-        customRange,
-        terms: terms as SchoolTermRow[],
+        period: effectivePeriod,
+        customRange: effectiveCustomRange,
+        terms,
       }),
     enabled: analyticsEnabled,
     staleTime: ADMIN_STALE_TIME_MS,
   });
 
   const data = analyticsEnabled ? rawData : undefined;
+
+  const termLabelForExport = useMemo(() => {
+    if (termScope === "all") return "All terms";
+    const t = terms.find((x) => x.id === termId);
+    return t ? t.label : "Selected term";
+  }, [termScope, termId, terms]);
+
+  const periodLabel = useMemo(() => {
+    if (termScope === "all") return "Financial year to date (all terms)";
+    if (period === "week") return "This week";
+    if (period === "month") return "This month";
+    if (period === "year") return "This year (within term)";
+    if (period === "custom" && customStart && customEnd) return `Custom: ${customStart} → ${customEnd}`;
+    return "Custom period";
+  }, [termScope, period, customStart, customEnd]);
+
+  const handleExport = useCallback(() => {
+    if (!data) return;
+    downloadFinancialAnalyticsCsv(data, {
+      financialYear,
+      termLabel: termLabelForExport,
+      periodLabel,
+    });
+  }, [data, financialYear, termLabelForExport, periodLabel]);
+
+  const handlePrint = useCallback(() => {
+    window.print();
+  }, []);
+
+  const operatingMarginPct =
+    data && data.totalIncome > 0 ? Math.round((data.net / data.totalIncome) * 1000) / 10 : null;
 
   const trendMax = useMemo(() => {
     if (!data?.trend.length) return 1;
@@ -164,13 +282,13 @@ export default function FinancialAnalyticsPage() {
   const pageSub = useMemo(() => {
     const range = `Jan 1 – Dec 31, ${financialYear}`;
     if (termScope === "all") {
-      return `Financial year ${financialYear} (${range}). All terms in this year.`;
+      return `Financial year ${financialYear} (${range}). All terms — year to date. Pick a single term to filter by week or month.`;
     }
     const row = terms.find((t) => t.id === termId);
     if (row) {
-      return `Financial year ${financialYear} (${range}). ${row.label} (${row.start_date} → ${row.end_date}).`;
+      return `Financial analytics for ${financialYear} (${range}). ${row.label} (${row.start_date} → ${row.end_date}).`;
     }
-    return `Financial year ${financialYear} (${range}).`;
+    return `Financial year ${financialYear} (${range}). Select a term to unlock period filters.`;
   }, [financialYear, termScope, termId, terms]);
 
   const inner = (
@@ -178,7 +296,7 @@ export default function FinancialAnalyticsPage() {
       <div className="page-header fade-up">
         <div className="page-title-block">
           <div className="page-eyebrow">Finance</div>
-          <h1 className="page-title">Income vs Expenditure</h1>
+          <h1 className="page-title">Financial Analytics</h1>
           <p className="page-sub">{pageSub}</p>
         </div>
         <div className="page-actions print:hidden">
@@ -227,6 +345,24 @@ export default function FinancialAnalyticsPage() {
         </div>
       )}
 
+      {schoolId && terms.length > 0 && (
+        <FinancialAnalyticsToolbar
+          onExport={handleExport}
+          onPrint={handlePrint}
+          receiptsTo={receiptsTo}
+          paymentsTo={paymentsTo}
+          expensesTo={expensesTo}
+          exportDisabled={!data}
+        />
+      )}
+
+      {schoolId && termsInSelectedYear.length > 0 && termScope === "all" && (
+        <p className="muted" style={{ fontSize: 12, marginBottom: 12, maxWidth: 640 }}>
+          Period filters (This week / month / year / Custom) apply after you choose a <strong>single term</strong> above.
+          With &quot;All terms&quot;, totals use the full financial year to date.
+        </p>
+      )}
+
       {!termsLoading && schoolId && terms.length === 0 && (
         <p className="muted" style={{ marginBottom: 12, fontSize: 13 }}>
           No school terms found. Configure terms for your school to attribute fee income.
@@ -239,27 +375,29 @@ export default function FinancialAnalyticsPage() {
         </p>
       )}
 
-      <div className="period-tabs">
-        {(
-          [
-            ["week", "This week"],
-            ["month", "This month"],
-            ["year", "This year"],
-            ["custom", "Custom"],
-          ] as const
-        ).map(([key, label]) => (
-          <button
-            key={key}
-            type="button"
-            className={`ptab ${period === key ? "active" : ""}`}
-            onClick={() => setPeriod(key)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {showPeriodFilters && (
+        <div className="period-tabs">
+          {(
+            [
+              ["week", "This week"],
+              ["month", "This month"],
+              ["year", "This year"],
+              ["custom", "Custom"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              className={`ptab ${period === key ? "active" : ""}`}
+              onClick={() => setPeriod(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {period === "custom" && (
+      {showPeriodFilters && period === "custom" && (
         <div className="fa-custom-dates mb-3">
           <label className="muted" style={{ fontSize: 12 }}>
             From
@@ -288,16 +426,18 @@ export default function FinancialAnalyticsPage() {
 
       {data && (
         <p className="muted" style={{ fontSize: 11, marginBottom: 10 }}>
-          Showing {data.effectiveStart} → {data.effectiveEnd} (clipped to financial year
-          {termScope === "one" ? " and selected term" : ""}).
+          Showing {data.effectiveStart} → {data.effectiveEnd}
+          {termScope === "all"
+            ? " (financial year to date, all terms)."
+            : " (clipped to financial year and selected term)."}
         </p>
       )}
 
       {loading && (
         <>
-          <div className="grid-3 mb-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="kpi">
+          <div className="fa-kpi-grid mb-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="kpi kpi-card">
                 <div className="fa-skel" style={{ width: "40%" }} />
                 <div className="fa-skel" style={{ width: "70%", marginTop: 10 }} />
               </div>
@@ -319,26 +459,73 @@ export default function FinancialAnalyticsPage() {
 
       {!loading && data && (
         <>
-          <div className="grid-3 mb-4">
-            <div className="kpi">
-              <div className="kpi-label">Total income</div>
+          {data.comparison && (
+            <div className="fa-compare-strip" role="complementary" aria-label="Prior period comparison">
+              <div className="fa-compare-strip__inner">
+                <Scale className="fa-compare-strip__ic" aria-hidden />
+                <span className="fa-compare-strip__label">Compared to prior period</span>
+                <span className="fa-compare-strip__range">
+                  {data.comparison.prevStart} → {data.comparison.prevEnd}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="fa-kpi-grid mb-4">
+            <div className="kpi kpi-card">
+              <div className="kpi-card__head">
+                <PiggyBank className="kpi-card__ic" aria-hidden />
+                <div className="kpi-label">Total income</div>
+              </div>
               <div className="kpi-val green">{formatUGX(data.totalIncome)}</div>
-              <div className="kpi-delta muted">Fee collections</div>
+              <div className="kpi-sub muted">Fee collections in range</div>
+              <KpiDelta pct={data.comparison?.incomeChangePct ?? null} goodWhenUp />
             </div>
-            <div className="kpi">
-              <div className="kpi-label">Total spent</div>
+            <div className="kpi kpi-card">
+              <div className="kpi-card__head">
+                <Landmark className="kpi-card__ic" aria-hidden />
+                <div className="kpi-label">Total spent</div>
+              </div>
               <div className="kpi-val red">{formatUGX(data.totalSpent)}</div>
-              <div className="kpi-delta muted">All categories</div>
+              <div className="kpi-sub muted">Operating &amp; payroll</div>
+              <KpiDelta pct={data.comparison?.spentChangePct ?? null} goodWhenUp={false} />
             </div>
-            <div className="kpi">
-              <div className="kpi-label">Net position</div>
+            <div className="kpi kpi-card">
+              <div className="kpi-card__head">
+                <Wallet className="kpi-card__ic" aria-hidden />
+                <div className="kpi-label">Net position</div>
+              </div>
               <div className={`kpi-val ${data.net >= 0 ? "green" : "red"}`}>
                 {data.net >= 0 ? "+" : "-"}
                 {formatUGX(Math.abs(data.net))}
               </div>
-              <div className={`kpi-delta ${data.net >= 0 ? "green" : "red"}`}>
-                {data.net >= 0 ? "On track" : "Review spend"}
+              <div className="kpi-sub muted">{data.net >= 0 ? "Surplus after expenses" : "Deficit — review costs"}</div>
+              <KpiDelta pct={data.comparison?.netChangePct ?? null} goodWhenUp />
+            </div>
+            <div className="kpi kpi-card">
+              <div className="kpi-card__head">
+                <Percent className="kpi-card__ic" aria-hidden />
+                <div className="kpi-label">Operating margin</div>
               </div>
+              <div className={`kpi-val ${operatingMarginPct != null && operatingMarginPct >= 0 ? "green" : "red"}`}>
+                {operatingMarginPct != null ? `${operatingMarginPct}%` : "—"}
+              </div>
+              <div className="kpi-sub muted">Net ÷ income (same period)</div>
+              {data.comparison && data.comparison.marginChangePp != null ? (
+                <KpiDelta pct={data.comparison.marginChangePp} goodWhenUp variant="pp" />
+              ) : (
+                <div className="kpi-delta muted">
+                  <span className="kpi-delta__txt">
+                    {!data.comparison
+                      ? "Benchmark for sustainability"
+                      : data.totalIncome <= 0
+                        ? "No fee income this period — margin not applicable"
+                        : data.comparison.prevIncome <= 0
+                          ? "Prior period had no fee income — margin not comparable"
+                          : "Margin change not available"}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -458,12 +645,46 @@ export default function FinancialAnalyticsPage() {
               </div>
             </div>
           </div>
+
+          <div className="fa-payment-section">
+            <div className="section-title">Fee collections by channel</div>
+            <div className="card-sm fa-payment-methods">
+              {data.paymentMethods.length > 0 ? (
+                <>
+                  <p className="muted fa-payment-lead" style={{ fontSize: 12, marginBottom: 12 }}>
+                    Share of recorded fee payments in this range (by payment method).
+                  </p>
+                  <div className="fa-payment-grid">
+                    {data.paymentMethods.map((row) => (
+                      <div key={row.method} className="fa-payment-row">
+                        <div className="flex-between mb-1">
+                          <span className="fa-cat-head">{row.method}</span>
+                          <span className="muted" style={{ fontSize: 11 }}>
+                            {formatUGX(row.amount)} ({row.pct}%)
+                          </span>
+                        </div>
+                        <div className="bar-bg">
+                          <div className={`bar-fill ${row.barClass}`} style={{ width: `${row.pct}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+                  {data.totalIncome > 0
+                    ? "Payment methods are not available for these records — amounts are still included in total income above."
+                    : "No fee collections in this range, so there is nothing to break down by channel."}
+                </p>
+              )}
+            </div>
+          </div>
         </>
       )}
 
       {!loading && !data && analyticsEnabled && <p className="muted">Could not load analytics.</p>}
 
-      {period === "custom" && (!customStart || !customEnd) && (
+      {showPeriodFilters && period === "custom" && (!customStart || !customEnd) && (
         <p className="muted" style={{ fontSize: 13 }}>
           Select start and end dates to load data.
         </p>

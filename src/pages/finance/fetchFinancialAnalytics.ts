@@ -29,6 +29,24 @@ function minDate(a: string, b: string): string {
   return a <= b ? a : b;
 }
 
+function parseIsoLocal(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** Calendar-day arithmetic (local) for ISO date strings. */
+export function addDays(iso: string, delta: number): string {
+  const d = parseIsoLocal(iso);
+  d.setDate(d.getDate() + delta);
+  return toIsoDate(d);
+}
+
+export function daysInclusive(start: string, end: string): number {
+  const a = parseIsoLocal(start).getTime();
+  const b = parseIsoLocal(end).getTime();
+  return Math.round((b - a) / (24 * 60 * 60 * 1000)) + 1;
+}
+
 /** Monday-start week in local time; end is today. */
 export function getDateRange(
   period: PeriodType,
@@ -57,6 +75,43 @@ export function getDateRange(
   if (period === "year") {
     const start = `${now.getFullYear()}-01-01`;
     return { start, end: today };
+  }
+
+  return { start: today, end: today };
+}
+
+/**
+ * Period relative to "now", anchored so "year" means Jan 1 → min(today, FY end) for the selected financial year.
+ */
+function getPeriodRangeForFinancialYear(
+  period: PeriodType,
+  custom: { start: string; end: string } | undefined,
+  financialYear: number
+): { start: string; end: string } {
+  const now = new Date();
+  const today = toIsoDate(now);
+  const fy = financialYearBounds(financialYear);
+  const yearEnd = minDate(today, fy.end);
+
+  if (period === "custom" && custom?.start && custom?.end) {
+    return { start: custom.start, end: custom.end };
+  }
+
+  if (period === "week") {
+    const copy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const day = copy.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    copy.setDate(copy.getDate() + diff);
+    return { start: toIsoDate(copy), end: today };
+  }
+
+  if (period === "month") {
+    const start = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+    return { start, end: today };
+  }
+
+  if (period === "year") {
+    return { start: fy.start, end: yearEnd };
   }
 
   return { start: today, end: today };
@@ -99,6 +154,47 @@ export function financialYearOptionsFromTerms(terms: SchoolTermRow[]): number[] 
   return [...years].sort((a, b) => b - a);
 }
 
+function clipToFyTerm(
+  periodRange: { start: string; end: string },
+  financialYear: number,
+  terms: SchoolTermRow[],
+  termScope: TermScope,
+  termId: string | undefined,
+  todayStr: string
+): { start: string; end: string } {
+  const fy = financialYearBounds(financialYear);
+  let clipStart = maxDate(periodRange.start, fy.start);
+  let clipEnd = minDate(minDate(periodRange.end, fy.end), todayStr);
+
+  if (termScope === "one" && termId) {
+    const row = terms.find((t) => t.id === termId);
+    if (row) {
+      clipStart = maxDate(clipStart, row.start_date);
+      clipEnd = minDate(clipEnd, row.end_date);
+    }
+  }
+  return { start: clipStart, end: clipEnd };
+}
+
+/** Previous window of the same length (immediately before current start), clipped to FY/term. */
+function previousComparableRange(
+  currentStart: string,
+  currentEnd: string,
+  financialYear: number,
+  terms: SchoolTermRow[],
+  termScope: TermScope,
+  termId: string | undefined,
+  todayStr: string
+): { start: string; end: string } | null {
+  const n = daysInclusive(currentStart, currentEnd);
+  if (n < 1) return null;
+  const prevEnd = addDays(currentStart, -1);
+  const prevStart = addDays(prevEnd, -(n - 1));
+  const clipped = clipToFyTerm({ start: prevStart, end: prevEnd }, financialYear, terms, termScope, termId, todayStr);
+  if (clipped.start > clipped.end) return null;
+  return clipped;
+}
+
 const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const PAYROLL_CATEGORY_RE = /salary|payroll|wage|staff pay|remuneration/i;
@@ -129,6 +225,28 @@ export type TrendMonthRow = {
   netLabel: string;
 };
 
+export type PaymentMethodRow = {
+  method: string;
+  amount: number;
+  pct: number;
+  barClass: "bar-green" | "bar-red" | "bar-blue" | "bar-gold";
+};
+
+export type PeriodComparison = {
+  prevStart: string;
+  prevEnd: string;
+  prevIncome: number;
+  prevSpent: number;
+  prevNet: number;
+  /** Prior-period operating margin (prevNet ÷ prevIncome), % */
+  prevMarginPct: number | null;
+  incomeChangePct: number | null;
+  spentChangePct: number | null;
+  netChangePct: number | null;
+  /** Change in margin vs prior period, percentage points (not %) */
+  marginChangePp: number | null;
+};
+
 export type FinancialAnalyticsData = {
   totalIncome: number;
   totalSpent: number;
@@ -142,9 +260,10 @@ export type FinancialAnalyticsData = {
   verdict: string;
   categories: CategorySpendRow[];
   trend: TrendMonthRow[];
-  /** Effective date window after FY / term / period clipping */
   effectiveStart: string;
   effectiveEnd: string;
+  paymentMethods: PaymentMethodRow[];
+  comparison: PeriodComparison | null;
 };
 
 const BAR_ROTATION: CategorySpendRow["barClass"][] = ["bar-green", "bar-red", "bar-blue", "bar-gold"];
@@ -155,6 +274,42 @@ function formatNetK(n: number): string {
   if (v >= 1_000_000) return `${sign}${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 1000) return `${sign}${Math.round(v / 1000)}K`;
   return `${sign}${v}`;
+}
+
+function pctChange(curr: number, prev: number): number | null {
+  if (prev <= 0) return null;
+  return Math.round(((curr - prev) / prev) * 1000) / 10;
+}
+
+function aggregatePaymentMethods(
+  payments: { amount_paid?: number; payment_method?: string | null }[]
+): PaymentMethodRow[] {
+  const map = new Map<string, number>();
+  for (const p of payments) {
+    const raw = (p.payment_method || "").trim();
+    const key = raw ? raw : "Other";
+    map.set(key, (map.get(key) || 0) + Number(p.amount_paid || 0));
+  }
+  const total = [...map.values()].reduce((a, b) => a + b, 0);
+  const rows = [...map.entries()]
+    .map(([method, amount]) => ({ method, amount: Math.round(amount) }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 8);
+  return rows.map((row, i) => ({
+    ...row,
+    pct: total > 0 ? Math.round((row.amount / total) * 100) : 0,
+    barClass: BAR_ROTATION[i % BAR_ROTATION.length],
+  }));
+}
+
+function emptyTrend(): TrendMonthRow[] {
+  return lastSixMonthRanges().map((r) => ({
+    label: r.label,
+    income: 0,
+    spent: 0,
+    net: 0,
+    netLabel: formatNetK(0),
+  }));
 }
 
 export async function fetchSchoolTerms(schoolId: string): Promise<SchoolTermRow[]> {
@@ -208,7 +363,7 @@ function buildPaymentFilter(
 ) {
   let q = supabase
     .from("student_payments")
-    .select("amount_paid, payment_date")
+    .select("amount_paid, payment_date, payment_method")
     .eq("school_id", schoolId)
     .is("reversed_at", null);
   if (termScope === "all") {
@@ -226,7 +381,6 @@ export async function fetchFinancialAnalytics(params: {
   schoolId: string;
   financialYear: number;
   termScope: TermScope;
-  /** Required when termScope === 'one' */
   termId?: string;
   period: PeriodType;
   customRange?: { start: string; end: string };
@@ -234,22 +388,19 @@ export async function fetchFinancialAnalytics(params: {
 }): Promise<FinancialAnalyticsData> {
   const { schoolId, financialYear, termScope, termId, period, customRange, terms } = params;
 
-  const fy = financialYearBounds(financialYear);
   const todayStr = toIsoDate(new Date());
-  const periodRange = getDateRange(period, customRange);
+  const periodRange = getPeriodRangeForFinancialYear(period, customRange, financialYear);
 
-  let clipStart = maxDate(periodRange.start, fy.start);
-  let clipEnd = minDate(minDate(periodRange.end, fy.end), todayStr);
+  const { start: clipStart, end: clipEnd } = clipToFyTerm(
+    periodRange,
+    financialYear,
+    terms,
+    termScope,
+    termScope === "one" ? termId : undefined,
+    todayStr
+  );
 
   const yearTermIds = termIdsForFinancialYear(terms, financialYear);
-
-  if (termScope === "one" && termId) {
-    const row = terms.find((t) => t.id === termId);
-    if (row) {
-      clipStart = maxDate(clipStart, row.start_date);
-      clipEnd = minDate(clipEnd, row.end_date);
-    }
-  }
 
   if (clipStart > clipEnd) {
     return {
@@ -264,15 +415,11 @@ export async function fetchFinancialAnalytics(params: {
       scholarshipBarPct: 0,
       verdict: "No data in this date range.",
       categories: [],
-      trend: lastSixMonthRanges().map((r) => ({
-        label: r.label,
-        income: 0,
-        spent: 0,
-        net: 0,
-        netLabel: formatNetK(0),
-      })),
+      trend: emptyTrend(),
       effectiveStart: clipStart,
       effectiveEnd: clipEnd,
+      paymentMethods: [],
+      comparison: null,
     };
   }
 
@@ -310,17 +457,38 @@ export async function fetchFinancialAnalytics(params: {
       scholarshipBarPct: 0,
       verdict: "Select a financial year with configured terms.",
       categories: [],
-      trend: lastSixMonthRanges().map((r) => ({
-        label: r.label,
-        income: 0,
-        spent: 0,
-        net: 0,
-        netLabel: formatNetK(0),
-      })),
+      trend: emptyTrend(),
       effectiveStart: start,
       effectiveEnd: end,
+      paymentMethods: [],
+      comparison: null,
     };
   }
+
+  const prevRange = previousComparableRange(start, end, financialYear, terms, termScope, termScope === "one" ? termId : undefined, todayStr);
+
+  const prevPayPromise =
+    prevRange &&
+    (() => {
+      const pf = buildPaymentFilter(
+        schoolId,
+        termScope,
+        yearTermIds,
+        termScope === "one" ? termId : undefined
+      );
+      return pf
+        ? pf.gte("payment_date", prevRange.start).lte("payment_date", prevRange.end)
+        : Promise.resolve({ data: [] as { amount_paid?: number }[] });
+    })();
+
+  const prevExpPromise =
+    prevRange &&
+    supabase
+      .from("school_expenses")
+      .select("amount, expense_date, status")
+      .eq("school_id", schoolId)
+      .gte("expense_date", prevRange.start)
+      .lte("expense_date", prevRange.end);
 
   const [
     paymentsRes,
@@ -328,6 +496,8 @@ export async function fetchFinancialAnalytics(params: {
     discountsRes,
     trendPaymentsRes,
     trendExpensesRes,
+    prevPayRes,
+    prevExpRes,
   ] = await Promise.all([
     mainPayFilter.gte("payment_date", start).lte("payment_date", end),
     supabase
@@ -349,10 +519,17 @@ export async function fetchFinancialAnalytics(params: {
       .eq("school_id", schoolId)
       .gte("expense_date", trendStart)
       .lte("expense_date", todayStr),
+    prevPayPromise || Promise.resolve({ data: [] }),
+    prevExpPromise || Promise.resolve({ data: [] }),
   ]);
 
-  const payments = (paymentsRes.data || []) as { amount_paid?: number; payment_date?: string }[];
+  const payments = (paymentsRes.data || []) as {
+    amount_paid?: number;
+    payment_date?: string;
+    payment_method?: string | null;
+  }[];
   const totalIncome = Math.round(payments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
+  const paymentMethods = aggregatePaymentMethods(payments);
 
   const expensesRaw = (expensesRes.data || []) as {
     amount?: number;
@@ -378,6 +555,45 @@ export async function fetchFinancialAnalytics(params: {
   const scholarships = Math.round(discounts.reduce((s, d) => s + Number(d.amount || 0), 0));
 
   const net = totalIncome - totalSpent;
+
+  let comparison: PeriodComparison | null = null;
+  if (prevRange && prevPayRes && prevExpRes) {
+    const prevPayments = (prevPayRes as { data?: { amount_paid?: number }[] }).data || [];
+    const prevIncome = Math.round(prevPayments.reduce((s, p) => s + Number(p.amount_paid || 0), 0));
+    const prevExpRaw = ((prevExpRes as { data?: unknown[] }).data || []) as {
+      amount?: number;
+      status?: string;
+    }[];
+    const prevSpent = Math.round(
+      prevExpRaw
+        .filter((e) => {
+          const st = (e.status || "").toLowerCase();
+          return st === "approved" || st === "paid";
+        })
+        .reduce((s, e) => s + Number(e.amount || 0), 0)
+    );
+    const prevNet = prevIncome - prevSpent;
+    const prevMarginPct =
+      prevIncome > 0 ? Math.round((prevNet / prevIncome) * 1000) / 10 : null;
+    const currMarginPct =
+      totalIncome > 0 ? Math.round((net / totalIncome) * 1000) / 10 : null;
+    const marginChangePp =
+      currMarginPct != null && prevMarginPct != null
+        ? Math.round((currMarginPct - prevMarginPct) * 10) / 10
+        : null;
+    comparison = {
+      prevStart: prevRange.start,
+      prevEnd: prevRange.end,
+      prevIncome,
+      prevSpent,
+      prevNet,
+      prevMarginPct,
+      incomeChangePct: pctChange(totalIncome, prevIncome),
+      spentChangePct: pctChange(totalSpent, prevSpent),
+      netChangePct: pctChange(net, prevNet),
+      marginChangePp,
+    };
+  }
 
   const denom = totalIncome > 0 ? totalIncome : 1;
   const incomeBarPct = 100;
@@ -466,5 +682,7 @@ export async function fetchFinancialAnalytics(params: {
     trend,
     effectiveStart: start,
     effectiveEnd: end,
+    paymentMethods,
+    comparison,
   };
 }
