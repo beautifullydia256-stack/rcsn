@@ -360,6 +360,15 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
   color:var(--t1);outline:none;transition:border-color .15s;width:100%;
 }
 .pw-teacher-profile .tp-assign-select{appearance:none;cursor:pointer;}
+.pw-teacher-profile .tp-subject-pick{
+  font-size:12.5px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);
+  background:var(--s2);color:var(--t1);cursor:pointer;font-weight:600;
+}
+.pw-teacher-profile .tp-subject-pick:hover{background:var(--s3);}
+.pw-teacher-profile .tp-subject-pick.selected{
+  border-color:rgba(255,181,71,.45);background:rgba(255,181,71,.12);color:var(--amber);
+}
+.pw-teacher-profile #tp-teacher-name,.pw-teacher-profile #tp-breadcrumb-name{text-transform:uppercase;letter-spacing:.04em;}
 .pw-teacher-profile .tp-assign-select:focus,
 .pw-teacher-profile .tp-assign-input:focus{border-color:rgba(255,181,71,.3);}
 .pw-teacher-profile .tp-assign-group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:150px;}
@@ -543,7 +552,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
     <div class="tp-breadcrumb">
       <span class="tp-bc-link" data-nav="/dashboard/admin/teachers">Teachers</span>
       <span style="color:var(--t3)">/</span>
-      <span class="tp-bc-current" id="tp-breadcrumb-name">Mustafa Kafeero</span>
+      <span class="tp-bc-current" id="tp-breadcrumb-name"></span>
     </div>
     <div class="tp-topbar-right">
       <button class="tp-btn tp-btn-ghost" id="tp-btn-print">🖨 Print</button>
@@ -573,13 +582,13 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 
         <!-- Info -->
         <div class="tp-hero-info">
-          <div class="tp-teacher-name" id="tp-teacher-name">Mustafa Kafeero</div>
+          <div class="tp-teacher-name" id="tp-teacher-name"></div>
           <div class="tp-hero-chips">
             <span class="tp-chip green"  id="tp-chip-status">✦ Active</span>
-            <span class="tp-chip amber"  id="tp-chip-emp-id">🪪 RIPS26262</span>
-            <span class="tp-chip teal"   id="tp-chip-role">👨‍🏫 Class Teacher</span>
-            <span class="tp-chip muted"  id="tp-chip-hired">📅 Hired Mar 2026</span>
-            <span class="tp-chip blue"   id="tp-chip-dept">🏫 Primary Dept.</span>
+            <span class="tp-chip amber"  id="tp-chip-emp-id"></span>
+            <span class="tp-chip teal"   id="tp-chip-role"></span>
+            <span class="tp-chip muted"  id="tp-chip-hired"></span>
+            <span class="tp-chip blue"   id="tp-chip-dept" style="display:none"></span>
           </div>
           <div class="tp-hero-meta">
             <div class="tp-meta-item">
@@ -803,12 +812,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
               </div>
               <div class="tp-field" style="grid-column:span 2">
                 <span class="tp-field-label">Portal Permissions</span>
-                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="tp-portal-permissions">
-                  <span class="tp-tag">Take Attendance</span>
-                  <span class="tp-tag">Record Marks</span>
-                  <span class="tp-tag">View Timetable</span>
-                  <span class="tp-tag">Messages</span>
-                </div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="tp-portal-permissions"></div>
               </div>
             </div>
           </div>
@@ -836,19 +840,12 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div class="tp-assign-group">
               <div class="tp-assign-label">Select Class</div>
               <select class="tp-assign-select" id="tp-assign-class-select">
-                <option value="">Choose a class…</option>
-                <option>Baby Class</option>
-                <option>Top Class</option>
-                <option>Middle Class</option>
-                <option>Primary 1</option>
-                <option>Primary 3</option>
-                <option>Primary 5</option>
-                <option>Primary 7</option>
+                <option value="">Select class</option>
               </select>
             </div>
-            <div class="tp-assign-group">
-              <div class="tp-assign-label">Subject(s)</div>
-              <input class="tp-assign-input" id="tp-assign-subject-input" placeholder="e.g. Mathematics, Science" type="text">
+            <div class="tp-assign-group" style="flex:2;min-width:220px">
+              <div class="tp-assign-label">Subjects for this class</div>
+              <div id="tp-assign-subject-wrap" class="tp-assign-input" style="min-height:44px;height:auto;padding:8px 10px"></div>
             </div>
             <div class="tp-assign-group" style="max-width:120px">
               <div class="tp-assign-label">Role</div>
@@ -868,26 +865,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div style="padding:10px 20px;font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3)">Role</div>
             <div style="padding:10px 20px;font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3)">Action</div>
           </div>
-          <div id="tp-assignments-body">
-            <div class="tp-assign-row">
-              <div class="tp-assign-col">Baby Class</div>
-              <div class="tp-assign-col"><div style="display:flex;gap:4px"><span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">Mathematics</span><span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">Science</span></div></div>
-              <div class="tp-assign-col"><span style="background:var(--teal-s);color:var(--teal);padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">Class Teacher</span></div>
-              <div class="tp-assign-actions"><button class="tp-remove-btn">Remove</button></div>
-            </div>
-            <div class="tp-assign-row">
-              <div class="tp-assign-col">Top Class</div>
-              <div class="tp-assign-col"><div style="display:flex;gap:4px"><span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">Mathematics</span></div></div>
-              <div class="tp-assign-col"><span style="background:var(--blue-s);color:var(--blue);padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">Subject Teacher</span></div>
-              <div class="tp-assign-actions"><button class="tp-remove-btn">Remove</button></div>
-            </div>
-            <div class="tp-assign-row">
-              <div class="tp-assign-col">Middle Class</div>
-              <div class="tp-assign-col"><div style="display:flex;gap:4px"><span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">Science</span></div></div>
-              <div class="tp-assign-col"><span style="background:var(--blue-s);color:var(--blue);padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">Subject Teacher</span></div>
-              <div class="tp-assign-actions"><button class="tp-remove-btn">Remove</button></div>
-            </div>
-          </div>
+          <div id="tp-assignments-body"></div>
         </div>
       </div>
     </div>

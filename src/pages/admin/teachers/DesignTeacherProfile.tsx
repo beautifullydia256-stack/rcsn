@@ -265,25 +265,45 @@ export default function DesignTeacherProfile() {
       const t = teacher as Record<string, unknown>;
       const school_id = String(t.school_id ?? '');
 
-      const [{ data: schRow }, { data: ctRows }, { data: tcsRows }, { data: studentsForClasses }, { data: teacherUsers }, ttRes] =
-        await Promise.all([
-          supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
-          supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
-          supabase
-            .from('teacher_class_subjects')
-            .select('id, class_name, subject')
-            .eq('school_id', school_id)
-            .eq('teacher_id', teacherId)
-            .order('class_name'),
-          supabase.from('students').select('current_class').eq('school_id', school_id),
-          supabase.from('users').select('email, is_active, updated_at').eq('school_id', school_id).eq('role', 'teacher'),
-          supabase
-            .from('timetable_periods')
-            .select('class_name, day_of_week, subject, start_time, end_time')
-            .eq('school_id', school_id)
-            .eq('teacher_id', teacherId)
-            .order('start_time'),
-        ]);
+      const [
+        { data: schRow },
+        { data: ctRows },
+        { data: tcsRows },
+        { data: studentsForClasses },
+        { data: csRows },
+        { data: teacherUsers },
+        ttRes,
+      ] = await Promise.all([
+        supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
+        supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
+        supabase
+          .from('teacher_class_subjects')
+          .select('id, class_name, subject')
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .order('class_name'),
+        supabase.from('students').select('current_class').eq('school_id', school_id),
+        supabase.from('class_subjects').select('class_name, subject').eq('school_id', school_id),
+        supabase.from('users').select('email, is_active, updated_at').eq('school_id', school_id).eq('role', 'teacher'),
+        supabase
+          .from('timetable_periods')
+          .select('class_name, day_of_week, subject, start_time, end_time')
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .order('start_time'),
+      ]);
+
+      const subjectsByClass: Record<string, string[]> = {};
+      (csRows || []).forEach((r: { class_name?: string; subject?: string }) => {
+        const cn = String(r.class_name || '').trim();
+        const sn = String(r.subject || '').trim();
+        if (!cn || !sn) return;
+        if (!subjectsByClass[cn]) subjectsByClass[cn] = [];
+        if (!subjectsByClass[cn].includes(sn)) subjectsByClass[cn].push(sn);
+      });
+      Object.keys(subjectsByClass).forEach((k) =>
+        subjectsByClass[k].sort((a, b) => a.localeCompare(b))
+      );
       const ttRows = ttRes.error ? [] : ttRes.data || [];
 
       const want = normEmail(pickStr(t.email));
@@ -386,7 +406,15 @@ export default function DesignTeacherProfile() {
         set('#tp-chip-hired', `📅 Hired ${fmtShort(pickStr(t.date_of_hire))}`);
         {
           const qual = pickStr(t.qualification);
-          set('#tp-chip-dept', qual ? `🏫 ${qual}` : '🏫 Dept. —');
+          const deptChip = root.querySelector('#tp-chip-dept') as HTMLElement | null;
+          if (deptChip) {
+            if (qual) {
+              deptChip.style.display = '';
+              deptChip.textContent = `🏫 ${qual}`;
+            } else {
+              deptChip.style.display = 'none';
+            }
+          }
         }
 
         const phone = pickStr(t.phone);
@@ -491,10 +519,41 @@ export default function DesignTeacherProfile() {
         );
 
         const sel = root.querySelector('#tp-assign-class-select') as HTMLSelectElement | null;
+        const renderSubjectPicker = (cls: string) => {
+          const wrap = root.querySelector('#tp-assign-subject-wrap') as HTMLElement | null;
+          if (!wrap) return;
+          if (!cls) {
+            wrap.innerHTML =
+              '<span style="font-size:12px;color:var(--t3)">Select a class to see subjects from your school catalogue.</span>';
+            return;
+          }
+          let subs = subjectsByClass[cls] || [];
+          if (subs.length === 0) {
+            const matchKey = Object.keys(subjectsByClass).find((x) => x.toLowerCase() === cls.toLowerCase());
+            if (matchKey) subs = subjectsByClass[matchKey];
+          }
+          if (subs.length === 0) {
+            wrap.innerHTML =
+              '<span style="font-size:12px;color:var(--t3);line-height:1.45">No subjects configured for this class. Add them under Admin → Settings → Subjects per Class.</span>';
+            return;
+          }
+          wrap.innerHTML = `<div class="tp-subject-picks" style="display:flex;flex-wrap:wrap;gap:6px">${subs
+            .map(
+              (s) =>
+                `<button type="button" class="tp-subject-pick" data-subject="${escapeAttr(s)}">${escapeHtml(s)}</button>`
+            )
+            .join('')}</div>`;
+          wrap.querySelectorAll('.tp-subject-pick').forEach((btn) => {
+            btn.addEventListener('click', () => (btn as HTMLElement).classList.toggle('selected'));
+          });
+        };
+
         if (sel) {
           sel.innerHTML =
-            `<option value="">Select class…</option>` +
+            `<option value="">Select class</option>` +
             uniqueClasses.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+          sel.onchange = () => renderSubjectPicker(sel.value);
+          renderSubjectPicker(sel.value);
         }
 
         setHTML(
@@ -549,14 +608,15 @@ export default function DesignTeacherProfile() {
         if (doAssign) {
           doAssign.onclick = async () => {
             const cls = (root.querySelector('#tp-assign-class-select') as HTMLSelectElement)?.value;
-            const subRaw = (root.querySelector('#tp-assign-subject-input') as HTMLInputElement)?.value || '';
+            const subWrap = root.querySelector('#tp-assign-subject-wrap');
+            const parts = subWrap
+              ? Array.from(subWrap.querySelectorAll('.tp-subject-pick.selected')).map(
+                  (b) => String((b as HTMLElement).dataset.subject || '').trim()
+                )
+              : [];
             if (!cls || !school_id) return;
-            const parts = subRaw
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean);
             if (parts.length === 0) {
-              window.alert('Enter at least one subject (comma-separated).');
+              window.alert('Select a class, then tap one or more subjects to assign.');
               return;
             }
             const rows = parts.map((subject) => ({
@@ -570,8 +630,6 @@ export default function DesignTeacherProfile() {
               window.alert(error.message);
               return;
             }
-            const input = root.querySelector('#tp-assign-subject-input') as HTMLInputElement | null;
-            if (input) input.value = '';
             setReloadToken((x) => x + 1);
           };
         }
