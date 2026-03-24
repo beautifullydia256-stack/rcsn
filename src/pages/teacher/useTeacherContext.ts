@@ -69,6 +69,9 @@ export function useTeacherContext(): TeacherContext {
     queryKey: ['teacher', 'context', schoolId ?? '', userEmail ?? ''],
     queryFn: () => fetchTeacherContext(schoolId, userEmail),
     enabled: !!schoolId && !!userEmail,
+    staleTime: 30 * 1000,
+    refetchInterval: 45 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   return {

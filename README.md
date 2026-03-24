@@ -30,9 +30,14 @@ PwezaCore is a modern, multi-tenant SaaS platform designed to streamline school 
 - **Graduation Processing**: Handles Primary 7, Senior 4, and Senior 6 graduations
 - **Subscription Management**: Free tier for 0-20 students (excluding final year students)
 
+## Teacher dashboard (canonical UI)
+
+Production uses the **Vite** app (`npm run build` → `dist`, see `vercel.json`). The maintained teacher experience lives under **`src/pages/teacher/`** with routes **`/dashboard/teacher/*`** in `src/App.tsx` (`TeacherLayout`, `TeacherDashboardHome`, `DesignTeacherDashboard`, etc.). A duplicate Next.js tree under `app/dashboard/teacher/` is not the primary surface; prefer the Vite routes for teacher work.
+
 ## 🚀 Technology Stack
 
-- **Frontend**: Next.js 15 with App Router, TypeScript, Tailwind CSS
+- **Frontend**: Vite + React (main app); Next.js App Router code also exists in-repo for legacy/secondary surfaces
+- **UI**: TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL, Authentication, Storage, Edge Functions)
 - **Animations**: Framer Motion for smooth micro-interactions
 - **Document Generation**: DOCX and PDFKit for reports and receipts

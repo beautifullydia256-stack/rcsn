@@ -1,4 +1,7 @@
 import { Suspense, useEffect, useState } from "react";
+import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
+import { useTheme } from "../../lib/theme-provider";
+import { useSchoolType } from "../../hooks/useSchoolType";
 import { Outlet, NavLink, Link, useNavigate, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -38,7 +41,7 @@ const prefetchChunk = (importFn: () => Promise<unknown>) => {
 };
 
 const TEACHER_ROUTE_CHUNKS = [
-  () => import("./Dashboard"),
+  () => import("./TeacherDashboardHome"),
   () => import("./students/StudentsPage"),
   () => import("./classes/ClassesPage"),
   () => import("./exam-results/ExamResultsPage"),
@@ -53,6 +56,33 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("./settings/SettingsPage"),
   () => import("../admin/students/AddStudentPage"),
 ];
+
+/** Dark PW shell + hidden scrollbars for Nursery/Primary teacher layout (aligned with accountant/admin). */
+const TEACHER_PRIMARY_SHELL_CSS = `
+  .teacher-primary-shell.accountant-glass.pw-layout[data-theme="dark"] {
+    --pw-bg: #05080f;
+    --pw-s1: #0b1120;
+    --pw-s2: #101828;
+    --pw-t1: #eef3ff;
+    --pw-t2: #8296be;
+    --pw-t3: #3d5278;
+    --pw-border: rgba(255,255,255,0.07);
+  }
+  .teacher-primary-shell.accountant-glass.pw-layout {
+    background: var(--pw-bg, #05080f);
+  }
+  .teacher-primary-shell .ac-glass-sidebar,
+  .teacher-primary-shell .teacher-main-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .teacher-primary-shell .ac-glass-sidebar::-webkit-scrollbar,
+  .teacher-primary-shell .teacher-main-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+`;
 
 function NavLinkStyle({
   to,
@@ -87,7 +117,13 @@ export default function TeacherLayout() {
   const location = useLocation();
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
+  const setUITheme = useUIStore((s) => s.setTheme);
+  const { theme: ctxTheme, setTheme: setCtxTheme } = useTheme();
+  const { data: schoolType, isLoading: schoolTypeLoading } = useSchoolType();
+  const isPrimarySchool = schoolType === "Nursery/Primary";
   const user = useAuthStore((s) => s.user);
+  const schoolId =
+    useAuthStore((s) => s.schoolId) ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
   const role = useAuthStore((s) => s.role);
   const { setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
   const canEnrolStudents = usePermission(PERMISSION_KEYS.studentsManage);
@@ -152,12 +188,44 @@ export default function TeacherLayout() {
     return () => (useIdle ? cancelIdleCallback(id as number) : clearTimeout(id));
   }, []);
 
+  useEffect(() => {
+    if (!isPrimarySchool) return;
+    const prevCtx = ctxTheme;
+    const prevUi = useUIStore.getState().theme;
+    setCtxTheme("dark");
+    setUITheme("dark");
+    return () => {
+      setCtxTheme(prevCtx);
+      setUITheme(prevUi);
+    };
+    // Intentionally omit ctxTheme: only capture theme when entering / leaving primary shell.
+  }, [isPrimarySchool, setCtxTheme, setUITheme]);
+
+  /** Secondary: keep ThemeProvider (html class) in sync with the sidebar toggle — both were drifting before. */
+  useEffect(() => {
+    if (isPrimarySchool) return;
+    setCtxTheme(theme);
+  }, [isPrimarySchool, theme, setCtxTheme]);
+
+  if (!schoolId || schoolTypeLoading) {
+    return <ThemedLoadingView />;
+  }
+
   return (
     <div
-      className="accountant-glass fixed inset-0 flex overflow-hidden"
-      data-theme={theme}
-      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
+      className={
+        isPrimarySchool
+          ? "teacher-primary-shell accountant-glass pw-layout fixed inset-0 flex overflow-hidden"
+          : "accountant-glass fixed inset-0 flex overflow-hidden"
+      }
+      data-theme={isPrimarySchool ? "dark" : theme}
+      style={
+        isPrimarySchool
+          ? { background: "var(--pw-bg, #05080f)", backgroundColor: "var(--pw-bg, #05080f)" }
+          : { background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }
+      }
     >
+      {isPrimarySchool ? <style>{TEACHER_PRIMARY_SHELL_CSS}</style> : null}
       <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
         <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
@@ -314,14 +382,16 @@ export default function TeacherLayout() {
               />
               <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 ac-text-muted" />
             </div>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
-              title={theme === "light" ? "Switch to dark" : "Switch to light"}
-            >
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </button>
+            {!isPrimarySchool && (
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+                title={theme === "light" ? "Switch to dark" : "Switch to light"}
+              >
+                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+              </button>
+            )}
             <button
               type="button"
               className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
@@ -329,14 +399,16 @@ export default function TeacherLayout() {
               <Bell className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 pl-2">
-              <span className="ac-text-primary text-sm font-medium truncate max-w-[120px]">
+              <span
+                className={`ac-text-primary text-sm font-medium truncate max-w-[120px] ${isPrimarySchool ? "uppercase tracking-wide" : ""}`}
+              >
                 {user?.user_metadata?.name ?? user?.email ?? "Teacher"}
               </span>
               <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
             </div>
           </div>
         </header>
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className={`flex-1 overflow-y-auto min-h-0 ${isPrimarySchool ? "teacher-main-scroll" : ""}`}>
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Suspense
               fallback={

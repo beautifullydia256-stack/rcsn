@@ -53,3 +53,21 @@ export function useDesignDashboardThemeSync(enabled: boolean) {
     return () => obs.disconnect();
   }, [enabled]);
 }
+
+/**
+ * Teacher design HTML should stay on dark tokens only (no `html.light`), matching the PW shell.
+ */
+export function useDesignDashboardDarkOnly(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled) return;
+    const root = document.documentElement;
+    const enforce = () => {
+      root.classList.remove('light');
+      if (!root.classList.contains('dark')) root.classList.add('dark');
+    };
+    enforce();
+    const obs = new MutationObserver(enforce);
+    obs.observe(root, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+    return () => obs.disconnect();
+  }, [enabled]);
+}

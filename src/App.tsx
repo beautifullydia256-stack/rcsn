@@ -68,7 +68,7 @@ const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPa
 const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
 const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazyWithRetry(() => import('./pages/admin/identity/StudentIDCardPage'));
-const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/DesignTeacherDashboard'));
+const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/TeacherDashboardHome'));
 const TeacherStudentsPage = lazyWithRetry(() => import('./pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazyWithRetry(() => import('./pages/teacher/classes/ClassesPage'));
 const TeacherExamResultsPage = lazyWithRetry(() => import('./pages/teacher/exam-results/ExamResultsPage'));
