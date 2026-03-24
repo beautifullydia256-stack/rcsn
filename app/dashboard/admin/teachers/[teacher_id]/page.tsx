@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/src/lib/supabase";
+import { mergeClassNamesWithCanonical } from "@/src/lib/schoolClassNames";
 import { motion } from "framer-motion";
 
 export default function TeacherProfilePage() {
@@ -80,8 +81,14 @@ export default function TeacherProfilePage() {
           .select('current_class')
           .eq('school_id', teacher.school_id);
         
-        const uniqueClasses = Array.from(new Set((students || []).map(s => s.current_class).filter(Boolean))).sort();
-        setAllClasses(uniqueClasses);
+        const uniqueClasses = Array.from(
+          new Set((students || []).map(s => s.current_class).filter(Boolean) as string[])
+        ).sort();
+        const mergedClasses = mergeClassNamesWithCanonical(
+          sch?.type as 'Nursery/Primary' | 'Secondary' | null,
+          uniqueClasses
+        );
+        setAllClasses(mergedClasses);
 
         // Load all class teachers to find available classes (from class_teachers table)
         const { data: classTeachers } = await supabase
@@ -91,7 +98,7 @@ export default function TeacherProfilePage() {
           .eq('year', currentYear)
           .eq('term', currentTerm);
         const classesWithTeachers = new Set((classTeachers || []).map(ct => ct.class_name));
-        const available = uniqueClasses.filter(c => !classesWithTeachers.has(c));
+        const available = mergedClasses.filter(c => !classesWithTeachers.has(c));
         setAvailableClasses(available);
       }
       setLoading(false);
@@ -390,7 +397,7 @@ export default function TeacherProfilePage() {
               
               {availableClasses.length === 0 ? (
                 <div className="text-white/70 mb-4">
-                  No classes available. All classes already have assigned class teachers, or no classes exist in the system.
+                  No class is free to assign right now: every class in your school&apos;s list already has a class teacher (for this term), or your school type is not set.
                 </div>
               ) : (
                 <>

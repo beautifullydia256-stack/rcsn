@@ -6,6 +6,7 @@ import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
+import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 
@@ -264,8 +265,9 @@ export default function DesignTeacherProfile() {
       const t = teacher as Record<string, unknown>;
       const school_id = String(t.school_id ?? '');
 
-      const [{ data: ctRows }, { data: tcsRows }, { data: studentsForClasses }, { data: teacherUsers }, ttRes] =
+      const [{ data: schRow }, { data: ctRows }, { data: tcsRows }, { data: studentsForClasses }, { data: teacherUsers }, ttRes] =
         await Promise.all([
+          supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
           supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
           supabase
             .from('teacher_class_subjects')
@@ -304,13 +306,18 @@ export default function DesignTeacherProfile() {
       const pu = portalUser as { email?: string; is_active?: boolean; updated_at?: string } | null;
       const portalActive = !!(pu && pu.is_active !== false && want && normEmail(pu.email) === want);
 
-      const uniqueClasses = Array.from(
+      const uniqueFromStudents = Array.from(
         new Set(
           (studentsForClasses || [])
             .map((s) => String((s as { current_class?: string }).current_class || '').trim())
             .filter(Boolean)
         )
-      ).sort();
+      );
+      const schoolType = (schRow as { type?: string } | null)?.type as
+        | 'Nursery/Primary'
+        | 'Secondary'
+        | undefined;
+      const uniqueClasses = mergeClassNamesWithCanonical(schoolType ?? null, uniqueFromStudents);
 
       if (cancelled) return;
 

@@ -392,13 +392,11 @@ export default function GenerateReportsPage() {
     }, 450);
 
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- selection inputs; pageData refetch updates exam sets
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getPreviewKeyAndPayload is stable per render; deps mirror selection
   }, [
     pageData?.schoolId,
-    pageData,
     selectedTermKey,
     selectedExamSetId,
-    effectiveExamSetId,
     selectedClass,
     reportType,
     selectedStudent,
@@ -517,9 +515,10 @@ export default function GenerateReportsPage() {
         return;
       }
 
-      const cachedReports = queryClient.getQueryData(ctx.key);
-      const hadCachedPreview = Array.isArray(cachedReports) && cachedReports.length > 0;
-      setDownloadPdfStatus(hadCachedPreview ? 'Preparing PDF…' : 'Generating reports…');
+      const cached = queryClient.getQueryData(ctx.key);
+      setDownloadPdfStatus(
+        Array.isArray(cached) && cached.length > 0 ? 'Preparing PDF…' : 'Generating reports…'
+      );
 
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
@@ -527,6 +526,10 @@ export default function GenerateReportsPage() {
         staleTime: STALE_TIME_MS,
       });
       if (!reports.length) throw new Error('No reports to download');
+
+      if (Array.isArray(cached) && cached.length > 0) {
+        setDownloadPdfStatus('Preparing PDF…');
+      }
 
       const response = await fetch(`${baseUrl}/api/pdf/generate`, {
         method: 'POST',

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 
 export default function TeacherProfilePage() {
@@ -71,7 +72,11 @@ export default function TeacherProfilePage() {
               .filter((c): c is string => typeof c === 'string' && c.trim().length > 0)
           )
         ).sort();
-        setAllClasses(uniqueClasses);
+        const mergedClasses = mergeClassNamesWithCanonical(
+          sch?.type as 'Nursery/Primary' | 'Secondary' | null,
+          uniqueClasses
+        );
+        setAllClasses(mergedClasses);
         const { data: classTeachers } = await supabase
           .from('class_teachers')
           .select('class_name')
@@ -79,7 +84,7 @@ export default function TeacherProfilePage() {
           .eq('year', currentYear)
           .eq('term', currentTerm);
         const classesWithTeachers = new Set((classTeachers || []).map((ct: { class_name: string }) => ct.class_name));
-        setAvailableClasses(uniqueClasses.filter((c) => !classesWithTeachers.has(c)));
+        setAvailableClasses(mergedClasses.filter((c) => !classesWithTeachers.has(c)));
       }
       setLoading(false);
     };
@@ -373,7 +378,9 @@ export default function TeacherProfilePage() {
           <div className="bg-slate-800 rounded-xl p-6 max-w-md w-full mx-4 border border-[var(--ac-border)]" onClick={(e) => e.stopPropagation()}>
             <h3 className="ac-text-primary text-xl font-semibold mb-4">Appoint as Class Teacher</h3>
             {availableClasses.length === 0 ? (
-              <div className="ac-text-secondary mb-4">No classes available.</div>
+              <div className="ac-text-secondary mb-4">
+                No class is free to assign: each class already has a class teacher (this term), or your school type is not set.
+              </div>
             ) : (
               <>
                 <p className="ac-text-secondary text-sm mb-4">Select a class to appoint <strong className="ac-text-primary">{name}</strong> as its class teacher.</p>

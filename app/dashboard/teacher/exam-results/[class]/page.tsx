@@ -7,17 +7,22 @@ import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
 import {
-  NURSERY_PERFORMANCE_OPTIONS,
-  NURSERY_PERFORMANCE_COLOR_MAP,
-  NURSERY_SKILL_GRID,
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
-  normalizeNurseryPerformanceWord,
   sanitizeNurseryKey,
-  getNurserySkillKeyVariants,
-  NurseryPerformanceRecord,
-  NurseryPerformanceWord
 } from "@/src/templates/primary/nurseryPerformance";
+import {
+  ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS,
+  BEGINNING_OF_TERM_RATINGS,
+  BEGINNING_OF_TERM_STRANDS,
+  canonicalizeBeginningOfTermSkillKey,
+  getBeginningOfTermStrandForSubject,
+  normalizeBeginningOfTermRating,
+  type BeginningOfTermRating,
+} from "@/src/templates/primary/nurseryBeginningOfTerm";
+
+/** Per-student map of skillKey → rating label (Beginning-of-term holistic grid). */
+type NurseryPerformanceRecord = Record<string, BeginningOfTermRating | string>;
 
 export default function TeacherExamResultsClassPage() {
   const router = useRouter();
@@ -42,7 +47,7 @@ export default function TeacherExamResultsClassPage() {
     if (isSecondary || isALevel) return null;
     return getSectionForClass(className);
   }, [className, isSecondary, isALevel]);
-  const isNursery = primarySection === 'Baby Class';
+  const isNursery = primarySection === 'Baby Class' || primarySection === 'Nursery';
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -62,28 +67,10 @@ export default function TeacherExamResultsClassPage() {
   const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
-  const nurserySkillsFlat = useMemo(() => NURSERY_SKILL_GRID.flat().filter(skill => skill.label), []);
-  const nurserySkillVariantLookup = useMemo(() => {
-    const map = new Map<string, string>();
-    nurserySkillsFlat.forEach(skill => {
-      getNurserySkillKeyVariants(skill).forEach(variant => {
-        map.set(variant, skill.key);
-      });
-    });
-    return map;
-  }, [nurserySkillsFlat]);
-  const canonicalizeNurserySkillKey = useCallback((rawKey: unknown): string | null => {
-    const sanitized = sanitizeNurseryKey(rawKey);
-    if (!sanitized) return null;
-    const canonical = nurserySkillVariantLookup.get(sanitized) || sanitized;
-    if (canonical === 'placeholder') return null;
-    return canonical;
-  }, [nurserySkillVariantLookup]);
-  const activeNurserySkill = useMemo(() => {
-    if (!isNursery || !selectedSubject) return null;
-    const normalized = sanitizeNurseryKey(selectedSubject);
-    return nurserySkillsFlat.find(skill => sanitizeNurseryKey(skill.label) === normalized || sanitizeNurseryKey(skill.key) === normalized) || null;
-  }, [isNursery, selectedSubject, nurserySkillsFlat]);
+  const activeBeginningOfTermStrand = useMemo(
+    () => (isNursery ? getBeginningOfTermStrandForSubject(selectedSubject) : null),
+    [isNursery, selectedSubject]
+  );
   // Secondary layout state
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
@@ -389,13 +376,13 @@ export default function TeacherExamResultsClassPage() {
           const teacherSubjects = teacherData?.subjects || [];
           console.log('Using fallback subjects from teachers table:', teacherSubjects);
           
-          if (teacherSubjects.length === 0) {
+          if (teacherSubjects.length === 0 && !isNursery) {
             setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
             return;
           }
           
           const processedSubjects = isNursery
-            ? nurserySkillsFlat.map(skill => skill.label)
+            ? ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS
             : teacherSubjects;
           
           setTeacherSubjects(processedSubjects);
@@ -414,19 +401,23 @@ export default function TeacherExamResultsClassPage() {
           const subjects = assignments?.map(a => a.subject) || [];
           console.log('Subjects for this class:', subjects);
           
-          if (subjects.length === 0) {
+          if (subjects.length === 0 && !isNursery) {
             setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
             return;
           }
           
           const processedSubjects = isNursery
-            ? nurserySkillsFlat.map(skill => skill.label)
+            ? ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS
             : subjects;
           
           setTeacherSubjects(processedSubjects);
         } else {
-          setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
-          return;
+          if (isNursery) {
+            setTeacherSubjects(ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS);
+          } else {
+            setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
+            return;
+          }
         }
 
         // Get exam sets for this class that are active for input
@@ -731,7 +722,7 @@ export default function TeacherExamResultsClassPage() {
     }));
   };
 
-  const handleNurserySelection = (studentId: string, skillKey: string, performance: NurseryPerformanceWord) => {
+  const handleNurserySelection = (studentId: string, skillKey: string, performance: BeginningOfTermRating) => {
     let changed = false;
     setNurseryPerformances(prev => {
       const current = prev[studentId] || {};
@@ -876,8 +867,8 @@ export default function TeacherExamResultsClassPage() {
         return;
       }
 
-      if (!isSecondary) {
-        if (isNursery) {
+        if (!isSecondary) {
+          if (isNursery) {
           const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
         const studentsToPersist = dirtyStudentIds.length > 0
           ? dirtyStudentIds
@@ -890,45 +881,45 @@ export default function TeacherExamResultsClassPage() {
           return;
         }
 
-        const saves = studentsToPersist.map(async (studentId) => {
-            const performances = nurseryPerformances[studentId] || {};
-            const payload: Record<string, NurseryPerformanceWord> = {};
-            Object.entries(performances).forEach(([skillKey, value]) => {
-              if (!value) return;
-              const canonicalKey = canonicalizeNurserySkillKey(skillKey);
-              if (!canonicalKey) return;
-              payload[canonicalKey] = value;
-            });
-            const payloadForRpc = Object.keys(payload).length ? payload : null;
-            console.debug('Saving nursery performance', {
-              studentId,
-              subject: activeNurserySkill?.label || selectedSubject,
-              payload: payloadForRpc
-            });
-
-            const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
-              p_school_id: schoolId,
-              p_exam_set_id: selectedExamSet,
-              p_student_id: studentId,
-              p_class_name: className,
-              p_subject: activeNurserySkill?.label || (selectedSubject || '').trim(),
-              p_marks_obtained: null,
-              p_total_marks: null,
-              p_grade: null,
-              p_remarks: null,
-              p_teacher_id: teacherIdForSave,
-              p_teacher_comment: null,
-              p_nursery_skills: payloadForRpc
-            });
-
-            if (resp.error) {
-              console.error('RPC nursery save error:', resp.error);
-              throw resp.error;
+        const saves: Promise<unknown>[] = [];
+        for (const studentId of studentsToPersist) {
+          const performances = nurseryPerformances[studentId] || {};
+          for (const strand of BEGINNING_OF_TERM_STRANDS) {
+            const payload: Record<string, string> = {};
+            for (const skill of strand.skills) {
+              const raw = performances[skill.key];
+              const norm = raw ? normalizeBeginningOfTermRating(raw) : null;
+              if (norm) payload[skill.key] = norm;
             }
-            if (resp.data && resp.data.success === false) {
-              throw new Error(resp.data.error || 'Failed to save nursery performance');
-            }
-          });
+            if (Object.keys(payload).length === 0) continue;
+
+            saves.push(
+              (async () => {
+                const resp = await supabase.rpc('teacher_upsert_exam_result_primary', {
+                  p_school_id: schoolId,
+                  p_exam_set_id: selectedExamSet,
+                  p_student_id: studentId,
+                  p_class_name: className,
+                  p_subject: strand.subject,
+                  p_marks_obtained: null,
+                  p_total_marks: null,
+                  p_grade: null,
+                  p_remarks: null,
+                  p_teacher_id: teacherIdForSave,
+                  p_teacher_comment: null,
+                  p_nursery_skills: payload,
+                });
+                if (resp.error) {
+                  console.error('RPC nursery save error:', resp.error);
+                  throw resp.error;
+                }
+                if (resp.data && (resp.data as { success?: boolean }).success === false) {
+                  throw new Error((resp.data as { error?: string }).error || 'Failed to save nursery performance');
+                }
+              })()
+            );
+          }
+        }
 
           await Promise.all(saves);
           setSuccess(`Successfully saved nursery performance for ${studentsToPersist.length} ${studentsToPersist.length === 1 ? 'student' : 'students'}`);
@@ -1121,9 +1112,10 @@ export default function TeacherExamResultsClassPage() {
     }
   };
 
-  // Prefill previously saved results when exam set + subject selected
+  // Prefill previously saved results when exam set + subject selected (non–pre-primary nursery)
   useEffect(() => {
     const prefill = async () => {
+      if (isNursery) return;
       if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject || students.length === 0) return;
       try {
         const { data, error } = await supabase
@@ -1138,51 +1130,15 @@ export default function TeacherExamResultsClassPage() {
 
         const rows = data || [];
         if (!isSecondary) {
-          if (isNursery) {
-            const map: Record<string, NurseryPerformanceRecord> = {};
-            rows.forEach(r => {
-              const raw = r.nursery_skill_performance;
-              if (!raw) return;
-              let source: Record<string, unknown> | null = null;
-              if (typeof raw === 'string') {
-                try {
-                  source = JSON.parse(raw);
-                } catch {
-                  source = null;
-                }
-              } else if (typeof raw === 'object') {
-                source = raw as Record<string, unknown>;
-              }
-
-              if (source) {
-              const normalized: NurseryPerformanceRecord = {};
-              Object.entries(source).forEach(([skillKey, value]) => {
-                const canonicalKey = canonicalizeNurserySkillKey(skillKey);
-                if (!canonicalKey) return;
-                const normalizedValue = normalizeNurseryPerformanceWord(value);
-                if (normalizedValue) {
-                  normalized[canonicalKey] = normalizedValue;
-                }
-              });
-              if (Object.keys(normalized).length > 0) {
-                map[r.student_id] = normalized;
-              }
-            }
+          const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+          rows.forEach(r => {
+            map[r.student_id] = {
+              marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+              totalMarks: r.total_marks != null ? String(r.total_marks) : '',
+              grade: r.grade || ''
+            };
           });
-          setNurseryPerformances(map);
-            setNurseryDirtyStudents({});
-            setExamResults({});
-          } else {
-            const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
-            rows.forEach(r => {
-              map[r.student_id] = {
-                marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-                totalMarks: r.total_marks != null ? String(r.total_marks) : '',
-                grade: r.grade || ''
-              };
-            });
-            setExamResults(map);
-          }
+          setExamResults(map);
         } else {
           const map: Record<string, any> = {};
           rows.forEach(r => {
@@ -1200,26 +1156,68 @@ export default function TeacherExamResultsClassPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
-    if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject) {
-      console.log('reloadSavedResults: Missing required parameters', {
-        resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject
-      });
+    if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet) {
       return;
     }
-    
+
+    if (isNursery) {
+      try {
+        const { data, error } = await supabase
+          .from('exam_results')
+          .select('*')
+          .eq('school_id', resolvedSchoolId)
+          .eq('class_name', className)
+          .eq('exam_set_id', selectedExamSet)
+          .in('subject', ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS)
+          .eq('teacher_id', resolvedTeacherId);
+        if (error) {
+          console.error('Error loading saved results:', error);
+          return;
+        }
+        const rows = data || [];
+        const map: Record<string, NurseryPerformanceRecord> = {};
+        for (const r of rows) {
+          const raw = r.nursery_skill_performance;
+          if (!raw) continue;
+          let source: Record<string, unknown> | null = null;
+          if (typeof raw === 'string') {
+            try {
+              source = JSON.parse(raw);
+            } catch {
+              source = null;
+            }
+          } else if (typeof raw === 'object') {
+            source = raw as Record<string, unknown>;
+          }
+          if (!source) continue;
+          const sid = r.student_id as string;
+          if (!map[sid]) map[sid] = {};
+          const acc = map[sid];
+          Object.entries(source).forEach(([skillKey, value]) => {
+            const canonicalKey = canonicalizeBeginningOfTermSkillKey(skillKey);
+            if (!canonicalKey) return;
+            const normalizedValue = normalizeBeginningOfTermRating(value);
+            if (normalizedValue) acc[canonicalKey] = normalizedValue;
+          });
+        }
+        setNurseryPerformances(map);
+        setNurseryDirtyStudents({});
+        setExamResults({});
+      } catch (err) {
+        console.error('Exception in reloadSavedResults (nursery):', err);
+      }
+      return;
+    }
+
+    if (!selectedSubject) {
+      return;
+    }
+
     try {
-      console.log('reloadSavedResults: Loading saved results for', {
-        schoolId: resolvedSchoolId,
-        className,
-        examSetId: selectedExamSet,
-        subject: selectedSubject,
-        teacherId: resolvedTeacherId
-      });
-      
       const { data, error } = await supabase
         .from('exam_results')
         .select('*')
@@ -1228,60 +1226,24 @@ export default function TeacherExamResultsClassPage() {
         .eq('exam_set_id', selectedExamSet)
         .eq('subject', selectedSubject)
         .eq('teacher_id', resolvedTeacherId);
-        
+
       if (error) {
         console.error('Error loading saved results:', error);
         return;
       }
-      
-      const rows = data || [];
-      console.log('reloadSavedResults: Found', rows.length, 'saved results');
-      
-      if (!isSecondary && !isALevel) {
-        if (isNursery) {
-          const map: Record<string, NurseryPerformanceRecord> = {};
-          rows.forEach(r => {
-            const raw = r.nursery_skill_performance;
-            if (!raw) return;
-            let source: Record<string, unknown> | null = null;
-            if (typeof raw === 'string') {
-              try {
-                source = JSON.parse(raw);
-              } catch {
-                source = null;
-              }
-            } else if (typeof raw === 'object') {
-              source = raw as Record<string, unknown>;
-            }
 
-            if (!source) return;
-            const normalized: NurseryPerformanceRecord = {};
-            Object.entries(source).forEach(([skillKey, value]) => {
-              const canonicalKey = canonicalizeNurserySkillKey(skillKey);
-              if (!canonicalKey) return;
-              const normalizedValue = normalizeNurseryPerformanceWord(value);
-              if (normalizedValue) {
-                normalized[canonicalKey] = normalizedValue;
-              }
-            });
-            if (Object.keys(normalized).length > 0) {
-              map[r.student_id] = normalized;
-            }
-          });
-          setNurseryPerformances(map);
-          setNurseryDirtyStudents({});
-          setExamResults({});
-        } else {
-          const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
-          rows.forEach(r => {
-            map[r.student_id] = {
-              marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-              totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-              grade: r.grade || ''
-            };
-          });
-          setExamResults(map);
-        }
+      const rows = data || [];
+
+      if (!isSecondary && !isALevel) {
+        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
+        rows.forEach(r => {
+          map[r.student_id] = {
+            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
+            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
+            grade: r.grade || ''
+          };
+        });
+        setExamResults(map);
       } else if (isALevel) {
         const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
         rows.forEach(r => {
@@ -1323,26 +1285,31 @@ export default function TeacherExamResultsClassPage() {
 
   // When switching Exam Set or Subject, clear current UI state and load saved rows for the new selection
   useEffect(() => {
-    if (!selectedExamSet || !selectedSubject) {
-      return;
-    }
+    if (!selectedExamSet) return;
     setError(null);
     setSuccess(null);
+    if (isNursery) {
+      void reloadSavedResults();
+      return;
+    }
+    if (!selectedSubject) return;
     setExamResults({});
     setExamResultsSecondary({});
-    (async () => { await reloadSavedResults(); })();
+    void reloadSavedResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedExamSet, selectedSubject]);
+  }, [selectedExamSet, selectedSubject, isNursery]);
 
   useEffect(() => {
     if (!isNursery) {
       setNurseryPerformances({});
       setNurseryDirtyStudents({});
-      return;
     }
-    setNurseryPerformances({});
-    setNurseryDirtyStudents({});
-  }, [selectedExamSet, selectedSubject, className, isNursery]);
+  }, [isNursery]);
+
+  useEffect(() => {
+    if (!isNursery || teacherSubjects.length === 0) return;
+    setSelectedSubject((prev) => prev || teacherSubjects[0]);
+  }, [isNursery, teacherSubjects]);
 
   // Refresh class teacher status when teacher ID changes
   useEffect(() => {
@@ -1658,7 +1625,9 @@ export default function TeacherExamResultsClassPage() {
                   <p className="text-white/80 text-sm mt-1">
                     {isSecondary
                       ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
-                      : 'Enter marks out of 100.'}
+                      : isNursery
+                        ? 'Beginning-of-term holistic grid: choose Very Good, Good, Needs Improvement, or Tries for each skill.'
+                        : 'Enter marks out of 100.'}
                   </p>
                 </div>
                 {/* Manual refresh buttons removed to streamline UI */}
@@ -1667,22 +1636,24 @@ export default function TeacherExamResultsClassPage() {
             <div className="overflow-x-auto">
               {!isSecondary && !isALevel ? (
                 isNursery ? (
-                  activeNurserySkill ? (
+                  activeBeginningOfTermStrand ? (
                     <table className="min-w-full">
                       <thead className="bg-white/5">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">{activeNurserySkill.label}</th>
+                          {activeBeginningOfTermStrand.skills.map((skill) => (
+                            <th
+                              key={skill.key}
+                              className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider max-w-[11rem]"
+                            >
+                              {skill.label}
+                            </th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/10">
                         {students.map((student) => {
                           const performance = nurseryPerformances[student.student_id] || {};
-                          const skillKey = activeNurserySkill.key;
-                          const selected = performance[skillKey];
-                          const color = selected ? NURSERY_PERFORMANCE_COLOR_MAP[selected] : undefined;
-                          const badgeTextColor = selected ? getNurseryReadableTextColor(color) : '#94a3b8';
-                          const cellBackground = selected ? applyAlphaToHex(color, 0.18) : 'transparent';
                           return (
                             <tr key={student.student_id} className="hover:bg-white/5">
                               <td className="px-4 py-4 align-top text-white">
@@ -1691,49 +1662,69 @@ export default function TeacherExamResultsClassPage() {
                                   <div className="text-xs text-white/60 mt-1">{student.admission_number}</div>
                                 )}
                               </td>
-                              <td className="px-3 py-3 align-top" style={{ background: cellBackground }}>
-                                <div className="flex flex-col items-center gap-2">
-                                  <div
-                                    className="w-full text-center text-xs font-semibold uppercase tracking-wide px-2 py-2 rounded-md border border-white/10 transition-colors"
-                                    style={{
-                                      background: selected ? color : 'rgba(255,255,255,0.05)',
-                                      color: badgeTextColor
-                                    }}
+                              {activeBeginningOfTermStrand.skills.map((skill) => {
+                                const skillKey = skill.key;
+                                const selected = performance[skillKey] as BeginningOfTermRating | undefined;
+                                const color = selected
+                                  ? BEGINNING_OF_TERM_RATINGS.find((r) => r.label === selected)?.color
+                                  : undefined;
+                                const badgeTextColor = selected && color ? getNurseryReadableTextColor(color) : '#94a3b8';
+                                const cellBackground = selected && color ? applyAlphaToHex(color, 0.18) : 'transparent';
+                                return (
+                                  <td
+                                    key={skillKey}
+                                    className="px-2 py-3 align-top"
+                                    style={{ background: cellBackground }}
                                   >
-                                    {selected || 'Select'}
-                                  </div>
-                                  <div className="flex flex-wrap justify-center gap-2">
-                                    {NURSERY_PERFORMANCE_OPTIONS.map(option => {
-                                      const isSelected = option.label === selected;
-                                      const buttonTextColor = getNurseryReadableTextColor(option.color);
-                                      return (
+                                    <div className="flex flex-col items-center gap-2">
+                                      <div
+                                        className="w-full text-center text-[10px] font-semibold uppercase tracking-wide px-1 py-1.5 rounded-md border border-white/10 transition-colors"
+                                        style={{
+                                          background: selected && color ? color : 'rgba(255,255,255,0.05)',
+                                          color: badgeTextColor,
+                                        }}
+                                      >
+                                        {selected || '—'}
+                                      </div>
+                                      <div className="flex flex-wrap justify-center gap-1">
+                                        {BEGINNING_OF_TERM_RATINGS.map((option) => {
+                                          const isSelected = option.label === selected;
+                                          const buttonTextColor = getNurseryReadableTextColor(option.color);
+                                          return (
+                                            <button
+                                              key={option.label}
+                                              type="button"
+                                              onClick={() =>
+                                                handleNurserySelection(student.student_id, skillKey, option.label)
+                                              }
+                                              className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full shadow-sm transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/60"
+                                              style={{
+                                                background: option.color,
+                                                color: buttonTextColor,
+                                                opacity: isSelected ? 1 : 0.78,
+                                                transform: isSelected ? 'scale(1.05)' : 'scale(1)',
+                                                boxShadow: isSelected
+                                                  ? '0 0 0 2px rgba(255,255,255,0.7)'
+                                                  : '0 1px 4px rgba(15,23,42,0.25)',
+                                              }}
+                                            >
+                                              {option.label}
+                                              {isSelected ? ' ✓' : ''}
+                                            </button>
+                                          );
+                                        })}
                                         <button
-                                          key={option.label}
                                           type="button"
-                                          onClick={() => handleNurserySelection(student.student_id, skillKey, option.label)}
-                                          className="px-2 py-1 text-[11px] font-semibold rounded-full shadow-sm transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/60"
-                                          style={{
-                                            background: option.color,
-                                            color: buttonTextColor,
-                                            opacity: isSelected ? 1 : 0.78,
-                                            transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-                                            boxShadow: isSelected ? '0 0 0 2px rgba(255,255,255,0.7)' : '0 1px 4px rgba(15,23,42,0.25)'
-                                          }}
+                                          onClick={() => handleNurseryClear(student.student_id, skillKey)}
+                                          className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-white/15 text-white hover:bg-white/25 transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/40"
                                         >
-                                          {option.label}{isSelected ? ' ✓' : ''}
+                                          Clear
                                         </button>
-                                      );
-                                    })}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleNurseryClear(student.student_id, skillKey)}
-                                      className="px-2 py-1 text-[11px] font-semibold rounded-full bg-white/15 text-white hover:bg-white/25 transition-transform duration-150 ease-out focus:outline-none focus:ring-2 focus:ring-white/40"
-                                    >
-                                      Clear
-                                    </button>
-                                  </div>
-                                </div>
-                              </td>
+                                      </div>
+                                    </div>
+                                  </td>
+                                );
+                              })}
                             </tr>
                           );
                         })}
@@ -1741,7 +1732,7 @@ export default function TeacherExamResultsClassPage() {
                     </table>
                   ) : (
                     <div className="p-6 text-center text-white/70 text-sm">
-                      Select a subject that matches one of the nursery developmental skills to begin recording performance.
+                      Select a learning area (strand) above to record ratings for its three skills.
                     </div>
                   )
                 ) : (
