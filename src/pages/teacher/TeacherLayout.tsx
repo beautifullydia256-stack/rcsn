@@ -27,6 +27,7 @@ import {
   Percent,
   UserPlus,
   Banknote,
+  MessageCircle,
 } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
@@ -34,8 +35,9 @@ import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/useP
 import { PERMISSION_KEYS } from "../../lib/permissions";
 import { useUIStore } from "../../store/uiStore";
 import { useTeacherContext } from "./useTeacherContext";
+import { ACCOUNTANT_PW_SHELL_CSS } from "../../lib/pwShellCss";
+import AdminContentSkeleton from "../../components/layout/AdminContentSkeleton";
 
-// Prefetch route chunks on hover so navigation feels instant
 const prefetchChunk = (importFn: () => Promise<unknown>) => {
   importFn().catch(() => {});
 };
@@ -57,33 +59,6 @@ const TEACHER_ROUTE_CHUNKS = [
   () => import("../admin/students/AddStudentPage"),
 ];
 
-/** Dark PW shell + hidden scrollbars for Nursery/Primary teacher layout (aligned with accountant/admin). */
-const TEACHER_PRIMARY_SHELL_CSS = `
-  .teacher-primary-shell.accountant-glass.pw-layout[data-theme="dark"] {
-    --pw-bg: #05080f;
-    --pw-s1: #0b1120;
-    --pw-s2: #101828;
-    --pw-t1: #eef3ff;
-    --pw-t2: #8296be;
-    --pw-t3: #3d5278;
-    --pw-border: rgba(255,255,255,0.07);
-  }
-  .teacher-primary-shell.accountant-glass.pw-layout {
-    background: var(--pw-bg, #05080f);
-  }
-  .teacher-primary-shell .ac-glass-sidebar,
-  .teacher-primary-shell .teacher-main-scroll {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  .teacher-primary-shell .ac-glass-sidebar::-webkit-scrollbar,
-  .teacher-primary-shell .teacher-main-scroll::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-  }
-`;
-
 function NavLinkStyle({
   to,
   end,
@@ -100,9 +75,7 @@ function NavLinkStyle({
   return (
     <NavLink to={to} end={end} className="block" onMouseEnter={onPrefetch}>
       {({ isActive }) => (
-        <span
-          className={`ac-sidebar-nav-item ${isActive ? "ac-sidebar-nav-item-active" : ""}`}
-        >
+        <span className={`ac-sidebar-nav-item ${isActive ? "ac-sidebar-nav-item-active" : ""}`}>
           <Icon className="h-5 w-5 flex-shrink-0 [color:inherit]" />
           <span className="flex-1">{children}</span>
           {isActive && <ChevronRight className="h-4 w-4 flex-shrink-0 opacity-80" />}
@@ -132,12 +105,23 @@ export default function TeacherLayout() {
   const [searchQ, setSearchQ] = useState("");
   const [examResultsOpen, setExamResultsOpen] = useState(false);
   const [openClass, setOpenClass] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const closeSidebar = () => setSidebarOpen(false);
+
+  const displayLabel = user?.user_metadata?.name ?? user?.email ?? "Teacher";
+  const userInitials =
+    displayLabel
+      .split(/\s+/)
+      .map((w: string) => w[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "T";
 
   const isExamResultsArea = location.pathname.startsWith("/dashboard/teacher/exam-results");
   useEffect(() => {
     if (isExamResultsArea) setExamResultsOpen(true);
   }, [isExamResultsArea]);
-  // When on class/subject URL, expand that class in the sidebar
   useEffect(() => {
     const match = location.pathname.match(/^\/dashboard\/teacher\/exam-results\/class\/([^/]+)(?:\/subject\/[^/]+)?/);
     if (match) {
@@ -148,6 +132,10 @@ export default function TeacherLayout() {
       }
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (isPrimarySchool) setSidebarOpen(false);
+  }, [location.pathname, isPrimarySchool]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -198,10 +186,8 @@ export default function TeacherLayout() {
       setCtxTheme(prevCtx);
       setUITheme(prevUi);
     };
-    // Intentionally omit ctxTheme: only capture theme when entering / leaving primary shell.
   }, [isPrimarySchool, setCtxTheme, setUITheme]);
 
-  /** Secondary: keep ThemeProvider (html class) in sync with the sidebar toggle — both were drifting before. */
   useEffect(() => {
     if (isPrimarySchool) return;
     setCtxTheme(theme);
@@ -211,21 +197,279 @@ export default function TeacherLayout() {
     return <ThemedLoadingView />;
   }
 
+  /** Same shell as accountant: fixed pw-sidebar + scrollable pw-main (no separate glass header/footer). */
+  if (isPrimarySchool) {
+    return (
+      <div className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden" data-theme="dark">
+        <style>{ACCOUNTANT_PW_SHELL_CSS}</style>
+        <button
+          type="button"
+          className="pw-hamburger"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
+        >
+          {sidebarOpen ? "✕" : "☰"}
+        </button>
+        {sidebarOpen && <div className="pw-sidebar-overlay" onClick={closeSidebar} role="presentation" />}
+        <aside className={`pw-sidebar ${sidebarOpen ? "pw-sidebar--open" : ""}`}>
+          <div className="pw-brand">
+            <div className="pw-brand-logo">🎓</div>
+            <span className="pw-brand-name">PwezaCore</span>
+            <span className="pw-brand-pill">Teacher</span>
+          </div>
+
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Main</span>
+            <NavLink
+              to="/dashboard/teacher"
+              end
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[0])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">⊞</span>
+              <span className="pw-nav-text">Dashboard</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/classes"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[2])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">📚</span>
+              <span className="pw-nav-text">My Classes</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/students"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[1])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">👥</span>
+              <span className="pw-nav-text">My Students</span>
+            </NavLink>
+            {canEnrolStudents && (
+              <NavLink
+                to="/dashboard/teacher/school/add-student"
+                onClick={closeSidebar}
+                onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[13])}
+                className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+              >
+                <span className="pw-nav-ic">➕</span>
+                <span className="pw-nav-text">Add student</span>
+              </NavLink>
+            )}
+            {canAccessFinance && role !== "accountant" && (
+              <NavLink
+                to="/dashboard/accountant"
+                onClick={closeSidebar}
+                onMouseEnter={() => prefetchChunk(() => import("../accountant/Dashboard"))}
+                className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+              >
+                <span className="pw-nav-ic">💰</span>
+                <span className="pw-nav-text">Finance</span>
+              </NavLink>
+            )}
+          </div>
+
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Teaching</span>
+            <button
+              type="button"
+              onClick={() => setExamResultsOpen((o) => !o)}
+              className={["pw-nav-link", isExamResultsArea ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">📋</span>
+              <span className="pw-nav-text">Exam Results</span>
+              <span className={`pw-nav-chevron ${examResultsOpen ? "pw-nav-chevron--open" : ""}`}>›</span>
+            </button>
+            {examResultsOpen && classesWithSubjects.length > 0 && (
+              <div className="pw-nav-subitems">
+                {classesWithSubjects.map((c) => (
+                  <div key={c.class_name}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenClass((prev) => (prev === c.class_name ? null : c.class_name))}
+                      className="pw-nav-link"
+                      style={{ fontSize: "12px", padding: "6px 10px" }}
+                    >
+                      <span className={`pw-nav-chevron ${openClass === c.class_name ? "pw-nav-chevron--open" : ""}`} style={{ marginLeft: 0, marginRight: 6 }}>
+                        ›
+                      </span>
+                      <span className="pw-nav-text">{c.class_name}</span>
+                    </button>
+                    {openClass === c.class_name && c.subjects.length > 0 && (
+                      <div className="pw-nav-subitems">
+                        {c.subjects.map((sub) => (
+                          <NavLink
+                            key={sub}
+                            to={`/dashboard/teacher/exam-results/class/${encodeURIComponent(c.class_name)}/subject/${encodeURIComponent(sub)}`}
+                            onClick={closeSidebar}
+                            onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[3])}
+                            className={({ isActive }) =>
+                              ["pw-nav-subitem", isActive ? "pw-nav-subitem--active" : ""].join(" ")
+                            }
+                          >
+                            <span className="pw-nav-sub-dot">·</span>
+                            {sub}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {examResultsOpen && classesWithSubjects.length === 0 && (
+              <div className="px-3 py-1 text-[11px]" style={{ color: "var(--pw-t3, #3d5278)" }}>
+                No classes assigned
+              </div>
+            )}
+            <NavLink
+              to="/dashboard/teacher/attendance"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[4])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">📅</span>
+              <span className="pw-nav-text">Attendance</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/timetable"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[5])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">🗓</span>
+              <span className="pw-nav-text">Timetable</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/grading-system"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[6])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">％</span>
+              <span className="pw-nav-text">Grading System</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/ai-planner"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[7])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">✨</span>
+              <span className="pw-nav-text">AI Lesson Planner</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/assignments"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[8])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">📝</span>
+              <span className="pw-nav-text">Assignments</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/resources"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">📖</span>
+              <span className="pw-nav-text">Resources</span>
+            </NavLink>
+          </div>
+
+          <div className="pw-nav-section">
+            <span className="pw-nav-label">Quick</span>
+            <NavLink
+              to="/dashboard/chat"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">💬</span>
+              <span className="pw-nav-text">Messages</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/notifications"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">🔔</span>
+              <span className="pw-nav-text">Notifications</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/teacher/settings"
+              onClick={closeSidebar}
+              onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[12])}
+              className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
+            >
+              <span className="pw-nav-ic">⚙</span>
+              <span className="pw-nav-text">Settings</span>
+            </NavLink>
+          </div>
+
+          <div className="pw-sidebar-tools">
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/dashboard/chat");
+                closeSidebar();
+              }}
+              aria-label="Messages"
+            >
+              <MessageCircle className="h-4 w-4 shrink-0" />
+              <span>Chat</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                navigate("/dashboard/teacher/notifications");
+                closeSidebar();
+              }}
+              aria-label="Notifications"
+            >
+              <Bell className="h-4 w-4 shrink-0" />
+            </button>
+          </div>
+
+          <div className="pw-sidebar-bottom">
+            <div className="pw-admin-card">
+              <div className="pw-admin-av">{userInitials}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="pw-admin-name" style={{ textTransform: "uppercase", letterSpacing: "0.04em" }}>
+                  {displayLabel}
+                </div>
+                <div className="pw-admin-role">Teacher</div>
+              </div>
+            </div>
+            <button type="button" className="pw-logout-btn" onClick={handleLogout}>
+              <span className="pw-nav-ic">🚪</span>
+              Logout
+            </button>
+          </div>
+        </aside>
+
+        <main className="pw-main">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
+            <Suspense fallback={<AdminContentSkeleton />}>
+              <Outlet />
+            </Suspense>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div
-      className={
-        isPrimarySchool
-          ? "teacher-primary-shell accountant-glass pw-layout fixed inset-0 flex overflow-hidden"
-          : "accountant-glass fixed inset-0 flex overflow-hidden"
-      }
-      data-theme={isPrimarySchool ? "dark" : theme}
-      style={
-        isPrimarySchool
-          ? { background: "var(--pw-bg, #05080f)", backgroundColor: "var(--pw-bg, #05080f)" }
-          : { background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }
-      }
+      className="accountant-glass fixed inset-0 flex overflow-hidden"
+      data-theme={theme}
+      style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}
     >
-      {isPrimarySchool ? <style>{TEACHER_PRIMARY_SHELL_CSS}</style> : null}
       <aside className="ac-glass-sidebar w-56 flex flex-col flex-shrink-0 z-10 overflow-y-auto">
         <div className="flex items-center justify-between gap-2 px-4 py-5 border-b border-white/10">
           <div className="flex items-center gap-3 min-w-0">
@@ -358,11 +602,7 @@ export default function TeacherLayout() {
             Settings
           </NavLinkStyle>
           <div className="pt-4 mt-4 border-t border-white/10">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="ac-sidebar-nav-item w-full text-left"
-            >
+            <button type="button" onClick={handleLogout} className="ac-sidebar-nav-item w-full text-left">
               <LogOut className="h-5 w-5 flex-shrink-0 [color:inherit]" />
               <span className="flex-1">Logout</span>
             </button>
@@ -382,16 +622,14 @@ export default function TeacherLayout() {
               />
               <Search className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 ac-text-muted" />
             </div>
-            {!isPrimarySchool && (
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
-                title={theme === "light" ? "Switch to dark" : "Switch to light"}
-              >
-                {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
+              title={theme === "light" ? "Switch to dark" : "Switch to light"}
+            >
+              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+            </button>
             <button
               type="button"
               className="ac-glass-card flex h-10 w-10 items-center justify-center rounded-full ac-text-secondary transition-colors hover:opacity-90"
@@ -399,16 +637,14 @@ export default function TeacherLayout() {
               <Bell className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-2 pl-2">
-              <span
-                className={`ac-text-primary text-sm font-medium truncate max-w-[120px] ${isPrimarySchool ? "uppercase tracking-wide" : ""}`}
-              >
+              <span className="ac-text-primary text-sm font-medium truncate max-w-[120px]">
                 {user?.user_metadata?.name ?? user?.email ?? "Teacher"}
               </span>
               <div className="h-10 w-10 flex-shrink-0 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600" />
             </div>
           </div>
         </header>
-        <div className={`flex-1 overflow-y-auto min-h-0 ${isPrimarySchool ? "teacher-main-scroll" : ""}`}>
+        <div className="flex-1 overflow-y-auto min-h-0">
           <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
             <Suspense
               fallback={
@@ -431,9 +667,15 @@ export default function TeacherLayout() {
           <div className="ac-text-secondary flex items-center justify-between text-sm">
             <span>Copyright © {new Date().getFullYear()} PwezaCore</span>
             <div className="flex items-center gap-6">
-              <Link to="/privacy-policy" className="hover:opacity-100 opacity-80">Privacy Policy</Link>
-              <Link to="/affiliate-terms" className="hover:opacity-100 opacity-80">Terms and conditions</Link>
-              <Link to="/contact" className="hover:opacity-100 opacity-80">Contact</Link>
+              <Link to="/privacy-policy" className="hover:opacity-100 opacity-80">
+                Privacy Policy
+              </Link>
+              <Link to="/affiliate-terms" className="hover:opacity-100 opacity-80">
+                Terms and conditions
+              </Link>
+              <Link to="/contact" className="hover:opacity-100 opacity-80">
+                Contact
+              </Link>
             </div>
           </div>
         </footer>

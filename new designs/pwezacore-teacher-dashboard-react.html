@@ -163,37 +163,37 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 
   <!-- HEADER -->
   <div class="pt-fu">
-    <div class="pt-eyebrow"><span class="pt-live"></span><span id="pt-date-line">Wednesday, 18 March 2026 · Term 1 Week 8</span></div>
-    <h1 class="pt-title" id="pt-greeting">Good morning, Teacher 👋</h1>
-    <p class="pt-sub">Here's what's happening across your classes today.</p>
+    <div class="pt-eyebrow"><span class="pt-live"></span><span id="pt-date-line"></span></div>
+    <h1 class="pt-title" id="pt-greeting"></h1>
+    <p class="pt-sub" id="pt-sub-line"></p>
   </div>
 
   <!-- KPIs -->
   <div class="pt-kpi-grid pt-fu pt-d1">
     <div class="pt-kpi indigo">
-      <div class="pt-kpi-top"><div class="pt-kpi-ic indigo">🏫</div><span class="pt-badge up" data-kpi="classes-badge">↑ 1</span></div>
+      <div class="pt-kpi-top"><div class="pt-kpi-ic indigo">🏫</div><span class="pt-badge up" data-kpi="classes-badge"></span></div>
       <div class="pt-kpi-lbl">My Classes</div>
-      <div class="pt-kpi-val" data-kpi="total-classes">—</div>
-      <div class="pt-kpi-sub" data-kpi="classes-sub">Active this term</div>
+      <div class="pt-kpi-val" data-kpi="total-classes"></div>
+      <div class="pt-kpi-sub" data-kpi="classes-sub"></div>
     </div>
     <div class="pt-kpi teal">
-      <div class="pt-kpi-top"><div class="pt-kpi-ic teal">👥</div><span class="pt-badge flat" data-kpi="students-badge">→ 0</span></div>
+      <div class="pt-kpi-top"><div class="pt-kpi-ic teal">👥</div><span class="pt-badge flat" data-kpi="students-badge"></span></div>
       <div class="pt-kpi-lbl">Total Students</div>
-      <div class="pt-kpi-val" data-kpi="total-students">—</div>
-      <div class="pt-kpi-sub" data-kpi="students-sub">Across all classes</div>
+      <div class="pt-kpi-val" data-kpi="total-students"></div>
+      <div class="pt-kpi-sub" data-kpi="students-sub"></div>
     </div>
     <div class="pt-kpi amber">
-      <div class="pt-kpi-top"><div class="pt-kpi-ic amber">📝</div><span class="pt-badge warn" data-kpi="assign-badge">Due today</span></div>
+      <div class="pt-kpi-top"><div class="pt-kpi-ic amber">📝</div><span class="pt-badge warn" data-kpi="assign-badge"></span></div>
       <div class="pt-kpi-lbl">Open Assignments</div>
-      <div class="pt-kpi-val" data-kpi="open-assignments">—</div>
-      <div class="pt-kpi-sub" data-kpi="assign-sub">Pending submissions</div>
+      <div class="pt-kpi-val" data-kpi="open-assignments"></div>
+      <div class="pt-kpi-sub" data-kpi="assign-sub"></div>
       <div class="pt-prog"><div class="pt-prog-fill" style="background:var(--amber)" data-kpi-width="assign-progress"></div></div>
     </div>
     <div class="pt-kpi violet">
-      <div class="pt-kpi-top"><div class="pt-kpi-ic violet">📋</div><span class="pt-badge up" data-kpi="attend-badge">↑ 4%</span></div>
+      <div class="pt-kpi-top"><div class="pt-kpi-ic violet">📋</div><span class="pt-badge up" data-kpi="attend-badge"></span></div>
       <div class="pt-kpi-lbl">Attendance Today</div>
-      <div class="pt-kpi-val" data-kpi="attendance-today">—</div>
-      <div class="pt-kpi-sub" data-kpi="attend-sub">Present today</div>
+      <div class="pt-kpi-val" data-kpi="attendance-today"></div>
+      <div class="pt-kpi-sub" data-kpi="attend-sub"></div>
       <div class="pt-prog"><div class="pt-prog-fill" style="background:var(--violet)" data-kpi-width="attend-progress"></div></div>
     </div>
   </div>
@@ -216,18 +216,14 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
         <span class="pt-card-title">🏫 My Classes</span>
         <a class="pt-card-action" data-nav="/dashboard/teacher/classes">View all →</a>
       </div>
-      <div id="pt-classes-list">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading classes…</div>
-      </div>
+      <div id="pt-classes-list"></div>
     </div>
     <div class="pt-card">
       <div class="pt-card-hd">
         <span class="pt-card-title">⏱️ Today's Schedule</span>
         <a class="pt-card-action" data-nav="/dashboard/teacher/timetable">Full →</a>
       </div>
-      <div id="pt-schedule-list">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading schedule…</div>
-      </div>
+      <div id="pt-schedule-list"></div>
     </div>
   </div>
 
@@ -237,22 +233,18 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
       <div class="pt-card-hd">
         <span class="pt-card-title">📝 Assignments</span>
         <div style="display:flex;gap:8px;align-items:center">
-          <button class="pt-btn pt-btn-primary" data-nav="/dashboard/teacher/assignments/new" style="padding:6px 12px;font-size:11.5px">＋ New</button>
+          <button class="pt-btn pt-btn-primary" data-nav="/dashboard/teacher/assignments" style="padding:6px 12px;font-size:11.5px">＋ New</button>
           <a class="pt-card-action" data-nav="/dashboard/teacher/assignments">All →</a>
         </div>
       </div>
-      <div id="pt-assignments-list">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading assignments…</div>
-      </div>
+      <div id="pt-assignments-list"></div>
     </div>
     <div class="pt-card">
       <div class="pt-card-hd">
         <span class="pt-card-title">🕐 Recent Activity</span>
-        <a class="pt-card-action">All →</a>
+        <a class="pt-card-action" data-nav="/dashboard/teacher/attendance">All →</a>
       </div>
-      <div id="pt-activity-list">
-        <div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Loading activity…</div>
-      </div>
+      <div id="pt-activity-list"></div>
     </div>
   </div>
 
@@ -265,15 +257,15 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
           <div style="width:34px;height:34px;border-radius:9px;background:var(--indigo-s);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>
           <span style="font-size:11px;font-weight:600;color:var(--indigo);text-align:center">Take Attendance</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/assignments/new" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/assignments" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
           <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📝</div>
           <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">New Assignment</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/grades" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/exam-results" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
           <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📊</div>
           <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Record Marks</span>
         </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/messages" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/chat" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
           <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">💬</div>
           <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Message Parents</span>
         </div>
