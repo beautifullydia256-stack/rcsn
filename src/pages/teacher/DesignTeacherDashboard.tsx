@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -78,9 +78,10 @@ async function fetchTeacherDashboardData(
   schoolId: string,
   teacherId: string | null,
   classNames: string[],
-  displayName: string | null,
+  userId: string,
   userEmail: string | undefined
 ) {
+  const displayName = await fetchUserDisplayName(userId);
   const today = new Date().toISOString().slice(0, 10);
   const dbDay = todayDbDayOfWeek();
 
@@ -216,37 +217,41 @@ export default function DesignTeacherDashboard() {
 
   const { teacherId, classNames, classesWithSubjects, isLoading: ctxLoading } = useTeacherContext();
 
-  const { data: displayName } = useQuery({
-    queryKey: ['users', 'display-name', user?.id],
-    queryFn: () => fetchUserDisplayName(user!.id),
-    enabled: !!user?.id,
-  });
-
   const subjectsByClass = useMemo(() => {
     const m = new Map<string, string[]>();
     classesWithSubjects.forEach((c) => m.set(c.class_name, c.subjects));
     return m;
   }, [classesWithSubjects]);
 
-  const { data: dashData } = useQuery({
-    queryKey: ['teacher', 'design-dashboard', schoolId, teacherId, classNames.join(','), displayName ?? ''],
+  const dashEnabled = !!schoolId && !!user && !ctxLoading;
+
+  const {
+    data: dashData,
+    isPending: dashPending,
+    isError: dashError,
+    error: dashErr,
+    refetch: refetchDash,
+  } = useQuery({
+    queryKey: ['teacher', 'design-dashboard', schoolId, teacherId, classNames.join(','), user?.id ?? ''],
     queryFn: () =>
       fetchTeacherDashboardData(
         schoolId!,
         teacherId,
         classNames,
-        displayName ?? null,
+        user!.id,
         user?.email ?? undefined
       ),
-    enabled: !!schoolId && !ctxLoading,
+    enabled: dashEnabled,
     refetchInterval: 45 * 1000,
   });
+
+  const showDashboardLoader = ctxLoading || (dashEnabled && dashPending);
 
   useDesignDashboardNav(containerRef, navigate, htmlReady);
   useDesignDashboardDarkOnly(htmlReady);
 
-  useEffect(() => {
-    if (!htmlReady || ctxLoading || !schoolId || !dashData) return;
+  useLayoutEffect(() => {
+    if (!htmlReady || !schoolId || !dashData) return;
 
     const d = dashData;
     const hour = new Date().getHours();
@@ -266,61 +271,60 @@ export default function DesignTeacherDashboard() {
             d.studentsCount === 1 ? '' : 's'
           } across your timetable.`;
 
-    requestAnimationFrame(() => {
-      const el = containerRef.current;
-      if (!el) return;
+    const el = containerRef.current;
+    if (!el) return;
 
-      const set = (sel: string, val: string) => {
-        const n = el.querySelector(sel);
-        if (n) n.textContent = val;
-      };
+    const set = (sel: string, val: string) => {
+      const n = el.querySelector(sel);
+      if (n) n.textContent = val;
+    };
 
-      set('#pt-greeting', `${greet}, ${d.firstName}`);
-      set('#pt-date-line', dateLine);
-      set('#pt-sub-line', subLine);
+    set('#pt-greeting', `${greet}, ${d.firstName}`);
+    set('#pt-date-line', dateLine);
+    set('#pt-sub-line', subLine);
 
-      set('[data-kpi="classes-badge"]', `${classNames.length} class${classNames.length === 1 ? '' : 'es'}`);
-      set('[data-kpi="students-badge"]', String(d.studentsCount));
-      set('[data-kpi="assign-badge"]', d.dueTodayCount > 0 ? `${d.dueTodayCount} due today` : `${d.openAssignments} open`);
-      set('[data-kpi="attend-badge"]', d.attendRows.length ? `${d.attendPct}% present` : 'No records');
+    set('[data-kpi="classes-badge"]', `${classNames.length} class${classNames.length === 1 ? '' : 'es'}`);
+    set('[data-kpi="students-badge"]', String(d.studentsCount));
+    set('[data-kpi="assign-badge"]', d.dueTodayCount > 0 ? `${d.dueTodayCount} due today` : `${d.openAssignments} open`);
+    set('[data-kpi="attend-badge"]', d.attendRows.length ? `${d.attendPct}% present` : 'No records');
 
-      set('[data-kpi="total-classes"]', String(classNames.length));
-      set('[data-kpi="total-students"]', String(d.studentsCount));
-      set('[data-kpi="open-assignments"]', String(d.openAssignments));
-      set('[data-kpi="classes-sub"]', classNames.length ? 'Assigned to you this term' : 'None assigned');
-      set(
-        '[data-kpi="students-sub"]',
-        classNames.length ? `Across ${classNames.length} class${classNames.length === 1 ? '' : 'es'}` : '—'
-      );
-      set(
-        '[data-kpi="assign-sub"]',
-        d.pendingSubmissionCount > 0
-          ? `${d.pendingSubmissionCount} submission${d.pendingSubmissionCount === 1 ? '' : 's'} to review`
-          : d.openAssignments > 0
-            ? 'No pending submissions'
-            : 'No open assignments'
-      );
-      set('[data-kpi="attendance-today"]', d.attendRows.length ? `${d.attendPct}%` : '—');
-      set(
-        '[data-kpi="attend-sub"]',
-        d.attendRows.length ? `${d.attendRows.length} record${d.attendRows.length === 1 ? '' : 's'} today` : 'No attendance today'
-      );
+    set('[data-kpi="total-classes"]', String(classNames.length));
+    set('[data-kpi="total-students"]', String(d.studentsCount));
+    set('[data-kpi="open-assignments"]', String(d.openAssignments));
+    set('[data-kpi="classes-sub"]', classNames.length ? 'Assigned to you this term' : 'None assigned');
+    set(
+      '[data-kpi="students-sub"]',
+      classNames.length ? `Across ${classNames.length} class${classNames.length === 1 ? '' : 'es'}` : '—'
+    );
+    set(
+      '[data-kpi="assign-sub"]',
+      d.pendingSubmissionCount > 0
+        ? `${d.pendingSubmissionCount} submission${d.pendingSubmissionCount === 1 ? '' : 's'} to review`
+        : d.openAssignments > 0
+          ? 'No pending submissions'
+          : 'No open assignments'
+    );
+    set('[data-kpi="attendance-today"]', d.attendRows.length ? `${d.attendPct}%` : '—');
+    set(
+      '[data-kpi="attend-sub"]',
+      d.attendRows.length ? `${d.attendRows.length} record${d.attendRows.length === 1 ? '' : 's'} today` : 'No attendance today'
+    );
 
-      const prog = el.querySelector('[data-kpi-width="attend-progress"]') as HTMLElement | null;
-      if (prog) prog.style.width = `${d.attendPct}%`;
-      const progA = el.querySelector('[data-kpi-width="assign-progress"]') as HTMLElement | null;
-      if (progA) progA.style.width = `${d.assignProgPct}%`;
+    const prog = el.querySelector('[data-kpi-width="attend-progress"]') as HTMLElement | null;
+    if (prog) prog.style.width = `${d.attendPct}%`;
+    const progA = el.querySelector('[data-kpi-width="assign-progress"]') as HTMLElement | null;
+    if (progA) progA.style.width = `${d.assignProgPct}%`;
 
-      const classesList = el.querySelector('#pt-classes-list');
-      if (classesList) {
-        if (!classNames.length) {
-          classesList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No classes assigned. Your administrator can link classes in staff settings.</div>`;
-        } else {
-          classesList.innerHTML = classNames
-            .map((cn, i) => {
-              const subs = subjectsByClass.get(cn)?.join(', ') || '—';
-              const initial = subs.replace(/[^A-Za-z]/g, '').slice(0, 1) || '📚';
-              return `
+    const classesList = el.querySelector('#pt-classes-list');
+    if (classesList) {
+      if (!classNames.length) {
+        classesList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No classes assigned. Your administrator can link classes in staff settings.</div>`;
+      } else {
+        classesList.innerHTML = classNames
+          .map((cn, i) => {
+            const subs = subjectsByClass.get(cn)?.join(', ') || '—';
+            const initial = subs.replace(/[^A-Za-z]/g, '').slice(0, 1) || '📚';
+            return `
               <div class="pt-class-row" data-nav="/dashboard/teacher/classes">
                 <div class="pt-class-av" style="background:${grad(i)}">${initial}</div>
                 <div style="flex:1">
@@ -329,15 +333,15 @@ export default function DesignTeacherDashboard() {
                 </div>
                 <span class="pt-chip indigo">${subjectsByClass.get(cn)?.length ?? 0} subj.</span>
               </div>`;
-            })
-            .join('');
-        }
+          })
+          .join('');
       }
+    }
 
-      const schedList = el.querySelector('#pt-schedule-list');
-      if (schedList) {
-        if (!d.timetableToday.length) {
-          schedList.innerHTML = `
+    const schedList = el.querySelector('#pt-schedule-list');
+    if (schedList) {
+      if (!d.timetableToday.length) {
+        schedList.innerHTML = `
             <div class="pt-sched-row" data-nav="/dashboard/teacher/timetable">
               <div class="pt-sched-time"><div class="pt-sched-h">—</div><div class="pt-sched-ap">—</div></div>
               <div class="pt-sched-sep"></div>
@@ -347,14 +351,14 @@ export default function DesignTeacherDashboard() {
               </div>
               <span class="pt-chip indigo">View</span>
             </div>`;
-        } else {
-          schedList.innerHTML = d.timetableToday
-            .map((row) => {
-              const start = formatTime(row.start_time);
-              const end = formatTime(row.end_time);
-              const h = parseInt(String(row.start_time).slice(0, 2), 10) || 0;
-              const ap = h >= 12 ? 'PM' : 'AM';
-              return `
+      } else {
+        schedList.innerHTML = d.timetableToday
+          .map((row) => {
+            const start = formatTime(row.start_time);
+            const end = formatTime(row.end_time);
+            const h = parseInt(String(row.start_time).slice(0, 2), 10) || 0;
+            const ap = h >= 12 ? 'PM' : 'AM';
+            return `
             <div class="pt-sched-row" data-nav="/dashboard/teacher/timetable">
               <div class="pt-sched-time"><div class="pt-sched-h">${esc(start)}</div><div class="pt-sched-ap">${ap}</div></div>
               <div class="pt-sched-sep"></div>
@@ -364,22 +368,22 @@ export default function DesignTeacherDashboard() {
               </div>
               <span class="pt-chip indigo">Class</span>
             </div>`;
-            })
-            .join('');
-        }
+          })
+          .join('');
       }
+    }
 
-      const assignList = el.querySelector('#pt-assignments-list');
-      if (assignList) {
-        if (!teacherId) {
-          assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Your teacher profile is not linked. Contact the school administrator.</div>`;
-        } else if (!d.assignmentRows.length) {
-          assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No upcoming assignments. Create one from <span data-nav="/dashboard/teacher/assignments" style="cursor:pointer;color:var(--indigo);font-weight:600">Assignments</span>.</div>`;
-        } else {
-          assignList.innerHTML = d.assignmentRows
-            .map((row) => {
-              const due = formatDue(row.due_date);
-              return `
+    const assignList = el.querySelector('#pt-assignments-list');
+    if (assignList) {
+      if (!teacherId) {
+        assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">Your teacher profile is not linked. Contact the school administrator.</div>`;
+      } else if (!d.assignmentRows.length) {
+        assignList.innerHTML = `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No upcoming assignments. Create one from <span data-nav="/dashboard/teacher/assignments" style="cursor:pointer;color:var(--indigo);font-weight:600">Assignments</span>.</div>`;
+      } else {
+        assignList.innerHTML = d.assignmentRows
+          .map((row) => {
+            const due = formatDue(row.due_date);
+            return `
             <div class="pt-assign-row" data-nav="/dashboard/teacher/assignments">
               <div style="flex:1;min-width:0">
                 <div class="pt-assign-title">${esc(row.title)}</div>
@@ -387,35 +391,70 @@ export default function DesignTeacherDashboard() {
               </div>
               <span class="pt-chip amber">${row.due_date === d.today ? 'Today' : 'Open'}</span>
             </div>`;
-            })
-            .join('');
-        }
+          })
+          .join('');
       }
+    }
 
-      const actList = el.querySelector('#pt-activity-list');
-      if (actList) {
-        if (!d.recentAtt.length) {
-          actList.innerHTML = `
+    const actList = el.querySelector('#pt-activity-list');
+    if (actList) {
+      if (!d.recentAtt.length) {
+        actList.innerHTML = `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
               <div class="pt-act-av" style="background:${grad(0)}">·</div>
               <div><div class="pt-act-text">No recent attendance rows for your classes.</div><div class="pt-act-time">Take attendance to see history here.</div></div>
             </div>`;
-        } else {
-          actList.innerHTML = d.recentAtt
-            .map((r, i) => {
-              const status = r.present === true ? 'Present' : r.present === false ? 'Absent' : 'Recorded';
-              const when = r.date || (r.created_at ? r.created_at.slice(0, 10) : '—');
-              return `
+      } else {
+        actList.innerHTML = d.recentAtt
+          .map((r, i) => {
+            const status = r.present === true ? 'Present' : r.present === false ? 'Absent' : 'Recorded';
+            const when = r.date || (r.created_at ? r.created_at.slice(0, 10) : '—');
+            return `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
               <div class="pt-act-av" style="background:${grad(i)}">✓</div>
               <div><div class="pt-act-text">${esc(r.class_name ?? 'Class')} — ${status}</div><div class="pt-act-time">${esc(when)}</div></div>
             </div>`;
-            })
-            .join('');
-        }
+          })
+          .join('');
       }
-    });
-  }, [htmlReady, ctxLoading, schoolId, dashData, classNames, subjectsByClass, teacherId]);
+    }
+  }, [htmlReady, schoolId, dashData, classNames, subjectsByClass, teacherId]);
+
+  if (!schoolId || !user) {
+    return null;
+  }
+
+  if (showDashboardLoader) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
+          <p className="ac-text-secondary">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (dashError) {
+    const msg = dashErr instanceof Error ? dashErr.message : 'Could not load dashboard.';
+    return (
+      <div className="ac-glass-card mx-auto max-w-md p-8 text-center border border-[var(--ac-border)]">
+        <p className="ac-text-primary mb-2 font-medium">Dashboard unavailable</p>
+        <p className="ac-text-muted mb-4 text-sm">{msg}</p>
+        <button
+          type="button"
+          className="ac-glass-btn-primary rounded-xl px-4 py-2 text-sm font-medium"
+          onClick={() => void refetchDash()}
+        >
+          Try again
+        </button>
+      </div>
+    );
+  }
+
+  if (!dashData) {
+    return null;
+  }
 
   return (
     <>

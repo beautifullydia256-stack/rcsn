@@ -1,6 +1,8 @@
+import type { User } from '@supabase/supabase-js';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
 
 export type ClassWithSubjects = { class_name: string; subjects: string[] };
 
@@ -15,19 +17,12 @@ export type TeacherContext = {
 
 async function fetchTeacherContext(
   schoolId: string | null,
-  userEmail: string | undefined
+  user: User | null
 ): Promise<Omit<TeacherContext, 'isLoading'>> {
-  if (!schoolId || !userEmail?.trim()) {
+  if (!schoolId || !user) {
     return { schoolId, teacherId: null, classNames: [], classesWithSubjects: [] };
   }
-  const email = userEmail.trim().toLowerCase();
-  const { data: teacher } = await supabase
-    .from('teachers')
-    .select('teacher_id')
-    .eq('school_id', schoolId)
-    .ilike('email', email)
-    .maybeSingle();
-  const teacherId = (teacher as { teacher_id?: string } | null)?.teacher_id ?? null;
+  const teacherId = await resolveTeacherIdForSchool(schoolId, user);
   if (!teacherId) return { schoolId, teacherId: null, classNames: [], classesWithSubjects: [] };
 
   const { data: classRows } = await supabase
@@ -63,12 +58,10 @@ export function useTeacherContext(): TeacherContext {
     schoolIdFromStore ??
     (user?.user_metadata?.school_id as string | undefined) ??
     null;
-  const userEmail = user?.email;
-
   const { data, isLoading } = useQuery({
-    queryKey: ['teacher', 'context', schoolId ?? '', userEmail ?? ''],
-    queryFn: () => fetchTeacherContext(schoolId, userEmail),
-    enabled: !!schoolId && !!userEmail,
+    queryKey: ['teacher', 'context', schoolId ?? '', user?.id ?? ''],
+    queryFn: () => fetchTeacherContext(schoolId, user ?? null),
+    enabled: !!schoolId && !!user,
     staleTime: 30 * 1000,
     refetchInterval: 45 * 1000,
     refetchOnWindowFocus: true,

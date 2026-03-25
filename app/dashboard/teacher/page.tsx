@@ -16,6 +16,6 @@ export default function TeacherDashboardDeprecatedNotice() {
       >
         Go to /dashboard/teacher
       </a>
-    </div>
+      </div>
   );
 }

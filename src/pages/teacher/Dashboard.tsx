@@ -1,7 +1,9 @@
+import type { User } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
 
 type DashboardStats = {
   teacherId: string | null;
@@ -9,24 +11,12 @@ type DashboardStats = {
   studentsCount: number;
 };
 
-async function fetchTeacherDashboardStats(
-  schoolId: string | null,
-  userEmail: string | undefined
-): Promise<DashboardStats> {
-  if (!schoolId || !userEmail?.trim()) {
+async function fetchTeacherDashboardStats(schoolId: string | null, user: User | null): Promise<DashboardStats> {
+  if (!schoolId || !user) {
     return { teacherId: null, classesCount: 0, studentsCount: 0 };
   }
 
-  const email = userEmail.trim().toLowerCase();
-
-  const { data: teacher } = await supabase
-    .from('teachers')
-    .select('teacher_id')
-    .eq('school_id', schoolId)
-    .ilike('email', email)
-    .maybeSingle();
-
-  const teacherId = (teacher as { teacher_id?: string } | null)?.teacher_id ?? null;
+  const teacherId = await resolveTeacherIdForSchool(schoolId, user);
   if (!teacherId) {
     return { teacherId: null, classesCount: 0, studentsCount: 0 };
   }
@@ -68,7 +58,6 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
   const user = useAuthStore((s) => s.user);
-  const userEmail = user?.email;
   // Match old behavior (c1e76a5): school_id from store or from auth user_metadata so dashboard works even before users row is loaded
   const schoolId =
     schoolIdFromStore ??
@@ -76,9 +65,9 @@ export default function TeacherDashboard() {
     null;
 
   const { data: stats, isLoading } = useQuery({
-    queryKey: ['teacher', 'dashboard-stats', schoolId ?? '', userEmail ?? ''],
-    queryFn: () => fetchTeacherDashboardStats(schoolId, userEmail),
-    enabled: !!schoolId && !!userEmail,
+    queryKey: ['teacher', 'dashboard-stats', schoolId ?? '', user?.id ?? ''],
+    queryFn: () => fetchTeacherDashboardStats(schoolId, user ?? null),
+    enabled: !!schoolId && !!user,
   });
 
   const classesCount = stats?.classesCount ?? 0;
