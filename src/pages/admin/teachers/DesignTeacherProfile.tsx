@@ -13,8 +13,6 @@ import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 const PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
-let cachedTeacherProfileHtml: string | null = null;
-
 const TP_TABS = ['overview', 'classes', 'timetable', 'performance', 'kyc', 'academic', 'activity'] as const;
 
 function parseInjectedHtml(raw: string): string {
@@ -107,6 +105,38 @@ function fmtUGX(n: number | null | undefined): string {
   return `UGX ${Number(n).toLocaleString()}`;
 }
 
+function safeFileName(name: string): string {
+  return String(name || 'file')
+    .replace(/[^a-zA-Z0-9._-]+/g, '_')
+    .slice(0, 120);
+}
+
+const TEACHER_DOC_BUCKET = 'teacher-documents';
+
+function fmtExpenseStatus(s: string | null | undefined): string {
+  if (!s) return '—';
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function activeDocCategory(root: Element, tabSelector: string): string {
+  const active = root.querySelector(`${tabSelector} .tp-doc-cat-btn.active`);
+  const t = (active?.textContent || '').trim();
+  if (!t || t === 'All') return 'Other';
+  return t;
+}
+
+/** yyyy-mm-dd for <input type="date"> */
+function isoDateOnly(s: string | null | undefined): string {
+  if (!s) return '';
+  const d = String(s).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : '';
+}
+
+function readTpField(root: Element, field: string): string {
+  const el = root.querySelector(`[data-tp-field="${field}"]`) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+  return el?.value?.trim() ?? '';
+}
+
 /** Swap key display spans for inputs (same layout/CSS shell) */
 function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   const fullName = String(t.name || '').trim();
@@ -116,6 +146,28 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   const exp = pickStr(t.experience) ?? '';
   const addr = pickStr(t.address) ?? '';
   const salRaw = t.salary != null && !Number.isNaN(Number(t.salary)) ? String(Number(t.salary)) : '';
+  const gender = pickStr(t.gender) ?? '';
+  const dob = isoDateOnly(pickStr(t.dob));
+  const nationality = pickStr(t.nationality) ?? '';
+  const religion = pickStr(t.religion) ?? '';
+  const nin = pickStr(t.national_id) ?? '';
+  const district = pickStr(t.district) ?? '';
+  const emergency = pickStr(t.emergency_contact) ?? '';
+  const empType = pickStr(t.employment_type) ?? '';
+  const hire = isoDateOnly(pickStr(t.date_of_hire));
+  const bankName = pickStr(t.bank_name) ?? '';
+  const bankAcc = pickStr(t.bank_account) ?? '';
+  const dept = pickStr(t.department) ?? '';
+  const prevSchool = pickStr(t.previous_school) ?? '';
+  const personalEmail = pickStr(t.personal_email) ?? '';
+  const active = t.is_active !== false;
+
+  const rating = t.performance_review_rating != null && !Number.isNaN(Number(t.performance_review_rating))
+    ? String(Number(t.performance_review_rating))
+    : '';
+  const revNotes = pickStr(t.performance_review_notes) ?? '';
+  const revBy = pickStr(t.performance_reviewed_by) ?? '';
+  const revAt = isoDateOnly(pickStr(t.performance_reviewed_at as string | undefined));
 
   const nameEl = root.querySelector('#tp-teacher-name');
   if (nameEl) {
@@ -128,6 +180,11 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   const emailMeta = root.querySelector('#tp-meta-email');
   if (emailMeta) {
     emailMeta.innerHTML = `<input type="email" class="pw-inline-input" data-tp-field="email" value="${escapeAttr(email)}" style="width:100%;max-width:320px"/>`;
+  }
+
+  const stEl = root.querySelector('#tp-chip-status');
+  if (stEl) {
+    stEl.innerHTML = `<select class="pw-inline-input" data-tp-field="is_active" style="font:inherit;padding:4px 8px;border-radius:8px"><option value="true" ${active ? 'selected' : ''}>Active</option><option value="false" ${!active ? 'selected' : ''}>Inactive</option></select>`;
   }
 
   const qEl = root.querySelector('#tp-qualification');
@@ -146,6 +203,57 @@ function applyTeacherEditMode(root: HTMLElement, t: Record<string, unknown>) {
   if (sEl) {
     sEl.innerHTML = `<input type="number" class="pw-inline-input" data-tp-field="salary" value="${escapeAttr(salRaw)}" min="0" step="1" placeholder="0" style="width:100%;max-width:200px"/>`;
   }
+
+  const gEl = root.querySelector('#tp-gender');
+  if (gEl) {
+    gEl.innerHTML = `<select class="pw-inline-input" data-tp-field="gender" style="width:100%"><option value="">—</option><option value="Male" ${gender === 'Male' ? 'selected' : ''}>Male</option><option value="Female" ${gender === 'Female' ? 'selected' : ''}>Female</option><option value="Other" ${gender === 'Other' ? 'selected' : ''}>Other</option></select>`;
+  }
+  const dobEl = root.querySelector('#tp-dob');
+  if (dobEl) {
+    dobEl.innerHTML = `<input type="date" class="pw-inline-input" data-tp-field="dob" value="${escapeAttr(dob)}" style="width:100%"/>`;
+  }
+  const setInp = (sel: string, field: string, val: string) => {
+    const el = root.querySelector(sel);
+    if (el) el.innerHTML = `<input type="text" class="pw-inline-input" data-tp-field="${field}" value="${escapeAttr(val)}" style="width:100%"/>`;
+  };
+  setInp('#tp-nationality', 'nationality', nationality);
+  setInp('#tp-religion', 'religion', religion);
+  setInp('#tp-nin', 'national_id', nin);
+  setInp('#tp-district', 'district', district);
+  setInp('#tp-emergency', 'emergency_contact', emergency);
+  setInp('#tp-employment-type', 'employment_type', empType);
+  const hireEl = root.querySelector('#tp-hire-date');
+  if (hireEl) {
+    hireEl.innerHTML = `<input type="date" class="pw-inline-input" data-tp-field="date_of_hire" value="${escapeAttr(hire)}" style="width:100%"/>`;
+  }
+  setInp('#tp-bank-name', 'bank_name', bankName);
+  setInp('#tp-bank-account', 'bank_account', bankAcc);
+  setInp('#tp-department', 'department', dept);
+  setInp('#tp-prev-school', 'previous_school', prevSchool);
+  const pe = root.querySelector('#tp-personal-email');
+  if (pe) {
+    pe.innerHTML = `<input type="email" class="pw-inline-input" data-tp-field="personal_email" value="${escapeAttr(personalEmail)}" style="width:100%"/>`;
+  }
+
+  const pr = root.querySelector('#tp-perf-rating');
+  if (pr) {
+    pr.innerHTML = `<input type="number" class="pw-inline-input" data-tp-field="performance_review_rating" value="${escapeAttr(rating)}" min="0" max="5" step="0.1" placeholder="0–5" style="width:120px"/>`;
+  }
+  const prd = root.querySelector('#tp-perf-review-date');
+  if (prd) {
+    prd.innerHTML = `<input type="date" class="pw-inline-input" data-tp-field="performance_reviewed_at" value="${escapeAttr(revAt)}" style="width:100%"/>`;
+  }
+  setInp('#tp-perf-reviewer', 'performance_reviewed_by', revBy);
+  const pn = root.querySelector('#tp-perf-notes');
+  if (pn) {
+    pn.innerHTML = `<textarea class="pw-inline-input" data-tp-field="performance_review_notes" rows="3" style="width:100%;resize:vertical">${escapeHtml(revNotes)}</textarea>`;
+  }
+}
+
+function parseBoolOrNull(v: string): boolean | null {
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return null;
 }
 
 export default function DesignTeacherProfile() {
@@ -164,20 +272,41 @@ export default function DesignTeacherProfile() {
     if (!confirmProfileSave()) return;
     const root = containerRef.current?.querySelector('.pw-teacher-profile');
     if (!root) return;
-    const name = (root.querySelector('[data-tp-field="name"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const phone = (root.querySelector('[data-tp-field="phone"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const email = (root.querySelector('[data-tp-field="email"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const qualification =
-      (root.querySelector('[data-tp-field="qualification"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const experience =
-      (root.querySelector('[data-tp-field="experience"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const address = (root.querySelector('[data-tp-field="address"]') as HTMLInputElement | null)?.value?.trim() ?? '';
-    const salaryRaw = (root.querySelector('[data-tp-field="salary"]') as HTMLInputElement | null)?.value?.trim() ?? '';
+    const name = readTpField(root, 'name');
+    const phone = readTpField(root, 'phone');
+    const email = readTpField(root, 'email');
+    const qualification = readTpField(root, 'qualification');
+    const experience = readTpField(root, 'experience');
+    const address = readTpField(root, 'address');
+    const salaryRaw = readTpField(root, 'salary');
+    const gender = readTpField(root, 'gender');
+    const dob = readTpField(root, 'dob');
+    const nationality = readTpField(root, 'nationality');
+    const religion = readTpField(root, 'religion');
+    const national_id = readTpField(root, 'national_id');
+    const district = readTpField(root, 'district');
+    const emergency_contact = readTpField(root, 'emergency_contact');
+    const employment_type = readTpField(root, 'employment_type');
+    const date_of_hire = readTpField(root, 'date_of_hire');
+    const bank_name = readTpField(root, 'bank_name');
+    const bank_account = readTpField(root, 'bank_account');
+    const department = readTpField(root, 'department');
+    const previous_school = readTpField(root, 'previous_school');
+    const personal_email = readTpField(root, 'personal_email');
+    const isActiveStr = readTpField(root, 'is_active');
+    const ratingStr = readTpField(root, 'performance_review_rating');
+    const performance_review_notes = readTpField(root, 'performance_review_notes');
+    const performance_reviewed_by = readTpField(root, 'performance_reviewed_by');
+    const performance_reviewed_at = readTpField(root, 'performance_reviewed_at');
+
     if (!name) {
       window.alert('Please enter a name.');
       return;
     }
     const salary = salaryRaw ? parseFloat(salaryRaw) : null;
+    const rating = ratingStr ? parseFloat(ratingStr) : null;
+    const is_active = parseBoolOrNull(isActiveStr);
+
     const payload: Record<string, unknown> = {
       name,
       phone: phone || null,
@@ -186,8 +315,29 @@ export default function DesignTeacherProfile() {
       experience: experience || null,
       address: address || null,
       salary: salary !== null && !Number.isNaN(salary) ? salary : null,
+      gender: gender || null,
+      dob: dob || null,
+      nationality: nationality || null,
+      religion: religion || null,
+      national_id: national_id || null,
+      district: district || null,
+      emergency_contact: emergency_contact || null,
+      employment_type: employment_type || null,
+      date_of_hire: date_of_hire || null,
+      bank_name: bank_name || null,
+      bank_account: bank_account || null,
+      department: department || null,
+      previous_school: previous_school || null,
+      personal_email: personal_email || null,
+      performance_review_notes: performance_review_notes || null,
+      performance_reviewed_by: performance_reviewed_by || null,
+      performance_reviewed_at: performance_reviewed_at ? `${performance_reviewed_at}T12:00:00.000Z` : null,
+      performance_review_rating:
+        rating !== null && !Number.isNaN(rating) ? rating : null,
       updated_at: new Date().toISOString(),
     };
+    if (is_active !== null) payload.is_active = is_active;
+
     const photoInp = root.querySelector('#tp-photo-file') as HTMLInputElement | null;
     const photoFile = photoInp?.files?.[0];
     if (photoFile) {
@@ -225,12 +375,7 @@ export default function DesignTeacherProfile() {
   }, []);
 
   useEffect(() => {
-    if (cachedTeacherProfileHtml) {
-      setHtmlContent(cachedTeacherProfileHtml);
-      return;
-    }
-    cachedTeacherProfileHtml = parseInjectedHtml(profileTemplateRaw);
-    setHtmlContent(cachedTeacherProfileHtml);
+    setHtmlContent(parseInjectedHtml(profileTemplateRaw));
   }, []);
 
   useEffect(() => {
@@ -278,13 +423,17 @@ export default function DesignTeacherProfile() {
         supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
         supabase
           .from('teacher_class_subjects')
-          .select('id, class_name, subject')
+          .select('id, class_name, subject, assignment_role')
           .eq('school_id', school_id)
           .eq('teacher_id', teacherId)
           .order('class_name'),
         supabase.from('students').select('current_class').eq('school_id', school_id),
         supabase.from('class_subjects').select('class_name, subject').eq('school_id', school_id),
-        supabase.from('users').select('email, is_active, updated_at').eq('school_id', school_id).eq('role', 'teacher'),
+        supabase
+          .from('users')
+          .select('user_id, email, is_active, updated_at, phone, linked_teacher_id')
+          .eq('school_id', school_id)
+          .eq('role', 'teacher'),
         supabase
           .from('timetable_periods')
           .select('class_name, day_of_week, subject, start_time, end_time')
@@ -307,24 +456,47 @@ export default function DesignTeacherProfile() {
       const ttRows = ttRes.error ? [] : ttRes.data || [];
 
       const want = normEmail(pickStr(t.email));
+      const teacherUserRows = (teacherUsers || []) as {
+        user_id?: string;
+        email?: string;
+        is_active?: boolean;
+        updated_at?: string;
+        phone?: string | null;
+        linked_teacher_id?: string | null;
+      }[];
       const portalUser =
-        want && teacherUsers
-          ? (teacherUsers as { email?: string; is_active?: boolean; updated_at?: string }[]).find(
-              (u) => normEmail(u.email) === want
-            ) ?? null
-          : null;
+        teacherUserRows.find(
+          (u) =>
+            (u.linked_teacher_id && u.linked_teacher_id === teacherId) ||
+            (!!want && normEmail(u.email) === want)
+        ) ?? null;
 
       const fullName = String(t.name || '').trim() || '—';
       const { first: firstName, last: lastName } = splitName(fullName);
 
       const classTeacherNames = new Set((ctRows || []).map((r) => String((r as { class_name?: string }).class_name || '').trim()).filter(Boolean));
 
-      const assignments = (tcsRows || []) as { id: string; class_name: string; subject: string }[];
+      const assignments = (tcsRows || []) as {
+        id: string;
+        class_name: string;
+        subject: string;
+        assignment_role?: string | null;
+      }[];
 
       const classFromTcs = [...new Set(assignments.map((a) => a.class_name).filter(Boolean))];
       const classNames = [...new Set([...classTeacherNames, ...classFromTcs])];
-      const pu = portalUser as { email?: string; is_active?: boolean; updated_at?: string } | null;
-      const portalActive = !!(pu && pu.is_active !== false && want && normEmail(pu.email) === want);
+      const pu = portalUser as {
+        email?: string;
+        is_active?: boolean;
+        updated_at?: string;
+        phone?: string | null;
+        linked_teacher_id?: string | null;
+      } | null;
+      const portalActive = !!(
+        pu &&
+        pu.is_active !== false &&
+        ((want && normEmail(pu.email) === want) || pu.linked_teacher_id === teacherId)
+      );
 
       const uniqueFromStudents = Array.from(
         new Set(
@@ -338,6 +510,118 @@ export default function DesignTeacherProfile() {
         | 'Secondary'
         | undefined;
       const uniqueClasses = mergeClassNamesWithCanonical(schoolType ?? null, uniqueFromStudents);
+
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - 90);
+      const fromStr = fromDate.toISOString().slice(0, 10);
+
+      const { data: attRows } = await supabase
+        .from('student_attendance')
+        .select('present, arrived_late')
+        .eq('school_id', school_id)
+        .eq('teacher_id', teacherId)
+        .gte('date', fromStr);
+
+      const { data: payRows } = await supabase
+        .from('school_expenses')
+        .select(
+          `
+          expense_id,
+          amount,
+          expense_date,
+          created_at,
+          description,
+          category_name,
+          payment_method,
+          status,
+          salary_period_label,
+          reference_number,
+          expense_subcategories ( name, is_salary )
+        `
+        )
+        .eq('school_id', school_id)
+        .eq('linked_teacher_id', teacherId)
+        .order('expense_date', { ascending: false })
+        .limit(150);
+
+      const { data: docRows } = await supabase
+        .from('teacher_documents')
+        .select(
+          'id, doc_kind, doc_category, original_filename, storage_path, mime_type, file_size_bytes, created_at'
+        )
+        .eq('school_id', school_id)
+        .eq('teacher_id', teacherId)
+        .order('created_at', { ascending: false })
+        .limit(80);
+
+      const { data: recentAssignRows } = await supabase
+        .from('assignments')
+        .select('title, class_name, subject, created_at')
+        .eq('school_id', school_id)
+        .eq('teacher_id', teacherId)
+        .order('created_at', { ascending: false })
+        .limit(15);
+
+      const { count: assignSetCount } = await supabase
+        .from('assignments')
+        .select('id', { count: 'exact', head: true })
+        .eq('school_id', school_id)
+        .eq('teacher_id', teacherId);
+
+      const { data: assignIdRows } = await supabase
+        .from('assignments')
+        .select('id')
+        .eq('school_id', school_id)
+        .eq('teacher_id', teacherId)
+        .limit(5000);
+
+      const aidList = (assignIdRows || []).map((r) => (r as { id: string }).id);
+      let markedAssignCount = 0;
+      let submissionTotal = 0;
+      if (aidList.length > 0) {
+        const { count: mc } = await supabase
+          .from('assignment_submissions')
+          .select('id', { count: 'exact', head: true })
+          .in('assignment_id', aidList)
+          .eq('status', 'graded');
+        markedAssignCount = mc ?? 0;
+        const { count: st } = await supabase
+          .from('assignment_submissions')
+          .select('id', { count: 'exact', head: true })
+          .in('assignment_id', aidList);
+        submissionTotal = st ?? 0;
+      }
+
+      const pairSet = new Set(assignments.map((a) => `${a.class_name}|${a.subject}`));
+      const { data: erRows } = await supabase
+        .from('exam_results')
+        .select('class_name, subject, marks_obtained, total_marks')
+        .eq('school_id', school_id)
+        .limit(8000);
+
+      const erFiltered = (erRows || []).filter((r) => {
+        const row = r as { class_name?: string; subject?: string };
+        return pairSet.has(`${String(row.class_name || '').trim()}|${String(row.subject || '').trim()}`);
+      });
+      let avgPct: number | null = null;
+      if (erFiltered.length > 0) {
+        const sum = erFiltered.reduce((acc, r) => {
+          const row = r as { marks_obtained?: number; total_marks?: number };
+          const mo = Number(row.marks_obtained ?? 0);
+          const tm = Number(row.total_marks ?? 100) || 100;
+          return acc + (mo / tm) * 100;
+        }, 0);
+        avgPct = sum / erFiltered.length;
+      }
+
+      const attList = (attRows || []) as { present?: boolean; arrived_late?: boolean }[];
+      const presentDays = attList.filter((r) => r.present === true).length;
+      const absentDays = attList.filter((r) => r.present === false).length;
+      const lateArrivalCount = attList.filter((r) => r.present === true && r.arrived_late === true).length;
+      const attTotal = attList.length;
+      const attRatePct = attTotal > 0 ? Math.round((presentDays / attTotal) * 100) : null;
+      const markRatePct =
+        submissionTotal > 0 ? Math.round((markedAssignCount / submissionTotal) * 100) : null;
 
       if (cancelled) return;
 
@@ -389,9 +673,10 @@ export default function DesignTeacherProfile() {
         }
 
         const statusChip = root.querySelector('#tp-chip-status') as HTMLElement | null;
-        if (statusChip) {
-          statusChip.textContent = '✦ Active';
-          statusChip.className = 'tp-chip green';
+        if (statusChip && !editMode) {
+          const isInactive = t.is_active === false;
+          statusChip.textContent = isInactive ? 'Inactive' : '✦ Active';
+          statusChip.className = `tp-chip ${isInactive ? 'rose' : 'green'}`;
         }
 
         set('#tp-chip-emp-id', `🪪 ${pickStr(t.employee_id) || '—'}`);
@@ -454,22 +739,22 @@ export default function DesignTeacherProfile() {
         const dob = pickStr(t.dob);
         set('#tp-dob', fmtDate(dob));
         set('#tp-age', calcAge(dob));
-        set('#tp-nationality', '—');
-        set('#tp-religion', '—');
+        set('#tp-nationality', pickStr(t.nationality) || '—');
+        set('#tp-religion', pickStr(t.religion) || '—');
         set('#tp-nin', pickStr(t.national_id) || 'Not recorded');
         set('#tp-address', pickStr(t.address) || '—');
-        set('#tp-district', '—');
-        set('#tp-emergency', '—');
+        set('#tp-district', pickStr(t.district) || '—');
+        set('#tp-emergency', pickStr(t.emergency_contact) || '—');
 
         set('#tp-emp-id', pickStr(t.employee_id) || '—');
         set('#tp-hire-date', fmtDate(pickStr(t.date_of_hire)));
-        set('#tp-employment-type', '—');
+        set('#tp-employment-type', pickStr(t.employment_type) || '—');
         set('#tp-salary', fmtUGX(t.salary != null ? Number(t.salary) : null));
-        set('#tp-bank-name', '—');
-        set('#tp-bank-account', '—');
-        set('#tp-department', '—');
+        set('#tp-bank-name', pickStr(t.bank_name) || '—');
+        set('#tp-bank-account', pickStr(t.bank_account) || '—');
+        set('#tp-department', pickStr(t.department) || '—');
         set('#tp-qualification', pickStr(t.qualification) || '—');
-        set('#tp-prev-school', '—');
+        set('#tp-prev-school', pickStr(t.previous_school) || '—');
         set('#tp-years-exp', pickStr(t.experience) || '—');
 
         const ph = root.querySelector('#tp-phone') as HTMLAnchorElement | null;
@@ -501,16 +786,16 @@ export default function DesignTeacherProfile() {
             em.textContent = '—';
           }
         }
-        set('#tp-personal-email', '—');
+        set('#tp-personal-email', pickStr(t.personal_email) || '—');
 
         const ps = root.querySelector('#tp-portal-status') as HTMLElement | null;
         if (ps) {
           ps.textContent = portalActive ? '✓ Active' : '✗ Not registered';
           ps.className = `tp-field-value ${portalActive ? 'green' : 'muted'}`;
         }
-        set('#tp-portal-email', email || '—');
+        set('#tp-portal-email', pickStr(pu?.email) || email || '—');
         set('#tp-portal-last-login', pu?.updated_at ? timeAgo(pu.updated_at) : 'Never');
-        set('#tp-portal-2fa', '⚠ Not enabled');
+        set('#tp-portal-2fa', 'Not tracked in app');
         setHTML(
           '#tp-portal-permissions',
           portalActive
@@ -562,10 +847,20 @@ export default function DesignTeacherProfile() {
             ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No class assignments yet. Use the form above to assign subjects.</div>`
             : assignments
                 .map((a) => {
+                  const ar = (a.assignment_role || 'subject_teacher') as 'subject_teacher' | 'co_teacher';
                   const isCt = classTeacherNames.has(a.class_name);
-                  const roleBg = isCt
-                    ? 'background:var(--teal-s);color:var(--teal)'
-                    : 'background:var(--blue-s);color:var(--blue)';
+                  const roleLabel =
+                    ar === 'co_teacher'
+                      ? 'Co-teacher'
+                      : isCt
+                        ? 'Class Teacher'
+                        : 'Subject Teacher';
+                  const roleBg =
+                    ar === 'co_teacher'
+                      ? 'background:var(--violet-s);color:var(--violet)'
+                      : isCt
+                        ? 'background:var(--teal-s);color:var(--teal)'
+                        : 'background:var(--blue-s);color:var(--blue)';
                   const subs = String(a.subject || '')
                     .split(',')
                     .map((s) => s.trim())
@@ -583,9 +878,9 @@ export default function DesignTeacherProfile() {
                   <div class="tp-assign-col"><div style="display:flex;gap:4px;flex-wrap:wrap">${
                     subs || '<span style="color:var(--t3);font-style:italic">—</span>'
                   }</div></div>
-                  <div class="tp-assign-col"><span style="${roleBg};padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">${
-                    isCt ? 'Class Teacher' : 'Subject Teacher'
-                  }</span></div>
+                  <div class="tp-assign-col"><span style="${roleBg};padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">${escapeHtml(
+                    roleLabel
+                  )}</span></div>
                   <div class="tp-assign-actions">
                     <button type="button" class="tp-remove-btn" data-assign-id="${escapeHtml(a.id)}">Remove</button>
                   </div>
@@ -619,13 +914,65 @@ export default function DesignTeacherProfile() {
               window.alert('Select a class, then tap one or more subjects to assign.');
               return;
             }
-            const rows = parts.map((subject) => ({
-              school_id,
-              teacher_id: teacherId,
-              class_name: cls,
-              subject,
-            }));
-            const { error } = await supabase.from('teacher_class_subjects').insert(rows);
+
+            const teacherNameCache = new Map<string, string>();
+            const getTeacherName = async (tid: string) => {
+              if (teacherNameCache.has(tid)) return teacherNameCache.get(tid)!;
+              const { data } = await supabase.from('teachers').select('name').eq('teacher_id', tid).maybeSingle();
+              const n = String((data as { name?: string } | null)?.name || 'Another teacher').trim();
+              teacherNameCache.set(tid, n);
+              return n;
+            };
+
+            const toInsert: {
+              school_id: string;
+              teacher_id: string;
+              class_name: string;
+              subject: string;
+              assignment_role: 'subject_teacher' | 'co_teacher';
+            }[] = [];
+
+            for (const subject of parts) {
+              const { data: primary } = await supabase
+                .from('teacher_class_subjects')
+                .select('teacher_id')
+                .eq('school_id', school_id)
+                .eq('class_name', cls)
+                .eq('subject', subject)
+                .eq('assignment_role', 'subject_teacher')
+                .maybeSingle();
+
+              const pid = (primary as { teacher_id?: string } | null)?.teacher_id;
+              if (pid && pid === teacherId) {
+                window.alert(`Already assigned as subject teacher: ${subject}`);
+                continue;
+              }
+              if (pid && pid !== teacherId) {
+                const otherName = await getTeacherName(pid);
+                const ok = window.confirm(
+                  `${cls} — ${subject} already has a subject teacher (${otherName}).\n\nAdd ${String(t.name || 'this teacher')} as a co-teacher for this subject?`
+                );
+                if (!ok) continue;
+                toInsert.push({
+                  school_id,
+                  teacher_id: teacherId,
+                  class_name: cls,
+                  subject,
+                  assignment_role: 'co_teacher',
+                });
+              } else {
+                toInsert.push({
+                  school_id,
+                  teacher_id: teacherId,
+                  class_name: cls,
+                  subject,
+                  assignment_role: 'subject_teacher',
+                });
+              }
+            }
+
+            if (toInsert.length === 0) return;
+            const { error } = await supabase.from('teacher_class_subjects').insert(toInsert);
             if (error) {
               window.alert(error.message);
               return;
@@ -662,42 +1009,286 @@ export default function DesignTeacherProfile() {
           }
         }
 
-        set('#tp-perf-present', '—');
-        set('#tp-perf-absent', '—');
-        set('#tp-perf-att-rate', '—');
+        set('#tp-perf-present', String(presentDays));
+        set('#tp-perf-absent', String(absentDays));
+        set('#tp-perf-att-rate', attRatePct != null ? `${attRatePct}%` : '—');
         const attBar = root.querySelector('#tp-att-bar') as HTMLElement | null;
-        if (attBar) attBar.style.width = '0%';
-        set('#tp-perf-late', '—');
-        set('#tp-perf-assignments-set', '—');
-        set('#tp-perf-marked', '—');
-        set('#tp-perf-mark-rate', '—');
+        if (attBar) attBar.style.width = `${attRatePct ?? 0}%`;
+        set('#tp-perf-late', String(lateArrivalCount));
+        set('#tp-perf-assignments-set', String(assignSetCount ?? 0));
+        set('#tp-perf-marked', String(markedAssignCount));
+        set('#tp-perf-mark-rate', markRatePct != null ? `${markRatePct}%` : '—');
         const markBar = root.querySelector('#tp-mark-bar') as HTMLElement | null;
-        if (markBar) markBar.style.width = '0%';
-        set('#tp-perf-avg-score', '—');
+        if (markBar) markBar.style.width = `${markRatePct ?? 0}%`;
+        set('#tp-perf-avg-score', avgPct != null ? `${Math.round(avgPct)}%` : '—');
 
-        setHTML(
-          '#tp-kyc-body',
-          `<div class="tp-empty"><div class="tp-empty-icon">📁</div><div class="tp-empty-title">No KYC documents</div><div class="tp-empty-sub">Uploads can be enabled when document storage is configured.</div></div>`
+        const ratingVal = t.performance_review_rating != null ? String(t.performance_review_rating) : '';
+        set('#tp-perf-rating', ratingVal ? `${ratingVal} / 5` : 'Not rated yet');
+        set(
+          '#tp-perf-review-date',
+          pickStr(t.performance_reviewed_at as string | undefined) ? fmtDate(pickStr(t.performance_reviewed_at as string | undefined)) : '—'
         );
-        setHTML(
-          '#tp-academic-body',
-          `<div class="tp-empty"><div class="tp-empty-icon">🎓</div><div class="tp-empty-title">No academic documents</div><div class="tp-empty-sub">Uploads can be enabled when document storage is configured.</div></div>`
-        );
-        setHTML(
-          '#tp-activity-body',
-          `<div class="tp-empty"><div class="tp-empty-icon">🕐</div><div class="tp-empty-title">No activity recorded</div><div class="tp-empty-sub">Teacher activity logging can be connected here later.</div></div>`
-        );
+        set('#tp-perf-reviewer', pickStr(t.performance_reviewed_by) || '—');
+        set('#tp-perf-notes', pickStr(t.performance_review_notes) || 'No review notes yet.');
 
-        const wireUpload = (inputSel: string) => {
+        const payList = (payRows || []) as Array<{
+          expense_id: string;
+          amount: number | string;
+          expense_date: string;
+          created_at?: string;
+          description: string;
+          category_name: string;
+          payment_method: string | null;
+          status: string | null;
+          salary_period_label: string | null;
+          reference_number: string | null;
+          expense_subcategories: { name?: string; is_salary?: boolean } | null;
+        }>;
+
+        const paymentBody = root.querySelector('#tp-payment-history-body') as HTMLElement | null;
+        if (paymentBody) {
+          if (payList.length === 0) {
+            paymentBody.innerHTML = `<div class="tp-empty" style="padding:28px">
+              <div class="tp-empty-icon">💰</div>
+              <div class="tp-empty-title">No payment lines yet</div>
+              <div class="tp-empty-sub">When your accountant records salary or allowances in <strong>Expenses</strong>, link this teacher and choose a payroll subcategory. Past payments will appear here.</div>
+            </div>`;
+          } else {
+            const rows = payList
+              .map((row) => {
+                const sub = row.expense_subcategories;
+                const typeLabel = sub?.name || row.category_name || 'Payment';
+                const kindTag = sub?.is_salary ? 'Payroll' : 'Expense';
+                const desc = escapeHtml(String(row.description || '').slice(0, 160));
+                const descTitle = escapeAttr(String(row.description || '').slice(0, 240));
+                const ref = row.reference_number ? escapeHtml(row.reference_number) : '—';
+                return `<tr>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);white-space:nowrap">${escapeHtml(fmtDate(row.expense_date))}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--t2)">${escapeHtml(row.salary_period_label || '—')}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border)"><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:var(--teal-s);color:var(--teal)">${escapeHtml(kindTag)}</span> ${escapeHtml(typeLabel)}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);font-weight:600">${escapeHtml(fmtUGX(Number(row.amount)))}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--t3)">${escapeHtml(row.payment_method || '—')}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border)">${escapeHtml(fmtExpenseStatus(row.status))}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);color:var(--t3)">${ref}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${descTitle}">${desc}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid var(--border)"><a href="#" data-nav="/dashboard/expense-receipt/${escapeAttr(String(row.expense_id))}" style="color:var(--teal);font-weight:600">Voucher</a></td>
+                </tr>`;
+              })
+              .join('');
+            paymentBody.innerHTML = `<div style="overflow-x:auto;padding:10px 12px 16px">
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+                <thead>
+                  <tr>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Paid / dated</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Period</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Type</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Amount</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Method</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Status</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Ref</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase">Notes</th>
+                    <th style="text-align:left;padding:8px 10px;color:var(--t3);font-size:10px;text-transform:uppercase"></th>
+                  </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+              </table>
+            </div>`;
+          }
+        }
+
+        const fmtDocSize = (n: number | null | undefined) => {
+          if (n == null || Number.isNaN(Number(n))) return '';
+          if (n < 1024) return `${n} B`;
+          if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
+          return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+        };
+
+        const docs = (docRows || []) as Array<{
+          id: string;
+          doc_kind: string;
+          doc_category: string | null;
+          original_filename: string;
+          storage_path: string;
+          file_size_bytes: number | null;
+          created_at: string;
+        }>;
+
+        const renderDocRows = (kind: 'kyc' | 'academic') => {
+          const list = docs.filter((d) => d.doc_kind === kind);
+          if (list.length === 0) {
+            return `<div class="tp-empty"><div class="tp-empty-icon">📁</div><div class="tp-empty-title">No ${kind === 'kyc' ? 'KYC' : 'academic'} documents</div><div class="tp-empty-sub">Upload PDF or images using the area above.</div></div>`;
+          }
+          return list
+            .map((d) => {
+              const sz = fmtDocSize(d.file_size_bytes);
+              const cat = d.doc_category || 'Other';
+              return `<div class="tp-doc-row" style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+                <div class="tp-doc-ic pdf">📄</div>
+                <div style="flex:1;min-width:0">
+                  <div class="tp-doc-name" style="font-weight:600">${escapeHtml(d.original_filename)}</div>
+                  <div class="tp-doc-meta" style="font-size:12px;color:var(--t3)">${escapeHtml(cat)} · ${escapeHtml(fmtDate(d.created_at))}${sz ? ` · ${sz}` : ''}</div>
+                </div>
+                <button type="button" class="tp-doc-btn tp-doc-btn-ghost" data-tp-doc-download="${escapeAttr(d.storage_path)}">⬇ Open</button>
+                <button type="button" class="tp-doc-btn" data-tp-doc-delete="${escapeAttr(d.id)}" data-tp-doc-path="${escapeAttr(d.storage_path)}" style="color:var(--rose)">Remove</button>
+              </div>`;
+            })
+            .join('');
+        };
+
+        setHTML('#tp-kyc-body', renderDocRows('kyc'));
+        setHTML('#tp-academic-body', renderDocRows('academic'));
+
+        root.querySelectorAll('[data-tp-doc-download]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const path = (btn as HTMLElement).dataset.tpDocDownload;
+            if (!path) return;
+            const { data, error } = await supabase.storage.from(TEACHER_DOC_BUCKET).createSignedUrl(path, 3600);
+            if (error || !data?.signedUrl) {
+              window.alert(error?.message || 'Could not open file.');
+              return;
+            }
+            window.open(data.signedUrl, '_blank', 'noopener');
+          });
+        });
+
+        root.querySelectorAll('[data-tp-doc-delete]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const id = (btn as HTMLElement).dataset.tpDocDelete;
+            const path = (btn as HTMLElement).dataset.tpDocPath;
+            if (!id || !path) return;
+            if (!window.confirm('Remove this document from the profile?')) return;
+            const { error: delDb } = await supabase.from('teacher_documents').delete().eq('id', id);
+            if (delDb) {
+              window.alert(delDb.message);
+              return;
+            }
+            await supabase.storage.from(TEACHER_DOC_BUCKET).remove([path]);
+            setReloadToken((x) => x + 1);
+            if (authUserId) {
+              void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
+            }
+          });
+        });
+
+        type ActRow = { at: string; title: string; sub: string };
+        const actItems: ActRow[] = [];
+        (recentAssignRows || []).forEach((r) => {
+          const row = r as { title?: string; class_name?: string; subject?: string; created_at?: string };
+          if (!row.created_at) return;
+          actItems.push({
+            at: row.created_at,
+            title: `Assignment: ${String(row.title || '').slice(0, 80)}`,
+            sub: `${String(row.class_name || '')} · ${String(row.subject || '')}`,
+          });
+        });
+        docs.forEach((d) => {
+          actItems.push({
+            at: d.created_at,
+            title: `Document · ${d.doc_kind === 'kyc' ? 'KYC' : 'Academic'}`,
+            sub: d.original_filename,
+          });
+        });
+        payList.forEach((row) => {
+          const c = row.created_at;
+          actItems.push({
+            at: c || `${row.expense_date}T12:00:00.000Z`,
+            title: `Payroll / expense · ${fmtUGX(Number(row.amount))}`,
+            sub: String(row.description || row.category_name || '').slice(0, 120),
+          });
+        });
+        actItems.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+        const actTop = actItems.slice(0, 24);
+        if (actTop.length === 0) {
+          setHTML(
+            '#tp-activity-body',
+            `<div class="tp-empty"><div class="tp-empty-icon">🕐</div><div class="tp-empty-title">No recent activity</div><div class="tp-empty-sub">Assignments, document uploads, and recorded payroll lines will appear here.</div></div>`
+          );
+        } else {
+          setHTML(
+            '#tp-activity-body',
+            `<div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+              ${actTop
+                .map(
+                  (a) => `
+              <div style="display:flex;justify-content:space-between;gap:14px;padding:12px 14px;background:var(--s1);border:1px solid var(--border);border-radius:10px;font-size:13px">
+                <div style="min-width:0">
+                  <div style="font-weight:600;color:var(--t1)">${escapeHtml(a.title)}</div>
+                  <div style="font-size:12px;color:var(--t3);margin-top:4px">${escapeHtml(a.sub)}</div>
+                </div>
+                <div style="white-space:nowrap;font-size:11.5px;color:var(--t3);align-self:flex-start">${escapeHtml(timeAgo(a.at))}</div>
+              </div>`
+                )
+                .join('')}
+            </div>`
+          );
+        }
+
+        const profileShell = root as HTMLElement;
+        if (!profileShell.dataset.tpDocCatDelegated) {
+          profileShell.dataset.tpDocCatDelegated = '1';
+          profileShell.addEventListener('click', (ev) => {
+            const el = (ev.target as HTMLElement).closest('.tp-doc-cat-btn');
+            if (!el || !profileShell.contains(el)) return;
+            const wrap = el.closest('.tp-doc-categories');
+            if (!wrap) return;
+            wrap.querySelectorAll('.tp-doc-cat-btn').forEach((b) => b.classList.remove('active'));
+            el.classList.add('active');
+          });
+        }
+
+        const doUpload = async (files: FileList | null, kind: 'kyc' | 'academic', tabSel: string) => {
+          if (!files?.length || !school_id) return;
+          const { data: auth } = await supabase.auth.getUser();
+          const uid = auth.user?.id ?? null;
+          const cat = activeDocCategory(root, tabSel);
+          for (const file of Array.from(files)) {
+            if (file.size > 10 * 1024 * 1024) {
+              window.alert(`${file.name} is larger than 10MB.`);
+              continue;
+            }
+            const path = `${school_id}/${teacherId}/${kind}/${Date.now()}_${safeFileName(file.name)}`;
+            const { error: upErr } = await supabase.storage.from(TEACHER_DOC_BUCKET).upload(path, file, {
+              contentType: file.type || undefined,
+              upsert: false,
+            });
+            if (upErr) {
+              window.alert(upErr.message);
+              continue;
+            }
+            const { error: insErr } = await supabase.from('teacher_documents').insert({
+              school_id,
+              teacher_id: teacherId,
+              doc_kind: kind,
+              doc_category: cat,
+              storage_path: path,
+              original_filename: file.name,
+              mime_type: file.type || null,
+              file_size_bytes: file.size,
+              uploaded_by: uid,
+            });
+            if (insErr) {
+              window.alert(insErr.message);
+              await supabase.storage.from(TEACHER_DOC_BUCKET).remove([path]);
+            }
+          }
+          setReloadToken((x) => x + 1);
+          if (authUserId) {
+            void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
+          }
+        };
+
+        const wireUpload = (inputSel: string, kind: 'kyc' | 'academic', tabSel: string) => {
           const inp = root.querySelector(inputSel) as HTMLInputElement | null;
           if (inp)
             inp.onchange = () => {
-              window.alert('Document storage for teachers is not configured yet.');
-              inp.value = '';
+              const f = inp.files;
+              void doUpload(f, kind, tabSel).finally(() => {
+                inp.value = '';
+              });
             };
         };
-        wireUpload('#tp-kyc-file-input');
-        wireUpload('#tp-academic-file-input');
+        wireUpload('#tp-kyc-file-input', 'kyc', '#tp-tab-kyc');
+        wireUpload('#tp-academic-file-input', 'academic', '#tp-tab-academic');
 
         const kycIn = root.querySelector('#tp-kyc-file-input') as HTMLElement | null;
         const acIn = root.querySelector('#tp-academic-file-input') as HTMLElement | null;

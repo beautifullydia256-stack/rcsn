@@ -9,7 +9,13 @@ const STALE_TIME_MS = 5 * 60 * 1000;
 async function fetchTeacherSubjectClassData(userId: string): Promise<{
   schoolId: string;
   teachers: { teacher_id: string; name: string }[];
-  assignments: { id: string; teacher_id: string; class_name: string; subject: string }[];
+  assignments: {
+    id: string;
+    teacher_id: string;
+    class_name: string;
+    subject: string;
+    assignment_role?: string | null;
+  }[];
 }> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [] };
@@ -17,7 +23,7 @@ async function fetchTeacherSubjectClassData(userId: string): Promise<{
     supabase.from('teachers').select('teacher_id,name').eq('school_id', u.school_id).order('name'),
     supabase
       .from('teacher_class_subjects')
-      .select('id, teacher_id, class_name, subject')
+      .select('id, teacher_id, class_name, subject, assignment_role')
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
   ]);
@@ -61,7 +67,13 @@ export default function SettingsTeacherSubjectClass({
   const schoolId = data?.schoolId ?? null;
   const teachers = data?.teachers ?? [];
   const [assignments, setAssignments] = useState<
-    { id: string; teacher_id: string; class_name: string; subject: string }[]
+    {
+      id: string;
+      teacher_id: string;
+      class_name: string;
+      subject: string;
+      assignment_role?: string | null;
+    }[]
   >([]);
 
   useEffect(() => {
@@ -81,20 +93,67 @@ export default function SettingsTeacherSubjectClass({
     setError(null);
     if (!schoolId || !selectedTeacher || !selectedClass || selectedSubjects.length === 0) return;
     setSaving(true);
-    const payload = selectedSubjects.map((s) => ({
-      school_id: schoolId,
-      teacher_id: selectedTeacher,
-      class_name: selectedClass,
-      subject: s,
-    }));
+    const thisTeacherName =
+      teachers.find((t) => t.teacher_id === selectedTeacher)?.name || 'This teacher';
+
+    const payload: {
+      school_id: string;
+      teacher_id: string;
+      class_name: string;
+      subject: string;
+      assignment_role: 'subject_teacher' | 'co_teacher';
+    }[] = [];
+
+    for (const s of selectedSubjects) {
+      const { data: primary } = await supabase
+        .from('teacher_class_subjects')
+        .select('teacher_id')
+        .eq('school_id', schoolId)
+        .eq('class_name', selectedClass)
+        .eq('subject', s)
+        .eq('assignment_role', 'subject_teacher')
+        .maybeSingle();
+
+      const pid = (primary as { teacher_id?: string } | null)?.teacher_id;
+      if (pid && pid === selectedTeacher) {
+        window.alert(`Already assigned as subject teacher: ${s}`);
+        continue;
+      }
+      if (pid && pid !== selectedTeacher) {
+        const otherName = teachers.find((t) => t.teacher_id === pid)?.name || 'Another teacher';
+        const ok = window.confirm(
+          `${selectedClass} — ${s} already has a subject teacher (${otherName}).\n\nAdd ${thisTeacherName} as a co-teacher?`
+        );
+        if (!ok) continue;
+        payload.push({
+          school_id: schoolId,
+          teacher_id: selectedTeacher,
+          class_name: selectedClass,
+          subject: s,
+          assignment_role: 'co_teacher',
+        });
+      } else {
+        payload.push({
+          school_id: schoolId,
+          teacher_id: selectedTeacher,
+          class_name: selectedClass,
+          subject: s,
+          assignment_role: 'subject_teacher',
+        });
+      }
+    }
+
+    if (payload.length === 0) {
+      setSaving(false);
+      return;
+    }
+
     const optimistic = payload.map((p) => ({
       id: `tmp-${Math.random()}`,
       ...p,
     }));
     setAssignments((prev) => [...optimistic, ...prev]);
-    const { error: insertError } = await supabase
-      .from('teacher_class_subjects')
-      .insert(payload);
+    const { error: insertError } = await supabase.from('teacher_class_subjects').insert(payload);
     setSaving(false);
     if (insertError) {
       setError(insertError.message);
@@ -124,7 +183,7 @@ export default function SettingsTeacherSubjectClass({
     <div>
       <SectionHeader
         title="Teacher ↔ Subject ↔ Class Assignments"
-        desc="Assign teachers to subjects for specific classes. One teacher can handle multiple subjects/classes and one subject can have multiple teachers."
+        desc="Each class+subject has one subject teacher; additional staff can be co-teachers. Class teachers are set under Classes."
       />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
@@ -203,19 +262,20 @@ export default function SettingsTeacherSubjectClass({
               <th className="px-4 py-2 text-gray-700">Teacher</th>
               <th className="px-4 py-2 text-gray-700">Class</th>
               <th className="px-4 py-2 text-gray-700">Subject</th>
+              <th className="px-4 py-2 text-gray-700">Role</th>
               <th className="px-4 py-2 text-gray-700">Actions</th>
             </tr>
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
             {loading ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-700">
                   Loading...
                 </td>
               </tr>
             ) : assignments.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={5} className="px-4 py-6 text-center text-gray-700">
                   No assignments yet.
                 </td>
               </tr>
@@ -227,6 +287,9 @@ export default function SettingsTeacherSubjectClass({
                   </td>
                   <td className="px-4 py-2 text-gray-800">{a.class_name}</td>
                   <td className="px-4 py-2 text-gray-800">{a.subject}</td>
+                  <td className="px-4 py-2 text-gray-700">
+                    {a.assignment_role === 'co_teacher' ? 'Co-teacher' : 'Subject teacher'}
+                  </td>
                   <td className="px-4 py-2">
                     <button
                       type="button"

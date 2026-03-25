@@ -803,17 +803,33 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
                 <span class="tp-field-value" id="tp-portal-email">mustafa@rips.sch</span>
               </div>
               <div class="tp-field">
-                <span class="tp-field-label">Last Login</span>
+                <span class="tp-field-label">Last account update</span>
                 <span class="tp-field-value muted" id="tp-portal-last-login">Never</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">2-Factor Auth</span>
-                <span class="tp-field-value amber" id="tp-portal-2fa">⚠ Not enabled</span>
+                <span class="tp-field-value muted" id="tp-portal-2fa">Not tracked in app</span>
               </div>
               <div class="tp-field" style="grid-column:span 2">
                 <span class="tp-field-label">Portal Permissions</span>
                 <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="tp-portal-permissions"></div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payroll & payment history (from expenses linked to this teacher) -->
+        <div class="tp-card span2">
+          <div class="tp-card-head">
+            <div class="tp-card-title">
+              <div class="tp-card-title-ic" style="background:var(--green-s)">💰</div>
+              Salary, allowances &amp; payment history
+            </div>
+          </div>
+          <div class="tp-card-body" id="tp-payment-history-body" style="padding:0">
+            <div class="tp-empty" style="padding:24px">
+              <div class="tp-empty-icon">📋</div>
+              <div class="tp-empty-title">Loading…</div>
             </div>
           </div>
         </div>

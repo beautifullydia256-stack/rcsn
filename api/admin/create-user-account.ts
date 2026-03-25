@@ -324,6 +324,7 @@ export default async function handler(req: Req, res: Res) {
           phone: phone != null ? String(phone) : null,
           department: department != null ? String(department) : null,
           position: position != null ? String(position) : null,
+          ...(teacherId ? { linked_teacher_id: teacherId } : {}),
         }, { onConflict: 'user_id' });
 
       if (userInsertError) {
