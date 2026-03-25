@@ -65,6 +65,22 @@ function roleLabel(role: string): string {
   return map[role] || role;
 }
 
+type ContactFilter = 'all' | 'teacher' | 'parent' | 'student';
+
+function matchesContactFilter(userRole: string, f: ContactFilter): boolean {
+  const r = (userRole || '').toLowerCase().trim();
+  if (f === 'all') return true;
+  if (f === 'teacher') return r === 'teacher' || r === 'head_teacher';
+  if (f === 'parent') return r === 'parent';
+  if (f === 'student') return r === 'student';
+  return true;
+}
+
+function displayChatName(u: EligibleChatUser): string {
+  const n = u.name?.trim();
+  return n || u.email || 'User';
+}
+
 export default function SchoolChatPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -82,6 +98,7 @@ export default function SchoolChatPage() {
   const [sending, setSending] = useState(false);
   const [newOpen, setNewOpen] = useState(false);
   const [pickQ, setPickQ] = useState('');
+  const [contactFilter, setContactFilter] = useState<ContactFilter>('all');
   const [mobileThread, setMobileThread] = useState(false);
 
   const home = dashboardHomeForRole(role);
@@ -151,28 +168,34 @@ export default function SchoolChatPage() {
   }, [withUserId, myId, setSearchParams]);
 
   const filteredEligible = useMemo(() => {
+    const byRole = eligible.filter((u) => matchesContactFilter(u.role, contactFilter));
     const q = pickQ.trim().toLowerCase();
-    if (!q) return eligible;
-    return eligible.filter(
+    if (!q) return byRole;
+    return byRole.filter(
       (u) =>
-        u.name.toLowerCase().includes(q) ||
+        (u.name || '').toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         u.role.toLowerCase().includes(q)
     );
-  }, [eligible, pickQ]);
+  }, [eligible, pickQ, contactFilter]);
 
   const openNewConversation = async (u: EligibleChatUser) => {
     setSending(true);
     try {
       const cid = await getOrCreateDm(u.user_id);
-      setNewOpen(false);
-      setPickQ('');
+      closeNewChatModal();
       setSelectedId(cid);
       setMobileThread(true);
       await queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
     } finally {
       setSending(false);
     }
+  };
+
+  const closeNewChatModal = () => {
+    setNewOpen(false);
+    setPickQ('');
+    setContactFilter('all');
   };
 
   const handleSend = async (e: FormEvent) => {
@@ -227,7 +250,11 @@ export default function SchoolChatPage() {
           </div>
           <button
             type="button"
-            onClick={() => setNewOpen(true)}
+            onClick={() => {
+              setContactFilter('all');
+              setPickQ('');
+              setNewOpen(true);
+            }}
             className="inline-flex items-center gap-2 rounded-lg bg-[#008069] px-3 py-2 text-sm font-semibold text-white shadow hover:bg-[#006b58]"
           >
             <UserPlus className="h-4 w-4" />
@@ -247,7 +274,11 @@ export default function SchoolChatPage() {
           </div>
           <button
             type="button"
-            onClick={() => setNewOpen(true)}
+            onClick={() => {
+              setContactFilter('all');
+              setPickQ('');
+              setNewOpen(true);
+            }}
             className="inline-flex items-center gap-1.5 rounded-full bg-[#008069] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#006b58] shadow-sm"
           >
             <UserPlus className="h-4 w-4" />
@@ -427,15 +458,26 @@ export default function SchoolChatPage() {
       </div>
 
       {newOpen && (
-        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50" role="dialog">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)]">
+        <div
+          className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-chat-title"
+          onClick={closeNewChatModal}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)]"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[#f0f2f5]">
-              <h2 className="font-semibold text-[#111b21]">New chat</h2>
-              <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={() => setNewOpen(false)}>
+              <h2 id="new-chat-title" className="font-semibold text-[#111b21]">
+                New chat
+              </h2>
+              <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={closeNewChatModal}>
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-3 border-b border-[var(--wa-border)]">
+            <div className="p-3 border-b border-[var(--wa-border)] space-y-3">
               <div className="relative rounded-lg bg-[#f0f2f5] flex items-center px-3 py-2">
                 <Search className="absolute left-5 h-4 w-4 text-[#8696a0]" />
                 <input
@@ -444,6 +486,29 @@ export default function SchoolChatPage() {
                   value={pickQ}
                   onChange={(e) => setPickQ(e.target.value)}
                 />
+              </div>
+              <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by role">
+                {(
+                  [
+                    { id: 'all' as const, label: 'All' },
+                    { id: 'teacher' as const, label: 'Teachers' },
+                    { id: 'parent' as const, label: 'Parents' },
+                    { id: 'student' as const, label: 'Students' },
+                  ] as const
+                ).map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setContactFilter(id)}
+                    className={`rounded-full px-3 py-1.5 text-[13px] font-medium border transition-colors ${
+                      contactFilter === id
+                        ? 'bg-[#008069] text-white border-[#008069]'
+                        : 'bg-white text-[#54656f] border-[var(--wa-border)] hover:bg-[#f5f6f6]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2">
@@ -458,10 +523,10 @@ export default function SchoolChatPage() {
                     className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center"
                   >
                     <div className="h-12 w-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
-                      {(u.name || '?').slice(0, 1).toUpperCase()}
+                      {displayChatName(u).slice(0, 1).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <div className="font-medium text-[#111b21]">{u.name}</div>
+                      <div className="font-medium text-[#111b21]">{displayChatName(u)}</div>
                       <div className="text-[13px] text-[#667781] truncate">
                         {roleLabel(u.role)} · {u.email}
                       </div>
@@ -469,7 +534,7 @@ export default function SchoolChatPage() {
                   </button>
                 ))}
               {!loadingElig && filteredEligible.length === 0 && (
-                <p className="p-4 text-[14px] text-[#667781]">No contacts match your search.</p>
+                <p className="p-4 text-[14px] text-[#667781]">No contacts match filters or search.</p>
               )}
             </div>
           </div>
