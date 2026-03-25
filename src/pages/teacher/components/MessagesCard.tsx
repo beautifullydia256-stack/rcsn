@@ -53,7 +53,7 @@ export default function MessagesCard({ messages = [] }: MessagesCardProps) {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/chat')}
+            onClick={() => navigate('/dashboard/teacher/messages')}
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             View All
@@ -70,8 +70,8 @@ export default function MessagesCard({ messages = [] }: MessagesCardProps) {
               whileHover={{ x: 4 }}
               role="button"
               tabIndex={0}
-              onClick={() => navigate('/dashboard/chat')}
-              onKeyDown={(e) => e.key === 'Enter' && navigate('/dashboard/chat')}
+              onClick={() => navigate('/dashboard/teacher/messages')}
+              onKeyDown={(e) => e.key === 'Enter' && navigate('/dashboard/teacher/messages')}
               className={`p-3 rounded-lg border ${
                 message.unread
                   ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 cursor-pointer'
@@ -112,7 +112,7 @@ export default function MessagesCard({ messages = [] }: MessagesCardProps) {
               type="button"
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => navigate('/dashboard/chat')}
+              onClick={() => navigate('/dashboard/teacher/messages')}
               className="w-full mt-4 py-2 text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
             >
               View {mockMessages.length - 3} more messages

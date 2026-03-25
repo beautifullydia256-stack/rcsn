@@ -198,6 +198,8 @@ export default function TeacherLayout() {
   }
 
   /** Same shell as accountant: fixed pw-sidebar + scrollable pw-main (no separate glass header/footer). */
+  const isTeacherMessages = location.pathname.startsWith('/dashboard/teacher/messages');
+
   if (isPrimarySchool) {
     return (
       <div className="accountant-glass pw-layout fixed inset-0 flex overflow-hidden" data-theme="dark">
@@ -384,7 +386,7 @@ export default function TeacherLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Quick</span>
             <NavLink
-              to="/dashboard/chat"
+              to="/dashboard/teacher/messages"
               onClick={closeSidebar}
               onMouseEnter={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}
               className={({ isActive }) => ["pw-nav-link", isActive ? "pw-nav-link--active" : ""].join(" ")}
@@ -416,7 +418,7 @@ export default function TeacherLayout() {
             <button
               type="button"
               onClick={() => {
-                navigate("/dashboard/chat");
+                navigate("/dashboard/teacher/messages");
                 closeSidebar();
               }}
               aria-label="Messages"
@@ -453,12 +455,18 @@ export default function TeacherLayout() {
           </div>
         </aside>
 
-        <main className="pw-main">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
+        <main className={`pw-main ${isTeacherMessages ? 'pw-main--chat' : ''}`}>
+          {isTeacherMessages ? (
             <Suspense fallback={<AdminContentSkeleton />}>
               <Outlet />
             </Suspense>
-          </div>
+          ) : (
+            <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 pb-10 min-h-0">
+              <Suspense fallback={<AdminContentSkeleton />}>
+                <Outlet />
+              </Suspense>
+            </div>
+          )}
         </main>
       </div>
     );
@@ -592,7 +600,7 @@ export default function TeacherLayout() {
           <NavLinkStyle to="/dashboard/teacher/resources" icon={Book} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[9])}>
             Resources
           </NavLinkStyle>
-          <NavLinkStyle to="/dashboard/chat" icon={MessageSquare} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}>
+          <NavLinkStyle to="/dashboard/teacher/messages" icon={MessageSquare} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[10])}>
             Messages
           </NavLinkStyle>
           <NavLinkStyle to="/dashboard/teacher/notifications" icon={Bell} onPrefetch={() => prefetchChunk(TEACHER_ROUTE_CHUNKS[11])}>

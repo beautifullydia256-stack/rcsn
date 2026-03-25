@@ -81,6 +81,7 @@ const TeacherAiPlannerPage = lazyWithRetry(() => import('./pages/teacher/ai-plan
 const TeacherAssignmentsPage = lazyWithRetry(() => import('./pages/teacher/assignments/AssignmentsPage'));
 const TeacherResourcesPage = lazyWithRetry(() => import('./pages/teacher/resources/ResourcesPage'));
 const SchoolChatPage = lazyWithRetry(() => import('./pages/chat/SchoolChatPage'));
+const ChatRouteRedirect = lazyWithRetry(() => import('./pages/chat/ChatRouteRedirect'));
 const ParentLayout = lazyWithRetry(() => import('./components/layout/ParentLayout'));
 const TeacherNotificationsPage = lazyWithRetry(() => import('./pages/teacher/notifications/NotificationsPage'));
 const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings/SettingsPage'));
@@ -139,7 +140,7 @@ function App() {
               <Route path="/security-letter" element={<SecurityLetterPage />} />
               <Route path="/dashboard" element={<ProtectedRoute />}>
                 <Route index element={<DashboardEntry />} />
-                <Route path="chat" element={<SchoolChatPage />} />
+                <Route path="chat" element={<ChatRouteRedirect />} />
                 <Route path="expense-receipt/:expenseId" element={<AccountantExpenseReceiptPage />} />
                 <Route path="admin" element={<AdminLayout />}>
                   <Route index element={<AdminDashboard />} />
@@ -192,6 +193,7 @@ function App() {
                   <Route path="reports/bulk" element={<BulkGenerator />} />
                   <Route path="reports/viewer" element={<ReportViewer />} />
                   <Route path="reports" element={<ReportsHub />} />
+                  <Route path="messages" element={<SchoolChatPage />} />
                 </Route>
                 <Route path="teacher" element={<TeacherLayout />}>
                   <Route index element={<TeacherDashboard />} />
@@ -233,6 +235,7 @@ function App() {
                   <Route path="bank" element={<AccountantBankPage />} />
                   <Route path="reports" element={<AccountantReportsPage />} />
                   <Route path="adjustments" element={<AccountantAdjustmentsPage />} />
+                  <Route path="messages" element={<SchoolChatPage />} />
                 </Route>
                 <Route path="librarian" element={<LibrarianDashboard />} />
                 <Route path="lab-technician" element={<LabTechnicianDashboard />} />

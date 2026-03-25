@@ -310,7 +310,7 @@ export default function AccountantLayout() {
             onClick={closeSidebar}
             onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}
           />
-          <NavItem to="/dashboard/chat" icon="💬" label="Messages" onClick={closeSidebar} />
+          <NavItem to="/dashboard/accountant/messages" icon="💬" label="Messages" onClick={closeSidebar} />
         </div>
 
         <div className="pw-nav-section">
@@ -370,7 +370,11 @@ export default function AccountantLayout() {
         </div>
       </aside>
 
-      <main className="pw-main">
+      <main
+        className={
+          location.pathname.startsWith('/dashboard/accountant/messages') ? 'pw-main pw-main--chat' : 'pw-main'
+        }
+      >
         <Suspense
           fallback={
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

@@ -251,6 +251,18 @@ export const ACCOUNTANT_PW_SHELL_CSS = `
       width: 100%;
     }
   }
+  .accountant-glass .pw-main.pw-main--chat {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+  .accountant-glass .pw-main.pw-main--chat > * {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
   .accountant-glass[data-theme="dark"] .pw-main table,
   .accountant-glass[data-theme="dark"] .pw-main th,
   .accountant-glass[data-theme="dark"] .pw-main td { color: #eef3ff; }

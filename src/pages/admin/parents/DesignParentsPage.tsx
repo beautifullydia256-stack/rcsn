@@ -40,6 +40,9 @@ const PARENTS_MOTION_KILL = `
 .pw-parents .par-pcard {
   transition: border-color 0.2s, box-shadow 0.2s;
 }
+.pw-parents .par-view-toggle { display: none !important; }
+.pw-parents #par-list-view { display: none !important; }
+.pw-parents #par-grid-view { display: block !important; }
 `;
 
 const GRADIENTS = [
@@ -275,10 +278,6 @@ export default function DesignParentsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
   const [page, setPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 'grid' : 'list'
-  );
-
   useEffect(() => {
     const id = 'pweza-parents-fonts';
     if (!document.getElementById(id)) {
@@ -400,70 +399,6 @@ export default function DesignParentsPage() {
           : `Showing <strong>${startIdx}</strong>–<strong>${endIdx}</strong> of <strong>${filteredSorted.length}</strong> parents`;
     }
 
-    const tbody = root.querySelector('#par-table-body');
-    if (tbody) {
-      if (pageSlice.length === 0) {
-        tbody.innerHTML = initialLoad
-          ? `<div style="padding:40px;text-align:center;color:var(--t2);font-size:13px">Loading parents…</div>`
-          : `<div style="padding:40px;text-align:center;color:var(--t3);font-size:13px">No parents found.</div>`;
-      } else {
-        tbody.innerHTML = pageSlice
-          .map((p, i) => {
-            const ini = initials(p.name);
-            const bg = grad(start + i);
-            const portalChip = p.portal_active
-              ? `<span class="par-chip green">✓ Active</span>`
-              : `<span class="par-chip rose">✗ None</span>`;
-            const rel = (p.relationship || '').toLowerCase();
-            const relChip = p.relationship
-              ? `<span class="par-chip ${rel === 'mother' ? 'teal' : 'violet'}">${escapeHtml(p.relationship)}</span>`
-              : `<span class="par-chip muted">—</span>`;
-            const studentTags =
-              p.students.length === 0
-                ? `<span style="color:var(--t3);font-style:italic;font-size:12px">Not linked</span>`
-                : p.students
-                    .map(
-                      (s) =>
-                        `<span class="par-stag" data-nav="/dashboard/admin/students/${escapeHtml(s.student_id)}">${escapeHtml(s.displayName)}</span>`
-                    )
-                    .join('');
-            const phone = String(p.phone ?? '').trim();
-            const email = String(p.email ?? '').trim();
-            const ninLine = p.nin ? `NIN: ${escapeHtml(p.nin)}` : 'NIN not recorded';
-            return `
-              <div class="par-trow" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" style="cursor:pointer">
-                <div class="par-td">
-                  <div class="par-cell">
-                    <div class="par-av" style="background:${bg}">${escapeHtml(ini)}</div>
-                    <div>
-                      <div class="par-name">${escapeHtml(p.name)}</div>
-                      <div class="par-rel">${ninLine}</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="par-td"><div class="par-student-tags">${studentTags}</div></div>
-                <div class="par-td">${relChip}</div>
-                <div class="par-td">
-                  <div class="par-contact-row">
-                    ${phone ? `<a href="tel:${phone.replace(/\s/g, '')}" class="par-contact-link phone" onclick="event.stopPropagation()">📞 ${escapeHtml(phone)}</a>` : '<span style="color:var(--t3);font-size:12px;font-style:italic">No phone</span>'}
-                    ${email ? `<a href="mailto:${escapeHtml(email)}" class="par-contact-link email" onclick="event.stopPropagation()">✉ ${escapeHtml(email)}</a>` : '<span style="color:var(--t3);font-size:12px;font-style:italic">No email</span>'}
-                  </div>
-                </div>
-                <div class="par-td" style="color:var(--t2)">${p.occupation ? escapeHtml(p.occupation) : '<span style="color:var(--t3);font-style:italic">—</span>'}</div>
-                <div class="par-td">${portalChip}</div>
-                <div class="par-td">
-                  <div class="par-row-actions">
-                    <div class="par-rbtn" data-msg="1" title="Message" onclick="event.stopPropagation()">💬</div>
-                    <div class="par-rbtn" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" title="View profile" onclick="event.stopPropagation()">👁</div>
-                    <div class="par-rbtn arrow" data-nav="/dashboard/admin/parents/${escapeHtml(p.parent_id)}" title="Open profile" onclick="event.stopPropagation()">›</div>
-                  </div>
-                </div>
-              </div>`;
-          })
-          .join('');
-      }
-    }
-
     const cardGrid = root.querySelector('#par-card-grid');
     if (cardGrid) {
       if (pageSlice.length === 0) {
@@ -553,17 +488,6 @@ export default function DesignParentsPage() {
       }
     }
 
-    const listView = root.querySelector('#par-list-view') as HTMLElement | null;
-    const gridView = root.querySelector('#par-grid-view') as HTMLElement | null;
-    if (listView && gridView) {
-      listView.style.display = viewMode === 'list' ? '' : 'none';
-      gridView.style.display = viewMode === 'grid' ? '' : 'none';
-    }
-    const listBtn = root.querySelector('#par-list-btn');
-    const gridBtn = root.querySelector('#par-grid-btn');
-    listBtn?.classList.toggle('active', viewMode === 'list');
-    gridBtn?.classList.toggle('active', viewMode === 'grid');
-
     const sortSel = root.querySelector('#par-sort-select') as HTMLSelectElement | null;
     if (sortSel) sortSel.value = sortKey;
   }, [
@@ -576,7 +500,6 @@ export default function DesignParentsPage() {
     startIdx,
     endIdx,
     totalPages,
-    viewMode,
     sortKey,
   ]);
 
@@ -637,15 +560,6 @@ export default function DesignParentsPage() {
     const pageBtnsEl = root.querySelector('#par-page-btns');
     pageBtnsEl?.addEventListener('click', onPageClick);
 
-    const onList = () => {
-      setViewMode('list');
-    };
-    const onGrid = () => {
-      setViewMode('grid');
-    };
-    root.querySelector('#par-list-btn')?.addEventListener('click', onList);
-    root.querySelector('#par-grid-btn')?.addEventListener('click', onGrid);
-
     const onAdd = () => {
       setSearchParams(
         (prev) => {
@@ -670,8 +584,6 @@ export default function DesignParentsPage() {
       statusEl?.removeEventListener('change', onStatus);
       sortEl?.removeEventListener('change', onSort);
       pageBtnsEl?.removeEventListener('click', onPageClick);
-      root.querySelector('#par-list-btn')?.removeEventListener('click', onList);
-      root.querySelector('#par-grid-btn')?.removeEventListener('click', onGrid);
       root.querySelector('#par-btn-add')?.removeEventListener('click', onAdd);
       root.querySelector('#par-btn-add-student')?.removeEventListener('click', onAddStudent);
       root.querySelector('#par-btn-add-teacher')?.removeEventListener('click', onAddTeacher);

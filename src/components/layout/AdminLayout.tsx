@@ -478,6 +478,18 @@ export default function AdminLayout() {
           background: var(--pw-bg, #05080f);
           color: var(--pw-t1, #eef3ff);
         }
+        .pw-main--chat {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          padding: 0;
+        }
+        .pw-main--chat > * {
+          flex: 1;
+          min-height: 0;
+          display: flex;
+          flex-direction: column;
+        }
         .pw-layout * {
           scrollbar-width: none !important;
           -ms-overflow-style: none !important;
@@ -526,7 +538,7 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/chat" icon="💬" label="Messages" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/messages" icon="💬" label="Messages" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/students" icon="👨‍🎓" label="Students" badge={studentCount ?? undefined} badgeColor="teal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/teachers" icon="🧑‍🏫" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/parents" icon="👨‍👩‍👧" label="Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
@@ -596,7 +608,13 @@ export default function AdminLayout() {
           </div>
         </aside>
 
-        <main className="pw-main">
+        <main
+          className={
+            location.pathname.startsWith('/dashboard/admin/messages')
+              ? 'pw-main pw-main--chat'
+              : 'pw-main'
+          }
+        >
           <Suspense fallback={<AdminContentSkeleton />}>
             <Outlet />
           </Suspense>

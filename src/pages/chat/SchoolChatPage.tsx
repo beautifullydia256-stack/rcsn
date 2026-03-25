@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MessageCircle, Search, Send, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Paperclip, Search, Send, Smile, UserPlus, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
   fetchEligibleChatUsers,
@@ -17,6 +17,10 @@ import {
 } from '@/lib/schoolChatApi';
 
 const CHAT_QK = ['school-chat'] as const;
+
+/** WhatsApp-style chat wallpaper (subtle pattern on #e5ddd5). */
+const WA_CHAT_BG = `linear-gradient(rgba(229, 221, 213, 0.92), rgba(229, 221, 213, 0.92)),
+  url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23d4ccc4' fill-opacity='0.35' d='M0 17h17V0H0v17zm17 35h17V35H17v17zM35 0v17h17V0H35z'/%3E%3C/svg%3E")`;
 
 function dashboardHomeForRole(role: string | null): string {
   switch (role) {
@@ -63,11 +67,14 @@ function roleLabel(role: string): string {
 
 export default function SchoolChatPage() {
   const queryClient = useQueryClient();
+  const location = useLocation();
   const role = useAuthStore((s) => s.role);
   const schoolId = useAuthStore((s) => s.schoolId);
   const myId = useAuthStore((s) => s.user?.id) ?? null;
   const [searchParams, setSearchParams] = useSearchParams();
   const withUserId = searchParams.get('with');
+
+  const embedded = /\/(admin|teacher|parent|student|accountant)\/messages/.test(location.pathname);
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
@@ -124,7 +131,6 @@ export default function SchoolChatPage() {
     return unsub;
   }, [selectedId, myId, queryClient]);
 
-  // Deep link ?with=user_id
   useEffect(() => {
     if (!withUserId || !myId) return;
     let cancelled = false;
@@ -188,49 +194,91 @@ export default function SchoolChatPage() {
     return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
   };
 
-  return (
-    <div className="min-h-[calc(100vh-2rem)] flex flex-col bg-slate-50 text-slate-900">
-      <header className="flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white px-4 py-3">
-        <Link
-          to={home}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-800 hover:text-amber-950"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Link>
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <MessageCircle className="h-6 w-6 text-amber-600 shrink-0" />
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold truncate">School messages</h1>
-            <p className="text-xs text-slate-500 truncate">
-              You only see people you are allowed to contact (classes, family, or staff scope).
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setNewOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white shadow hover:bg-amber-500"
-        >
-          <UserPlus className="h-4 w-4" />
-          New chat
-        </button>
-      </header>
+  const formatMsgTime = (iso: string | null) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
 
-      <div className="flex flex-1 min-h-0">
-        {/* Conversation list */}
+  return (
+    <div
+      className={`wa-root flex flex-col min-h-0 w-full ${embedded ? 'flex-1 h-full max-h-[100dvh]' : 'min-h-[calc(100vh-2rem)]'}`}
+      style={{ fontFamily: 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}
+    >
+      <style>{`
+        .wa-root { --wa-header: #075e54; --wa-header-light: #008069; --wa-in: #ffffff; --wa-out: #d9fdd3; --wa-list: #f0f2f5; --wa-border: #e9edef; }
+        .wa-sidebar-item:hover { background: #f5f6f6; }
+        .wa-sidebar-item.wa-active { background: #ebebeb; }
+        .wa-input::placeholder { color: #8696a0; }
+      `}</style>
+
+      {!embedded && (
+        <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 shrink-0 bg-white text-slate-900 border-slate-200">
+          <Link to={home} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#008069] hover:underline">
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Link>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <MessageCircle className="h-6 w-6 text-[#008069] shrink-0" />
+            <div className="min-w-0">
+              <h1 className="text-lg font-bold truncate">School messages</h1>
+              <p className="text-xs text-slate-500 truncate">People you are allowed to contact at your school.</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#008069] px-3 py-2 text-sm font-semibold text-white shadow hover:bg-[#006b58]"
+          >
+            <UserPlus className="h-4 w-4" />
+            New chat
+          </button>
+        </header>
+      )}
+
+      {embedded && (
+        <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-list)]">
+          <div className="flex items-center gap-2 min-w-0">
+            <MessageCircle className="h-6 w-6 text-[#54656f] shrink-0" />
+            <div>
+              <h1 className="text-[17px] font-semibold text-[#111b21] leading-tight">Messages</h1>
+              <p className="text-[12px] text-[#667781]">School chat</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setNewOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-[#008069] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#006b58] shadow-sm"
+          >
+            <UserPlus className="h-4 w-4" />
+            New chat
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-1 min-h-0 border-t border-[var(--wa-border)]">
+        {/* Chat list — WhatsApp left column */}
         <aside
           className={`${
-            mobileThread ? 'hidden sm:flex' : 'flex'
-          } w-full sm:w-[min(100%,380px)] flex-col border-r border-slate-200 bg-white`}
+            mobileThread ? 'hidden md:flex' : 'flex'
+          } w-full md:w-[min(100%,380px)] md:max-w-[40%] flex-col border-r border-[var(--wa-border)] bg-[var(--wa-list)] shrink-0`}
         >
-          <div className="p-3 border-b border-slate-100">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Conversations</p>
+          <div className="p-2 border-b border-[var(--wa-border)] bg-[var(--wa-list)]">
+            <div className="relative rounded-lg bg-white flex items-center px-3 py-1.5 border border-[var(--wa-border)]">
+              <Search className="h-4 w-4 text-[#8696a0] shrink-0 mr-2" />
+              <input
+                type="search"
+                readOnly
+                placeholder="Search or start new chat"
+                className="w-full text-[14px] text-[#3b4a54] bg-transparent border-0 outline-none placeholder:text-[#8696a0] cursor-default"
+                aria-hidden
+              />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto">
-            {loadingConv && <p className="p-4 text-sm text-slate-500">Loading…</p>}
+            {loadingConv && <p className="p-4 text-[14px] text-[#667781]">Loading…</p>}
             {!loadingConv && conversations.length === 0 && (
-              <p className="p-4 text-sm text-slate-500">No conversations yet. Start a new chat.</p>
+              <p className="p-4 text-[14px] text-[#667781]">No chats yet. Tap <strong>New chat</strong>.</p>
             )}
             {conversations.map((c: ChatConversationRow) => (
               <button
@@ -240,91 +288,137 @@ export default function SchoolChatPage() {
                   setSelectedId(c.conversation_id);
                   setMobileThread(true);
                 }}
-                className={`w-full text-left px-4 py-3 border-b border-slate-50 hover:bg-amber-50/80 transition ${
-                  selectedId === c.conversation_id ? 'bg-amber-50' : ''
+                className={`wa-sidebar-item w-full text-left px-3 py-2.5 border-b border-[var(--wa-border)] flex gap-3 transition-colors ${
+                  selectedId === c.conversation_id ? 'wa-active' : ''
                 }`}
               >
-                <div className="flex justify-between gap-2">
-                  <span className="font-medium text-slate-900 truncate">{c.peer_name}</span>
-                  {c.unread_count > 0 && (
-                    <span className="shrink-0 rounded-full bg-amber-600 px-2 py-0.5 text-xs font-semibold text-white">
-                      {c.unread_count}
-                    </span>
-                  )}
+                <div
+                  className="h-12 w-12 rounded-full shrink-0 flex items-center justify-center text-white text-[15px] font-medium"
+                  style={{ background: 'linear-gradient(180deg, #6b7c85, #54656f)' }}
+                >
+                  {(c.peer_name || '?').slice(0, 1).toUpperCase()}
                 </div>
-                <div className="text-xs text-slate-500">{roleLabel(c.peer_role)}</div>
-                <div className="text-sm text-slate-600 line-clamp-2 mt-0.5">{c.last_body || '—'}</div>
-                <div className="text-[11px] text-slate-400 mt-1">{formatTime(c.last_at)}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex justify-between gap-2 items-baseline">
+                    <span className="font-medium text-[#111b21] text-[16px] truncate">{c.peer_name}</span>
+                    <span className="text-[11px] text-[#667781] shrink-0 whitespace-nowrap">{formatTime(c.last_at)}</span>
+                  </div>
+                  <div className="text-[12px] text-[#667781] truncate">{roleLabel(c.peer_role)}</div>
+                  <div className="flex justify-between gap-2 items-center mt-0.5">
+                    <span className="text-[14px] text-[#667781] truncate">{c.last_body || ' '}</span>
+                    {c.unread_count > 0 && (
+                      <span className="shrink-0 rounded-full bg-[#25d366] text-white text-[11px] font-semibold min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                        {c.unread_count}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </button>
             ))}
           </div>
         </aside>
 
-        {/* Thread */}
+        {/* Thread — WhatsApp right column */}
         <section
-          className={`${
-            !mobileThread ? 'hidden sm:flex' : 'flex'
-          } flex-1 flex-col min-h-0 bg-slate-50`}
+          className={`${!mobileThread ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-h-0 bg-[#efeae2]`}
         >
-          <div className="sm:hidden flex items-center gap-2 border-b border-slate-200 bg-white px-3 py-2">
+          <div className="md:hidden flex items-center gap-2 border-b border-[var(--wa-border)] px-2 py-2 shrink-0 bg-[var(--wa-header)] text-white">
             <button
               type="button"
-              className="text-sm text-amber-800 font-medium"
+              className="p-2 rounded-full hover:bg-white/10"
               onClick={() => setMobileThread(false)}
+              aria-label="Back to chats"
             >
-              ← Chats
+              <ArrowLeft className="h-5 w-5" />
             </button>
+            <span className="text-[16px] font-medium truncate">{selectedConv?.peer_name || 'Chat'}</span>
           </div>
 
           {!selectedId && (
-            <div className="flex flex-1 items-center justify-center p-8 text-center text-slate-500">
-              <div>
-                <MessageCircle className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                <p className="font-medium text-slate-700">Select a conversation or start a new chat</p>
+            <div
+              className="hidden md:flex flex-1 flex-col items-center justify-center p-8 text-center border-l border-[var(--wa-border)]"
+              style={{ background: WA_CHAT_BG }}
+            >
+              <div className="max-w-sm rounded-lg bg-white/90 px-6 py-8 shadow-sm border border-[var(--wa-border)]">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 text-[#8696a0]" strokeWidth={1.25} />
+                <p className="text-[20px] font-light text-[#41525d]">PwezaCore Web</p>
+                <p className="text-[14px] text-[#667781] mt-2">
+                  Select a conversation to start messaging, or start a new chat.
+                </p>
               </div>
             </div>
           )}
 
           {selectedId && selectedConv && (
             <>
-              <div className="border-b border-slate-200 bg-white px-4 py-3">
-                <div className="font-semibold text-slate-900">{selectedConv.peer_name}</div>
-                <div className="text-xs text-slate-500">{roleLabel(selectedConv.peer_role)}</div>
+              <div className="hidden md:flex items-center gap-3 px-4 py-2.5 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-header)] text-white">
+                <div
+                  className="h-10 w-10 rounded-full flex items-center justify-center text-[15px] font-medium bg-white/20"
+                  aria-hidden
+                >
+                  {(selectedConv.peer_name || '?').slice(0, 1).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-[16px] truncate">{selectedConv.peer_name}</div>
+                  <div className="text-[13px] text-white/80 truncate">{roleLabel(selectedConv.peer_role)}</div>
+                </div>
               </div>
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+
+              <div
+                className="flex-1 overflow-y-auto px-[4%] py-3 space-y-1"
+                style={{ background: WA_CHAT_BG }}
+              >
                 {messages.map((m) => {
                   const mine = m.sender_id === myId;
                   return (
-                    <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                    <div key={m.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm shadow-sm ${
-                          mine ? 'bg-amber-600 text-white rounded-br-md' : 'bg-white text-slate-900 border border-slate-200 rounded-bl-md'
+                        className={`max-w-[75%] sm:max-w-[65%] rounded-lg px-2 py-1.5 pb-5 shadow-sm relative ${
+                          mine
+                            ? 'rounded-br-none bg-[var(--wa-out)] text-[#111b21]'
+                            : 'rounded-bl-none bg-[var(--wa-in)] text-[#111b21] border border-[#e9edef]'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                        <p className={`text-[10px] mt-1 ${mine ? 'text-amber-100' : 'text-slate-400'}`}>
-                          {formatTime(m.created_at)}
-                        </p>
+                        <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug pr-12">{m.body}</p>
+                        <span
+                          className={`absolute bottom-1 right-2 text-[11px] tabular-nums ${
+                            mine ? 'text-[#667781]' : 'text-[#667781]'
+                          }`}
+                        >
+                          {formatMsgTime(m.created_at)}
+                        </span>
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <form onSubmit={handleSend} className="border-t border-slate-200 bg-white p-3 flex gap-2">
-                <input
-                  className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  placeholder="Type a message…"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  disabled={sending}
-                />
+
+              <form
+                onSubmit={handleSend}
+                className="flex items-end gap-2 px-3 py-2 shrink-0 border-t border-[var(--wa-border)] bg-[#f0f2f5]"
+              >
+                <button type="button" className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block" aria-label="Emoji">
+                  <Smile className="h-6 w-6" />
+                </button>
+                <button type="button" className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block" aria-label="Attach">
+                  <Paperclip className="h-6 w-6" />
+                </button>
+                <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3">
+                  <input
+                    className="flex-1 wa-input bg-transparent border-0 text-[15px] text-[#111b21] outline-none py-2 placeholder:text-[#8696a0]"
+                    placeholder="Type a message"
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    disabled={sending}
+                  />
+                </div>
                 <button
                   type="submit"
                   disabled={sending || !draft.trim()}
-                  className="inline-flex items-center gap-1 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                  className="p-3 rounded-full bg-[#008069] text-white hover:bg-[#006b58] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                  aria-label="Send"
                 >
-                  <Send className="h-4 w-4" />
-                  Send
+                  <Send className="h-5 w-5" />
                 </button>
               </form>
             </>
@@ -333,19 +427,19 @@ export default function SchoolChatPage() {
       </div>
 
       {newOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" role="dialog">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <h2 className="font-semibold text-slate-900">Start a conversation</h2>
-              <button type="button" className="p-1 rounded-lg hover:bg-slate-100" onClick={() => setNewOpen(false)}>
+        <div className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50" role="dialog">
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)]">
+            <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[#f0f2f5]">
+              <h2 className="font-semibold text-[#111b21]">New chat</h2>
+              <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={() => setNewOpen(false)}>
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-3 border-b border-slate-100">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <div className="p-3 border-b border-[var(--wa-border)]">
+              <div className="relative rounded-lg bg-[#f0f2f5] flex items-center px-3 py-2">
+                <Search className="absolute left-5 h-4 w-4 text-[#8696a0]" />
                 <input
-                  className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm"
+                  className="w-full rounded-lg bg-white border border-[var(--wa-border)] py-2 pl-9 pr-3 text-[14px] outline-none focus:border-[#008069]"
                   placeholder="Search name or email…"
                   value={pickQ}
                   onChange={(e) => setPickQ(e.target.value)}
@@ -353,7 +447,7 @@ export default function SchoolChatPage() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-2">
-              {loadingElig && <p className="p-3 text-sm text-slate-500">Loading contacts…</p>}
+              {loadingElig && <p className="p-3 text-[14px] text-[#667781]">Loading contacts…</p>}
               {!loadingElig &&
                 filteredEligible.map((u) => (
                   <button
@@ -361,16 +455,21 @@ export default function SchoolChatPage() {
                     type="button"
                     disabled={sending}
                     onClick={() => void openNewConversation(u)}
-                    className="w-full text-left rounded-lg px-3 py-2.5 hover:bg-amber-50 border border-transparent hover:border-amber-100"
+                    className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center"
                   >
-                    <div className="font-medium text-slate-900">{u.name}</div>
-                    <div className="text-xs text-slate-500">
-                      {roleLabel(u.role)} · {u.email}
+                    <div className="h-12 w-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
+                      {(u.name || '?').slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-[#111b21]">{u.name}</div>
+                      <div className="text-[13px] text-[#667781] truncate">
+                        {roleLabel(u.role)} · {u.email}
+                      </div>
                     </div>
                   </button>
                 ))}
               {!loadingElig && filteredEligible.length === 0 && (
-                <p className="p-4 text-sm text-slate-500">No contacts match your search.</p>
+                <p className="p-4 text-[14px] text-[#667781]">No contacts match your search.</p>
               )}
             </div>
           </div>

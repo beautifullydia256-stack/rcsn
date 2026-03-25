@@ -283,9 +283,6 @@ export default function DesignStudentsPage() {
   const [q, setQ] = useState('');
   const [classFilter, setClassFilter] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name-asc');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() =>
-    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches ? 'grid' : 'list'
-  );
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -512,191 +509,9 @@ export default function DesignStudentsPage() {
               <option value="class">Class</option>
               <option value="recent">Most Recent</option>
             </select>
-            <div className="view-toggle">
-              <button
-                type="button"
-                className={`view-btn ${viewMode === 'list' ? 'active' : ''}`}
-                onClick={() => setViewMode('list')}
-              >
-                ≡ List
-              </button>
-              <button
-                type="button"
-                className={`view-btn ${viewMode === 'grid' ? 'active' : ''}`}
-                onClick={() => setViewMode('grid')}
-              >
-                ⊞ Grid
-              </button>
-            </div>
           </div>
 
-          {viewMode === 'list' && (
-            <div className="fade-up d3">
-              <div className="table-wrap">
-                <div className="table-head">
-                  <div className="th active">
-                    Student <span className="sort-ic">▲</span>
-                  </div>
-                  <div className="th">Parent / Guardian</div>
-                  <div className="th">Class</div>
-                  <div className="th">Class Teacher</div>
-                  <div className="th">Address</div>
-                  <div className="th">Phone</div>
-                  <div className="th" style={{ justifyContent: 'flex-end' }}>
-                    Actions
-                  </div>
-                </div>
-
-                {loading ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">⏳</div>
-                    <div className="empty-title">Loading students…</div>
-                  </div>
-                ) : filteredSorted.length === 0 ? (
-                  <div className="empty-state">
-                    <div className="empty-icon">🧑‍🎓</div>
-                    <div className="empty-title">No students match your filters.</div>
-                    <div className="empty-sub">Try adjusting search or class filter.</div>
-                  </div>
-                ) : (
-                  pageSlice.map((r, idx) => {
-                    const globalIdx = (safePage - 1) * PAGE_SIZE + idx;
-                    const parents = displayParentsForStudent(r.student_id, r, parentsByStudent);
-                    const parentLine = parents.map((p) => p.name).filter(Boolean).join(', ') || '';
-                    const first = parents[0];
-                    const phone = (first?.phone || r.guardian_phone || '').trim();
-                    const addr =
-                      (r.address && r.address.trim()) || (r.guardian_address && r.guardian_address.trim()) || '';
-                    const teacher = classTeacherNameByClass[r.current_class || ''] || '';
-                    const name = displayFullName(r);
-                    const adm = r.admission_number?.trim();
-                    const chipMod = classChipModifier(r.current_class);
-                    const chipCls = chipMod ? `class-chip ${chipMod}` : 'class-chip';
-                    const photo = photoByStudentId[r.student_id];
-                    const filterName = name.toLowerCase();
-                    const filterClass = (r.current_class || '').toLowerCase();
-
-                    return (
-                      <div
-                        key={r.student_id}
-                        className="table-row"
-                        data-name={filterName}
-                        data-class={filterClass}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            navigate(`/dashboard/admin/students/${r.student_id}`);
-                          }
-                        }}
-                      >
-                        <div className="td">
-                          <div className="student-cell">
-                            <div className="student-av" style={photo ? undefined : { background: gradAt(globalIdx) }}>
-                              {photo ? (
-                                <img src={photo} alt="" />
-                              ) : (
-                                initials(name)
-                              )}
-                            </div>
-                            <div>
-                              <div className="student-name">{name}</div>
-                              <div className="student-sub">
-                                {adm ? `Admission #${adm}` : '—'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        <div className={`td ${parentLine ? '' : 'muted'}`}>{parentLine || '—'}</div>
-                        <div className="td">
-                          {r.current_class ? (
-                            <span className={chipCls}>{r.current_class}</span>
-                          ) : (
-                            <div className="td muted">—</div>
-                          )}
-                        </div>
-                        <div className={`td ${teacher ? '' : 'muted'}`}>{teacher || '—'}</div>
-                        <div className={`td ${addr ? '' : 'muted'}`}>{addr || '—'}</div>
-                        <div className="td" onClick={(e) => e.stopPropagation()}>
-                          {phone ? (
-                            <a href={`tel:${phone.replace(/\s/g, '')}`} className="phone-link">
-                              📞 {phone}
-                            </a>
-                          ) : (
-                            <div className="td muted">—</div>
-                          )}
-                        </div>
-                        <div className="td" onClick={(e) => e.stopPropagation()}>
-                          <div className="row-actions">
-                            <button
-                              type="button"
-                              className="row-btn"
-                              title="View profile"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                            >
-                              👁
-                            </button>
-                            <button
-                              type="button"
-                              className="row-btn arrow"
-                              title="Open profile"
-                              onClick={() => navigate(`/dashboard/admin/students/${r.student_id}`)}
-                            >
-                              ›
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-
-                {!loading && filteredSorted.length > 0 && (
-                  <div className="pagination print:hidden">
-                    <div className="pagination-info">
-                      Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of{' '}
-                      <strong>{filteredSorted.length}</strong> students
-                    </div>
-                    <div className="pagination-btns">
-                      <button
-                        type="button"
-                        className="page-btn"
-                        disabled={safePage <= 1}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                        aria-label="Previous page"
-                      >
-                        ‹
-                      </button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-                        <button
-                          key={n}
-                          type="button"
-                          className={`page-btn ${n === safePage ? 'active' : ''}`}
-                          onClick={() => setPage(n)}
-                        >
-                          {n}
-                        </button>
-                      ))}
-                      <button
-                        type="button"
-                        className="page-btn"
-                        disabled={safePage >= totalPages}
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                        aria-label="Next page"
-                      >
-                        ›
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {viewMode === 'grid' && (
-            <div className="fade-up d3 print:hidden">
+          <div className="fade-up d3 print:hidden">
               {loading ? (
                 <div className="empty-state">
                   <div className="empty-icon">⏳</div>
@@ -827,7 +642,6 @@ export default function DesignStudentsPage() {
                 </div>
               )}
             </div>
-          )}
         </div>
       </div>
 
