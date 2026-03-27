@@ -12,17 +12,18 @@ import {
   sanitizeNurseryKey,
 } from "@/src/templates/primary/nurseryPerformance";
 import {
-  ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS,
-  BEGINNING_OF_TERM_RATINGS,
-  BEGINNING_OF_TERM_STRANDS,
-  canonicalizeBeginningOfTermSkillKey,
-  getBeginningOfTermStrandForSubject,
-  normalizeBeginningOfTermRating,
-  type BeginningOfTermRating,
-} from "@/src/templates/primary/nurseryBeginningOfTerm";
+  ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS,
+  PRE_PRIMARY_HOLISTIC_RATINGS,
+  PRE_PRIMARY_HOLISTIC_STRANDS,
+  canonicalizePrePrimaryHolisticSkillKey,
+  getPrePrimaryHolisticStrandForSubject,
+  normalizePrePrimaryHolisticRating,
+  prePrimaryHolisticRatingToStoredValue,
+  type PrePrimaryHolisticRating,
+} from "@/src/templates/primary/prePrimaryHolisticRatings";
 
-/** Per-student map of skillKey → rating label (Beginning-of-term holistic grid). */
-type NurseryPerformanceRecord = Record<string, BeginningOfTermRating | string>;
+/** Per-student map of skillKey → rating label (pre-primary holistic colour grid). */
+type NurseryPerformanceRecord = Record<string, PrePrimaryHolisticRating | string>;
 
 export default function TeacherExamResultsClassPage() {
   const router = useRouter();
@@ -67,8 +68,8 @@ export default function TeacherExamResultsClassPage() {
   const [primaryAggregatePoints, setPrimaryAggregatePoints] = useState<Record<string, { eng: string; math: string; sci: string; sst: string }>>({});
   const [nurseryPerformances, setNurseryPerformances] = useState<Record<string, NurseryPerformanceRecord>>({});
   const [nurseryDirtyStudents, setNurseryDirtyStudents] = useState<Record<string, boolean>>({});
-  const activeBeginningOfTermStrand = useMemo(
-    () => (isNursery ? getBeginningOfTermStrandForSubject(selectedSubject) : null),
+  const activePrePrimaryHolisticStrand = useMemo(
+    () => (isNursery ? getPrePrimaryHolisticStrandForSubject(selectedSubject) : null),
     [isNursery, selectedSubject]
   );
   // Secondary layout state
@@ -382,7 +383,7 @@ export default function TeacherExamResultsClassPage() {
           }
           
           const processedSubjects = isNursery
-            ? ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS
+            ? ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS
             : teacherSubjects;
           
           setTeacherSubjects(processedSubjects);
@@ -407,13 +408,13 @@ export default function TeacherExamResultsClassPage() {
           }
           
           const processedSubjects = isNursery
-            ? ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS
+            ? ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS
             : subjects;
           
           setTeacherSubjects(processedSubjects);
         } else {
           if (isNursery) {
-            setTeacherSubjects(ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS);
+            setTeacherSubjects(ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS);
           } else {
             setError(`No subjects assigned for ${className}. Please contact your administrator to assign subjects.`);
             return;
@@ -722,7 +723,7 @@ export default function TeacherExamResultsClassPage() {
     }));
   };
 
-  const handleNurserySelection = (studentId: string, skillKey: string, performance: BeginningOfTermRating) => {
+  const handleNurserySelection = (studentId: string, skillKey: string, performance: PrePrimaryHolisticRating) => {
     let changed = false;
     setNurseryPerformances(prev => {
       const current = prev[studentId] || {};
@@ -884,12 +885,12 @@ export default function TeacherExamResultsClassPage() {
         const saves: Promise<unknown>[] = [];
         for (const studentId of studentsToPersist) {
           const performances = nurseryPerformances[studentId] || {};
-          for (const strand of BEGINNING_OF_TERM_STRANDS) {
+          for (const strand of PRE_PRIMARY_HOLISTIC_STRANDS) {
             const payload: Record<string, string> = {};
             for (const skill of strand.skills) {
               const raw = performances[skill.key];
-              const norm = raw ? normalizeBeginningOfTermRating(raw) : null;
-              if (norm) payload[skill.key] = norm;
+              const norm = raw ? normalizePrePrimaryHolisticRating(raw) : null;
+              if (norm) payload[skill.key] = prePrimaryHolisticRatingToStoredValue(norm);
             }
             if (Object.keys(payload).length === 0) continue;
 
@@ -1172,7 +1173,7 @@ export default function TeacherExamResultsClassPage() {
           .eq('school_id', resolvedSchoolId)
           .eq('class_name', className)
           .eq('exam_set_id', selectedExamSet)
-          .in('subject', ALL_BEGINNING_OF_TERM_STRAND_SUBJECTS)
+          .in('subject', ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS)
           .eq('teacher_id', resolvedTeacherId);
         if (error) {
           console.error('Error loading saved results:', error);
@@ -1198,9 +1199,9 @@ export default function TeacherExamResultsClassPage() {
           if (!map[sid]) map[sid] = {};
           const acc = map[sid];
           Object.entries(source).forEach(([skillKey, value]) => {
-            const canonicalKey = canonicalizeBeginningOfTermSkillKey(skillKey);
+            const canonicalKey = canonicalizePrePrimaryHolisticSkillKey(skillKey);
             if (!canonicalKey) return;
-            const normalizedValue = normalizeBeginningOfTermRating(value);
+            const normalizedValue = normalizePrePrimaryHolisticRating(value);
             if (normalizedValue) acc[canonicalKey] = normalizedValue;
           });
         }
@@ -1626,7 +1627,7 @@ export default function TeacherExamResultsClassPage() {
                     {isSecondary
                       ? 'O-Level format: Activity, Formative Score (20%), Exam Score (80%), Final Score (100%), Grade.'
                       : isNursery
-                        ? 'Beginning-of-term holistic grid: choose Very Good, Good, Needs Improvement, or Tries for each skill.'
+                        ? 'Pre-primary holistic grid: choose Very Good, Good, Needs Improvement, or Tries for each skill (any exam set).'
                         : 'Enter marks out of 100.'}
                   </p>
                 </div>
@@ -1636,12 +1637,12 @@ export default function TeacherExamResultsClassPage() {
             <div className="overflow-x-auto">
               {!isSecondary && !isALevel ? (
                 isNursery ? (
-                  activeBeginningOfTermStrand ? (
+                  activePrePrimaryHolisticStrand ? (
                     <table className="min-w-full">
                       <thead className="bg-white/5">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider">Student</th>
-                          {activeBeginningOfTermStrand.skills.map((skill) => (
+                          {activePrePrimaryHolisticStrand.skills.map((skill) => (
                             <th
                               key={skill.key}
                               className="px-3 py-3 text-left text-xs font-medium text-white/70 uppercase tracking-wider max-w-[11rem]"
@@ -1662,11 +1663,11 @@ export default function TeacherExamResultsClassPage() {
                                   <div className="text-xs text-white/60 mt-1">{student.admission_number}</div>
                                 )}
                               </td>
-                              {activeBeginningOfTermStrand.skills.map((skill) => {
+                              {activePrePrimaryHolisticStrand.skills.map((skill) => {
                                 const skillKey = skill.key;
-                                const selected = performance[skillKey] as BeginningOfTermRating | undefined;
+                                const selected = performance[skillKey] as PrePrimaryHolisticRating | undefined;
                                 const color = selected
-                                  ? BEGINNING_OF_TERM_RATINGS.find((r) => r.label === selected)?.color
+                                  ? PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === selected)?.color
                                   : undefined;
                                 const badgeTextColor = selected && color ? getNurseryReadableTextColor(color) : '#94a3b8';
                                 const cellBackground = selected && color ? applyAlphaToHex(color, 0.18) : 'transparent';
@@ -1687,7 +1688,7 @@ export default function TeacherExamResultsClassPage() {
                                         {selected || '—'}
                                       </div>
                                       <div className="flex flex-wrap justify-center gap-1">
-                                        {BEGINNING_OF_TERM_RATINGS.map((option) => {
+                                        {PRE_PRIMARY_HOLISTIC_RATINGS.map((option) => {
                                           const isSelected = option.label === selected;
                                           const buttonTextColor = getNurseryReadableTextColor(option.color);
                                           return (
