@@ -185,3 +185,11 @@ export function getPrePrimaryHolisticStrandForSubject(subject: string | null | u
   if (!t) return null;
   return PRE_PRIMARY_HOLISTIC_STRANDS.find((s) => s.subject === t) ?? null;
 }
+
+/** Baby / Middle / Top — classes that use the holistic colour grid (not P1–P7). */
+export function isPrePrimaryNurseryClass(className: string | null | undefined): boolean {
+  const t = String(className || '')
+    .trim()
+    .toLowerCase();
+  return t === 'baby class' || t === 'middle class' || t === 'top class';
+}

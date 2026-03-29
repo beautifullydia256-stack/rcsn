@@ -1,6 +1,6 @@
 /**
- * Teacher Exam Results — step 2: for a selected class, choose Exam Set + Subject,
- * then enter marks (one subject at a time) like the previous flow.
+ * Teacher Exam Results — for a selected class, choose Exam Set + Subject.
+ * Primary (P1–P7): marks out of 100. Pre-primary (Baby / Middle / Top): holistic colour ratings per skill.
  */
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -9,6 +9,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '../useTeacherContext';
 import { calculatePrimaryGrade, calculateGrade } from '@/lib/reportUtils';
+import { isPrePrimaryNurseryClass } from '../../../templates/primary/prePrimaryHolisticRatings';
+import { PrePrimaryHolisticExamGrid } from './PrePrimaryHolisticExamGrid';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ExamSet = { id: string; name: string; term?: number; year?: number; active_for_input?: boolean };
@@ -50,6 +52,11 @@ export default function ExamResultsClassPage() {
     queryFn: () => fetchSchoolType(schoolId!),
     enabled: !!schoolId,
   });
+
+  const showPrePrimaryHolistic = useMemo(
+    () => schoolType === 'Nursery/Primary' && isPrePrimaryNurseryClass(className),
+    [schoolType, className]
+  );
 
   const { data: currentTerm } = useQuery({
     queryKey: ['teacher', 'current-term', schoolId ?? ''],
@@ -131,12 +138,19 @@ export default function ExamResultsClassPage() {
       if (!schoolId || !selectedExamSetId || !className || !selectedSubject) return [];
       const { data } = await supabase
         .from('exam_results')
-        .select('student_id, marks_obtained, total_marks, grade, remarks')
+        .select('student_id, marks_obtained, total_marks, grade, remarks, nursery_skill_performance')
         .eq('school_id', schoolId)
         .eq('exam_set_id', selectedExamSetId)
         .eq('class_name', className)
         .eq('subject', selectedSubject);
-      return (data ?? []) as { student_id: string; marks_obtained: number | null; total_marks: number; grade: string | null; remarks: string | null }[];
+      return (data ?? []) as {
+        student_id: string;
+        marks_obtained: number | null;
+        total_marks: number | null;
+        grade: string | null;
+        remarks: string | null;
+        nursery_skill_performance?: unknown;
+      }[];
     },
     enabled: !!schoolId && !!selectedExamSetId && !!className && !!selectedSubject,
   });
@@ -171,6 +185,7 @@ export default function ExamResultsClassPage() {
 
   const handleSave = async () => {
     if (!schoolId || !teacherId || !selectedExamSetId || !className || !selectedSubject) return;
+    if (showPrePrimaryHolistic) return;
     setSaving(true);
     setSaveError(null);
     setSaveSuccess(false);
@@ -232,7 +247,11 @@ export default function ExamResultsClassPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold ac-text-primary">Exam Results — {className}</h1>
-          <p className="ac-text-muted text-sm mt-1">Select exam set and subject, then enter marks.</p>
+          <p className="ac-text-muted text-sm mt-1">
+            {showPrePrimaryHolistic
+              ? 'Select exam set and subject, then enter holistic ratings for Baby / Middle / Top, or marks for other classes.'
+              : 'Select exam set and subject, then enter marks.'}
+          </p>
         </div>
         <button
           type="button"
@@ -290,61 +309,76 @@ export default function ExamResultsClassPage() {
         {selectedExamSetId && selectedSubject && (
           <>
             <div className="border-t border-[var(--ac-border)] pt-4">
-              <p className="ac-text-primary text-sm font-medium mb-3">Enter marks for {selectedSubject} (out of 100)</p>
-              {students.length === 0 ? (
-                <p className="ac-text-muted text-sm">No students in this class.</p>
+              {showPrePrimaryHolistic && teacherId ? (
+                <PrePrimaryHolisticExamGrid
+                  students={students}
+                  subject={selectedSubject}
+                  schoolId={schoolId!}
+                  teacherId={teacherId}
+                  className={className}
+                  selectedExamSetId={selectedExamSetId}
+                  existingRows={existingResults}
+                  onRefetch={() => refetchResults()}
+                />
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-                  <table className="w-full min-w-[500px] border-collapse ac-text-primary text-sm">
-                    <thead>
-                      <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-bg-muted)]">
-                        <th className="text-left p-2 font-medium">Student</th>
-                        <th className="text-left p-2 font-medium w-24">Marks</th>
-                        <th className="text-left p-2 font-medium">Grade</th>
-                        <th className="text-left p-2 font-medium">Remark</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map((stu) => {
-                        const { marks, remark } = getRow(stu.student_id);
-                        const marksNum = parseFloat(marks) || 0;
-                        const total = 100;
-                        const { grade } = schoolType === 'Nursery/Primary'
-                          ? calculatePrimaryGrade(marksNum, total)
-                          : calculateGrade(marksNum, total);
-                        return (
-                          <tr key={stu.student_id} className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-bg-muted)]/50">
-                            <td className="p-2 font-medium">{stu.name}</td>
-                            <td className="p-2">
-                              <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                step={1}
-                                className="w-20 rounded border border-[var(--ac-border)] bg-[var(--ac-bg)] px-2 py-1 ac-text-primary text-center"
-                                value={marks}
-                                onChange={(e) => setRow(stu.student_id, 'marks', e.target.value)}
-                              />
-                            </td>
-                            <td className="p-2">{marks !== '' ? grade : '—'}</td>
-                            <td className="p-2">
-                              <input
-                                type="text"
-                                className="w-full max-w-xs rounded border border-[var(--ac-border)] bg-[var(--ac-bg)] px-2 py-1 ac-text-primary"
-                                placeholder="Remark"
-                                value={remark}
-                                onChange={(e) => setRow(stu.student_id, 'remark', e.target.value)}
-                              />
-                            </td>
+                <>
+                  <p className="ac-text-primary text-sm font-medium mb-3">Enter marks for {selectedSubject} (out of 100)</p>
+                  {students.length === 0 ? (
+                    <p className="ac-text-muted text-sm">No students in this class.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
+                      <table className="w-full min-w-[500px] border-collapse ac-text-primary text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-bg-muted)]">
+                            <th className="text-left p-2 font-medium">Student</th>
+                            <th className="text-left p-2 font-medium w-24">Marks</th>
+                            <th className="text-left p-2 font-medium">Grade</th>
+                            <th className="text-left p-2 font-medium">Remark</th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
+                        </thead>
+                        <tbody>
+                          {students.map((stu) => {
+                            const { marks, remark } = getRow(stu.student_id);
+                            const marksNum = parseFloat(marks) || 0;
+                            const total = 100;
+                            const { grade } = schoolType === 'Nursery/Primary'
+                              ? calculatePrimaryGrade(marksNum, total)
+                              : calculateGrade(marksNum, total);
+                            return (
+                              <tr key={stu.student_id} className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-bg-muted)]/50">
+                                <td className="p-2 font-medium">{stu.name}</td>
+                                <td className="p-2">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    step={1}
+                                    className="w-20 rounded border border-[var(--ac-border)] bg-[var(--ac-bg)] px-2 py-1 ac-text-primary text-center"
+                                    value={marks}
+                                    onChange={(e) => setRow(stu.student_id, 'marks', e.target.value)}
+                                  />
+                                </td>
+                                <td className="p-2">{marks !== '' ? grade : '—'}</td>
+                                <td className="p-2">
+                                  <input
+                                    type="text"
+                                    className="w-full max-w-xs rounded border border-[var(--ac-border)] bg-[var(--ac-bg)] px-2 py-1 ac-text-primary"
+                                    placeholder="Remark"
+                                    value={remark}
+                                    onChange={(e) => setRow(stu.student_id, 'remark', e.target.value)}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
             </div>
-            {students.length > 0 && (
+            {students.length > 0 && !showPrePrimaryHolistic && (
               <div className="flex items-center gap-3">
                 <button
                   type="button"

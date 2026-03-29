@@ -1,0 +1,12 @@
+---
+description: Next.js teacher exam-results — draft only; avoid default edits
+globs: app/dashboard/teacher/exam-results/**/*.{tsx,ts}
+---
+
+# Next.js `app/dashboard/teacher/exam-results/` (draft)
+
+This App Router tree is a **parallel / draft** implementation. Production teacher exam input runs in the **React SPA** at `src/pages/teacher/exam-results/`.
+
+**Do not** implement new teacher exam-result behaviour here by default — it will diverge from what teachers use and confuses tooling.
+
+Only edit these files when the user **explicitly** asks for Next.js App Router changes or a deliberate port from the SPA.

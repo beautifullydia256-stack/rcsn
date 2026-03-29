@@ -1,5 +1,12 @@
 "use client";
 
+/**
+ * Draft Next.js teacher exam-results page. Production uses the React SPA:
+ * `src/pages/teacher/exam-results/ExamResultsSubjectPage.tsx` and `ExamResultsClassPage.tsx`.
+ * Prefer editing those for teacher-facing exam input unless you are explicitly porting to App Router.
+ * @see .cursor/rules/teacher-exam-results-nextjs-draft.mdc
+ */
+
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";

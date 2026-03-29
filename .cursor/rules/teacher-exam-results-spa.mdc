@@ -1,0 +1,18 @@
+---
+description: Teacher exam results — React SPA is canonical (production)
+globs: src/pages/teacher/exam-results/**/*.{tsx,ts}
+---
+
+# Teacher exam results (React SPA)
+
+The live teacher dashboard uses **React Router** (`src/App.tsx`) and these pages:
+
+- `src/pages/teacher/exam-results/ExamResultsPage.tsx` — class list
+- `src/pages/teacher/exam-results/ExamResultsClassPage.tsx` — class + subject + marks **or** pre-primary holistic grid
+- `src/pages/teacher/exam-results/ExamResultsSubjectPage.tsx` — subject route from sidebar
+
+**Primary (P1–P7):** numeric marks out of 100 (existing behaviour).
+
+**Pre-primary nursery classes (Baby Class, Middle Class, Top Class):** holistic colour ratings per skill; shared types in `src/templates/primary/prePrimaryHolisticRatings.ts`.
+
+When changing how teachers enter exam results, **edit the SPA files above**, not the Next.js draft under `app/dashboard/teacher/exam-results/`, unless the user explicitly asks to work on the Next.js route.
