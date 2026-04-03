@@ -59,9 +59,18 @@ export default function CreateTeacherLoginPage() {
           teacherId,
         }),
       });
-      const data = await response.json().catch(() => ({}));
+      const raw = await response.text();
+      let data: { error?: string; message?: string } = {};
+      try {
+        data = JSON.parse(raw) as { error?: string; message?: string };
+      } catch {
+        /* Vercel/runtime may return non-JSON on hard failures */
+      }
       if (!response.ok) {
-        const msg = (data as { error?: string })?.error || `Request failed (${response.status})`;
+        const msg =
+          data.error ||
+          (raw.trim() && raw.length < 800 ? raw.trim() : '') ||
+          `Request failed (${response.status})`;
         setError(msg);
         toast.error(msg);
         return;

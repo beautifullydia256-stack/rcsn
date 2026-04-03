@@ -7,7 +7,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
-import { validatePasswordLength } from '../../lib/passwordPolicy';
+
+// Vercel serverless (this file): use CJS `passwordPolicy.js` so the function bundle loads reliably.
+// Do not import `lib/passwordPolicy.ts` here — resolution can fail at cold start on Vite deployments.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { validatePasswordLength } = require('../../lib/passwordPolicy.js') as {
+  validatePasswordLength: (p: unknown) => string | null;
+};
 
 type Req = {
   method?: string;
