@@ -159,10 +159,20 @@ export default function AddAccountsManagerPage() {
     
     setSaving(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError("Your session expired. Please sign in again.");
+        setSaving(false);
+        return;
+      }
       // Call API endpoint to create user (server-side with service role)
       const response = await fetch('/api/admin/create-user-account', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           email,
           firstName,

@@ -57,11 +57,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const {
-      data: { user: adminUser },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !adminUser) {
+    let adminUser = null;
+    const fromCookie = await supabase.auth.getUser();
+    if (fromCookie.data?.user && !fromCookie.error) {
+      adminUser = fromCookie.data.user;
+    } else {
+      const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization');
+      const bearer =
+        authHeader && /^Bearer\s+\S+/i.test(authHeader) ? authHeader.replace(/^Bearer\s+/i, '').trim() : null;
+      if (bearer) {
+        const fromJwt = await supabase.auth.getUser(bearer);
+        if (fromJwt.data?.user && !fromJwt.error) {
+          adminUser = fromJwt.data.user;
+        }
+      }
+    }
+    if (!adminUser) {
       return withCors(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
 

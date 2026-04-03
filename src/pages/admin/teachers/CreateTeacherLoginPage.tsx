@@ -47,11 +47,22 @@ export default function CreateTeacherLoginPage() {
       } catch {
         /* non-fatal */
       }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        const msg = 'Your session expired. Please sign in again.';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
       const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
       const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
       const response = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         credentials: 'include',
         body: JSON.stringify({
           sendEmailInvite: true,

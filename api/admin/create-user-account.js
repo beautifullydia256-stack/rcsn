@@ -50,6 +50,25 @@ function parseBody(req) {
   return {};
 }
 
+/** Vite SPA stores auth in sessionStorage, not cookies — client must send Authorization: Bearer <access_token>. */
+function getBearerToken(req) {
+  try {
+    let raw;
+    const h = req.headers;
+    if (!h) return null;
+    if (typeof h.get === 'function') {
+      raw = h.get('authorization') || h.get('Authorization');
+    } else {
+      raw = h.authorization || h.Authorization;
+    }
+    if (typeof raw !== 'string' || !raw) return null;
+    const m = raw.match(/^Bearer\s+(\S+)/i);
+    return m ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 module.exports = async function handler(req, res) {
   const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
   const cors = {
@@ -110,11 +129,20 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const {
-      data: { user: adminUser },
-      error: authError,
-    } = await supabase.auth.getUser();
-    if (authError || !adminUser) {
+    let adminUser = null;
+    const fromCookie = await supabase.auth.getUser();
+    if (fromCookie.data?.user && !fromCookie.error) {
+      adminUser = fromCookie.data.user;
+    } else {
+      const bearer = getBearerToken(req);
+      if (bearer) {
+        const fromJwt = await supabase.auth.getUser(bearer);
+        if (fromJwt.data?.user && !fromJwt.error) {
+          adminUser = fromJwt.data.user;
+        }
+      }
+    }
+    if (!adminUser) {
       setCors();
       res.status(401).json({ error: 'Unauthorized' });
       return;

@@ -144,6 +144,12 @@ export default function InviteFromRosterPage() {
     }
     setSending(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error('Your session expired. Please sign in again.');
+        return;
+      }
       const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
       const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
       const body: Record<string, unknown> = {
@@ -180,7 +186,10 @@ export default function InviteFromRosterPage() {
 
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         credentials: 'include',
         body: JSON.stringify(body),
       });
