@@ -5,6 +5,11 @@
   "rewrites": [
     { "source": "/((?!api/)(?!assets/).*)", "destination": "/index.html" }
   ],
+  "functions": {
+    "api/admin/create-user-account.js": {
+      "includeFiles": "lib/**"
+    }
+  },
   "env": {
     "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD": "true"
   }

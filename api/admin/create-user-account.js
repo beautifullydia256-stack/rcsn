@@ -8,8 +8,27 @@
 const { createClient } = require('@supabase/supabase-js');
 const { createServerClient } = require('@supabase/ssr');
 
+const { sendResendInnerHtml } = require('../../lib/resendSend.js');
+const {
+  buildCredentialInnerHtml,
+  buildCredentialEmailSubject,
+} = require('../../lib/credentialInnerHtml.js');
+const { getPublicSiteOrigin } = require('../../lib/emailHtml.js');
+
 const MIN_PWD_LEN = 8;
 const MAX_PWD_LEN = 72;
+const OTP_CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+
+/** Same rules as lib/passwordPolicy.js — inlined so the function never resolves to the .ts file on the server. */
+function generateOneTimePassword(length = 8) {
+  const n = Math.min(Math.max(length, MIN_PWD_LEN), MAX_PWD_LEN);
+  let s = '';
+  for (let i = 0; i < n; i += 1) {
+    s += OTP_CHARSET[Math.floor(Math.random() * OTP_CHARSET.length)];
+  }
+  return s;
+}
+
 function validatePasswordLength(password) {
   const p = String(password ?? '');
   if (p.length < MIN_PWD_LEN) return `Password must be at least ${MIN_PWD_LEN} characters.`;
@@ -301,7 +320,6 @@ module.exports = async function handler(req, res) {
     if (otherStaffId) meta.other_staff_id = otherStaffId;
 
     if (sendEmailInvite) {
-      const { generateOneTimePassword } = require('../../lib/passwordPolicy');
       oneTimeInvitePassword = generateOneTimePassword();
       const authMeta = { ...meta, must_change_password: true };
       const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
@@ -432,9 +450,6 @@ module.exports = async function handler(req, res) {
 
     if (sendEmailInvite && oneTimeInvitePassword) {
       try {
-        const { sendResendInnerHtml } = require('../../lib/resendSend');
-        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
-        const { getPublicSiteOrigin } = require('../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
         const mailResult = await sendResendInnerHtml({
           to: String(email),
@@ -503,9 +518,6 @@ module.exports = async function handler(req, res) {
 
     if (!sendEmailInvite && password) {
       try {
-        const { sendResendInnerHtml } = require('../../lib/resendSend');
-        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
-        const { getPublicSiteOrigin } = require('../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}`;
         await sendResendInnerHtml({
           to: String(email),
