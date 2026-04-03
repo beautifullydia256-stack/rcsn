@@ -91,7 +91,11 @@ export async function transformSnapshotToReportFormat(
     presentDays = p;
     absentDays = Math.max(0, totalSchoolDays - p);
   }
-  if (presentDays == null && absentDays == null && totalSchoolDays == null && (pct == null || pct === '')) {
+  const pctMissing =
+    pct == null ||
+    (typeof pct === 'string' && String(pct).trim() === '') ||
+    (typeof pct === 'number' && Number.isNaN(pct));
+  if (presentDays == null && absentDays == null && totalSchoolDays == null && pctMissing) {
     presentDays = null;
     absentDays = null;
     totalSchoolDays = null;
