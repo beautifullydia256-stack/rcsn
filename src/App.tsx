@@ -31,6 +31,7 @@ function lazyWithRetry<T extends { default: ComponentType<unknown> }>(
 // Lazy load pages (with retry to avoid chunk-load errors after deploy)
 const HomePage = lazyWithRetry(() => import('./pages/Home'));
 const LoginPage = lazyWithRetry(() => import('./pages/auth/Login'));
+const CompleteFirstPasswordPage = lazyWithRetry(() => import('./pages/auth/CompleteFirstPassword'));
 const RegisterPage = lazyWithRetry(() => import('./pages/auth/Register'));
 const DashboardEntry = lazyWithRetry(() => import('./pages/dashboard/DashboardEntry'));
 const AdminDashboard = lazyWithRetry(() => import('./pages/admin/Dashboard'));
@@ -126,6 +127,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/login/complete-password" element={<CompleteFirstPasswordPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/jobs" element={<JobsPage />} />

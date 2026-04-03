@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { isValidEmailFormat } from '@/lib/emailValidator';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import AdminPageWrapper from '@/components/layout/AdminPageWrapper';
 import { useToast } from '@/components/Toast';
-import { Mail } from 'lucide-react';
+import { ArrowLeft, KeyRound, Mail, Send, ShieldCheck } from 'lucide-react';
 
 export default function CreateTeacherLoginPage() {
   const navigate = useNavigate();
@@ -87,52 +87,124 @@ export default function CreateTeacherLoginPage() {
   };
 
   return (
-    <AdminPageWrapper
-      title="Invite teacher"
-      subtitle="We send an email invitation only — they set their own password. The email is saved on their teacher record."
-    >
-      <div className="flex items-center justify-end gap-2 mb-4">
+    <AdminPageWrapper>
+      <div className="invite-flow mx-auto w-full max-w-xl px-3 pb-8 pt-1 font-['Instrument_Sans',system-ui,sans-serif] sm:px-4 sm:pt-2">
         <button
           type="button"
-          className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm"
           onClick={() => navigate(`/dashboard/admin/teachers/${teacherId}`)}
+          className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-full border border-[var(--ac-border)] bg-white/40 px-4 py-2 text-sm font-medium text-[var(--ac-text-secondary)] shadow-sm backdrop-blur-sm transition hover:bg-white/60 hover:text-[var(--ac-text-primary)] dark:bg-white/5 dark:hover:bg-white/10"
         >
-          Back
+          <ArrowLeft className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+          Back to profile
         </button>
-      </div>
-      {error && <div className="mb-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2">{error}</div>}
-      <form className={`${adminCardClass} space-y-4`} autoComplete="off" onSubmit={(e) => void sendInvite(e)}>
-        <p className="text-sm ac-text-secondary">
-          <span className="font-medium ac-text-primary">{teacherName || 'Teacher'}</span>
-        </p>
-        <div>
-          <label className="block ac-text-secondary text-sm mb-1">Email for invitation</label>
-          <input
-            type="email"
-            className="ac-input w-full rounded-lg px-3 py-2"
-            placeholder="teacher@school.sch"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            name="teacher_email"
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            data-lpignore="true"
-          />
+
+        <header className="mb-8 text-center sm:mb-10 sm:text-left">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 sm:mx-0">
+            <Mail className="h-7 w-7" strokeWidth={1.75} aria-hidden />
+          </div>
+          <h1 className="font-['Cabinet_Grotesk',system-ui,sans-serif] text-2xl font-bold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-3xl sm:tracking-tight">
+            Invite to PwezaCore
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-pretty text-[15px] leading-relaxed text-[var(--ac-text-secondary)] sm:mx-0 sm:text-base">
+            Send a secure welcome email with a one-time password. They’ll sign in, set their own password, and land on
+            the teacher dashboard. We’ll save this address on their record.
+          </p>
+        </header>
+
+        {error && (
+          <div
+            role="alert"
+            className="mb-6 rounded-2xl border border-red-400/35 bg-red-500/10 px-4 py-3 text-sm leading-snug text-red-100 dark:text-red-200/95"
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="ac-glass-card overflow-hidden rounded-2xl p-5 shadow-[var(--ac-shadow-strong)] sm:p-8">
+          <div className="mb-6 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] px-4 py-3 sm:px-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ac-text-muted)]">Inviting</p>
+            <p className="mt-1 text-lg font-semibold tracking-tight text-[var(--ac-text-primary)]">
+              {teacherName || 'Teacher'}
+            </p>
+          </div>
+
+          <ol className="mb-8 space-y-4 text-sm text-[var(--ac-text-secondary)]">
+            <li className="flex gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <Mail className="h-4 w-4" aria-hidden />
+              </span>
+              <div>
+                <p className="font-medium text-[var(--ac-text-primary)]">Email arrives in their inbox</p>
+                <p className="mt-0.5 text-[13px] leading-snug">Professional template with sign-in link (email prefilled).</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <KeyRound className="h-4 w-4" aria-hidden />
+              </span>
+              <div>
+                <p className="font-medium text-[var(--ac-text-primary)]">They use the one-time password once</p>
+                <p className="mt-0.5 text-[13px] leading-snug">Then they create a new password they’ll keep.</p>
+              </div>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-4 w-4" aria-hidden />
+              </span>
+              <div>
+                <p className="font-medium text-[var(--ac-text-primary)]">Access is ready</p>
+                <p className="mt-0.5 text-[13px] leading-snug">
+                  Redirected to the right dashboard after they finish setup.
+                </p>
+              </div>
+            </li>
+          </ol>
+
+          <form className="space-y-5" autoComplete="off" onSubmit={(e) => void sendInvite(e)}>
+            <div>
+              <label
+                htmlFor="teacher_email"
+                className="mb-2 block text-sm font-semibold text-[var(--ac-text-primary)]"
+              >
+                Email address
+              </label>
+              <input
+                id="teacher_email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                className="ac-input min-h-12 w-full rounded-xl border-[var(--ac-border)] px-4 py-3 text-base outline-none transition focus:ring-2 focus:ring-emerald-500/40 sm:text-[15px]"
+                placeholder="name@school.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                name="teacher_email"
+                autoCorrect="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                data-lpignore="true"
+              />
+              <p className="mt-2 text-xs leading-relaxed text-[var(--ac-text-muted)]">
+                Must be reachable — they need this inbox to receive credentials.
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-5 text-base font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:from-emerald-500 hover:to-teal-500 disabled:pointer-events-none disabled:opacity-50 sm:min-h-[3.25rem]"
+              disabled={saving}
+            >
+              <Send className="h-[1.125rem] w-[1.125rem] shrink-0 opacity-95" aria-hidden />
+              {saving ? 'Sending invitation…' : 'Send invitation email'}
+            </button>
+          </form>
         </div>
-        <button
-          type="submit"
-          className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-white font-medium disabled:opacity-50 w-full sm:w-auto"
-          disabled={saving}
-        >
-          <Mail className="h-4 w-4" />
-          {saving ? 'Sending…' : 'Send invitation'}
-        </button>
-        <p className="text-xs ac-text-muted">
-          For bulk invites from the roster, use User Management → Send invitations.
+
+        <p className="mt-6 text-center text-xs leading-relaxed text-[var(--ac-text-muted)] sm:text-left">
+          Inviting several people? Use{' '}
+          <span className="font-medium text-[var(--ac-text-secondary)]">User Management → Send invitations</span> for
+          bulk roster invites.
         </p>
-      </form>
+      </div>
     </AdminPageWrapper>
   );
 }

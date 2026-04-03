@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '@/lib/postAuthRedirect';
 
 function isRecoveryImplicitFromHash(): boolean {
   const h = window.location.hash;
@@ -34,7 +35,11 @@ export default function AuthCallbackPage() {
         navigate('/auth/update-password', { replace: true });
         return;
       }
-      navigate('/dashboard', { replace: true });
+      if (userMustChangePassword(session.user)) {
+        navigate('/login/complete-password', { replace: true });
+        return;
+      }
+      navigate(applyReturnUrlOverride(await resolvePostLoginPath(session.user)), { replace: true });
     }
 
     async function run() {
@@ -52,7 +57,11 @@ export default function AuthCallbackPage() {
           return;
         }
         if (data.session) {
-          navigate('/dashboard', { replace: true });
+          if (userMustChangePassword(data.session.user)) {
+            navigate('/login/complete-password', { replace: true });
+          } else {
+            navigate(applyReturnUrlOverride(await resolvePostLoginPath(data.session.user)), { replace: true });
+          }
           return;
         }
       }
@@ -63,8 +72,10 @@ export default function AuthCallbackPage() {
         if (session) {
           if (flowRecovery || isRecoveryImplicitFromHash()) {
             navigate('/auth/update-password', { replace: true });
+          } else if (userMustChangePassword(session.user)) {
+            navigate('/login/complete-password', { replace: true });
           } else {
-            navigate('/dashboard', { replace: true });
+            navigate(applyReturnUrlOverride(await resolvePostLoginPath(session.user)), { replace: true });
           }
           return;
         }

@@ -250,6 +250,9 @@ module.exports = async function handler(req, res) {
     }
 
     let authUserId = null;
+    /** Set when sendEmailInvite: one-time password + welcome email (not Supabase magic link). */
+    let oneTimeInvitePassword = null;
+
     const meta = {
       name,
       role: roleOut,
@@ -262,18 +265,26 @@ module.exports = async function handler(req, res) {
     if (otherStaffId) meta.other_staff_id = otherStaffId;
 
     if (sendEmailInvite) {
-      const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
-      if (inviteError) {
+      const { generateOneTimePassword } = require('../../lib/passwordPolicy');
+      oneTimeInvitePassword = generateOneTimePassword();
+      const authMeta = { ...meta, must_change_password: true };
+      const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
+        email: String(email),
+        password: oneTimeInvitePassword,
+        email_confirm: true,
+        user_metadata: authMeta,
+      });
+      if (signupError) {
         if (
-          inviteError.message?.toLowerCase().includes('already') ||
-          inviteError.message?.toLowerCase().includes('registered')
+          signupError.message?.toLowerCase().includes('already') ||
+          signupError.message?.toLowerCase().includes('registered')
         ) {
           setCors();
           res.status(400).json({ error: 'A user with this email address has already been registered' });
           return;
         }
         setCors();
-        res.status(400).json({ error: inviteError.message });
+        res.status(400).json({ error: signupError.message });
         return;
       }
       authUserId = data?.user?.id ?? null;
@@ -383,12 +394,83 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if (sendEmailInvite && oneTimeInvitePassword) {
+      try {
+        const { sendResendInnerHtml } = require('../../lib/resendSend');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
+        const { getPublicSiteOrigin } = require('../../lib/emailHtml');
+        const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
+        const mailResult = await sendResendInnerHtml({
+          to: String(email),
+          subject: buildCredentialEmailSubject(String(roleOut ?? ''), ''),
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: name || String(firstName ?? '') || 'there',
+            email: String(email),
+            password: oneTimeInvitePassword,
+            role: String(roleOut ?? ''),
+            roleLabel: String(roleOut ?? ''),
+            loginUrl,
+            firstLoginEnforced: true,
+          }),
+        });
+        if (!mailResult || mailResult.success !== true) {
+          console.error('[create-user-account] Welcome email failed:', mailResult?.error);
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(authUserId);
+          } catch {
+            /* ignore */
+          }
+          try {
+            await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+          } catch {
+            /* ignore */
+          }
+          if (otherStaffId) {
+            try {
+              await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+            } catch {
+              /* ignore */
+            }
+          }
+          setCors();
+          res.status(502).json({
+            error:
+              mailResult?.error ||
+              'Could not send the welcome email. The account was not created. Check RESEND_API_KEY and try again.',
+          });
+          return;
+        }
+      } catch (mailErr) {
+        console.error('[create-user-account] Welcome email exception:', mailErr);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        } catch {
+          /* ignore */
+        }
+        try {
+          await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+        } catch {
+          /* ignore */
+        }
+        if (otherStaffId) {
+          try {
+            await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+          } catch {
+            /* ignore */
+          }
+        }
+        setCors();
+        res.status(502).json({ error: 'Could not send the welcome email. The account was not created.' });
+        return;
+      }
+    }
+
     if (!sendEmailInvite && password) {
       try {
         const { sendResendInnerHtml } = require('../../lib/resendSend');
         const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
         const { getPublicSiteOrigin } = require('../../lib/emailHtml');
-        const loginUrl = `${getPublicSiteOrigin()}/login`;
+        const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}`;
         await sendResendInnerHtml({
           to: String(email),
           subject: buildCredentialEmailSubject(String(roleOut ?? ''), ''),
@@ -410,7 +492,7 @@ module.exports = async function handler(req, res) {
     res.status(200).json({
       success: true,
       message: sendEmailInvite
-        ? 'User invited successfully! They will receive an email to set up their account.'
+        ? 'Invitation sent! They will receive an email with a one-time password and a sign-in button.'
         : 'User created successfully! They can now log in with their credentials.',
     });
   } catch (err) {

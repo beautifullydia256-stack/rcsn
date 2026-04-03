@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { userMustChangePassword } from '../lib/postAuthRedirect';
 import { usePwezaStore } from '../store/pwezaStore';
 import { ensureCurrentAndNextAcademicYears } from '../lib/ensureAcademicYear';
 import { refreshPermissionsForSession } from '../lib/refreshPermissions';
@@ -21,6 +22,11 @@ export default function ProtectedRoute() {
         
         if (error || !session) {
           navigate('/login');
+          return;
+        }
+
+        if (userMustChangePassword(session.user)) {
+          navigate('/login/complete-password', { replace: true });
           return;
         }
 
@@ -71,6 +77,9 @@ export default function ProtectedRoute() {
           navigate('/login');
         } else if (session) {
           setUser(session.user);
+          if (userMustChangePassword(session.user)) {
+            navigate('/login/complete-password', { replace: true });
+          }
         }
       }
     );

@@ -1,25 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { motion } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
-
-const roleToPath: Record<string, string> = {
-  owner: '/dashboard/owner',
-  admin: '/dashboard/admin',
-  teacher: '/dashboard/teacher',
-  parent: '/dashboard/parent',
-  student: '/dashboard/student',
-  librarian: '/dashboard/librarian',
-  lab_technician: '/dashboard/lab-technician',
-  clinician: '/dashboard/clinician',
-  accountant: '/dashboard/accountant',
-  head_teacher: '/dashboard/head-teacher',
-};
+import { applyReturnUrlOverride, resolvePostLoginPath, userMustChangePassword } from '../../lib/postAuthRedirect';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { setUser, setRole } = useAuthStore();
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -34,6 +23,24 @@ export default function LoginPage() {
   const turnstileKey = import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
   useEffect(() => {
+    const emailQ = searchParams.get('email');
+    if (emailQ) {
+      setFormData((fd) => ({ ...fd, email: decodeURIComponent(emailQ).trim() }));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    void (async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session?.user && userMustChangePassword(session.user)) {
+        navigate('/login/complete-password', { replace: true });
+      }
+    })();
+  }, [navigate]);
+
+  useEffect(() => {
     if (!showSuccess) return;
     const t = setTimeout(() => setShowSuccess(false), 1500);
     return () => clearTimeout(t);
@@ -43,7 +50,12 @@ export default function LoginPage() {
     const attemptRestore = async () => {
       try {
         const { data: current } = await supabase.auth.getSession();
-        if (current?.session) return;
+        if (current?.session) {
+          if (userMustChangePassword(current.session.user)) {
+            navigate('/login/complete-password', { replace: true });
+          }
+          return;
+        }
         const raw = typeof window !== 'undefined' ? window.localStorage.getItem('pwezacore_remember') : null;
         if (!raw) return;
         const saved = JSON.parse(raw);
@@ -66,7 +78,26 @@ export default function LoginPage() {
   }, []);
 
   async function completePostLogin(session: any, user: any) {
-    const userMetadata = user?.raw_user_meta_data || {};
+    if (userMustChangePassword(user)) {
+      setUser(user);
+      const userMetadata = user?.raw_user_meta_data || user?.user_metadata || {};
+      let resolvedRole = (userMetadata?.role || '').toLowerCase();
+      if (!resolvedRole && user?.id) {
+        try {
+          const { data: userRows } = await supabase.from('users').select('role').eq('user_id', user.id).limit(1);
+          resolvedRole = (userRows?.[0]?.role || '').toLowerCase();
+        } catch {
+          /* ignore */
+        }
+      }
+      if (!resolvedRole && (userMetadata as { student_id?: string })?.student_id) {
+        resolvedRole = 'student';
+      }
+      setRole(resolvedRole || 'student');
+      navigate('/login/complete-password', { replace: true });
+      return;
+    }
+    const userMetadata = user?.raw_user_meta_data || user?.user_metadata || {};
     let resolvedRole = (userMetadata?.role || '').toLowerCase();
     if (!resolvedRole && user?.id) {
       try {
@@ -77,21 +108,15 @@ export default function LoginPage() {
           .limit(1);
         const dbRole = userRows?.[0]?.role;
         resolvedRole = (dbRole || '').toLowerCase();
-      } catch {}
+      } catch {
+        /* ignore */
+      }
     }
-    if (!resolvedRole && (user?.raw_user_meta_data as any)?.student_id) {
+    if (!resolvedRole && (userMetadata as { student_id?: string })?.student_id) {
       resolvedRole = 'student';
     }
-    const preferred = roleToPath[resolvedRole] || '/dashboard';
-    let targetUrl = preferred;
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const returnUrl = urlParams.get('returnUrl');
-      if (returnUrl) {
-        const decoded = decodeURIComponent(returnUrl);
-        if (!decoded.startsWith('/login')) targetUrl = decoded;
-      }
-    } catch {}
+    const preferred = await resolvePostLoginPath(user);
+    const targetUrl = applyReturnUrlOverride(preferred);
     setUser(user);
     setRole(resolvedRole || 'student');
     if (typeof window !== 'undefined') window.location.replace(targetUrl);

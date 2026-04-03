@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { validatePasswordLength } from '../../../../lib/passwordPolicy';
+import { generateOneTimePassword, validatePasswordLength } from '../../../../lib/passwordPolicy';
 
 // CORS: allow frontend at www.pwezacore.com (and optional CORS_ORIGIN env) when API is on api.pwezacore.com
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
     }
 
     let authUserId: string | null = null;
+    let oneTimeInvitePassword: string | null = null;
     const meta: Record<string, unknown> = {
       name,
       role: roleOut,
@@ -204,12 +205,19 @@ export async function POST(request: NextRequest) {
     if (otherStaffId) meta.other_staff_id = otherStaffId;
 
     if (sendEmailInvite) {
-      const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
-      if (inviteError) {
-        if (inviteError.message?.toLowerCase().includes('already') || inviteError.message?.toLowerCase().includes('registered')) {
+      oneTimeInvitePassword = generateOneTimePassword();
+      const authMeta = { ...meta, must_change_password: true };
+      const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
+        email: String(email),
+        password: oneTimeInvitePassword,
+        email_confirm: true,
+        user_metadata: authMeta,
+      });
+      if (signupError) {
+        if (signupError.message?.toLowerCase().includes('already') || signupError.message?.toLowerCase().includes('registered')) {
           return withCors(NextResponse.json({ error: 'A user with this email address has already been registered' }, { status: 400 }));
         }
-        return withCors(NextResponse.json({ error: inviteError.message }, { status: 400 }));
+        return withCors(NextResponse.json({ error: signupError.message }, { status: 400 }));
       }
       authUserId = data?.user?.id ?? null;
     } else {
@@ -318,12 +326,84 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (sendEmailInvite && oneTimeInvitePassword && authUserId) {
+      try {
+        const { sendResendInnerHtml } = require('../../../../lib/resendSend');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../../../lib/credentialInnerHtml');
+        const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
+        const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
+        const mailResult = await sendResendInnerHtml({
+          to: String(email),
+          subject: buildCredentialEmailSubject(String(roleOut ?? ''), ''),
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: name || String(firstName ?? '') || 'there',
+            email: String(email),
+            password: oneTimeInvitePassword,
+            role: String(roleOut ?? ''),
+            roleLabel: String(roleOut ?? ''),
+            loginUrl,
+            firstLoginEnforced: true,
+          }),
+        });
+        if (!mailResult || mailResult.success !== true) {
+          console.error('[create-user-account] Welcome email failed:', mailResult?.error);
+          try {
+            await supabaseAdmin.auth.admin.deleteUser(authUserId);
+          } catch {
+            /* ignore */
+          }
+          try {
+            await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+          } catch {
+            /* ignore */
+          }
+          if (otherStaffId) {
+            try {
+              await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+            } catch {
+              /* ignore */
+            }
+          }
+          return withCors(
+            NextResponse.json(
+              {
+                error:
+                  mailResult?.error ||
+                  'Could not send the welcome email. The account was not created. Check RESEND_API_KEY and try again.',
+              },
+              { status: 502 }
+            )
+          );
+        }
+      } catch (mailErr) {
+        console.error('[create-user-account] Welcome email exception:', mailErr);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        } catch {
+          /* ignore */
+        }
+        try {
+          await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+        } catch {
+          /* ignore */
+        }
+        if (otherStaffId) {
+          try {
+            await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+          } catch {
+            /* ignore */
+          }
+        }
+        return withCors(NextResponse.json({ error: 'Could not send the welcome email. The account was not created.' }, { status: 502 }));
+      }
+    }
+
     if (!sendEmailInvite && password) {
       try {
         const { sendResendInnerHtml } = require('../../../../lib/resendSend');
         const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../../../lib/credentialInnerHtml');
         const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
-        const loginUrl = `${getPublicSiteOrigin()}/login`;
+        const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}`;
         await sendResendInnerHtml({
           to: String(email),
           subject: buildCredentialEmailSubject(String(roleOut ?? ''), ''),
@@ -345,7 +425,7 @@ export async function POST(request: NextRequest) {
       NextResponse.json({
         success: true,
         message: sendEmailInvite
-          ? 'User invited successfully! They will receive an email to set up their account.'
+          ? 'Invitation sent! They will receive an email with a one-time password and a sign-in button.'
           : 'User created successfully! They can now log in with their credentials.',
       })
     );
