@@ -1,69 +1,58 @@
 /**
  * Vercel serverless: POST /api/admin/create-user-account
- * Same logic as app/api/admin/create-user-account/route.ts but runs on www.pwezacore.com
- * so the frontend can call same-origin and avoid CORS. Set env: NEXT_PUBLIC_SUPABASE_URL,
- * NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
+ * Intentionally CommonJS (.js) so Node loads it without "Cannot use import statement outside a module"
+ * (Vite project's package.json has no "type": "module"; compiled .ts was emitting ESM import syntax.)
  */
+'use strict';
 
-import { createClient } from '@supabase/supabase-js';
-import { createServerClient } from '@supabase/ssr';
+const { createClient } = require('@supabase/supabase-js');
+const { createServerClient } = require('@supabase/ssr');
 
-/** Inline: avoid top-level `require()` — Vercel may emit ESM where `require` is undefined (FUNCTION_INVOCATION_FAILED). */
 const MIN_PWD_LEN = 8;
 const MAX_PWD_LEN = 72;
-function validatePasswordLength(password: unknown): string | null {
+function validatePasswordLength(password) {
   const p = String(password ?? '');
   if (p.length < MIN_PWD_LEN) return `Password must be at least ${MIN_PWD_LEN} characters.`;
   if (p.length > MAX_PWD_LEN) return `Password must be at most ${MAX_PWD_LEN} characters.`;
   return null;
 }
 
-type Req = {
-  method?: string;
-  headers?: { cookie?: string; get?: (name: string) => string | null };
-  body?: string | Record<string, unknown>;
-};
-type Res = {
-  setHeader: (k: string, v: string | number) => void;
-  status: (n: number) => Res;
-  json: (x: unknown) => void;
-  end: (body?: string) => void;
-};
-
-function getCookieString(req: Req): string | undefined {
+function getCookieString(req) {
   const h = req.headers;
   if (!h) return undefined;
   if (typeof h.cookie === 'string') return h.cookie;
-  if (typeof (h as { get?: (n: string) => string | null }).get === 'function') {
-    return (h as { get: (n: string) => string | null }).get('cookie') ?? undefined;
-  }
+  if (typeof h.get === 'function') return h.get('cookie') ?? undefined;
   return undefined;
 }
 
-function parseCookies(cookieHeader: string | undefined): (name: string) => string | undefined {
-  const map = new Map<string, string>();
+function parseCookies(cookieHeader) {
+  const map = new Map();
   if (cookieHeader) {
     for (const part of cookieHeader.split(';')) {
       const [key, ...v] = part.trim().split('=');
       if (key) map.set(key.trim(), decodeURIComponent((v.join('=') || '').trim()));
     }
   }
-  return (name: string) => map.get(name);
+  return (name) => map.get(name);
 }
 
-function parseBody(req: Req): Record<string, unknown> {
+function parseBody(req) {
   const b = req.body;
   if (b == null) return {};
-  if (typeof b === 'object' && !Array.isArray(b)) return b as Record<string, unknown>;
+  if (typeof b === 'object' && !Array.isArray(b)) return b;
   if (typeof b === 'string') {
-    try { return JSON.parse(b || '{}') as Record<string, unknown>; } catch { return {}; }
+    try {
+      return JSON.parse(b || '{}');
+    } catch {
+      return {};
+    }
   }
   return {};
 }
 
-export default async function handler(req: Req, res: Res) {
+module.exports = async function handler(req, res) {
   const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
-  const cors: Record<string, string> = {
+  const cors = {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
@@ -72,7 +61,7 @@ export default async function handler(req: Req, res: Res) {
   };
   const setCors = () => Object.entries(cors).forEach(([k, v]) => res.setHeader(k, v));
 
-  const send500 = (err: unknown) => {
+  const send500 = (err) => {
     setCors();
     const msg = err instanceof Error ? err.message : String(err);
     res.status(500).json({ error: msg || 'A server error has occurred' });
@@ -91,8 +80,10 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const supabaseAnon =
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseAnon || !supabaseServiceKey) {
@@ -103,11 +94,13 @@ export default async function handler(req: Req, res: Res) {
 
     const cookieStr = getCookieString(req);
     const getCookie = parseCookies(cookieStr);
-    let supabase: ReturnType<typeof createServerClient>;
+    let supabase;
     try {
       supabase = createServerClient(supabaseUrl, supabaseAnon, {
         cookies: {
-          get(name: string) { return getCookie(name) ?? undefined; },
+          get(name) {
+            return getCookie(name) ?? undefined;
+          },
           set() {},
           remove() {},
         },
@@ -117,7 +110,10 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const { data: { user: adminUser }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user: adminUser },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !adminUser) {
       setCors();
       res.status(401).json({ error: 'Unauthorized' });
@@ -143,7 +139,7 @@ export default async function handler(req: Req, res: Res) {
     let firstName = body.firstName != null ? String(body.firstName) : '';
     let lastName = body.lastName != null ? String(body.lastName) : '';
     let roleOut = body.role != null ? String(body.role) : 'teacher';
-    const { phone, password, department, position } = body as Record<string, unknown>;
+    const { phone, password, department, position } = body;
     let sendEmailInvite = Boolean(body.sendEmailInvite);
 
     const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
@@ -151,7 +147,6 @@ export default async function handler(req: Req, res: Res) {
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Link invite to an existing teacher or other_staff roster row (invite-only)
     if (teacherId || otherStaffId) {
       sendEmailInvite = true;
       if (body.password != null && String(body.password).trim() !== '') {
@@ -182,14 +177,16 @@ export default async function handler(req: Req, res: Res) {
         return;
       }
       roleOut = 'teacher';
-      const full = String((t as { name?: string }).name || '').trim();
+      const full = String(t.name || '').trim();
       const parts = full.split(/\s+/).filter(Boolean);
       firstName = parts[0] || 'Teacher';
       lastName = parts.slice(1).join(' ') || '';
-      if (!emailIn) emailIn = (t as { email?: string }).email ? String((t as { email?: string }).email).trim() : '';
+      if (!emailIn) emailIn = t.email ? String(t.email).trim() : '';
       if (!emailIn) {
         setCors();
-        res.status(400).json({ error: 'This teacher has no email. Add an email in the invitation form, then send again.' });
+        res
+          .status(400)
+          .json({ error: 'This teacher has no email. Add an email in the invitation form, then send again.' });
         return;
       }
       const { data: existingT } = await supabaseAdmin
@@ -215,26 +212,28 @@ export default async function handler(req: Req, res: Res) {
         res.status(400).json({ error: 'Staff member not found or not in your school.' });
         return;
       }
-      if ((o as { linked_user_id?: string }).linked_user_id) {
+      if (o.linked_user_id) {
         setCors();
         res.status(400).json({ error: 'This person already has a login linked.' });
         return;
       }
-      const sr = String((o as { staff_role?: string }).staff_role || '').trim();
+      const sr = String(o.staff_role || '').trim();
       if (!sr) {
         setCors();
         res.status(400).json({ error: 'Set a dashboard role (Staff role) on the Staff page before inviting.' });
         return;
       }
       roleOut = sr;
-      const full = String((o as { full_name?: string }).full_name || '').trim();
+      const full = String(o.full_name || '').trim();
       const parts = full.split(/\s+/).filter(Boolean);
       firstName = parts[0] || 'Staff';
       lastName = parts.slice(1).join(' ') || '';
-      if (!emailIn) emailIn = (o as { email?: string }).email ? String((o as { email?: string }).email).trim() : '';
+      if (!emailIn) emailIn = o.email ? String(o.email).trim() : '';
       if (!emailIn) {
         setCors();
-        res.status(400).json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
+        res
+          .status(400)
+          .json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
         return;
       }
     }
@@ -242,12 +241,7 @@ export default async function handler(req: Req, res: Res) {
     const email = emailIn;
     const name = `${firstName || ''} ${lastName || ''}`.toString().trim() || email;
 
-    // Check if email already exists in public.users (fast) - avoid listUsers() which can timeout on serverless
-    const { data: existingUserByEmail } = await supabaseAdmin
-      .from('users')
-      .select('user_id')
-      .eq('email', email)
-      .maybeSingle();
+    const { data: existingUserByEmail } = await supabaseAdmin.from('users').select('user_id').eq('email', email).maybeSingle();
 
     if (existingUserByEmail) {
       setCors();
@@ -255,8 +249,8 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    let authUserId: string | null = null;
-    const meta: Record<string, unknown> = {
+    let authUserId = null;
+    const meta = {
       name,
       role: roleOut,
       school_id: adminData.school_id,
@@ -270,7 +264,10 @@ export default async function handler(req: Req, res: Res) {
     if (sendEmailInvite) {
       const { data, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(String(email), { data: meta });
       if (inviteError) {
-        if (inviteError.message?.toLowerCase().includes('already') || inviteError.message?.toLowerCase().includes('registered')) {
+        if (
+          inviteError.message?.toLowerCase().includes('already') ||
+          inviteError.message?.toLowerCase().includes('registered')
+        ) {
           setCors();
           res.status(400).json({ error: 'A user with this email address has already been registered' });
           return;
@@ -278,9 +275,8 @@ export default async function handler(req: Req, res: Res) {
         setCors();
         res.status(400).json({ error: inviteError.message });
         return;
-      } else {
-        authUserId = data?.user?.id ?? null;
       }
+      authUserId = data?.user?.id ?? null;
     } else {
       const { data, error: signupError } = await supabaseAdmin.auth.admin.createUser({
         email: String(email),
@@ -289,7 +285,10 @@ export default async function handler(req: Req, res: Res) {
         user_metadata: meta,
       });
       if (signupError) {
-        if (signupError.message?.toLowerCase().includes('already') || signupError.message?.toLowerCase().includes('registered')) {
+        if (
+          signupError.message?.toLowerCase().includes('already') ||
+          signupError.message?.toLowerCase().includes('registered')
+        ) {
           setCors();
           res.status(400).json({ error: 'A user with this email address has already been registered' });
           return;
@@ -297,9 +296,8 @@ export default async function handler(req: Req, res: Res) {
         setCors();
         res.status(400).json({ error: signupError.message });
         return;
-      } else {
-        authUserId = data?.user?.id ?? null;
       }
+      authUserId = data?.user?.id ?? null;
     }
 
     if (!adminData.school_id) {
@@ -309,11 +307,18 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const { data: schoolCheck, error: schoolCheckError } = await supabaseAdmin.from('schools').select('school_id').eq('school_id', adminData.school_id).single();
+    const { data: schoolCheck, error: schoolCheckError } = await supabaseAdmin
+      .from('schools')
+      .select('school_id')
+      .eq('school_id', adminData.school_id)
+      .single();
     if (schoolCheckError || !schoolCheck) {
       if (authUserId) await supabaseAdmin.auth.admin.deleteUser(authUserId);
       setCors();
-      res.status(400).json({ error: `The school_id does not exist in the schools table.`, details: schoolCheckError?.message });
+      res.status(400).json({
+        error: `The school_id does not exist in the schools table.`,
+        details: schoolCheckError?.message,
+      });
       return;
     }
 
@@ -326,22 +331,19 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    const { error: userInsertError } = await supabaseAdmin
-      .from('users')
-      .upsert(
-        {
-          user_id: authUserId,
-          email: String(email),
-          name,
-          role: String(roleOut ?? 'teacher'),
-          school_id: adminData.school_id,
-          phone: phone != null ? String(phone) : null,
-          department: department != null ? String(department) : null,
-          position: position != null ? String(position) : null,
-          ...(teacherId ? { linked_teacher_id: teacherId } : {}),
-        },
-        { onConflict: 'user_id' }
-      );
+    const upsertPayload = {
+      user_id: authUserId,
+      email: String(email),
+      name,
+      role: String(roleOut ?? 'teacher'),
+      school_id: adminData.school_id,
+      phone: phone != null ? String(phone) : null,
+      department: department != null ? String(department) : null,
+      position: position != null ? String(position) : null,
+    };
+    if (teacherId) upsertPayload.linked_teacher_id = teacherId;
+
+    const { error: userInsertError } = await supabaseAdmin.from('users').upsert(upsertPayload, { onConflict: 'user_id' });
 
     if (userInsertError) {
       console.error('Failed to create user record:', userInsertError.message);
@@ -383,11 +385,8 @@ export default async function handler(req: Req, res: Res) {
 
     if (!sendEmailInvite && password) {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { sendResendInnerHtml } = require('../../lib/resendSend');
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../lib/credentialInnerHtml');
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { getPublicSiteOrigin } = require('../../lib/emailHtml');
         const loginUrl = `${getPublicSiteOrigin()}/login`;
         await sendResendInnerHtml({
@@ -414,7 +413,7 @@ export default async function handler(req: Req, res: Res) {
         ? 'User invited successfully! They will receive an email to set up their account.'
         : 'User created successfully! They can now log in with their credentials.',
     });
-  } catch (err: unknown) {
+  } catch (err) {
     send500(err);
   }
-}
+};

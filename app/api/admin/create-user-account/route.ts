@@ -30,7 +30,7 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });
 }
 
-/** Mirrors api/admin/create-user-account.ts (Vercel) — roster invites, head_teacher managers, teacher/otherStaff linking. */
+/** Mirrors api/admin/create-user-account.js (Vercel) — roster invites, head_teacher managers, teacher/otherStaff linking. */
 export async function POST(request: NextRequest) {
   let adminSchoolId: string | null | undefined;
   try {
