@@ -19,6 +19,13 @@ function withCors(res: NextResponse): NextResponse {
   return res;
 }
 
+function normalizeManagerRole(role: unknown): string {
+  return String(role ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
 /** Vercel: allow long-running invite/create flows */
 export const maxDuration = 60;
 
@@ -76,16 +83,18 @@ export async function POST(request: NextRequest) {
       return withCors(NextResponse.json({ error: 'Unauthorized' }, { status: 401 }));
     }
 
-    const { data: adminData } = await supabase
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: adminData, error: adminRowErr } = await supabaseAdmin
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
-      .single();
+      .maybeSingle();
 
     adminSchoolId = adminData?.school_id;
 
     const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
-    if (!adminData || !MANAGER_ROLES.includes(String(adminData.role ?? ''))) {
+    const adminRoleKey = normalizeManagerRole(adminData?.role);
+    if (adminRowErr || !adminData || !MANAGER_ROLES.includes(adminRoleKey)) {
       return withCors(NextResponse.json({ error: 'Unauthorized - Admin access required' }, { status: 403 }));
     }
 
@@ -105,8 +114,6 @@ export async function POST(request: NextRequest) {
 
     const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
     const otherStaffId = body.otherStaffId != null ? String(body.otherStaffId).trim() : '';
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     if (teacherId || otherStaffId) {
       sendEmailInvite = true;

@@ -69,6 +69,14 @@ function getBearerToken(req) {
   }
 }
 
+/** Match public.users.role to manager allow-list (handles "Head Teacher", HEAD_TEACHER, etc.). */
+function normalizeManagerRole(role) {
+  return String(role ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
 module.exports = async function handler(req, res) {
   const origin = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
   const cors = {
@@ -148,14 +156,16 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data: adminData } = await supabase
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: adminData, error: adminRowErr } = await supabaseAdmin
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
-      .single();
+      .maybeSingle();
 
     const MANAGER_ROLES = ['admin', 'owner', 'head_teacher'];
-    if (!adminData || !MANAGER_ROLES.includes(String(adminData.role ?? ''))) {
+    const adminRoleKey = normalizeManagerRole(adminData?.role);
+    if (adminRowErr || !adminData || !MANAGER_ROLES.includes(adminRoleKey)) {
       setCors();
       res.status(403).json({ error: 'Unauthorized - Admin access required' });
       return;
@@ -172,8 +182,6 @@ module.exports = async function handler(req, res) {
 
     const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
     const otherStaffId = body.otherStaffId != null ? String(body.otherStaffId).trim() : '';
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     if (teacherId || otherStaffId) {
       sendEmailInvite = true;
