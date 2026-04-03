@@ -32,7 +32,7 @@ const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCa
 const TestPage = lazy(() => import('../pages/admin/TestPage'));
 
 // Teacher routes
-const TeacherDashboard = lazy(() => import('../pages/teacher/Dashboard'));
+const TeacherDashboard = lazy(() => import('../pages/teacher/TeacherDashboardHome'));
 const TeacherStudentsPage = lazy(() => import('../pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazy(() => import('../pages/teacher/classes/ClassesPage'));
 const TeacherExamResultsPage = lazy(() => import('../pages/teacher/exam-results/ExamResultsPage'));
