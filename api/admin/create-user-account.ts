@@ -7,6 +7,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
+import { validatePasswordLength } from '../../lib/passwordPolicy';
 
 type Req = {
   method?: string;
@@ -151,10 +152,6 @@ export default async function handler(req: Req, res: Res) {
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { validatePasswordLength } = require('../../lib/passwordPolicy') as {
-      validatePasswordLength: (p: unknown) => string | null;
-    };
     if (!sendEmailInvite) {
       const pwdErr = validatePasswordLength(password);
       if (pwdErr) {
@@ -311,11 +308,19 @@ export default async function handler(req: Req, res: Res) {
       return;
     }
 
-    // Create user profile in users table - direct upsert (no RPC), same as create-teacher-login / app route
-    try {
-      const { error: userInsertError } = await supabaseAdmin
-        .from('users')
-        .upsert({
+    if (!authUserId) {
+      setCors();
+      res.status(502).json({
+        error:
+          'Could not complete signup: authentication did not return a user id. Check Supabase Auth configuration and try again.',
+      });
+      return;
+    }
+
+    const { error: userInsertError } = await supabaseAdmin
+      .from('users')
+      .upsert(
+        {
           user_id: authUserId,
           email: String(email),
           name,
@@ -325,14 +330,24 @@ export default async function handler(req: Req, res: Res) {
           department: department != null ? String(department) : null,
           position: position != null ? String(position) : null,
           ...(teacherId ? { linked_teacher_id: teacherId } : {}),
-        }, { onConflict: 'user_id' });
+        },
+        { onConflict: 'user_id' }
+      );
 
-      if (userInsertError) {
-        console.warn('Failed to create user record:', userInsertError.message);
-        // Don't fail the entire operation; auth user can still log in
+    if (userInsertError) {
+      console.error('Failed to create user record:', userInsertError.message);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      } catch {
+        /* best-effort rollback */
       }
-    } catch (userErr: unknown) {
-      console.warn('Error creating user record:', userErr);
+      setCors();
+      res.status(400).json({
+        error:
+          userInsertError.message ||
+          'Could not save the user profile. The invitation was rolled back; nothing was created.',
+      });
+      return;
     }
 
     if (authUserId && teacherId) {

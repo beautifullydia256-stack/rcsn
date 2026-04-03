@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
-import { supabaseAdmin } from '@/lib/supabase';
-import { isValidRealEmail } from '@/src/lib/realEmail';
+import { isValidRealEmail } from '@/lib/realEmail';
+
+export const runtime = 'nodejs';
 
 /**
  * After enrolling a student with guardian info: find existing parent user by email (or create one)
@@ -16,6 +17,14 @@ export async function POST(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
     const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string;
+
+    if (!supabaseUrl || !supabaseAnon || !supabaseServiceKey) {
+      return NextResponse.json({ error: 'Server configuration error. Please contact support.' }, { status: 500 });
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
 
     const supabase = createServerClient(supabaseUrl, supabaseAnon, {
       cookies: {
@@ -77,13 +86,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!supabaseAdmin) {
-      return NextResponse.json(
-        { error: 'Service role key not configured' },
-        { status: 500 }
-      );
-    }
-
     const parentName = String(name).trim();
     const parentEmailRaw = email && String(email).trim() ? String(email).trim() : '';
     const parentPhone = phone && String(phone).trim() ? String(phone).trim() : null;
@@ -129,8 +131,16 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      parentUserId = createData.user.id;
-      await supabaseAdmin.from('users').insert({
+      const newAuthUser = createData?.user;
+      const newId = newAuthUser?.id;
+      if (!newId) {
+        return NextResponse.json(
+          { error: 'Auth did not return a user id. Parent account was not created.' },
+          { status: 502 }
+        );
+      }
+      parentUserId = newId;
+      const { error: profileErr } = await supabaseAdmin.from('users').insert({
         user_id: parentUserId,
         email: authEmail,
         role: 'parent',
@@ -138,6 +148,17 @@ export async function POST(request: NextRequest) {
         school_id,
         phone: parentPhone || null,
       });
+      if (profileErr) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(parentUserId);
+        } catch {
+          /* best-effort */
+        }
+        return NextResponse.json(
+          { error: profileErr.message || 'Could not save parent profile.' },
+          { status: 400 }
+        );
+      }
     }
 
     // Link parent to this student (parent_id = auth user id; allow multiple students per parent)

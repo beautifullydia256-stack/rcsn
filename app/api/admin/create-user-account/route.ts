@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { validatePasswordLength } from '../../../../lib/passwordPolicy';
 
 // CORS: allow frontend at www.pwezacore.com (and optional CORS_ORIGIN env) when API is on api.pwezacore.com
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
@@ -20,6 +21,9 @@ function withCors(res: NextResponse): NextResponse {
 
 /** Vercel: allow long-running invite/create flows */
 export const maxDuration = 60;
+
+/** Avoid Edge runtime incompatibilities with Node-only libs */
+export const runtime = 'nodejs';
 
 /** Handle CORS preflight so browser allows POST from www.pwezacore.com */
 export async function OPTIONS() {
@@ -102,9 +106,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { validatePasswordLength } = require('../../../../lib/passwordPolicy') as {
-      validatePasswordLength: (p: unknown) => string | null;
-    };
     if (!sendEmailInvite) {
       const pwdErr = validatePasswordLength(password);
       if (pwdErr) {
@@ -247,29 +248,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    try {
-      const { error: userInsertError } = await supabaseAdmin
-        .from('users')
-        .upsert(
+    if (!authUserId) {
+      return withCors(
+        NextResponse.json(
           {
-            user_id: authUserId,
-            email: String(email),
-            name,
-            role: String(roleOut ?? 'teacher'),
-            school_id: adminData.school_id,
-            phone: phone != null ? String(phone) : null,
-            department: department != null ? String(department) : null,
-            position: position != null ? String(position) : null,
-            ...(teacherId ? { linked_teacher_id: teacherId } : {}),
+            error:
+              'Could not complete signup: authentication did not return a user id. Check Supabase Auth configuration and try again.',
           },
-          { onConflict: 'user_id' }
-        );
+          { status: 502 }
+        )
+      );
+    }
 
-      if (userInsertError) {
-        console.warn('Failed to create user record:', userInsertError.message);
+    const { error: userInsertError } = await supabaseAdmin
+      .from('users')
+      .upsert(
+        {
+          user_id: authUserId,
+          email: String(email),
+          name,
+          role: String(roleOut ?? 'teacher'),
+          school_id: adminData.school_id,
+          phone: phone != null ? String(phone) : null,
+          department: department != null ? String(department) : null,
+          position: position != null ? String(position) : null,
+          ...(teacherId ? { linked_teacher_id: teacherId } : {}),
+        },
+        { onConflict: 'user_id' }
+      );
+
+    if (userInsertError) {
+      console.error('Failed to create user record:', userInsertError.message);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+      } catch {
+        /* best-effort rollback */
       }
-    } catch (userErr: unknown) {
-      console.warn('Error creating user record:', userErr);
+      return withCors(
+        NextResponse.json(
+          {
+            error:
+              userInsertError.message ||
+              'Could not save the user profile. The invitation was rolled back; nothing was created.',
+          },
+          { status: 400 }
+        )
+      );
     }
 
     if (authUserId && teacherId) {

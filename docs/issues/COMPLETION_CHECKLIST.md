@@ -4,10 +4,10 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 
 | ID | Doc | Status | Verified (date / notes) |
 |----|-----|--------|-------------------------|
-| 01 | [01-failed-to-send-invitation.md](./01-failed-to-send-invitation.md) | Partial | API `maxDuration`; store school on invite; DB `last_sign_in_at` migration — retest invites. |
-| 02 | [02-failed-to-add-parent.md](./02-failed-to-add-parent.md) | Partial | ensure-parent-link JSON guard — retest add parent. |
-| 03 | [03-dashboard-vs-outstanding-term-invoice-mismatch.md](./03-dashboard-vs-outstanding-term-invoice-mismatch.md) | Partial | New migration: `auto_initialize_student_balance` uses calendar term; admin KPI uses `student_balances` + `term_id` — **run migration** then retest new student + dashboard. |
-| 04 | [04-user-management-ui-ux-modernization.md](./04-user-management-ui-ux-modernization.md) | Not started | Full redesign not implemented. |
+| 01 | [01-failed-to-send-invitation.md](./01-failed-to-send-invitation.md) | Partial | **Code:** `DesignTeacherProfile` users select uses `created_at`/`last_sign_in_at` (no `updated_at`); `DesignStudentProfile` balance query omits `last_payment_date`; `create-user-account` Node runtime, ESM `passwordPolicy`, `authUserId` guard, rollback on `users` upsert fail. **You verify:** invites in prod. |
+| 02 | [02-failed-to-add-parent.md](./02-failed-to-add-parent.md) | Partial | **Code:** `ensure-parent-link` uses env service client (no `supabaseAdmin` import), `@/lib/realEmail`, auth user id guard, rollback if `public.users` insert fails. **You verify:** add parent flow. |
+| 03 | [03-dashboard-vs-outstanding-term-invoice-mismatch.md](./03-dashboard-vs-outstanding-term-invoice-mismatch.md) | Partial | **Code:** Next `app/dashboard/admin/Kpis.tsx` outstanding + fees use `student_balances` / `student_payments` scoped by current `term_id`. **You verify:** dashboard vs outstanding page. Apply DB migration `20260403120000_*` if not yet. |
+| 04 | [04-user-management-ui-ux-modernization.md](./04-user-management-ui-ux-modernization.md) | Partial | **Code:** `InviteFromRosterPage` — loading state before “No school linked”; persist `school_id` into auth store when loaded from DB. Full redesign still open. |
 | 05 | [05-assign-class-teacher-visibility-and-rules.md](./05-assign-class-teacher-visibility-and-rules.md) | Partial | Teacher profile: removed bogus term-3 filter; multi-class badges; API blocks second class teacher. |
 | 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | Partial | Toolbar: Print / Save PDF hint; full redesign + chart PDF not done. |
 | 07 | [07-record-payment-modal-loop-accountant-outstanding.md](./07-record-payment-modal-loop-accountant-outstanding.md) | Partial | `useCallback` for record payment in `AccountantLayout` — retest SPA outstanding → payments flow. |
@@ -25,4 +25,4 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 1. `20260403120000_student_balance_current_term_and_users_last_sign_in.sql`
 2. `20260403150000_in_app_notifications.sql`
 
-Last updated: 2026-04-03 (implementation pass).
+Last updated: 2026-04-03 (invite/balance/users + ensure-parent-link + admin KPIs + invite roster hydration).

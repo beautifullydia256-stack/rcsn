@@ -370,7 +370,7 @@ export default function DesignStudentProfile() {
 
       const balanceQ = await supabase
         .from('student_balances')
-        .select('total_fees, total_paid, balance, last_payment_date')
+        .select('total_fees, total_paid, balance')
         .eq('school_id', schoolId)
         .eq('student_id', studentId)
         .limit(1)
@@ -509,7 +509,6 @@ export default function DesignStudentProfile() {
         total_fees?: number;
         total_paid?: number;
         balance?: number;
-        last_payment_date?: string;
       } | null;
       const lastPayment = paymentRes.data as {
         amount_paid?: number;
@@ -803,7 +802,7 @@ export default function DesignStudentProfile() {
         }
         set(
           '#sp-last-payment-date',
-          lastPayment?.payment_date ? fmtDate(lastPayment.payment_date) : feeBal?.last_payment_date ? fmtDate(feeBal.last_payment_date) : '—'
+          lastPayment?.payment_date ? fmtDate(lastPayment.payment_date) : '—'
         );
         set('#sp-payment-method', lastPayment?.payment_method ? String(lastPayment.payment_method) : '—');
         set('#sp-scholarship', disc);

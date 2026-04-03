@@ -39,75 +39,67 @@ export function AdminKpis() {
             (t.end_date >= currentTerm.today)
         ) || (allTerms && allTerms[0]) || null;
 
-        // Execute all queries in parallel for maximum performance
-        const [
-          studentsResult,
-          teachersResult,
-          attendanceResult,
-          balancesResult,
-          receiptsResult
-        ] = await Promise.all([
-          // Students count
-          supabase.from("students")
+        // Parallel counts; finance KPIs use the same ledger as Outstanding (student_balances / term_id).
+        const [studentsResult, teachersResult, attendanceResult] = await Promise.all([
+          supabase
+            .from("students")
             .select("*", { count: "exact", head: true })
             .eq("school_id", u.school_id)
-            .eq('status', 'active'),
-          
-          // Teachers count
-          supabase.from("teachers")
-            .select("*", { count: "exact", head: true })
-            .eq("school_id", u.school_id),
-          
-          // Today's attendance
-          supabase.from('student_attendance')
-            .select('student_id')
-            .eq('school_id', u.school_id)
-            .eq('date', currentTerm.today)
-            .eq('present', true),
-          
-          // Outstanding balances - calculate from students and payments
-          supabase.from('students')
-            .select('student_id, expected_fee_amount')
-            .eq('school_id', u.school_id)
-            .eq('status', 'active'),
-          
-          // Receipts count - use current term if available
-          currentTermData ? 
-            supabase.from("receipts")
-              .select("receipt_id", { count: "exact", head: true })
-              .eq("school_id", u.school_id)
-              .gte('created_at', currentTermData.start_date || '1900-01-01')
-              .lte('created_at', currentTermData.end_date || '2100-12-31') :
-            supabase.from("receipts")
-              .select("receipt_id", { count: "exact", head: true })
-              .eq("school_id", u.school_id)
+            .eq("status", "active"),
+          supabase.from("teachers").select("*", { count: "exact", head: true }).eq("school_id", u.school_id),
+          supabase
+            .from("student_attendance")
+            .select("student_id")
+            .eq("school_id", u.school_id)
+            .eq("date", currentTerm.today)
+            .eq("present", true),
         ]);
 
-        // Calculate outstanding balances from students and payments
-        const studentIds = (balancesResult.data || []).map((s: any) => s.student_id);
-        const { data: payments } = await supabase
-          .from('student_payments')
-          .select('student_id, amount_paid')
-          .in('student_id', studentIds)
-          .eq('school_id', u.school_id);
-        
-        const paidByStudent: Record<string, number> = {};
-        (payments || []).forEach((p: any) => {
-          if (studentIds.includes(p.student_id)) {
-            const amt = Number(p.amount_paid || 0);
-            paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
-          }
-        });
-        
-        const outstanding = (balancesResult.data || [])
-          .map((s: any) => Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0)))
-          .reduce((sum: number, balance: number) => sum + balance, 0);
+        let outstanding = 0;
+        let receipts = 0;
+        const termId = currentTermData && (currentTermData as { id?: string }).id;
+        if (termId) {
+          const balQ = await supabase
+            .from("student_balances")
+            .select("balance")
+            .eq("school_id", u.school_id)
+            .eq("term_id", termId);
+          outstanding = (balQ.data || []).reduce(
+            (sum, r) => sum + Math.max(0, Number((r as { balance?: number }).balance ?? 0)),
+            0
+          );
+          const payQ = await supabase
+            .from("student_payments")
+            .select("amount_paid")
+            .eq("school_id", u.school_id)
+            .eq("term_id", termId)
+            .is("reversed_at", null);
+          receipts = (payQ.data || []).reduce(
+            (sum, r) => sum + Number((r as { amount_paid?: number }).amount_paid ?? 0),
+            0
+          );
+        } else {
+          const balQ = await supabase.from("student_balances").select("balance").eq("school_id", u.school_id);
+          outstanding = (balQ.data || []).reduce(
+            (sum, r) => sum + Math.max(0, Number((r as { balance?: number }).balance ?? 0)),
+            0
+          );
+          const payQ = await supabase
+            .from("student_payments")
+            .select("amount_paid")
+            .eq("school_id", u.school_id)
+            .is("reversed_at", null);
+          receipts = (payQ.data || []).reduce(
+            (sum, r) => sum + Number((r as { amount_paid?: number }).amount_paid ?? 0),
+            0
+          );
+        }
 
         setK({
           students: studentsResult.count || 0,
           teachers: teachersResult.count || 0,
           outstanding,
-          receipts: receiptsResult.count || 0,
+          receipts,
           attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
         });
       } catch (error) {
@@ -124,7 +116,7 @@ export function AdminKpis() {
     { label: "Total Students", value: k.students, accent: "from-blue-500/30 to-blue-700/20", href: "/dashboard/admin/students" },
     { label: "Total Teachers", value: k.teachers, accent: "from-green-500/30 to-green-700/20", href: "/dashboard/admin/teachers" },
     { label: "Outstanding Balances", value: new Intl.NumberFormat().format(k.outstanding), accent: "from-yellow-500/30 to-yellow-700/20", href: "/dashboard/admin/outstanding" },
-    { label: "Receipts This Term", value: k.receipts, accent: "from-rose-500/30 to-rose-700/20", href: undefined },
+    { label: "Fees collected (this term)", value: new Intl.NumberFormat().format(k.receipts), accent: "from-rose-500/30 to-rose-700/20", href: undefined },
     { label: "Attendance Today", value: k.attendance, accent: "from-indigo-500/30 to-indigo-700/20", href: undefined },
   ];
 

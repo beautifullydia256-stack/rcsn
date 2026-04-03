@@ -431,7 +431,7 @@ export default function DesignTeacherProfile() {
         supabase.from('class_subjects').select('class_name, subject').eq('school_id', school_id),
         supabase
           .from('users')
-          .select('user_id, email, is_active, updated_at, phone, linked_teacher_id')
+          .select('user_id, email, is_active, created_at, last_sign_in_at, phone, linked_teacher_id')
           .eq('school_id', school_id)
           .eq('role', 'teacher'),
         supabase
@@ -460,7 +460,8 @@ export default function DesignTeacherProfile() {
         user_id?: string;
         email?: string;
         is_active?: boolean;
-        updated_at?: string;
+        created_at?: string;
+        last_sign_in_at?: string | null;
         phone?: string | null;
         linked_teacher_id?: string | null;
       }[];
@@ -488,7 +489,8 @@ export default function DesignTeacherProfile() {
       const pu = portalUser as {
         email?: string;
         is_active?: boolean;
-        updated_at?: string;
+        created_at?: string;
+        last_sign_in_at?: string | null;
         phone?: string | null;
         linked_teacher_id?: string | null;
       } | null;
@@ -794,7 +796,10 @@ export default function DesignTeacherProfile() {
           ps.className = `tp-field-value ${portalActive ? 'green' : 'muted'}`;
         }
         set('#tp-portal-email', pickStr(pu?.email) || email || '—');
-        set('#tp-portal-last-login', pu?.updated_at ? timeAgo(pu.updated_at) : 'Never');
+        set(
+          '#tp-portal-last-login',
+          pu?.last_sign_in_at ? timeAgo(pu.last_sign_in_at) : 'Never'
+        );
         set('#tp-portal-2fa', 'Not tracked in app');
         setHTML(
           '#tp-portal-permissions',

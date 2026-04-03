@@ -59,6 +59,8 @@ export default function InviteFromRosterPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdFromStore ?? null);
+  /** False until we've tried store + DB for school_id (avoids flashing "No school linked" during hydration). */
+  const [schoolResolved, setSchoolResolved] = useState(false);
   const [tab, setTab] = useState<'staff' | 'teachers'>('staff');
   const [q, setQ] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherRow | null>(null);
@@ -69,14 +71,21 @@ export default function InviteFromRosterPage() {
   useEffect(() => {
     if (schoolIdFromStore) {
       setSchoolId(schoolIdFromStore);
+      setSchoolResolved(true);
       return;
     }
     const run = async () => {
-      if (!authUser?.id) return;
+      if (!authUser?.id) {
+        setSchoolResolved(true);
+        return;
+      }
       const { data } = await supabase.from('users').select('school_id').eq('user_id', authUser.id).single();
-      setSchoolId(data?.school_id ?? null);
+      const sid = (data?.school_id as string | undefined) ?? null;
+      setSchoolId(sid);
+      if (sid) useAuthStore.getState().setSchoolId(sid);
+      setSchoolResolved(true);
     };
-    run();
+    void run();
   }, [authUser?.id, schoolIdFromStore]);
 
   const { data, isLoading } = useQuery({
@@ -193,10 +202,21 @@ export default function InviteFromRosterPage() {
     }
   };
 
+  if (!schoolResolved) {
+    return (
+      <AdminPageWrapper title="Send invitations">
+        <div className={`${adminCardClass} p-6 text-sm ac-text-secondary`}>Loading your school context…</div>
+      </AdminPageWrapper>
+    );
+  }
+
   if (!schoolId) {
     return (
       <AdminPageWrapper title="Send invitations">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">No school linked.</div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+          No school is linked to your account. If you are an admin, check with support that your user has a{' '}
+          <code className="text-xs">school_id</code> set.
+        </div>
       </AdminPageWrapper>
     );
   }
