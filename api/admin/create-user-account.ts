@@ -8,12 +8,15 @@
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 
-// Vercel serverless (this file): use CJS `passwordPolicy.js` so the function bundle loads reliably.
-// Do not import `lib/passwordPolicy.ts` here — resolution can fail at cold start on Vite deployments.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { validatePasswordLength } = require('../../lib/passwordPolicy.js') as {
-  validatePasswordLength: (p: unknown) => string | null;
-};
+/** Inline: avoid top-level `require()` — Vercel may emit ESM where `require` is undefined (FUNCTION_INVOCATION_FAILED). */
+const MIN_PWD_LEN = 8;
+const MAX_PWD_LEN = 72;
+function validatePasswordLength(password: unknown): string | null {
+  const p = String(password ?? '');
+  if (p.length < MIN_PWD_LEN) return `Password must be at least ${MIN_PWD_LEN} characters.`;
+  if (p.length > MAX_PWD_LEN) return `Password must be at most ${MAX_PWD_LEN} characters.`;
+  return null;
+}
 
 type Req = {
   method?: string;
