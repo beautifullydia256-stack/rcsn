@@ -9,7 +9,11 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '../useTeacherContext';
 import { calculatePrimaryGrade, calculateGrade } from '@/lib/reportUtils';
-import { isPrePrimaryNurseryClass } from '../../../templates/primary/prePrimaryHolisticRatings';
+import {
+  ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS,
+  countPrePrimaryStrandsWithData,
+  isPrePrimaryNurseryClass,
+} from '../../../templates/primary/prePrimaryHolisticRatings';
 import { PrePrimaryHolisticExamGrid } from './PrePrimaryHolisticExamGrid';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
@@ -133,6 +137,49 @@ export default function ExamResultsSubjectPage() {
     },
     enabled: !!schoolId && !!selectedExamSetId && !!className && !!subject,
   });
+
+  const { data: strandCoverageRows = [] } = useQuery({
+    queryKey: [
+      'teacher',
+      'exam-results',
+      'strand-coverage',
+      schoolId,
+      selectedExamSetId,
+      className,
+    ],
+    queryFn: async () => {
+      if (!schoolId || !selectedExamSetId || !className) return [];
+      const { data } = await supabase
+        .from('exam_results')
+        .select('student_id, subject, nursery_skill_performance')
+        .eq('school_id', schoolId)
+        .eq('exam_set_id', selectedExamSetId)
+        .eq('class_name', className)
+        .in('subject', ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS);
+      return (data ?? []) as {
+        student_id: string;
+        subject: string;
+        nursery_skill_performance?: unknown;
+      }[];
+    },
+    enabled: !!schoolId && !!selectedExamSetId && !!className && showPrePrimaryHolistic,
+  });
+
+  const strandAreasRatedByStudent = useMemo(() => {
+    const m = new Map<string, number>();
+    const byStudent = new Map<string, { subject: string; nursery_skill_performance?: unknown }[]>();
+    for (const r of strandCoverageRows) {
+      if (!byStudent.has(r.student_id)) byStudent.set(r.student_id, []);
+      byStudent.get(r.student_id)!.push({
+        subject: r.subject,
+        nursery_skill_performance: r.nursery_skill_performance,
+      });
+    }
+    for (const [sid, rows] of byStudent) {
+      m.set(sid, countPrePrimaryStrandsWithData(rows));
+    }
+    return m;
+  }, [strandCoverageRows]);
 
   const resultsByStudent = useMemo(() => {
     const map = new Map<string, (typeof existingResults)[0]>();
@@ -277,6 +324,7 @@ export default function ExamResultsSubjectPage() {
                   selectedExamSetId={selectedExamSetId}
                   existingRows={existingResults}
                   onRefetch={() => refetchResults()}
+                  strandAreasRatedByStudent={strandAreasRatedByStudent}
                 />
               ) : (
                 <>

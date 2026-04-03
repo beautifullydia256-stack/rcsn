@@ -22,6 +22,7 @@ import {
   CreditCard,
   Smartphone,
   IdCard,
+  ScrollText,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -52,7 +53,8 @@ export default function AdminSidebar({ isCollapsed: externalCollapsed, onCollaps
     { icon: FileText, label: 'Reports', path: '/dashboard/admin/reports/generate' },
     { icon: ClipboardList, label: 'Attendance', path: '/dashboard/admin/attendance-records' },
     { icon: BookOpen, label: 'Exam Sets', path: '/dashboard/admin/exam-sets' },
-    { icon: IdCard, label: 'Identity', path: '/dashboard/admin/identity' },
+    { icon: IdCard, label: 'Identity cards', path: '/dashboard/admin/identity' },
+    { icon: ScrollText, label: 'Headed paper', path: '/dashboard/admin/headed-paper' },
     { icon: Building2, label: 'Classes', path: '/dashboard/admin/settings/classes' },
     { icon: CreditCard, label: 'Job Vacancies', path: '/dashboard/admin/jobs' },
     { icon: Settings, label: 'System Settings', path: '/dashboard/admin/settings' },

@@ -9,9 +9,9 @@ export const ACCOUNTANT_PW_SHELL_CSS = `
     --pw-s2: #101828;
     --pw-s3: #141c2e;
     --pw-s4: #1d2d4e;
-    --pw-t1: #eef3ff;
-    --pw-t2: #8296be;
-    --pw-t3: #3d5278;
+    --pw-t1: #f8faff;
+    --pw-t2: #c5d4ef;
+    --pw-t3: #8ea6cc;
     --pw-border: rgba(255,255,255,0.07);
     --pw-bh: rgba(255,255,255,0.12);
   }
@@ -347,5 +347,16 @@ export const ACCOUNTANT_PW_SHELL_CSS = `
     background: none;
     border: none;
     padding: 0;
+  }
+  .accountant-glass.pw-layout[data-theme="dark"] select {
+    background-color: var(--pw-s2, #101828);
+    color: var(--pw-t1, #f8faff);
+    border: 1px solid var(--pw-border);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .accountant-glass.pw-layout[data-theme="dark"] select option {
+    background-color: var(--pw-s2, #101828);
+    color: var(--pw-t1, #f8faff);
   }
 `;

@@ -208,6 +208,7 @@ export async function generateReportsBulkClient(
           overall_remark: remark,
           remark,
           final_score: d.marks_obtained,
+          nursery_skill_performance: d.nursery_skill_performance,
         };
       });
       // Template4 (Upper Section) expects student.subjects: array of { subject_name, eot_marks, mot_marks, bot_marks, eot_grade, mot_grade, bot_grade, total_marks, teacher_comment, teacher_name }

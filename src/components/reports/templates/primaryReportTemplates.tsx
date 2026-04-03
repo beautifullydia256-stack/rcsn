@@ -11,10 +11,19 @@ import {
   getReadableTextColor,
   applyAlphaToHex
 } from '../../../templates/primary/nurseryPerformance';
+import {
+  PRE_PRIMARY_HOLISTIC_STRANDS,
+  PRE_PRIMARY_HOLISTIC_RATINGS,
+  PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL,
+  isPrePrimaryNurseryClass,
+  parsePrePrimaryGradeFromPerformanceJson,
+} from '../../../templates/primary/prePrimaryHolisticRatings';
+import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
+import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { lightenColor, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatCurrency } from '../../../lib/reportUtils';
 
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
   const cls = String(student.current_class || '');
   const isOL = isOLevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
@@ -32,9 +41,25 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     }
     // template6 (Baby Class Heritage) and default primary (nursery/middle/top) use Template2
     if (template === 'template6') {
-      return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+      return (
+        <Template2KasoziReport
+          student={student}
+          examSet={examSet}
+          school={school}
+          prePrimaryReportMode={prePrimaryReportMode}
+          detailedObservationItemsByKey={detailedObservationItemsByKey}
+        />
+      );
     }
-    return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+    return (
+      <Template2KasoziReport
+        student={student}
+        examSet={examSet}
+        school={school}
+        prePrimaryReportMode={prePrimaryReportMode}
+        detailedObservationItemsByKey={detailedObservationItemsByKey}
+      />
+    );
   }
 
   // O-Level/Secondary path
@@ -42,7 +67,15 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     case 'template1':
       return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
     case 'template2':
-      return <Template2KasoziReport student={student} examSet={examSet} school={school} />;
+      return (
+        <Template2KasoziReport
+          student={student}
+          examSet={examSet}
+          school={school}
+          prePrimaryReportMode={prePrimaryReportMode}
+          detailedObservationItemsByKey={detailedObservationItemsByKey}
+        />
+      );
     case 'template3':
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
     case 'template4':
@@ -315,7 +348,25 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
 }
 
 // Template 2 - St. Adrian Kasozi Secondary School Format
-function Template2KasoziReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+function Template2KasoziReport({
+  student,
+  examSet,
+  school,
+  prePrimaryReportMode = 'colour',
+  detailedObservationItemsByKey,
+}: {
+  student: any;
+  examSet: any;
+  school: any;
+  prePrimaryReportMode?: 'colour' | 'detailed';
+  detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
+}) {
+  const isPrePrimary = isPrePrimaryNurseryClass(student?.current_class);
+  const useDetailedPrePrimary =
+    isPrePrimary &&
+    prePrimaryReportMode === 'detailed' &&
+    detailedObservationItemsByKey &&
+    Object.keys(detailedObservationItemsByKey).length > 0;
 
   const kidsFontStack = "'Baloo 2', 'Comic Sans MS', 'Comic Neue', 'Poppins', 'sans-serif'";
   const backgroundGradient = 'linear-gradient(135deg, #fff7ad 0%, #ffd1dc 40%, #c8f5ff 75%, #e7deff 100%)';
@@ -544,7 +595,9 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
                 fontFamily: kidsFontStack
               }}
             >
-              MIDDLE &amp; TOP CLASS - TERMLY REPORT
+              {isPrePrimary
+                ? `${String(student?.current_class || 'Pre-primary').toUpperCase()} - TERMLY REPORT`
+                : 'MIDDLE & TOP CLASS - TERMLY REPORT'}
             </div>
             {headerMetaItems.length > 0 && (
               <div
@@ -612,117 +665,274 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       </div>
 
       <div className="mb-5">
-        <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
-            border: '4px solid rgba(30,64,175,0.18)',
-            borderRadius: '20px',
-            padding: '8px',
-            boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
-          }}
-        >
-          <table
-            className="w-full"
-            style={{
-              borderCollapse: 'collapse',
-              fontSize: '10pt',
-              tableLayout: 'fixed',
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              overflow: 'hidden'
-            }}
-          >
-            <tbody>
-            {NURSERY_SKILL_GRID.map((row, rowIdx) => (
-              <tr key={`nursery-skill-row-${rowIdx}`}>
-                {row.map((skill, colIdx) => {
-                  if (!skill.label) {
-                    return (
+        {useDetailedPrePrimary ? (
+          <>
+            <h3 className="text-[12pt] font-bold mb-2">Beginning of Term — Detailed progress</h3>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                border: '4px solid rgba(30,64,175,0.18)',
+                borderRadius: '20px',
+                padding: '12px',
+                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
+              }}
+            >
+              {buildPrePrimaryDetailedSections(student.results, detailedObservationItemsByKey!).map((sec) => (
+                <div key={sec.sectionTitle} className="mb-4 print:page-break-inside-avoid last:mb-0">
+                  <h4
+                    className="text-[10.5pt] font-bold text-blue-900 mb-2"
+                    style={{ fontFamily: kidsFontStack }}
+                  >
+                    {sec.sectionTitle}
+                  </h4>
+                  {sec.skills.map((sk) => (
+                    <div
+                      key={sk.skillKey}
+                      className="mb-3 pl-1 border-l-4 border-blue-200/80"
+                      style={{ breakInside: 'avoid' as const }}
+                    >
+                      <div className="text-[9.5pt] font-semibold text-slate-800 mb-0.5">{sk.skillLabel}</div>
+                      {sk.promptText ? (
+                        <div className="text-[8.5pt] text-slate-500 italic mb-1">{sk.promptText}</div>
+                      ) : null}
+                      <p className="text-[10pt] text-slate-900 leading-snug m-0">
+                        {sk.notRecorded ? 'Not recorded for this assessment.' : sk.responseText}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <p className="text-[7.5pt] text-slate-500 mt-3 leading-relaxed">
+              This report uses the same ratings as the colour checklist. Where Good and Needs Improvement apply, wording may match until distinct lines are maintained in the catalogue.
+            </p>
+          </>
+        ) : isPrePrimary ? (
+          <>
+            <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                border: '4px solid rgba(30,64,175,0.18)',
+                borderRadius: '20px',
+                padding: '8px',
+                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
+              }}
+            >
+              <table
+                className="w-full"
+                style={{
+                  borderCollapse: 'collapse',
+                  fontSize: '9pt',
+                  tableLayout: 'fixed',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  overflow: 'hidden'
+                }}
+              >
+                <thead>
+                  <tr style={{ background: 'rgba(30,64,175,0.08)' }}>
+                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'left', width: '28%' }}>
+                      Learning area
+                    </th>
+                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 1</th>
+                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 2</th>
+                    <th style={{ border: '2px solid rgba(148,163,184,0.35)', padding: '6px', textAlign: 'center' }}>Skill 3</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {PRE_PRIMARY_HOLISTIC_STRANDS.map((strand) => (
+                    <tr key={strand.subject}>
                       <td
-                        key={`nursery-skill-${rowIdx}-${colIdx}`}
                         style={{
                           border: '2px solid rgba(148,163,184,0.35)',
-                          padding: '8px 6px',
-                          minHeight: '42px',
-                          textAlign: 'center',
+                          padding: '6px',
                           verticalAlign: 'middle',
-                          background: '#ffffff'
+                          fontWeight: 600,
+                          fontSize: '8pt'
                         }}
                       >
-                        {'\u00A0'}
+                        {strand.subject}
                       </td>
-                    );
-                  }
-
-                  const performanceWord = resolveNurseryPerformanceValue(student, skill);
-                  const fallbackColor = '#e2e8f0';
-                  const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
-                  const hasPerformance = Boolean(performanceWord);
-                  const textColor = getReadableTextColor(accentColor);
-                  const gradientBackground = hasPerformance ? accentColor : '#f8fafc';
-                  const labelColor = hasPerformance
-                    ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
-                    : '#1f2937';
-                  const cellBorderColor = hasPerformance ? accentColor : 'rgba(148,163,184,0.45)';
-                  const cellShadow = hasPerformance
-                    ? `0 16px 32px ${applyAlphaToHex(accentColor, 0.35)}`
-                    : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
-
-                  return (
-                    <td
-                      key={`nursery-skill-${rowIdx}-${colIdx}`}
-                      style={{
-                        border: `2px solid ${cellBorderColor}`,
-                        padding: '8px 6px',
-                        minHeight: '48px',
-                        textAlign: 'center',
-                        fontWeight: 600,
-                        verticalAlign: 'middle',
-                        background: gradientBackground,
-                        transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
-                        boxShadow: cellShadow
-                      }}
-                    >
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
-                        <span style={{ fontSize: '9pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
-                          {skill.label}
-                        </span>
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-          </table>
-        </div>
-
-        <div
-          className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4"
-          style={{
-            background: 'rgba(255,255,255,0.8)',
-            borderRadius: '16px',
-            padding: '10px 14px',
-            border: '2px dashed rgba(30,64,175,0.24)',
-            boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
-          }}
-        >
-          {NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => (
-            <div key={label} className="flex items-center gap-2 font-semibold">
-              <div
-                style={{
-                  width: '18px',
-                  height: '18px',
-                  border: '1px solid #1f2937',
-                  borderRadius: '4px',
-                  background: color
-                }}
-              />
-              <span>{label}</span>
+                      {strand.skills.map((skill) => {
+                        const resultRow = student.results?.find((r: { subject?: string }) => (r.subject || '').trim() === strand.subject);
+                        const gradeEnum = parsePrePrimaryGradeFromPerformanceJson(resultRow?.nursery_skill_performance, skill.key);
+                        const label = gradeEnum ? PRE_PRIMARY_HOLISTIC_ENUM_TO_LABEL[gradeEnum] : null;
+                        const color = label
+                          ? PRE_PRIMARY_HOLISTIC_RATINGS.find((r) => r.label === label)?.color
+                          : '#f1f5f9';
+                        const accentColor = color || '#e2e8f0';
+                        const hasPerformance = Boolean(label);
+                        const textColor = getReadableTextColor(accentColor);
+                        const gradientBackground = hasPerformance ? accentColor : '#f8fafc';
+                        const labelColor = hasPerformance
+                          ? textColor === '#ffffff'
+                            ? 'rgba(255,255,255,0.95)'
+                            : 'rgba(15,23,42,0.92)'
+                          : '#64748b';
+                        return (
+                          <td
+                            key={skill.key}
+                            style={{
+                              border: '2px solid rgba(148,163,184,0.45)',
+                              padding: '6px 4px',
+                              minHeight: '40px',
+                              textAlign: 'center',
+                              verticalAlign: 'middle',
+                              background: gradientBackground,
+                              boxShadow: hasPerformance ? `0 8px 16px ${applyAlphaToHex(accentColor, 0.3)}` : undefined
+                            }}
+                          >
+                            <span style={{ fontSize: '8pt', fontWeight: 600, color: labelColor }}>{label || '—'}</span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
+            <div
+              className="flex flex-wrap gap-4 items-center text-[9.6pt] mt-4"
+              style={{
+                background: 'rgba(255,255,255,0.8)',
+                borderRadius: '16px',
+                padding: '10px 14px',
+                border: '2px dashed rgba(30,64,175,0.24)',
+                boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
+              }}
+            >
+              {PRE_PRIMARY_HOLISTIC_RATINGS.map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-2 font-semibold">
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      border: '1px solid #1f2937',
+                      borderRadius: '4px',
+                      background: color
+                    }}
+                  />
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <h3 className="text-[12pt] font-bold mb-2">Developmental Skills Checklist</h3>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, rgba(255,244,209,0.94) 0%, rgba(204,238,255,0.94) 100%)',
+                border: '4px solid rgba(30,64,175,0.18)',
+                borderRadius: '20px',
+                padding: '8px',
+                boxShadow: '0 20px 36px rgba(30,64,175,0.18)'
+              }}
+            >
+              <table
+                className="w-full"
+                style={{
+                  borderCollapse: 'collapse',
+                  fontSize: '10pt',
+                  tableLayout: 'fixed',
+                  backgroundColor: '#ffffff',
+                  borderRadius: '12px',
+                  overflow: 'hidden'
+                }}
+              >
+                <tbody>
+                  {NURSERY_SKILL_GRID.map((row, rowIdx) => (
+                    <tr key={`nursery-skill-row-${rowIdx}`}>
+                      {row.map((skill, colIdx) => {
+                        if (!skill.label) {
+                          return (
+                            <td
+                              key={`nursery-skill-${rowIdx}-${colIdx}`}
+                              style={{
+                                border: '2px solid rgba(148,163,184,0.35)',
+                                padding: '8px 6px',
+                                minHeight: '42px',
+                                textAlign: 'center',
+                                verticalAlign: 'middle',
+                                background: '#ffffff'
+                              }}
+                            >
+                              {'\u00A0'}
+                            </td>
+                          );
+                        }
+
+                        const performanceWord = resolveNurseryPerformanceValue(student, skill);
+                        const fallbackColor = '#e2e8f0';
+                        const accentColor = performanceWord ? NURSERY_PERFORMANCE_COLOR_MAP[performanceWord] : fallbackColor;
+                        const hasPerformance = Boolean(performanceWord);
+                        const textColor = getReadableTextColor(accentColor);
+                        const gradientBackground = hasPerformance ? accentColor : '#f8fafc';
+                        const labelColor = hasPerformance
+                          ? (textColor === '#ffffff' ? 'rgba(255,255,255,0.88)' : 'rgba(15,23,42,0.92)')
+                          : '#1f2937';
+                        const cellBorderColor = hasPerformance ? accentColor : 'rgba(148,163,184,0.45)';
+                        const cellShadow = hasPerformance
+                          ? `0 16px 32px ${applyAlphaToHex(accentColor, 0.35)}`
+                          : 'inset 0 0 0 1px rgba(148,163,184,0.25)';
+
+                        return (
+                          <td
+                            key={`nursery-skill-${rowIdx}-${colIdx}`}
+                            style={{
+                              border: `2px solid ${cellBorderColor}`,
+                              padding: '8px 6px',
+                              minHeight: '48px',
+                              textAlign: 'center',
+                              fontWeight: 600,
+                              verticalAlign: 'middle',
+                              background: gradientBackground,
+                              transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
+                              boxShadow: cellShadow
+                            }}
+                          >
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', minHeight: '40px', justifyContent: 'center' }}>
+                              <span style={{ fontSize: '9pt', textTransform: 'uppercase', letterSpacing: '0.02em', fontWeight: 600, color: labelColor }}>
+                                {skill.label}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div
+              className="flex flex-wrap gap-6 items-center text-[9.6pt] mt-4"
+              style={{
+                background: 'rgba(255,255,255,0.8)',
+                borderRadius: '16px',
+                padding: '10px 14px',
+                border: '2px dashed rgba(30,64,175,0.24)',
+                boxShadow: '0 8px 18px rgba(30,64,175,0.12)'
+              }}
+            >
+              {NURSERY_PERFORMANCE_OPTIONS.map(({ label, color }) => (
+                <div key={label} className="flex items-center gap-2 font-semibold">
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      border: '1px solid #1f2937',
+                      borderRadius: '4px',
+                      background: color
+                    }}
+                  />
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div

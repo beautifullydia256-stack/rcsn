@@ -335,6 +335,11 @@ export async function createSnapshotFromExamSet(
       exam_set_name: result.exam_sets?.name || baseExamSet?.name || '',
       exam_set_term: result.exam_sets?.term || baseExamSet?.term || term,
       exam_set_year: result.exam_sets?.year || baseExamSet?.year || year,
+      nursery_skill_performance: (() => {
+        const raw = (result as { nursery_skill_performance?: unknown }).nursery_skill_performance;
+        if (raw == null) return undefined;
+        return typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+      })(),
       frozen_data: {
         student_name: student?.name || '',
         admission_number: student?.admission_number || '',

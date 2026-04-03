@@ -55,9 +55,10 @@ function teacherHasLogin(t: TeacherRow, users: UserEmailRow[]): boolean {
 
 export default function InviteFromRosterPage() {
   const authUser = useAuthStore((s) => s.user);
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdFromStore ?? null);
   const [tab, setTab] = useState<'staff' | 'teachers'>('staff');
   const [q, setQ] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherRow | null>(null);
@@ -66,13 +67,17 @@ export default function InviteFromRosterPage() {
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
+    if (schoolIdFromStore) {
+      setSchoolId(schoolIdFromStore);
+      return;
+    }
     const run = async () => {
       if (!authUser?.id) return;
       const { data } = await supabase.from('users').select('school_id').eq('user_id', authUser.id).single();
       setSchoolId(data?.school_id ?? null);
     };
     run();
-  }, [authUser?.id]);
+  }, [authUser?.id, schoolIdFromStore]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'invite-roster', schoolId],

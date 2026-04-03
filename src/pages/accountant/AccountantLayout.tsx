@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState, useRef } from "react";
+import { Suspense, useEffect, useState, useRef, useCallback } from "react";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
@@ -88,12 +88,17 @@ export default function AccountantLayout() {
 
   const closeSidebar = () => setSidebarOpen(false);
 
-  const openRecordPayment = (initialStudentId?: string) => {
+  const openRecordPayment = useCallback((initialStudentId?: string) => {
     setRecordPaymentInitialStudentId(initialStudentId ?? null);
     setRecordPaymentOpen(true);
-  };
+  }, []);
 
-  const openRecordExpense = () => setRecordExpenseOpen(true);
+  const closeRecordPayment = useCallback(() => {
+    setRecordPaymentOpen(false);
+    setRecordPaymentInitialStudentId(null);
+  }, []);
+
+  const openRecordExpense = useCallback(() => setRecordExpenseOpen(true), []);
 
   const displayName = user?.user_metadata?.name ?? user?.email ?? "Accountant";
   const userInitials = displayName
@@ -213,10 +218,7 @@ export default function AccountantLayout() {
       <style>{ACCOUNTANT_PW_SHELL_CSS}</style>
       <RecordPaymentModal
         open={recordPaymentOpen}
-        onClose={() => {
-          setRecordPaymentOpen(false);
-          setRecordPaymentInitialStudentId(null);
-        }}
+        onClose={closeRecordPayment}
         initialStudentId={recordPaymentInitialStudentId ?? undefined}
       />
       <RecordExpenseModal open={recordExpenseOpen} onClose={() => setRecordExpenseOpen(false)} />

@@ -1,638 +1,144 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import DashboardBackground from '@/src/components/ui/DashboardBackground';
+import { Bell, Check, Inbox } from 'lucide-react';
 
-interface NotificationStats {
-  total: number;
-  pending: number;
-  sent: number;
-  failed: number;
-  byType: {
-    email: number;
-    sms: number;
-    whatsapp: number;
-  };
-  byCategory: {
-    academic: number;
-    attendance: number;
-    financial: number;
-    behavior: number;
-    announcement: number;
-    event: number;
-  };
-}
+type InAppRow = {
+  id: string;
+  title: string;
+  body: string | null;
+  category: string | null;
+  read_at: string | null;
+  created_at: string;
+};
 
 export default function NotificationsPage() {
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [stats, setStats] = useState<NotificationStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [processingLogs, setProcessingLogs] = useState(false);
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<InAppRow[]>([]);
 
-  // Test email (Resend)
-  const [testEmailAddr, setTestEmailAddr] = useState('');
-  const [testSubject, setTestSubject] = useState('PwezaCore test');
-  const [testMessage, setTestMessage] = useState('Hello from PwezaCore – this is a test email.');
-  const [testSending, setTestSending] = useState(false);
-  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  const [waPhone, setWaPhone] = useState('');
-  const [waMessage, setWaMessage] = useState('Hello from PwezaCore – test WhatsApp.');
-  const [waSending, setWaSending] = useState(false);
-  const [waResult, setWaResult] = useState<{ ok: boolean; message: string } | null>(null);
-
-  // Form state for sending announcements
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [category, setCategory] = useState('announcement');
-  const [priority, setPriority] = useState('medium');
-  const [targetClass, setTargetClass] = useState('all');
-  const [classes, setClasses] = useState<string[]>([]);
+  const load = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    const { data, error } = await supabase
+      .from('user_in_app_notifications')
+      .select('id, title, body, category, read_at, created_at')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (!error && data) setItems(data as InAppRow[]);
+    setLoading(false);
+  }, [router]);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    load();
+  }, [load]);
 
-  const loadData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!userData?.school_id) {
-        router.push('/login');
-        return;
-      }
-
-      setSchoolId(userData.school_id);
-
-      // Get distinct classes
-      const { data: classData } = await supabase
-        .from('students')
-        .select('current_class')
-        .eq('school_id', userData.school_id)
-        .eq('status', 'active');
-
-      if (classData) {
-        const uniqueClasses = [...new Set(classData.map(s => s.current_class))].sort();
-        setClasses(uniqueClasses);
-      }
-
-      // Load notification stats
-      await loadStats(userData.school_id);
-    } catch (error) {
-      console.error('Error loading data:', error);
-    } finally {
-      setLoading(false);
-    }
+  const markRead = async (id: string) => {
+    await supabase
+      .from('user_in_app_notifications')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', id);
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read_at: new Date().toISOString() } : n)));
   };
 
-  const loadStats = async (sid: string) => {
-    try {
-      const response = await fetch(`/api/notifications/send?school_id=${sid}`);
-      const data = await response.json();
-      if (data.success) {
-        setStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    }
-  };
-
-  const sendAnnouncement = async () => {
-    if (!schoolId || !title || !message) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    setSending(true);
-    try {
-      // Get target students
-      let studentsQuery = supabase
-        .from('students')
-        .select('student_id')
-        .eq('school_id', schoolId)
-        .eq('status', 'active');
-
-      if (targetClass !== 'all') {
-        studentsQuery = studentsQuery.eq('current_class', targetClass);
-      }
-
-      const { data: students, error: studentsError } = await studentsQuery;
-
-      if (studentsError) throw studentsError;
-
-      if (!students || students.length === 0) {
-        alert('No students found for the selected criteria');
-        setSending(false);
-        return;
-      }
-
-      // Send notification to each student
-      let successCount = 0;
-      for (const student of students) {
-        const { error } = await supabase.rpc('send_notification', {
-          p_school_id: schoolId,
-          p_student_id: student.student_id,
-          p_category: category,
-          p_title: title,
-          p_message: message,
-          p_priority: priority
-        });
-
-        if (!error) successCount++;
-      }
-
-      alert(`Announcement queued successfully! Sent to ${successCount} students.`);
-      
-      // Clear form
-      setTitle('');
-      setMessage('');
-      setCategory('announcement');
-      setPriority('medium');
-      setTargetClass('all');
-
-      // Reload stats
-      await loadStats(schoolId);
-    } catch (error) {
-      console.error('Error sending announcement:', error);
-      alert('Error sending announcement: ' + String(error));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const sendTestEmail = async () => {
-    if (!testEmailAddr.trim() || !testMessage.trim()) {
-      setTestResult({ ok: false, message: 'Enter email address and message.' });
-      return;
-    }
-    setTestSending(true);
-    setTestResult(null);
-    try {
-      const res = await fetch('/api/notifications/test-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: testEmailAddr.trim(),
-          subject: testSubject.trim() || 'PwezaCore test',
-          message: testMessage.trim(),
-        }),
-      });
-
-      const raw = await res.text();
-      let data: any = null;
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch {
-        // Non-JSON response (e.g. HTML error page)
-      }
-
-      if (!res.ok || !data?.success) {
-        setTestResult({
-          ok: false,
-          message: data?.error || `Email test failed (${res.status}). ${raw ? `Server said: ${raw.slice(0, 120)}...` : ''}`,
-        });
-        return;
-      }
-
-      setTestResult({
-        ok: true,
-        message: data?.id
-          ? `Sent. Resend id: ${data.id}. Check inbox and Resend → Logs.`
-          : 'Sent. Check inbox and Resend → Logs.',
-      });
-    } catch (e) {
-      setTestResult({ ok: false, message: String(e) });
-    } finally {
-      setTestSending(false);
-    }
-  };
-
-  const sendTestWhatsApp = async () => {
-    if (!waPhone.trim() || !waMessage.trim()) {
-      setWaResult({ ok: false, message: 'Enter phone number and message.' });
-      return;
-    }
-    setWaSending(true);
-    setWaResult(null);
-    try {
-      const res = await fetch('/api/notifications/test-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: waPhone.trim(), message: waMessage.trim() }),
-      });
-      const raw = await res.text();
-      let data: any = null;
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch {
-        // ignore non-JSON
-      }
-      if (!res.ok || !data?.success) {
-        setWaResult({
-          ok: false,
-          message: data?.error || `Request failed (${res.status}). ${raw ? raw.slice(0, 100) : ''}`,
-        });
-        return;
-      }
-      setWaResult({
-        ok: true,
-        message: `Accepted. Status: ${data.status || 'SENT'}. Check WhatsApp for delivery. Uganda (+256) only.`,
-      });
-    } catch (e) {
-      setWaResult({ ok: false, message: String(e) });
-    } finally {
-      setWaSending(false);
-    }
-  };
-
-  const processPendingNotifications = async () => {
-    setProcessingLogs(true);
-    try {
-      const response = await fetch('/api/notifications/send', {
-        method: 'POST'
-      });
-      const data = await response.json();
-      
-      if (data.success) {
-        alert(`Processed ${data.processed} notifications:\n✅ Sent: ${data.sent}\n❌ Failed: ${data.failed}`);
-        if (schoolId) await loadStats(schoolId);
-      } else {
-        alert('Error processing notifications: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error processing notifications:', error);
-      alert('Error: ' + String(error));
-    } finally {
-      setProcessingLogs(false);
-    }
-  };
-
-  const sendFeeReminders = async () => {
-    if (!schoolId) return;
-    
-    if (!confirm('Send fee balance reminders to all parents with outstanding balances?')) {
-      return;
-    }
-
-    setSending(true);
-    try {
-      const { data, error } = await supabase.rpc('send_fee_balance_reminders');
-      
-      if (error) throw error;
-      
-      alert(`Fee reminders sent successfully! Notifications queued: ${data}`);
-      await loadStats(schoolId);
-    } catch (error) {
-      console.error('Error sending fee reminders:', error);
-      alert('Error: ' + String(error));
-    } finally {
-      setSending(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black flex items-center justify-center">
-        <DashboardBackground />
-        <div className="relative z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white/30 border-t-white"></div>
-          <p className="text-white/80 mt-4">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  const unread = items.filter((n) => !n.read_at);
+  const read = items.filter((n) => n.read_at);
 
   return (
-    <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
-      <DashboardBackground />
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Notifications Management</h1>
-          <p className="text-white/70 mt-2">Send announcements and manage automated notifications</p>
-        </div>
-
-        {/* Test email (Resend) */}
-        <div className="rounded-xl border-2 border-blue-500/40 bg-blue-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
-          <h3 className="text-xl font-semibold text-white mb-1">📧 Send test email</h3>
-          <p className="text-sm text-white/70 mb-5">
-            Sends one message via Resend using RESEND_API_KEY and RESEND_FROM (e.g. PwezaCore &lt;noreply@pwezacore.com&gt;). Check your inbox and Resend → Logs after sending.
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Email address to send to</label>
-              <input
-                type="email"
-                value={testEmailAddr}
-                onChange={(e) => { setTestEmailAddr(e.target.value); setTestResult(null); }}
-                placeholder="you@example.com"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Subject</label>
-              <input
-                type="text"
-                value={testSubject}
-                onChange={(e) => { setTestSubject(e.target.value); setTestResult(null); }}
-                placeholder="PwezaCore test"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Message</label>
-              <textarea
-                value={testMessage}
-                onChange={(e) => { setTestMessage(e.target.value); setTestResult(null); }}
-                placeholder="Type your test message here..."
-                rows={4}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-blue-500 focus:border-blue-400 resize-y"
-              />
-            </div>
-            {testResult && (
-              <div className={`px-4 py-3 rounded-lg ${testResult.ok ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                {testResult.message}
-              </div>
-            )}
-            <button
-              onClick={sendTestEmail}
-              disabled={testSending || !testEmailAddr.trim() || !testMessage.trim()}
-              className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {testSending ? 'Sending...' : 'Send test email'}
-            </button>
+    <DashboardBackground>
+      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/30">
+            <Inbox className="w-7 h-7 text-amber-200" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white">Notification center</h1>
+            <p className="text-white/70 text-sm">
+              New items stay at the top. Open a notification to mark it read.
+            </p>
           </div>
         </div>
 
-        {/* Test WhatsApp */}
-        <div className="rounded-xl border-2 border-green-500/40 bg-green-500/5 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white mb-8">
-          <h3 className="text-xl font-semibold text-white mb-1">💬 Send test WhatsApp</h3>
-          <p className="text-sm text-white/70 mb-5">Uganda (+256) only. Set AFRICASTALKING_WHATSAPP_NUMBER (your WhatsApp business number) in Vercel. Same API key and username as SMS.</p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Phone number</label>
-              <input
-                type="text"
-                value={waPhone}
-                onChange={(e) => { setWaPhone(e.target.value); setWaResult(null); }}
-                placeholder="0712345678 or +256712345678"
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-green-500 focus:border-green-400"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Message</label>
-              <textarea
-                value={waMessage}
-                onChange={(e) => { setWaMessage(e.target.value); setWaResult(null); }}
-                placeholder="Test message..."
-                rows={3}
-                className="w-full px-4 py-2.5 rounded-lg border border-white/20 bg-white/10 text-white placeholder:text-white/50 focus:ring-2 focus:ring-green-500 focus:border-green-400 resize-y"
-              />
-            </div>
-            {waResult && (
-              <div className={`px-4 py-3 rounded-lg ${waResult.ok ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
-                {waResult.message}
-              </div>
-            )}
-            <button
-              onClick={sendTestWhatsApp}
-              disabled={waSending || !waPhone.trim() || !waMessage.trim()}
-              className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {waSending ? 'Sending...' : 'Send test WhatsApp'}
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        {stats && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
-          >
-            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <p className="text-sm font-medium text-white/70">Total Notifications</p>
-              <p className="text-3xl font-bold text-white mt-2">{stats.total}</p>
-            </div>
-            <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <p className="text-sm font-medium text-yellow-300">Pending</p>
-              <p className="text-3xl font-bold text-yellow-400 mt-2">{stats.pending}</p>
-            </div>
-            <div className="rounded-xl border border-green-500/30 bg-green-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <p className="text-sm font-medium text-green-300">Sent</p>
-              <p className="text-3xl font-bold text-green-400 mt-2">{stats.sent}</p>
-            </div>
-            <div className="rounded-xl border border-red-500/30 bg-red-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <p className="text-sm font-medium text-red-300">Failed</p>
-              <p className="text-3xl font-bold text-red-400 mt-2">{stats.failed}</p>
-            </div>
-          </motion.div>
-        )}
-
-        {/* Stats by Type and Category */}
-        {stats && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <h3 className="text-lg font-semibold text-white mb-4">By Type</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">📧 Email</span>
-                  <span className="font-semibold text-white">{stats.byType.email}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">📱 SMS</span>
-                  <span className="font-semibold text-white">{stats.byType.sms}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">💬 WhatsApp</span>
-                  <span className="font-semibold text-white">{stats.byType.whatsapp}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-              <h3 className="text-lg font-semibold text-white mb-4">By Category</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">📚 Academic</span>
-                  <span className="font-semibold text-white">{stats.byCategory.academic}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">✓ Attendance</span>
-                  <span className="font-semibold text-white">{stats.byCategory.attendance}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">💰 Financial</span>
-                  <span className="font-semibold text-white">{stats.byCategory.financial}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">⭐ Behavior</span>
-                  <span className="font-semibold text-white">{stats.byCategory.behavior}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">📢 Announcements</span>
-                  <span className="font-semibold text-white">{stats.byCategory.announcement}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-white/80">📅 Events</span>
-                  <span className="font-semibold text-white">{stats.byCategory.event}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Actions */}
-        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 mb-8 text-white">
-          <h3 className="text-lg font-semibold text-white mb-4">Quick Actions</h3>
-          <div className="flex flex-wrap gap-4">
-            <button
-              onClick={processPendingNotifications}
-              disabled={processingLogs}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors flex items-center space-x-2"
-            >
-              {processingLogs ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Processing...</span>
-                </>
+        {loading ? (
+          <div className="text-white/60">Loading…</div>
+        ) : (
+          <div className="space-y-8">
+            <section>
+              <h2 className="text-sm font-semibold text-white/90 mb-3 flex items-center gap-2">
+                <Bell className="w-4 h-4 text-amber-300" />
+                Unread ({unread.length})
+              </h2>
+              {unread.length === 0 ? (
+                <p className="text-white/50 text-sm">No new notifications.</p>
               ) : (
-                <>
-                  <span>📤</span>
-                  <span>Process Pending Notifications</span>
-                </>
+                <ul className="space-y-2">
+                  {unread.map((n) => (
+                    <motion.li
+                      key={n.id}
+                      layout
+                      className="rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <button
+                        type="button"
+                        className="w-full text-left p-4"
+                        onClick={() => markRead(n.id)}
+                      >
+                        <div className="flex justify-between gap-2">
+                          <span className="font-medium text-white">{n.title}</span>
+                          <span className="text-xs text-white/45 shrink-0">
+                            {new Date(n.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        {n.body ? <p className="text-white/70 text-sm mt-1">{n.body}</p> : null}
+                        {n.category ? (
+                          <span className="inline-block mt-2 text-[10px] uppercase tracking-wide text-amber-200/80 bg-amber-500/15 px-2 py-0.5 rounded">
+                            {n.category}
+                          </span>
+                        ) : null}
+                      </button>
+                    </motion.li>
+                  ))}
+                </ul>
               )}
-            </button>
+            </section>
 
-            <button
-              onClick={sendFeeReminders}
-              disabled={sending}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition-colors flex items-center space-x-2"
-            >
-              <span>💰</span>
-              <span>Send Fee Reminders</span>
-            </button>
-
-            <button
-              onClick={() => router.push('/dashboard/admin')}
-              className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center space-x-2"
-            >
-              <span>←</span>
-              <span>Back to Dashboard</span>
-            </button>
+            <section>
+              <h2 className="text-sm font-semibold text-white/70 mb-3 flex items-center gap-2">
+                <Check className="w-4 h-4 text-white/50" />
+                Read
+              </h2>
+              {read.length === 0 ? (
+                <p className="text-white/40 text-sm">No read notifications yet.</p>
+              ) : (
+                <ul className="space-y-2 opacity-80">
+                  {read.map((n) => (
+                    <li
+                      key={n.id}
+                      className="rounded-xl border border-white/10 bg-black/20 px-4 py-3"
+                    >
+                      <div className="flex justify-between gap-2">
+                        <span className="font-medium text-white/85">{n.title}</span>
+                        <span className="text-xs text-white/40 shrink-0">
+                          {n.read_at ? new Date(n.read_at).toLocaleString() : ''}
+                        </span>
+                      </div>
+                      {n.body ? <p className="text-white/55 text-sm mt-1">{n.body}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           </div>
-        </div>
-
-        {/* Send Announcement Form */}
-        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-          <h3 className="text-lg font-semibold text-white mb-4">Send School Announcement</h3>
-          
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Category</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="announcement" className="bg-slate-900">📢 Announcement</option>
-                  <option value="academic" className="bg-slate-900">📚 Academic</option>
-                  <option value="event" className="bg-slate-900">📅 Event</option>
-                  <option value="attendance" className="bg-slate-900">✓ Attendance</option>
-                  <option value="financial" className="bg-slate-900">💰 Financial</option>
-                  <option value="behavior" className="bg-slate-900">⭐ Behavior</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-white/90 mb-2">Priority</label>
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="low" className="bg-slate-900">Low</option>
-                  <option value="medium" className="bg-slate-900">Medium</option>
-                  <option value="high" className="bg-slate-900">High</option>
-                  <option value="urgent" className="bg-slate-900">Urgent</option>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">Target Class</label>
-              <select
-                value={targetClass}
-                onChange={(e) => setTargetClass(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              >
-                <option value="all" className="bg-slate-900">All Classes</option>
-                {classes.map((cls) => (
-                  <option key={cls} value={cls} className="bg-slate-900">{cls}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g., School Closing Date"
-                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/90 mb-2">Message *</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Enter your announcement message..."
-                rows={6}
-                className="w-full px-3 py-2 rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/60 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <button
-              onClick={sendAnnouncement}
-              disabled={sending || !title || !message}
-              className="w-full px-6 py-3 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg disabled:bg-gray-600/50 disabled:opacity-50 transition-colors font-semibold"
-            >
-              {sending ? 'Sending...' : 'Send Announcement'}
-            </button>
-          </div>
-        </div>
-
-        {/* Info Box */}
-        <div className="mt-8 rounded-xl border border-blue-500/30 bg-blue-500/10 backdrop-blur-md shadow-lg shadow-black/20 p-6 text-white">
-          <h4 className="font-semibold text-blue-300 mb-2">ℹ️ How Notifications Work</h4>
-          <ul className="text-sm text-white/80 space-y-2">
-            <li>• Notifications are automatically triggered when events occur (new reports, absences, payments, etc.)</li>
-            <li>• All notifications are queued and sent based on parent preferences</li>
-            <li>• Click "Process Pending Notifications" to send queued messages via Email/SMS/WhatsApp</li>
-            <li>• Parents can manage their notification preferences in their dashboard</li>
-            <li>• Email/SMS/WhatsApp integrations need to be configured in production</li>
-          </ul>
-        </div>
+        )}
       </div>
-    </div>
+    </DashboardBackground>
   );
 }

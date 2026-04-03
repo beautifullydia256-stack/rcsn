@@ -6,11 +6,14 @@
 import { getTemplateForClass } from '../../templates/primary';
 import { ReportPreview } from './templates/primaryReportTemplates';
 import { calculatePrimaryGrade } from '../../lib/reportUtils';
+import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
 
 type ReportPreviewFromDataProps = {
   reportData: any;
   /** Template key (e.g. 'template4'). If not set, derived from reportData.students[0].current_class via getTemplateForClass. */
   templateKey?: string;
+  prePrimaryReportMode?: 'colour' | 'detailed';
+  detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
 };
 
 const defaultReportTitleSettings = {
@@ -18,7 +21,12 @@ const defaultReportTitleSettings = {
   use_dynamic_term: true,
 };
 
-export function ReportPreviewFromData({ reportData, templateKey }: ReportPreviewFromDataProps) {
+export function ReportPreviewFromData({
+  reportData,
+  templateKey,
+  prePrimaryReportMode = 'colour',
+  detailedObservationItemsByKey,
+}: ReportPreviewFromDataProps) {
   if (!reportData?.students?.[0]) return null;
 
   const raw = reportData.students[0];
@@ -97,11 +105,21 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
           }
           return Array.from(bySubject.values());
         })();
+  const att = raw.attendance as
+    | { presentDays?: number | null; absentDays?: number | null; totalSchoolDays?: number | null; percentage?: number | null }
+    | undefined;
+  const summaryAtt = raw.summary as Record<string, unknown> | undefined;
   const student = {
     ...raw,
     results,
     subjects,
     summary: raw.summary ?? {},
+    attendance: {
+      presentDays: att?.presentDays ?? summaryAtt?.presentDays ?? summaryAtt?.days_present,
+      absentDays: att?.absentDays ?? summaryAtt?.absentDays ?? summaryAtt?.days_absent,
+      totalSchoolDays: att?.totalSchoolDays ?? summaryAtt?.totalSchoolDays ?? summaryAtt?.total_days,
+      percentage: att?.percentage ?? summaryAtt?.attendancePercentage ?? summaryAtt?.attendance_percentage,
+    },
     comments: {
       ...comments,
       head_teacher_text: comments.head_teacher_text ?? comments.headteacher_text ?? '',
@@ -128,6 +146,8 @@ export function ReportPreviewFromData({ reportData, templateKey }: ReportPreview
       currentTermInfo={currentTermInfo}
       examSets={undefined}
       gradeSystem={undefined}
+      prePrimaryReportMode={prePrimaryReportMode}
+      detailedObservationItemsByKey={detailedObservationItemsByKey}
     />
   );
 }

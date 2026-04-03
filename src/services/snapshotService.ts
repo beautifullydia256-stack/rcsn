@@ -41,6 +41,8 @@ export interface SnapshotData {
   fees_expected?: number | null;
   fees_paid?: number | null;
   fees_balance?: number | null;
+  /** Per subject row; pre-primary holistic JSON from exam_results (strand subjects). */
+  nursery_skill_performance?: Record<string, unknown> | null;
   frozen_data?: Record<string, any>;
 }
 

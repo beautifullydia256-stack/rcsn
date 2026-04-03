@@ -40,8 +40,25 @@ async function fetchPermissionsForUser(userId: string, schoolId: string): Promis
 
 export default function PermissionsPage() {
   const authUser = useAuthStore((s) => s.user);
-  const schoolId = useAuthStore((s) => s.schoolId);
+  const schoolIdStore = useAuthStore((s) => s.schoolId);
+  const setSchoolIdStore = useAuthStore((s) => s.setSchoolId);
+  const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdStore ?? null);
   const setPermissions = useAuthStore((s) => s.setPermissions);
+
+  useEffect(() => {
+    if (schoolIdStore) {
+      setSchoolId(schoolIdStore);
+      return;
+    }
+    const run = async () => {
+      if (!authUser?.id) return;
+      const { data } = await supabase.from('users').select('school_id').eq('user_id', authUser.id).single();
+      const sid = data?.school_id ?? null;
+      setSchoolId(sid);
+      if (sid) setSchoolIdStore(sid);
+    };
+    run();
+  }, [authUser?.id, schoolIdStore, setSchoolIdStore]);
   const toast = useToast();
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<string | null>(null);

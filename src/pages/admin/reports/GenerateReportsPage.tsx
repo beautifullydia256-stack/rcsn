@@ -7,6 +7,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
+import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
+import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
@@ -189,6 +191,7 @@ export default function GenerateReportsPage() {
   const [showNoResultsModal, setShowNoResultsModal] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
+  const [prePrimaryReportMode, setPrePrimaryReportMode] = useState<'colour' | 'detailed'>('colour');
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
   const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
     term: number;
@@ -308,6 +311,34 @@ export default function GenerateReportsPage() {
     const t = PRIMARY_TEMPLATES[key as keyof typeof PRIMARY_TEMPLATES];
     return t?.name ?? 'Report For Baby Class';
   }, [selectedClass]);
+
+  const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
+
+  const { data: nurseryObsRows } = useQuery({
+    queryKey: ['nursery-detailed-observation-catalog'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('nursery_detailed_observation_items').select('*');
+      if (error) throw error;
+      return (data ?? []) as NurseryDetailedObservationRow[];
+    },
+    enabled: !!pageData?.schoolId && isPrePrimaryClass,
+    staleTime: STALE_TIME_MS,
+  });
+
+  const detailedObservationItemsByKey = useMemo(() => {
+    if (!nurseryObsRows?.length) return undefined;
+    return Object.fromEntries(nurseryObsRows.map((r) => [r.item_key, r])) as Record<
+      string,
+      NurseryDetailedObservationRow
+    >;
+  }, [nurseryObsRows]);
+
+  const prePrimaryStrandWarningCount = useMemo(() => {
+    if (!isPrePrimaryClass || prePrimaryReportMode !== 'detailed' || previewReports.length === 0) return null;
+    const raw = previewReports[0]?.students?.[0]?.results;
+    const n = countPrePrimaryStrandsWithData((raw ?? []) as { subject?: string; nursery_skill_performance?: unknown }[]);
+    return n < 5 ? n : null;
+  }, [isPrePrimaryClass, prePrimaryReportMode, previewReports]);
 
   const { data: classesForExamSet = [] } = useQuery({
     queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
@@ -805,6 +836,23 @@ export default function GenerateReportsPage() {
                 <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No results for this exam set yet.</p>
               )}
             </div>
+
+            {isPrePrimaryClass && (
+              <div>
+                <label className="block ac-text-secondary text-sm font-medium mb-2">Pre-primary report layout</label>
+                <select
+                  value={prePrimaryReportMode}
+                  onChange={(e) => setPrePrimaryReportMode(e.target.value as 'colour' | 'detailed')}
+                  className="ac-input w-full rounded-lg px-3 py-2 min-h-0 max-w-md"
+                >
+                  <option value="colour">Colour checklist (holistic grid)</option>
+                  <option value="detailed">Detailed comments (observation sentences)</option>
+                </select>
+                <p className="mt-1 text-xs ac-text-muted">
+                  Detailed comments use the same ratings as exam entry. Enter all five learning-area subjects for a complete report.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Student – only when Single Student */}
@@ -907,10 +955,24 @@ export default function GenerateReportsPage() {
                   <span className="ac-text-secondary text-sm">Template: {templateDisplayName}</span>
                 </div>
                 <div className="ac-glass-card p-4 rounded-lg overflow-auto max-h-[80vh] border border-[var(--ac-border)]">
-                  <div className="mx-auto space-y-8 print:bg-white" style={{ width: '210mm', maxWidth: '100%' }}>
+                  {prePrimaryStrandWarningCount != null && (
+                    <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/15 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                      Only {prePrimaryStrandWarningCount} of 5 learning areas have ratings for this exam set. Missing areas
+                      will show &quot;Not recorded for this assessment.&quot; Add ratings under each strand subject in Exam
+                      Results for a complete report.
+                    </div>
+                  )}
+                  <div
+                    className="mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
+                    style={{ width: '210mm', maxWidth: '100%' }}
+                  >
                     {reportsToDisplay.map((report: any, idx: number) => (
                       <div key={report.id || report.report_data?.students?.[0]?.student_id || idx} className="report-student-card">
-                        <ReportPreviewFromData reportData={report.report_data} />
+                        <ReportPreviewFromData
+                          reportData={report.report_data}
+                          prePrimaryReportMode={prePrimaryReportMode}
+                          detailedObservationItemsByKey={detailedObservationItemsByKey}
+                        />
                       </div>
                     ))}
                   </div>

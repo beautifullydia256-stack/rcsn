@@ -128,7 +128,22 @@ export async function POST(request: NextRequest) {
       setting = data;
     }
 
-    // Record appointment in class_teachers table (allows multiple)
+    const { data: existingCt } = await supabase
+      .from('class_teachers')
+      .select('teacher_id')
+      .eq('school_id', school_id)
+      .eq('class_name', class_name)
+      .maybeSingle();
+    if (existingCt && existingCt.teacher_id !== teacher_id) {
+      return NextResponse.json(
+        { error: 'This class already has a class teacher. Un-appoint them first before assigning another.' },
+        { status: 409 }
+      );
+    }
+    if (existingCt?.teacher_id === teacher_id) {
+      return NextResponse.json({ success: true, setting, message: 'Already class teacher for this class.' });
+    }
+
     const { error: linkErr } = await supabase
       .from('class_teachers')
       .insert({ school_id, class_name, teacher_id })

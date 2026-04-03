@@ -40,15 +40,27 @@ export default function TeacherTimetablePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold ac-text-primary">My Timetable</h1>
-        <button
-          type="button"
-          className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
-          onClick={() => navigate('/dashboard/teacher')}
-        >
-          Back
-        </button>
+        <div className="flex gap-2 print:hidden">
+          {hasAny && (
+            <button
+              type="button"
+              className="ac-glass-btn rounded-xl px-3 py-2 text-sm font-medium ac-text-primary border border-[var(--ac-border)]"
+              onClick={() => window.print()}
+              title="Use your browser print dialog and choose Save as PDF"
+            >
+              Print / Save PDF
+            </button>
+          )}
+          <button
+            type="button"
+            className="ac-glass-btn-secondary rounded-xl px-3 py-2 text-sm font-medium ac-text-primary"
+            onClick={() => navigate('/dashboard/teacher')}
+          >
+            Back
+          </button>
+        </div>
       </div>
 
       {isLoading && (

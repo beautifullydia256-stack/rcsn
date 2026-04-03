@@ -36,7 +36,12 @@ export async function POST(request: NextRequest) {
       .eq('user_id', adminUser.id)
       .single();
 
-    const body = await request.json();
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    }
     const { student_id, school_id, name, email, phone, relationship } = body as {
       student_id?: string;
       school_id?: string;
@@ -163,7 +168,9 @@ export async function POST(request: NextRequest) {
       message: existingUser ? 'Parent linked to student.' : 'Parent account created and linked.',
       parent_id: parentUserId,
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[ensure-parent-link]', error);
+    return NextResponse.json({ error: msg || 'Internal error' }, { status: 500 });
   }
 }

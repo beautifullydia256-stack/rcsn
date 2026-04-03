@@ -18,6 +18,9 @@ function withCors(res: NextResponse): NextResponse {
   return res;
 }
 
+/** Vercel: allow long-running invite/create flows */
+export const maxDuration = 60;
+
 /** Handle CORS preflight so browser allows POST from www.pwezacore.com */
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders });

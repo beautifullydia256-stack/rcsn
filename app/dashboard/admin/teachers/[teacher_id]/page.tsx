@@ -21,7 +21,8 @@ export default function TeacherProfilePage() {
   const [assignSubjects, setAssignSubjects] = useState<string[]>([]);
   const [savingAssign, setSavingAssign] = useState(false);
   const [appointing, setAppointing] = useState(false);
-  const [classTeacherOf, setClassTeacherOf] = useState<string | null>(null);
+  /** Class names where this teacher is the assigned class teacher (one row per class in class_teachers). */
+  const [classTeacherOf, setClassTeacherOf] = useState<string[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
   const [allClasses, setAllClasses] = useState<string[]>([]);
   const [showAppointModal, setShowAppointModal] = useState(false);
@@ -61,19 +62,14 @@ export default function TeacherProfilePage() {
           .order('class_name');
         setAssignedLinks((tsub || []) as any);
 
-        // Load class where this teacher is class teacher (from class_teachers table)
-        const currentYear = new Date().getFullYear();
-        const currentTerm = 3; // current term
+        // Class teacher assignments (global per class for this school — no hardcoded term)
         const { data: ctForTeacher } = await supabase
           .from('class_teachers')
           .select('class_name')
           .eq('school_id', teacher.school_id)
           .eq('teacher_id', teacher.teacher_id)
-          .eq('year', currentYear)
-          .eq('term', currentTerm)
-          .limit(1)
-          .maybeSingle();
-        setClassTeacherOf(ctForTeacher?.class_name || null);
+          .order('class_name');
+        setClassTeacherOf((ctForTeacher || []).map((r) => r.class_name).filter(Boolean));
 
         // Load all classes from students table
         const { data: students } = await supabase
@@ -90,15 +86,12 @@ export default function TeacherProfilePage() {
         );
         setAllClasses(mergedClasses);
 
-        // Load all class teachers to find available classes (from class_teachers table)
         const { data: classTeachers } = await supabase
           .from('class_teachers')
           .select('class_name')
-          .eq('school_id', teacher.school_id)
-          .eq('year', currentYear)
-          .eq('term', currentTerm);
-        const classesWithTeachers = new Set((classTeachers || []).map(ct => ct.class_name));
-        const available = mergedClasses.filter(c => !classesWithTeachers.has(c));
+          .eq('school_id', teacher.school_id);
+        const classesWithTeachers = new Set((classTeachers || []).map((ct) => ct.class_name));
+        const available = mergedClasses.filter((c) => !classesWithTeachers.has(c));
         setAvailableClasses(available);
       }
       setLoading(false);
@@ -201,8 +194,8 @@ export default function TeacherProfilePage() {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || 'Failed to appoint class teacher');
       
-      setClassTeacherOf(selectedClassToAppoint);
-      setAvailableClasses(prev => prev.filter(c => c !== selectedClassToAppoint));
+      setClassTeacherOf((prev) => [...prev, selectedClassToAppoint].sort());
+      setAvailableClasses((prev) => prev.filter((c) => c !== selectedClassToAppoint));
       setShowAppointModal(false);
       setSelectedClassToAppoint('');
       alert(`Successfully appointed as class teacher for ${selectedClassToAppoint}`);
@@ -214,8 +207,10 @@ export default function TeacherProfilePage() {
   };
 
   const unappointAsClassTeacher = async () => {
-    if (!row?.teacher_id || !classTeacherOf || !schoolId) return;
-    if (!confirm(`Are you sure you want to un-appoint this teacher from ${classTeacherOf}?`)) return;
+    if (!row?.teacher_id || classTeacherOf.length === 0 || !schoolId) return;
+    const toRemove = classTeacherOf.length === 1 ? classTeacherOf[0] : window.prompt(`Un-appoint from which class? (${classTeacherOf.join(', ')})`) || '';
+    if (!toRemove || !classTeacherOf.includes(toRemove)) return;
+    if (!confirm(`Are you sure you want to un-appoint this teacher from ${toRemove}?`)) return;
     
     setAppointing(true);
     try {
@@ -223,7 +218,7 @@ export default function TeacherProfilePage() {
       const res = await fetch('/api/class-teachers', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ class_name: classTeacherOf, teacher_id: row.teacher_id })
+        body: JSON.stringify({ class_name: toRemove, teacher_id: row.teacher_id })
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -231,10 +226,9 @@ export default function TeacherProfilePage() {
         throw new Error(msg);
       }
 
-      const previousClass = classTeacherOf;
-      setClassTeacherOf(null);
-      setAvailableClasses(prev => [...prev, previousClass].sort());
-      alert(`Successfully un-appointed from ${previousClass}`);
+      setClassTeacherOf((prev) => prev.filter((c) => c !== toRemove));
+      setAvailableClasses((prev) => [...prev, toRemove].sort());
+      alert(`Successfully un-appointed from ${toRemove}`);
     } catch (e: any) {
       alert(`Failed to un-appoint: ${e.message}`);
     } finally {
@@ -250,8 +244,10 @@ export default function TeacherProfilePage() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white text-xl">👤</div>
             <h1 className="text-white text-2xl font-semibold">{name || 'Teacher Profile'}</h1>
-            {classTeacherOf && (
-              <span className="ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/40">Class Teacher · {classTeacherOf}</span>
+            {classTeacherOf.length > 0 && (
+              <span className="ml-2 px-2 py-1 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-200 border border-amber-400/40">
+                Class Teacher · {classTeacherOf.join(', ')}
+              </span>
             )}
           </div>
           <div className="flex gap-2">
@@ -268,13 +264,13 @@ export default function TeacherProfilePage() {
                 alert('Password reset successfully.');
               }
             }}>Reset Password</button>
-            {classTeacherOf ? (
+            {classTeacherOf.length > 0 ? (
               <button 
                 className="px-3 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white" 
                 onClick={unappointAsClassTeacher}
                 disabled={appointing}
               >
-                {appointing ? 'Un-appointing...' : `Un-appoint from ${classTeacherOf}`}
+                {appointing ? 'Un-appointing...' : `Un-appoint class teacher${classTeacherOf.length > 1 ? '…' : ` (${classTeacherOf[0]})`}`}
               </button>
             ) : (
               <button 
@@ -282,7 +278,7 @@ export default function TeacherProfilePage() {
                 onClick={() => setShowAppointModal(true)}
                 disabled={availableClasses.length === 0}
               >
-                Appoint as Class Teacher
+                Assign class teacher
               </button>
             )}
           </div>

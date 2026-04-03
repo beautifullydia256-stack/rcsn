@@ -42,6 +42,7 @@ export interface SnapshotRowForPersist {
   exam_set_term?: number;
   exam_set_year?: number;
   frozen_data?: Record<string, unknown>;
+  nursery_skill_performance?: Record<string, unknown>;
 }
 
 export interface BuildReportResult {
@@ -333,6 +334,11 @@ export async function buildReportDataFromScope(
         school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
         report_date: new Date().toISOString().slice(0, 10),
       },
+      nursery_skill_performance: (() => {
+        const raw = (result as { nursery_skill_performance?: unknown }).nursery_skill_performance;
+        if (raw == null) return undefined;
+        return typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {};
+      })(),
     });
   });
 
@@ -415,6 +421,7 @@ function oneReportFromSnapshotRows(
       overall_remark: remark,
       remark,
       final_score: d.marks_obtained,
+      nursery_skill_performance: d.nursery_skill_performance,
     };
   });
 

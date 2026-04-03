@@ -25,6 +25,8 @@ type Props = {
   selectedExamSetId: string;
   existingRows: Array<{ student_id: string; nursery_skill_performance?: unknown }>;
   onRefetch: () => void;
+  /** How many of the five holistic strand subjects have ratings for this student (this exam set). */
+  strandAreasRatedByStudent?: Map<string, number>;
 };
 
 function parseNurseryMap(raw: unknown): Record<string, PrePrimaryHolisticRating> {
@@ -57,6 +59,7 @@ export function PrePrimaryHolisticExamGrid({
   selectedExamSetId,
   existingRows,
   onRefetch,
+  strandAreasRatedByStudent,
 }: Props) {
   const activeStrand = getPrePrimaryHolisticStrandForSubject(subject);
   const [nurseryPerformances, setNurseryPerformances] = useState<
@@ -170,14 +173,20 @@ export function PrePrimaryHolisticExamGrid({
         Pre-primary holistic ratings for <span className="font-semibold">{subject}</span> — choose Very Good, Good,
         Needs Improvement, or Tries for each skill (any exam set).
       </p>
+      <p className="text-xs ac-text-muted">
+        For a complete report across all learning areas, enter ratings under each of the five strand subjects. Per student,
+        the count below shows how many of those five areas already have data for this exam set.
+      </p>
       {students.length === 0 ? (
         <p className="ac-text-muted text-sm">No students in this class.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-          <table className="w-full min-w-[640px] border-collapse ac-text-primary text-sm">
+        <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)] touch-pan-x">
+          <table className="w-full min-w-[min(100%,720px)] border-collapse ac-text-primary text-sm">
             <thead>
               <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-bg-muted)]">
-                <th className="text-left p-2 font-medium min-w-[140px]">Student</th>
+                <th className="text-left p-2 font-medium min-w-[140px] sticky left-0 z-10 bg-[var(--ac-bg-muted)] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                  Student
+                </th>
                 {activeStrand.skills.map((skill) => (
                   <th key={skill.key} className="text-left p-2 font-medium max-w-[10rem]">
                     {skill.label}
@@ -190,11 +199,30 @@ export function PrePrimaryHolisticExamGrid({
                 const performance = nurseryPerformances[stu.student_id] || {};
                 return (
                   <tr key={stu.student_id} className="border-b border-[var(--ac-border)] hover:bg-[var(--ac-bg-muted)]/50">
-                    <td className="p-2 align-top font-medium">
+                    <td className="p-2 align-top font-medium sticky left-0 z-[1] bg-[var(--ac-bg)] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
                       {stu.name}
                       {stu.admission_number && (
                         <span className="block text-xs ac-text-muted mt-0.5">{stu.admission_number}</span>
                       )}
+                      {strandAreasRatedByStudent && (
+                        <span
+                          className={`block text-[10px] mt-0.5 font-medium ${
+                            (strandAreasRatedByStudent.get(stu.student_id) ?? 0) >= 5
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-amber-700 dark:text-amber-300'
+                          }`}
+                        >
+                          {strandAreasRatedByStudent.get(stu.student_id) ?? 0}/5 learning areas (this exam)
+                        </span>
+                      )}
+                      {activeStrand ? (
+                        <span className="block text-[10px] ac-text-muted mt-0.5">
+                          {
+                            activeStrand.skills.filter((s) => (nurseryPerformances[stu.student_id] || {})[s.key]).length
+                          }
+                          /{activeStrand.skills.length} skills (this subject)
+                        </span>
+                      ) : null}
                     </td>
                     {activeStrand.skills.map((skill) => {
                       const skillKey = skill.key;
@@ -225,7 +253,7 @@ export function PrePrimaryHolisticExamGrid({
                                     key={option.label}
                                     type="button"
                                     onClick={() => handleSelect(stu.student_id, skillKey, option.label)}
-                                    className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full shadow-sm transition-transform"
+                                    className="touch-manipulation min-h-[44px] min-w-[44px] px-1.5 py-1 text-[10px] font-semibold rounded-full shadow-sm transition-transform sm:min-h-0 sm:min-w-0"
                                     style={{
                                       background: option.color,
                                       color: btnText,

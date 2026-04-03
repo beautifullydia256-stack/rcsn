@@ -21,9 +21,14 @@ export default function FinancialAnalyticsToolbar({
   return (
     <div className="fa-toolbar print:hidden">
       <div className="fa-toolbar__actions">
-        <button type="button" className="fa-btn fa-btn--secondary" onClick={onPrint}>
+        <button
+          type="button"
+          className="fa-btn fa-btn--secondary"
+          onClick={onPrint}
+          title="Opens print dialog — choose Save as PDF for a colored export"
+        >
           <Printer className="fa-btn__ic" aria-hidden />
-          Print
+          Print / Save PDF
         </button>
         <button
           type="button"

@@ -37,7 +37,7 @@ export async function transformSnapshotToReportFormat(
   // 4. Group data by subject (teacher_comment from remarks when empty - matches snapshot/reportGenerator)
   const effectiveRemark = (d: { teacher_comment?: string; remarks?: string }) =>
     (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
-  const results = studentData.map((d) => {
+  const results = studentData.map((d: SnapshotData) => {
     const remark = effectiveRemark(d);
     return {
       subject: d.subject,
@@ -52,6 +52,7 @@ export async function transformSnapshotToReportFormat(
       remark,
       exam_set_id: snapshot.exam_set_id,
       exam_set_name: d.exam_set_name || snapshot.exam_sets?.name,
+      nursery_skill_performance: d.nursery_skill_performance,
     };
   });
 
@@ -68,12 +69,39 @@ export async function transformSnapshotToReportFormat(
     performanceRemark: firstRecord.division || 'N/A',
   };
 
-  // 6. Get attendance details from frozen data
+  const fd = frozenData as Record<string, unknown>;
+  const presentFromFrozen = fd.present_days ?? fd.days_present ?? fd.attendance_present;
+  const absentFromFrozen = fd.absent_days ?? fd.days_absent ?? fd.attendance_absent;
+  const totalDaysFromFrozen = fd.total_school_days ?? fd.attendance_total_days;
+  let presentDays: number | null =
+    presentFromFrozen != null && presentFromFrozen !== '' ? Number(presentFromFrozen) : null;
+  let absentDays: number | null =
+    absentFromFrozen != null && absentFromFrozen !== '' ? Number(absentFromFrozen) : null;
+  let totalSchoolDays: number | null =
+    totalDaysFromFrozen != null && totalDaysFromFrozen !== '' ? Number(totalDaysFromFrozen) : null;
+  const pct = firstRecord.attendance_percentage;
+  if (
+    totalSchoolDays != null &&
+    totalSchoolDays > 0 &&
+    pct != null &&
+    !Number.isNaN(Number(pct)) &&
+    presentDays == null
+  ) {
+    const p = Math.round((Number(pct) / 100) * totalSchoolDays);
+    presentDays = p;
+    absentDays = Math.max(0, totalSchoolDays - p);
+  }
+  if (presentDays == null && absentDays == null && totalSchoolDays == null && (pct == null || pct === '')) {
+    presentDays = null;
+    absentDays = null;
+    totalSchoolDays = null;
+  }
+
   const attendanceDetails = {
-    presentDays: null, // Will be calculated from attendance_percentage if needed
-    absentDays: null,
-    totalSchoolDays: null,
-    percentage: firstRecord.attendance_percentage || null,
+    presentDays,
+    absentDays,
+    totalSchoolDays,
+    percentage: pct ?? null,
   };
 
   // 7. Build exact report format matching old system
@@ -104,7 +132,6 @@ export async function transformSnapshotToReportFormat(
         admission_number: frozenData.admission_number || '',
         profile_photo: firstRecord.student_photo_url || null,
         results: results,
-        attendance: [], // Not needed - attendance_percentage is in summary
         fees: {
           expected: firstRecord.fees_expected || 0,
           paid: firstRecord.fees_paid || 0,
@@ -115,6 +142,7 @@ export async function transformSnapshotToReportFormat(
           headteacher_text: firstRecord.headteacher_comment || '',
         },
         summary: summary,
+        attendance: attendanceDetails,
       },
     ],
   };

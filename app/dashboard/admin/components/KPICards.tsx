@@ -52,11 +52,13 @@ export default function AdminKPICards() {
                 : t.end_date >= currentTerm.today
           ) || (allTerms && allTerms[0]) || null;
 
+        const termId = currentTermData?.id as string | undefined;
+
         const [
           studentsResult,
           teachersResult,
           attendanceResult,
-          balancesResult,
+          termBalancesResult,
           feesCollectedResult,
         ] = await Promise.all([
           supabase
@@ -71,44 +73,30 @@ export default function AdminKPICards() {
             .eq('school_id', u.school_id)
             .eq('date', currentTerm.today)
             .eq('present', true),
-          supabase
-            .from('students')
-            .select('student_id, expected_fee_amount')
-            .eq('school_id', u.school_id)
-            .eq('status', 'active'),
-          currentTermData
+          termId
+            ? supabase
+                .from('student_balances')
+                .select('balance')
+                .eq('school_id', u.school_id)
+                .eq('term_id', termId)
+            : Promise.resolve({ data: [] as { balance?: number }[] }),
+          termId
             ? supabase
                 .from('student_payments')
                 .select('amount_paid')
                 .eq('school_id', u.school_id)
-                .gte('payment_date', currentTermData.start_date || '1900-01-01')
-                .lte('payment_date', currentTermData.end_date || '2100-12-31')
-            : supabase.from('student_payments').select('amount_paid').eq('school_id', u.school_id),
+                .eq('term_id', termId)
+                .is('reversed_at', null)
+            : Promise.resolve({ data: [] as { amount_paid?: number }[] }),
         ]);
 
-        const studentIds = (balancesResult.data || []).map((s: any) => s.student_id);
-        const { data: payments } = await supabase
-          .from('student_payments')
-          .select('student_id, amount_paid')
-          .in('student_id', studentIds)
-          .eq('school_id', u.school_id);
-
-        const paidByStudent: Record<string, number> = {};
-        (payments || []).forEach((p: any) => {
-          if (studentIds.includes(p.student_id)) {
-            const amt = Number(p.amount_paid || 0);
-            paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
-          }
-        });
-
-        const outstanding = (balancesResult.data || [])
-          .map((s: any) =>
-            Math.max(0, Number(s.expected_fee_amount || 0) - (paidByStudent[s.student_id] || 0))
-          )
-          .reduce((sum: number, balance: number) => sum + balance, 0);
+        const outstanding = (termBalancesResult.data || []).reduce(
+          (sum: number, row: { balance?: number }) => sum + Math.max(0, Number(row.balance ?? 0)),
+          0
+        );
 
         const feesCollected = (feesCollectedResult.data || []).reduce(
-          (sum: number, payment: any) => sum + Number(payment.amount_paid || 0),
+          (sum: number, payment: { amount_paid?: number }) => sum + Number(payment.amount_paid || 0),
           0
         );
 

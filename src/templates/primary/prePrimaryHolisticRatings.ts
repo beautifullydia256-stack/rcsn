@@ -193,3 +193,56 @@ export function isPrePrimaryNurseryClass(className: string | null | undefined): 
     .toLowerCase();
   return t === 'baby class' || t === 'middle class' || t === 'top class';
 }
+
+/** Read one skill grade from a stored nursery_skill_performance JSON object. */
+export function parsePrePrimaryGradeFromPerformanceJson(
+  perf: unknown,
+  skillKey: string
+): PrePrimaryHolisticGradeEnum | null {
+  if (!perf || typeof perf !== 'object' || Array.isArray(perf)) return null;
+  const raw = (perf as Record<string, unknown>)[skillKey];
+  const label = normalizePrePrimaryHolisticRating(raw);
+  if (!label) return null;
+  return prePrimaryHolisticRatingToStoredValue(label);
+}
+
+/**
+ * Merge holistic ratings from all strand subject rows (report results / exam_results shape).
+ * Last write wins if the same key appears twice (should not happen).
+ */
+export function mergePrePrimaryHolisticFromReportResults(
+  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>
+): Partial<Record<string, PrePrimaryHolisticGradeEnum>> {
+  const out: Partial<Record<string, PrePrimaryHolisticGradeEnum>> = {};
+  for (const r of results) {
+    const subj = (r.subject || '').trim();
+    if (!ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS.includes(subj)) continue;
+    const perf = r.nursery_skill_performance;
+    if (!perf || typeof perf !== 'object' || Array.isArray(perf)) continue;
+    for (const rawKey of Object.keys(perf as Record<string, unknown>)) {
+      const canon = canonicalizePrePrimaryHolisticSkillKey(rawKey);
+      if (!canon || !ALL_PRE_PRIMARY_HOLISTIC_SKILL_KEYS.has(canon)) continue;
+      const label = normalizePrePrimaryHolisticRating((perf as Record<string, unknown>)[rawKey]);
+      if (!label) continue;
+      out[canon] = prePrimaryHolisticRatingToStoredValue(label);
+    }
+  }
+  return out;
+}
+
+/** Count how many of the five strand subjects have at least one saved holistic skill. */
+export function countPrePrimaryStrandsWithData(
+  results: Array<{ subject?: string; nursery_skill_performance?: unknown }>
+): number {
+  let n = 0;
+  for (const strand of PRE_PRIMARY_HOLISTIC_STRANDS) {
+    const row = results.find((r) => (r.subject || '').trim() === strand.subject);
+    const perf = row?.nursery_skill_performance;
+    if (!perf || typeof perf !== 'object' || Array.isArray(perf)) continue;
+    const hasSkill = strand.skills.some(
+      (sk) => parsePrePrimaryGradeFromPerformanceJson(perf, sk.key) != null
+    );
+    if (hasSkill) n++;
+  }
+  return n;
+}
