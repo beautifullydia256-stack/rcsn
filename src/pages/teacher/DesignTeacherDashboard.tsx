@@ -1,6 +1,6 @@
 import { useLayoutEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly } from '@/lib/designDashboardHtml';
@@ -224,15 +224,21 @@ export default function DesignTeacherDashboard() {
   }, [classesWithSubjects]);
 
   const dashEnabled = !!schoolId && !!user && !ctxLoading;
+  const classesKey = useMemo(() => [...classNames].sort().join('|'), [classNames]);
 
   const {
     data: dashData,
     isPending: dashPending,
+    isPlaceholderData: dashIsPlaceholder,
     isError: dashError,
     error: dashErr,
     refetch: refetchDash,
   } = useQuery({
-    queryKey: ['teacher', 'design-dashboard', schoolId, teacherId, classNames.join(','), user?.id ?? ''],
+    /**
+     * Stable key: avoids a new cache entry (and full "empty" refetch) when teacherId flips
+     * momentarily. Latest teacherId/classNames always come from the closure in queryFn.
+     */
+    queryKey: ['teacher', 'design-dashboard', schoolId ?? '', user?.id ?? '', classesKey],
     queryFn: () =>
       fetchTeacherDashboardData(
         schoolId!,
@@ -242,10 +248,19 @@ export default function DesignTeacherDashboard() {
         user?.email ?? undefined
       ),
     enabled: dashEnabled,
+    staleTime: 30 * 1000,
     refetchInterval: 45 * 1000,
+    refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
 
-  const showDashboardLoader = ctxLoading || (dashEnabled && dashPending);
+  /** Never swap the whole page for a spinner once we can show data (including stale/previous) */
+  const showDashboardLoader =
+    !!schoolId &&
+    !!user &&
+    !dashData &&
+    !dashIsPlaceholder &&
+    (ctxLoading || (dashEnabled && dashPending));
 
   useDesignDashboardNav(containerRef, navigate, htmlReady);
   useDesignDashboardDarkOnly(htmlReady);
@@ -435,7 +450,7 @@ export default function DesignTeacherDashboard() {
     );
   }
 
-  if (dashError) {
+  if (dashError && !dashData) {
     const msg = dashErr instanceof Error ? dashErr.message : 'Could not load dashboard.';
     return (
       <div className="ac-glass-card mx-auto max-w-md p-8 text-center border border-[var(--ac-border)]">

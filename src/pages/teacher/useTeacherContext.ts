@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { resolveTeacherIdForSchool } from '@/lib/resolveTeacherId';
@@ -58,14 +58,19 @@ export function useTeacherContext(): TeacherContext {
     schoolIdFromStore ??
     (user?.user_metadata?.school_id as string | undefined) ??
     null;
-  const { data, isLoading } = useQuery({
+  const { data, isPending, isPlaceholderData } = useQuery({
     queryKey: ['teacher', 'context', schoolId ?? '', user?.id ?? ''],
     queryFn: () => fetchTeacherContext(schoolId, user ?? null),
     enabled: !!schoolId && !!user,
-    staleTime: 30 * 1000,
-    refetchInterval: 45 * 1000,
+    staleTime: 3 * 60 * 1000,
+    /** Slower background poll so it does not fight the dashboard query */
+    refetchInterval: 2 * 60 * 1000,
     refetchOnWindowFocus: true,
+    placeholderData: keepPreviousData,
   });
+
+  /** True only before the first successful context — not on background refetch */
+  const isLoading = isPending && !data && !isPlaceholderData;
 
   return {
     schoolId: data?.schoolId ?? schoolId,
