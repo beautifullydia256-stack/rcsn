@@ -42,24 +42,22 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
   background:var(--bg);color:var(--t1);
 }
 
-@keyframes pt-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes pt-blink{0%,100%{opacity:1}50%{opacity:.25}}
-.pt-fu{animation:pt-up .38s ease both}
-.pt-d1{animation-delay:.04s}.pt-d2{animation-delay:.08s}.pt-d3{animation-delay:.12s}.pt-d4{animation-delay:.16s}
+/* No entrance / pulse animations — dashboard stays visually still after load */
+.pt-fu,.pt-d1,.pt-d2,.pt-d3,.pt-d4{animation:none}
 
 /* ── CONTENT ── */
 .pw-teacher .pt-content{padding:22px 24px 60px;display:flex;flex-direction:column;gap:18px}
 
 /* ── HEADER ── */
 .pw-teacher .pt-eyebrow{font-size:11px;color:var(--t3);margin-bottom:4px;display:flex;align-items:center;gap:6px}
-.pw-teacher .pt-live{width:6px;height:6px;border-radius:50%;background:var(--indigo);animation:pt-blink 2s infinite;flex-shrink:0}
+.pw-teacher .pt-live{width:6px;height:6px;border-radius:50%;background:var(--indigo);flex-shrink:0}
 .pw-teacher .pt-title{font-family:'Syne',sans-serif;font-weight:800;font-size:25px;letter-spacing:-.3px;color:var(--t1)}
 .pw-teacher .pt-sub{font-size:12.5px;color:var(--t2);margin-top:3px}
 
 /* ── KPI GRID ── */
 .pw-teacher .pt-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
-.pw-teacher .pt-kpi{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:border-color .2s,transform .2s;cursor:default}
-.pw-teacher .pt-kpi:hover{border-color:var(--bh);transform:translateY(-2px)}
+.pw-teacher .pt-kpi{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);padding:18px;position:relative;overflow:hidden;transition:none;cursor:default}
+.pw-teacher .pt-kpi:hover{border-color:var(--bh)}
 .pw-teacher .pt-kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}
 .pw-teacher .pt-kpi.indigo::before{background:linear-gradient(90deg,var(--indigo),var(--sky))}
 .pw-teacher .pt-kpi.teal::before{background:linear-gradient(90deg,var(--teal),var(--sky))}
@@ -78,14 +76,14 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 .pw-teacher .pt-kpi-val{font-family:'Syne',sans-serif;font-weight:700;font-size:26px;letter-spacing:-.5px;color:var(--t1);margin:3px 0 4px;line-height:1.1}
 .pw-teacher .pt-kpi-sub{font-size:11px;color:var(--t3)}
 .pw-teacher .pt-prog{width:100%;height:4px;background:var(--s3);border-radius:99px;overflow:hidden;margin-top:8px}
-.pw-teacher .pt-prog-fill{height:100%;border-radius:99px}
+.pw-teacher .pt-prog-fill{height:100%;border-radius:99px;transition:none}
 
 /* ── CARDS ── */
 .pw-teacher .pt-card{background:var(--s1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
 .pw-teacher .pt-card-hd{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .pw-teacher .pt-card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13.5px;color:var(--t1);display:flex;align-items:center;gap:7px}
-.pw-teacher .pt-card-action{font-size:12px;font-weight:500;color:var(--indigo);cursor:pointer;transition:opacity .18s;text-decoration:none}
-.pw-teacher .pt-card-action:hover{opacity:.6}
+.pw-teacher .pt-card-action{font-size:12px;font-weight:500;color:var(--indigo);cursor:pointer;transition:none;text-decoration:none}
+.pw-teacher .pt-card-action:hover{opacity:.75}
 
 /* ── ROWS ── */
 .pw-teacher .pt-row{display:grid;gap:12px}
@@ -104,14 +102,14 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 .pw-teacher .pt-chip.violet{background:var(--violet-s);color:var(--violet)}
 
 /* ── BUTTONS ── */
-.pw-teacher .pt-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:12.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .18s;border:none;white-space:nowrap}
+.pw-teacher .pt-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 15px;border-radius:var(--rs);font-size:12.5px;font-weight:600;font-family:'DM Sans',sans-serif;cursor:pointer;transition:none;border:none;white-space:nowrap}
 .pw-teacher .pt-btn-primary{background:var(--indigo);color:#fff}
-.pw-teacher .pt-btn-primary:hover{filter:brightness(1.12);transform:translateY(-1px);box-shadow:0 4px 16px var(--indigo-g)}
+.pw-teacher .pt-btn-primary:hover{filter:brightness(1.08)}
 .pw-teacher .pt-btn-ghost{background:var(--s2);color:var(--t2);border:1px solid var(--border)}
 .pw-teacher .pt-btn-ghost:hover{border-color:var(--bh);color:var(--t1)}
 
 /* ── CLASS LIST ── */
-.pw-teacher .pt-class-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-teacher .pt-class-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:none}
 .pw-teacher .pt-class-row:last-child{border-bottom:none}
 .pw-teacher .pt-class-row:hover{background:var(--s2)}
 .pw-teacher .pt-class-av{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
@@ -119,14 +117,14 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 .pw-teacher .pt-class-sub{font-size:11px;color:var(--t3);margin-top:1px}
 
 /* ── ASSIGNMENTS ── */
-.pw-teacher .pt-assign-row{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .14s}
+.pw-teacher .pt-assign-row{display:flex;align-items:center;gap:12px;padding:11px 18px;border-bottom:1px solid var(--border);cursor:pointer;transition:none}
 .pw-teacher .pt-assign-row:last-child{border-bottom:none}
 .pw-teacher .pt-assign-row:hover{background:var(--s2)}
 .pw-teacher .pt-assign-title{font-size:12.5px;font-weight:600;color:var(--t1)}
 .pw-teacher .pt-assign-sub{font-size:11px;color:var(--t3);margin-top:1px}
 
 /* ── SCHEDULE ── */
-.pw-teacher .pt-sched-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .14s;cursor:pointer}
+.pw-teacher .pt-sched-row{display:flex;align-items:center;gap:12px;padding:10px 18px;border-bottom:1px solid var(--border);transition:none;cursor:pointer}
 .pw-teacher .pt-sched-row:last-child{border-bottom:none}
 .pw-teacher .pt-sched-row:hover{background:var(--s2)}
 .pw-teacher .pt-sched-row.now{background:rgba(79,142,247,0.06);border-left:2px solid var(--indigo)}
@@ -138,7 +136,7 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
 .pw-teacher .pt-sched-meta{font-size:11px;color:var(--t3);margin-top:1px}
 
 /* ── ACTIVITY ── */
-.pw-teacher .pt-act-row{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);transition:background .14s}
+.pw-teacher .pt-act-row{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--border);transition:none}
 .pw-teacher .pt-act-row:last-child{border-bottom:none}
 .pw-teacher .pt-act-row:hover{background:var(--s2)}
 .pw-teacher .pt-act-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px}
@@ -198,15 +196,29 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
     </div>
   </div>
 
-  <!-- AI BANNER -->
-  <div class="pt-ai-banner pt-fu pt-d1">
-    <div class="pt-ai-glow"></div>
-    <div style="width:46px;height:46px;border-radius:12px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🤖</div>
-    <div style="flex:1;position:relative;z-index:1">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--t1)">AI Lesson Planner</div>
-      <div style="font-size:12px;color:var(--t2);margin-top:2px">Generate lesson plans, quizzes, rubrics, and study materials in seconds.</div>
+  <!-- QUICK ACTIONS (first — primary shortcuts) -->
+  <div class="pt-fu pt-d1">
+    <div class="pt-card">
+      <div class="pt-card-hd"><span class="pt-card-title">⚡ Quick Actions</span></div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.18);cursor:pointer;" data-nav="/dashboard/teacher/attendance" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='rgba(79,142,247,0.18)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:var(--indigo-s);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>
+          <span style="font-size:11px;font-weight:600;color:var(--indigo);text-align:center">Take Attendance</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;" data-nav="/dashboard/teacher/assignments" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📝</div>
+          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">New Assignment</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;" data-nav="/dashboard/teacher/exam-results" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📊</div>
+          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Record Marks</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;" data-nav="/dashboard/chat" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">💬</div>
+          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Message Parents</span>
+        </div>
+      </div>
     </div>
-    <button class="pt-btn pt-btn-primary" data-nav="/dashboard/teacher/ai-planner">✨ Open AI Planner</button>
   </div>
 
   <!-- CLASSES + SCHEDULE -->
@@ -248,29 +260,15 @@ html.light .pw-teacher,html[data-theme=light] .pw-teacher{
     </div>
   </div>
 
-  <!-- QUICK ACTIONS -->
-  <div class="pt-fu pt-d4">
-    <div class="pt-card">
-      <div class="pt-card-hd"><span class="pt-card-title">⚡ Quick Actions</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:14px 18px">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.18);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/attendance" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='rgba(79,142,247,0.18)'">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--indigo-s);display:flex;align-items:center;justify-content:center;font-size:17px">📋</div>
-          <span style="font-size:11px;font-weight:600;color:var(--indigo);text-align:center">Take Attendance</span>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/assignments" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📝</div>
-          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">New Assignment</span>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/teacher/exam-results" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">📊</div>
-          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Record Marks</span>
-        </div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:7px;padding:13px 8px;border-radius:10px;background:var(--s2);border:1px solid var(--border);cursor:pointer;transition:all .18s" data-nav="/dashboard/chat" onmouseover="this.style.borderColor='var(--indigo)'" onmouseout="this.style.borderColor='var(--border)'">
-          <div style="width:34px;height:34px;border-radius:9px;background:var(--s3);display:flex;align-items:center;justify-content:center;font-size:17px">💬</div>
-          <span style="font-size:11px;font-weight:600;color:var(--t2);text-align:center">Message Parents</span>
-        </div>
-      </div>
+  <!-- AI LESSON PLANNER (last — below quick actions and main dashboard cards) -->
+  <div class="pt-ai-banner pt-fu pt-d4">
+    <div class="pt-ai-glow"></div>
+    <div style="width:46px;height:46px;border-radius:12px;background:var(--indigo-s);border:1px solid rgba(79,142,247,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🤖</div>
+    <div style="flex:1;position:relative;z-index:1">
+      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--t1)">AI Lesson Planner</div>
+      <div style="font-size:12px;color:var(--t2);margin-top:2px">Generate lesson plans, quizzes, rubrics, and study materials in seconds.</div>
     </div>
+    <button class="pt-btn pt-btn-primary" data-nav="/dashboard/teacher/ai-planner">✨ Open AI Planner</button>
   </div>
 
 </div>

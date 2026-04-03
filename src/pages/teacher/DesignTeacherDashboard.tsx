@@ -414,7 +414,6 @@ export default function DesignTeacherDashboard() {
 
   const {
     data: dashData,
-    dataUpdatedAt,
     isPending: dashPending,
     isPlaceholderData: dashIsPlaceholder,
     isError: dashError,
@@ -431,10 +430,10 @@ export default function DesignTeacherDashboard() {
         user?.email ?? undefined
       ),
     enabled: dashEnabled,
-    staleTime: 30 * 1000,
+    staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchInterval: 45 * 1000,
-    refetchOnWindowFocus: true,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
     placeholderData: keepPreviousData,
   });
 
@@ -475,15 +474,7 @@ export default function DesignTeacherDashboard() {
       shellApplied.current = true;
     }
     applyTeacherDashboardPaint(el, effectiveDash, classNames, teacherId, subjectsByClass);
-  }, [
-    htmlReady,
-    schoolId,
-    effectiveDash,
-    dataUpdatedAt,
-    classNames,
-    subjectsByClass,
-    teacherId,
-  ]);
+  }, [htmlReady, schoolId, effectiveDash, classNames, subjectsByClass, teacherId]);
 
   if (!schoolId || !user) {
     return null;
@@ -492,10 +483,7 @@ export default function DesignTeacherDashboard() {
   if (showDashboardLoader) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
-          <p className="ac-text-secondary">Loading dashboard...</p>
-        </div>
+        <p className="ac-text-secondary text-sm">Loading dashboard…</p>
       </div>
     );
   }

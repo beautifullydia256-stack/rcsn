@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
-import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
 export function AdminKpis() {
@@ -122,26 +121,18 @@ export function AdminKpis() {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-      {cards.map((c, i) => (
-        <motion.button
+      {cards.map((c) => (
+        <button
           type="button"
           key={c.label}
           onClick={() => c.href && router.push(c.href)}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: i * 0.05 }}
-          whileHover={{ scale: 1.03 }}
-          className={`text-left rounded-xl border border-white/10 bg-gradient-to-br ${c.accent} bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20 transition-transform ${c.href ? 'hover:ring-1 hover:ring-white/20 cursor-pointer' : ''}`}
+          className={`text-left rounded-xl border border-white/10 bg-gradient-to-br ${c.accent} bg-white/10 backdrop-blur-md p-4 shadow-lg shadow-black/20 ${c.href ? 'hover:ring-1 hover:ring-white/20 cursor-pointer' : ''}`}
         >
           <div className="text-xs text-white/80">{c.label}</div>
           <div className="text-2xl font-semibold mt-1 text-white">
-            {loading ? (
-              <div className="animate-pulse bg-white/20 rounded h-6 w-16"></div>
-            ) : (
-              c.value
-            )}
+            {loading ? <span className="text-white/50">…</span> : c.value}
           </div>
-        </motion.button>
+        </button>
       ))}
     </div>
   );
