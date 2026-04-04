@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 
 /** Serializable KPI payload for the admin design dashboard HTML shell (applied via DOM). */
 export type AdminDesignDashboardKpis = {
@@ -23,17 +24,7 @@ export type AdminDesignDashboardKpis = {
 export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<AdminDesignDashboardKpis> {
   const todayIso = new Date().toISOString().slice(0, 10);
 
-  const { data: terms } = await supabase
-    .from('school_terms')
-    .select('id, start_date, end_date')
-    .eq('school_id', schoolId)
-    .order('year', { ascending: false })
-    .order('term', { ascending: false });
-
-  const currentTerm =
-    (terms || []).find((t: { start_date?: string; end_date?: string }) =>
-      t.start_date ? t.start_date <= todayIso && t.end_date! >= todayIso : t.end_date! >= todayIso
-    ) || terms?.[0] || null;
+  const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
 
   const termId = currentTerm?.id ?? null;
 

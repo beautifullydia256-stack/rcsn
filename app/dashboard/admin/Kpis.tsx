@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { resolveCurrentSchoolTerm } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 
 export function AdminKpis() {
@@ -24,19 +25,7 @@ export function AdminKpis() {
         const { data: u } = await supabase.from("users").select("school_id").eq("user_id", user.id).single();
         if (!u?.school_id) return;
 
-        // Get current term - optimized query
-        const { data: allTerms } = await supabase
-          .from('school_terms')
-          .select('id, start_date, end_date, year, term')
-          .eq('school_id', u.school_id)
-          .order('year', { ascending: false })
-          .order('term', { ascending: false });
-        
-        const currentTermData = (allTerms || []).find((t: any) => 
-          t.start_date ? 
-            (t.start_date <= currentTerm.today && t.end_date >= currentTerm.today) : 
-            (t.end_date >= currentTerm.today)
-        ) || (allTerms && allTerms[0]) || null;
+        const currentTermData = await resolveCurrentSchoolTerm(supabase, u.school_id, currentTerm.today);
 
         // Parallel counts; finance KPIs use the same ledger as Outstanding (student_balances / term_id).
         const [studentsResult, teachersResult, attendanceResult] = await Promise.all([

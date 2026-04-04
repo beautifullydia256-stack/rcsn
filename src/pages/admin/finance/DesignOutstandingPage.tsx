@@ -4,6 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
+import { loadOutstandingBalanceAggByStudent } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
@@ -96,19 +97,18 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
   if (!data?.school_id) return { rows: [], clearedCount: 0 };
   const schoolId = data.school_id as string;
 
-  const { data: studs } = await supabase
-    .from('students')
-    .select('student_id,name,current_class,status,expected_fee_amount')
-    .eq('school_id', schoolId)
-    .eq('status', 'active');
-  const studentIds = (studs || []).map((s: { student_id: string }) => s.student_id);
+  const balanceByStudent = await loadOutstandingBalanceAggByStudent(supabase, schoolId);
 
-  const [paysRes, parentsRes] = await Promise.all([
-    supabase.from('student_payments').select('student_id, amount_paid').eq('school_id', schoolId),
+  const [studsRes, parentsRes] = await Promise.all([
+    supabase
+      .from('students')
+      .select('student_id,name,current_class,status')
+      .eq('school_id', schoolId)
+      .eq('status', 'active'),
     supabase.from('parents').select('student_id,name,email,phone,parent_id').eq('school_id', schoolId),
   ]);
 
-  const pays = paysRes.data || [];
+  const studs = studsRes.data || [];
   const parents = parentsRes.data || [];
   const parentByStudent = new Map<string, { name?: string; email?: string; phone?: string; parent_id?: string }>();
   for (const p of parents) {
@@ -116,19 +116,13 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
     if (row.student_id) parentByStudent.set(row.student_id, row);
   }
 
-  const paidByStudent: Record<string, number> = {};
-  for (const p of pays) {
-    const sid = (p as { student_id: string }).student_id;
-    if (!studentIds.includes(sid)) continue;
-    paidByStudent[sid] = (paidByStudent[sid] || 0) + Number((p as { amount_paid?: number }).amount_paid || 0);
-  }
-
   const rows: OutstandingRow[] = (studs || []).map((s: Record<string, unknown>) => {
     const sid = s.student_id as string;
     const parent = parentByStudent.get(sid);
-    const expected = Number(s.expected_fee_amount ?? 0);
-    const paid = paidByStudent[sid] || 0;
-    const balance = Math.max(0, expected - paid);
+    const agg = balanceByStudent.get(sid);
+    const expected = Number(agg?.total_fees ?? 0);
+    const paid = Number(agg?.total_paid ?? 0);
+    const balance = Number(agg?.balance ?? 0);
     const pct = expected > 0 ? Math.round((paid / expected) * 100) : 0;
     return {
       student_id: sid,
@@ -148,10 +142,8 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
   let clearedCount = 0;
   for (const s of studs || []) {
     const sid = (s as { student_id: string }).student_id;
-    const exp = Number((s as { expected_fee_amount?: number }).expected_fee_amount ?? 0);
-    const paid = paidByStudent[sid] || 0;
-    const balance = Math.max(0, exp - paid);
-    if (balance <= 0) clearedCount += 1;
+    const bal = balanceByStudent.get(sid)?.balance ?? 0;
+    if (bal <= 0) clearedCount += 1;
   }
 
   return {

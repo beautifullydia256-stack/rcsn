@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { loadOutstandingBalanceAggByStudent } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -31,22 +32,14 @@ export default function OutstandingBalancesPage() {
       if (!data?.school_id) return router.push("/login");
       setSchoolId(data.school_id);
 
-      // Fetch active students
+      const balanceByStudent = await loadOutstandingBalanceAggByStudent(supabase, data.school_id);
+
       const { data: studs } = await supabase
         .from("students")
-        .select("student_id,name,current_class,status,expected_fee_amount")
+        .select("student_id,name,current_class,status")
         .eq("school_id", data.school_id)
         .eq("status", "active");
 
-      const studentIds = (studs || []).map((s: any) => s.student_id);
-
-      // Aggregate payments by student (approved only for tuition)
-      const { data: pays } = await supabase
-        .from("student_payments")
-        .select("student_id, amount_paid, payment_date, payment_method")
-        .eq("school_id", data.school_id);
-
-      // Parents map
       const { data: parents } = await supabase
         .from("parents")
         .select("student_id,name,email")
@@ -54,15 +47,10 @@ export default function OutstandingBalancesPage() {
 
       const parentByStudent = new Map((parents || []).map((p: any) => [p.student_id, { name: p.name, email: p.email }]));
 
-      const paidByStudent: Record<string, number> = {};
-      const pendingByStudent: Record<string, number> = {};
-      (pays || []).forEach((p: any) => {
-        if (!studentIds.includes(p.student_id)) return;
-        const amt = Number(p.amount_paid || 0);
-        paidByStudent[p.student_id] = (paidByStudent[p.student_id] || 0) + amt;
-      });
-
       const computed: Row[] = (studs || []).map((s: any) => {
+        const agg = balanceByStudent.get(s.student_id);
+        const balance = agg?.balance ?? 0;
+        const paid = agg?.total_paid ?? 0;
         const parent = parentByStudent.get(s.student_id) || {};
         return {
           student_id: s.student_id,
@@ -70,13 +58,13 @@ export default function OutstandingBalancesPage() {
           current_class: s.current_class,
           parent_name: (parent as any).name,
           parent_email: (parent as any).email,
-          amount_paid: paidByStudent[s.student_id] || 0,
-          balance: Math.max(0, (Number(s.expected_fee_amount || 0)) - (paidByStudent[s.student_id] || 0)),
-          has_pending: (Number(s.expected_fee_amount || 0)) > (paidByStudent[s.student_id] || 0),
+          amount_paid: paid,
+          balance,
+          has_pending: balance > 0,
         };
       });
 
-      setRows(computed.filter(r => r.has_pending));
+      setRows(computed.filter((r) => r.has_pending));
       setLoading(false);
     };
     run();
@@ -97,8 +85,11 @@ export default function OutstandingBalancesPage() {
     <div className="min-h-screen relative bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-indigo-700 via-slate-900 to-black">
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-black/40" />
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-white text-xl font-semibold">Outstanding Balances</h1>
+        <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-white text-xl font-semibold">Outstanding Balances</h1>
+            <p className="text-white/60 text-sm mt-1">Same term-scoped ledger as the admin dashboard finance cards.</p>
+          </div>
           <button className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={() => router.push('/dashboard/admin')}>Back to Dashboard</button>
         </div>
 
@@ -121,9 +112,9 @@ export default function OutstandingBalancesPage() {
             </thead>
             <tbody className="[&>tr:nth-child(even)]:bg-white/5">
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-white/80">Loading...</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-white/80">Loading...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-white/80">No pending balances found.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-white/80">No pending balances found.</td></tr>
               ) : (
                 filtered.map(r => {
                   const total = r.amount_paid + r.balance;
