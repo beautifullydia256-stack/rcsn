@@ -92,6 +92,29 @@ function getBearerToken(req) {
   }
 }
 
+/** Same idea as create-user-account.js normalizeManagerRole + accountant (matches DB RPC intent). */
+function normalizeStaffRole(role) {
+  return String(role ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
+const STUDENT_MANAGE_ROLES = ['admin', 'owner', 'head_teacher', 'accountant'];
+
+async function callerCanManageStudentsForSchool(supabaseAdmin, adminUserId, schoolId, adminRow) {
+  const key = normalizeStaffRole(adminRow.role);
+  if (STUDENT_MANAGE_ROLES.includes(key)) return true;
+  const { data: perm } = await supabaseAdmin
+    .from('user_school_permissions')
+    .select('id')
+    .eq('user_id', adminUserId)
+    .eq('school_id', schoolId)
+    .eq('permission_key', 'students.manage')
+    .maybeSingle();
+  return !!perm;
+}
+
 module.exports = async function handler(req, res) {
   const origin = resolveCorsOrigin(req);
   const cors = {
@@ -208,13 +231,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data: canManage, error: rpcErr } = await supabase.rpc('current_user_can_manage_students');
-    if (rpcErr || !canManage) {
+    const canManage = await callerCanManageStudentsForSchool(
+      supabaseAdmin,
+      adminUser.id,
+      school_id,
+      adminRow
+    );
+    if (!canManage) {
       applyCors();
       res.status(403).json({
         error:
-          rpcErr?.message ||
-          'You do not have permission to link parents for students. Ensure your role allows student management.',
+          'You do not have permission to link parents for students. Your role must be admin, owner, head teacher, or accountant, or you need the students.manage permission for this school.',
       });
       return;
     }

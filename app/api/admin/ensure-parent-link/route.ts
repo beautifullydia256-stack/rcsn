@@ -6,6 +6,33 @@ import { isValidRealEmail } from '@/lib/realEmail';
 
 export const runtime = 'nodejs';
 
+function normalizeStaffRole(role: unknown): string {
+  return String(role ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '_');
+}
+
+const STUDENT_MANAGE_ROLES = ['admin', 'owner', 'head_teacher', 'accountant'];
+
+async function callerCanManageStudentsForSchool(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  adminUserId: string,
+  schoolId: string,
+  adminRow: { role?: string | null }
+): Promise<boolean> {
+  const key = normalizeStaffRole(adminRow.role);
+  if (STUDENT_MANAGE_ROLES.includes(key)) return true;
+  const { data: perm } = await supabaseAdmin
+    .from('user_school_permissions')
+    .select('id')
+    .eq('user_id', adminUserId)
+    .eq('school_id', schoolId)
+    .eq('permission_key', 'students.manage')
+    .maybeSingle();
+  return !!perm;
+}
+
 /**
  * After enrolling a student with guardian info: find existing parent user by email (or create one)
  * and link them to the student via parents table (parent_id = auth user id).
@@ -110,13 +137,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: canManage, error: rpcErr } = await supabase.rpc('current_user_can_manage_students');
-    if (rpcErr || !canManage) {
+    const canManage = await callerCanManageStudentsForSchool(
+      supabaseAdmin,
+      adminUser.id,
+      String(school_id),
+      adminRow
+    );
+    if (!canManage) {
       return NextResponse.json(
         {
           error:
-            rpcErr?.message ||
-            'You do not have permission to link parents for students. Ensure your role is admin/owner/head_teacher/accountant or you have students.manage permission.',
+            'You do not have permission to link parents for students. Your role must be admin, owner, head teacher, or accountant, or you need the students.manage permission for this school.',
         },
         { status: 403 }
       );
