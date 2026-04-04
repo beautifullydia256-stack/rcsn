@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
-import { loadOutstandingBalanceAggByStudent } from "@/lib/adminFinanceTerm";
+import { loadOutstandingBalanceAggByStudentAllTerms } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -32,13 +32,19 @@ export default function OutstandingBalancesPage() {
       if (!data?.school_id) return router.push("/login");
       setSchoolId(data.school_id);
 
-      const balanceByStudent = await loadOutstandingBalanceAggByStudent(supabase, data.school_id);
+      const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, data.school_id);
+      const owingIds = [...balanceByStudent.entries()]
+        .filter(([, a]) => a.balance > 0)
+        .map(([id]) => id);
 
-      const { data: studs } = await supabase
-        .from("students")
-        .select("student_id,name,current_class,status")
-        .eq("school_id", data.school_id)
-        .eq("status", "active");
+      const { data: studs } =
+        owingIds.length > 0
+          ? await supabase
+              .from("students")
+              .select("student_id,name,current_class,status")
+              .eq("school_id", data.school_id)
+              .in("student_id", owingIds)
+          : { data: [] as { student_id: string; name: string; current_class: string; status?: string }[] };
 
       const { data: parents } = await supabase
         .from("parents")
@@ -46,25 +52,32 @@ export default function OutstandingBalancesPage() {
         .eq("school_id", data.school_id);
 
       const parentByStudent = new Map((parents || []).map((p: any) => [p.student_id, { name: p.name, email: p.email }]));
+      const studById = new Map((studs || []).map((s: any) => [s.student_id, s]));
 
-      const computed: Row[] = (studs || []).map((s: any) => {
-        const agg = balanceByStudent.get(s.student_id);
+      const computed: Row[] = owingIds.map((sid) => {
+        const s = studById.get(sid) as { name?: string; current_class?: string; status?: string } | undefined;
+        const agg = balanceByStudent.get(sid);
         const balance = agg?.balance ?? 0;
         const paid = agg?.total_paid ?? 0;
-        const parent = parentByStudent.get(s.student_id) || {};
+        const parent = parentByStudent.get(sid) || {};
+        const status = s?.status || "";
+        const inactive = status && status !== "active";
+        const displayClass = s
+          ? [s.current_class || "—", inactive ? `· ${status}` : ""].filter(Boolean).join(" ")
+          : "—";
         return {
-          student_id: s.student_id,
-          student_name: s.name,
-          current_class: s.current_class,
+          student_id: sid,
+          student_name: s?.name ?? "Student (not on current roster)",
+          current_class: displayClass,
           parent_name: (parent as any).name,
           parent_email: (parent as any).email,
           amount_paid: paid,
           balance,
-          has_pending: balance > 0,
+          has_pending: true,
         };
       });
 
-      setRows(computed.filter((r) => r.has_pending));
+      setRows(computed);
       setLoading(false);
     };
     run();
@@ -88,7 +101,7 @@ export default function OutstandingBalancesPage() {
         <div className="mb-4 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-white text-xl font-semibold">Outstanding Balances</h1>
-            <p className="text-white/60 text-sm mt-1">Same term-scoped ledger as the admin dashboard finance cards.</p>
+            <p className="text-white/60 text-sm mt-1">All terms combined — includes inactive or former students with unpaid balances.</p>
           </div>
           <button className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20" onClick={() => router.push('/dashboard/admin')}>Back to Dashboard</button>
         </div>

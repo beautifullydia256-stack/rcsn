@@ -4,7 +4,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
-import { loadOutstandingBalanceAggByStudent } from '@/lib/adminFinanceTerm';
+import { loadOutstandingBalanceAggByStudentAllTerms } from '@/lib/adminFinanceTerm';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
@@ -97,18 +97,24 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
   if (!data?.school_id) return { rows: [], clearedCount: 0 };
   const schoolId = data.school_id as string;
 
-  const balanceByStudent = await loadOutstandingBalanceAggByStudent(supabase, schoolId);
+  const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, schoolId);
 
-  const [studsRes, parentsRes] = await Promise.all([
-    supabase
-      .from('students')
-      .select('student_id,name,current_class,status')
-      .eq('school_id', schoolId)
-      .eq('status', 'active'),
+  const owingIds = [...balanceByStudent.entries()]
+    .filter(([, a]) => a.balance > 0)
+    .map(([id]) => id);
+
+  const [studsRes, parentsRes, rosterRes] = await Promise.all([
+    owingIds.length
+      ? supabase
+          .from('students')
+          .select('student_id,name,current_class,status')
+          .eq('school_id', schoolId)
+          .in('student_id', owingIds)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     supabase.from('parents').select('student_id,name,email,phone,parent_id').eq('school_id', schoolId),
+    supabase.from('students').select('student_id').eq('school_id', schoolId),
   ]);
 
-  const studs = studsRes.data || [];
   const parents = parentsRes.data || [];
   const parentByStudent = new Map<string, { name?: string; email?: string; phone?: string; parent_id?: string }>();
   for (const p of parents) {
@@ -116,18 +122,28 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
     if (row.student_id) parentByStudent.set(row.student_id, row);
   }
 
-  const rows: OutstandingRow[] = (studs || []).map((s: Record<string, unknown>) => {
-    const sid = s.student_id as string;
+  const studById = new Map(
+    (studsRes.data || []).map((s) => [String((s as { student_id: string }).student_id), s as Record<string, unknown>])
+  );
+
+  const rows: OutstandingRow[] = owingIds.map((sid) => {
+    const s = studById.get(sid);
     const parent = parentByStudent.get(sid);
     const agg = balanceByStudent.get(sid);
     const expected = Number(agg?.total_fees ?? 0);
     const paid = Number(agg?.total_paid ?? 0);
     const balance = Number(agg?.balance ?? 0);
     const pct = expected > 0 ? Math.round((paid / expected) * 100) : 0;
+    const status = s ? String((s.status as string) || '') : '';
+    const inactive = status && status !== 'active';
+    const displayName = s ? String(s.name ?? '—') : 'Student (not on current roster)';
+    const displayClass = s
+      ? [String(s.current_class ?? '—'), inactive ? `· ${status}` : ''].filter(Boolean).join(' ')
+      : '—';
     return {
       student_id: sid,
-      name: String(s.name ?? '—'),
-      current_class: String(s.current_class ?? '—'),
+      name: displayName,
+      current_class: displayClass,
       amount_paid: paid,
       fee_balance: balance,
       fee_total: expected,
@@ -140,14 +156,14 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
   });
 
   let clearedCount = 0;
-  for (const s of studs || []) {
-    const sid = (s as { student_id: string }).student_id;
+  for (const r of rosterRes.data || []) {
+    const sid = (r as { student_id: string }).student_id;
     const bal = balanceByStudent.get(sid)?.balance ?? 0;
     if (bal <= 0) clearedCount += 1;
   }
 
   return {
-    rows: rows.filter((r) => r.fee_balance > 0),
+    rows,
     clearedCount,
   };
 }

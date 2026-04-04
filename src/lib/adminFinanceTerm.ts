@@ -65,6 +65,29 @@ export async function loadOutstandingBalanceAggByStudent(
   return byStudent;
 }
 
+/** Per-student aggregates across every `student_balances` row for the school (all terms). */
+export async function loadOutstandingBalanceAggByStudentAllTerms(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<Map<string, BalanceAgg>> {
+  const { data: rows } = await client
+    .from('student_balances')
+    .select('student_id, total_fees, total_paid, balance')
+    .eq('school_id', schoolId);
+
+  const byStudent = new Map<string, BalanceAgg>();
+  for (const r of rows || []) {
+    const sid = (r as { student_id?: string }).student_id;
+    if (!sid) continue;
+    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0 };
+    cur.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
+    cur.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
+    cur.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
+    byStudent.set(sid, cur);
+  }
+  return byStudent;
+}
+
 /**
  * Sum of positive balances across all terms where fees were set (matches accountant
  * dashboard "Outstanding All Time" / FinancialOverview total overall balance).

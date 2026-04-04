@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
-import { loadOutstandingBalanceAggByStudent } from '../../../lib/adminFinanceTerm';
+import { loadOutstandingBalanceAggByStudentAllTerms } from '../../../lib/adminFinanceTerm';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 
@@ -23,37 +23,47 @@ export async function fetchOutstanding(userId: string): Promise<Row[]> {
   const { data } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
   if (!data?.school_id) return [];
 
-  const balanceByStudent = await loadOutstandingBalanceAggByStudent(supabase, data.school_id);
+  const balanceByStudent = await loadOutstandingBalanceAggByStudentAllTerms(supabase, data.school_id);
+  const owingIds = [...balanceByStudent.entries()]
+    .filter(([, a]) => a.balance > 0)
+    .map(([id]) => id);
 
   const [studsRes, parentsRes] = await Promise.all([
-    supabase
-      .from('students')
-      .select('student_id,name,current_class,status')
-      .eq('school_id', data.school_id)
-      .eq('status', 'active'),
+    owingIds.length
+      ? supabase
+          .from('students')
+          .select('student_id,name,current_class,status')
+          .eq('school_id', data.school_id)
+          .in('student_id', owingIds)
+      : Promise.resolve({ data: [] as { student_id: string; name: string; current_class: string; status?: string }[] }),
     supabase.from('parents').select('student_id,name,email').eq('school_id', data.school_id),
   ]);
-  const studs = studsRes.data || [];
   const parents = parentsRes.data || [];
   const parentByStudent = new Map(parents.map((p: any) => [p.student_id, { name: p.name, email: p.email }]));
+  const studById = new Map((studsRes.data || []).map((s: any) => [s.student_id, s]));
 
-  const computed: Row[] = (studs || []).map((s: any) => {
-    const agg = balanceByStudent.get(s.student_id);
+  return owingIds.map((sid) => {
+    const s = studById.get(sid) as { name?: string; current_class?: string; status?: string } | undefined;
+    const agg = balanceByStudent.get(sid);
     const balance = agg?.balance ?? 0;
     const paid = agg?.total_paid ?? 0;
-    const parent = parentByStudent.get(s.student_id) || {};
+    const parent = parentByStudent.get(sid) || {};
+    const status = s?.status || '';
+    const inactive = status && status !== 'active';
+    const displayClass = s
+      ? [s.current_class || '—', inactive ? `· ${status}` : ''].filter(Boolean).join(' ')
+      : '—';
     return {
-      student_id: s.student_id,
-      student_name: s.name,
-      current_class: s.current_class,
+      student_id: sid,
+      student_name: s?.name ?? 'Student (not on current roster)',
+      current_class: displayClass,
       parent_name: (parent as any).name,
       parent_email: (parent as any).email,
       amount_paid: paid,
       balance,
-      has_pending: balance > 0,
+      has_pending: true,
     };
   });
-  return computed.filter((r) => r.has_pending);
 }
 
 export default function OutstandingPage() {
