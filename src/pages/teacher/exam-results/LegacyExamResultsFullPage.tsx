@@ -48,6 +48,8 @@ export default function LegacyExamResultsFullPage() {
     const enc = params.classEncoded;
     return enc ? decodeURIComponent(enc) : "";
   }, [params.classEncoded]);
+  /** Matches DB `class_name` and grade-setting keys (trimmed). */
+  const normalizedClassName = useMemo(() => (className || "").trim(), [className]);
   const lockedSubject = useMemo(() => {
     const enc = params.subjectEncoded;
     return enc ? decodeURIComponent(enc) : null;
@@ -70,8 +72,8 @@ export default function LegacyExamResultsFullPage() {
   // Detect Primary school section (Baby Class, Nursery, Lower, Upper)
   const primarySection = useMemo(() => {
     if (isSecondary || isALevel) return null;
-    return getSectionForClass(className);
-  }, [className, isSecondary, isALevel]);
+    return getSectionForClass(normalizedClassName);
+  }, [normalizedClassName, isSecondary, isALevel]);
   const isNursery = primarySection === 'Baby Class' || primarySection === 'Nursery';
 
   const [loading, setLoading] = useState(true);
@@ -98,17 +100,17 @@ export default function LegacyExamResultsFullPage() {
   );
   /** One teacher may use different scales per class; scope stored bands by class + subject. */
   const scopedGradeKey = useCallback(
-    (subject: string) => `${className}::${(subject || "").trim()}`,
-    [className]
+    (subject: string) => `${normalizedClassName}::${(subject || "").trim()}`,
+    [normalizedClassName]
   );
   const parseSubjectFromScopedGradeKey = useCallback(
     (fullKey: string): string | null => {
-      const prefix = `${className}::`;
+      const prefix = `${normalizedClassName}::`;
       if (!fullKey.startsWith(prefix)) return null;
       const sub = fullKey.slice(prefix.length).trim();
       return sub || null;
     },
-    [className]
+    [normalizedClassName]
   );
   // Primary layout state (existing)
   const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }>>({});
@@ -189,7 +191,7 @@ export default function LegacyExamResultsFullPage() {
   }, [secondaryGradeSettings, selectedSubject, scopedGradeKey]);
 
   useEffect(() => {
-    const prefix = `${className}::`;
+    const prefix = `${normalizedClassName}::`;
     setGradeSettings((prev) => {
       const next: Record<string, Array<{ min: number; max: number; grade: string }>> = {};
       for (const [k, v] of Object.entries(prev)) {
@@ -204,7 +206,7 @@ export default function LegacyExamResultsFullPage() {
       }
       return next;
     });
-  }, [className]);
+  }, [normalizedClassName]);
 
   // Comments functionality removed per request
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
@@ -272,7 +274,7 @@ export default function LegacyExamResultsFullPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           const returnUrl = encodeURIComponent(
-            `/dashboard/teacher/exam-results/class/${encodeURIComponent(className)}`
+            `/dashboard/teacher/exam-results/class/${encodeURIComponent(normalizedClassName)}`
           );
           navigate(`/login?returnUrl=${returnUrl}`);
           return;
@@ -332,14 +334,14 @@ export default function LegacyExamResultsFullPage() {
         setResolvedTeacherId(teacherId);
         setResolvedSchoolId(schoolId);
 
-        console.log("Fetching assignments for:", { schoolId, teacherId, className });
+        console.log("Fetching assignments for:", { schoolId, teacherId, className: normalizedClassName });
 
         const { data: assignmentRows, error: assignmentsError } = await supabase
           .from("teacher_class_subjects")
           .select("subject")
           .eq("school_id", schoolId)
           .eq("teacher_id", teacherId)
-          .eq("class_name", className);
+          .eq("class_name", normalizedClassName);
 
         let subjectList: string[] = [];
         if (!assignmentsError && assignmentRows && assignmentRows.length > 0) {
@@ -367,7 +369,7 @@ export default function LegacyExamResultsFullPage() {
         const processedSubjects = isNursery ? ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS : subjectList;
         if (!isNursery && processedSubjects.length === 0) {
           setError(
-            `No subjects assigned for ${className}. Please contact your administrator to assign subjects.`
+            `No subjects assigned for ${normalizedClassName}. Please contact your administrator to assign subjects.`
           );
           return;
         }
@@ -386,8 +388,11 @@ export default function LegacyExamResultsFullPage() {
         if (examSetsError) throw examSetsError;
         
         // Filter exam sets that apply to this class (either all classes or specific class)
-        const filteredExamSets = (examSetsData || []).filter(examSet => 
-          examSet.target_classes.length === 0 || examSet.target_classes.includes(className)
+        const filteredExamSets = (examSetsData || []).filter(
+          (examSet) =>
+            examSet.target_classes.length === 0 ||
+            examSet.target_classes.includes(normalizedClassName) ||
+            examSet.target_classes.includes(className)
         );
         setExamSets(filteredExamSets);
 
@@ -398,7 +403,7 @@ export default function LegacyExamResultsFullPage() {
             .from('class_teachers')
             .select('id')
             .eq('school_id', schoolId)
-            .eq('class_name', className)
+            .eq('class_name', normalizedClassName)
             .eq('teacher_id', currentTeacherId)
             .limit(1);
           setIsClassTeacher(!!(ctRows && ctRows.length > 0));
@@ -413,7 +418,7 @@ export default function LegacyExamResultsFullPage() {
               .from("class_teacher_comments_settings")
               .select("id, min_percent, max_percent, comment_text")
               .eq("school_id", schoolId)
-              .eq("class_name", className)
+              .eq("class_name", normalizedClassName)
               .order("min_percent");
             if (!ctErr && ctRows?.length) {
               const sanitized = ctRows
@@ -444,7 +449,7 @@ export default function LegacyExamResultsFullPage() {
           .from('students')
           .select('student_id, name, current_class')
           .eq('school_id', schoolId)
-          .eq('current_class', className)
+          .eq('current_class', normalizedClassName)
           .order('name');
 
           if (studentsError) {
@@ -468,7 +473,7 @@ export default function LegacyExamResultsFullPage() {
     };
 
     fetchData();
-  }, [className, navigate]);
+  }, [normalizedClassName, className, navigate, isNursery]);
 
   useEffect(() => {
     if (lockedSubject) setSelectedSubject(lockedSubject);
@@ -560,26 +565,32 @@ export default function LegacyExamResultsFullPage() {
   // Division 1: 75-100, Division 2: 70-74, Credit 3: 65-69, Credit 4: 60-64,
   // Credit 5: 55-59, Credit 6: 50-54, Pass 7: 45-49, Pass 8: 40-44, F9: 0-39
   // Using short format: D1, D2, C3, C4, C5, C6, P7, P8, F9
-  const getDefaultGrades = () => [
-    { min: 75, max: 100, grade: 'D1' },
-    { min: 70, max: 74, grade: 'D2' },
-    { min: 65, max: 69, grade: 'C3' },
-    { min: 60, max: 64, grade: 'C4' },
-    { min: 55, max: 59, grade: 'C5' },
-    { min: 50, max: 54, grade: 'C6' },
-    { min: 45, max: 49, grade: 'P7' },
-    { min: 40, max: 44, grade: 'P8' },
-    { min: 0, max: 39, grade: 'F9' },
-  ];
+  const getDefaultGrades = useCallback(
+    () => [
+      { min: 75, max: 100, grade: "D1" },
+      { min: 70, max: 74, grade: "D2" },
+      { min: 65, max: 69, grade: "C3" },
+      { min: 60, max: 64, grade: "C4" },
+      { min: 55, max: 59, grade: "C5" },
+      { min: 50, max: 54, grade: "C6" },
+      { min: 45, max: 49, grade: "P7" },
+      { min: 40, max: 44, grade: "P8" },
+      { min: 0, max: 39, grade: "F9" },
+    ],
+    []
+  );
 
   /** O-Level / A-Level final score (0–100): letter grades A–E (not primary D1–F9). */
-  const getDefaultSecondaryGradeBands = () => [
-    { min: 80, max: 100, grade: 'A' },
-    { min: 70, max: 79, grade: 'B' },
-    { min: 60, max: 69, grade: 'C' },
-    { min: 50, max: 59, grade: 'D' },
-    { min: 0, max: 49, grade: 'E' },
-  ];
+  const getDefaultSecondaryGradeBands = useCallback(
+    () => [
+      { min: 80, max: 100, grade: "A" },
+      { min: 70, max: 79, grade: "B" },
+      { min: 60, max: 69, grade: "C" },
+      { min: 50, max: 59, grade: "D" },
+      { min: 0, max: 49, grade: "E" },
+    ],
+    []
+  );
 
   const secondaryGradeBandsForSubject = (subject: string) => {
     const key = scopedGradeKey(subject);
@@ -603,12 +614,12 @@ export default function LegacyExamResultsFullPage() {
     }
     
     try {
-      console.log('Checking class teacher status for:', { resolvedSchoolId, className, resolvedTeacherId });
+      console.log('Checking class teacher status for:', { resolvedSchoolId, className: normalizedClassName, resolvedTeacherId });
       const { data: ctRows } = await supabase
         .from('class_teachers')
         .select('id')
         .eq('school_id', resolvedSchoolId)
-        .eq('class_name', className)
+        .eq('class_name', normalizedClassName)
         .eq('teacher_id', resolvedTeacherId)
         .limit(1);
       
@@ -701,15 +712,15 @@ export default function LegacyExamResultsFullPage() {
   }, [isSecondary, selectedSubject, secondaryBandsSignature]);
 
   const loadTeacherExamGradeSettingsFromSupabase = useCallback(async () => {
-    if (!resolvedSchoolId || !className?.trim()) return;
+    if (!resolvedSchoolId || !normalizedClassName) return;
     setExamGradeSettingsLoading(true);
-    const prefix = `${className}::`;
+    const prefix = `${normalizedClassName}::`;
     try {
       const { data: bandRows, error: bandErr } = await supabase
         .from("teacher_exam_grade_bands")
         .select("subject, scale_kind, min_percent, max_percent, grade_label, sort_order")
         .eq("school_id", resolvedSchoolId)
-        .eq("class_name", className)
+        .eq("class_name", normalizedClassName)
         .order("subject", { ascending: true })
         .order("scale_kind", { ascending: true })
         .order("sort_order", { ascending: true });
@@ -758,7 +769,7 @@ export default function LegacyExamResultsFullPage() {
           "o_level_formative_max, auto_remark_enabled, primary_division_settings, grade_remarks_olevel, grade_remarks_alevel"
         )
         .eq("school_id", resolvedSchoolId)
-        .eq("class_name", className)
+        .eq("class_name", normalizedClassName)
         .maybeSingle();
       if (prefErr) throw prefErr;
 
@@ -778,20 +789,51 @@ export default function LegacyExamResultsFullPage() {
         if (gra && typeof gra === "object" && gra !== null && !Array.isArray(gra)) {
           setGradeRemarksALevel((prev) => ({ ...prev, ...(gra as Record<string, string>) }));
         }
+      } else {
+        setOLevelFormativeMax(20);
+        setAutoRemarkEnabled(true);
+        setPrimaryDivisionSettings({
+          div1_min: 4,
+          div1_max: 12,
+          div2_min: 13,
+          div2_max: 23,
+          div3_min: 24,
+          div3_max: 29,
+          div4_min: 30,
+          div4_max: 34,
+          u_min: 35,
+          u_max: 36,
+        });
+        setGradeRemarksOLevel({
+          A: "Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.",
+          B: "Outstanding! Strive for excellence to reach the next level.",
+          C: "Satisfactory, but there is room for improvement. Work harder to meet expectations.",
+          D: "Fair effort. Keep working to improve your understanding and performance.",
+          E: "Your effort needs Improvement. Work diligently to boost your performance.",
+          F: "Insufficient performance. Seek support and put in more effort to improve.",
+        });
+        setGradeRemarksALevel({
+          A: "Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.",
+          B: "Outstanding! Strive for excellence to reach the next level.",
+          C: "Satisfactory, but there is room for improvement. Work harder to meet expectations.",
+          D: "Fair effort. Keep working to improve your understanding and performance.",
+          E: "Your effort needs Improvement. Work diligently to boost your performance.",
+          F: "Insufficient performance. Seek support and put in more effort to improve.",
+        });
       }
     } catch (e) {
       console.error("loadTeacherExamGradeSettingsFromSupabase", e);
     } finally {
       setExamGradeSettingsLoading(false);
     }
-  }, [resolvedSchoolId, className, scopedGradeKey]);
+  }, [resolvedSchoolId, normalizedClassName, scopedGradeKey]);
 
   useEffect(() => {
     void loadTeacherExamGradeSettingsFromSupabase();
   }, [loadTeacherExamGradeSettingsFromSupabase]);
 
   const saveTeacherExamGradeSettingsToSupabase = useCallback(async () => {
-    if (!resolvedSchoolId || !className?.trim()) {
+    if (!resolvedSchoolId || !normalizedClassName) {
       alert("Cannot save: school or class not loaded.");
       return;
     }
@@ -800,7 +842,7 @@ export default function LegacyExamResultsFullPage() {
       const { error: prefErr } = await supabase.from("teacher_exam_class_prefs").upsert(
         {
           school_id: resolvedSchoolId,
-          class_name: className,
+          class_name: normalizedClassName,
           o_level_formative_max: oLevelFormativeMax,
           auto_remark_enabled: autoRemarkEnabled,
           primary_division_settings: primaryDivisionSettings,
@@ -810,6 +852,28 @@ export default function LegacyExamResultsFullPage() {
         { onConflict: "school_id,class_name" }
       );
       if (prefErr) throw prefErr;
+
+      const gsSubj = gradeSettingsSubject.trim();
+      const primaryMap: Record<string, Array<{ min: number; max: number; grade: string }>> = {
+        ...gradeSettings,
+      };
+      const secondaryMap: Record<string, Array<{ min: number; max: number; grade: string }>> = {
+        ...secondaryGradeSettings,
+      };
+      if (gsSubj) {
+        const sk = scopedGradeKey(gsSubj);
+        if (!isSecondary && !isALevel) {
+          const cur = primaryMap[sk];
+          if (!cur || cur.length === 0) {
+            primaryMap[sk] = getDefaultGrades().map((g) => ({ ...g }));
+          }
+        } else if (isSecondary || isALevel) {
+          const cur = secondaryMap[sk];
+          if (!cur || cur.length === 0) {
+            secondaryMap[sk] = getDefaultSecondaryGradeBands().map((g) => ({ ...g }));
+          }
+        }
+      }
 
       const collectSubjectsForScale = (
         map: Record<string, Array<{ min: number; max: number; grade: string }>>
@@ -821,15 +885,15 @@ export default function LegacyExamResultsFullPage() {
         }
         return subs;
       };
-      const subjectsPrimary = collectSubjectsForScale(gradeSettings);
-      const subjectsSecondary = collectSubjectsForScale(secondaryGradeSettings);
+      const subjectsPrimary = collectSubjectsForScale(primaryMap);
+      const subjectsSecondary = collectSubjectsForScale(secondaryMap);
 
       if (subjectsPrimary.size > 0) {
         const { error: delP } = await supabase
           .from("teacher_exam_grade_bands")
           .delete()
           .eq("school_id", resolvedSchoolId)
-          .eq("class_name", className)
+          .eq("class_name", normalizedClassName)
           .eq("scale_kind", "primary")
           .in("subject", [...subjectsPrimary]);
         if (delP) throw delP;
@@ -839,7 +903,7 @@ export default function LegacyExamResultsFullPage() {
           .from("teacher_exam_grade_bands")
           .delete()
           .eq("school_id", resolvedSchoolId)
-          .eq("class_name", className)
+          .eq("class_name", normalizedClassName)
           .eq("scale_kind", "secondary")
           .in("subject", [...subjectsSecondary]);
         if (delS) throw delS;
@@ -866,7 +930,7 @@ export default function LegacyExamResultsFullPage() {
           (bands || []).forEach((b, idx) => {
             rows.push({
               school_id: resolvedSchoolId,
-              class_name: className,
+              class_name: normalizedClassName,
               subject,
               scale_kind,
               min_percent: b.min,
@@ -877,13 +941,14 @@ export default function LegacyExamResultsFullPage() {
           });
         }
       };
-      pushBands(gradeSettings, "primary");
-      pushBands(secondaryGradeSettings, "secondary");
+      pushBands(primaryMap, "primary");
+      pushBands(secondaryMap, "secondary");
 
       if (rows.length > 0) {
         const { error: insErr } = await supabase.from("teacher_exam_grade_bands").insert(rows);
         if (insErr) throw insErr;
       }
+      void loadTeacherExamGradeSettingsFromSupabase();
       alert("Grade settings saved.");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to save grade settings";
@@ -894,7 +959,7 @@ export default function LegacyExamResultsFullPage() {
     }
   }, [
     resolvedSchoolId,
-    className,
+    normalizedClassName,
     oLevelFormativeMax,
     autoRemarkEnabled,
     primaryDivisionSettings,
@@ -902,7 +967,14 @@ export default function LegacyExamResultsFullPage() {
     gradeRemarksALevel,
     gradeSettings,
     secondaryGradeSettings,
+    gradeSettingsSubject,
+    isSecondary,
+    isALevel,
+    scopedGradeKey,
     parseSubjectFromScopedGradeKey,
+    getDefaultGrades,
+    getDefaultSecondaryGradeBands,
+    loadTeacherExamGradeSettingsFromSupabase,
   ]);
 
   // Primary change handler (existing)
@@ -1118,7 +1190,7 @@ export default function LegacyExamResultsFullPage() {
                   p_school_id: schoolId,
                   p_exam_set_id: selectedExamSet,
                   p_student_id: studentId,
-                  p_class_name: className,
+                  p_class_name: normalizedClassName,
                   p_subject: strand.subject,
                   p_marks_obtained: null,
                   p_total_marks: null,
@@ -1168,7 +1240,7 @@ export default function LegacyExamResultsFullPage() {
               p_school_id: schoolId,
               p_exam_set_id: selectedExamSet,
               p_student_id: studentId,
-              p_class_name: className,
+              p_class_name: normalizedClassName,
               p_subject: (selectedSubject || '').trim(),
               p_marks_obtained: parseFloat(data.marks),
               p_total_marks: parseFloat(data.totalMarks || '100'),
@@ -1214,7 +1286,7 @@ export default function LegacyExamResultsFullPage() {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
             p_student_id: studentId,
-            p_class_name: className,
+            p_class_name: normalizedClassName,
             p_subject: (selectedSubject || '').trim(),
             p_marks_obtained: parseFloat(data.marks),
             p_total_marks: parseFloat(data.totalMarks || '100'),
@@ -1278,7 +1350,7 @@ export default function LegacyExamResultsFullPage() {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
             p_student_id: studentId,
-            p_class_name: className,
+            p_class_name: normalizedClassName,
             p_subject: (selectedSubject || '').trim(),
             p_activity_score: activityNum,
             p_descriptor: descriptor,
@@ -1341,7 +1413,7 @@ export default function LegacyExamResultsFullPage() {
           .from('exam_results')
           .select('*')
           .eq('school_id', resolvedSchoolId)
-          .eq('class_name', className)
+          .eq('class_name', normalizedClassName)
           .eq('exam_set_id', selectedExamSet)
           .eq('subject', selectedSubject)
           .eq('teacher_id', resolvedTeacherId);
@@ -1375,7 +1447,7 @@ export default function LegacyExamResultsFullPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, normalizedClassName, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1389,7 +1461,7 @@ export default function LegacyExamResultsFullPage() {
           .from('exam_results')
           .select('*')
           .eq('school_id', resolvedSchoolId)
-          .eq('class_name', className)
+          .eq('class_name', normalizedClassName)
           .eq('exam_set_id', selectedExamSet)
           .in('subject', ALL_PRE_PRIMARY_HOLISTIC_STRAND_SUBJECTS)
           .eq('teacher_id', resolvedTeacherId);
@@ -1441,7 +1513,7 @@ export default function LegacyExamResultsFullPage() {
         .from('exam_results')
         .select('*')
         .eq('school_id', resolvedSchoolId)
-        .eq('class_name', className)
+        .eq('class_name', normalizedClassName)
         .eq('exam_set_id', selectedExamSet)
         .eq('subject', selectedSubject)
         .eq('teacher_id', resolvedTeacherId);
@@ -1535,7 +1607,7 @@ export default function LegacyExamResultsFullPage() {
     if (resolvedTeacherId && resolvedSchoolId) {
       refreshClassTeacherStatus();
     }
-  }, [resolvedTeacherId, resolvedSchoolId, className]);
+  }, [resolvedTeacherId, resolvedSchoolId, normalizedClassName]);
 
   if (loading) {
     return (
@@ -1763,7 +1835,7 @@ export default function LegacyExamResultsFullPage() {
                     const { data: { user: u2 } } = await supabase.auth.getUser();
                     const upsertRows = payload.map((r) => ({
                       school_id: resolvedSchoolId,
-                      class_name: className,
+                      class_name: normalizedClassName,
                       min_percent: r.min_percent,
                       max_percent: r.max_percent,
                       comment_text: r.comment_text,
@@ -2423,7 +2495,7 @@ export default function LegacyExamResultsFullPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={examGradeSettingsSaving || examGradeSettingsLoading || !resolvedSchoolId || !className.trim()}
+                    disabled={examGradeSettingsSaving || examGradeSettingsLoading || !resolvedSchoolId || !normalizedClassName}
                     onClick={() => void saveTeacherExamGradeSettingsToSupabase()}
                     className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white"
                   >
