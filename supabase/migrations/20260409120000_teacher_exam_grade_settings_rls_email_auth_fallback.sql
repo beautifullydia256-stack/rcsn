@@ -31,7 +31,7 @@ CREATE POLICY tegp_prefs_all ON public.teacher_exam_class_prefs
               AND trim(t.email) <> ''
               AND lower(trim(t.email)) = lower(trim(coalesce(
                 nullif(trim(u.email), ''),
-                nullif(trim(coalesce(auth.jwt() ->> 'email', '')), ''),
+                nullif(trim(coalesce(((SELECT auth.jwt()) ->> 'email'), '')), ''),
                 ''
               )))
             )
@@ -62,7 +62,7 @@ CREATE POLICY tegp_prefs_all ON public.teacher_exam_class_prefs
               AND trim(t.email) <> ''
               AND lower(trim(t.email)) = lower(trim(coalesce(
                 nullif(trim(u.email), ''),
-                nullif(trim(coalesce(auth.jwt() ->> 'email', '')), ''),
+                nullif(trim(coalesce(((SELECT auth.jwt()) ->> 'email'), '')), ''),
                 ''
               )))
             )
@@ -99,7 +99,7 @@ CREATE POLICY tegb_bands_all ON public.teacher_exam_grade_bands
               AND trim(t.email) <> ''
               AND lower(trim(t.email)) = lower(trim(coalesce(
                 nullif(trim(u.email), ''),
-                nullif(trim(coalesce(auth.jwt() ->> 'email', '')), ''),
+                nullif(trim(coalesce(((SELECT auth.jwt()) ->> 'email'), '')), ''),
                 ''
               )))
             )
@@ -131,7 +131,7 @@ CREATE POLICY tegb_bands_all ON public.teacher_exam_grade_bands
               AND trim(t.email) <> ''
               AND lower(trim(t.email)) = lower(trim(coalesce(
                 nullif(trim(u.email), ''),
-                nullif(trim(coalesce(auth.jwt() ->> 'email', '')), ''),
+                nullif(trim(coalesce(((SELECT auth.jwt()) ->> 'email'), '')), ''),
                 ''
               )))
             )
