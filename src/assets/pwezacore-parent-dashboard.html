@@ -1,0 +1,841 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PwezaCore — Parent Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*
+ ═══════════════════════════════════════════════════════
+  REACT INJECTION FORMAT — Parent Dashboard
+  Scope: .pw-parent  |  FULL LAYOUT (sidebar + main)
+  Route: /dashboard/parent
+  Accent: --coral #ff6b6b
+
+  This file IS the complete shell. It replaces your
+  existing /dashboard/parent page entirely.
+
+  ALL DOM TARGETS (populated by React/Supabase):
+  ─ #pd-parent-initials    2-letter initials in sidebar avatar
+  ─ #pd-parent-name        Parent full name in sidebar
+  ─ #pd-topbar-av          Mobile topbar avatar initials
+  ─ #pd-greeting           "Good morning, [Name]"
+  ─ #pd-date-str           "Saturday, 4 April 2026"
+  ─ #pd-child-tabs         Inject child switcher tabs
+  ─ #pd-viewing-name       "Joan Mukwaba" (selected child)
+  ─ #pd-viewing-class      "Primary 3" chip
+  ─ #pd-attendance-status  "Present today" or "Absent"
+  ─ #pd-notif-badge        Unread message count
+  ─ [data-kpi="avg-score"]    e.g. "72%"
+  ─ [data-kpi="attendance"]   e.g. "88%"
+  ─ [data-kpi="fee-balance"]  e.g. "UGX 610,000"
+  ─ [data-kpi="class-rank"]   e.g. "4th"
+  ─ #pd-fee-amount         "UGX 610,000"
+  ─ #pd-fee-due            "Due by April 30, 2026"
+  ─ #pd-fee-breakdown      Inject fee item rows
+  ─ #pd-fee-bar            .style.width = "45%"
+  ─ #pd-fee-paid           "UGX 200,000 paid"
+  ─ #pd-fee-total          "Total: UGX 810,000"
+  ─ #pd-fee-term           "Term 1 · 2026"
+  ─ #pd-performance-body   Inject subject rows
+  ─ #pd-schedule-body      Inject timetable rows
+  ─ #pd-exams-body         Inject exam rows
+  ─ #pd-notices-body       Inject notice rows
+  ─ #pd-messages-body      Inject message rows
+  ─ #pd-btn-pay-now        onClick → payment page
+  ─ #pd-btn-logout         onClick → supabase.auth.signOut()
+  ─ .pd-nav-item[data-nav] onClick → navigate(data-nav)
+ ═══════════════════════════════════════════════════════
+*/
+
+.pw-parent*,.pw-parent*::before,.pw-parent*::after{box-sizing:border-box;margin:0;padding:0}
+
+.pw-parent{
+  --bg:#07090f;--s0:#0b0e18;--s1:#10141f;--s2:#161b2b;--s3:#1d2438;--s4:#252d44;
+  --border:rgba(255,255,255,0.06);--bh:rgba(255,255,255,0.11);
+  --coral:#ff6b6b;--coral-d:#e05555;--coral-s:rgba(255,107,107,0.10);--coral-g:rgba(255,107,107,0.20);
+  --teal:#00e5c3;--teal-s:rgba(0,229,195,0.09);
+  --amber:#ffb547;--amber-s:rgba(255,181,71,0.10);
+  --blue:#3d7eff;--blue-s:rgba(61,126,255,0.10);
+  --violet:#9d7eff;--violet-s:rgba(157,126,255,0.10);
+  --green:#27e09f;--green-s:rgba(39,224,159,0.10);
+  --rose:#ff4f6a;--rose-s:rgba(255,79,106,0.10);
+  --t1:#e8eeff;--t2:#7c89b0;--t3:#3a4468;
+  --sidebar-w:230px;--r:12px;--rs:7px;
+  font-family:'Geist',sans-serif;
+  background:var(--bg);color:var(--t1);
+  min-height:100vh;font-size:14px;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+
+html.light .pw-parent,html[data-theme=light] .pw-parent {
+  --bg:#f0f4ff;--s0:#fff;--s1:#fff;--s2:#f4f7ff;--s3:#e8eeff;--s4:#dce3ff;
+  --border:rgba(0,0,0,0.07);--bh:rgba(0,0,0,0.13);
+  --t1:#0a0e1a;--t2:#3a4880;--t3:#8892b8;
+  background:var(--bg);color:var(--t1);
+}
+
+@keyframes pd-up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pd-blink{0%,100%{opacity:1}50%{opacity:.3}}
+.pd-fu{animation:pd-up .3s ease both}
+.pd-d1{animation-delay:.04s}.pd-d2{animation-delay:.09s}
+.pd-d3{animation-delay:.14s}.pd-d4{animation-delay:.19s}
+
+/* ── SHELL ── */
+.pw-parent .pd-shell{display:flex;min-height:100vh;position:relative}
+
+/* ══ SIDEBAR ══ */
+.pw-parent .pd-sidebar{
+  width:var(--sidebar-w);min-width:var(--sidebar-w);
+  background:var(--s0);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  height:100vh;position:sticky;top:0;
+  overflow-y:auto;overflow-x:hidden;flex-shrink:0;z-index:30;
+  transition:transform .25s ease;
+}
+.pw-parent .pd-sidebar::-webkit-scrollbar{width:0}
+
+/* Brand */
+.pw-parent .pd-brand{
+  display:flex;align-items:center;gap:10px;
+  padding:20px 16px 18px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.pw-parent .pd-brand-mark{
+  width:34px;height:34px;border-radius:9px;background:var(--coral);
+  display:grid;place-items:center;font-size:16px;flex-shrink:0;color:#fff;
+}
+.pw-parent .pd-brand-name{
+  font-family:'Instrument Serif',serif;font-size:17px;color:var(--t1);line-height:1.1;
+}
+.pw-parent .pd-brand-role{
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--coral);margin-top:1px;
+}
+
+/* User card */
+.pw-parent .pd-user-card{
+  display:flex;align-items:center;gap:10px;
+  padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.pw-parent .pd-user-av{
+  width:36px;height:36px;border-radius:50%;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  display:grid;place-items:center;
+  font-size:12px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.pw-parent .pd-user-name{font-size:13px;font-weight:600;color:var(--t1);line-height:1.2;}
+.pw-parent .pd-user-role{font-size:11px;color:var(--t3);margin-top:1px;}
+
+/* Child switcher */
+.pw-parent .pd-child-switch{
+  padding:12px 14px;border-bottom:1px solid var(--border);flex-shrink:0;
+}
+.pw-parent .pd-cs-label{
+  font-size:9.5px;font-weight:700;letter-spacing:1.6px;
+  text-transform:uppercase;color:var(--t3);margin-bottom:8px;
+}
+.pw-parent .pd-child-tabs{display:flex;flex-direction:column;gap:3px;}
+.pw-parent .pd-child-tab{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:var(--rs);
+  cursor:pointer;transition:all .14s;
+  font-size:12.5px;color:var(--t2);font-weight:500;
+}
+.pw-parent .pd-child-tab:hover{background:var(--s2);color:var(--t1);}
+.pw-parent .pd-child-tab.active{background:var(--coral-s);color:var(--coral);font-weight:600;}
+.pw-parent .pd-child-dot{
+  width:7px;height:7px;border-radius:50%;background:var(--t3);flex-shrink:0;
+}
+.pw-parent .pd-child-tab.active .pd-child-dot{
+  background:var(--coral);box-shadow:0 0 0 3px var(--coral-s);
+}
+
+/* Nav */
+.pw-parent .pd-nav{padding:10px 10px;flex:1;}
+.pw-parent .pd-nav-section{margin-bottom:6px;}
+.pw-parent .pd-nav-label{
+  font-size:9.5px;font-weight:700;letter-spacing:1.8px;
+  text-transform:uppercase;color:var(--t3);padding:6px 8px 4px;
+}
+.pw-parent .pd-nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:var(--rs);
+  cursor:pointer;transition:all .14s;
+  font-size:13px;font-weight:450;color:var(--t2);position:relative;
+}
+.pw-parent .pd-nav-item:hover{background:var(--s2);color:var(--t1);}
+.pw-parent .pd-nav-item.active{background:var(--coral-s);color:var(--coral);font-weight:600;}
+.pw-parent .pd-nav-item.active::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:2.5px;background:var(--coral);border-radius:0 2px 2px 0;
+}
+.pw-parent .pd-nav-ic{width:18px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.pw-parent .pd-nav-badge{
+  margin-left:auto;min-width:18px;height:18px;
+  border-radius:20px;padding:0 5px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;background:var(--coral);color:#fff;
+}
+
+/* Sidebar footer */
+.pw-parent .pd-sidebar-footer{
+  padding:14px 16px;border-top:1px solid var(--border);flex-shrink:0;
+}
+.pw-parent .pd-footer-btn{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;border-radius:var(--rs);
+  font-size:12.5px;font-weight:500;color:var(--t3);
+  cursor:pointer;transition:all .14s;width:100%;
+  background:none;border:none;font-family:'Geist',sans-serif;text-align:left;
+}
+.pw-parent .pd-footer-btn:hover{background:var(--s2);color:var(--t1);}
+
+/* Mobile overlay */
+.pw-parent .pd-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.65);z-index:29;
+}
+
+/* ══ MAIN ══ */
+.pw-parent .pd-main{flex:1;min-width:0;display:flex;flex-direction:column;overflow-x:hidden;}
+
+/* Mobile topbar */
+.pw-parent .pd-topbar{
+  display:none;align-items:center;gap:12px;
+  padding:12px 16px;background:var(--s0);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:20;
+}
+.pw-parent .pd-hamburger{
+  width:36px;height:36px;border-radius:var(--rs);
+  background:var(--s2);border:1px solid var(--border);
+  display:grid;place-items:center;cursor:pointer;
+  font-size:16px;color:var(--t2);flex-shrink:0;
+}
+.pw-parent .pd-topbar-title{
+  font-family:'Instrument Serif',serif;font-size:17px;color:var(--t1);
+}
+.pw-parent .pd-topbar-av{
+  margin-left:auto;width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--coral),var(--violet));
+  display:grid;place-items:center;
+  font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
+}
+
+/* Content */
+.pw-parent .pd-content{padding:22px 24px 60px;flex:1;}
+
+/* ── HEADER ── */
+.pw-parent .pd-header{margin-bottom:18px;}
+.pw-parent .pd-date{
+  font-size:11px;color:var(--t3);margin-bottom:4px;
+  display:flex;align-items:center;gap:6px;
+}
+.pw-parent .pd-live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);animation:pd-blink 2s infinite;
+}
+.pw-parent .pd-greeting{
+  font-family:'Instrument Serif',serif;
+  font-size:26px;letter-spacing:-.3px;color:var(--t1);margin-bottom:3px;
+}
+.pw-parent .pd-greeting-sub{font-size:13px;color:var(--t2);}
+
+/* ── CHILD BANNER ── */
+.pw-parent .pd-child-banner{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;background:var(--s1);
+  border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:16px;flex-wrap:wrap;
+}
+.pw-parent .pd-viewing-label{
+  font-size:11px;font-weight:700;letter-spacing:.8px;
+  text-transform:uppercase;color:var(--t3);
+}
+.pw-parent .pd-viewing-name{font-size:13.5px;font-weight:600;color:var(--t1);}
+.pw-parent .pd-child-class-chip{
+  display:inline-flex;align-items:center;
+  padding:3px 9px;border-radius:20px;
+  font-size:11.5px;font-weight:600;
+  background:var(--coral-s);color:var(--coral);
+  border:1px solid rgba(255,107,107,.15);
+}
+.pw-parent .pd-child-status{
+  margin-left:auto;display:flex;align-items:center;gap:5px;
+  font-size:11.5px;font-weight:600;
+}
+.pw-parent .pd-child-status.present{color:var(--green);}
+.pw-parent .pd-child-status.absent{color:var(--rose);}
+.pw-parent .pd-child-status::before{
+  content:'';width:6px;height:6px;border-radius:50%;background:currentColor;
+}
+
+/* ── KPI STRIP ── */
+.pw-parent .pd-kpi-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:10px;margin-bottom:16px;
+}
+.pw-parent .pd-kpi{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px 18px;
+  position:relative;overflow:hidden;
+  transition:border-color .2s,transform .2s;cursor:default;
+}
+.pw-parent .pd-kpi:hover{border-color:var(--bh);transform:translateY(-2px);}
+.pw-parent .pd-kpi::after{
+  content:'';position:absolute;top:0;left:0;right:0;
+  height:1.5px;border-radius:var(--r) var(--r) 0 0;
+}
+.pw-parent .pd-kpi.cv::after{background:linear-gradient(90deg,var(--violet),transparent 60%);}
+.pw-parent .pd-kpi.ct::after{background:linear-gradient(90deg,var(--teal),transparent 60%);}
+.pw-parent .pd-kpi.cc::after{background:linear-gradient(90deg,var(--coral),transparent 60%);}
+.pw-parent .pd-kpi.ca::after{background:linear-gradient(90deg,var(--amber),transparent 60%);}
+.pw-parent .pd-kpi-label{
+  font-size:9.5px;font-weight:700;letter-spacing:1.2px;
+  text-transform:uppercase;color:var(--t3);margin-bottom:8px;
+}
+.pw-parent .pd-kpi-val{
+  font-family:'Instrument Serif',serif;
+  font-size:28px;letter-spacing:-1px;line-height:1;color:var(--t1);
+}
+.pw-parent .pd-kpi-val.cv{color:var(--violet);}
+.pw-parent .pd-kpi-val.ct{color:var(--teal);}
+.pw-parent .pd-kpi-val.cc{color:var(--coral);}
+.pw-parent .pd-kpi-val.ca{color:var(--amber);}
+.pw-parent .pd-kpi-sub{font-size:10.5px;color:var(--t3);margin-top:4px;}
+
+/* ── FEE CARD ── */
+.pw-parent .pd-fee-card{
+  background:var(--s1);border:1px solid var(--border);
+  border-left:3px solid var(--coral);border-radius:var(--r);
+  padding:20px 22px;margin-bottom:16px;
+  display:grid;grid-template-columns:1fr auto;
+  gap:24px;align-items:start;
+}
+.pw-parent .pd-fee-eyebrow{
+  font-size:9.5px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--coral);margin-bottom:6px;
+}
+.pw-parent .pd-fee-amount{
+  font-family:'Instrument Serif',serif;
+  font-size:32px;letter-spacing:-1px;color:var(--coral);line-height:1;
+}
+.pw-parent .pd-fee-due{font-size:12px;color:var(--t2);margin-top:4px;}
+.pw-parent .pd-fee-breakdown{
+  margin-top:14px;display:flex;flex-direction:column;gap:5px;
+}
+.pw-parent .pd-fee-item{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:12.5px;color:var(--t2);
+  padding:6px 10px;background:var(--s2);border-radius:var(--rs);
+}
+.pw-parent .pd-fee-item-label{font-weight:500;}
+.pw-parent .pd-fee-item-val{
+  font-family:'Geist Mono',monospace;font-size:12px;color:var(--t1);
+}
+.pw-parent .pd-fee-progress{margin-top:14px;}
+.pw-parent .pd-fee-prog-labels{
+  display:flex;justify-content:space-between;
+  font-size:11px;color:var(--t3);margin-bottom:6px;
+}
+.pw-parent .pd-fee-prog-track{
+  height:6px;background:var(--s3);
+  border-radius:99px;overflow:hidden;
+}
+.pw-parent .pd-fee-prog-fill{
+  height:100%;border-radius:99px;
+  background:linear-gradient(90deg,var(--coral),var(--amber));
+  transition:width .8s ease;
+}
+.pw-parent .pd-fee-prog-footnotes{
+  display:flex;justify-content:space-between;
+  margin-top:5px;font-size:10.5px;color:var(--t3);
+}
+
+/* Pay buttons */
+.pw-parent .pd-fee-actions{display:flex;flex-direction:column;gap:8px;min-width:180px;}
+.pw-parent .pd-pay-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:10px 18px;border-radius:var(--rs);
+  font-family:'Geist',sans-serif;font-size:13px;font-weight:600;
+  cursor:pointer;border:none;transition:all .17s;white-space:nowrap;
+}
+.pw-parent .pd-pay-primary{background:var(--coral);color:#fff;}
+.pw-parent .pd-pay-primary:hover{
+  background:#ff8585;transform:translateY(-1px);
+  box-shadow:0 4px 20px var(--coral-g);
+}
+.pw-parent .pd-pay-ghost{
+  background:var(--s2);color:var(--t2);
+  border:1px solid var(--border);font-size:12px;padding:8px 14px;
+}
+.pw-parent .pd-pay-ghost:hover{background:var(--s3);color:var(--t1);}
+.pw-parent .pd-pay-note{
+  font-size:10.5px;color:var(--t3);text-align:center;line-height:1.6;
+}
+
+/* ── CONTENT GRID ── */
+.pw-parent .pd-grid{
+  display:grid;grid-template-columns:1.4fr 1fr;
+  gap:14px;margin-bottom:14px;
+}
+.pw-parent .pd-col-stack{display:flex;flex-direction:column;gap:14px;}
+.pw-parent .pd-grid-2{
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:14px;margin-bottom:14px;
+}
+
+/* ── CARDS ── */
+.pw-parent .pd-card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);overflow:hidden;
+}
+.pw-parent .pd-card-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:13px 18px 11px;border-bottom:1px solid var(--border);
+}
+.pw-parent .pd-card-title{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;font-weight:700;letter-spacing:1.4px;
+  text-transform:uppercase;color:var(--t3);
+}
+.pw-parent .pd-card-ic{
+  width:26px;height:26px;border-radius:7px;
+  display:grid;place-items:center;font-size:13px;flex-shrink:0;
+}
+.pw-parent .pd-card-link{
+  font-size:11.5px;font-weight:600;color:var(--coral);
+  cursor:pointer;transition:opacity .14s;text-decoration:none;
+}
+.pw-parent .pd-card-link:hover{opacity:.7;}
+.pw-parent .pd-card-body{padding:13px 18px;}
+
+/* Performance rows */
+.pw-parent .pd-perf-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.pw-parent .pd-perf-row:last-child{border-bottom:none;}
+.pw-parent .pd-perf-subject{flex:1;font-size:13px;font-weight:500;color:var(--t1);}
+.pw-parent .pd-perf-score{
+  font-family:'Instrument Serif',serif;font-size:17px;letter-spacing:-.3px;
+}
+.pw-parent .pd-perf-score.high{color:var(--green);}
+.pw-parent .pd-perf-score.mid{color:var(--amber);}
+.pw-parent .pd-perf-score.low{color:var(--rose);}
+.pw-parent .pd-perf-grade{
+  font-size:11px;font-weight:700;
+  padding:2px 7px;border-radius:5px;
+  background:var(--s3);color:var(--t2);
+}
+.pw-parent .pd-perf-bar-wrap{width:55px;height:4px;background:var(--s3);border-radius:99px;overflow:hidden;flex-shrink:0;}
+.pw-parent .pd-perf-bar{height:100%;border-radius:99px;}
+
+/* Schedule rows */
+.pw-parent .pd-sched-row{
+  display:flex;align-items:center;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+}
+.pw-parent .pd-sched-row:last-child{border-bottom:none;}
+.pw-parent .pd-sched-time{
+  font-family:'Geist Mono',monospace;font-size:11px;
+  color:var(--t3);width:46px;flex-shrink:0;
+}
+.pw-parent .pd-sched-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pw-parent .pd-sched-subject{flex:1;font-size:13px;font-weight:500;color:var(--t1);}
+.pw-parent .pd-sched-teacher{font-size:11.5px;color:var(--t3);}
+
+/* Exam rows */
+.pw-parent .pd-exam-row{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 0;border-bottom:1px solid var(--border);
+}
+.pw-parent .pd-exam-row:last-child{border-bottom:none;}
+.pw-parent .pd-exam-date{
+  width:38px;height:38px;border-radius:8px;
+  background:var(--s2);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;flex-shrink:0;
+}
+.pw-parent .pd-exam-day{
+  font-family:'Instrument Serif',serif;font-size:14px;
+  color:var(--coral);line-height:1;
+}
+.pw-parent .pd-exam-mon{
+  font-size:9px;font-weight:700;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--t3);
+}
+.pw-parent .pd-exam-name{font-size:13px;font-weight:500;color:var(--t1);}
+.pw-parent .pd-exam-sub{font-size:11.5px;color:var(--t3);margin-top:1px;}
+.pw-parent .pd-exam-chip{
+  font-size:10.5px;font-weight:600;padding:2px 8px;
+  border-radius:5px;background:var(--amber-s);color:var(--amber);
+  flex-shrink:0;
+}
+
+/* Notice rows */
+.pw-parent .pd-notice-row{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;border-radius:var(--rs);
+}
+.pw-parent .pd-notice-row:last-child{border-bottom:none;}
+.pw-parent .pd-notice-row:hover{background:var(--s2);margin:0 -18px;padding:8px 18px;}
+.pw-parent .pd-notice-dot{
+  width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0;
+}
+.pw-parent .pd-notice-dot.new{background:var(--coral);}
+.pw-parent .pd-notice-dot.read{background:var(--t3);}
+.pw-parent .pd-notice-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px;}
+.pw-parent .pd-notice-title.read{font-weight:400;color:var(--t2);}
+.pw-parent .pd-notice-date{font-size:11px;color:var(--t3);}
+
+/* Message rows */
+.pw-parent .pd-msg-row{
+  display:flex;align-items:flex-start;gap:10px;
+  padding:8px 0;border-bottom:1px solid var(--border);
+  cursor:pointer;transition:background .12s;
+}
+.pw-parent .pd-msg-row:last-child{border-bottom:none;}
+.pw-parent .pd-msg-row:hover{background:var(--s2);margin:0 -18px;padding:8px 18px;}
+.pw-parent .pd-msg-av{
+  width:30px;height:30px;border-radius:50%;
+  display:grid;place-items:center;
+  font-size:11px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.pw-parent .pd-msg-name{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:2px;}
+.pw-parent .pd-msg-preview{
+  font-size:12px;color:var(--t2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;
+}
+.pw-parent .pd-msg-time{margin-left:auto;font-size:11px;color:var(--t3);flex-shrink:0;}
+.pw-parent .pd-msg-unread{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--coral);margin-top:5px;flex-shrink:0;
+}
+
+/* Empty state */
+.pw-parent .pd-empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:24px 16px;gap:7px;text-align:center;
+}
+.pw-parent .pd-empty-ic{font-size:24px;opacity:.3;}
+.pw-parent .pd-empty-txt{font-size:12.5px;color:var(--t3);}
+
+/* Scrollbar */
+.pw-parent ::-webkit-scrollbar{width:5px;height:5px;}
+.pw-parent ::-webkit-scrollbar-track{background:transparent;}
+.pw-parent ::-webkit-scrollbar-thumb{background:var(--s3);border-radius:3px;}
+
+/* ══ RESPONSIVE ══ */
+@media(max-width:768px){
+  .pw-parent .pd-sidebar{
+    position:fixed;top:0;left:0;height:100%;
+    transform:translateX(-100%);z-index:40;
+  }
+  .pw-parent .pd-sidebar.open{transform:translateX(0);}
+  .pw-parent .pd-overlay.open{display:block;}
+  .pw-parent .pd-topbar{display:flex;}
+  .pw-parent .pd-content{padding:14px 14px 60px;}
+  .pw-parent .pd-kpi-strip{grid-template-columns:1fr 1fr;gap:8px;}
+  .pw-parent .pd-fee-card{grid-template-columns:1fr;gap:14px;}
+  .pw-parent .pd-grid{grid-template-columns:1fr;}
+  .pw-parent .pd-grid-2{grid-template-columns:1fr;}
+  .pw-parent .pd-greeting{font-size:22px;}
+}
+@media(min-width:769px) and (max-width:1100px){
+  .pw-parent{--sidebar-w:200px;}
+  .pw-parent .pd-kpi-strip{grid-template-columns:repeat(2,1fr);}
+  .pw-parent .pd-grid{grid-template-columns:1fr;}
+  .pw-parent .pd-grid-2{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div class="pw-parent">
+<div class="pd-shell">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="pd-sidebar" id="pd-sidebar">
+
+  <div class="pd-brand">
+    <div class="pd-brand-mark">🎓</div>
+    <div>
+      <div class="pd-brand-name">PwezaCore</div>
+      <div class="pd-brand-role">Parent Portal</div>
+    </div>
+  </div>
+
+  <div class="pd-user-card">
+    <div class="pd-user-av" id="pd-parent-initials">—</div>
+    <div>
+      <div class="pd-user-name" id="pd-parent-name">—</div>
+      <div class="pd-user-role">Parent / Guardian</div>
+    </div>
+  </div>
+
+  <div class="pd-child-switch">
+    <div class="pd-cs-label">My Children</div>
+    <div class="pd-child-tabs" id="pd-child-tabs">
+      <!-- React injects one .pd-child-tab per linked child -->
+    </div>
+  </div>
+
+  <nav class="pd-nav">
+    <div class="pd-nav-section">
+      <div class="pd-nav-label">Overview</div>
+      <div class="pd-nav-item active" data-nav="/dashboard/parent">
+        <span class="pd-nav-ic">🏠</span>Dashboard
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/messages">
+        <span class="pd-nav-ic">💬</span>Messages
+        <span class="pd-nav-badge" id="pd-notif-badge" style="display:none">0</span>
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/notices">
+        <span class="pd-nav-ic">📢</span>School Notices
+      </div>
+    </div>
+
+    <div class="pd-nav-section">
+      <div class="pd-nav-label">My Child</div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/performance">
+        <span class="pd-nav-ic">📊</span>Performance
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/attendance">
+        <span class="pd-nav-ic">📋</span>Attendance
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/timetable">
+        <span class="pd-nav-ic">📅</span>Timetable
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/exams">
+        <span class="pd-nav-ic">✏️</span>Exams &amp; Results
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/reports">
+        <span class="pd-nav-ic">📄</span>Report Cards
+      </div>
+    </div>
+
+    <div class="pd-nav-section">
+      <div class="pd-nav-label">Finance</div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/fees">
+        <span class="pd-nav-ic">💳</span>Fees &amp; Payments
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/receipts">
+        <span class="pd-nav-ic">🧾</span>Receipts
+      </div>
+    </div>
+
+    <div class="pd-nav-section">
+      <div class="pd-nav-label">Account</div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/profile">
+        <span class="pd-nav-ic">👤</span>My Profile
+      </div>
+      <div class="pd-nav-item" data-nav="/dashboard/parent/settings">
+        <span class="pd-nav-ic">⚙️</span>Settings
+      </div>
+    </div>
+  </nav>
+
+  <div class="pd-sidebar-footer">
+    <button class="pd-footer-btn" id="pd-btn-logout">
+      <span class="pd-nav-ic">🚪</span>Sign Out
+    </button>
+  </div>
+
+</aside>
+
+<div class="pd-overlay" id="pd-overlay"></div>
+
+<!-- ══ MAIN ══ -->
+<main class="pd-main">
+
+  <!-- Mobile topbar -->
+  <div class="pd-topbar">
+    <button class="pd-hamburger" id="pd-hamburger">☰</button>
+    <span class="pd-topbar-title">PwezaCore</span>
+    <div class="pd-topbar-av" id="pd-topbar-av">—</div>
+  </div>
+
+  <div class="pd-content">
+
+    <!-- HEADER -->
+    <div class="pd-header pd-fu">
+      <div class="pd-date">
+        <div class="pd-live-dot"></div>
+        <span id="pd-date-str">—</span>
+      </div>
+      <div class="pd-greeting" id="pd-greeting">Good morning</div>
+      <div class="pd-greeting-sub">Track your children's progress, fees, and school updates — all in one place.</div>
+    </div>
+
+    <!-- CHILD BANNER -->
+    <div class="pd-child-banner pd-fu pd-d1">
+      <span class="pd-viewing-label">Viewing</span>
+      <span class="pd-viewing-name" id="pd-viewing-name">—</span>
+      <span class="pd-child-class-chip" id="pd-viewing-class">—</span>
+      <div class="pd-child-status present" id="pd-attendance-status">Enrolled</div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="pd-kpi-strip pd-fu pd-d1">
+      <div class="pd-kpi cv">
+        <div class="pd-kpi-label">Avg Score</div>
+        <div class="pd-kpi-val cv" data-kpi="avg-score">—</div>
+        <div class="pd-kpi-sub">This term</div>
+      </div>
+      <div class="pd-kpi ct">
+        <div class="pd-kpi-label">Attendance</div>
+        <div class="pd-kpi-val ct" data-kpi="attendance">—</div>
+        <div class="pd-kpi-sub">Days present</div>
+      </div>
+      <div class="pd-kpi cc">
+        <div class="pd-kpi-label">Fee Balance</div>
+        <div class="pd-kpi-val cc" data-kpi="fee-balance">—</div>
+        <div class="pd-kpi-sub">Outstanding</div>
+      </div>
+      <div class="pd-kpi ca">
+        <div class="pd-kpi-label">Class Rank</div>
+        <div class="pd-kpi-val ca" data-kpi="class-rank">—</div>
+        <div class="pd-kpi-sub">In class</div>
+      </div>
+    </div>
+
+    <!-- FEE CARD -->
+    <div class="pd-fee-card pd-fu pd-d2">
+      <div>
+        <div class="pd-fee-eyebrow">Outstanding Fee Balance</div>
+        <div class="pd-fee-amount" id="pd-fee-amount">—</div>
+        <div class="pd-fee-due" id="pd-fee-due">Loading fee details…</div>
+        <div class="pd-fee-breakdown" id="pd-fee-breakdown"></div>
+        <div class="pd-fee-progress">
+          <div class="pd-fee-prog-labels">
+            <span id="pd-fee-term">Term payment progress</span>
+            <span id="pd-fee-paid">—</span>
+          </div>
+          <div class="pd-fee-prog-track">
+            <div class="pd-fee-prog-fill" id="pd-fee-bar" style="width:0%"></div>
+          </div>
+          <div class="pd-fee-prog-footnotes">
+            <span id="pd-fee-paid-foot">—</span>
+            <span id="pd-fee-total">Total: —</span>
+          </div>
+        </div>
+      </div>
+      <div class="pd-fee-actions">
+        <button class="pd-pay-btn pd-pay-primary" id="pd-btn-pay-now">💳 Pay Now</button>
+        <button class="pd-pay-btn pd-pay-ghost" id="pd-btn-mobile-money">📱 Mobile Money</button>
+        <button class="pd-pay-btn pd-pay-ghost" id="pd-btn-bank">🏦 Bank Transfer</button>
+        <div class="pd-pay-note">Receipt sent to email<br>Instant confirmation</div>
+      </div>
+    </div>
+
+    <!-- PERFORMANCE + SCHEDULE/EXAMS -->
+    <div class="pd-grid pd-fu pd-d3">
+
+      <div class="pd-card">
+        <div class="pd-card-head">
+          <div class="pd-card-title">
+            <div class="pd-card-ic" style="background:var(--violet-s)">📊</div>
+            Academic Performance
+          </div>
+          <a class="pd-card-link" data-nav="/dashboard/parent/performance">Full transcript →</a>
+        </div>
+        <div class="pd-card-body">
+          <div id="pd-performance-body">
+            <div class="pd-empty">
+              <div class="pd-empty-ic">📊</div>
+              <div class="pd-empty-txt">Results will appear here once published by the school.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pd-col-stack">
+        <div class="pd-card">
+          <div class="pd-card-head">
+            <div class="pd-card-title">
+              <div class="pd-card-ic" style="background:var(--teal-s)">🕐</div>
+              Today's Schedule
+            </div>
+            <a class="pd-card-link" data-nav="/dashboard/parent/timetable">Full →</a>
+          </div>
+          <div class="pd-card-body">
+            <div id="pd-schedule-body">
+              <div class="pd-empty">
+                <div class="pd-empty-ic">📅</div>
+                <div class="pd-empty-txt">No classes scheduled today.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pd-card">
+          <div class="pd-card-head">
+            <div class="pd-card-title">
+              <div class="pd-card-ic" style="background:var(--amber-s)">✏️</div>
+              Upcoming Exams
+            </div>
+            <a class="pd-card-link" data-nav="/dashboard/parent/exams">Full →</a>
+          </div>
+          <div class="pd-card-body">
+            <div id="pd-exams-body">
+              <div class="pd-empty">
+                <div class="pd-empty-ic">✏️</div>
+                <div class="pd-empty-txt">No upcoming exams scheduled.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- NOTICES + MESSAGES -->
+    <div class="pd-grid-2 pd-fu pd-d4">
+
+      <div class="pd-card">
+        <div class="pd-card-head">
+          <div class="pd-card-title">
+            <div class="pd-card-ic" style="background:var(--coral-s)">📢</div>
+            School Notices
+          </div>
+          <a class="pd-card-link" data-nav="/dashboard/parent/notices">All →</a>
+        </div>
+        <div class="pd-card-body">
+          <div id="pd-notices-body">
+            <div class="pd-empty">
+              <div class="pd-empty-ic">📢</div>
+              <div class="pd-empty-txt">No notices at this time.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pd-card">
+        <div class="pd-card-head">
+          <div class="pd-card-title">
+            <div class="pd-card-ic" style="background:var(--blue-s)">💬</div>
+            Messages
+          </div>
+          <a class="pd-card-link" data-nav="/dashboard/parent/messages">All →</a>
+        </div>
+        <div class="pd-card-body">
+          <div id="pd-messages-body">
+            <div class="pd-empty">
+              <div class="pd-empty-ic">💬</div>
+              <div class="pd-empty-txt">No messages yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div><!-- /pd-content -->
+</main>
+
+</div><!-- /pd-shell -->
+</div><!-- /pw-parent -->
+
+</body>
+</html>

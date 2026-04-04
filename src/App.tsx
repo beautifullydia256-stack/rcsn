@@ -90,6 +90,7 @@ const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/DesignStudentDashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazyWithRetry(() => import('./pages/parent/DesignParentDashboard'));
+const ParentPortalSectionRoute = lazyWithRetry(() => import('./pages/parent/ParentPortalSectionRoute'));
 /** Accountant home uses FinancialOverview (same fee KPI logic as admin); DesignAccountantDashboard is HTML-only and unused here. */
 const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
@@ -225,6 +226,16 @@ function App() {
                 <Route path="parent" element={<ParentLayout />}>
                   <Route index element={<ParentDashboard />} />
                   <Route path="messages" element={<SchoolChatPage />} />
+                  <Route path="notices" element={<ParentPortalSectionRoute />} />
+                  <Route path="performance" element={<ParentPortalSectionRoute />} />
+                  <Route path="attendance" element={<ParentPortalSectionRoute />} />
+                  <Route path="timetable" element={<ParentPortalSectionRoute />} />
+                  <Route path="exams" element={<ParentPortalSectionRoute />} />
+                  <Route path="reports" element={<ParentPortalSectionRoute />} />
+                  <Route path="fees" element={<ParentPortalSectionRoute />} />
+                  <Route path="receipts" element={<ParentPortalSectionRoute />} />
+                  <Route path="profile" element={<ParentPortalSectionRoute />} />
+                  <Route path="settings" element={<ParentPortalSectionRoute />} />
                 </Route>
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
