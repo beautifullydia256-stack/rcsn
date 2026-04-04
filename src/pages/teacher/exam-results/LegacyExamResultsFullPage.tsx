@@ -298,6 +298,16 @@ export default function LegacyExamResultsFullPage() {
         let schoolId = userMetadata.school_id as string | undefined;
         let teacherId = userMetadata.teacher_id as string | undefined;
 
+        const { data: portalUserRow } = await supabase
+          .from("users")
+          .select("school_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        const portalSchoolId = (portalUserRow as { school_id?: string | null } | null)?.school_id;
+        if (portalSchoolId) {
+          schoolId = portalSchoolId;
+        }
+
         if (teacherId && schoolId) {
           const { data: tMeta } = await supabase
             .from("teachers")
