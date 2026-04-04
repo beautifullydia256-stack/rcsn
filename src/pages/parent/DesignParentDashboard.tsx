@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
+import { extractStyleAndBody, useDesignDashboardNav } from '@/lib/designDashboardHtml';
 
 import designRaw from '@/assets/pwezacore-parent-dashboard.html?raw';
 
@@ -64,7 +64,6 @@ export default function DesignParentDashboard() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
 
   useDesignDashboardNav(containerRef, navigate, true);
-  useDesignDashboardThemeSync(true);
 
   useLayoutEffect(() => {
     const link = document.createElement('link');
@@ -77,31 +76,48 @@ export default function DesignParentDashboard() {
   }, []);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const sidebar = el.querySelector('#pd-sidebar');
-    const overlay = el.querySelector('#pd-overlay');
-    const burger = el.querySelector('#pd-hamburger');
-    const open = () => {
-      sidebar?.classList.add('open');
-      overlay?.classList.add('open');
-      document.body.style.overflow = 'hidden';
+    const root = containerRef.current;
+    if (!root) return;
+
+    const sidebar = () => root.querySelector('#pd-sidebar');
+    const overlay = () => root.querySelector('#pd-overlay');
+
+    const setOpen = (open: boolean) => {
+      const s = sidebar();
+      const o = overlay();
+      s?.classList.toggle('open', open);
+      o?.classList.toggle('open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
     };
-    const close = () => {
-      sidebar?.classList.remove('open');
-      overlay?.classList.remove('open');
-      document.body.style.overflow = '';
+
+    const close = () => setOpen(false);
+
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!root.contains(t)) return;
+
+      if (t.closest('#pd-hamburger')) {
+        e.preventDefault();
+        const s = sidebar();
+        const next = !s?.classList.contains('open');
+        setOpen(next);
+        return;
+      }
+
+      if (t.closest('#pd-overlay') && overlay()?.classList.contains('open')) {
+        close();
+        return;
+      }
+
+      if (window.innerWidth <= 768 && t.closest('.pd-nav-item')) {
+        close();
+      }
     };
-    burger?.addEventListener('click', open);
-    overlay?.addEventListener('click', close);
-    const navClose = (e: MouseEvent) => {
-      if (window.innerWidth <= 768 && (e.target as HTMLElement).closest('.pd-nav-item')) close();
-    };
-    el.addEventListener('click', navClose);
+
+    root.addEventListener('click', onClick);
     return () => {
-      burger?.removeEventListener('click', open);
-      overlay?.removeEventListener('click', close);
-      el.removeEventListener('click', navClose);
+      root.removeEventListener('click', onClick);
+      document.body.style.overflow = '';
     };
   }, []);
 

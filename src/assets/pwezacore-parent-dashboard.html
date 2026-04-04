@@ -69,7 +69,8 @@
   -webkit-font-smoothing:antialiased;overflow-x:hidden;
 }
 
-html.light .pw-parent,html[data-theme=light] .pw-parent {
+/* Light tokens apply only when explicitly opted in — parent portal matches admin/teacher (dark) by default */
+html.light .pw-parent.pw-parent--light,html[data-theme=light] .pw-parent.pw-parent--light {
   --bg:#f0f4ff;--s0:#fff;--s1:#fff;--s2:#f4f7ff;--s3:#e8eeff;--s4:#dce3ff;
   --border:rgba(0,0,0,0.07);--bh:rgba(0,0,0,0.13);
   --t1:#0a0e1a;--t2:#3a4880;--t3:#8892b8;
@@ -194,7 +195,7 @@ html.light .pw-parent,html[data-theme=light] .pw-parent {
 /* Mobile overlay */
 .pw-parent .pd-overlay{
   display:none;position:fixed;inset:0;
-  background:rgba(0,0,0,.65);z-index:29;
+  background:rgba(0,0,0,.65);z-index:280;
 }
 
 /* ══ MAIN ══ */
@@ -205,13 +206,15 @@ html.light .pw-parent,html[data-theme=light] .pw-parent {
   display:none;align-items:center;gap:12px;
   padding:12px 16px;background:var(--s0);
   border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:20;
+  position:sticky;top:0;z-index:300;
 }
 .pw-parent .pd-hamburger{
   width:36px;height:36px;border-radius:var(--rs);
   background:var(--s2);border:1px solid var(--border);
   display:grid;place-items:center;cursor:pointer;
   font-size:16px;color:var(--t2);flex-shrink:0;
+  position:relative;z-index:310;
+  -webkit-tap-highlight-color:transparent;
 }
 .pw-parent .pd-topbar-title{
   font-family:'Instrument Serif',serif;font-size:17px;color:var(--t1);
@@ -531,7 +534,7 @@ html.light .pw-parent,html[data-theme=light] .pw-parent {
 @media(max-width:768px){
   .pw-parent .pd-sidebar{
     position:fixed;top:0;left:0;height:100%;
-    transform:translateX(-100%);z-index:40;
+    transform:translateX(-100%);z-index:290;
   }
   .pw-parent .pd-sidebar.open{transform:translateX(0);}
   .pw-parent .pd-overlay.open{display:block;}
@@ -552,7 +555,7 @@ html.light .pw-parent,html[data-theme=light] .pw-parent {
 </style>
 </head>
 <body>
-<div class="pw-parent">
+<div class="pw-parent" data-pw-parent-shell>
 <div class="pd-shell">
 
 <!-- ══ SIDEBAR ══ -->
@@ -651,7 +654,7 @@ html.light .pw-parent,html[data-theme=light] .pw-parent {
 
   <!-- Mobile topbar -->
   <div class="pd-topbar">
-    <button class="pd-hamburger" id="pd-hamburger">☰</button>
+    <button type="button" class="pd-hamburger" id="pd-hamburger" aria-label="Open menu">☰</button>
     <span class="pd-topbar-title">PwezaCore</span>
     <div class="pd-topbar-av" id="pd-topbar-av">—</div>
   </div>
