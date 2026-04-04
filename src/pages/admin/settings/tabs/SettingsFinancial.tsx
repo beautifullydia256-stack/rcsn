@@ -125,8 +125,12 @@ export default function SettingsFinancial({
         });
         const syncResult = await syncResponse.json();
         if (syncResponse.ok) {
+          const invN =
+            (syncResult.invoicesCreated || 0) + (syncResult.invoicesUpdated || 0) > 0
+              ? ` Invoices aligned: ${syncResult.invoicesCreated || 0} created, ${syncResult.invoicesUpdated || 0} updated.`
+              : '';
           setSuccess(
-            `Fee structure saved! ${syncResult.updated || 0} student(s) updated with new fees.`
+            `Fee structure saved! ${syncResult.updated || 0} student(s) updated with new fees.${invN}`
           );
         } else {
           setSuccess('Fee structure saved successfully! (Balance sync will run in background)');

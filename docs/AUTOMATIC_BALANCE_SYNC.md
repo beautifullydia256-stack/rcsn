@@ -59,9 +59,9 @@
 3. For each student:
    - Gets tuition for their class
    - Updates `students.expected_fee_amount`
-   - Calculates total paid from `student_fees`
-   - Creates/updates `student_balances` record
-   - Sets balance = tuition - total paid
+   - Calculates total paid from `student_payments` for the **calendar current term**
+   - Creates/updates `student_balances` for that term
+   - If tuition &gt; 0: creates or updates **`student_invoices`** (`issued` / `partial` / `paid`) for the same term so students added *before* fee structure was saved still get a matching invoice when the admin saves fees (same alignment as new-student auto-invoice).
 
 **Parameters:**
 - `schoolId` (required)

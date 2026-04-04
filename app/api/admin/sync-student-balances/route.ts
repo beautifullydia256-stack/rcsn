@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
 
     let updatedCount = 0;
     let balancesCreated = 0;
+    let invoicesCreated = 0;
+    let invoicesUpdated = 0;
 
     for (const student of students) {
       const tuitionAmount = feeMap.get(student.current_class) ?? 0;
@@ -130,6 +132,56 @@ export async function POST(request: NextRequest) {
           .insert(row);
         if (!balanceError) balancesCreated++;
       }
+
+      // Issued invoice for current term = same expectation as new-student auto-invoice (fee structure may be saved after students exist).
+      if (tuitionAmount > 0 && termId) {
+        let invStatus: 'issued' | 'partial' | 'paid' = 'issued';
+        if (totalPaid >= tuitionAmount) invStatus = 'paid';
+        else if (totalPaid > 0) invStatus = 'partial';
+
+        const { data: existingInv } = await supabase
+          .from('student_invoices')
+          .select('invoice_id, invoice_number')
+          .eq('school_id', schoolId)
+          .eq('student_id', student.student_id)
+          .eq('term_id', termId)
+          .maybeSingle();
+
+        if (!existingInv) {
+          let invNum: string | null = null;
+          try {
+            const res = await supabase.rpc('get_next_invoice_number', { p_school_id: schoolId });
+            invNum = (res.data as string | null) ?? null;
+          } catch {
+            invNum = null;
+          }
+          if (!invNum) {
+            invNum = `INV-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+          }
+          const { error: invInsErr } = await supabase.from('student_invoices').insert({
+            school_id: schoolId,
+            student_id: student.student_id,
+            term_id: termId,
+            invoice_number: invNum,
+            total_amount: tuitionAmount,
+            amount_paid: totalPaid,
+            status: invStatus,
+            updated_at: new Date().toISOString(),
+          });
+          if (!invInsErr) invoicesCreated++;
+        } else {
+          const { error: invUpErr } = await supabase
+            .from('student_invoices')
+            .update({
+              total_amount: tuitionAmount,
+              amount_paid: totalPaid,
+              status: invStatus,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('invoice_id', existingInv.invoice_id);
+          if (!invUpErr) invoicesUpdated++;
+        }
+      }
     }
 
     return NextResponse.json({
@@ -137,6 +189,8 @@ export async function POST(request: NextRequest) {
       message: `Successfully synced balances for ${updatedCount} students`,
       updated: updatedCount,
       balancesCreated: balancesCreated,
+      invoicesCreated,
+      invoicesUpdated,
       totalStudents: students.length,
       termId,
       termYear,
