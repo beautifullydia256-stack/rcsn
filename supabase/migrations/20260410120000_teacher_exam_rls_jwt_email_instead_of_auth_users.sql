@@ -1,8 +1,5 @@
--- Further RLS fixes for teacher_exam_class_prefs / teacher_exam_grade_bands:
--- 1) Email match even when linked_teacher_id is wrong or points elsewhere.
--- 2) Fallback to JWT email (auth.jwt()->>'email') when public.users.email is empty.
---    Do NOT subquery auth.users — authenticated role gets "permission denied for table users".
--- 3) Keeps trim() on class_name / subject.
+-- Hotfix: policies created in 20260409120000 subqueried auth.users → "permission denied for table users"
+-- for role authenticated. Recreate same logic using auth.jwt() ->> 'email' only.
 
 DROP POLICY IF EXISTS tegp_prefs_all ON public.teacher_exam_class_prefs;
 
