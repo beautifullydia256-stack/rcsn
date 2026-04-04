@@ -10,7 +10,7 @@ import { SkeletonKPIStrip, SkeletonTable } from '@/components/PwezaSkeleton';
 
 import outstandingTemplateRaw from '@/assets/pwezacore-outstanding.html?raw';
 
-const PAGE_SIZE = 15;
+const DEFAULT_PAGE_SIZE = 20;
 const OUTSTANDING_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
@@ -186,8 +186,10 @@ export default function DesignOutstandingPage() {
   const [classFilter, setClassFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [sortLabel, setSortLabel] = useState<SortLabel>('Highest Balance First');
+  const [pageSize, setPageSize] = useState<number | 'all'>(DEFAULT_PAGE_SIZE);
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const paginationRef = useRef({ totalPages: 1 });
 
   useEffect(() => {
     const id = 'pweza-outstanding-fonts';
@@ -242,7 +244,28 @@ export default function DesignOutstandingPage() {
     if (statusFilter === 'high') result = result.filter((r) => r.fee_balance > 200000);
 
     const an = (a: OutstandingRow) => a.name.toLowerCase();
+
+    /** When searching, surface closer name / guardian matches first. */
+    const relevance = (r: OutstandingRow): number => {
+      if (!q) return 0;
+      const n = r.name.toLowerCase();
+      const pn = (r.parent_name || '').toLowerCase();
+      const em = (r.parent_email || '').toLowerCase();
+      const cl = r.current_class.toLowerCase();
+      if (n.startsWith(q)) return 0;
+      if (n.includes(q)) return 2;
+      if (pn.startsWith(q) || em.startsWith(q)) return 3;
+      if (pn.includes(q) || em.includes(q)) return 4;
+      if (cl.includes(q)) return 5;
+      return 6;
+    };
+
     result.sort((a, b) => {
+      if (q) {
+        const ra = relevance(a);
+        const rb = relevance(b);
+        if (ra !== rb) return ra - rb;
+      }
       switch (sortLabel) {
         case 'Lowest Balance First':
           return a.fee_balance - b.fee_balance || an(a).localeCompare(an(b));
@@ -257,8 +280,11 @@ export default function DesignOutstandingPage() {
     return result;
   }, [allRows, searchQuery, classFilter, statusFilter, sortLabel]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / PAGE_SIZE));
+  const effectivePageSize =
+    pageSize === 'all' ? Math.max(filteredSorted.length, 1) : pageSize;
+  const totalPages = Math.max(1, Math.ceil(filteredSorted.length / effectivePageSize));
   const safePage = Math.min(page, totalPages);
+  paginationRef.current.totalPages = totalPages;
 
   useEffect(() => {
     setPage((p) => Math.min(p, totalPages));
@@ -266,10 +292,10 @@ export default function DesignOutstandingPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [searchQuery, classFilter, statusFilter, sortLabel]);
+  }, [searchQuery, classFilter, statusFilter, sortLabel, pageSize]);
 
-  const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-  const endIdx = Math.min(safePage * PAGE_SIZE, filteredSorted.length);
+  const startIdx = filteredSorted.length === 0 ? 0 : (safePage - 1) * effectivePageSize + 1;
+  const endIdx = Math.min(safePage * effectivePageSize, filteredSorted.length);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,8 +351,8 @@ export default function DesignOutstandingPage() {
     if (!el) return;
     const root = el.querySelector('.pw-outstanding') || el;
     const loading = !outstandingData && isPending;
-    const start = (safePage - 1) * PAGE_SIZE;
-    const pageData = filteredSorted.slice(start, start + PAGE_SIZE);
+    const start = (safePage - 1) * effectivePageSize;
+    const pageData = filteredSorted.slice(start, start + effectivePageSize);
     const total = filteredSorted.length;
 
     const totalOut = allRows.reduce((s, st) => s + st.fee_balance, 0);
@@ -361,6 +387,29 @@ export default function DesignOutstandingPage() {
 
     const sortSel = root.querySelector('#ob-sort-select') as HTMLSelectElement | null;
     if (sortSel) sortSel.value = sortLabel;
+
+    const pageSizeSel = root.querySelector('#ob-page-size') as HTMLSelectElement | null;
+    if (pageSizeSel) pageSizeSel.value = pageSize === 'all' ? 'all' : String(pageSize);
+
+    const searchInput = root.querySelector('#ob-search') as HTMLInputElement | null;
+    if (
+      searchInput &&
+      document.activeElement !== searchInput &&
+      searchInput.value !== searchQuery
+    ) {
+      searchInput.value = searchQuery;
+    }
+
+    const clearBtn = root.querySelector('#ob-search-clear') as HTMLButtonElement | null;
+    if (clearBtn) clearBtn.style.visibility = searchQuery.trim() ? 'visible' : 'hidden';
+
+    const hintEl = root.querySelector('#ob-filter-hint');
+    if (hintEl) {
+      const q = searchQuery.trim();
+      hintEl.textContent = q
+        ? `${total} match${total === 1 ? '' : 'es'} · name / guardian matches ranked first`
+        : `${total} student${total === 1 ? '' : 's'} with outstanding balance`;
+    }
 
     const tbody = root.querySelector('#ob-table-body');
     if (tbody) {
@@ -469,6 +518,9 @@ export default function DesignOutstandingPage() {
     selectedIds,
     clearedCountTotal,
     outstandingData,
+    effectivePageSize,
+    pageSize,
+    searchQuery,
   ]);
 
   useLayoutEffect(() => {
@@ -485,91 +537,91 @@ export default function DesignOutstandingPage() {
     if (!htmlContent || !containerRef.current) return;
     const root = containerRef.current;
 
-    const onNav = (e: Event) => {
-      const t = (e.target as HTMLElement | null)?.closest('[data-nav]');
-      if (!t) return;
-      e.preventDefault();
-      const href = t.getAttribute('data-nav');
-      if (href) navigate(href);
-    };
-    root.addEventListener('click', onNav);
-
-    const searchEl = root.querySelector('#ob-search') as HTMLInputElement | null;
-    const classEl = root.querySelector('#ob-class-filter') as HTMLSelectElement | null;
-    const statusEl = root.querySelector('#ob-status-filter') as HTMLSelectElement | null;
-    const sortEl = root.querySelector('#ob-sort-select') as HTMLSelectElement | null;
-
-    const onSearch = () => searchEl && setSearchQuery(searchEl.value);
-    const onClass = () => classEl && setClassFilter(classEl.value);
-    const onStatus = () => statusEl && setStatusFilter(statusEl.value);
-    const onSort = () => {
-      if (sortEl && sortEl.value) setSortLabel(sortEl.value as SortLabel);
+    const onInput = (e: Event) => {
+      const t = e.target as HTMLElement;
+      if (t.id === 'ob-search') setSearchQuery((t as HTMLInputElement).value);
     };
 
-    searchEl?.addEventListener('input', onSearch);
-    classEl?.addEventListener('change', onClass);
-    statusEl?.addEventListener('change', onStatus);
-    sortEl?.addEventListener('change', onSort);
-
-    const onPageClick = (e: Event) => {
-      const btn = (e.target as HTMLElement | null)?.closest('[data-page]') as HTMLButtonElement | null;
-      if (!btn || btn.disabled) return;
-      const p = btn.dataset.page;
-      if (p === 'prev') setPage((x) => Math.max(1, x - 1));
-      else if (p === 'next') setPage((x) => Math.min(totalPages, x + 1));
-      else if (p) setPage(Number(p));
-    };
-    root.querySelector('#ob-page-btns')?.addEventListener('click', onPageClick);
-
-    root.querySelector('#ob-btn-record')?.addEventListener('click', () => navigate('/dashboard/accountant/payments'));
-
-    const onCheckChange = (e: Event) => {
+    const onChange = (e: Event) => {
       const tgt = e.target as HTMLInputElement;
-      if (!tgt.classList.contains('ob-row-check')) return;
-      const id = tgt.dataset.studentId || '';
-      setSelectedIds((prev) => {
-        const next = new Set(prev);
-        if (tgt.checked) next.add(id);
-        else next.delete(id);
-        return next;
-      });
-    };
-    root.addEventListener('change', onCheckChange);
-
-    const checkAll = root.querySelector('#ob-check-all') as HTMLInputElement | null;
-    const onCheckAll = () => {
-      const checked = !!checkAll?.checked;
-      const ids = new Set<string>();
-      if (checked) {
-        root.querySelectorAll('.ob-row-check').forEach((c) => {
-          const sid = (c as HTMLInputElement).dataset.studentId;
-          if (sid) ids.add(sid);
+      if (tgt.id === 'ob-class-filter') setClassFilter(tgt.value);
+      else if (tgt.id === 'ob-status-filter') setStatusFilter(tgt.value);
+      else if (tgt.id === 'ob-sort-select' && tgt.value) setSortLabel(tgt.value as SortLabel);
+      else if (tgt.id === 'ob-page-size') {
+        const v = tgt.value;
+        setPageSize(v === 'all' ? 'all' : Number(v));
+      } else if (tgt.id === 'ob-check-all') {
+        const checked = !!tgt.checked;
+        const ids = new Set<string>();
+        if (checked) {
+          root.querySelectorAll('.ob-row-check').forEach((c) => {
+            const sid = (c as HTMLInputElement).dataset.studentId;
+            if (sid) ids.add(sid);
+          });
+        }
+        setSelectedIds(ids);
+        root.querySelectorAll('.ob-row-check').forEach((cb) => {
+          (cb as HTMLInputElement).checked = checked;
+        });
+      } else if (tgt.classList.contains('ob-row-check')) {
+        const id = tgt.dataset.studentId || '';
+        setSelectedIds((prev) => {
+          const next = new Set(prev);
+          if (tgt.checked) next.add(id);
+          else next.delete(id);
+          return next;
         });
       }
-      setSelectedIds(ids);
-      root.querySelectorAll('.ob-row-check').forEach((cb) => {
-        (cb as HTMLInputElement).checked = checked;
-      });
     };
-    checkAll?.addEventListener('change', onCheckAll);
 
-    root.querySelector('#ob-bulk-clear')?.addEventListener('click', () => {
+    const onClick = (e: MouseEvent) => {
+      const tgt = e.target as HTMLElement;
+      if (tgt.closest('#ob-search-clear')) {
+        e.preventDefault();
+        const inp = root.querySelector('#ob-search') as HTMLInputElement | null;
+        if (inp) inp.value = '';
+        setSearchQuery('');
+        return;
+      }
+      const pageBtn = tgt.closest('[data-page]') as HTMLButtonElement | null;
+      if (pageBtn && !pageBtn.disabled) {
+        const p = pageBtn.dataset.page;
+        const tp = paginationRef.current.totalPages;
+        if (p === 'prev') setPage((x) => Math.max(1, x - 1));
+        else if (p === 'next') setPage((x) => Math.min(tp, x + 1));
+        else if (p) setPage(Number(p));
+        return;
+      }
+      const nav = tgt.closest('[data-nav]');
+      if (nav) {
+        e.preventDefault();
+        const href = nav.getAttribute('data-nav');
+        if (href) navigate(href);
+      }
+    };
+
+    const onRecord = () => navigate('/dashboard/accountant/payments');
+    const onBulkClear = () => {
       setSelectedIds(new Set());
       root.querySelectorAll('.ob-row-check').forEach((cb) => ((cb as HTMLInputElement).checked = false));
+      const checkAll = root.querySelector('#ob-check-all') as HTMLInputElement | null;
       if (checkAll) checkAll.checked = false;
-    });
+    };
+
+    root.addEventListener('click', onClick);
+    root.addEventListener('input', onInput);
+    root.addEventListener('change', onChange);
+    root.querySelector('#ob-btn-record')?.addEventListener('click', onRecord);
+    root.querySelector('#ob-bulk-clear')?.addEventListener('click', onBulkClear);
 
     return () => {
-      root.removeEventListener('click', onNav);
-      searchEl?.removeEventListener('input', onSearch);
-      classEl?.removeEventListener('change', onClass);
-      statusEl?.removeEventListener('change', onStatus);
-      sortEl?.removeEventListener('change', onSort);
-      root.querySelector('#ob-page-btns')?.removeEventListener('click', onPageClick);
-      root.removeEventListener('change', onCheckChange);
-      checkAll?.removeEventListener('change', onCheckAll);
+      root.removeEventListener('click', onClick);
+      root.removeEventListener('input', onInput);
+      root.removeEventListener('change', onChange);
+      root.querySelector('#ob-btn-record')?.removeEventListener('click', onRecord);
+      root.querySelector('#ob-bulk-clear')?.removeEventListener('click', onBulkClear);
     };
-  }, [htmlContent, navigate, totalPages]);
+  }, [htmlContent, navigate]);
 
   useEffect(() => {
     if (!containerRef.current) return;

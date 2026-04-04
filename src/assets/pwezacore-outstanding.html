@@ -92,11 +92,20 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 .pw-outstanding .ob-kpi-sub{font-size:11px;color:var(--t3);margin-top:3px;}
 
 /* TOOLBAR */
-.pw-outstanding .ob-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
-.pw-outstanding .ob-search{flex:1;min-width:200px;max-width:380px;display:flex;align-items:center;gap:9px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 14px;transition:border-color .15s;}
-.pw-outstanding .ob-search:focus-within{border-color:rgba(255,79,106,.3);}
-.pw-outstanding .ob-search input{background:none;border:none;outline:none;color:var(--t1);font-family:'Geist',sans-serif;font-size:13px;width:100%;}
+.pw-outstanding .ob-toolbar{display:flex;flex-direction:column;gap:12px;margin-bottom:18px;}
+.pw-outstanding .ob-toolbar-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.pw-outstanding .ob-visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
+.pw-outstanding .ob-search-wrap{flex:1;min-width:min(100%,280px);min-height:44px;display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:var(--rs);padding:0 12px;transition:border-color .15s,box-shadow .15s;}
+.pw-outstanding .ob-search-wrap:focus-within{border-color:rgba(255,79,106,.45);box-shadow:0 0 0 3px rgba(255,79,106,.12);}
+.pw-outstanding .ob-search-wrap .ob-search-icon{flex-shrink:0;font-size:16px;opacity:.85;user-select:none;}
+.pw-outstanding .ob-search{display:flex;flex:1;align-items:center;min-width:0;border:none;background:transparent;padding:10px 0;box-shadow:none;}
+.pw-outstanding .ob-search:focus-within{box-shadow:none;}
+.pw-outstanding .ob-search input{background:none;border:none;outline:none;color:var(--t1);font-family:'Geist',sans-serif;font-size:14px;width:100%;line-height:1.4;}
 .pw-outstanding .ob-search input::placeholder{color:var(--t3);}
+.pw-outstanding .ob-search-clear{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:6px;background:transparent;color:var(--t3);font-size:18px;line-height:1;cursor:pointer;transition:background .15s,color .15s;}
+.pw-outstanding .ob-search-clear:hover{background:var(--s3);color:var(--t1);}
+.pw-outstanding .ob-result-hint{font-size:12px;color:var(--t3);margin:0;width:100%;}
+.pw-outstanding .ob-page-size-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.06em;margin-right:4px;}
 .pw-outstanding .ob-select{background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:8px 28px 8px 14px;font-family:'Geist',sans-serif;font-size:13px;color:var(--t2);cursor:pointer;outline:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%235a2030'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;transition:border-color .15s;}
 .pw-outstanding .ob-select:hover{border-color:var(--bh);}
 
@@ -381,11 +390,19 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 
   <!-- TOOLBAR -->
   <div class="ob-toolbar ob-fu ob-d2">
-    <div class="ob-search">
-      <span style="color:var(--t3);font-size:14px">🔍</span>
-      <input id="ob-search" placeholder="Search by student, class, parent name or email…" type="text">
+    <div class="ob-toolbar-row" style="width:100%;align-items:stretch">
+      <label class="ob-visually-hidden" for="ob-search">Search by student, class, or parent</label>
+      <div class="ob-search-wrap" role="search">
+        <span class="ob-search-icon" aria-hidden="true">🔍</span>
+        <div class="ob-search">
+          <input id="ob-search" name="ob-search" placeholder="Search — results update as you type…" type="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
+        </div>
+        <button type="button" class="ob-search-clear" id="ob-search-clear" title="Clear search" aria-label="Clear search">×</button>
+      </div>
     </div>
-    <select class="ob-select" id="ob-class-filter">
+    <p class="ob-result-hint" id="ob-filter-hint" aria-live="polite"></p>
+    <div class="ob-toolbar-row">
+      <select class="ob-select" id="ob-class-filter" aria-label="Filter by class">
       <option value="">All Classes</option>
       <option>Primary 1</option>
       <option>Primary 2</option>
@@ -393,18 +410,26 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
       <option>Primary 5</option>
       <option>Primary 7</option>
     </select>
-    <select class="ob-select" id="ob-status-filter">
+    <select class="ob-select" id="ob-status-filter" aria-label="Filter by payment status">
       <option value="">All Status</option>
       <option value="zero">0% Paid</option>
       <option value="partial">Partially Paid</option>
       <option value="high">High Balance (&gt;200k)</option>
     </select>
-    <select class="ob-select" id="ob-sort-select">
+    <select class="ob-select" id="ob-sort-select" aria-label="Sort list">
       <option>Highest Balance First</option>
       <option>Lowest Balance First</option>
       <option>Name A → Z</option>
       <option>% Paid Ascending</option>
     </select>
+    <span class="ob-page-size-label" id="ob-page-size-label">Rows</span>
+    <select class="ob-select" id="ob-page-size" aria-label="Rows per page" style="min-width:88px">
+      <option value="20" selected>20</option>
+      <option value="50">50</option>
+      <option value="100">100</option>
+      <option value="all">All</option>
+    </select>
+    </div>
   </div>
 
   <!-- BULK ACTIONS BAR -->
