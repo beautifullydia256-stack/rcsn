@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { ParentPortalProvider, useParentPortal } from '@/context/ParentPortalContext';
 import { PARENT_PORTAL_SCOPED_STYLE } from '@/lib/parentPortalAssets';
@@ -8,8 +8,37 @@ import { displayStudentName } from '@/lib/parentPortalUtils';
 const FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
 
-function navClass({ isActive }: { isActive: boolean }) {
+function navClass(isActive: boolean) {
   return 'pd-nav-item' + (isActive ? ' active' : '');
+}
+
+function ParentNavButton({
+  to,
+  end = false,
+  onAfterClick,
+  children,
+}: {
+  to: string;
+  end?: boolean;
+  onAfterClick?: () => void;
+  children: ReactNode;
+}) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const isActive = matchPath({ path: to, end }, pathname) != null;
+
+  return (
+    <button
+      type="button"
+      className={navClass(isActive)}
+      onClick={() => {
+        onAfterClick?.();
+        navigate(to);
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 function ParentChrome() {
@@ -107,14 +136,10 @@ function ParentChrome() {
             <nav className="pd-nav">
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Overview</div>
-                <NavLink to="/dashboard/parent" end className={navClass} onClick={() => setSidebarOpen(false)}>
+                <ParentNavButton to="/dashboard/parent" end onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">🏠</span>Dashboard
-                </NavLink>
-                <NavLink
-                  to="/dashboard/parent/messages"
-                  className={navClass}
-                  onClick={() => setSidebarOpen(false)}
-                >
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/messages" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">💬</span>Messages
                   {unreadInbox > 0 ? (
                     <span className="pd-nav-badge" id="pd-notif-badge" style={{ display: 'flex' }}>
@@ -125,49 +150,49 @@ function ParentChrome() {
                       0
                     </span>
                   )}
-                </NavLink>
-                <NavLink to="/dashboard/parent/notices" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/notices" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">📢</span>School Notices
-                </NavLink>
+                </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">My Child</div>
-                <NavLink to="/dashboard/parent/performance" className={navClass} onClick={() => setSidebarOpen(false)}>
+                <ParentNavButton to="/dashboard/parent/performance" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">📊</span>Performance
-                </NavLink>
-                <NavLink to="/dashboard/parent/attendance" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/attendance" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">📋</span>Attendance
-                </NavLink>
-                <NavLink to="/dashboard/parent/timetable" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/timetable" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">📅</span>Timetable
-                </NavLink>
-                <NavLink to="/dashboard/parent/exams" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/exams" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">✏️</span>Exams &amp; Results
-                </NavLink>
-                <NavLink to="/dashboard/parent/reports" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/reports" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">📄</span>Report Cards
-                </NavLink>
+                </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Finance</div>
-                <NavLink to="/dashboard/parent/fees" className={navClass} onClick={() => setSidebarOpen(false)}>
+                <ParentNavButton to="/dashboard/parent/fees" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">💳</span>Fees &amp; Payments
-                </NavLink>
-                <NavLink to="/dashboard/parent/receipts" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/receipts" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">🧾</span>Receipts
-                </NavLink>
+                </ParentNavButton>
               </div>
 
               <div className="pd-nav-section">
                 <div className="pd-nav-label">Account</div>
-                <NavLink to="/dashboard/parent/profile" className={navClass} onClick={() => setSidebarOpen(false)}>
+                <ParentNavButton to="/dashboard/parent/profile" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">👤</span>My Profile
-                </NavLink>
-                <NavLink to="/dashboard/parent/settings" className={navClass} onClick={() => setSidebarOpen(false)}>
+                </ParentNavButton>
+                <ParentNavButton to="/dashboard/parent/settings" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">⚙️</span>Settings
-                </NavLink>
+                </ParentNavButton>
               </div>
             </nav>
 
