@@ -110,8 +110,17 @@ function ParentChrome() {
   /** Warm lazy chunks so first nav under Overview rarely suspends at the app root. */
   useEffect(() => {
     void import('@/pages/chat/SchoolChatPage');
-    void import('@/pages/parent/ParentPortalSectionRoute');
     void import('@/pages/parent/DesignParentDashboard');
+    void import('@/pages/parent/ParentNoticesPage');
+    void import('@/pages/parent/ParentPerformancePage');
+    void import('@/pages/parent/ParentAttendancePage');
+    void import('@/pages/parent/ParentTimetablePage');
+    void import('@/pages/parent/ParentExamsPage');
+    void import('@/pages/parent/ParentReportsPage');
+    void import('@/pages/parent/ParentFeesPage');
+    void import('@/pages/parent/ParentReceiptsPage');
+    void import('@/pages/parent/ParentProfilePage');
+    void import('@/pages/parent/ParentSettingsPage');
   }, []);
 
   return (

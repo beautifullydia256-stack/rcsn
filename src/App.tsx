@@ -90,7 +90,16 @@ const TeacherSettingsPage = lazyWithRetry(() => import('./pages/teacher/settings
 const StudentDashboard = lazyWithRetry(() => import('./pages/student/DesignStudentDashboard'));
 const StudentFeesPage = lazyWithRetry(() => import('./pages/student/fees/FeesPage'));
 const ParentDashboard = lazyWithRetry(() => import('./pages/parent/DesignParentDashboard'));
-const ParentPortalSectionRoute = lazyWithRetry(() => import('./pages/parent/ParentPortalSectionRoute'));
+const ParentNoticesPage = lazyWithRetry(() => import('./pages/parent/ParentNoticesPage'));
+const ParentPerformancePage = lazyWithRetry(() => import('./pages/parent/ParentPerformancePage'));
+const ParentAttendancePage = lazyWithRetry(() => import('./pages/parent/ParentAttendancePage'));
+const ParentTimetablePage = lazyWithRetry(() => import('./pages/parent/ParentTimetablePage'));
+const ParentExamsPage = lazyWithRetry(() => import('./pages/parent/ParentExamsPage'));
+const ParentReportsPage = lazyWithRetry(() => import('./pages/parent/ParentReportsPage'));
+const ParentFeesPage = lazyWithRetry(() => import('./pages/parent/ParentFeesPage'));
+const ParentReceiptsPage = lazyWithRetry(() => import('./pages/parent/ParentReceiptsPage'));
+const ParentProfilePage = lazyWithRetry(() => import('./pages/parent/ParentProfilePage'));
+const ParentSettingsPage = lazyWithRetry(() => import('./pages/parent/ParentSettingsPage'));
 /** Accountant home uses FinancialOverview (same fee KPI logic as admin); DesignAccountantDashboard is HTML-only and unused here. */
 const AccountantDashboard = lazyWithRetry(() => import('./pages/accountant/Dashboard'));
 const AccountantBillingPage = lazyWithRetry(() => import('./pages/accountant/BillingPage'));
@@ -226,16 +235,16 @@ function App() {
                 <Route path="parent" element={<ParentLayout />}>
                   <Route index element={<ParentDashboard />} />
                   <Route path="messages" element={<SchoolChatPage />} />
-                  <Route path="notices" element={<ParentPortalSectionRoute />} />
-                  <Route path="performance" element={<ParentPortalSectionRoute />} />
-                  <Route path="attendance" element={<ParentPortalSectionRoute />} />
-                  <Route path="timetable" element={<ParentPortalSectionRoute />} />
-                  <Route path="exams" element={<ParentPortalSectionRoute />} />
-                  <Route path="reports" element={<ParentPortalSectionRoute />} />
-                  <Route path="fees" element={<ParentPortalSectionRoute />} />
-                  <Route path="receipts" element={<ParentPortalSectionRoute />} />
-                  <Route path="profile" element={<ParentPortalSectionRoute />} />
-                  <Route path="settings" element={<ParentPortalSectionRoute />} />
+                  <Route path="notices" element={<ParentNoticesPage />} />
+                  <Route path="performance" element={<ParentPerformancePage />} />
+                  <Route path="attendance" element={<ParentAttendancePage />} />
+                  <Route path="timetable" element={<ParentTimetablePage />} />
+                  <Route path="exams" element={<ParentExamsPage />} />
+                  <Route path="reports" element={<ParentReportsPage />} />
+                  <Route path="fees" element={<ParentFeesPage />} />
+                  <Route path="receipts" element={<ParentReceiptsPage />} />
+                  <Route path="profile" element={<ParentProfilePage />} />
+                  <Route path="settings" element={<ParentSettingsPage />} />
                 </Route>
                 <Route path="accountant" element={<AccountantLayout />}>
                   <Route index element={<AccountantDashboard />} />
