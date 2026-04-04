@@ -15,11 +15,33 @@ export default function CreateParentLoginPage() {
   const [guardianName, setGuardianName] = useState('');
   const [email, setEmail] = useState('');
   const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [hasPortalAccount, setHasPortalAccount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
+      const { data: portalRow } = await supabase
+        .from('users')
+        .select('user_id, email, name')
+        .eq('user_id', parentId)
+        .eq('role', 'parent')
+        .maybeSingle();
+
+      if (portalRow) {
+        setHasPortalAccount(true);
+        setGuardianName(portalRow.name ? String(portalRow.name) : '');
+        setEmail(portalRow.email ? String(portalRow.email) : '');
+        const { data: prow } = await supabase
+          .from('parents')
+          .select('school_id')
+          .eq('parent_id', parentId)
+          .limit(1)
+          .maybeSingle();
+        setSchoolId((prow?.school_id as string) || null);
+        return;
+      }
+
       const { data: rows } = await supabase
         .from('parents')
         .select('name, email, school_id, is_primary_contact')
@@ -30,6 +52,7 @@ export default function CreateParentLoginPage() {
       setGuardianName(primary?.name ? String(primary.name) : '');
       setEmail(primary?.email ? String(primary.email) : '');
       setSchoolId((primary?.school_id as string) || null);
+      setHasPortalAccount(false);
     };
     if (parentId) void load();
   }, [parentId]);
@@ -104,6 +127,72 @@ export default function CreateParentLoginPage() {
     }
   };
 
+  const sendResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const addr = email.trim();
+    if (!isValidEmailFormat(addr)) {
+      setError('Enter a valid email address so we know where to send the new password.');
+      return;
+    }
+    setSaving(true);
+    try {
+      try {
+        if (schoolId) {
+          await supabase.from('parents').update({ email: addr }).eq('parent_id', parentId).eq('school_id', schoolId);
+        }
+      } catch {
+        /* non-fatal */
+      }
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        const msg = 'Your session expired. Please sign in again.';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+      const url = apiBase ? `${apiBase}/api/admin/resend-portal-credentials` : '/api/admin/resend-portal-credentials';
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: parentId,
+          email: addr,
+        }),
+      });
+      const raw = await response.text();
+      let data: { error?: string; message?: string } = {};
+      try {
+        data = JSON.parse(raw) as { error?: string; message?: string };
+      } catch {
+        /* ignore */
+      }
+      if (!response.ok) {
+        const msg =
+          data.error ||
+          (raw.trim() && raw.length < 800 ? raw.trim() : '') ||
+          `Request failed (${response.status})`;
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+      toast.success(data.message || 'Email sent with a new one-time password.');
+      setTimeout(() => navigate(`/dashboard/admin/parents/${parentId}`), 1200);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Network error. Please try again.';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AdminPageWrapper>
       <div className="invite-flow mx-auto w-full max-w-xl px-3 pb-8 pt-1 font-['Instrument_Sans',system-ui,sans-serif] sm:px-4 sm:pt-2">
@@ -121,11 +210,22 @@ export default function CreateParentLoginPage() {
             <Mail className="h-7 w-7" strokeWidth={1.75} aria-hidden />
           </div>
           <h1 className="font-['Cabinet_Grotesk',system-ui,sans-serif] text-2xl font-bold leading-tight tracking-tight text-[var(--ac-text-primary)] sm:text-3xl sm:tracking-tight">
-            Invite to parent portal
+            {hasPortalAccount ? 'Resend portal sign-in email' : 'Invite to parent portal'}
           </h1>
           <p className="mx-auto mt-3 max-w-md text-pretty text-[15px] leading-relaxed text-[var(--ac-text-secondary)] sm:mx-0 sm:text-base">
-            Send the same secure welcome email your staff get: one-time password, prefilled sign-in link, then they choose
-            their own password. We’ll save this address on their guardian record.
+            {hasPortalAccount ? (
+              <>
+                This guardian already has an account (for example from Add parent with email). If they never received
+                credentials or forgot the password, send a <strong>new one-time password</strong> by email. Their old
+                password will <strong>stop working</strong> after you send this. You can correct their email below before
+                sending.
+              </>
+            ) : (
+              <>
+                Send the same secure welcome email your staff get: one-time password, prefilled sign-in link, then they
+                choose their own password. We’ll save this address on their guardian record.
+              </>
+            )}
           </p>
         </header>
 
@@ -140,7 +240,9 @@ export default function CreateParentLoginPage() {
 
         <div className="ac-glass-card overflow-hidden rounded-2xl p-5 shadow-[var(--ac-shadow-strong)] sm:p-8">
           <div className="mb-6 rounded-xl border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] px-4 py-3 sm:px-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ac-text-muted)]">Inviting</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--ac-text-muted)]">
+              {hasPortalAccount ? 'Account holder' : 'Inviting'}
+            </p>
             <p className="mt-1 text-lg font-semibold tracking-tight text-[var(--ac-text-primary)]">
               {guardianName || 'Guardian'}
             </p>
@@ -170,13 +272,21 @@ export default function CreateParentLoginPage() {
                 <ShieldCheck className="h-4 w-4" aria-hidden />
               </span>
               <div>
-                <p className="font-medium text-[var(--ac-text-primary)]">Parent portal is ready</p>
-                <p className="mt-0.5 text-[13px] leading-snug">They can sign in to see linked children and school updates.</p>
+                <p className="font-medium text-[var(--ac-text-primary)]">Parent portal access</p>
+                <p className="mt-0.5 text-[13px] leading-snug">
+                  {hasPortalAccount
+                    ? 'No need to create another account — this only refreshes how they sign in.'
+                    : 'They can sign in to see linked children and school updates.'}
+                </p>
               </div>
             </li>
           </ol>
 
-          <form className="space-y-5" autoComplete="off" onSubmit={(e) => void sendInvite(e)}>
+          <form
+            className="space-y-5"
+            autoComplete="off"
+            onSubmit={(e) => void (hasPortalAccount ? sendResend(e) : sendInvite(e))}
+          >
             <div>
               <label htmlFor="parent_email" className="mb-2 block text-sm font-semibold text-[var(--ac-text-primary)]">
                 Email address
@@ -207,7 +317,13 @@ export default function CreateParentLoginPage() {
               disabled={saving}
             >
               <Send className="h-[1.125rem] w-[1.125rem] shrink-0 opacity-95" aria-hidden />
-              {saving ? 'Sending invitation…' : 'Send invitation email'}
+              {saving
+                ? hasPortalAccount
+                  ? 'Sending…'
+                  : 'Sending invitation…'
+                : hasPortalAccount
+                  ? 'Email new one-time password'
+                  : 'Send invitation email'}
             </button>
           </form>
         </div>

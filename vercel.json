@@ -11,6 +11,9 @@
     },
     "api/admin/ensure-parent-link.js": {
       "includeFiles": "lib/**"
+    },
+    "api/admin/resend-portal-credentials.js": {
+      "includeFiles": "lib/**"
     }
   },
   "env": {

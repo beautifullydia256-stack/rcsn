@@ -11,6 +11,7 @@ import {
   type AddParentSchoolStudent,
 } from './addParentSchoolQuery';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
+import { isValidEmailFormat } from '@/lib/emailValidator';
 
 const RELATIONSHIP_OPTIONS = [
   { value: '', label: 'Select relationship…' },
@@ -122,8 +123,8 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
       return;
     }
     const addr = email.trim();
-    if (!addr) {
-      setError('Email is required so the parent can sign in to the portal.');
+    if (addr && !isValidEmailFormat(addr)) {
+      setError('Enter a valid email address, or leave email empty to save the guardian without portal access for now.');
       return;
     }
 
@@ -133,7 +134,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         student_id: studentId,
         school_id: schoolId,
         name: trimName,
-        email: addr,
+        ...(addr ? { email: addr } : {}),
         phone: phone.trim() || undefined,
         relationship: relationship.trim(),
       });
@@ -323,16 +324,13 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         </div>
 
         <div>
-          <label className={labelClass}>
-            Email <span className="text-red-500">*</span>
-          </label>
+          <label className={labelClass}>Email</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
-            placeholder="e.g. parent@example.com"
-            required
+            placeholder="Optional — add later, then use Invite to portal"
           />
         </div>
 
@@ -348,8 +346,9 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         </div>
 
         <p className="text-xs text-[var(--ac-text-muted)]">
-          A real email is required so we can create or link their parent portal login. Phone is optional but useful for
-          your records.
+          If you include an email, we create or link their portal login immediately (same as before). If you leave email
+          empty, we only save the guardian on the student — add an email on their profile later, then use{' '}
+          <span className="font-medium">Invite to portal</span> to send the welcome message and one-time password.
         </p>
 
         <div className="flex flex-wrap gap-3 pt-2">

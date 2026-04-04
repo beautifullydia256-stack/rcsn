@@ -4,6 +4,7 @@
  */
 'use strict';
 
+const { randomUUID } = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { createServerClient } = require('@supabase/ssr');
 const { isValidRealEmail } = require('../../lib/realEmail.js');
@@ -266,10 +267,44 @@ module.exports = async function handler(req, res) {
     const parentPhone = phone ? phone.trim() : null;
     const rel = relationship ? relationship.trim() : null;
 
-    if (!parentEmailRaw || !isValidRealEmail(parentEmailRaw)) {
+    if (!parentEmailRaw) {
+      const linkOnlyId = randomUUID();
+      const { error: linkOnlyErr } = await supabaseAdmin.from('parents').insert({
+        parent_id: linkOnlyId,
+        student_id,
+        school_id,
+        name: parentName,
+        email: null,
+        phone: parentPhone || null,
+        ...(rel ? { relationship: rel } : {}),
+      });
+      if (linkOnlyErr) {
+        if (linkOnlyErr.code === '23505') {
+          applyCors();
+          res.status(200).json({
+            success: true,
+            message: 'Parent already linked to this student.',
+          });
+          return;
+        }
+        applyCors();
+        res.status(400).json({ error: linkOnlyErr.message });
+        return;
+      }
+      applyCors();
+      res.status(200).json({
+        success: true,
+        message:
+          'Guardian linked without a portal login. Add an email on their profile, then use Invite to portal to send credentials.',
+        parent_id: linkOnlyId,
+      });
+      return;
+    }
+
+    if (!isValidRealEmail(parentEmailRaw)) {
       applyCors();
       res.status(400).json({
-        error: 'A real parent email address is required (no auto-generated or placeholder addresses).',
+        error: 'Enter a valid email address, or leave email blank to save the guardian without portal access for now.',
       });
       return;
     }
