@@ -199,13 +199,23 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
   display:flex; align-items:center; gap:9px;
   background:var(--s2); border:1px solid var(--border);
   border-radius:var(--rs); padding:8px 14px;
-  transition:border-color .15s;
+  transition:border-color .15s, box-shadow .15s;
 }
-.pw-parents .par-search:focus-within { border-color:rgba(157,126,255,.3); }
+.pw-parents .par-search:focus-within { border-color:rgba(157,126,255,.35); box-shadow:0 0 0 3px rgba(157,126,255,.1); }
 .pw-parents .par-search input {
-  background:none; border:none; outline:none;
+  background:none; border:none; margin:0; padding:0;
   color:var(--t1); font-family:'Geist',sans-serif;
   font-size:13px; width:100%;
+  -webkit-appearance:none; appearance:none;
+  outline:none; box-shadow:none;
+}
+.pw-parents .par-search input:focus,
+.pw-parents .par-search input:focus-visible {
+  outline:none; box-shadow:none;
+}
+.pw-parents .par-search input::-webkit-search-decoration,
+.pw-parents .par-search input::-webkit-search-cancel-button {
+  -webkit-appearance:none;
 }
 .pw-parents .par-search input::placeholder { color:var(--t3); }
 .pw-parents .par-select {
@@ -621,7 +631,7 @@ html.light .pw-parents, html[data-theme=light] .pw-parents {
   <div class="par-toolbar par-fu par-d2">
     <div class="par-search">
       <span style="color:var(--t3);font-size:14px">🔍</span>
-      <input id="par-search" placeholder="Search by name, phone, or email…" type="text">
+      <input id="par-search" placeholder="Search by name, phone, or email…" type="text" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
     </div>
     <select class="par-select" id="par-status-filter">
       <option value="">All Status</option>

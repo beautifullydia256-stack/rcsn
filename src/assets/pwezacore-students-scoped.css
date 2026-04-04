@@ -263,14 +263,19 @@
   border: 1px solid var(--border);
   border-radius: var(--rs);
   padding: 8px 14px;
-  transition: border-color .15s;
+  transition: border-color .15s, box-shadow .15s;
 }
 
-.pw-students .search-bar:focus-within { border-color: rgba(0,229,195,.25); }
+.pw-students .search-bar:focus-within {
+  border-color: rgba(0,229,195,.35);
+  box-shadow: 0 0 0 3px rgba(0,229,195,.1);
+}
 
 .pw-students .search-bar input {
   background: none;
   border: none;
+  margin: 0;
+  padding: 0;
   color: var(--t1);
   font-family: 'Geist', sans-serif;
   font-size: 13px;

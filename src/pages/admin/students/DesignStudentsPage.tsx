@@ -475,6 +475,9 @@ export default function DesignStudentsPage() {
                 type="text"
                 inputMode="search"
                 autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="search"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);
