@@ -177,8 +177,15 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
 
   const isGraduated = selectedStudentRow?.status === "graduated";
+  /** Opening fees from fee structure / sync live on student_balances only — no student_invoices row yet. */
+  const hasCurrentTermBalanceAlready =
+    !!currentTerm && outstandingBalances.some((b) => b.term_id === currentTerm.id);
   const showActivateCurrentTerm =
-    !!currentTerm && hasCurrentTermInvoice === false && !!selectedStudent && !isGraduated;
+    !!currentTerm &&
+    hasCurrentTermInvoice === false &&
+    !!selectedStudent &&
+    !isGraduated &&
+    !hasCurrentTermBalanceAlready;
 
   async function handleActivateCurrentTermInvoice() {
     if (!schoolId || !userId || !selectedStudent || !currentTerm || !selectedStudentRow) return;
@@ -539,7 +546,11 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                         <span className="text-slate-500">Loading balances…</span>
                       ) : outstandingBalances.length > 0 ? (
                         <>
-                          <p className="font-medium text-slate-800">Outstanding balances (oldest first)</p>
+                          <p className="font-medium text-slate-800">
+                            {outstandingBalances.length > 1
+                              ? "Outstanding by term (oldest term first)"
+                              : "Outstanding for this period"}
+                          </p>
                           <ul className="mt-1 list-inside list-disc text-slate-700">
                             {outstandingBalances.map((b) => (
                               <li key={b.term_id}>
@@ -548,7 +559,11 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                             ))}
                           </ul>
                           <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
-                          <p className="mt-0.5 text-slate-600">Payments are applied to the oldest term first, then the next, and so on.</p>
+                          {outstandingBalances.length > 1 && (
+                            <p className="mt-0.5 text-slate-600">
+                              Payments are applied to the oldest owing term first, then the next.
+                            </p>
+                          )}
                         </>
                       ) : (
                         <p className="text-slate-600">No outstanding balance for this student.</p>
