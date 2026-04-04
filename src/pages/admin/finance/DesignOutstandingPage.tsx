@@ -131,9 +131,11 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
     const parent = parentByStudent.get(sid);
     const agg = balanceByStudent.get(sid);
     const expected = Number(agg?.total_fees ?? 0);
+    const prior = Number(agg?.prior_system_balance ?? 0);
     const paid = Number(agg?.total_paid ?? 0);
     const balance = Number(agg?.balance ?? 0);
-    const pct = expected > 0 ? Math.round((paid / expected) * 100) : 0;
+    const totalForPct = expected + prior;
+    const pct = totalForPct > 0 ? Math.round((paid / totalForPct) * 100) : 0;
     const status = s ? String((s.status as string) || '') : '';
     const inactive = status && status !== 'active';
     const displayName = s ? String(s.name ?? '—') : 'Student (not on current roster)';
@@ -146,7 +148,7 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
       current_class: displayClass,
       amount_paid: paid,
       fee_balance: balance,
-      fee_total: expected,
+      fee_total: totalForPct,
       pct_paid: pct,
       parent_name: parent?.name ?? null,
       parent_email: parent?.email ?? null,

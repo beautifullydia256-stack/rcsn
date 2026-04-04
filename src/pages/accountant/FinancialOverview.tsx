@@ -113,18 +113,19 @@ export type StatisticData = {
   totalOverallBalance: number;
 };
 
-async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
-  const { data: terms } = await supabase
-    .from("school_terms")
-    .select("id, term, year")
-    .eq("school_id", schoolId)
-    .order("year", { ascending: false })
-    .order("term", { ascending: false });
+const PRIOR_EXTERNAL_TERM_ID = "__prior_external__";
 
-  const { data: balances } = await supabase
-    .from("student_balances")
-    .select("term_id, total_fees, total_paid, balance")
-    .eq("school_id", schoolId);
+async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
+  const [{ data: terms }, { data: balances }, { data: priorRows }] = await Promise.all([
+    supabase
+      .from("school_terms")
+      .select("id, term, year")
+      .eq("school_id", schoolId)
+      .order("year", { ascending: false })
+      .order("term", { ascending: false }),
+    supabase.from("student_balances").select("term_id, total_fees, total_paid, balance").eq("school_id", schoolId),
+    supabase.from("prior_system_balance_entries").select("amount_outstanding").eq("school_id", schoolId),
+  ]);
 
   const byTerm: Record<string, { expected: number; paidThisTerm: number; overallBalance: number }> = {};
   (balances || []).forEach((b: { term_id: string; total_fees?: number; total_paid?: number; balance?: number }) => {
@@ -147,6 +148,22 @@ async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
       paidThisTerm: byTerm[t.id].paidThisTerm,
       overallBalance: byTerm[t.id].overallBalance,
     }));
+
+  const priorSum = (priorRows || []).reduce(
+    (s, r) => s + Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0)),
+    0
+  );
+  if (priorSum > 0) {
+    termsList.push({
+      termId: PRIOR_EXTERNAL_TERM_ID,
+      term: 0,
+      year: 0,
+      termLabel: "Prior / external",
+      expected: 0,
+      paidThisTerm: 0,
+      overallBalance: priorSum,
+    });
+  }
 
   const totalExpected = termsList.reduce((s, r) => s + r.expected, 0);
   const totalOverallBalance = termsList.reduce((s, r) => s + r.overallBalance, 0);
