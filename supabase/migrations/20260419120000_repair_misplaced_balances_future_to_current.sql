@@ -141,13 +141,13 @@ BEGIN
     WHERE st.id = current_term_id;
 
     -- 1) Merge numeric balances from future terms into current term row
+    --    (invoice-style schema: no class_id / last_payment_date on student_balances)
     WITH src AS (
       SELECT
         sb.student_id,
         sb.school_id,
         SUM(COALESCE(sb.total_fees, 0)) AS add_fees,
-        SUM(COALESCE(sb.total_paid, 0)) AS add_paid,
-        MAX(sb.class_id) AS any_class
+        SUM(COALESCE(sb.total_paid, 0)) AS add_paid
       FROM public.student_balances sb
       WHERE sb.school_id = r_school.school_id
         AND sb.term_id = ANY (v_future)
@@ -159,32 +159,25 @@ BEGIN
         student_id,
         school_id,
         term_id,
-        class_id,
         year,
         term,
         total_fees,
         total_paid,
-        last_payment_date,
-        created_at,
         updated_at
       )
       SELECT
         src.student_id,
         src.school_id,
         current_term_id,
-        src.any_class,
         COALESCE(v_y, EXTRACT(YEAR FROM v_today)::INT),
         COALESCE(v_t, 1),
         src.add_fees,
         src.add_paid,
-        NULL,
-        NOW(),
         NOW()
       FROM src
       ON CONFLICT (student_id, term_id) DO UPDATE SET
         total_fees = public.student_balances.total_fees + EXCLUDED.total_fees,
         total_paid = public.student_balances.total_paid + EXCLUDED.total_paid,
-        class_id = COALESCE(public.student_balances.class_id, EXCLUDED.class_id),
         year = COALESCE(EXCLUDED.year, public.student_balances.year),
         term = COALESCE(EXCLUDED.term, public.student_balances.term),
         updated_at = NOW()
