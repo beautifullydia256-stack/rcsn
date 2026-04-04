@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { ParentPortalProvider, useParentPortal } from '@/context/ParentPortalContext';
@@ -10,6 +10,34 @@ const FONT_HREF =
 
 function navClass(isActive: boolean) {
   return 'pd-nav-item' + (isActive ? ' active' : '');
+}
+
+/** Keeps sidebar + top bar visible while lazy child routes load (avoids full-app ThemedLoadingView). */
+function ParentOutletFallback() {
+  return (
+    <div
+      className="pd-outlet-fallback"
+      style={{
+        padding: '28px 24px 40px',
+        color: 'var(--t2)',
+        fontSize: 14,
+        maxWidth: 480,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "'Instrument Serif', serif",
+          fontSize: 20,
+          color: 'var(--t1)',
+          marginBottom: 6,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        Loading…
+      </div>
+      <div style={{ opacity: 0.85 }}>Preparing this section.</div>
+    </div>
+  );
 }
 
 function ParentNavButton({
@@ -78,6 +106,13 @@ function ParentChrome() {
       document.body.style.overflow = '';
     };
   }, [sidebarOpen]);
+
+  /** Warm lazy chunks so first nav under Overview rarely suspends at the app root. */
+  useEffect(() => {
+    void import('@/pages/chat/SchoolChatPage');
+    void import('@/pages/parent/ParentPortalSectionRoute');
+    void import('@/pages/parent/DesignParentDashboard');
+  }, []);
 
   return (
     <>
@@ -238,7 +273,9 @@ function ParentChrome() {
             </div>
 
             <div className="pd-content">
-              <Outlet />
+              <Suspense fallback={<ParentOutletFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
           </main>
         </div>
