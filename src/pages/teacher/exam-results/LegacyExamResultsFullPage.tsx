@@ -298,11 +298,23 @@ export default function LegacyExamResultsFullPage() {
         let schoolId = userMetadata.school_id as string | undefined;
         let teacherId = userMetadata.teacher_id as string | undefined;
 
+        // Prefer RPC when deployed (matches current_school_id() in RLS exactly).
+        // If RPC is missing (404) or fails, read public.users — JWT metadata school_id is often stale/wrong and breaks prefs RLS.
         const { data: rpcSchoolId, error: schoolRpcError } = await supabase.rpc(
           "get_authenticated_user_school_id"
         );
-        if (!schoolRpcError && rpcSchoolId) {
+        if (!schoolRpcError && rpcSchoolId != null && String(rpcSchoolId).length > 0) {
           schoolId = String(rpcSchoolId);
+        } else {
+          const { data: portalUserRow } = await supabase
+            .from("users")
+            .select("school_id")
+            .eq("user_id", user.id)
+            .maybeSingle();
+          const portalSchoolId = (portalUserRow as { school_id?: string | null } | null)?.school_id;
+          if (portalSchoolId) {
+            schoolId = String(portalSchoolId);
+          }
         }
 
         if (teacherId && schoolId) {
