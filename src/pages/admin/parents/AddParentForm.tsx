@@ -9,6 +9,7 @@ import {
   addParentSchoolStaleOptions,
   fetchAddParentSchoolContext,
 } from './addParentSchoolQuery';
+import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 
 export type AddParentFormProps = {
   mode: 'page' | 'modal';
@@ -61,24 +62,15 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
 
     setSubmitting(true);
     try {
-      const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-      const url = apiBase ? `${apiBase}/api/admin/ensure-parent-link` : '/api/admin/ensure-parent-link';
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          student_id: studentId,
-          school_id: schoolId,
-          name: trimName,
-          email: email.trim() || undefined,
-          phone: phone.trim() || undefined,
-        }),
+      const linkRes = await ensureParentLinkForStudent({
+        student_id: studentId,
+        school_id: schoolId,
+        name: trimName,
+        email: email.trim() || undefined,
+        phone: phone.trim() || undefined,
       });
-
-      const result = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(result.error || res.statusText || 'Failed to add parent');
+      if (!linkRes.ok) {
+        throw new Error(linkRes.error || 'Failed to add parent');
       }
 
       if (mode === 'modal') {

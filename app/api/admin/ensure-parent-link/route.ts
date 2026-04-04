@@ -34,8 +34,22 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const { data: { user: adminUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !adminUser) {
+    let adminUser = null;
+    const fromCookie = await supabase.auth.getUser();
+    if (fromCookie.data?.user && !fromCookie.error) {
+      adminUser = fromCookie.data.user;
+    } else {
+      const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization');
+      const bearer =
+        authHeader && /^Bearer\s+\S+/i.test(authHeader) ? authHeader.replace(/^Bearer\s+/i, '').trim() : null;
+      if (bearer) {
+        const fromJwt = await supabase.auth.getUser(bearer);
+        if (fromJwt.data?.user && !fromJwt.error) {
+          adminUser = fromJwt.data.user;
+        }
+      }
+    }
+    if (!adminUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -43,7 +57,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
-      .single();
+      .maybeSingle();
 
     let body: Record<string, unknown>;
     try {

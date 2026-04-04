@@ -8,6 +8,9 @@
   "functions": {
     "api/admin/create-user-account.js": {
       "includeFiles": "lib/**"
+    },
+    "api/admin/ensure-parent-link.ts": {
+      "includeFiles": "lib/**"
     }
   },
   "env": {

@@ -89,6 +89,30 @@ function parseBody(req: Req): Record<string, unknown> {
   return {};
 }
 
+/** Vite SPA: session in storage; cross-origin API must accept Bearer (cookies not sent). */
+function getBearerToken(req: Req): string | null {
+  try {
+    const h = req.headers;
+    if (!h) return null;
+    let raw: string | undefined;
+    if (typeof (h as { get?: (n: string) => string | null }).get === 'function') {
+      raw =
+        (h as { get: (n: string) => string | null }).get('authorization') ??
+        (h as { get: (n: string) => string | null }).get('Authorization') ??
+        undefined;
+    } else {
+      const rec = h as Record<string, string | string[] | undefined>;
+      const a = rec.authorization ?? rec.Authorization;
+      raw = Array.isArray(a) ? a[0] : typeof a === 'string' ? a : undefined;
+    }
+    if (!raw || typeof raw !== 'string') return null;
+    const m = raw.match(/^Bearer\s+(\S+)/i);
+    return m ? m[1]!.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function handler(req: Req, res: Res) {
   const origin = resolveCorsOrigin(req);
   const cors: Record<string, string> = {
@@ -131,8 +155,20 @@ export default async function handler(req: Req, res: Res) {
       },
     });
 
-    const { data: { user: adminUser }, error: authError } = await supabase.auth.getUser();
-    if (authError || !adminUser) {
+    let adminUser = null;
+    const fromCookie = await supabase.auth.getUser();
+    if (fromCookie.data?.user && !fromCookie.error) {
+      adminUser = fromCookie.data.user;
+    } else {
+      const bearer = getBearerToken(req);
+      if (bearer) {
+        const fromJwt = await supabase.auth.getUser(bearer);
+        if (fromJwt.data?.user && !fromJwt.error) {
+          adminUser = fromJwt.data.user;
+        }
+      }
+    }
+    if (!adminUser) {
       setCors();
       res.status(401).json({ error: 'Unauthorized' });
       return;
@@ -142,7 +178,7 @@ export default async function handler(req: Req, res: Res) {
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
-      .single();
+      .maybeSingle();
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { isValidRealEmail } = require('../../lib/realEmail.js') as {
@@ -219,8 +255,14 @@ export default async function handler(req: Req, res: Res) {
         res.status(400).json({ error: createError.message });
         return;
       }
-      parentUserId = createData!.user.id;
-      await supabaseAdmin.from('users').insert({
+      const newId = createData?.user?.id;
+      if (!newId) {
+        setCors();
+        res.status(502).json({ error: 'Auth did not return a user id. Parent account was not created.' });
+        return;
+      }
+      parentUserId = newId;
+      const { error: profileErr } = await supabaseAdmin.from('users').insert({
         user_id: parentUserId,
         email: authEmail,
         role: 'parent',
@@ -228,6 +270,16 @@ export default async function handler(req: Req, res: Res) {
         school_id,
         phone: parentPhone || null,
       });
+      if (profileErr) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(parentUserId);
+        } catch {
+          /* best-effort */
+        }
+        setCors();
+        res.status(400).json({ error: profileErr.message || 'Could not save parent profile.' });
+        return;
+      }
     }
 
     const { error: linkError } = await supabaseAdmin

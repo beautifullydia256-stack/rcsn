@@ -1,6 +1,10 @@
+import { supabase } from '@/lib/supabase';
+
 /**
  * Calls the serverless route that creates/finds a parent auth user and inserts into public.parents.
  * Must use the same base URL as create-student-login when VITE_API_URL is set (cross-origin / preview).
+ *
+ * Sends Authorization: Bearer when a session exists (Vite SPA uses sessionStorage; cookies are often empty cross-origin).
  */
 export async function ensureParentLinkForStudent(body: {
   student_id: string;
@@ -17,9 +21,14 @@ export async function ensureParentLinkForStudent(body: {
   ).replace(/\/$/, '');
   const url = apiBase ? `${apiBase}/api/admin/ensure-parent-link` : '/api/admin/ensure-parent-link';
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
       credentials: 'include',
       body: JSON.stringify(body),
     });
