@@ -10,6 +10,8 @@ export type PriorBalanceAgg = {
   sumOutstanding: number;
   lastSourceNote: string | null;
   lastEnteredAt: string | null;
+  /** Row id when a single prior entry exists (unique per school+student). */
+  entryId: string | null;
 };
 
 export type BillingData = {
@@ -39,6 +41,7 @@ function aggregateTermInvoiceOutstanding(
 
 function aggregatePriorBalances(
   rows: {
+    id: string;
     student_id: string;
     amount_outstanding: number | string;
     source_note: string | null;
@@ -47,10 +50,12 @@ function aggregatePriorBalances(
 ): Record<string, PriorBalanceAgg> {
   const sums = new Map<string, number>();
   const latest = new Map<string, { at: string; note: string | null }>();
+  const entryIdByStudent = new Map<string, string>();
   for (const r of rows) {
     const amt = Number(r.amount_outstanding);
     if (!Number.isFinite(amt)) continue;
     sums.set(r.student_id, (sums.get(r.student_id) || 0) + amt);
+    entryIdByStudent.set(r.student_id, r.id);
     const prev = latest.get(r.student_id);
     if (!prev || r.entered_at > prev.at) {
       latest.set(r.student_id, { at: r.entered_at, note: r.source_note });
@@ -63,6 +68,7 @@ function aggregatePriorBalances(
       sumOutstanding,
       lastSourceNote: l?.note ?? null,
       lastEnteredAt: l?.at ?? null,
+      entryId: entryIdByStudent.get(studentId) ?? null,
     };
   }
   return out;
@@ -85,7 +91,7 @@ export async function fetchBillingData(schoolId: string): Promise<BillingData> {
       .neq("status", "cancelled"),
     supabase
       .from("prior_system_balance_entries")
-      .select("student_id, amount_outstanding, source_note, entered_at")
+      .select("id, student_id, amount_outstanding, source_note, entered_at")
       .eq("school_id", schoolId)
       .order("entered_at", { ascending: true }),
   ]);

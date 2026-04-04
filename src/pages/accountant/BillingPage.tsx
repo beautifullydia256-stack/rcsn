@@ -21,6 +21,7 @@ export default function BillingPage() {
     refetchOnWindowFocus: true,
   });
   const fees = data?.fees ?? [];
+  const termsList = data?.terms ?? [];
   const students = data?.students ?? [];
   const studentsError = data?.studentsError ?? null;
   const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
@@ -42,6 +43,9 @@ export default function BillingPage() {
   const [priorAmount, setPriorAmount] = useState("");
   const [priorNote, setPriorNote] = useState("");
   const [savingPrior, setSavingPrior] = useState(false);
+  /** Split lines for move_prior_balance_to_term_opening_invoices (Option 1: real term rows). */
+  const [priorSplitRows, setPriorSplitRows] = useState<{ termId: string; amount: string }[]>([{ termId: "", amount: "" }]);
+  const [movingPrior, setMovingPrior] = useState(false);
 
   useEffect(() => {
     if (!schoolId) {
@@ -61,6 +65,10 @@ export default function BillingPage() {
       cancelled = true;
     };
   }, [schoolId]);
+
+  useEffect(() => {
+    setPriorSplitRows([{ termId: "", amount: "" }]);
+  }, [selectedStudent]);
 
   const classNames = fees.map((r) => r.class_name);
   const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
@@ -83,6 +91,11 @@ export default function BillingPage() {
             s.current_class.toLowerCase().includes(q)
         );
 
+  const termsOldestFirst = useMemo(
+    () => [...termsList].sort((a, b) => (a.year !== b.year ? a.year - b.year : a.term - b.term)),
+    [termsList]
+  );
+
   const termOutstandingForSelected = selectedStudent
     ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
     : 0;
@@ -95,7 +108,7 @@ export default function BillingPage() {
   const priorEntryBlockedReason = (() => {
     if (!selectedStudent) return null;
     if (priorBalanceByStudent[selectedStudent]) {
-      return "A prior-system balance was already recorded for this student. Only one entry is allowed—use term invoices for ongoing fees.";
+      return "A prior-system balance exists for this student. Prefer Move prior onto term invoices below so Record Payment matches multi-term ordering; the one-off prior field is only for when you cannot split by term.";
     }
     if (studentIdsClosedTermHistory.has(selectedStudent)) {
       return "This student has invoices on a closed term, so a one-time prior balance can no longer be added. That step is only for new onboarding before any closed term.";
@@ -147,6 +160,55 @@ export default function BillingPage() {
       }
     } finally {
       setSavingPrior(false);
+    }
+  }
+
+  async function handleMovePriorToTermInvoices() {
+    if (!schoolId || !selectedStudent) {
+      setMessage({ type: "err", text: "Select a student first." });
+      return;
+    }
+    const target = priorTotalForSelected;
+    if (target <= 0.005) return;
+    const allocations = priorSplitRows
+      .map((r) => ({ term_id: r.termId.trim(), amount: Number(r.amount) }))
+      .filter((r) => r.term_id.length > 0 && Number.isFinite(r.amount) && r.amount > 0);
+    if (allocations.length === 0) {
+      setMessage({ type: "err", text: "Add at least one school term and a positive amount for each line." });
+      return;
+    }
+    const sum = allocations.reduce((s, a) => s + a.amount, 0);
+    if (Math.abs(sum - target) > 0.02) {
+      setMessage({
+        type: "err",
+        text:
+          "Amounts must sum exactly to current prior outstanding (" +
+          target.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+          "). Now: " +
+          sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+          ".",
+      });
+      return;
+    }
+    setMovingPrior(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.rpc("move_prior_balance_to_term_opening_invoices", {
+        p_school_id: schoolId,
+        p_student_id: selectedStudent,
+        p_allocations: allocations,
+      });
+      if (error) throw new Error(error.message);
+      setPriorSplitRows([{ termId: "", amount: "" }]);
+      setMessage({
+        type: "ok",
+        text: "Prior moved to issued term invoices. Outstanding now follows normal term rows (oldest term first in Record Payment).",
+      });
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
+    } catch (e: unknown) {
+      setMessage({ type: "err", text: (e as Error).message || "Could not move prior balance." });
+    } finally {
+      setMovingPrior(false);
     }
   }
 
@@ -506,8 +568,7 @@ export default function BillingPage() {
                     </h3>
                     {showPriorAndCombinedInSummary ? (
                       <p className="ac-text-muted text-xs">
-                        Term invoices track fees inside Pweza terms. Prior-system entries record debt carried from another system (no extra invoice per term). Each student may have{" "}
-                        <strong>only one</strong> prior entry, and only while they still have <strong>no invoices on a closed term</strong> (new onboarding). After terms are closed, use normal term invoices.
+                        <strong>Preferred:</strong> move prior debt onto real term invoices (below) so Record Payment lists each term oldest-first, like other students. One-off prior entry is a fallback when you cannot split amounts by term. Each student may have only one prior row; closed-term rules still apply for brand-new prior inserts.
                       </p>
                     ) : (
                       <p className="ac-text-muted text-xs">
@@ -549,6 +610,91 @@ export default function BillingPage() {
                         {priorAggForSelected.lastEnteredAt ? ` (${new Date(priorAggForSelected.lastEnteredAt).toLocaleString()})` : ""}
                         {priorAggForSelected.lastSourceNote ? `: ${priorAggForSelected.lastSourceNote}` : ""}
                       </p>
+                    )}
+                    {showPriorAndCombinedInSummary && priorTotalForSelected > 0.005 && (
+                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
+                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
+                          Move prior onto term invoices
+                        </h4>
+                        <p className="ac-text-muted text-xs">
+                          Enter lines that sum exactly to the prior total. Each line creates an <strong>issued</strong> invoice for that term (requires no existing active invoice on that term). Payments then follow normal oldest-term-first rules.
+                        </p>
+                        {priorSplitRows.map((row, idx) => (
+                          <div key={idx} className="flex flex-wrap items-end gap-2">
+                            <div className="min-w-[200px] flex-1">
+                              <label className="ac-text-secondary mb-1 block text-xs font-medium">Term</label>
+                              <select
+                                value={row.termId}
+                                onChange={(e) => {
+                                  const next = [...priorSplitRows];
+                                  next[idx] = { ...next[idx], termId: e.target.value };
+                                  setPriorSplitRows(next);
+                                }}
+                                className="ac-input"
+                                disabled={movingPrior}
+                              >
+                                <option value="">Select term</option>
+                                {termsOldestFirst.map((t) => (
+                                  <option key={t.id} value={t.id}>
+                                    Term {t.term}, {t.year}
+                                    {t.is_closed ? " (closed)" : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            <div className="w-36">
+                              <label className="ac-text-secondary mb-1 block text-xs font-medium">Amount</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={row.amount}
+                                onChange={(e) => {
+                                  const next = [...priorSplitRows];
+                                  next[idx] = { ...next[idx], amount: e.target.value };
+                                  setPriorSplitRows(next);
+                                }}
+                                className="ac-input tabular-nums"
+                                disabled={movingPrior}
+                              />
+                            </div>
+                            {priorSplitRows.length > 1 ? (
+                              <button
+                                type="button"
+                                className="ac-text-muted mb-2 text-xs hover:text-red-400"
+                                onClick={() => setPriorSplitRows(priorSplitRows.filter((_, i) => i !== idx))}
+                                disabled={movingPrior}
+                              >
+                                Remove
+                              </button>
+                            ) : null}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setPriorSplitRows([...priorSplitRows, { termId: "", amount: "" }])}
+                          disabled={movingPrior}
+                          className="ac-text-muted text-xs font-medium hover:text-emerald-400"
+                        >
+                          + Add term line
+                        </button>
+                        <p className="ac-text-muted text-xs tabular-nums">
+                          Prior to allocate:{" "}
+                          {priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Sum of
+                          lines:{" "}
+                          {priorSplitRows
+                            .reduce((s, r) => s + (Number(r.amount) || 0), 0)
+                            .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void handleMovePriorToTermInvoices()}
+                          disabled={movingPrior || !userId}
+                          className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                        >
+                          {movingPrior ? "Working…" : "Create invoices and clear prior"}
+                        </button>
+                      </div>
                     )}
                     {!priorEntryBlockedReason && (
                       <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">

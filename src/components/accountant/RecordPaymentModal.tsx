@@ -51,13 +51,34 @@ function buildOutstandingRows(
   return sortOutstandingForPayment(out);
 }
 
+/** Outstanding from fees minus paid (same definition as a healthy `balance` column). Do not trust `balance` alone — it can drift if not rewritten when `total_paid` changes. */
+function termOutstandingFromRow(r: {
+  total_fees?: number | string | null;
+  total_paid?: number | string | null;
+  balance?: number | string | null;
+}): number {
+  const fees = Number(r.total_fees ?? 0);
+  const paid = Number(r.total_paid ?? 0);
+  if (Number.isFinite(fees) && Number.isFinite(paid)) {
+    return Math.max(0, fees - paid);
+  }
+  return Math.max(0, Number(r.balance ?? 0));
+}
+
 /** If duplicate `student_balances` rows exist per term, combine so allocation runs once per term. */
 function mergeTermBalanceRows(
-  raw: { term_id: string; term: number; year: number; balance: number | string | null }[]
+  raw: {
+    term_id: string;
+    term: number;
+    year: number;
+    total_fees?: number | string | null;
+    total_paid?: number | string | null;
+    balance?: number | string | null;
+  }[]
 ): { term_id: string; term: number; year: number; balance: number }[] {
   const m = new Map<string, { term_id: string; term: number; year: number; balance: number }>();
   for (const r of raw) {
-    const bal = Math.max(0, Number(r.balance ?? 0));
+    const bal = termOutstandingFromRow(r);
     if (bal <= 0) continue;
     const ex = m.get(r.term_id);
     if (!ex) {
@@ -77,10 +98,9 @@ async function fetchOutstandingRowsForRecordPayment(
   const [balRes, priorRes] = await Promise.all([
     supabase
       .from("student_balances")
-      .select("term_id, term, year, balance")
+      .select("term_id, term, year, total_fees, total_paid, balance")
       .eq("school_id", schoolId)
       .eq("student_id", studentId)
-      .gt("balance", 0)
       .order("year", { ascending: true })
       .order("term", { ascending: true }),
     supabase
@@ -93,7 +113,16 @@ async function fetchOutstandingRowsForRecordPayment(
   ]);
   if (balRes.error?.message) return { rows: [], errorMessage: balRes.error.message };
   if (priorRes.error?.message) return { rows: [], errorMessage: priorRes.error.message };
-  const merged = mergeTermBalanceRows((balRes.data || []) as { term_id: string; term: number; year: number; balance: number | string | null }[]);
+  const merged = mergeTermBalanceRows(
+    (balRes.data || []) as {
+      term_id: string;
+      term: number;
+      year: number;
+      total_fees?: number | string | null;
+      total_paid?: number | string | null;
+      balance?: number | string | null;
+    }[]
+  );
   const priorArr = (priorRes.data || []) as { id: string; amount_outstanding: number }[];
   const rows = buildOutstandingRows(merged, priorArr[0] ?? null);
   return { rows, errorMessage: null };
