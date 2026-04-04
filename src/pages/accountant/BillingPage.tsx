@@ -501,41 +501,43 @@ export default function BillingPage() {
                         {priorAggForSelected.lastSourceNote ? `: ${priorAggForSelected.lastSourceNote}` : ""}
                       </p>
                     )}
-                    <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
-                      <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">Add prior-system entry</h4>
-                      <div>
-                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={priorAmount}
-                          onChange={(e) => setPriorAmount(e.target.value)}
-                          className="ac-input"
-                          placeholder="e.g. 150000"
-                          disabled={savingPrior || !!priorEntryBlockedReason}
-                        />
+                    {!priorEntryBlockedReason && (
+                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
+                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">Add prior-system entry</h4>
+                        <div>
+                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={priorAmount}
+                            onChange={(e) => setPriorAmount(e.target.value)}
+                            className="ac-input"
+                            placeholder="e.g. 150000"
+                            disabled={savingPrior}
+                          />
+                        </div>
+                        <div>
+                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
+                          <textarea
+                            value={priorNote}
+                            onChange={(e) => setPriorNote(e.target.value)}
+                            className="ac-input min-h-[72px] resize-y"
+                            placeholder="e.g. Old Excel Term 2 2024"
+                            disabled={savingPrior}
+                            rows={2}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddPriorEntry}
+                          disabled={savingPrior || !userId}
+                          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                        >
+                          {savingPrior ? "Saving…" : "Add prior-system entry"}
+                        </button>
                       </div>
-                      <div>
-                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
-                        <textarea
-                          value={priorNote}
-                          onChange={(e) => setPriorNote(e.target.value)}
-                          className="ac-input min-h-[72px] resize-y"
-                          placeholder="e.g. Old Excel Term 2 2024"
-                          disabled={savingPrior || !!priorEntryBlockedReason}
-                          rows={2}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleAddPriorEntry}
-                        disabled={savingPrior || !userId || !!priorEntryBlockedReason}
-                        className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
-                      >
-                        {savingPrior ? "Saving…" : "Add prior-system entry"}
-                      </button>
-                    </div>
+                    )}
                   </div>
                 )}
                 <button
