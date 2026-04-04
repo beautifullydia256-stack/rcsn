@@ -223,7 +223,7 @@ export default function StaffPage() {
                 <label className={labelClass}>
                   Full name <span className="text-red-500">*</span>
                 </label>
-                <input className={inputClass} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="e.g. Mary Nakato" />
+                <input className={inputClass} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
               </div>
               <div>
                 <label className={labelClass}>Job title</label>

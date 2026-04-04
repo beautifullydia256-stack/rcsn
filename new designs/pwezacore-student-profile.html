@@ -20,7 +20,7 @@
  *  HERO CARD:
  *    #sp-photo-img                src + style.display='block'   — real photo URL (hide #sp-photo-initials when set)
  *    #sp-photo-initials           textContent  — "EC" initials fallback (hide when photo exists)
- *    #sp-student-name             textContent  — "Elijah Children" (DM Serif Display)
+ *    #sp-student-name             textContent  — filled from database (DM Serif Display)
  *    #sp-chip-class               textContent  — "🏫 Primary 3"
  *    #sp-chip-status              className + textContent — "✦ Active" / "✗ Inactive"
  *    #sp-chip-adm                 textContent  — "# RAK202511001"
@@ -214,6 +214,15 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 }
 .pw-profile .sp-btn-danger:hover { background: rgba(244,63,94,.2); }
 .pw-profile .sp-btn-sm { padding: 6px 13px; font-size: 12px; }
+.pw-profile .pw-inline-input {
+  width: 100%; max-width: 100%; box-sizing: border-box;
+  background: var(--surface-2, #1a1f2e); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: inherit;
+  color: var(--text-primary); font-family: inherit;
+}
+.pw-profile .pw-inline-input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(79, 142, 247, 0.2);
+}
 
 /* ── CONTENT WRAPPER ── */
 .pw-profile .sp-content { padding: 28px 32px 64px; }
@@ -435,6 +444,52 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-guardian-field-value a { color: var(--accent); text-decoration: none; }
 .pw-profile .sp-guardian-field-value a:hover { text-decoration: underline; }
 
+.pw-profile .sp-guardian-siblings {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid var(--border);
+}
+.pw-profile .sp-guardian-siblings-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 9px;
+}
+.pw-profile .sp-guardian-sibling-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.pw-profile .sp-guardian-sibling-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.pw-profile .sp-guardian-sibling-link:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.pw-profile .sp-guardian-sibling-name { flex: 1; min-width: 0; }
+.pw-profile .sp-guardian-sibling-meta {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* ── NO PARENT NOTICE ── */
 .pw-profile .sp-no-parent-notice {
   display: flex; align-items: center; gap: 13px;
@@ -522,11 +577,6 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-doc-name { font-size: 13.5px; font-weight: 600; flex: 1; }
 .pw-profile .sp-doc-date { font-size: 12px; color: var(--text-muted); }
 
-/* ── SCROLLBAR ── */
-.pw-profile ::-webkit-scrollbar { width: 5px; }
-.pw-profile ::-webkit-scrollbar-track { background: transparent; }
-.pw-profile ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 3px; }
-
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
   .pw-profile .sp-content { padding: 20px 20px 60px; }
@@ -570,8 +620,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
       <span class="sp-bc-current" id="sp-breadcrumb-name">Loading…</span>
     </div>
     <div class="sp-topbar-right">
-      <button class="sp-btn sp-btn-ghost" id="sp-btn-print">🖨 Print</button>
-      <button class="sp-btn sp-btn-ghost" id="sp-btn-edit">✏️ Edit Profile</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-print">🖨 Print</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-cancel-edit" style="display:none">Cancel</button>
+      <button type="button" class="sp-btn sp-btn-ghost" id="sp-btn-edit">✏️ Edit Profile</button>
       <button class="sp-btn sp-btn-danger" id="sp-btn-delete">🗑 Delete</button>
     </div>
   </div>
@@ -586,10 +637,11 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
         <!-- PHOTO -->
         <div class="sp-photo-wrap">
+          <input type="file" id="sp-photo-file" accept="image/*" style="display:none" aria-label="Upload photo">
           <!-- Real photo — shown when student has a photo_url in the database -->
           <img id="sp-photo-img" class="sp-photo-img" src="" alt="" style="display:none;">
           <!-- Initials fallback — shown when no photo exists -->
-          <div id="sp-photo-initials" class="sp-photo-initials">EC</div>
+          <div id="sp-photo-initials" class="sp-photo-initials">?</div>
           <div class="sp-photo-edit" id="sp-btn-change-photo" title="Change photo">📷</div>
         </div>
 
@@ -998,38 +1050,38 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
 <div class="sp-guardian-card">
   <div class="sp-guardian-top">
-    <div class="sp-guardian-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">KD</div>
+    <div class="sp-guardian-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">?</div>
     <div class="sp-guardian-name-block">
-      <div class="sp-guardian-name">Kimuli Daudi</div>
-      <div class="sp-guardian-relation">Father · Primary Guardian</div>
+      <div class="sp-guardian-name">—</div>
+      <div class="sp-guardian-relation">—</div>
     </div>
     <div class="sp-guardian-actions">
-      <button class="sp-icon-btn" data-tel="0759881429" title="Call">📞</button>
-      <button class="sp-icon-btn" data-email="kimuli@email.com" title="Email">✉️</button>
-      <button class="sp-icon-btn sp-green" data-whatsapp="0759881429" title="WhatsApp">💬</button>
+      <button class="sp-icon-btn" data-tel="" title="Call">📞</button>
+      <button class="sp-icon-btn" data-email="" title="Email">✉️</button>
+      <button class="sp-icon-btn sp-green" data-whatsapp="" title="WhatsApp">💬</button>
       <button class="sp-icon-btn" data-nav="/dashboard/admin/parents/PARENT_ID" title="Open profile">›</button>
     </div>
   </div>
   <div class="sp-guardian-fields">
     <div>
       <div class="sp-guardian-field-label">Phone</div>
-      <div class="sp-guardian-field-value"><a href="tel:0759881429">0759 881 429</a></div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Email</div>
-      <div class="sp-guardian-field-value"><a href="mailto:kimuli@email.com">kimuli@email.com</a></div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Occupation</div>
-      <div class="sp-guardian-field-value">Business Owner</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">NIN / ID</div>
-      <div class="sp-guardian-field-value">CM9100XXXX</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Address</div>
-      <div class="sp-guardian-field-value">Mengo, Kampala</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Portal Access</div>

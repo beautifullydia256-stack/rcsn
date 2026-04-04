@@ -17,9 +17,9 @@ export default function ActivityFeedCard() {
   const items: ActivityItem[] = [
     {
       id: 'a1',
-      avatar: 'LJ',
-      title: 'Lutaya Jofrey',
-      subtitle: 'paid USh 175,000 in school fees.',
+      avatar: '•',
+      title: 'Fee payment',
+      subtitle: 'recorded for a linked student account.',
       time: 'Today at 10:12 AM · Cash',
       icon: '💰',
       gradient: 'linear-gradient(135deg,#10d9a8,#3d8ef8)',
@@ -44,9 +44,9 @@ export default function ActivityFeedCard() {
     },
     {
       id: 'a4',
-      avatar: 'MK',
-      title: 'Mustafa Kafeero',
-      subtitle: 'submitted attendance for S.1 English.',
+      avatar: '•',
+      title: 'Attendance',
+      subtitle: 'marked for a class (example item).',
       time: 'Yesterday at 4:05 PM',
       icon: '📋',
       gradient: 'linear-gradient(135deg,#22d3ee,#9d7bf8)',

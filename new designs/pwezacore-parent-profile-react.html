@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PwezaCore — Parent Profile · Kimuli Daudi</title>
+<title>PwezaCore — Parent Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /*
@@ -598,7 +598,7 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
     <div class="pp-breadcrumb">
       <span class="pp-bc-link" data-nav="/dashboard/admin/parents">Parents &amp; Guardians</span>
       <span style="color:var(--t3)">/</span>
-      <span class="pp-bc-current" id="pp-breadcrumb-name">Kimuli Daudi</span>
+      <span class="pp-bc-current" id="pp-breadcrumb-name">—</span>
     </div>
     <div class="pp-topbar-right">
       <button class="pp-btn pp-btn-ghost" id="pp-btn-print">🖨 Print</button>
@@ -618,39 +618,39 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
         <!-- Photo -->
         <div class="pp-photo-wrap">
           <img id="pp-photo-img" class="pp-photo-img" src="" alt="" style="display:none">
-          <div id="pp-photo-initials" class="pp-photo-initials">KD</div>
+          <div id="pp-photo-initials" class="pp-photo-initials">?</div>
           <div class="pp-photo-edit" title="Change photo">📷</div>
         </div>
 
         <!-- Info -->
         <div class="pp-hero-info">
-          <div class="pp-parent-name" id="pp-parent-name">Kimuli Daudi</div>
+          <div class="pp-parent-name" id="pp-parent-name">—</div>
           <div class="pp-hero-chips">
-            <span class="pp-chip violet" id="pp-chip-relation">👨 Father</span>
-            <span class="pp-chip green"  id="pp-chip-portal">🌐 Portal Active</span>
-            <span class="pp-chip muted"  id="pp-chip-nin">🪪 CM9100XXXX</span>
-            <span class="pp-chip blue"   id="pp-chip-children-count">👧 1 Child</span>
+            <span class="pp-chip muted" id="pp-chip-relation">—</span>
+            <span class="pp-chip muted"  id="pp-chip-portal">—</span>
+            <span class="pp-chip muted"  id="pp-chip-nin">🪪 Not recorded</span>
+            <span class="pp-chip muted"   id="pp-chip-children-count">—</span>
           </div>
           <div class="pp-hero-meta">
             <div class="pp-meta-item">
               <span class="pp-meta-label">Phone</span>
-              <span class="pp-meta-value"><a href="tel:0759881429" id="pp-meta-phone">0759 881 429</a></span>
+              <span class="pp-meta-value"><a id="pp-meta-phone">—</a></span>
             </div>
             <div class="pp-meta-item">
               <span class="pp-meta-label">Email</span>
-              <span class="pp-meta-value"><a href="mailto:kimuli@gmail.com" class="email" id="pp-meta-email">kimuli@gmail.com</a></span>
+              <span class="pp-meta-value"><a class="email" id="pp-meta-email">—</a></span>
             </div>
             <div class="pp-meta-item">
               <span class="pp-meta-label">Occupation</span>
-              <span class="pp-meta-value" id="pp-meta-occupation">Business Owner</span>
+              <span class="pp-meta-value" id="pp-meta-occupation">—</span>
             </div>
             <div class="pp-meta-item">
               <span class="pp-meta-label">Address</span>
-              <span class="pp-meta-value" id="pp-meta-address">Mengo, Kampala</span>
+              <span class="pp-meta-value" id="pp-meta-address">—</span>
             </div>
             <div class="pp-meta-item">
               <span class="pp-meta-label">Registered</span>
-              <span class="pp-meta-value" id="pp-meta-joined">Nov 2025</span>
+              <span class="pp-meta-value" id="pp-meta-joined">—</span>
             </div>
           </div>
         </div>
@@ -659,7 +659,7 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
         <div class="pp-hero-actions">
           <button class="pp-btn pp-btn-teal" id="pp-btn-message">📩 Send Message</button>
           <button class="pp-btn pp-btn-ghost" id="pp-btn-portal">🌐 Manage Portal</button>
-          <button class="pp-btn pp-btn-ghost" id="pp-btn-call" onclick="window.location.href='tel:0759881429'">📞 Call</button>
+          <button type="button" class="pp-btn pp-btn-ghost" id="pp-btn-call">📞 Call</button>
         </div>
 
       </div>
@@ -693,27 +693,27 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             <div class="pp-fields">
               <div class="pp-field">
                 <span class="pp-field-label">First Name</span>
-                <span class="pp-field-value" id="pp-first-name">Kimuli</span>
+                <span class="pp-field-value" id="pp-first-name">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Last Name</span>
-                <span class="pp-field-value" id="pp-last-name">Daudi</span>
+                <span class="pp-field-value" id="pp-last-name">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Gender</span>
-                <span class="pp-field-value" id="pp-gender">Male</span>
+                <span class="pp-field-value" id="pp-gender">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Relationship</span>
-                <span class="pp-field-value violet" id="pp-relationship">Father</span>
+                <span class="pp-field-value violet" id="pp-relationship">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">NIN / National ID</span>
-                <span class="pp-field-value" id="pp-nin">CM9100XXXX</span>
+                <span class="pp-field-value" id="pp-nin">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Nationality</span>
-                <span class="pp-field-value" id="pp-nationality">Ugandan</span>
+                <span class="pp-field-value" id="pp-nationality">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Religion</span>
@@ -739,31 +739,31 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             <div class="pp-fields">
               <div class="pp-field">
                 <span class="pp-field-label">Phone Number</span>
-                <span class="pp-field-value teal"><a href="tel:0759881429" id="pp-phone">0759 881 429</a></span>
+                <span class="pp-field-value teal"><a id="pp-phone">—</a></span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">WhatsApp</span>
-                <span class="pp-field-value teal" id="pp-whatsapp"><a href="https://wa.me/256759881429" target="_blank">0759 881 429</a></span>
+                <span class="pp-field-value teal" id="pp-whatsapp">—</span>
               </div>
               <div class="pp-field" style="grid-column:span 2">
                 <span class="pp-field-label">Email Address</span>
-                <span class="pp-field-value"><a href="mailto:kimuli@gmail.com" class="email" id="pp-email">kimuli@gmail.com</a></span>
+                <span class="pp-field-value"><a class="email" id="pp-email">—</a></span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Occupation</span>
-                <span class="pp-field-value" id="pp-occupation">Business Owner</span>
+                <span class="pp-field-value" id="pp-occupation">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Employer</span>
-                <span class="pp-field-value muted" id="pp-employer">Self-employed</span>
+                <span class="pp-field-value muted" id="pp-employer">—</span>
               </div>
               <div class="pp-field" style="grid-column:span 2">
                 <span class="pp-field-label">Home Address</span>
-                <span class="pp-field-value" id="pp-address">Mengo, Kampala</span>
+                <span class="pp-field-value" id="pp-address">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">District</span>
-                <span class="pp-field-value" id="pp-district">Kampala</span>
+                <span class="pp-field-value" id="pp-district">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Emergency Contact</span>
@@ -786,15 +786,15 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             <div class="pp-fields three">
               <div class="pp-field">
                 <span class="pp-field-label">Portal Status</span>
-                <span class="pp-field-value green" id="pp-portal-status">✓ Active</span>
+                <span class="pp-field-value muted" id="pp-portal-status">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Account Email</span>
-                <span class="pp-field-value" id="pp-portal-email">kimuli@gmail.com</span>
+                <span class="pp-field-value" id="pp-portal-email">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Last Login</span>
-                <span class="pp-field-value" id="pp-portal-last-login">2 days ago</span>
+                <span class="pp-field-value" id="pp-portal-last-login">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Portal Permissions</span>
@@ -807,7 +807,7 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Registered</span>
-                <span class="pp-field-value" id="pp-portal-registered">November 12, 2025</span>
+                <span class="pp-field-value" id="pp-portal-registered">—</span>
               </div>
               <div class="pp-field">
                 <span class="pp-field-label">Two-Factor Auth</span>
@@ -838,25 +838,23 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
 
               <!-- Child card 1 -->
               <div class="pp-child-card" data-nav="/dashboard/admin/students/STUDENT_ID">
-                <div class="pp-child-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">
-                  <img src="https://i.pravatar.cc/46?img=47" alt="">
-                </div>
+                <div class="pp-child-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">?</div>
                 <div style="flex:1">
-                  <div class="pp-child-name">Jessica Alupo</div>
-                  <div class="pp-child-sub">Primary 1 · Admission #RAK202511004</div>
+                  <div class="pp-child-name">—</div>
+                  <div class="pp-child-sub">— · —</div>
                 </div>
                 <!-- Quick stats -->
                 <div class="pp-child-stats">
                   <div class="pp-child-stat">
-                    <div class="pp-child-stat-val" style="color:var(--amber)">UGX 240K</div>
+                    <div class="pp-child-stat-val" style="color:var(--amber)">—</div>
                     <div class="pp-child-stat-lbl">Fee Balance</div>
                   </div>
                   <div class="pp-child-stat">
-                    <div class="pp-child-stat-val" style="color:var(--green)">74%</div>
+                    <div class="pp-child-stat-val" style="color:var(--green)">—</div>
                     <div class="pp-child-stat-lbl">Attendance</div>
                   </div>
                   <div class="pp-child-stat">
-                    <div class="pp-child-stat-val" style="color:var(--violet)">P1</div>
+                    <div class="pp-child-stat-val" style="color:var(--violet)">—</div>
                     <div class="pp-child-stat-lbl">Class</div>
                   </div>
                 </div>
@@ -892,15 +890,15 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--border)">
               <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
                 <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Total Billed</div>
-                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px" id="pp-pay-total-billed">UGX 640,000</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px" id="pp-pay-total-billed">—</div>
               </div>
               <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
                 <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Amount Paid</div>
-                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--green)" id="pp-pay-total-paid">UGX 400,000</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--green)" id="pp-pay-total-paid">—</div>
               </div>
               <div style="background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:14px 16px">
                 <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">Balance Owing</div>
-                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--amber)" id="pp-pay-balance">UGX 240,000</div>
+                <div style="font-family:'Instrument Serif',serif;font-size:20px;letter-spacing:-.5px;color:var(--amber)" id="pp-pay-balance">—</div>
               </div>
             </div>
 
@@ -909,20 +907,11 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
               <div class="pp-pay-row">
                 <div class="pp-pay-ic" style="background:var(--green-s)">💵</div>
                 <div style="flex:1">
-                  <div class="pp-pay-name">Mobile Money Payment</div>
-                  <div class="pp-pay-sub">Jessica Alupo · Term 1 · February 3, 2026</div>
+                  <div class="pp-pay-name">—</div>
+                  <div class="pp-pay-sub">—</div>
                 </div>
-                <span class="pp-tag">MTN MoMo</span>
-                <div class="pp-pay-amount green">+ UGX 200,000</div>
-              </div>
-              <div class="pp-pay-row">
-                <div class="pp-pay-ic" style="background:var(--green-s)">💵</div>
-                <div style="flex:1">
-                  <div class="pp-pay-name">Cash Payment</div>
-                  <div class="pp-pay-sub">Jessica Alupo · Term 1 · January 15, 2026</div>
-                </div>
-                <span class="pp-tag">Cash</span>
-                <div class="pp-pay-amount green">+ UGX 200,000</div>
+                <span class="pp-tag">—</span>
+                <div class="pp-pay-amount green">—</div>
               </div>
             </div>
           </div>
@@ -946,25 +935,16 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             <!-- Compose -->
             <div class="pp-msg-compose">
               <div class="pp-msg-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a);width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0">A</div>
-              <textarea rows="2" placeholder="Type a message to Kimuli Daudi…"></textarea>
+              <textarea rows="2" placeholder="Type a message…"></textarea>
               <button class="pp-btn pp-btn-violet pp-btn-sm" style="align-self:flex-end">Send</button>
             </div>
 
             <!-- Messages -->
             <div id="pp-messages-body">
-              <div class="pp-msg-row sent">
-                <div class="pp-msg-av" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">A</div>
-                <div>
-                  <div class="pp-msg-bubble sent">Dear Kimuli, please note that term 2 fees are due by April 14th. Kindly ensure payment is made before the deadline.</div>
-                  <div class="pp-msg-meta" style="text-align:right">Admin · March 18, 2026 · 9:14 AM</div>
-                </div>
-              </div>
-              <div class="pp-msg-row">
-                <div class="pp-msg-av" style="background:linear-gradient(135deg,#9d7eff,#ff4f6a)">KD</div>
-                <div>
-                  <div class="pp-msg-bubble">Thank you for the reminder. I will arrange the payment by end of this week.</div>
-                  <div class="pp-msg-meta">Kimuli Daudi · March 18, 2026 · 11:42 AM</div>
-                </div>
+              <div class="pp-empty">
+                <div class="pp-empty-icon">💬</div>
+                <div class="pp-empty-title">No messages yet</div>
+                <div class="pp-empty-sub">School messaging can be connected here later.</div>
               </div>
             </div>
           </div>
@@ -985,40 +965,9 @@ html.light .pw-parent-profile .pp-topbar { background:rgba(240,244,255,.94); }
             </div>
           </div>
           <div class="pp-card-body" id="pp-activity-body">
-            <div class="pp-act-row">
-              <div class="pp-act-dot" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">💳</div>
-              <div>
-                <div class="pp-act-text"><strong>Payment received</strong> · UGX 200,000 — Mobile Money for Jessica Alupo Term 1 fees</div>
-                <div class="pp-act-time">February 3, 2026 · 2:18 PM</div>
-              </div>
-            </div>
-            <div class="pp-act-row">
-              <div class="pp-act-dot" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">🌐</div>
-              <div>
-                <div class="pp-act-text"><strong>Portal login</strong> — Logged into parent portal from Kampala, Uganda</div>
-                <div class="pp-act-time">March 16, 2026 · 8:04 AM</div>
-              </div>
-            </div>
-            <div class="pp-act-row">
-              <div class="pp-act-dot" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">📋</div>
-              <div>
-                <div class="pp-act-text"><strong>Attendance viewed</strong> — Checked Jessica Alupo's attendance record</div>
-                <div class="pp-act-time">March 14, 2026 · 7:22 PM</div>
-              </div>
-            </div>
-            <div class="pp-act-row">
-              <div class="pp-act-dot" style="background:linear-gradient(135deg,#9d7eff,#ff4f6a)">💬</div>
-              <div>
-                <div class="pp-act-text"><strong>Message sent</strong> — Replied to admin fee reminder</div>
-                <div class="pp-act-time">March 18, 2026 · 11:42 AM</div>
-              </div>
-            </div>
-            <div class="pp-act-row">
-              <div class="pp-act-dot" style="background:var(--s4)">✉️</div>
-              <div>
-                <div class="pp-act-text"><strong>Portal invite sent</strong> — Email invitation sent to kimuli@gmail.com</div>
-                <div class="pp-act-time">November 12, 2025 · 10:00 AM</div>
-              </div>
+            <div class="pp-empty">
+              <div class="pp-empty-icon">🕐</div>
+              <div class="pp-empty-title">No activity recorded</div>
             </div>
           </div>
         </div>

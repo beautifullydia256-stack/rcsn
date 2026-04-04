@@ -317,7 +317,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
             value={name}
             onChange={(e) => setName(e.target.value)}
             className={inputClass}
-            placeholder="e.g. Jane Doe"
+            placeholder="Parent or guardian name"
             required
           />
         </div>

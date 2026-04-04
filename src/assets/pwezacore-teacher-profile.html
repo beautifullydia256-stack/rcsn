@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PwezaCore — Teacher Profile · Mustafa Kafeero</title>
+<title>PwezaCore — Teacher Profile</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /*
@@ -576,7 +576,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
         <div class="tp-photo-wrap">
           <input type="file" id="tp-photo-file" accept="image/*" style="display:none" aria-label="Upload photo">
           <img id="tp-photo-img" class="tp-photo-img" src="" alt="" style="display:none">
-          <div id="tp-photo-initials" class="tp-photo-initials">MK</div>
+          <div id="tp-photo-initials" class="tp-photo-initials">?</div>
           <div class="tp-photo-edit" id="tp-btn-change-photo" title="Change photo">📷</div>
         </div>
 
@@ -584,7 +584,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
         <div class="tp-hero-info">
           <div class="tp-teacher-name" id="tp-teacher-name"></div>
           <div class="tp-hero-chips">
-            <span class="tp-chip green"  id="tp-chip-status">✦ Active</span>
+            <span class="tp-chip muted"  id="tp-chip-status">—</span>
             <span class="tp-chip amber"  id="tp-chip-emp-id"></span>
             <span class="tp-chip teal"   id="tp-chip-role"></span>
             <span class="tp-chip muted"  id="tp-chip-hired"></span>
@@ -593,23 +593,23 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
           <div class="tp-hero-meta">
             <div class="tp-meta-item">
               <span class="tp-meta-label">Phone</span>
-              <span class="tp-meta-value"><a href="tel:+256759881420" id="tp-meta-phone">+256 759 881 420</a></span>
+              <span class="tp-meta-value"><a id="tp-meta-phone">—</a></span>
             </div>
             <div class="tp-meta-item">
               <span class="tp-meta-label">Email</span>
-              <span class="tp-meta-value"><a href="mailto:mustafa@rips.sch" class="email" id="tp-meta-email">mustafa@rips.sch</a></span>
+              <span class="tp-meta-value"><a class="email" id="tp-meta-email">—</a></span>
             </div>
             <div class="tp-meta-item">
               <span class="tp-meta-label">Classes</span>
-              <span class="tp-meta-value amber" id="tp-meta-classes-count">3 classes</span>
+              <span class="tp-meta-value amber" id="tp-meta-classes-count">—</span>
             </div>
             <div class="tp-meta-item">
               <span class="tp-meta-label">Salary</span>
-              <span class="tp-meta-value teal" id="tp-meta-salary">UGX 100,000</span>
+              <span class="tp-meta-value teal" id="tp-meta-salary">—</span>
             </div>
             <div class="tp-meta-item">
               <span class="tp-meta-label">Hired</span>
-              <span class="tp-meta-value" id="tp-meta-hire-date">March 16, 2026</span>
+              <span class="tp-meta-value" id="tp-meta-hire-date">—</span>
             </div>
           </div>
         </div>
@@ -618,7 +618,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
         <div class="tp-hero-actions">
           <button class="tp-btn tp-btn-amber" id="tp-btn-assign-class">🏫 Assign to Class</button>
           <button class="tp-btn tp-btn-ghost" id="tp-btn-view-schedule">📅 View Schedule</button>
-          <button class="tp-btn tp-btn-ghost" id="tp-btn-call" onclick="window.location.href='tel:+256759881420'">📞 Call</button>
+          <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-call">📞 Call</button>
         </div>
 
       </div>
@@ -653,11 +653,11 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div class="tp-fields">
               <div class="tp-field">
                 <span class="tp-field-label">First Name</span>
-                <span class="tp-field-value" id="tp-first-name">Mustafa</span>
+                <span class="tp-field-value" id="tp-first-name">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Last Name</span>
-                <span class="tp-field-value" id="tp-last-name">Kafeero</span>
+                <span class="tp-field-value" id="tp-last-name">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Gender</span>
@@ -665,11 +665,11 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Date of Birth</span>
-                <span class="tp-field-value" id="tp-dob">January 5, 2000</span>
+                <span class="tp-field-value" id="tp-dob">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Age</span>
-                <span class="tp-field-value" id="tp-age">26 years</span>
+                <span class="tp-field-value" id="tp-age">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Nationality</span>
@@ -711,19 +711,19 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div class="tp-fields">
               <div class="tp-field">
                 <span class="tp-field-label">Employee ID</span>
-                <span class="tp-field-value amber mono" id="tp-emp-id">RIPS26262</span>
+                <span class="tp-field-value amber mono" id="tp-emp-id">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Date of Hire</span>
-                <span class="tp-field-value" id="tp-hire-date">March 16, 2026</span>
+                <span class="tp-field-value" id="tp-hire-date">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Employment Type</span>
-                <span class="tp-field-value" id="tp-employment-type">Full-Time</span>
+                <span class="tp-field-value" id="tp-employment-type">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Monthly Salary</span>
-                <span class="tp-field-value teal" id="tp-salary">UGX 100,000</span>
+                <span class="tp-field-value teal" id="tp-salary">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Bank Name</span>
@@ -735,7 +735,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Department</span>
-                <span class="tp-field-value" id="tp-department">Primary Section</span>
+                <span class="tp-field-value" id="tp-department">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Highest Qualification</span>
@@ -765,15 +765,15 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div class="tp-fields">
               <div class="tp-field">
                 <span class="tp-field-label">Phone</span>
-                <span class="tp-field-value teal"><a href="tel:+256759881420" id="tp-phone">+256 759 881 420</a></span>
+                <span class="tp-field-value teal"><a id="tp-phone">—</a></span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">WhatsApp</span>
-                <span class="tp-field-value teal" id="tp-whatsapp"><a href="https://wa.me/256759881420">+256 759 881 420</a></span>
+                <span class="tp-field-value teal" id="tp-whatsapp">—</span>
               </div>
               <div class="tp-field" style="grid-column:span 2">
                 <span class="tp-field-label">School Email</span>
-                <span class="tp-field-value"><a href="mailto:mustafa@rips.sch" class="email" id="tp-email">mustafa@rips.sch</a></span>
+                <span class="tp-field-value"><a class="email" id="tp-email">—</a></span>
               </div>
               <div class="tp-field" style="grid-column:span 2">
                 <span class="tp-field-label">Personal Email</span>
@@ -796,11 +796,11 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <div class="tp-fields">
               <div class="tp-field">
                 <span class="tp-field-label">Portal Status</span>
-                <span class="tp-field-value green" id="tp-portal-status">✓ Active</span>
+                <span class="tp-field-value muted" id="tp-portal-status">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Login Email</span>
-                <span class="tp-field-value" id="tp-portal-email">mustafa@rips.sch</span>
+                <span class="tp-field-value" id="tp-portal-email">—</span>
               </div>
               <div class="tp-field">
                 <span class="tp-field-label">Last account update</span>
@@ -900,48 +900,10 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             <button class="tp-btn tp-btn-ghost tp-btn-sm" id="tp-btn-edit-timetable">✏️ Edit Timetable</button>
           </div>
           <div class="tp-card-body" id="tp-timetable-body">
-            <div class="tp-timetable">
-              <div class="tp-tt-cell header"></div>
-              <div class="tp-tt-cell header">Monday</div>
-              <div class="tp-tt-cell header">Tuesday</div>
-              <div class="tp-tt-cell header">Wednesday</div>
-              <div class="tp-tt-cell header">Thursday</div>
-              <div class="tp-tt-cell header">Friday</div>
-
-              <div class="tp-tt-cell time-col">7:30 AM</div>
-              <div class="tp-tt-cell active">Baby Class<br><span style="font-size:10px;opacity:.7">Mathematics</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Baby Class<br><span style="font-size:10px;opacity:.7">Mathematics</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Baby Class<br><span style="font-size:10px;opacity:.7">Science</span></div>
-
-              <div class="tp-tt-cell time-col">9:00 AM</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Top Class<br><span style="font-size:10px;opacity:.7">Mathematics</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Top Class<br><span style="font-size:10px;opacity:.7">Mathematics</span></div>
-              <div class="tp-tt-cell free">—</div>
-
-              <div class="tp-tt-cell time-col">10:30 AM</div>
-              <div class="tp-tt-cell active">Middle Class<br><span style="font-size:10px;opacity:.7">Science</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Middle Class<br><span style="font-size:10px;opacity:.7">Science</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Middle Class<br><span style="font-size:10px;opacity:.7">Science</span></div>
-
-              <div class="tp-tt-cell time-col">12:00 PM</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell free">—</div>
-
-              <div class="tp-tt-cell time-col">2:00 PM</div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Baby Class<br><span style="font-size:10px;opacity:.7">General</span></div>
-              <div class="tp-tt-cell free">—</div>
-              <div class="tp-tt-cell active">Baby Class<br><span style="font-size:10px;opacity:.7">General</span></div>
-              <div class="tp-tt-cell free">—</div>
+            <div class="tp-empty" style="padding:28px">
+              <div class="tp-empty-icon">📅</div>
+              <div class="tp-empty-title">No timetable entries</div>
+              <div class="tp-empty-sub">When periods are scheduled for this teacher in Timetable, they will show here.</div>
             </div>
           </div>
         </div>
@@ -1104,44 +1066,10 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 
             <!-- Document list -->
             <div id="tp-kyc-body">
-              <div class="tp-doc-row">
-                <div class="tp-doc-ic pdf">📄</div>
-                <div style="flex:1">
-                  <div class="tp-doc-name">National_ID_Mustafa_Kafeero.pdf</div>
-                  <div class="tp-doc-meta">National ID · Uploaded March 16, 2026 · 1.2 MB</div>
-                </div>
-                <span class="tp-doc-verified yes">✓ Verified</span>
-                <div class="tp-doc-actions">
-                  <a class="tp-doc-btn tp-doc-btn-ghost" href="#" target="_blank">⬇ Download</a>
-                  <button class="tp-doc-btn tp-doc-btn-ghost">👁 View</button>
-                  <button class="tp-doc-btn tp-doc-btn-rose">🗑</button>
-                </div>
-              </div>
-              <div class="tp-doc-row">
-                <div class="tp-doc-ic pdf">📄</div>
-                <div style="flex:1">
-                  <div class="tp-doc-name">Employment_Contract_2026.pdf</div>
-                  <div class="tp-doc-meta">Employment Contract · Uploaded March 16, 2026 · 342 KB</div>
-                </div>
-                <span class="tp-doc-verified yes">✓ Verified</span>
-                <div class="tp-doc-actions">
-                  <a class="tp-doc-btn tp-doc-btn-ghost" href="#" target="_blank">⬇ Download</a>
-                  <button class="tp-doc-btn tp-doc-btn-ghost">👁 View</button>
-                  <button class="tp-doc-btn tp-doc-btn-rose">🗑</button>
-                </div>
-              </div>
-              <div class="tp-doc-row">
-                <div class="tp-doc-ic pdf">📋</div>
-                <div style="flex:1">
-                  <div class="tp-doc-name">Police_Clearance_Application.pdf</div>
-                  <div class="tp-doc-meta">Police Clearance · Uploaded March 17, 2026 · 245 KB · <span style="color:var(--amber)">Awaiting verification</span></div>
-                </div>
-                <span class="tp-doc-verified no">⏳ Pending</span>
-                <div class="tp-doc-actions">
-                  <a class="tp-doc-btn tp-doc-btn-ghost" href="#" target="_blank">⬇ Download</a>
-                  <button class="tp-doc-btn tp-doc-btn-ghost">👁 View</button>
-                  <button class="tp-doc-btn tp-doc-btn-rose">🗑</button>
-                </div>
+              <div class="tp-empty">
+                <div class="tp-empty-icon">📁</div>
+                <div class="tp-empty-title">No KYC documents</div>
+                <div class="tp-empty-sub">Upload PDF or images using the area above.</div>
               </div>
             </div>
 
@@ -1238,40 +1166,10 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
             </div>
           </div>
           <div class="tp-card-body" id="tp-activity-body">
-            <div class="tp-act-row">
-              <div class="tp-act-dot" style="background:linear-gradient(135deg,#27e09f,#3d7eff)">📋</div>
-              <div>
-                <div class="tp-act-text"><strong>Attendance recorded</strong> — Marked 28 students present in Baby Class</div>
-                <div class="tp-act-time">March 21, 2026 · 7:45 AM</div>
-              </div>
-            </div>
-            <div class="tp-act-row">
-              <div class="tp-act-dot" style="background:linear-gradient(135deg,#ffb547,#ff4f6a)">📝</div>
-              <div>
-                <div class="tp-act-text"><strong>Assignment created</strong> — "Term 1 Math Exercise Set 3" for Baby Class</div>
-                <div class="tp-act-time">March 20, 2026 · 2:12 PM</div>
-              </div>
-            </div>
-            <div class="tp-act-row">
-              <div class="tp-act-dot" style="background:linear-gradient(135deg,#3d7eff,#9d7eff)">🌐</div>
-              <div>
-                <div class="tp-act-text"><strong>Portal login</strong> — Logged in from Kampala, Uganda</div>
-                <div class="tp-act-time">March 19, 2026 · 6:55 AM</div>
-              </div>
-            </div>
-            <div class="tp-act-row">
-              <div class="tp-act-dot" style="background:linear-gradient(135deg,#9d7eff,#ff4f6a)">🏫</div>
-              <div>
-                <div class="tp-act-text"><strong>Class assigned</strong> — Assigned as Class Teacher for Baby Class by Admin</div>
-                <div class="tp-act-time">March 16, 2026 · 6:16 PM</div>
-              </div>
-            </div>
-            <div class="tp-act-row">
-              <div class="tp-act-dot" style="background:var(--s4)">👤</div>
-              <div>
-                <div class="tp-act-text"><strong>Profile created</strong> — Teacher account created by Administrator</div>
-                <div class="tp-act-time">March 16, 2026 · 6:16 PM</div>
-              </div>
+            <div class="tp-empty">
+              <div class="tp-empty-icon">🕐</div>
+              <div class="tp-empty-title">No recent activity</div>
+              <div class="tp-empty-sub">Assignments, document uploads, and recorded payroll lines will appear here.</div>
             </div>
           </div>
         </div>

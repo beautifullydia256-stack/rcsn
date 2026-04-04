@@ -742,7 +742,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 value={guardianName}
                 onChange={(e) => setGuardianName(e.target.value)}
                 className={inputClass}
-                placeholder="e.g. Jane Doe"
+                placeholder="Student name"
               />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

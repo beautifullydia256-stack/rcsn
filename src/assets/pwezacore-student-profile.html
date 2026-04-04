@@ -20,7 +20,7 @@
  *  HERO CARD:
  *    #sp-photo-img                src + style.display='block'   — real photo URL (hide #sp-photo-initials when set)
  *    #sp-photo-initials           textContent  — "EC" initials fallback (hide when photo exists)
- *    #sp-student-name             textContent  — "Elijah Children" (DM Serif Display)
+ *    #sp-student-name             textContent  — filled from database (DM Serif Display)
  *    #sp-chip-class               textContent  — "🏫 Primary 3"
  *    #sp-chip-status              className + textContent — "✦ Active" / "✗ Inactive"
  *    #sp-chip-adm                 textContent  — "# RAK202511001"
@@ -641,7 +641,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
           <!-- Real photo — shown when student has a photo_url in the database -->
           <img id="sp-photo-img" class="sp-photo-img" src="" alt="" style="display:none;">
           <!-- Initials fallback — shown when no photo exists -->
-          <div id="sp-photo-initials" class="sp-photo-initials">EC</div>
+          <div id="sp-photo-initials" class="sp-photo-initials">?</div>
           <div class="sp-photo-edit" id="sp-btn-change-photo" title="Change photo">📷</div>
         </div>
 
@@ -1050,38 +1050,38 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 
 <div class="sp-guardian-card">
   <div class="sp-guardian-top">
-    <div class="sp-guardian-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">KD</div>
+    <div class="sp-guardian-av" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">?</div>
     <div class="sp-guardian-name-block">
-      <div class="sp-guardian-name">Kimuli Daudi</div>
-      <div class="sp-guardian-relation">Father · Primary Guardian</div>
+      <div class="sp-guardian-name">—</div>
+      <div class="sp-guardian-relation">—</div>
     </div>
     <div class="sp-guardian-actions">
-      <button class="sp-icon-btn" data-tel="0759881429" title="Call">📞</button>
-      <button class="sp-icon-btn" data-email="kimuli@email.com" title="Email">✉️</button>
-      <button class="sp-icon-btn sp-green" data-whatsapp="0759881429" title="WhatsApp">💬</button>
+      <button class="sp-icon-btn" data-tel="" title="Call">📞</button>
+      <button class="sp-icon-btn" data-email="" title="Email">✉️</button>
+      <button class="sp-icon-btn sp-green" data-whatsapp="" title="WhatsApp">💬</button>
       <button class="sp-icon-btn" data-nav="/dashboard/admin/parents/PARENT_ID" title="Open profile">›</button>
     </div>
   </div>
   <div class="sp-guardian-fields">
     <div>
       <div class="sp-guardian-field-label">Phone</div>
-      <div class="sp-guardian-field-value"><a href="tel:0759881429">0759 881 429</a></div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Email</div>
-      <div class="sp-guardian-field-value"><a href="mailto:kimuli@email.com">kimuli@email.com</a></div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Occupation</div>
-      <div class="sp-guardian-field-value">Business Owner</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">NIN / ID</div>
-      <div class="sp-guardian-field-value">CM9100XXXX</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Address</div>
-      <div class="sp-guardian-field-value">Mengo, Kampala</div>
+      <div class="sp-guardian-field-value">—</div>
     </div>
     <div>
       <div class="sp-guardian-field-label">Portal Access</div>
