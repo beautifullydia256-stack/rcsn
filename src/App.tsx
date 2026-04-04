@@ -49,6 +49,7 @@ const TeacherEditPage = lazyWithRetry(() => import('./pages/admin/teachers/Teach
 const CreateTeacherLoginPage = lazyWithRetry(() => import('./pages/admin/teachers/CreateTeacherLoginPage'));
 const DesignParentsPage = lazyWithRetry(() => import('./pages/admin/parents/DesignParentsPage'));
 const DesignParentProfile = lazyWithRetry(() => import('./pages/admin/parents/DesignParentProfile'));
+const CreateParentLoginPage = lazyWithRetry(() => import('./pages/admin/parents/CreateParentLoginPage'));
 const AccountsPage = lazyWithRetry(() => import('./pages/admin/accounts/AccountsPage'));
 const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/CreateStaffPage'));
 const InviteFromRosterPage = lazyWithRetry(() => import('./pages/admin/accounts/InviteFromRosterPage'));
@@ -159,6 +160,7 @@ function App() {
                   <Route path="parents">
                     <Route index element={<DesignParentsPage />} />
                     <Route path="add" element={<Navigate to="/dashboard/admin/parents?add=1" replace />} />
+                    <Route path=":parent_id/create-login" element={<CreateParentLoginPage />} />
                     <Route path=":parent_id" element={<DesignParentProfile />} />
                   </Route>
                   <Route path="accounts" element={<AccountsPage />} />

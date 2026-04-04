@@ -196,13 +196,23 @@ module.exports = async function handler(req, res) {
     let firstName = body.firstName != null ? String(body.firstName) : '';
     let lastName = body.lastName != null ? String(body.lastName) : '';
     let roleOut = body.role != null ? String(body.role) : 'teacher';
-    const { phone, password, department, position } = body;
+    let phone =
+      body.phone != null && String(body.phone).trim() !== '' ? String(body.phone).trim() : null;
+    const { password, department, position } = body;
     let sendEmailInvite = Boolean(body.sendEmailInvite);
 
     const teacherId = body.teacherId != null ? String(body.teacherId).trim() : '';
     const otherStaffId = body.otherStaffId != null ? String(body.otherStaffId).trim() : '';
+    const parentIdForInvite = body.parentId != null ? String(body.parentId).trim() : '';
 
-    if (teacherId || otherStaffId) {
+    const rosterKeyCount = (teacherId ? 1 : 0) + (otherStaffId ? 1 : 0) + (parentIdForInvite ? 1 : 0);
+    if (rosterKeyCount > 1) {
+      setCors();
+      res.status(400).json({ error: 'Specify only one of teacherId, otherStaffId, or parentId.' });
+      return;
+    }
+
+    if (teacherId || otherStaffId || parentIdForInvite) {
       sendEmailInvite = true;
       if (body.password != null && String(body.password).trim() !== '') {
         setCors();
@@ -289,6 +299,63 @@ module.exports = async function handler(req, res) {
         res
           .status(400)
           .json({ error: 'This person has no email. Add an email in the invitation form, then send again.' });
+        return;
+      }
+    } else if (parentIdForInvite) {
+      const { data: prowRows, error: pErr } = await supabaseAdmin
+        .from('parents')
+        .select('parent_id, name, email, phone, is_primary_contact')
+        .eq('school_id', adminData.school_id)
+        .eq('parent_id', parentIdForInvite);
+      if (pErr || !prowRows || prowRows.length === 0) {
+        setCors();
+        res.status(400).json({ error: 'Parent not found or not in your school.' });
+        return;
+      }
+      const { data: keyUser } = await supabaseAdmin
+        .from('users')
+        .select('user_id, role')
+        .eq('user_id', parentIdForInvite)
+        .maybeSingle();
+      if (keyUser) {
+        const rk = normalizeManagerRole(keyUser.role);
+        if (rk === 'parent') {
+          setCors();
+          res.status(400).json({ error: 'This parent already has a portal account.' });
+          return;
+        }
+        setCors();
+        res
+          .status(400)
+          .json({ error: 'This guardian link is already tied to a staff account. Contact support if this is wrong.' });
+        return;
+      }
+      roleOut = 'parent';
+      const primary = prowRows.find((r) => r.is_primary_contact === true) || prowRows[0];
+      const full = String((primary && primary.name) || '').trim();
+      const parts = full.split(/\s+/).filter(Boolean);
+      firstName = parts[0] || 'Parent';
+      lastName = parts.slice(1).join(' ') || '';
+      if (!emailIn) emailIn = primary && primary.email ? String(primary.email).trim() : '';
+      if (!emailIn) {
+        setCors();
+        res.status(400).json({
+          error:
+            'This guardian has no email on file. Add an email on their profile (or in the invite form), then send again.',
+        });
+        return;
+      }
+      if (!phone && primary && primary.phone) phone = String(primary.phone).trim() || null;
+      const { data: existingP } = await supabaseAdmin
+        .from('users')
+        .select('user_id')
+        .eq('school_id', adminData.school_id)
+        .eq('role', 'parent')
+        .ilike('email', emailIn)
+        .maybeSingle();
+      if (existingP?.user_id) {
+        setCors();
+        res.status(400).json({ error: 'A parent account with this email already exists for your school.' });
         return;
       }
     }
@@ -448,6 +515,35 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if (authUserId && parentIdForInvite) {
+      try {
+        const { error: migErr } = await supabaseAdmin
+          .from('parents')
+          .update({ parent_id: authUserId, email: String(email) })
+          .eq('school_id', adminData.school_id)
+          .eq('parent_id', parentIdForInvite);
+        if (migErr) throw migErr;
+      } catch (e) {
+        console.error('Failed to migrate parents.parent_id:', e);
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        } catch {
+          /* best-effort */
+        }
+        try {
+          await supabaseAdmin.from('users').delete().eq('user_id', authUserId);
+        } catch {
+          /* best-effort */
+        }
+        setCors();
+        res.status(400).json({
+          error:
+            'Could not link guardian records to the new account. The invitation was rolled back; nothing was created.',
+        });
+        return;
+      }
+    }
+
     if (sendEmailInvite && oneTimeInvitePassword) {
       try {
         const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(email))}&first_login=1`;
@@ -483,6 +579,17 @@ module.exports = async function handler(req, res) {
               /* ignore */
             }
           }
+          if (parentIdForInvite) {
+            try {
+              await supabaseAdmin
+                .from('parents')
+                .update({ parent_id: parentIdForInvite })
+                .eq('school_id', adminData.school_id)
+                .eq('parent_id', authUserId);
+            } catch {
+              /* ignore */
+            }
+          }
           setCors();
           res.status(502).json({
             error:
@@ -506,6 +613,17 @@ module.exports = async function handler(req, res) {
         if (otherStaffId) {
           try {
             await supabaseAdmin.from('other_staff_members').update({ linked_user_id: null }).eq('id', otherStaffId);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (parentIdForInvite) {
+          try {
+            await supabaseAdmin
+              .from('parents')
+              .update({ parent_id: parentIdForInvite })
+              .eq('school_id', adminData.school_id)
+              .eq('parent_id', authUserId);
           } catch {
             /* ignore */
           }
@@ -539,6 +657,7 @@ module.exports = async function handler(req, res) {
     setCors();
     res.status(200).json({
       success: true,
+      ...(parentIdForInvite ? { userId: authUserId } : {}),
       message: sendEmailInvite
         ? 'Invitation sent! They will receive an email with a one-time password and a sign-in button.'
         : 'User created successfully! They can now log in with their credentials.',
