@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import ParentPageScaffold, { parentPortal } from '@/components/parent/ParentPageScaffold';
 import { useParentPortal } from '@/context/ParentPortalContext';
 import { displayStudentName } from '@/lib/parentPortalUtils';
@@ -36,17 +37,21 @@ export default function ParentFeesPage() {
     }
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from('student_balances')
-        .select('total_fees, total_paid, balance')
-        .eq('school_id', schoolId)
-        .eq('student_id', child.student_id)
-        .maybeSingle();
+      const [agg, payRes] = await Promise.all([
+        loadStudentBalanceAggAllTerms(supabase, schoolId, child.student_id),
+        supabase
+          .from('student_payments')
+          .select('amount_paid')
+          .eq('school_id', schoolId)
+          .eq('student_id', child.student_id)
+          .is('reversed_at', null),
+      ]);
       if (cancelled) return;
-      const b = data as { total_fees?: number; total_paid?: number; balance?: number } | null;
-      setTotalFees(Number(b?.total_fees || 0));
-      setTotalPaid(Number(b?.total_paid || 0));
-      setBalance(Number(b?.balance ?? Math.max(0, Number(b?.total_fees || 0) - Number(b?.total_paid || 0))));
+      const bal = Math.max(0, Number(agg.balance || 0));
+      const paid = (payRes.data || []).reduce((s, p) => s + Math.max(0, Number((p as { amount_paid?: number }).amount_paid || 0)), 0);
+      setBalance(bal);
+      setTotalPaid(paid);
+      setTotalFees(paid + bal);
       setLoading(false);
     })();
     return () => {
@@ -54,7 +59,7 @@ export default function ParentFeesPage() {
     };
   }, [ready, schoolId, child?.student_id]);
 
-  const pct = totalFees > 0 ? Math.round((totalPaid / totalFees) * 100) : 0;
+  const pct = totalFees > 0 ? Math.round((totalPaid / totalFees) * 100) : 0; // totalFees = paid + outstanding (matches school total)
   const sidQ = child?.student_id || '';
 
   return (

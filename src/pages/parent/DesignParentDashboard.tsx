@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import { useDesignDashboardNav } from '@/lib/designDashboardHtml';
 import { PARENT_HOME_INNER_HTML } from '@/lib/parentPortalAssets';
 import { displayStudentName, parentInitials } from '@/lib/parentPortalUtils';
@@ -79,6 +80,7 @@ export default function DesignParentDashboard() {
       let feeBalance = 0;
       let feeTotal = 0;
       let feePaid = 0;
+      let feePriorLegacy = 0;
       let perfRows: { subject: string; score: number; max: number; grade: string | null }[] = [];
       let timetableRows: { time: string; subject: string; teacher: string }[] = [];
       let examRows: { name: string; sub: string; day: string; mon: string }[] = [];
@@ -94,7 +96,8 @@ export default function DesignParentDashboard() {
         const [
           examRes,
           attRes,
-          balRes,
+          feeAgg,
+          paySumRes,
           ttRes,
           examSetsRes,
           noticesRes,
@@ -108,12 +111,13 @@ export default function DesignParentDashboard() {
             .eq('student_id', sid)
             .limit(80),
           supabase.from('student_attendance').select('present').eq('school_id', schoolId).eq('student_id', sid),
+          loadStudentBalanceAggAllTerms(supabase, schoolId, sid),
           supabase
-            .from('student_balances')
-            .select('total_fees, total_paid, balance')
+            .from('student_payments')
+            .select('amount_paid')
             .eq('school_id', schoolId)
             .eq('student_id', sid)
-            .maybeSingle(),
+            .is('reversed_at', null),
           supabase
             .from('timetable_periods')
             .select('start_time, end_time, subject, teacher_id')
@@ -178,12 +182,11 @@ export default function DesignParentDashboard() {
         const trow = todayAttRes.data as { present?: boolean } | null;
         if (trow && typeof trow.present === 'boolean') todayPresent = trow.present;
 
-        const bal = balRes.data as { total_fees?: number; total_paid?: number; balance?: number } | null;
-        if (bal) {
-          feeTotal = Number(bal.total_fees || 0);
-          feePaid = Number(bal.total_paid || 0);
-          feeBalance = Number(bal.balance ?? Math.max(0, feeTotal - feePaid));
-        }
+        feeBalance = Math.max(0, Number(feeAgg.balance || 0));
+        feePriorLegacy = Math.max(0, Number(feeAgg.prior_system_balance || 0));
+        const payRows = (paySumRes.data || []) as { amount_paid?: number }[];
+        feePaid = payRows.reduce((s, p) => s + Math.max(0, Number(p.amount_paid || 0)), 0);
+        feeTotal = feePaid + feeBalance;
 
         const tt = (ttRes.data || []) as {
           start_time?: string;
@@ -289,6 +292,7 @@ export default function DesignParentDashboard() {
       if (cancelled) return;
 
       const feePct = feeTotal > 0 ? Math.round((feePaid / feeTotal) * 100) : 0;
+      const feeTermRemainder = Math.max(0, feeBalance - feePriorLegacy);
 
       requestAnimationFrame(() => {
         const root = homeRef.current;
@@ -337,30 +341,43 @@ export default function DesignParentDashboard() {
           feeDue.textContent = !child
             ? 'Link a student to see fees.'
             : feeBalance > 0
-              ? 'Due by end of term — pay on time to avoid disruption.'
+              ? feePriorLegacy > 0
+                ? 'Includes a legacy balance from before this system; total due matches the school’s records — pay on time.'
+                : 'Due by end of term — pay on time to avoid disruption.'
               : 'Fees cleared for this period.';
         }
         if (feeBar) feeBar.style.width = `${feePct}%`;
         if (feePaidLbl) feePaidLbl.textContent = child ? `${feePct}% paid` : '—';
         if (feeFoot) feeFoot.textContent = child ? `${fmt(feePaid)} paid` : '—';
         if (feeTotalEl) feeTotalEl.textContent = child ? `Total: ${fmt(feeTotal)}` : 'Total: —';
-        if (feeTerm) feeTerm.textContent = child ? `${childClass} · Term payment progress` : '—';
+        if (feeTerm)
+          feeTerm.textContent = child
+            ? `${childClass} · ${feePriorLegacy > 0 ? 'Fee & legacy balance progress' : 'Term payment progress'}`
+            : '—';
 
         if (feeBreakdown) {
           if (!child) {
             feeBreakdown.innerHTML = '';
           } else {
             feeBreakdown.innerHTML = `
+            ${
+              feePriorLegacy > 0
+                ? `<div class="pd-fee-item">
+              <span class="pd-fee-item-label">Prior / external (legacy)</span>
+              <span class="pd-fee-item-val">${fmt(feePriorLegacy)}</span>
+            </div>`
+                : ''
+            }
             <div class="pd-fee-item">
-              <span class="pd-fee-item-label">Total fees</span>
-              <span class="pd-fee-item-val">${fmt(feeTotal)}</span>
+              <span class="pd-fee-item-label">Term fees (remaining)</span>
+              <span class="pd-fee-item-val">${fmt(feeTermRemainder)}</span>
             </div>
             <div class="pd-fee-item">
-              <span class="pd-fee-item-label">Amount paid</span>
+              <span class="pd-fee-item-label">Amount paid (all recorded payments)</span>
               <span class="pd-fee-item-val" style="color:var(--green)">${fmt(feePaid)}</span>
             </div>
             <div class="pd-fee-item">
-              <span class="pd-fee-item-label">Balance</span>
+              <span class="pd-fee-item-label">Total outstanding</span>
               <span class="pd-fee-item-val" style="color:var(--coral)">${fmt(feeBalance)}</span>
             </div>`;
           }
