@@ -2,7 +2,7 @@
  * POS-style Record Payment modal. Renders on top of current view; no route change.
  * Opened from dashboard (or layout); Esc and overlay close it.
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
@@ -51,6 +51,54 @@ function buildOutstandingRows(
   return sortOutstandingForPayment(out);
 }
 
+/** If duplicate `student_balances` rows exist per term, combine so allocation runs once per term. */
+function mergeTermBalanceRows(
+  raw: { term_id: string; term: number; year: number; balance: number | string | null }[]
+): { term_id: string; term: number; year: number; balance: number }[] {
+  const m = new Map<string, { term_id: string; term: number; year: number; balance: number }>();
+  for (const r of raw) {
+    const bal = Math.max(0, Number(r.balance ?? 0));
+    if (bal <= 0) continue;
+    const ex = m.get(r.term_id);
+    if (!ex) {
+      m.set(r.term_id, { term_id: r.term_id, term: r.term, year: r.year, balance: bal });
+    } else {
+      m.set(r.term_id, { ...ex, balance: ex.balance + bal });
+    }
+  }
+  return [...m.values()].sort((a, b) => a.year - b.year || a.term - b.term);
+}
+
+/** Authoritative snapshot for payment allocation — always use this when posting, not stale React state. */
+async function fetchOutstandingRowsForRecordPayment(
+  schoolId: string,
+  studentId: string
+): Promise<{ rows: OutstandingBalanceRow[]; errorMessage: string | null }> {
+  const [balRes, priorRes] = await Promise.all([
+    supabase
+      .from("student_balances")
+      .select("term_id, term, year, balance")
+      .eq("school_id", schoolId)
+      .eq("student_id", studentId)
+      .gt("balance", 0)
+      .order("year", { ascending: true })
+      .order("term", { ascending: true }),
+    supabase
+      .from("prior_system_balance_entries")
+      .select("id, amount_outstanding")
+      .eq("school_id", schoolId)
+      .eq("student_id", studentId)
+      .order("entered_at", { ascending: true })
+      .limit(1),
+  ]);
+  if (balRes.error?.message) return { rows: [], errorMessage: balRes.error.message };
+  if (priorRes.error?.message) return { rows: [], errorMessage: priorRes.error.message };
+  const merged = mergeTermBalanceRows((balRes.data || []) as { term_id: string; term: number; year: number; balance: number | string | null }[]);
+  const priorArr = (priorRes.data || []) as { id: string; amount_outstanding: number }[];
+  const rows = buildOutstandingRows(merged, priorArr[0] ?? null);
+  return { rows, errorMessage: null };
+}
+
 function formatReceiptTime(d: Date): string {
   const day = String(d.getDate()).padStart(2, "0");
   const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
@@ -91,6 +139,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [activatingInvoice, setActivatingInvoice] = useState(false);
   const [schoolName, setSchoolName] = useState("");
+  const paymentSubmitLockRef = useRef(false);
 
   useEffect(() => {
     if (open && initialStudentId) setSelectedStudent(initialStudentId);
@@ -148,28 +197,15 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       setCurrentTermFee(null);
       return;
     }
+    let cancelled = false;
     setBalancesLoading(true);
     setOutstandingBalances([]);
     setHasCurrentTermInvoice(null);
     setCurrentTermFee(null);
     void (async () => {
       try {
-        const [balRes, priorRes, invRes, feeRes] = await Promise.all([
-          supabase
-            .from("student_balances")
-            .select("term_id, term, year, balance")
-            .eq("school_id", schoolId)
-            .eq("student_id", selectedStudent)
-            .gt("balance", 0)
-            .order("year", { ascending: true })
-            .order("term", { ascending: true }),
-          supabase
-            .from("prior_system_balance_entries")
-            .select("id, amount_outstanding")
-            .eq("school_id", schoolId)
-            .eq("student_id", selectedStudent)
-            .order("entered_at", { ascending: true })
-            .limit(1),
+        const [outResult, invRes, stRes] = await Promise.all([
+          fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent),
           currentTerm
             ? supabase
                 .from("student_invoices")
@@ -179,42 +215,40 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                 .eq("term_id", currentTerm.id)
                 .maybeSingle()
             : Promise.resolve({ data: null }),
-          (() => {
-            const studentRow = students.find((s) => s.student_id === selectedStudent);
-            const currentClass = studentRow?.current_class;
-            if (!currentClass) return Promise.resolve({ data: [] });
-            return supabase
+          supabase.from("students").select("current_class").eq("school_id", schoolId).eq("student_id", selectedStudent).maybeSingle(),
+        ]);
+        if (cancelled) return;
+        if (outResult.errorMessage) {
+          setMessage("Could not load balances: " + outResult.errorMessage);
+          setOutstandingBalances([]);
+          return;
+        }
+        setOutstandingBalances(outResult.rows);
+        if (currentTerm) {
+          setHasCurrentTermInvoice(!!invRes.data);
+          const cls = (stRes.data as { current_class?: string } | null)?.current_class;
+          if (!cls) {
+            setCurrentTermFee(null);
+          } else {
+            const { data: feeRow } = await supabase
               .from("school_fee_structure")
               .select("tuition_amount")
               .eq("school_id", schoolId)
-              .eq("class_name", currentClass)
+              .eq("class_name", cls)
               .maybeSingle();
-          })(),
-        ]);
-        if (balRes.error?.message) {
-          setMessage("Could not load term balances: " + balRes.error.message);
-          setOutstandingBalances([]);
-          return;
-        }
-        if (priorRes.error?.message) {
-          setMessage("Could not load prior balance: " + priorRes.error.message);
-          setOutstandingBalances([]);
-          return;
-        }
-        const raw = (balRes.data || []) as { term_id: string; term: number; year: number; balance: number }[];
-        const priorArr = (priorRes.data || []) as { id: string; amount_outstanding: number }[];
-        const priorRow = priorArr[0] ?? null;
-        setOutstandingBalances(buildOutstandingRows(raw, priorRow));
-        if (currentTerm) {
-          setHasCurrentTermInvoice(!!invRes.data);
-          const feeRow = feeRes.data as { tuition_amount?: number } | null;
-          setCurrentTermFee(feeRow?.tuition_amount != null ? Number(feeRow.tuition_amount) : null);
+            if (!cancelled) {
+              setCurrentTermFee(feeRow?.tuition_amount != null ? Number(feeRow.tuition_amount) : null);
+            }
+          }
         }
       } finally {
-        setBalancesLoading(false);
+        if (!cancelled) setBalancesLoading(false);
       }
     })();
-  }, [schoolId, selectedStudent, currentTerm, students]);
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId, selectedStudent, currentTerm]);
 
   const totalDue = outstandingBalances.reduce((sum, b) => sum + b.balance, 0);
   const canRecordPayment = totalDue > 0 && Number(amount) > 0;
@@ -294,25 +328,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       if (balErr) throw balErr;
       setHasCurrentTermInvoice(true);
       setMessage("Current term invoice activated. Refreshing balances…");
-      const [{ data: balData }, { data: priorData }] = await Promise.all([
-        supabase
-          .from("student_balances")
-          .select("term_id, term, year, balance")
-          .eq("school_id", schoolId)
-          .eq("student_id", selectedStudent)
-          .gt("balance", 0),
-        supabase
-          .from("prior_system_balance_entries")
-          .select("id, amount_outstanding")
-          .eq("school_id", schoolId)
-          .eq("student_id", selectedStudent)
-          .order("entered_at", { ascending: true })
-          .limit(1),
-      ]);
-      const raw = (balData || []) as { term_id: string; term: number; year: number; balance: number }[];
-      const priorArr = (priorData || []) as { id: string; amount_outstanding: number }[];
-      const priorRow = priorArr[0] ?? null;
-      setOutstandingBalances(buildOutstandingRows(raw, priorRow));
+      const outResult = await fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent);
+      if (!outResult.errorMessage) setOutstandingBalances(outResult.rows);
       setMessage("Current term invoice activated. Total due now includes Term " + currentTerm.term + ", " + currentTerm.year + ".");
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
     } catch (err: unknown) {
@@ -364,19 +381,33 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       setMessage("Please select a student and enter an amount.");
       return;
     }
-    if (outstandingBalances.length === 0) {
-      setMessage("This student has no outstanding balance.");
-      return;
-    }
     const amt = Number(amount);
-    if (amt > totalDue) {
-      setMessage("Amount cannot exceed total due (" + totalDue.toLocaleString() + ").");
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setMessage("Enter a valid payment amount.");
       return;
     }
+    if (paymentSubmitLockRef.current) return;
+    paymentSubmitLockRef.current = true;
     setSubmitting(true);
     setMessage("");
     try {
-      const sortedBalances = sortOutstandingForPayment(outstandingBalances);
+      const { rows: freshRows, errorMessage: freshErr } = await fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent);
+      if (freshErr) {
+        setMessage("Could not load current balances: " + freshErr + " Refresh and try again.");
+        return;
+      }
+      if (freshRows.length === 0) {
+        setMessage("No outstanding balance for this student right now. Refresh and try again.");
+        return;
+      }
+      const sortedBalances = sortOutstandingForPayment(freshRows);
+      const maxDueNow = sortedBalances.reduce((s, b) => s + b.balance, 0);
+      if (amt > maxDueNow + 0.01) {
+        setMessage(
+          "Amount exceeds current total due (" + maxDueNow.toLocaleString() + "). Balances may have changed—check the modal and try again."
+        );
+        return;
+      }
       let remaining = amt;
       const allocations: PaymentAllocation[] = [];
       for (const row of sortedBalances) {
@@ -398,7 +429,11 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       }
       if (allocations.length === 0) {
         setMessage("No amount to apply to outstanding balances.");
-        setSubmitting(false);
+        return;
+      }
+      const allocatedTotal = allocations.reduce((s, a) => s + a.amount, 0);
+      if (Math.abs(allocatedTotal - amt) > 0.02) {
+        setMessage("Internal allocation mismatch. Please try again or contact support.");
         return;
       }
 
@@ -461,7 +496,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         if (error) throw error;
       }
 
-      const totalRemaining = totalDue - amt;
+      const totalRemaining = Math.max(0, maxDueNow - amt);
       const allocationLines = allocations.map((a) =>
         a.kind === "prior"
           ? { termLabel: "Prior / external (legacy)", amountApplied: a.amount }
@@ -501,6 +536,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
             : "Failed to record payment.";
       setMessage(msg);
     } finally {
+      paymentSubmitLockRef.current = false;
       setSubmitting(false);
     }
   }
