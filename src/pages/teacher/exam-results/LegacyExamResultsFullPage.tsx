@@ -951,7 +951,10 @@ export default function LegacyExamResultsFullPage() {
       void loadTeacherExamGradeSettingsFromSupabase();
       alert("Grade settings saved.");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed to save grade settings";
+      const pe = e as { message?: string; details?: string; hint?: string };
+      const msg =
+        [pe?.message, pe?.details, pe?.hint].filter(Boolean).join(" — ") ||
+        (e instanceof Error ? e.message : "Failed to save grade settings");
       console.error("saveTeacherExamGradeSettingsToSupabase", e);
       alert(msg);
     } finally {
