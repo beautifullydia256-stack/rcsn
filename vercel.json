@@ -9,7 +9,7 @@
     "api/admin/create-user-account.js": {
       "includeFiles": "lib/**"
     },
-    "api/admin/ensure-parent-link.ts": {
+    "api/admin/ensure-parent-link.js": {
       "includeFiles": "lib/**"
     }
   },

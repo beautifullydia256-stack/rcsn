@@ -1,15 +1,24 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Search, X } from 'lucide-react';
 import {
   addParentSchoolQueryKey,
   addParentSchoolStaleOptions,
   fetchAddParentSchoolContext,
+  type AddParentSchoolStudent,
 } from './addParentSchoolQuery';
 import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
+
+const RELATIONSHIP_OPTIONS = [
+  { value: '', label: 'Select relationship…' },
+  { value: 'Father', label: 'Father' },
+  { value: 'Mother', label: 'Mother' },
+  { value: 'Guardian', label: 'Guardian' },
+  { value: 'Other', label: 'Other' },
+];
 
 export type AddParentFormProps = {
   mode: 'page' | 'modal';
@@ -17,15 +26,23 @@ export type AddParentFormProps = {
   onCancel?: () => void;
 };
 
+function normalize(s: string) {
+  return s.trim().toLowerCase();
+}
+
 export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProps) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const [studentId, setStudentId] = useState('');
+  const [studentQuery, setStudentQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [relationship, setRelationship] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   const { data, isPending } = useQuery({
     queryKey: addParentSchoolQueryKey(user?.id ?? ''),
@@ -39,6 +56,46 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
   const schoolId = data?.schoolId ?? null;
   const students = data?.students ?? [];
 
+  const selectedStudent = useMemo(
+    () => students.find((s) => s.student_id === studentId) ?? null,
+    [students, studentId]
+  );
+
+  const filteredStudents = useMemo(() => {
+    const q = normalize(studentQuery);
+    let list: AddParentSchoolStudent[] = students;
+    if (q) {
+      list = students.filter((s) => {
+        const hay = `${s.name} ${s.current_class} ${s.admission_number}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
+    return list.slice(0, 20);
+  }, [students, studentQuery]);
+
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      const el = pickerRef.current;
+      if (el && !el.contains(e.target as Node)) setPickerOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [pickerOpen]);
+
+  const clearStudent = () => {
+    setStudentId('');
+    setStudentQuery('');
+    setPickerOpen(false);
+  };
+
+  const pickStudent = (s: AddParentSchoolStudent) => {
+    setStudentId(s.student_id);
+    const adm = s.admission_number ? ` · ${s.admission_number}` : '';
+    setStudentQuery(`${s.name} (${s.current_class})${adm}`);
+    setPickerOpen(false);
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -48,15 +105,20 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
       return;
     }
     if (!studentId) {
-      setError('Please select a student.');
+      setError('Please search and select a student.');
+      return;
+    }
+    if (!relationship.trim()) {
+      setError('Please select how this person is related to the student (e.g. Father, Mother).');
       return;
     }
     if (!schoolId) {
       setError('You are not linked to a school.');
       return;
     }
-    if (!email.trim() && !phone.trim()) {
-      setError('At least one of email or phone is required.');
+    const addr = email.trim();
+    if (!addr) {
+      setError('Email is required so the parent can sign in to the portal.');
       return;
     }
 
@@ -66,15 +128,17 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         student_id: studentId,
         school_id: schoolId,
         name: trimName,
-        email: email.trim() || undefined,
+        email: addr,
         phone: phone.trim() || undefined,
+        relationship: relationship.trim(),
       });
       if (!linkRes.ok) {
         throw new Error(linkRes.error || 'Failed to add parent');
       }
 
       if (mode === 'modal') {
-        setStudentId('');
+        clearStudent();
+        setRelationship('');
         setName('');
         setEmail('');
         setPhone('');
@@ -142,23 +206,101 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
           </div>
         )}
 
-        <div>
-          <label className={labelClass}>
+        <div ref={pickerRef} className="relative">
+          <label className={labelClass} id="add-par-student-label">
             Student <span className="text-red-500">*</span>
           </label>
+          <p className="mb-2 text-xs text-[var(--ac-text-muted)]">
+            Search by name, class, or admission number. Students can have more than one parent (e.g. father and mother);
+            anyone already linked still appears here.
+          </p>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+              aria-hidden
+            />
+            <input
+              type="text"
+              className={`${inputClass} pl-10 pr-10`}
+              placeholder="Type to search students…"
+              value={studentQuery}
+              onChange={(e) => {
+                const v = e.target.value;
+                setStudentQuery(v);
+                if (studentId && selectedStudent) {
+                  const adm = selectedStudent.admission_number ? ` · ${selectedStudent.admission_number}` : '';
+                  const expected = `${selectedStudent.name} (${selectedStudent.current_class})${adm}`;
+                  if (v !== expected) {
+                    setStudentId('');
+                  }
+                }
+                setPickerOpen(true);
+              }}
+              onFocus={() => setPickerOpen(true)}
+              aria-labelledby="add-par-student-label"
+              autoComplete="off"
+            />
+            {(studentId || studentQuery) && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                onClick={clearStudent}
+                aria-label="Clear student"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {pickerOpen && (
+            <ul
+              className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg dark:border-slate-600 dark:bg-slate-900"
+              role="listbox"
+            >
+              {filteredStudents.length === 0 ? (
+                <li className="px-3 py-2 text-sm text-slate-500">No matching students.</li>
+              ) : (
+                filteredStudents.map((s) => (
+                  <li key={s.student_id} role="option">
+                    <button
+                      type="button"
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left text-sm hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                      onMouseDown={(ev) => {
+                        ev.preventDefault();
+                        pickStudent(s);
+                      }}
+                    >
+                      <span className="font-medium text-slate-900 dark:text-slate-100">{s.name}</span>
+                      <span className="text-xs text-slate-500">
+                        {s.current_class}
+                        {s.admission_number ? ` · Adm ${s.admission_number}` : ''}
+                      </span>
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
+        </div>
+
+        <div>
+          <label className={labelClass}>
+            Relationship to student <span className="text-red-500">*</span>
+          </label>
           <select
-            value={studentId}
-            onChange={(e) => setStudentId(e.target.value)}
+            value={relationship}
+            onChange={(e) => setRelationship(e.target.value)}
             className={inputClass}
             required
           >
-            <option value="">Select student</option>
-            {students.map((s) => (
-              <option key={s.student_id} value={s.student_id}>
-                {s.name} ({s.current_class})
+            {RELATIONSHIP_OPTIONS.map((o) => (
+              <option key={o.label} value={o.value}>
+                {o.label}
               </option>
             ))}
           </select>
+          <p className="mt-1 text-xs text-[var(--ac-text-muted)]">
+            You can add more detail later on the parent&apos;s profile.
+          </p>
         </div>
 
         <div>
@@ -176,13 +318,16 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         </div>
 
         <div>
-          <label className={labelClass}>Email</label>
+          <label className={labelClass}>
+            Email <span className="text-red-500">*</span>
+          </label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={inputClass}
             placeholder="e.g. parent@example.com"
+            required
           />
         </div>
 
@@ -198,7 +343,8 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         </div>
 
         <p className="text-xs text-[var(--ac-text-muted)]">
-          At least one of email or phone is required. A parent account (login) will be created or linked so they can access the parent portal.
+          A real email is required so we can create or link their parent portal login. Phone is optional but useful for
+          your records.
         </p>
 
         <div className="flex flex-wrap gap-3 pt-2">

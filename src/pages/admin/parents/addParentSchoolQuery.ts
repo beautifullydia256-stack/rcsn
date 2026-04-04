@@ -5,6 +5,7 @@ export type AddParentSchoolStudent = {
   student_id: string;
   name: string;
   current_class: string;
+  admission_number: string;
 };
 
 export type AddParentSchoolData = {
@@ -24,14 +25,19 @@ export async function fetchAddParentSchoolContext(userId: string): Promise<AddPa
 
   const { data: students } = await supabase
     .from('students')
-    .select('student_id, name, current_class')
+    .select('student_id, name, current_class, admission_number')
     .eq('school_id', u.school_id)
     .eq('status', 'active')
     .order('name');
 
   return {
     schoolId: u.school_id,
-    students: (students || []) as AddParentSchoolStudent[],
+    students: (students || []).map((row) => ({
+      student_id: String((row as { student_id: string }).student_id),
+      name: String((row as { name?: string }).name ?? ''),
+      current_class: String((row as { current_class?: string }).current_class ?? ''),
+      admission_number: String((row as { admission_number?: string }).admission_number ?? ''),
+    })),
   };
 }
 
