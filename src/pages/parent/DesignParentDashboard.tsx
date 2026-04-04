@@ -1,14 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { extractStyleAndBody, useDesignDashboardNav } from '@/lib/designDashboardHtml';
-
-import designRaw from '@/assets/pwezacore-parent-dashboard.html?raw';
-
-const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
-
-const FONT_HREF =
-  'https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap';
+import { useDesignDashboardNav } from '@/lib/designDashboardHtml';
+import { PARENT_HOME_INNER_HTML } from '@/lib/parentPortalAssets';
+import { displayStudentName, parentInitials } from '@/lib/parentPortalUtils';
+import { useParentPortal } from '@/context/ParentPortalContext';
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ff6b6b,#9d7eff)',
@@ -20,219 +16,56 @@ const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
 
 const SCHED_COLORS = ['#00e5c3', '#9d7eff', '#ffb547', '#3d7eff', '#ff6b6b', '#27e09f'];
 
-function initials(name: string) {
-  return (name || '?')
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
 function fmt(n: number) {
   return `UGX ${Math.round(n || 0).toLocaleString()}`;
-}
-
-function displayStudentName(s: Record<string, unknown>): string {
-  const fn = String(s.first_name ?? '').trim();
-  const mn = String(s.middle_name ?? '').trim();
-  const ln = String(s.last_name ?? '').trim();
-  const parts = [fn, mn, ln].filter(Boolean);
-  if (parts.length) return parts.join(' ');
-  return String(s.name ?? '').trim() || '—';
 }
 
 function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-type StudentRow = {
-  student_id: string;
-  name?: string;
-  first_name?: string;
-  middle_name?: string;
-  last_name?: string;
-  current_class?: string | null;
-  admission_number?: string | null;
-};
-
 export default function DesignParentDashboard() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
+  const homeRef = useRef<HTMLDivElement>(null);
+  const {
+    ready,
+    schoolId,
+    userId,
+    parentNameFull,
+    children,
+    activeStudentId: selectedId,
+    refreshUnread,
+  } = useParentPortal();
 
-  useDesignDashboardNav(containerRef, navigate, true);
-
-  useLayoutEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = FONT_HREF;
-    document.head.appendChild(link);
-    return () => {
-      document.head.removeChild(link);
-    };
-  }, []);
+  useDesignDashboardNav(homeRef, navigate, true);
 
   useEffect(() => {
-    const root = containerRef.current;
-    if (!root) return;
-
-    const sidebar = () => root.querySelector('#pd-sidebar');
-    const overlay = () => root.querySelector('#pd-overlay');
-
-    const setOpen = (open: boolean) => {
-      const s = sidebar();
-      const o = overlay();
-      s?.classList.toggle('open', open);
-      o?.classList.toggle('open', open);
-      document.body.style.overflow = open ? 'hidden' : '';
-    };
-
-    const close = () => setOpen(false);
-
-    const onClick = (e: MouseEvent) => {
-      const t = e.target as HTMLElement;
-      if (!root.contains(t)) return;
-
-      if (t.closest('#pd-hamburger')) {
-        e.preventDefault();
-        const s = sidebar();
-        const next = !s?.classList.contains('open');
-        setOpen(next);
-        return;
-      }
-
-      if (t.closest('#pd-overlay') && overlay()?.classList.contains('open')) {
-        close();
-        return;
-      }
-
-      if (window.innerWidth <= 768 && t.closest('.pd-nav-item')) {
-        close();
-      }
-    };
-
-    root.addEventListener('click', onClick);
-    return () => {
-      root.removeEventListener('click', onClick);
-      document.body.style.overflow = '';
-    };
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const path = location.pathname;
-    el.querySelectorAll('.pd-nav-item').forEach((i) => {
-      const nav = (i as HTMLElement).dataset.nav;
-      i.classList.toggle('active', nav === path);
-    });
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onTab = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest('.pd-child-tab');
-      if (!t || !el.contains(t)) return;
-      const id = (t as HTMLElement).dataset.childId;
-      if (id) setActiveStudentId(id);
-    };
-    el.addEventListener('click', onTab);
-    return () => el.removeEventListener('click', onTab);
-  }, []);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const onLogout = async (e: MouseEvent) => {
-      const btn = (e.target as HTMLElement).closest('#pd-btn-logout');
-      if (!btn || !el.contains(btn)) return;
-      e.preventDefault();
-      await supabase.auth.signOut();
-      navigate('/login');
-    };
-    el.addEventListener('click', onLogout);
-    return () => el.removeEventListener('click', onLogout);
-  }, [navigate]);
-
-  useEffect(() => {
-    const el = containerRef.current;
+    const el = homeRef.current;
     if (!el) return;
 
-    const setDateStr = () => {
-      const now = new Date();
-      const ds = el.querySelector('#pd-date-str');
-      if (ds) {
-        ds.textContent = now.toLocaleDateString('en-UG', {
-          weekday: 'long',
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric',
-        });
-      }
-    };
-    setDateStr();
+    const now = new Date();
+    const ds = el.querySelector('#pd-date-str');
+    if (ds) {
+      ds.textContent = now.toLocaleDateString('en-UG', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+  }, [ready]);
+
+  useEffect(() => {
+    const el = homeRef.current;
+    if (!el || !ready || !userId) return;
 
     let cancelled = false;
 
     async function load() {
-      const { data: auth } = await supabase.auth.getUser();
-      const user = auth.user;
-      if (!user || cancelled) return;
-
-      const { data: userRow } = await supabase
-        .from('users')
-        .select('school_id, name, email')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      const schoolId = (userRow as { school_id?: string } | null)?.school_id ?? null;
-      const parentNameFull =
-        String((userRow as { name?: string })?.name || '').trim() ||
-        String(user.email || '').split('@')[0] ||
-        'Parent';
-
-      let parentLinkRows: { student_id: string }[] = [];
-      if (schoolId) {
-        const { data: byId } = await supabase
-          .from('parents')
-          .select('student_id')
-          .eq('school_id', schoolId)
-          .eq('parent_id', user.id);
-        parentLinkRows = (byId as { student_id: string }[]) || [];
-        if (!parentLinkRows.length && user.email) {
-          const { data: byEmail } = await supabase
-            .from('parents')
-            .select('student_id')
-            .eq('school_id', schoolId)
-            .ilike('email', user.email.trim());
-          parentLinkRows = (byEmail as { student_id: string }[]) || [];
-        }
-      }
-
-      const studentIds = [...new Set(parentLinkRows.map((r) => r.student_id).filter(Boolean))];
-      let children: StudentRow[] = [];
-      if (schoolId && studentIds.length) {
-        const { data: studs } = await supabase
-          .from('students')
-          .select('student_id, name, first_name, middle_name, last_name, current_class, admission_number')
-          .eq('school_id', schoolId)
-          .in('student_id', studentIds);
-        children = (studs as StudentRow[]) || [];
-      }
-
-      const selectedId =
-        activeStudentId && children.some((c) => c.student_id === activeStudentId)
-          ? activeStudentId
-          : children[0]?.student_id ?? null;
-      if (selectedId !== activeStudentId && children.length) {
-        setActiveStudentId(selectedId);
-      }
-
-      const child = children.find((c) => c.student_id === selectedId) || children[0] || null;
+      const child =
+        selectedId && children.length
+          ? children.find((c) => c.student_id === selectedId) || children[0] || null
+          : children[0] || null;
       const childDisplayName = child ? displayStudentName(child) : '—';
       const childClass = child?.current_class ? String(child.current_class) : '—';
 
@@ -251,7 +84,6 @@ export default function DesignParentDashboard() {
       let examRows: { name: string; sub: string; day: string; mon: string }[] = [];
       let noticesHtml = '';
       let messagesHtml = '';
-      let unreadInbox = 0;
 
       const today = new Date().toISOString().slice(0, 10);
       const weekdayLong = new Date().toLocaleDateString('en-US', { weekday: 'long' });
@@ -305,7 +137,7 @@ export default function DesignParentDashboard() {
           supabase
             .from('user_in_app_notifications')
             .select('id, title, body, created_at, read_at')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .order('created_at', { ascending: false })
             .limit(6),
           supabase
@@ -316,6 +148,8 @@ export default function DesignParentDashboard() {
             .eq('date', today)
             .maybeSingle(),
         ]);
+
+        if (cancelled) return;
 
         const results = (examRes.data || []) as {
           subject?: string;
@@ -425,7 +259,6 @@ export default function DesignParentDashboard() {
           created_at?: string;
           read_at?: string | null;
         }[];
-        unreadInbox = inbox.filter((m) => !m.read_at).length;
         if (inbox.length === 0) {
           messagesHtml = `<div class="pd-empty"><div class="pd-empty-ic">💬</div><div class="pd-empty-txt">No messages yet.</div></div>`;
         } else {
@@ -440,7 +273,7 @@ export default function DesignParentDashboard() {
               const unread = !m.read_at;
               return `
             <div class="pd-msg-row" data-nav="/dashboard/parent/messages">
-              <div class="pd-msg-av" style="background:${grad(i)}">${esc(initials(String(m.title || 'School')))}</div>
+              <div class="pd-msg-av" style="background:${grad(i)}">${esc(parentInitials(String(m.title || 'School')))}</div>
               <div style="flex:1;min-width:0">
                 <div class="pd-msg-name">${esc(String(m.title || 'School'))}</div>
                 <div class="pd-msg-preview">${esc(preview)}</div>
@@ -458,34 +291,11 @@ export default function DesignParentDashboard() {
       const feePct = feeTotal > 0 ? Math.round((feePaid / feeTotal) * 100) : 0;
 
       requestAnimationFrame(() => {
-        const root = containerRef.current;
+        const root = homeRef.current;
         if (!root) return;
-
-        const ini = initials(parentNameFull);
-        const pIni = root.querySelector('#pd-parent-initials');
-        const pName = root.querySelector('#pd-parent-name');
-        const topAv = root.querySelector('#pd-topbar-av');
-        if (pIni) pIni.textContent = ini;
-        if (pName) pName.textContent = parentNameFull;
-        if (topAv) topAv.textContent = ini;
 
         const gEl = root.querySelector('#pd-greeting');
         if (gEl) gEl.textContent = `${greet}, ${greetFirst}`;
-
-        const tabsEl = root.querySelector('#pd-child-tabs');
-        if (tabsEl) {
-          if (children.length === 0) {
-            tabsEl.innerHTML = `<div style="font-size:12px;color:var(--t3);padding:4px">No children linked yet.</div>`;
-          } else {
-            tabsEl.innerHTML = children
-              .map((c) => {
-                const nm = displayStudentName(c);
-                const active = c.student_id === selectedId ? 'active' : '';
-                return `<div class="pd-child-tab ${active}" data-child-id="${esc(c.student_id)}"><div class="pd-child-dot"></div>${esc(nm)}</div>`;
-              })
-              .join('');
-          }
-        }
 
         root.querySelector('#pd-viewing-name')!.textContent = childDisplayName;
         root.querySelector('#pd-viewing-class')!.textContent = childClass;
@@ -534,8 +344,7 @@ export default function DesignParentDashboard() {
         if (feePaidLbl) feePaidLbl.textContent = child ? `${feePct}% paid` : '—';
         if (feeFoot) feeFoot.textContent = child ? `${fmt(feePaid)} paid` : '—';
         if (feeTotalEl) feeTotalEl.textContent = child ? `Total: ${fmt(feeTotal)}` : 'Total: —';
-        if (feeTerm)
-          feeTerm.textContent = child ? `${childClass} · Term payment progress` : '—';
+        if (feeTerm) feeTerm.textContent = child ? `${childClass} · Term payment progress` : '—';
 
         if (feeBreakdown) {
           if (!child) {
@@ -630,16 +439,6 @@ export default function DesignParentDashboard() {
         const msgBody = root.querySelector('#pd-messages-body');
         if (msgBody) msgBody.innerHTML = messagesHtml || '';
 
-        const badge = root.querySelector('#pd-notif-badge') as HTMLElement | null;
-        if (badge) {
-          if (unreadInbox > 0) {
-            badge.textContent = String(unreadInbox);
-            badge.style.display = 'flex';
-          } else {
-            badge.style.display = 'none';
-          }
-        }
-
         const pay = root.querySelector('#pd-btn-pay-now');
         const mm = root.querySelector('#pd-btn-mobile-money');
         const bank = root.querySelector('#pd-btn-bank');
@@ -655,24 +454,22 @@ export default function DesignParentDashboard() {
           (bank as HTMLElement).onclick = () =>
             navigate(`/dashboard/parent/fees${sidQ ? `?child=${sidQ}&method=bank_transfer` : '?method=bank_transfer'}`);
         }
-
       });
+
+      void refreshUnread();
     }
 
     void load();
     return () => {
       cancelled = true;
     };
-  }, [activeStudentId]);
+  }, [ready, schoolId, userId, selectedId, children, parentNameFull, navigate, refreshUnread]);
 
   return (
-    <>
-      <style>{SCOPED_STYLE}</style>
-      <div
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: BODY_HTML }}
-        style={{ width: '100%', minHeight: '100%', display: 'block' }}
-      />
-    </>
+    <div
+      ref={homeRef}
+      dangerouslySetInnerHTML={{ __html: PARENT_HOME_INNER_HTML }}
+      style={{ width: '100%', display: 'block' }}
+    />
   );
 }
