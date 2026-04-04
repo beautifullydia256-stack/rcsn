@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { resolveCurrentSchoolTerm, type SchoolTermBrief } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
 
@@ -20,7 +21,6 @@ export default function BillingPage() {
     refetchOnWindowFocus: true,
   });
   const fees = data?.fees ?? [];
-  const terms = data?.terms ?? [];
   const students = data?.students ?? [];
   const studentsError = data?.studentsError ?? null;
   const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
@@ -31,7 +31,8 @@ export default function BillingPage() {
   );
 
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
-  const [selectedTerm, setSelectedTerm] = useState("");
+  const [currentTerm, setCurrentTerm] = useState<SchoolTermBrief | null>(null);
+  const [currentTermResolved, setCurrentTermResolved] = useState(false);
   const [selectedClass, setSelectedClass] = useState("");
   const [selectedStudent, setSelectedStudent] = useState("");
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
@@ -43,8 +44,23 @@ export default function BillingPage() {
   const [savingPrior, setSavingPrior] = useState(false);
 
   useEffect(() => {
-    if (terms.length > 0 && !selectedTerm) setSelectedTerm(terms[0].id);
-  }, [terms, selectedTerm]);
+    if (!schoolId) {
+      setCurrentTerm(null);
+      setCurrentTermResolved(true);
+      return;
+    }
+    setCurrentTermResolved(false);
+    let cancelled = false;
+    void resolveCurrentSchoolTerm(supabase, schoolId).then((t) => {
+      if (!cancelled) {
+        setCurrentTerm(t);
+        setCurrentTermResolved(true);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId]);
 
   const classNames = fees.map((r) => r.class_name);
   const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
@@ -133,8 +149,9 @@ export default function BillingPage() {
   }
 
   async function handleGenerateBulk() {
-    if (!schoolId || !userId || !selectedTerm || !selectedClass || studentsInClass.length === 0) {
-      setMessage({ type: "err", text: "Select term and class with at least one student." });
+    const termId = currentTerm?.id;
+    if (!schoolId || !userId || !termId || !selectedClass || studentsInClass.length === 0) {
+      setMessage({ type: "err", text: "Current term is not available or class has no students." });
       return;
     }
     setGenerating(true);
@@ -159,7 +176,7 @@ export default function BillingPage() {
           {
             school_id: schoolId,
             student_id: st.student_id,
-            term_id: selectedTerm,
+            term_id: termId,
             total_amount: amount,
             status: "issued",
             invoice_number: invNum,
@@ -171,15 +188,14 @@ export default function BillingPage() {
         if (invErr) throw invErr;
         created.push(st.name);
       }
-      const termRow = terms.find((t) => t.id === selectedTerm);
-      const year = termRow?.year ?? new Date().getFullYear();
-      const termNum = termRow?.term ?? 1;
+      const year = currentTerm?.year ?? new Date().getFullYear();
+      const termNum = currentTerm?.term ?? 1;
       const studentIds = studentsInClass.map((s) => s.student_id);
       const { data: existingBalances } = await supabase
         .from("student_balances")
         .select("student_id, total_paid")
         .eq("school_id", schoolId)
-        .eq("term_id", selectedTerm)
+        .eq("term_id", termId)
         .in("student_id", studentIds);
       const paidMap = new Map((existingBalances || []).map((b: { student_id: string; total_paid: number }) => [b.student_id, Number(b.total_paid || 0)]));
       for (const st of studentsInClass) {
@@ -188,7 +204,7 @@ export default function BillingPage() {
           {
             student_id: st.student_id,
             school_id: schoolId,
-            term_id: selectedTerm,
+            term_id: termId,
             year,
             term: termNum,
             total_fees: amount,
@@ -209,8 +225,9 @@ export default function BillingPage() {
   }
 
   async function handleGenerateSingle() {
-    if (!schoolId || !userId || !selectedTerm || !selectedStudent) {
-      setMessage({ type: "err", text: "Select term and student." });
+    const termId = currentTerm?.id;
+    if (!schoolId || !userId || !termId || !selectedStudent) {
+      setMessage({ type: "err", text: "Current term is not available or no student selected." });
       return;
     }
     const amount = Number(singleAmount || suggestedAmount);
@@ -233,7 +250,7 @@ export default function BillingPage() {
         {
           school_id: schoolId,
           student_id: selectedStudent,
-          term_id: selectedTerm,
+          term_id: termId,
           total_amount: amount,
           status: "issued",
           invoice_number: invNum,
@@ -243,21 +260,20 @@ export default function BillingPage() {
         { onConflict: "school_id,student_id,term_id" }
       );
       if (invErr) throw invErr;
-      const termRow = terms.find((t) => t.id === selectedTerm);
-      const year = termRow?.year ?? new Date().getFullYear();
-      const termNum = termRow?.term ?? 1;
+      const year = currentTerm?.year ?? new Date().getFullYear();
+      const termNum = currentTerm?.term ?? 1;
       const { data: existing } = await supabase
         .from("student_balances")
         .select("total_paid")
         .eq("student_id", selectedStudent)
-        .eq("term_id", selectedTerm)
+        .eq("term_id", termId)
         .single();
       const totalPaid = existing?.total_paid ?? 0;
       const { error: balErr } = await supabase.from("student_balances").upsert(
         {
           student_id: selectedStudent,
           school_id: schoolId,
-          term_id: selectedTerm,
+          term_id: termId,
           year,
           term: termNum,
           total_fees: amount,
@@ -316,14 +332,23 @@ export default function BillingPage() {
           <div className="space-y-4">
             <div>
               <label className="ac-text-secondary mb-1 block text-sm font-medium">Term</label>
-              <select value={selectedTerm} onChange={(e) => setSelectedTerm(e.target.value)} className="ac-input">
-                <option value="">Select term</option>
-                {terms.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    Term {t.term}, {t.year}
-                  </option>
-                ))}
-              </select>
+              <div className="ac-input flex min-h-[42px] items-center bg-white/5 text-sm text-[var(--ac-text-primary,inherit)]">
+                {!currentTermResolved ? (
+                  <span className="ac-text-muted">Loading current term…</span>
+                ) : currentTerm ? (
+                  <span>
+                    Term {currentTerm.term}, {currentTerm.year}{" "}
+                    <span className="ac-text-muted font-normal">(active term — invoicing is limited to this period)</span>
+                  </span>
+                ) : (
+                  <span className="text-amber-400">
+                    No school term could be resolved. Add terms with dates under Admin, or check term calendars.
+                  </span>
+                )}
+              </div>
+              <p className="ac-text-muted mt-1 text-xs">
+                You cannot bill a future term from here; generate invoices only for the term the school is in today.
+              </p>
             </div>
             {generateMode === "bulk" ? (
               <>
@@ -362,7 +387,7 @@ export default function BillingPage() {
                 <button
                   type="button"
                   onClick={handleGenerateBulk}
-                  disabled={generating || !selectedTerm || !selectedClass || studentsInClass.length === 0}
+                  disabled={generating || !currentTerm?.id || !selectedClass || studentsInClass.length === 0}
                   className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
                 >
                   {generating ? "Generating…" : `Generate invoices for ${selectedClass || "class"}`}
@@ -516,7 +541,7 @@ export default function BillingPage() {
                 <button
                   type="button"
                   onClick={handleGenerateSingle}
-                  disabled={generating || !selectedTerm || !selectedStudent}
+                  disabled={generating || !currentTerm?.id || !selectedStudent}
                   className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
                 >
                   {generating ? "Generating…" : "Generate invoice"}

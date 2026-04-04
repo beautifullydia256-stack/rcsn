@@ -168,7 +168,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
             .select("id, amount_outstanding")
             .eq("school_id", schoolId)
             .eq("student_id", selectedStudent)
-            .maybeSingle(),
+            .order("entered_at", { ascending: true })
+            .limit(1),
           currentTerm
             ? supabase
                 .from("student_invoices")
@@ -190,8 +191,19 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
               .maybeSingle();
           })(),
         ]);
+        if (balRes.error?.message) {
+          setMessage("Could not load term balances: " + balRes.error.message);
+          setOutstandingBalances([]);
+          return;
+        }
+        if (priorRes.error?.message) {
+          setMessage("Could not load prior balance: " + priorRes.error.message);
+          setOutstandingBalances([]);
+          return;
+        }
         const raw = (balRes.data || []) as { term_id: string; term: number; year: number; balance: number }[];
-        const priorRow = (priorRes.data || null) as { id: string; amount_outstanding: number } | null;
+        const priorArr = (priorRes.data || []) as { id: string; amount_outstanding: number }[];
+        const priorRow = priorArr[0] ?? null;
         setOutstandingBalances(buildOutstandingRows(raw, priorRow));
         if (currentTerm) {
           setHasCurrentTermInvoice(!!invRes.data);
@@ -294,10 +306,12 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           .select("id, amount_outstanding")
           .eq("school_id", schoolId)
           .eq("student_id", selectedStudent)
-          .maybeSingle(),
+          .order("entered_at", { ascending: true })
+          .limit(1),
       ]);
       const raw = (balData || []) as { term_id: string; term: number; year: number; balance: number }[];
-      const priorRow = (priorData || null) as { id: string; amount_outstanding: number } | null;
+      const priorArr = (priorData || []) as { id: string; amount_outstanding: number }[];
+      const priorRow = priorArr[0] ?? null;
       setOutstandingBalances(buildOutstandingRows(raw, priorRow));
       setMessage("Current term invoice activated. Total due now includes Term " + currentTerm.term + ", " + currentTerm.year + ".");
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
