@@ -89,6 +89,8 @@ export default function BillingPage() {
   const priorAggForSelected = selectedStudent ? priorBalanceByStudent[selectedStudent] : undefined;
   const priorTotalForSelected = priorAggForSelected?.sumOutstanding ?? 0;
   const combinedOutstandingForSelected = termOutstandingForSelected + priorTotalForSelected;
+  /** Hide prior / combined lines when there is no external balance left (only term matters). */
+  const showPriorAndCombinedInSummary = priorTotalForSelected > 0.005;
 
   const priorEntryBlockedReason = (() => {
     if (!selectedStudent) return null;
@@ -163,8 +165,27 @@ export default function BillingPage() {
         setGenerating(false);
         return;
       }
+      const allInClassIds = studentsInClass.map((s) => s.student_id);
+      const { data: existingInvRows } = await supabase
+        .from("student_invoices")
+        .select("student_id")
+        .eq("school_id", schoolId)
+        .eq("term_id", termId)
+        .in("student_id", allInClassIds)
+        .neq("status", "cancelled");
+      const hasInvoice = new Set((existingInvRows || []).map((r: { student_id: string }) => r.student_id));
+      const toInvoice = studentsInClass.filter((s) => !hasInvoice.has(s.student_id));
+      const skippedStudents = studentsInClass.filter((s) => hasInvoice.has(s.student_id));
+      if (toInvoice.length === 0) {
+        setMessage({
+          type: "err",
+          text: `No new invoices: every student in ${selectedClass} already has an active invoice for the current term.`,
+        });
+        setGenerating(false);
+        return;
+      }
       const created: string[] = [];
-      for (const st of studentsInClass) {
+      for (const st of toInvoice) {
         let invNum: string | null = null;
         try {
           const res = await supabase.rpc("get_next_invoice_number", { p_school_id: schoolId });
@@ -172,33 +193,30 @@ export default function BillingPage() {
         } catch {
           invNum = "INV-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
         }
-        const { error: invErr } = await supabase.from("student_invoices").upsert(
-          {
-            school_id: schoolId,
-            student_id: st.student_id,
-            term_id: termId,
-            total_amount: amount,
-            status: "issued",
-            invoice_number: invNum,
-            created_by: userId,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "school_id,student_id,term_id" }
-        );
+        const { error: invErr } = await supabase.from("student_invoices").insert({
+          school_id: schoolId,
+          student_id: st.student_id,
+          term_id: termId,
+          total_amount: amount,
+          status: "issued",
+          invoice_number: invNum,
+          created_by: userId,
+          updated_at: new Date().toISOString(),
+        });
         if (invErr) throw invErr;
         created.push(st.name);
       }
       const year = currentTerm?.year ?? new Date().getFullYear();
       const termNum = currentTerm?.term ?? 1;
-      const studentIds = studentsInClass.map((s) => s.student_id);
+      const newStudentIds = toInvoice.map((s) => s.student_id);
       const { data: existingBalances } = await supabase
         .from("student_balances")
         .select("student_id, total_paid")
         .eq("school_id", schoolId)
         .eq("term_id", termId)
-        .in("student_id", studentIds);
+        .in("student_id", newStudentIds);
       const paidMap = new Map((existingBalances || []).map((b: { student_id: string; total_paid: number }) => [b.student_id, Number(b.total_paid || 0)]));
-      for (const st of studentsInClass) {
+      for (const st of toInvoice) {
         const totalPaid = paidMap.get(st.student_id) ?? 0;
         const { error: balErr } = await supabase.from("student_balances").upsert(
           {
@@ -215,7 +233,11 @@ export default function BillingPage() {
         );
         if (balErr) throw balErr;
       }
-      setMessage({ type: "ok", text: `Generated ${created.length} invoice(s) for ${selectedClass}.` });
+      const skipPart =
+        skippedStudents.length > 0
+          ? ` Skipped ${skippedStudents.length} (already invoiced this term): ${skippedStudents.map((s) => s.name).join(", ")}.`
+          : "";
+      setMessage({ type: "ok", text: `Generated ${created.length} invoice(s) for ${selectedClass}.${skipPart}` });
       setSelectedClass("");
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Failed to generate invoices." });
@@ -238,6 +260,22 @@ export default function BillingPage() {
     setGenerating(true);
     setMessage(null);
     try {
+      const { data: existingInv } = await supabase
+        .from("student_invoices")
+        .select("invoice_id")
+        .eq("school_id", schoolId)
+        .eq("student_id", selectedStudent)
+        .eq("term_id", termId)
+        .neq("status", "cancelled")
+        .maybeSingle();
+      if (existingInv) {
+        setMessage({
+          type: "err",
+          text: "This student already has an invoice for the current term. Only one invoice per student per term is allowed.",
+        });
+        setGenerating(false);
+        return;
+      }
       let invNum: string | null = null;
       try {
         const res = await supabase.rpc("get_next_invoice_number", { p_school_id: schoolId });
@@ -246,19 +284,16 @@ export default function BillingPage() {
         invNum = "INV-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
       }
       const st = selectedStudentRow!;
-      const { error: invErr } = await supabase.from("student_invoices").upsert(
-        {
-          school_id: schoolId,
-          student_id: selectedStudent,
-          term_id: termId,
-          total_amount: amount,
-          status: "issued",
-          invoice_number: invNum,
-          created_by: userId,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "school_id,student_id,term_id" }
-      );
+      const { error: invErr } = await supabase.from("student_invoices").insert({
+        school_id: schoolId,
+        student_id: selectedStudent,
+        term_id: termId,
+        total_amount: amount,
+        status: "issued",
+        invoice_number: invNum,
+        created_by: userId,
+        updated_at: new Date().toISOString(),
+      });
       if (invErr) throw invErr;
       const year = currentTerm?.year ?? new Date().getFullYear();
       const termNum = currentTerm?.term ?? 1;
@@ -466,11 +501,19 @@ export default function BillingPage() {
                 </div>
                 {selectedStudent && selectedStudentRow && (
                   <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
-                    <h3 className="ac-text-primary text-sm font-semibold">Prior-system and combined balance</h3>
-                    <p className="ac-text-muted text-xs">
-                      Term invoices track fees inside Pweza terms. Prior-system entries record debt carried from another system (no extra invoice per term). Each student may have{" "}
-                      <strong>only one</strong> prior entry, and only while they still have <strong>no invoices on a closed term</strong> (new onboarding). After terms are closed, use normal term invoices.
-                    </p>
+                    <h3 className="ac-text-primary text-sm font-semibold">
+                      {showPriorAndCombinedInSummary ? "Prior-system and combined balance" : "Outstanding balance"}
+                    </h3>
+                    {showPriorAndCombinedInSummary ? (
+                      <p className="ac-text-muted text-xs">
+                        Term invoices track fees inside Pweza terms. Prior-system entries record debt carried from another system (no extra invoice per term). Each student may have{" "}
+                        <strong>only one</strong> prior entry, and only while they still have <strong>no invoices on a closed term</strong> (new onboarding). After terms are closed, use normal term invoices.
+                      </p>
+                    ) : (
+                      <p className="ac-text-muted text-xs">
+                        Amount still due on term invoices for this student. Further school fees use term invoices only (one active invoice per student per term).
+                      </p>
+                    )}
                     {priorEntryBlockedReason && (
                       <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{priorEntryBlockedReason}</p>
                     )}
@@ -481,20 +524,26 @@ export default function BillingPage() {
                           {isLoading ? "…" : termOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </dd>
                       </div>
-                      <div className="flex justify-between gap-4">
-                        <dt className="ac-text-secondary">Prior-system (external)</dt>
-                        <dd className="ac-text-primary font-medium tabular-nums">
-                          {isLoading ? "…" : priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-4 border-t border-[var(--ac-border)] pt-2">
-                        <dt className="ac-text-primary font-medium">Combined</dt>
-                        <dd className="ac-text-primary font-semibold tabular-nums">
-                          {isLoading ? "…" : combinedOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </dd>
-                      </div>
+                      {showPriorAndCombinedInSummary && (
+                        <>
+                          <div className="flex justify-between gap-4">
+                            <dt className="ac-text-secondary">Prior-system (external)</dt>
+                            <dd className="ac-text-primary font-medium tabular-nums">
+                              {isLoading ? "…" : priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </dd>
+                          </div>
+                          <div className="flex justify-between gap-4 border-t border-[var(--ac-border)] pt-2">
+                            <dt className="ac-text-primary font-medium">Combined</dt>
+                            <dd className="ac-text-primary font-semibold tabular-nums">
+                              {isLoading ? "…" : combinedOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </dd>
+                          </div>
+                        </>
+                      )}
                     </dl>
-                    {priorAggForSelected && (priorAggForSelected.lastSourceNote || priorAggForSelected.lastEnteredAt) && (
+                    {showPriorAndCombinedInSummary &&
+                      priorAggForSelected &&
+                      (priorAggForSelected.lastSourceNote || priorAggForSelected.lastEnteredAt) && (
                       <p className="ac-text-muted text-xs">
                         Latest entry
                         {priorAggForSelected.lastEnteredAt ? ` (${new Date(priorAggForSelected.lastEnteredAt).toLocaleString()})` : ""}
