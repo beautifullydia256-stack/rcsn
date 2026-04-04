@@ -609,10 +609,10 @@ export default function DesignStudentProfile() {
         if (feeMeta) {
           const bal = feeBal.balance;
           if (Number(bal) > 0) {
-            feeMeta.textContent = `${fmtUGX(Number(bal))} Owing`;
+            feeMeta.textContent = fmtUGX(Number(bal));
             feeMeta.className = 'sp-hero-meta-value amber';
           } else if (/overdue|unpaid|owing/.test(paymentStatus) && expectedFee > 0) {
-            feeMeta.textContent = `${fmtUGX(expectedFee)} Owing`;
+            feeMeta.textContent = fmtUGX(expectedFee);
             feeMeta.className = 'sp-hero-meta-value amber';
           } else {
             feeMeta.textContent = '✓ Paid';
