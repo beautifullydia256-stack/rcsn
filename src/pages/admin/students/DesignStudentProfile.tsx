@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
+import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 
@@ -368,22 +369,17 @@ export default function DesignStudentProfile() {
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      const balanceQ = await supabase
-        .from('student_balances')
-        .select('total_fees, total_paid, balance')
-        .eq('school_id', schoolId)
-        .eq('student_id', studentId)
-        .limit(1)
-        .maybeSingle();
-      const paymentQ = await supabase
-        .from('student_payments')
-        .select('amount_paid, payment_method, payment_date')
-        .eq('school_id', schoolId)
-        .eq('student_id', studentId)
-        .order('payment_date', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      const balanceRes = { data: balanceQ.error ? null : balanceQ.data };
+      const [feeBal, paymentQ] = await Promise.all([
+        loadStudentBalanceAggAllTerms(supabase, schoolId, studentId),
+        supabase
+          .from('student_payments')
+          .select('amount_paid, payment_method, payment_date')
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId)
+          .order('payment_date', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
       const paymentRes = { data: paymentQ.error ? null : paymentQ.data };
 
       /** Same resolution as students list: portal `parents` rows + guardian_* on `students` when unlinked. */
@@ -505,11 +501,6 @@ export default function DesignStudentProfile() {
         grade?: string;
       }[];
       const subjectRows = (subjectsRes.data || []) as { subject?: string }[];
-      const feeBal = balanceRes.data as {
-        total_fees?: number;
-        total_paid?: number;
-        balance?: number;
-      } | null;
       const lastPayment = paymentRes.data as {
         amount_paid?: number;
         payment_method?: string;
@@ -616,8 +607,8 @@ export default function DesignStudentProfile() {
 
         const feeMeta = el.querySelector('#sp-meta-fee-balance') as HTMLElement | null;
         if (feeMeta) {
-          const bal = feeBal?.balance ?? null;
-          if (bal != null && Number(bal) > 0) {
+          const bal = feeBal.balance;
+          if (Number(bal) > 0) {
             feeMeta.textContent = `${fmtUGX(Number(bal))} Owing`;
             feeMeta.className = 'sp-hero-meta-value amber';
           } else if (/overdue|unpaid|owing/.test(paymentStatus) && expectedFee > 0) {
@@ -789,10 +780,10 @@ export default function DesignStudentProfile() {
           );
         }
 
-        const billed = feeBal?.total_fees ?? expectedFee ?? 0;
-        const paid = feeBal?.total_paid ?? 0;
-        const balance = feeBal?.balance ?? Math.max(0, Number(billed) - Number(paid));
-        set('#sp-fee-term-label', 'Fee Summary');
+        const billed = feeBal.total_fees;
+        const paid = feeBal.total_paid;
+        const balance = feeBal.balance;
+        set('#sp-fee-term-label', 'Fee summary (all terms)');
         set('#sp-fee-total-billed', fmtUGX(Number(billed)));
         set('#sp-fee-total-paid', fmtUGX(Number(paid)));
         const feeBalEl = el.querySelector('#sp-fee-balance') as HTMLElement | null;

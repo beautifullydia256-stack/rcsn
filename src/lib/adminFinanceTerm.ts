@@ -88,6 +88,34 @@ export async function loadOutstandingBalanceAggByStudentAllTerms(
   return byStudent;
 }
 
+/** All `student_balances` rows for one student, aggregated the same way as all-terms school rollups. */
+export async function loadStudentBalanceAggAllTerms(
+  client: SupabaseClient,
+  schoolId: string,
+  studentId: string
+): Promise<BalanceAgg> {
+  const { data: rows, error } = await client
+    .from('student_balances')
+    .select('total_fees, total_paid, balance')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId);
+
+  if (error) {
+    if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      console.warn('[adminFinanceTerm] loadStudentBalanceAggAllTerms:', error.message);
+    }
+    return { total_fees: 0, total_paid: 0, balance: 0 };
+  }
+
+  const agg: BalanceAgg = { total_fees: 0, total_paid: 0, balance: 0 };
+  for (const r of rows || []) {
+    agg.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
+    agg.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
+    agg.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
+  }
+  return agg;
+}
+
 /**
  * Sum of positive balances across all terms where fees were set (matches accountant
  * dashboard "Outstanding All Time" / FinancialOverview total overall balance).
