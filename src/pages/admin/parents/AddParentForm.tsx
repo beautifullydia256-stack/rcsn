@@ -1,6 +1,6 @@
 import { useState, type FormEvent, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import { ArrowLeft, Search, X } from 'lucide-react';
@@ -44,11 +44,12 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
   const [error, setError] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  const { data, isPending } = useQuery({
-    queryKey: addParentSchoolQueryKey(user?.id ?? ''),
+  const userId = user?.id ?? '';
+  const { data, isPending, isFetching } = useQuery({
+    queryKey: addParentSchoolQueryKey(userId),
     queryFn: () => fetchAddParentSchoolContext(user!.id),
     enabled: !!user?.id,
-    placeholderData: keepPreviousData,
+    // No placeholderData: avoid submitting another user's school_id after account switch.
     refetchOnWindowFocus: false,
     ...addParentSchoolStaleOptions,
   });
@@ -110,6 +111,10 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
     }
     if (!relationship.trim()) {
       setError('Please select how this person is related to the student (e.g. Father, Mother).');
+      return;
+    }
+    if (isFetching) {
+      setError('Still loading your school. Please wait a moment and try again.');
       return;
     }
     if (!schoolId) {
@@ -350,7 +355,7 @@ export function AddParentForm({ mode, onCompleted, onCancel }: AddParentFormProp
         <div className="flex flex-wrap gap-3 pt-2">
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || (isFetching && !data)}
             className="min-h-[48px] rounded-xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50"
           >
             {submitting ? 'Adding…' : 'Add parent'}

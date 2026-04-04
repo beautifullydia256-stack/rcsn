@@ -179,9 +179,28 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (!adminRow?.school_id || String(adminRow.school_id) !== String(school_id)) {
+    if (!adminRow) {
       applyCors();
-      res.status(403).json({ error: 'You can only manage parents for your own school.' });
+      res.status(403).json({
+        error:
+          'No staff profile was found for your login in this environment. Ask support to ensure public.users has a row for your account with the correct school_id.',
+      });
+      return;
+    }
+    if (!adminRow.school_id) {
+      applyCors();
+      res.status(403).json({
+        error:
+          'Your account has no school assigned in public.users. An admin must set school_id on your user before you can link parents.',
+      });
+      return;
+    }
+    if (String(adminRow.school_id) !== String(school_id)) {
+      applyCors();
+      res.status(403).json({
+        error:
+          'The school in this request does not match your account school. Try refreshing the page or signing out and back in. If you switched users without reloading, that can cause a stale school until the page reloads.',
+      });
       return;
     }
 

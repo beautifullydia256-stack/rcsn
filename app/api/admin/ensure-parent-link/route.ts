@@ -81,9 +81,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!adminRow?.school_id || String(adminRow.school_id) !== String(school_id)) {
+    if (!adminRow) {
       return NextResponse.json(
-        { error: 'You can only manage parents for your own school.' },
+        {
+          error:
+            'No staff profile was found for your login. Ensure public.users has a row for your account with the correct school_id.',
+        },
+        { status: 403 }
+      );
+    }
+    if (!adminRow.school_id) {
+      return NextResponse.json(
+        {
+          error:
+            'Your account has no school assigned in public.users. Set school_id on your user before linking parents.',
+        },
+        { status: 403 }
+      );
+    }
+    if (String(adminRow.school_id) !== String(school_id)) {
+      return NextResponse.json(
+        {
+          error:
+            'The school in this request does not match your account school. Refresh the page or sign out and back in (stale school can happen after switching users).',
+        },
         { status: 403 }
       );
     }
