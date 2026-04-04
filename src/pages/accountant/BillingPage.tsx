@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
@@ -9,6 +9,7 @@ const STALE_MS = 2 * 60 * 1000;
 
 export default function BillingPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
   const { data, isLoading } = useQuery({
@@ -22,6 +23,12 @@ export default function BillingPage() {
   const terms = data?.terms ?? [];
   const students = data?.students ?? [];
   const studentsError = data?.studentsError ?? null;
+  const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
+  const priorBalanceByStudent = data?.priorBalanceByStudent ?? {};
+  const studentIdsClosedTermHistory = useMemo(
+    () => new Set(data?.studentIdsWithClosedTermInvoiceHistory ?? []),
+    [data?.studentIdsWithClosedTermInvoiceHistory]
+  );
 
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
   const [selectedTerm, setSelectedTerm] = useState("");
@@ -31,6 +38,9 @@ export default function BillingPage() {
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [priorAmount, setPriorAmount] = useState("");
+  const [priorNote, setPriorNote] = useState("");
+  const [savingPrior, setSavingPrior] = useState(false);
 
   useEffect(() => {
     if (terms.length > 0 && !selectedTerm) setSelectedTerm(terms[0].id);
@@ -56,6 +66,71 @@ export default function BillingPage() {
             s.name.toLowerCase().includes(q) ||
             s.current_class.toLowerCase().includes(q)
         );
+
+  const termOutstandingForSelected = selectedStudent
+    ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
+    : 0;
+  const priorAggForSelected = selectedStudent ? priorBalanceByStudent[selectedStudent] : undefined;
+  const priorTotalForSelected = priorAggForSelected?.sumOutstanding ?? 0;
+  const combinedOutstandingForSelected = termOutstandingForSelected + priorTotalForSelected;
+
+  const priorEntryBlockedReason = (() => {
+    if (!selectedStudent) return null;
+    if (priorBalanceByStudent[selectedStudent]) {
+      return "A prior-system balance was already recorded for this student. Only one entry is allowed—use term invoices for ongoing fees.";
+    }
+    if (studentIdsClosedTermHistory.has(selectedStudent)) {
+      return "This student has invoices on a closed term, so a one-time prior balance can no longer be added. That step is only for new onboarding before any closed term.";
+    }
+    return null;
+  })();
+
+  async function handleAddPriorEntry() {
+    if (!schoolId || !userId || !selectedStudent) {
+      setMessage({ type: "err", text: "Select a student first." });
+      return;
+    }
+    if (priorEntryBlockedReason) {
+      setMessage({ type: "err", text: priorEntryBlockedReason });
+      return;
+    }
+    const amount = Number(priorAmount);
+    if (!amount || amount <= 0) {
+      setMessage({ type: "err", text: "Enter a positive amount for prior-system balance." });
+      return;
+    }
+    setSavingPrior(true);
+    setMessage(null);
+    try {
+      const { error } = await supabase.from("prior_system_balance_entries").insert({
+        school_id: schoolId,
+        student_id: selectedStudent,
+        amount_outstanding: amount,
+        source_note: priorNote.trim() || null,
+        entered_by_user_id: userId,
+      });
+      if (error) throw new Error(error.message);
+      setPriorAmount("");
+      setPriorNote("");
+      setMessage({ type: "ok", text: "Prior-system balance entry saved." });
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
+    } catch (e: unknown) {
+      const msg = (e as Error).message || "Failed to save prior-system entry.";
+      const lower = msg.toLowerCase();
+      if (lower.includes("uq_prior_system_balance") || lower.includes("unique")) {
+        setMessage({
+          type: "err",
+          text: "This student already has a prior-system balance. Only one entry is allowed.",
+        });
+      } else if (lower.includes("prior_system_balance_entries:")) {
+        setMessage({ type: "err", text: msg.replace(/^.*?prior_system_balance_entries:\s*/i, "") });
+      } else {
+        setMessage({ type: "err", text: msg });
+      }
+    } finally {
+      setSavingPrior(false);
+    }
+  }
 
   async function handleGenerateBulk() {
     if (!schoolId || !userId || !selectedTerm || !selectedClass || studentsInClass.length === 0) {
@@ -364,6 +439,80 @@ export default function BillingPage() {
                     <p className="ac-text-muted mt-1 text-xs">Suggested from fee structure: {suggestedAmount.toLocaleString()}</p>
                   )}
                 </div>
+                {selectedStudent && selectedStudentRow && (
+                  <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
+                    <h3 className="ac-text-primary text-sm font-semibold">Prior-system and combined balance</h3>
+                    <p className="ac-text-muted text-xs">
+                      Term invoices track fees inside Pweza terms. Prior-system entries record debt carried from another system (no extra invoice per term). Each student may have{" "}
+                      <strong>only one</strong> prior entry, and only while they still have <strong>no invoices on a closed term</strong> (new onboarding). After terms are closed, use normal term invoices.
+                    </p>
+                    {priorEntryBlockedReason && (
+                      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{priorEntryBlockedReason}</p>
+                    )}
+                    <dl className="grid gap-2 text-sm">
+                      <div className="flex justify-between gap-4">
+                        <dt className="ac-text-secondary">Term invoices (remaining)</dt>
+                        <dd className="ac-text-primary font-medium tabular-nums">
+                          {isLoading ? "…" : termOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4">
+                        <dt className="ac-text-secondary">Prior-system (external)</dt>
+                        <dd className="ac-text-primary font-medium tabular-nums">
+                          {isLoading ? "…" : priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-4 border-t border-[var(--ac-border)] pt-2">
+                        <dt className="ac-text-primary font-medium">Combined</dt>
+                        <dd className="ac-text-primary font-semibold tabular-nums">
+                          {isLoading ? "…" : combinedOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </dd>
+                      </div>
+                    </dl>
+                    {priorAggForSelected && (priorAggForSelected.lastSourceNote || priorAggForSelected.lastEnteredAt) && (
+                      <p className="ac-text-muted text-xs">
+                        Latest entry
+                        {priorAggForSelected.lastEnteredAt ? ` (${new Date(priorAggForSelected.lastEnteredAt).toLocaleString()})` : ""}
+                        {priorAggForSelected.lastSourceNote ? `: ${priorAggForSelected.lastSourceNote}` : ""}
+                      </p>
+                    )}
+                    <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
+                      <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">Add prior-system entry</h4>
+                      <div>
+                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={priorAmount}
+                          onChange={(e) => setPriorAmount(e.target.value)}
+                          className="ac-input"
+                          placeholder="e.g. 150000"
+                          disabled={savingPrior || !!priorEntryBlockedReason}
+                        />
+                      </div>
+                      <div>
+                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
+                        <textarea
+                          value={priorNote}
+                          onChange={(e) => setPriorNote(e.target.value)}
+                          className="ac-input min-h-[72px] resize-y"
+                          placeholder="e.g. Old Excel Term 2 2024"
+                          disabled={savingPrior || !!priorEntryBlockedReason}
+                          rows={2}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAddPriorEntry}
+                        disabled={savingPrior || !userId || !!priorEntryBlockedReason}
+                        className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      >
+                        {savingPrior ? "Saving…" : "Add prior-system entry"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={handleGenerateSingle}

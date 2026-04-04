@@ -46,6 +46,14 @@
 
 ---
 
+## Prior-system (external) balance
+
+Debt carried from **another system** when there is no clean mapping to a Pweza term is stored in **`prior_system_balance_entries`**: one row per student per school (`amount_outstanding`, `source_note`, `entered_by_user_id`, `entered_at`). The database also **rejects** a new row if that student already has **any** `student_invoices` row for a **`school_terms`** record with **`is_closed = true`**—so this is only for **new onboarding**, not something to add again each term after the cohort has moved on. This is **not** an extra `student_invoices` row for the same term (the unique key `(school_id, student_id, term_id)` on invoices is unchanged). Accountants see term invoice remainder, prior-system sum, and a **combined** total on **Invoices & Billing** (single-student flow). Schools should **close terms** in settings when a period ends so this rule matches real academic boundaries.
+
+**Phase 2 (not implemented in v1):** wiring prior-system totals into **Record Payment** allocation (e.g. oldest-term-first behaviour), finance dashboards, and other KPIs needs an explicit rule (such as “pay term invoices first” vs “treat prior balance as older than any term”). Term-scoped **`balance_brought_forward`** remains separate and is not replaced by this ledger.
+
+---
+
 ## 🛠️ Technical Implementation
 
 ### **API Endpoint**
