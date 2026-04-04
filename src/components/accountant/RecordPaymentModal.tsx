@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
 import { Receipt, X } from "lucide-react";
@@ -82,12 +83,18 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
-      const termsWithDates = (tRes.data || []) as CurrentTermRow[];
-      const today = new Date().toISOString().slice(0, 10);
-      const current = termsWithDates.find(
-        (t) => t.start_date && t.end_date && t.start_date <= today && t.end_date >= today
-      ) ?? termsWithDates[0] ?? null;
-      setCurrentTerm(current);
+      const cur = await resolveCurrentSchoolTerm(supabase, schoolId);
+      setCurrentTerm(
+        cur
+          ? {
+              id: cur.id,
+              term: cur.term ?? 1,
+              year: cur.year ?? new Date().getFullYear(),
+              start_date: cur.start_date ?? undefined,
+              end_date: cur.end_date ?? undefined,
+            }
+          : null
+      );
       const debtorIds = [...new Set((balRes.data || []).map((b: { student_id: string }) => b.student_id))].filter(
         (id) => !active.some((s) => s.student_id === id)
       );

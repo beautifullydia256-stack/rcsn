@@ -8,7 +8,15 @@ export type SchoolTermBrief = {
   term?: number;
 };
 
-/** Same calendar rule as admin KPIs / fetchAdminDesignDashboardKpis. */
+/**
+ * Same rules as `public.auto_initialize_student_balance` / admin KPIs:
+ * 1) Term where today ∈ [start_date, end_date] (latest such term if overlap)
+ * 2) Else most recent term that has already started (year DESC, term DESC)
+ * 3) Else earliest term by calendar (year ASC, term ASC) — never “latest term” as default
+ *
+ * Avoid using ORDER BY year DESC, term DESC LIMIT 1 alone: that picks Term 3 and leaves
+ * “current term” KPIs at zero while debt sits on a future term.
+ */
 export async function resolveCurrentSchoolTerm(
   client: SupabaseClient,
   schoolId: string,
@@ -17,18 +25,32 @@ export async function resolveCurrentSchoolTerm(
   const { data: allTerms } = await client
     .from('school_terms')
     .select('id, start_date, end_date, year, term')
-    .eq('school_id', schoolId)
-    .order('year', { ascending: false })
-    .order('term', { ascending: false });
+    .eq('school_id', schoolId);
 
-  const row =
-    (allTerms || []).find((t: SchoolTermBrief) =>
-      t.start_date
-        ? t.start_date <= todayIso && String(t.end_date ?? '') >= todayIso
-        : String(t.end_date ?? '') >= todayIso
-    ) ?? allTerms?.[0] ??
-    null;
-  return row ?? null;
+  const terms = (allTerms || []) as SchoolTermBrief[];
+  if (!terms.length) return null;
+
+  const byNewest = (a: SchoolTermBrief, b: SchoolTermBrief) =>
+    (b.year ?? 0) - (a.year ?? 0) || (b.term ?? 0) - (a.term ?? 0);
+  const byOldest = (a: SchoolTermBrief, b: SchoolTermBrief) =>
+    (a.year ?? 0) - (b.year ?? 0) || (a.term ?? 0) - (b.term ?? 0);
+
+  const inWindow = terms
+    .filter(
+      (t) =>
+        t.start_date != null &&
+        t.start_date <= todayIso &&
+        t.end_date != null &&
+        String(t.end_date) >= todayIso
+    )
+    .sort(byNewest);
+  if (inWindow.length) return inWindow[0];
+
+  const started = terms.filter((t) => t.start_date != null && t.start_date <= todayIso).sort(byNewest);
+  if (started.length) return started[0];
+
+  const chronological = [...terms].sort(byOldest);
+  return chronological[0] ?? null;
 }
 
 export type BalanceAgg = { total_fees: number; total_paid: number; balance: number };

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/src/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/src/lib/adminFinanceTerm';
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,19 +45,22 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     }
 
-    // Get current term
-    const { data: currentTerm } = await supabase
-      .from('school_terms')
-      .select('*')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: false })
-      .limit(1)
-      .single();
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const resolved = await resolveCurrentSchoolTerm(supabase, schoolId, todayIso);
+    if (!resolved?.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'No school term is configured for this school, or terms have no dates.',
+          updated: 0,
+        },
+        { status: 200 }
+      );
+    }
 
-    const termId = (currentTerm as any)?.id || (currentTerm as any)?.term_id;
-    const termYear = (currentTerm as any)?.year ?? new Date().getFullYear();
-    const termNum = (currentTerm as any)?.term ?? 1;
+    const termId = resolved.id;
+    const termYear = resolved.year ?? new Date().getFullYear();
+    const termNum = resolved.term ?? 1;
 
     // Map class_name -> tuition_amount (day tuition from fee structure)
     const feeMap = new Map<string, number>();
@@ -133,7 +137,10 @@ export async function POST(request: NextRequest) {
       message: `Successfully synced balances for ${updatedCount} students`,
       updated: updatedCount,
       balancesCreated: balancesCreated,
-      totalStudents: students.length
+      totalStudents: students.length,
+      termId,
+      termYear,
+      termNum,
     });
 
   } catch (error: any) {

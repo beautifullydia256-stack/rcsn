@@ -51,6 +51,8 @@
 ### **API Endpoint**
 **File:** `app/api/admin/sync-student-balances/route.ts`
 
+**Current term:** Resolves the term with `resolveCurrentSchoolTerm` (same rules as the `auto_initialize_student_balance` DB trigger: today inside term dates, else latest started term, else earliest configured term). It must **not** use “highest year + highest term number” only — that wrongly attached opening balances to Term 3 while the school calendar was in Term 1, so “Outstanding (this term)” showed zero but “Total overall balance” did not.
+
 **What it does:**
 1. Fetches fee structure for school
 2. Gets all active students
