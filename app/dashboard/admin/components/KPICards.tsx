@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/src/lib/supabase';
+import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from '@/lib/adminFinanceTerm';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Users, GraduationCap, DollarSign, CalendarCheck, ArrowUpRight } from 'lucide-react';
@@ -11,6 +12,7 @@ export default function AdminKPICards() {
     students: 0,
     teachers: 0,
     outstanding: 0,
+    totalOverallBalance: 0,
     feesCollected: 0,
     attendance: 0,
   });
@@ -37,21 +39,7 @@ export default function AdminKPICards() {
           .single();
         if (!u?.school_id) return;
 
-        const { data: allTerms } = await supabase
-          .from('school_terms')
-          .select('id, start_date, end_date, year, term')
-          .eq('school_id', u.school_id)
-          .order('year', { ascending: false })
-          .order('term', { ascending: false });
-
-        const currentTermData =
-          (allTerms || []).find(
-            (t: any) =>
-              t.start_date
-                ? t.start_date <= currentTerm.today && t.end_date >= currentTerm.today
-                : t.end_date >= currentTerm.today
-          ) || (allTerms && allTerms[0]) || null;
-
+        const currentTermData = await resolveCurrentSchoolTerm(supabase, u.school_id, currentTerm.today);
         const termId = currentTermData?.id as string | undefined;
 
         const [
@@ -60,6 +48,7 @@ export default function AdminKPICards() {
           attendanceResult,
           termBalancesResult,
           feesCollectedResult,
+          totalOverallBalance,
         ] = await Promise.all([
           supabase
             .from('students')
@@ -88,6 +77,7 @@ export default function AdminKPICards() {
                 .eq('term_id', termId)
                 .is('reversed_at', null)
             : Promise.resolve({ data: [] as { amount_paid?: number }[] }),
+          sumTotalOverallOutstandingBalance(supabase, u.school_id),
         ]);
 
         const outstanding = (termBalancesResult.data || []).reduce(
@@ -104,6 +94,7 @@ export default function AdminKPICards() {
           students: studentsResult.count || 0,
           teachers: teachersResult.count || 0,
           outstanding,
+          totalOverallBalance,
           feesCollected,
           attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
         });
@@ -147,7 +138,7 @@ export default function AdminKPICards() {
       trend: 'this term',
     },
     {
-      label: 'Outstanding Balances',
+      label: 'Outstanding Fees',
       value: new Intl.NumberFormat('en-UG', {
         style: 'currency',
         currency: 'UGX',
@@ -156,7 +147,19 @@ export default function AdminKPICards() {
       icon: DollarSign,
       color: '#dc2626',
       href: '/dashboard/admin/outstanding',
-      trend: 'to recover',
+      trend: 'this term',
+    },
+    {
+      label: 'Total overall balance',
+      value: new Intl.NumberFormat('en-UG', {
+        style: 'currency',
+        currency: 'UGX',
+        maximumFractionDigits: 0,
+      }).format(kpis.totalOverallBalance),
+      icon: DollarSign,
+      color: '#0891b2',
+      href: '/dashboard/admin/outstanding',
+      trend: 'all terms',
     },
     {
       label: 'Attendance Today',
@@ -169,7 +172,7 @@ export default function AdminKPICards() {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
       {cards.map((c, i) => {
         const Icon = c.icon;
         return (

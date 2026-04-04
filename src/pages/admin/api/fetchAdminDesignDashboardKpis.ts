@@ -12,7 +12,8 @@ export type AdminDesignDashboardKpis = {
   totalAttendance: number;
   expensesCount: number;
   activeClasses: number;
-  jobApps: number;
+  /** All terms: sum of balance where total_fees > 0 and balance > 0 (accountant KPI). */
+  totalOverallBalance: number;
 };
 
 /**
@@ -36,7 +37,7 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     balanceRowsRes,
     pendingExpensesCountRes,
     activeClassesRowsRes,
-    jobsCountRes,
+    allBalancesForOverallRes,
   ] = await Promise.all([
     supabase
       .from('students')
@@ -78,10 +79,7 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
       .eq('school_id', schoolId)
       .eq('status', 'active')
       .limit(5000),
-    supabase
-      .from('jobs')
-      .select('job_id', { count: 'exact', head: true })
-      .eq('school_id', schoolId),
+    supabase.from('student_balances').select('total_fees, balance').eq('school_id', schoolId),
   ]);
 
   const totalStudents = studentsCountRes.count ?? 0;
@@ -101,7 +99,15 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     (activeClassesRowsRes.data || []).map((r: { current_class?: string }) => r.current_class).filter(Boolean)
   ).size;
 
-  const jobApps = jobsCountRes.count ?? 0;
+  const totalOverallBalance = ((allBalancesForOverallRes.data || []) as { total_fees?: number; balance?: number }[]).reduce(
+    (sum, r) => {
+      const tf = Number(r.total_fees ?? 0);
+      const bal = Number(r.balance ?? 0);
+      if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
+      return sum;
+    },
+    0
+  );
 
   return {
     totalStudents,
@@ -113,6 +119,6 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
     totalAttendance,
     expensesCount,
     activeClasses,
-    jobApps,
+    totalOverallBalance,
   };
 }

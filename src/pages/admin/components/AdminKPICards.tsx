@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { Users, GraduationCap, DollarSign, CalendarCheck, Clock, FileCheck } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -15,26 +16,24 @@ type Kpis = {
   attendance: number;
   pendingExpenses: number;
   activeClasses: number;
-  jobApplications: number | null; // placeholder for now (requires backend data mapping)
+  totalOverallBalance: number;
 };
 
 export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const today = new Date().toISOString().slice(0, 10);
+  const currentTermData = await resolveCurrentSchoolTerm(supabase, schoolId, today);
+  const termId = currentTermData?.id ?? null;
 
   const [
-    termsResult,
     studentsResult,
     teachersResult,
     attendanceResult,
     pendingExpensesResult,
     activeClassesResult,
+    allBalancesRes,
+    feesCollectedResult,
+    termBalancesResult,
   ] = await Promise.all([
-    supabase
-      .from('school_terms')
-      .select('id, start_date, end_date, year, term')
-      .eq('school_id', schoolId)
-      .order('year', { ascending: false })
-      .order('term', { ascending: false }),
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase.from('student_attendance').select('student_id').eq('school_id', schoolId).eq('date', today).eq('present', true),
@@ -48,18 +47,7 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
       .select('current_class')
       .eq('school_id', schoolId)
       .eq('status', 'active'),
-  ]);
-
-  const allTerms = termsResult.data || [];
-  const currentTermData =
-    allTerms.find(
-      (t: { start_date?: string; end_date: string }) =>
-        t.start_date ? t.start_date <= today && t.end_date >= today : t.end_date >= today
-    ) || (allTerms[0] as { id?: string; start_date?: string; end_date: string }) || null;
-
-  const termId = currentTermData?.id ?? null;
-
-  const [feesCollectedResult, termBalancesResult] = await Promise.all([
+    supabase.from('student_balances').select('total_fees, balance').eq('school_id', schoolId),
     termId
       ? supabase
           .from('student_payments')
@@ -87,11 +75,18 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     0
   );
 
+  const totalOverallBalance = ((allBalancesRes.data || []) as { total_fees?: number; balance?: number }[]).reduce(
+    (sum, r) => {
+      const tf = Number(r.total_fees ?? 0);
+      const bal = Number(r.balance ?? 0);
+      if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
+      return sum;
+    },
+    0
+  );
+
   const pendingExpenses = pendingExpensesResult.count ?? 0;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
-
-  // Placeholder: "job applications" isn't available in existing KPIs fetch.
-  const jobApplications = null;
 
   return {
     students: studentsResult.count ?? 0,
@@ -101,7 +96,7 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     attendance: new Set((attendanceResult.data || []).map((x: { student_id: string }) => x.student_id)).size,
     pendingExpenses,
     activeClasses,
-    jobApplications,
+    totalOverallBalance,
   };
 }
 
@@ -239,7 +234,7 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
         {
           label: 'Outstanding Fees',
           value: fmt(kpis.outstanding),
-          subline: 'Balance due',
+          subline: 'This term',
           variant: 'orange' as KPIVariant,
           href: '/dashboard/admin/outstanding',
           icon: DollarSign,
@@ -269,13 +264,12 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
           icon: FileCheck,
         },
         {
-          label: 'Job Applications',
-          value: '—',
-          subline: 'Placeholder',
+          label: 'Total overall balance',
+          value: fmt(kpis.totalOverallBalance),
+          subline: 'All terms',
           variant: 'blue' as KPIVariant,
-          href: undefined,
-          icon: GraduationCap,
-          isPlaceholder: true,
+          href: '/dashboard/admin/outstanding',
+          icon: DollarSign,
         },
       ]
     : [];
@@ -294,7 +288,7 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
             variant={c.variant}
             href={c.href}
             isLoading={isLoading}
-            isPlaceholder={c.isPlaceholder}
+            isPlaceholder={Boolean((c as { isPlaceholder?: boolean }).isPlaceholder)}
           />
         ))}
       </div>

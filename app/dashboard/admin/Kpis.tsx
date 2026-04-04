@@ -2,11 +2,18 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
-import { resolveCurrentSchoolTerm } from "@/lib/adminFinanceTerm";
+import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 
 export function AdminKpis() {
-  const [k, setK] = useState({ students: 0, teachers: 0, outstanding: 0, receipts: 0, attendance: 0 });
+  const [k, setK] = useState({
+    students: 0,
+    teachers: 0,
+    outstanding: 0,
+    totalOverallBalance: 0,
+    receipts: 0,
+    attendance: 0,
+  });
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -28,7 +35,9 @@ export function AdminKpis() {
         const currentTermData = await resolveCurrentSchoolTerm(supabase, u.school_id, currentTerm.today);
 
         // Parallel counts; finance KPIs use the same ledger as Outstanding (student_balances / term_id).
-        const [studentsResult, teachersResult, attendanceResult] = await Promise.all([
+        const termId = currentTermData && (currentTermData as { id?: string }).id;
+
+        const [studentsResult, teachersResult, attendanceResult, totalOverallBalance] = await Promise.all([
           supabase
             .from("students")
             .select("*", { count: "exact", head: true })
@@ -41,11 +50,11 @@ export function AdminKpis() {
             .eq("school_id", u.school_id)
             .eq("date", currentTerm.today)
             .eq("present", true),
+          sumTotalOverallOutstandingBalance(supabase, u.school_id),
         ]);
 
         let outstanding = 0;
         let receipts = 0;
-        const termId = currentTermData && (currentTermData as { id?: string }).id;
         if (termId) {
           const balQ = await supabase
             .from("student_balances")
@@ -66,27 +75,13 @@ export function AdminKpis() {
             (sum, r) => sum + Number((r as { amount_paid?: number }).amount_paid ?? 0),
             0
           );
-        } else {
-          const balQ = await supabase.from("student_balances").select("balance").eq("school_id", u.school_id);
-          outstanding = (balQ.data || []).reduce(
-            (sum, r) => sum + Math.max(0, Number((r as { balance?: number }).balance ?? 0)),
-            0
-          );
-          const payQ = await supabase
-            .from("student_payments")
-            .select("amount_paid")
-            .eq("school_id", u.school_id)
-            .is("reversed_at", null);
-          receipts = (payQ.data || []).reduce(
-            (sum, r) => sum + Number((r as { amount_paid?: number }).amount_paid ?? 0),
-            0
-          );
         }
 
         setK({
           students: studentsResult.count || 0,
           teachers: teachersResult.count || 0,
           outstanding,
+          totalOverallBalance,
           receipts,
           attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
         });
@@ -100,16 +95,18 @@ export function AdminKpis() {
     loadData();
   }, [currentTerm.today]);
 
+  const fmt = (n: number) => new Intl.NumberFormat().format(n);
   const cards = [
     { label: "Total Students", value: k.students, accent: "from-blue-500/30 to-blue-700/20", href: "/dashboard/admin/students" },
     { label: "Total Teachers", value: k.teachers, accent: "from-green-500/30 to-green-700/20", href: "/dashboard/admin/teachers" },
-    { label: "Outstanding Balances", value: new Intl.NumberFormat().format(k.outstanding), accent: "from-yellow-500/30 to-yellow-700/20", href: "/dashboard/admin/outstanding" },
-    { label: "Fees collected (this term)", value: new Intl.NumberFormat().format(k.receipts), accent: "from-rose-500/30 to-rose-700/20", href: undefined },
+    { label: "Outstanding Fees (this term)", value: fmt(k.outstanding), accent: "from-yellow-500/30 to-yellow-700/20", href: "/dashboard/admin/outstanding" },
+    { label: "Fees collected (this term)", value: fmt(k.receipts), accent: "from-rose-500/30 to-rose-700/20", href: undefined },
+    { label: "Total overall balance", value: fmt(k.totalOverallBalance), accent: "from-cyan-500/30 to-cyan-700/20", href: "/dashboard/admin/outstanding" },
     { label: "Attendance Today", value: k.attendance, accent: "from-indigo-500/30 to-indigo-700/20", href: undefined },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-6 gap-4">
       {cards.map((c) => (
         <button
           type="button"

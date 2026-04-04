@@ -247,13 +247,15 @@ function applyAdminDesignKpisToDom(el: HTMLElement, kpis: AdminDesignDashboardKp
 
   setText('[data-kpi="fees-collected"]', formatUShCompact(kpis.feesCollected));
   setText('[data-kpi="outstanding-fees"]', formatUShCompact(kpis.outstanding));
+  setText('[data-kpi="outstanding-sub"]', 'This term');
 
   setText('[data-kpi="attendance-today"]', `${kpis.attendancePct}%`);
   setText('[data-kpi="attendance-sub"]', `${kpis.present} / ${kpis.totalAttendance} present`);
 
   setText('[data-kpi="pending-expenses"]', String(kpis.expensesCount));
   setText('[data-kpi="active-classes"]', String(kpis.activeClasses));
-  setText('[data-kpi="job-applications"]', String(kpis.jobApps));
+  setText('[data-kpi="total-overall-balance"]', formatUShCompact(kpis.totalOverallBalance));
+  setText('[data-kpi="total-overall-sub"]', 'All terms');
 
   const expCountEl = el.querySelector('#pa-expense-count') as HTMLElement | null;
   if (expCountEl) expCountEl.textContent = `${kpis.expensesCount} pending`;

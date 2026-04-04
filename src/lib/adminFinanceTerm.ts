@@ -64,3 +64,24 @@ export async function loadOutstandingBalanceAggByStudent(
   }
   return byStudent;
 }
+
+/**
+ * Sum of positive balances across all terms where fees were set (matches accountant
+ * dashboard "Outstanding All Time" / FinancialOverview total overall balance).
+ */
+export async function sumTotalOverallOutstandingBalance(
+  client: SupabaseClient,
+  schoolId: string
+): Promise<number> {
+  const { data: rows } = await client
+    .from('student_balances')
+    .select('total_fees, balance')
+    .eq('school_id', schoolId);
+
+  return (rows || []).reduce((sum, r) => {
+    const tf = Number((r as { total_fees?: number }).total_fees ?? 0);
+    const bal = Number((r as { balance?: number }).balance ?? 0);
+    if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
+    return sum;
+  }, 0);
+}
