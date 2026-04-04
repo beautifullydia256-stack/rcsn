@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '../useTeacherContext';
+import { getSecondaryExamEntryTrack } from '@/components/reports/templates/helpers';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ClassInfo = { class_name: string; subjects: string[]; is_class_teacher: boolean };
@@ -111,16 +112,31 @@ export default function TeacherExamResultsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {classes.map((c) => (
+              {classes.map((c) => {
+                const secTrack = schoolType === 'Secondary' ? getSecondaryExamEntryTrack(c.class_name) : null;
+                return (
                 <button
                   key={c.class_name}
                   type="button"
                   className="rounded-xl border border-[var(--ac-border)] bg-[var(--ac-bg)] p-6 text-left ac-text-primary hover:bg-[var(--ac-bg-muted)] transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--ac-focus)]"
                   onClick={() => handleClassSelect(c.class_name)}
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold">{c.class_name}</h3>
-                    <span className="text-[var(--ac-text-muted)]" aria-hidden>→</span>
+                  <div className="flex items-center justify-between gap-2 mb-4">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <h3 className="text-lg font-semibold">{c.class_name}</h3>
+                      {secTrack && (
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide border ${
+                            secTrack === 'alevel'
+                              ? 'border-violet-500/50 bg-violet-500/15 text-violet-800 dark:text-violet-200'
+                              : 'border-sky-500/50 bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                          }`}
+                        >
+                          {secTrack === 'alevel' ? 'A-Level' : 'O-Level'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[var(--ac-text-muted)] shrink-0" aria-hidden>→</span>
                   </div>
                   <div className="mb-4">
                     <div className="ac-text-muted text-sm mb-2">Subjects you teach:</div>
@@ -143,7 +159,8 @@ export default function TeacherExamResultsPage() {
                     Click to input exam results for {c.class_name}
                   </div>
                 </button>
-              ))}
+              );
+              })}
             </div>
           )}
         </div>

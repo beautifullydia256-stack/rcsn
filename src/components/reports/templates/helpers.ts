@@ -11,7 +11,24 @@ export function isSecondaryClass(className: string): boolean {
 export function isOLevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
-  return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
+  return /^(senior\s*[1-4]|s\.?\s*[1-4])/i.test(trimmed);
+}
+
+/** Senior 5–6 / S.5–S.6 — A-Level (UACE-style) stream; matches leading class label before stream suffix. */
+export function isALevelClass(className: string): boolean {
+  if (!className) return false;
+  const trimmed = className.trim();
+  return /^(senior\s*[56]|s\.?\s*[56])/i.test(trimmed);
+}
+
+/**
+ * For secondary schools only: which exam-entry track applies from the class name.
+ * Defaults to O-Level when the name does not clearly match S1–4 nor S5–6 (e.g. custom labels).
+ */
+export function getSecondaryExamEntryTrack(className: string): 'olevel' | 'alevel' {
+  if (isALevelClass(className)) return 'alevel';
+  if (isOLevelClass(className)) return 'olevel';
+  return 'olevel';
 }
 
 export function isLowerSectionPrimary(className: string): boolean {

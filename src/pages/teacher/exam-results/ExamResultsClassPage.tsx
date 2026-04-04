@@ -11,6 +11,10 @@ import { useTeacherContext } from '../useTeacherContext';
 import { calculatePrimaryGrade, calculateGrade } from '@/lib/reportUtils';
 import { isPrePrimaryNurseryClass } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { PrePrimaryHolisticExamGrid } from './PrePrimaryHolisticExamGrid';
+import { getSecondaryExamEntryTrack } from '@/components/reports/templates/helpers';
+import { SecondaryExamEntryTrackBanner } from './SecondaryExamEntryTrackBanner';
+import { SecondaryOLevelExamGrid, type SecondaryOLevelExistingRow } from './SecondaryOLevelExamGrid';
+import { SecondaryALevelExamGrid } from './SecondaryALevelExamGrid';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ExamSet = { id: string; name: string; term?: number; year?: number; active_for_input?: boolean };
@@ -57,6 +61,11 @@ export default function ExamResultsClassPage() {
     () => schoolType === 'Nursery/Primary' && isPrePrimaryNurseryClass(className),
     [schoolType, className]
   );
+
+  const secondaryTrack = useMemo(() => {
+    if (schoolType !== 'Secondary') return null;
+    return getSecondaryExamEntryTrack(className);
+  }, [schoolType, className]);
 
   const { data: currentTerm } = useQuery({
     queryKey: ['teacher', 'current-term', schoolId ?? ''],
@@ -138,7 +147,9 @@ export default function ExamResultsClassPage() {
       if (!schoolId || !selectedExamSetId || !className || !selectedSubject) return [];
       const { data } = await supabase
         .from('exam_results')
-        .select('student_id, marks_obtained, total_marks, grade, remarks, nursery_skill_performance')
+        .select(
+          'student_id, marks_obtained, total_marks, grade, remarks, nursery_skill_performance, activity_score, descriptor, formative_score, exam_score, final_score, overall_remark, teacher_initials, topic'
+        )
         .eq('school_id', schoolId)
         .eq('exam_set_id', selectedExamSetId)
         .eq('class_name', className)
@@ -150,6 +161,14 @@ export default function ExamResultsClassPage() {
         grade: string | null;
         remarks: string | null;
         nursery_skill_performance?: unknown;
+        activity_score?: number | null;
+        descriptor?: string | null;
+        formative_score?: number | null;
+        exam_score?: number | null;
+        final_score?: number | null;
+        overall_remark?: string | null;
+        teacher_initials?: string | null;
+        topic?: string | null;
       }[];
     },
     enabled: !!schoolId && !!selectedExamSetId && !!className && !!selectedSubject,
@@ -244,14 +263,21 @@ export default function ExamResultsClassPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-bold ac-text-primary">Exam Results — {className}</h1>
           <p className="ac-text-muted text-sm mt-1">
             {showPrePrimaryHolistic
               ? 'Select exam set and subject, then enter holistic ratings for Baby / Middle / Top, or marks for other classes.'
-              : 'Select exam set and subject, then enter marks.'}
+              : schoolType === 'Secondary' && secondaryTrack === 'olevel'
+                ? 'Select exam set and subject — O-Level format (activity, formative & exam).'
+                : schoolType === 'Secondary' && secondaryTrack === 'alevel'
+                  ? 'Select exam set and subject — A-Level format (marks out of 100).'
+                  : 'Select exam set and subject, then enter marks.'}
           </p>
+          <div className="mt-3 max-w-2xl">
+            <SecondaryExamEntryTrackBanner className={className} schoolType={schoolType ?? null} />
+          </div>
         </div>
         <button
           type="button"
@@ -320,9 +346,45 @@ export default function ExamResultsClassPage() {
                   existingRows={existingResults}
                   onRefetch={() => refetchResults()}
                 />
+              ) : schoolType === 'Secondary' && secondaryTrack === 'olevel' ? (
+                !teacherId ? (
+                  <p className="ac-text-muted text-sm">Your teacher profile is not linked. Contact the administrator.</p>
+                ) : students.length === 0 ? (
+                  <p className="ac-text-muted text-sm">No students in this class.</p>
+                ) : (
+                  <SecondaryOLevelExamGrid
+                    students={students}
+                    schoolId={schoolId!}
+                    teacherId={teacherId}
+                    className={className}
+                    subject={selectedSubject}
+                    selectedExamSetId={selectedExamSetId}
+                    existingRows={existingResults as SecondaryOLevelExistingRow[]}
+                    onRefetch={() => refetchResults()}
+                  />
+                )
+              ) : schoolType === 'Secondary' && secondaryTrack === 'alevel' ? (
+                !teacherId ? (
+                  <p className="ac-text-muted text-sm">Your teacher profile is not linked. Contact the administrator.</p>
+                ) : students.length === 0 ? (
+                  <p className="ac-text-muted text-sm">No students in this class.</p>
+                ) : (
+                  <SecondaryALevelExamGrid
+                    students={students}
+                    schoolId={schoolId!}
+                    teacherId={teacherId}
+                    className={className}
+                    subject={selectedSubject}
+                    selectedExamSetId={selectedExamSetId}
+                    existingRows={existingResults}
+                    onRefetch={() => refetchResults()}
+                  />
+                )
               ) : (
                 <>
-                  <p className="ac-text-primary text-sm font-medium mb-3">Enter marks for {selectedSubject} (out of 100)</p>
+                  <p className="ac-text-primary text-sm font-medium mb-3">
+                    Enter marks for {selectedSubject} (out of 100)
+                  </p>
                   {students.length === 0 ? (
                     <p className="ac-text-muted text-sm">No students in this class.</p>
                   ) : (
@@ -378,7 +440,7 @@ export default function ExamResultsClassPage() {
                 </>
               )}
             </div>
-            {students.length > 0 && !showPrePrimaryHolistic && (
+            {students.length > 0 && !showPrePrimaryHolistic && schoolType !== 'Secondary' && (
               <div className="flex items-center gap-3">
                 <button
                   type="button"

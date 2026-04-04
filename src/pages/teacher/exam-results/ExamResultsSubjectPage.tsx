@@ -15,6 +15,10 @@ import {
   isPrePrimaryNurseryClass,
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { PrePrimaryHolisticExamGrid } from './PrePrimaryHolisticExamGrid';
+import { getSecondaryExamEntryTrack } from '@/components/reports/templates/helpers';
+import { SecondaryExamEntryTrackBanner } from './SecondaryExamEntryTrackBanner';
+import { SecondaryOLevelExamGrid, type SecondaryOLevelExistingRow } from './SecondaryOLevelExamGrid';
+import { SecondaryALevelExamGrid } from './SecondaryALevelExamGrid';
 
 type SchoolType = 'Nursery/Primary' | 'Secondary' | null;
 type ExamSet = { id: string; name: string; term?: number; year?: number; active_for_input?: boolean };
@@ -62,6 +66,11 @@ export default function ExamResultsSubjectPage() {
     () => schoolType === 'Nursery/Primary' && isPrePrimaryNurseryClass(className),
     [schoolType, className]
   );
+
+  const secondaryTrack = useMemo(() => {
+    if (schoolType !== 'Secondary') return null;
+    return getSecondaryExamEntryTrack(className);
+  }, [schoolType, className]);
 
   const { data: currentTerm } = useQuery({
     queryKey: ['teacher', 'current-term', schoolId ?? ''],
@@ -121,7 +130,9 @@ export default function ExamResultsSubjectPage() {
       if (!schoolId || !selectedExamSetId || !className || !subject) return [];
       const { data } = await supabase
         .from('exam_results')
-        .select('student_id, marks_obtained, total_marks, grade, remarks, nursery_skill_performance')
+        .select(
+          'student_id, marks_obtained, total_marks, grade, remarks, nursery_skill_performance, activity_score, descriptor, formative_score, exam_score, final_score, overall_remark, teacher_initials, topic'
+        )
         .eq('school_id', schoolId)
         .eq('exam_set_id', selectedExamSetId)
         .eq('class_name', className)
@@ -133,6 +144,14 @@ export default function ExamResultsSubjectPage() {
         grade: string | null;
         remarks: string | null;
         nursery_skill_performance?: unknown;
+        activity_score?: number | null;
+        descriptor?: string | null;
+        formative_score?: number | null;
+        exam_score?: number | null;
+        final_score?: number | null;
+        overall_remark?: string | null;
+        teacher_initials?: string | null;
+        topic?: string | null;
       }[];
     },
     enabled: !!schoolId && !!selectedExamSetId && !!className && !!subject,
@@ -277,8 +296,15 @@ export default function ExamResultsSubjectPage() {
         <p className="ac-text-muted text-sm mt-1">
           {showPrePrimaryHolistic
             ? 'Select exam set, then enter holistic ratings (Very Good / Good / Needs Improvement / Tries) for each skill.'
-            : 'Select exam set, then enter marks.'}
+            : schoolType === 'Secondary' && secondaryTrack === 'olevel'
+              ? 'Select exam set — O-Level format (activity, formative & exam scores).'
+              : schoolType === 'Secondary' && secondaryTrack === 'alevel'
+                ? 'Select exam set — A-Level format (marks out of 100).'
+                : 'Select exam set, then enter marks.'}
         </p>
+        <div className="mt-3">
+          <SecondaryExamEntryTrackBanner className={className} schoolType={schoolType ?? null} />
+        </div>
       </div>
 
       {currentTerm == null && (
@@ -326,6 +352,40 @@ export default function ExamResultsSubjectPage() {
                   onRefetch={() => refetchResults()}
                   strandAreasRatedByStudent={strandAreasRatedByStudent}
                 />
+              ) : schoolType === 'Secondary' && secondaryTrack === 'olevel' ? (
+                !teacherId ? (
+                  <p className="ac-text-muted text-sm">Your teacher profile is not linked. Contact the administrator.</p>
+                ) : students.length === 0 ? (
+                  <p className="ac-text-muted text-sm">No students in this class.</p>
+                ) : (
+                  <SecondaryOLevelExamGrid
+                    students={students}
+                    schoolId={schoolId!}
+                    teacherId={teacherId}
+                    className={className}
+                    subject={subject}
+                    selectedExamSetId={selectedExamSetId}
+                    existingRows={existingResults as SecondaryOLevelExistingRow[]}
+                    onRefetch={() => refetchResults()}
+                  />
+                )
+              ) : schoolType === 'Secondary' && secondaryTrack === 'alevel' ? (
+                !teacherId ? (
+                  <p className="ac-text-muted text-sm">Your teacher profile is not linked. Contact the administrator.</p>
+                ) : students.length === 0 ? (
+                  <p className="ac-text-muted text-sm">No students in this class.</p>
+                ) : (
+                  <SecondaryALevelExamGrid
+                    students={students}
+                    schoolId={schoolId!}
+                    teacherId={teacherId}
+                    className={className}
+                    subject={subject}
+                    selectedExamSetId={selectedExamSetId}
+                    existingRows={existingResults}
+                    onRefetch={() => refetchResults()}
+                  />
+                )
               ) : (
                 <>
                   <p className="ac-text-primary text-sm font-medium mb-3">Enter marks for {subject} (out of 100)</p>
@@ -384,7 +444,7 @@ export default function ExamResultsSubjectPage() {
                 </>
               )}
             </div>
-            {students.length > 0 && !showPrePrimaryHolistic && (
+            {students.length > 0 && !showPrePrimaryHolistic && schoolType !== 'Secondary' && (
               <div className="flex items-center gap-3">
                 <button
                   type="button"
