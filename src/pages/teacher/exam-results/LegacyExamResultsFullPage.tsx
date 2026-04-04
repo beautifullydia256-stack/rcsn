@@ -73,7 +73,7 @@ export default function LegacyExamResultsFullPage() {
     return getSectionForClass(className);
   }, [className, isSecondary, isALevel]);
   const isNursery = primarySection === 'Baby Class' || primarySection === 'Nursery';
-  
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +91,25 @@ export default function LegacyExamResultsFullPage() {
   const [resolvedSchoolId, setResolvedSchoolId] = useState<string>("");
   const [selectedExamSet, setSelectedExamSet] = useState<string>("");
   const [selectedSubject, setSelectedSubject] = useState<string>(() => lockedSubject ?? "");
+  /** Subject whose grade bands are edited in Grade Settings (current exam subject only). */
+  const gradeSettingsSubject = useMemo(
+    () => (selectedSubject.trim() || displaySubjects[0] || "").trim(),
+    [selectedSubject, displaySubjects]
+  );
+  /** One teacher may use different scales per class; scope stored bands by class + subject. */
+  const scopedGradeKey = useCallback(
+    (subject: string) => `${className}::${(subject || "").trim()}`,
+    [className]
+  );
+  const parseSubjectFromScopedGradeKey = useCallback(
+    (fullKey: string): string | null => {
+      const prefix = `${className}::`;
+      if (!fullKey.startsWith(prefix)) return null;
+      const sub = fullKey.slice(prefix.length).trim();
+      return sub || null;
+    },
+    [className]
+  );
   // Primary layout state (existing)
   const [examResults, setExamResults] = useState<Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }>>({});
   // Primary aggregate points for core subjects (English, Mathematics, Science, Social Studies)
@@ -116,6 +135,8 @@ export default function LegacyExamResultsFullPage() {
   const [topicFilter, setTopicFilter] = useState<string>("");
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
+  const [examGradeSettingsLoading, setExamGradeSettingsLoading] = useState(false);
+  const [examGradeSettingsSaving, setExamGradeSettingsSaving] = useState(false);
   const [showTeacherRemarks, setShowTeacherRemarks] = useState(false);
   const [showClassTeacherComments, setShowClassTeacherComments] = useState(false);
   const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
@@ -154,7 +175,37 @@ export default function LegacyExamResultsFullPage() {
       setTeacherRemarksRanges(DEFAULT_TEACHER_REMARKS_RANGES.map((r) => ({ ...r })));
     }
   };
-  const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{min: number; max: number; grade: string}>>>({});
+  const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{ min: number; max: number; grade: string }>>>(
+    {}
+  );
+  /** O-Level / A-Level final-score bands (A–E) per subject — kept separate from primary D1–F9. */
+  const [secondaryGradeSettings, setSecondaryGradeSettings] = useState<
+    Record<string, Array<{ min: number; max: number; grade: string }>>
+  >({});
+  const secondaryBandsSignature = useMemo(() => {
+    const sk = (selectedSubject || "").trim();
+    if (!sk) return "null";
+    return JSON.stringify(secondaryGradeSettings[scopedGradeKey(sk)] ?? null);
+  }, [secondaryGradeSettings, selectedSubject, scopedGradeKey]);
+
+  useEffect(() => {
+    const prefix = `${className}::`;
+    setGradeSettings((prev) => {
+      const next: Record<string, Array<{ min: number; max: number; grade: string }>> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (k.startsWith(prefix)) next[k] = v;
+      }
+      return next;
+    });
+    setSecondaryGradeSettings((prev) => {
+      const next: Record<string, Array<{ min: number; max: number; grade: string }>> = {};
+      for (const [k, v] of Object.entries(prev)) {
+        if (k.startsWith(prefix)) next[k] = v;
+      }
+      return next;
+    });
+  }, [className]);
+
   // Comments functionality removed per request
   const [gradeRemarks, setGradeRemarks] = useState<Record<string, string>>({
     A: 'Exceptional! Your performance is outstanding, demonstrating innovative and creative application of knowledge. Maintain this excellent standard.',
@@ -458,7 +509,7 @@ export default function LegacyExamResultsFullPage() {
   const calculatePrimaryGrade = (marks: number, totalMarks: number, subject: string): string => {
     if (!marks && marks !== 0) return '';
     const percentage = (marks / (totalMarks || 100)) * 100;
-    const subjectGrades = gradeSettings[subject] || getDefaultGrades();
+    const subjectGrades = gradeSettings[scopedGradeKey(subject)] || getDefaultGrades();
     for (const gradeRange of subjectGrades) {
       if (percentage >= gradeRange.min && percentage <= gradeRange.max) {
         return gradeRange.grade;
@@ -520,6 +571,22 @@ export default function LegacyExamResultsFullPage() {
     { min: 40, max: 44, grade: 'P8' },
     { min: 0, max: 39, grade: 'F9' },
   ];
+
+  /** O-Level / A-Level final score (0–100): letter grades A–E (not primary D1–F9). */
+  const getDefaultSecondaryGradeBands = () => [
+    { min: 80, max: 100, grade: 'A' },
+    { min: 70, max: 79, grade: 'B' },
+    { min: 60, max: 69, grade: 'C' },
+    { min: 50, max: 59, grade: 'D' },
+    { min: 0, max: 49, grade: 'E' },
+  ];
+
+  const secondaryGradeBandsForSubject = (subject: string) => {
+    const key = scopedGradeKey(subject);
+    const custom = (subject || "").trim() ? secondaryGradeSettings[key] : undefined;
+    if (custom && custom.length > 0) return custom;
+    return getDefaultSecondaryGradeBands();
+  };
   const [classTeacherRanges, setClassTeacherRanges] = useState<Array<{ id?: string; min_percent: number; max_percent: number; comment_text: string }>>([
     { min_percent: 0, max_percent: 40, comment_text: 'The student needs to work much harder. With better focus and effort, there is room for great improvement next term.' },
     { min_percent: 41, max_percent: 60, comment_text: 'A fair performance, showing some understanding. More consistency and commitment are needed to reach higher results.' },
@@ -590,13 +657,253 @@ export default function LegacyExamResultsFullPage() {
     return "Outstanding";
   };
 
-  const calculateSecondaryGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
-    if (finalScore >= 80) return "A";
-    if (finalScore >= 70) return "B";
-    if (finalScore >= 60) return "C";
-    if (finalScore >= 50) return "D";
+  const calculateSecondaryGrade = (finalScore: number, subject: string): "A" | "B" | "C" | "D" | "E" => {
+    const bands = secondaryGradeBandsForSubject(subject);
+    const sorted = [...bands].sort((a, b) => b.min - a.min);
+    for (const b of sorted) {
+      if (finalScore >= b.min && finalScore <= b.max) {
+        const letter = String(b.grade || "").trim().toUpperCase().charAt(0);
+        if (letter === "A" || letter === "B" || letter === "C" || letter === "D" || letter === "E") {
+          return letter;
+        }
+      }
+    }
+    const fallback = [...bands].sort((a, c) => a.min - c.min)[0]?.grade || "E";
+    const letter = String(fallback).trim().toUpperCase().charAt(0);
+    if (letter === "A" || letter === "B" || letter === "C" || letter === "D" || letter === "E") return letter;
     return "E";
   };
+
+  // When O-Level percentage bands change for this subject, refresh letter grades in the grid.
+  useEffect(() => {
+    if (!isSecondary || !(selectedSubject || "").trim()) return;
+    const subj = selectedSubject.trim();
+    setExamResultsSecondary((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const sid of Object.keys(next)) {
+        const row = next[sid];
+        const fn = Math.trunc(parseFloat(row.final) || 0);
+        const hasInput =
+          (parseFloat(row.formative) || 0) > 0 ||
+          (parseFloat(row.exam) || 0) > 0 ||
+          (parseFloat(row.activityScore) || 0) > 0 ||
+          (row.final || "").trim() !== "";
+        if (!hasInput && fn === 0) continue;
+        const g = calculateSecondaryGrade(fn, subj);
+        if (row.grade !== g) {
+          next[sid] = { ...row, grade: g };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [isSecondary, selectedSubject, secondaryBandsSignature]);
+
+  const loadTeacherExamGradeSettingsFromSupabase = useCallback(async () => {
+    if (!resolvedSchoolId || !className?.trim()) return;
+    setExamGradeSettingsLoading(true);
+    const prefix = `${className}::`;
+    try {
+      const { data: bandRows, error: bandErr } = await supabase
+        .from("teacher_exam_grade_bands")
+        .select("subject, scale_kind, min_percent, max_percent, grade_label, sort_order")
+        .eq("school_id", resolvedSchoolId)
+        .eq("class_name", className)
+        .order("subject", { ascending: true })
+        .order("scale_kind", { ascending: true })
+        .order("sort_order", { ascending: true });
+      if (bandErr) throw bandErr;
+
+      const primary: Record<string, Array<{ min: number; max: number; grade: string }>> = {};
+      const secondary: Record<string, Array<{ min: number; max: number; grade: string }>> = {};
+      for (const row of bandRows || []) {
+        const r = row as {
+          subject?: string;
+          scale_kind?: string;
+          min_percent?: number;
+          max_percent?: number;
+          grade_label?: string;
+        };
+        const subj = String(r.subject || "").trim();
+        if (!subj) continue;
+        const key = scopedGradeKey(subj);
+        const target = r.scale_kind === "primary" ? primary : secondary;
+        if (!target[key]) target[key] = [];
+        target[key].push({
+          min: Number(r.min_percent) || 0,
+          max: Number(r.max_percent) || 100,
+          grade: String(r.grade_label || ""),
+        });
+      }
+
+      setGradeSettings((prev) => {
+        const next = { ...prev };
+        for (const k of Object.keys(next)) {
+          if (k.startsWith(prefix)) delete next[k];
+        }
+        return { ...next, ...primary };
+      });
+      setSecondaryGradeSettings((prev) => {
+        const next = { ...prev };
+        for (const k of Object.keys(next)) {
+          if (k.startsWith(prefix)) delete next[k];
+        }
+        return { ...next, ...secondary };
+      });
+
+      const { data: prefRow, error: prefErr } = await supabase
+        .from("teacher_exam_class_prefs")
+        .select(
+          "o_level_formative_max, auto_remark_enabled, primary_division_settings, grade_remarks_olevel, grade_remarks_alevel"
+        )
+        .eq("school_id", resolvedSchoolId)
+        .eq("class_name", className)
+        .maybeSingle();
+      if (prefErr) throw prefErr;
+
+      if (prefRow) {
+        const p = prefRow as Record<string, unknown>;
+        if (typeof p.o_level_formative_max === "number") setOLevelFormativeMax(p.o_level_formative_max);
+        if (typeof p.auto_remark_enabled === "boolean") setAutoRemarkEnabled(p.auto_remark_enabled);
+        const div = p.primary_division_settings;
+        if (div && typeof div === "object" && div !== null && !Array.isArray(div)) {
+          setPrimaryDivisionSettings((s) => ({ ...s, ...(div as typeof s) }));
+        }
+        const gro = p.grade_remarks_olevel;
+        if (gro && typeof gro === "object" && gro !== null && !Array.isArray(gro)) {
+          setGradeRemarksOLevel((prev) => ({ ...prev, ...(gro as Record<string, string>) }));
+        }
+        const gra = p.grade_remarks_alevel;
+        if (gra && typeof gra === "object" && gra !== null && !Array.isArray(gra)) {
+          setGradeRemarksALevel((prev) => ({ ...prev, ...(gra as Record<string, string>) }));
+        }
+      }
+    } catch (e) {
+      console.error("loadTeacherExamGradeSettingsFromSupabase", e);
+    } finally {
+      setExamGradeSettingsLoading(false);
+    }
+  }, [resolvedSchoolId, className, scopedGradeKey]);
+
+  useEffect(() => {
+    void loadTeacherExamGradeSettingsFromSupabase();
+  }, [loadTeacherExamGradeSettingsFromSupabase]);
+
+  const saveTeacherExamGradeSettingsToSupabase = useCallback(async () => {
+    if (!resolvedSchoolId || !className?.trim()) {
+      alert("Cannot save: school or class not loaded.");
+      return;
+    }
+    setExamGradeSettingsSaving(true);
+    try {
+      const { error: prefErr } = await supabase.from("teacher_exam_class_prefs").upsert(
+        {
+          school_id: resolvedSchoolId,
+          class_name: className,
+          o_level_formative_max: oLevelFormativeMax,
+          auto_remark_enabled: autoRemarkEnabled,
+          primary_division_settings: primaryDivisionSettings,
+          grade_remarks_olevel: gradeRemarksOLevel,
+          grade_remarks_alevel: gradeRemarksALevel,
+        },
+        { onConflict: "school_id,class_name" }
+      );
+      if (prefErr) throw prefErr;
+
+      const collectSubjectsForScale = (
+        map: Record<string, Array<{ min: number; max: number; grade: string }>>
+      ) => {
+        const subs = new Set<string>();
+        for (const fullKey of Object.keys(map)) {
+          const subject = parseSubjectFromScopedGradeKey(fullKey);
+          if (subject) subs.add(subject);
+        }
+        return subs;
+      };
+      const subjectsPrimary = collectSubjectsForScale(gradeSettings);
+      const subjectsSecondary = collectSubjectsForScale(secondaryGradeSettings);
+
+      if (subjectsPrimary.size > 0) {
+        const { error: delP } = await supabase
+          .from("teacher_exam_grade_bands")
+          .delete()
+          .eq("school_id", resolvedSchoolId)
+          .eq("class_name", className)
+          .eq("scale_kind", "primary")
+          .in("subject", [...subjectsPrimary]);
+        if (delP) throw delP;
+      }
+      if (subjectsSecondary.size > 0) {
+        const { error: delS } = await supabase
+          .from("teacher_exam_grade_bands")
+          .delete()
+          .eq("school_id", resolvedSchoolId)
+          .eq("class_name", className)
+          .eq("scale_kind", "secondary")
+          .in("subject", [...subjectsSecondary]);
+        if (delS) throw delS;
+      }
+
+      type BandInsert = {
+        school_id: string;
+        class_name: string;
+        subject: string;
+        scale_kind: "primary" | "secondary";
+        min_percent: number;
+        max_percent: number;
+        grade_label: string;
+        sort_order: number;
+      };
+      const rows: BandInsert[] = [];
+      const pushBands = (
+        map: Record<string, Array<{ min: number; max: number; grade: string }>>,
+        scale_kind: "primary" | "secondary"
+      ) => {
+        for (const [fullKey, bands] of Object.entries(map)) {
+          const subject = parseSubjectFromScopedGradeKey(fullKey);
+          if (!subject) continue;
+          (bands || []).forEach((b, idx) => {
+            rows.push({
+              school_id: resolvedSchoolId,
+              class_name: className,
+              subject,
+              scale_kind,
+              min_percent: b.min,
+              max_percent: b.max,
+              grade_label: String(b.grade || ""),
+              sort_order: idx,
+            });
+          });
+        }
+      };
+      pushBands(gradeSettings, "primary");
+      pushBands(secondaryGradeSettings, "secondary");
+
+      if (rows.length > 0) {
+        const { error: insErr } = await supabase.from("teacher_exam_grade_bands").insert(rows);
+        if (insErr) throw insErr;
+      }
+      alert("Grade settings saved.");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to save grade settings";
+      console.error("saveTeacherExamGradeSettingsToSupabase", e);
+      alert(msg);
+    } finally {
+      setExamGradeSettingsSaving(false);
+    }
+  }, [
+    resolvedSchoolId,
+    className,
+    oLevelFormativeMax,
+    autoRemarkEnabled,
+    primaryDivisionSettings,
+    gradeRemarksOLevel,
+    gradeRemarksALevel,
+    gradeSettings,
+    secondaryGradeSettings,
+    parseSubjectFromScopedGradeKey,
+  ]);
 
   // Primary change handler (existing)
   const handleMarksChange = (studentId: string, field: 'marks' | 'totalMarks' | 'remark', value: string) => {
@@ -713,7 +1020,7 @@ export default function LegacyExamResultsFullPage() {
       next.descriptor = calculateDescriptor(aSafe);
       const finalNum = Math.trunc(fSafe + eSafe);
       next.final = String(finalNum);
-      const newGrade = calculateSecondaryGrade(finalNum);
+      const newGrade = calculateSecondaryGrade(finalNum, selectedSubject);
       next.grade = newGrade;
       if (autoRemarkEnabled) {
         const finalNum = parseFloat(next.final) || 0;
@@ -754,7 +1061,7 @@ export default function LegacyExamResultsFullPage() {
       const fnum = parseFloat(next.formative) || 0;
       const enum_ = parseFloat(next.exam) || 0;
       next.final = String(trunc0(fnum + enum_));
-      next.grade = calculateSecondaryGrade(trunc0(fnum + enum_));
+      next.grade = calculateSecondaryGrade(trunc0(fnum + enum_), selectedSubject);
       return { ...prev, [studentId]: next };
     });
   };
@@ -965,7 +1272,7 @@ export default function LegacyExamResultsFullPage() {
           const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
             const finalNum = formativeNum + examNum;
-            const grade = calculateSecondaryGrade(finalNum);
+            const grade = calculateSecondaryGrade(finalNum, (selectedSubject || '').trim());
           
           const rpcParams = {
             p_school_id: schoolId,
@@ -1807,7 +2114,12 @@ export default function LegacyExamResultsFullPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-slate-800 rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-white text-xl font-semibold">Grade Settings</h2>
+                <div>
+                  <h2 className="text-white text-xl font-semibold">Grade Settings</h2>
+                  {examGradeSettingsLoading && (
+                    <p className="text-white/50 text-xs mt-1">Loading saved settings from your school…</p>
+                  )}
+                </div>
                 <button onClick={() => setShowGradeSettings(false)} className="text-white/60 hover:text-white">✕</button>
               </div>
               <div className="space-y-4">
@@ -1853,121 +2165,271 @@ export default function LegacyExamResultsFullPage() {
                     </p>
                   </div>
                 )}
-                
-                {/* Secondary School Settings - Only show for Secondary schools */}
-                {(isSecondary || isALevel) && (
+
+                {/* O-Level class (Senior 1–4): only O-Level controls — no A-Level toggle */}
+                {isSecondary && (
                   <>
-                {/* Level Selector */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Subject Level</h3>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 text-white/90 text-sm">
-                      <input
-                        type="radio"
-                        name="level"
-                        checked={selectedLevel === 'olevel'}
-                        onChange={() => setSelectedLevel('olevel')}
-                      />
-                      O-Level (Senior 1-4)
-                    </label>
-                    <label className="flex items-center gap-2 text-white/90 text-sm">
-                      <input
-                        type="radio"
-                        name="level"
-                        checked={selectedLevel === 'alevel'}
-                        onChange={() => setSelectedLevel('alevel')}
-                      />
-                      A-Level (Senior 5-6)
-                    </label>
-                  </div>
-                </div>
-
-                {/* Auto Remark - Available for all levels */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Auto Remark</h3>
-                  <label className="flex items-center gap-2 text-white/90 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={autoRemarkEnabled}
-                      onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
-                    />
-                    Automatically set remark based on grade
-                  </label>
-                </div>
-
-                {/* Grade Remarks - Available for all levels */}
-                <div className="border border-white/10 rounded-lg p-4">
-                  <h3 className="text-white font-medium mb-3">Grade Remarks ({selectedLevel === 'olevel' ? 'O-Level' : 'A-Level'})</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(['A','B','C','D','E','F'] as const).map(g => (
-                      <div key={g} className="flex flex-col gap-2">
-                        <label className="text-white/80 text-sm">Remark for Grade {g}</label>
-                        <textarea
-                          value={selectedLevel === 'olevel' ? (gradeRemarksOLevel[g] || '') : (gradeRemarksALevel[g] || '')}
-                          onChange={(e) => {
-                            if (selectedLevel === 'olevel') {
-                              setGradeRemarksOLevel(prev => ({ ...prev, [g]: e.target.value }));
-                            } else {
-                              setGradeRemarksALevel(prev => ({ ...prev, [g]: e.target.value }));
-                            }
-                          }}
-                          className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                    <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+                      <span className="font-medium">O-Level</span>
+                      <span className="text-white/80">
+                        {' '}
+                        — Class {className}. Grade bands below are only for the subject you have selected for exam entry
+                        {gradeSettingsSubject ? ` (${gradeSettingsSubject})` : ''}.
+                      </span>
+                    </div>
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Auto Remark</h3>
+                      <label className="flex items-center gap-2 text-white/90 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoRemarkEnabled}
+                          onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
+                        />
+                        Automatically set remark based on grade
+                      </label>
+                    </div>
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Grade Remarks (O-Level, A–E)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(['A', 'B', 'C', 'D', 'E'] as const).map((g) => (
+                          <div key={g} className="flex flex-col gap-2">
+                            <label className="text-white/80 text-sm">Remark for Grade {g}</label>
+                            <textarea
+                              value={gradeRemarksOLevel[g] || ''}
+                              onChange={(e) =>
+                                setGradeRemarksOLevel((prev) => ({ ...prev, [g]: e.target.value }))
+                              }
+                              className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">O-Level Settings</h3>
+                      <div className="flex items-center gap-3">
+                        <label className="text-white/80 text-sm">Formative Max</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={oLevelFormativeMax}
+                          onChange={(e) =>
+                            setOLevelFormativeMax(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))
+                          }
+                          className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
                         />
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* O-Level Specific Settings */}
-                {selectedLevel === 'olevel' && (
-                  <div className="border border-white/10 rounded-lg p-4">
-                    <h3 className="text-white font-medium mb-3">O-Level Settings</h3>
-                    <div className="flex items-center gap-3">
-                      <label className="text-white/80 text-sm">Formative Max</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={oLevelFormativeMax}
-                        onChange={(e) => setOLevelFormativeMax(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
-                        className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
-                      />
                     </div>
-                  </div>
-                    )}
                   </>
                 )}
-                {displaySubjects.map(subject => (
-                  <div key={subject} className="border border-white/10 rounded-lg p-4">
-                    <h3 className="text-white font-medium mb-3">{subject}</h3>
+
+                {/* A-Level class (Senior 5–6): only A-Level controls */}
+                {isALevel && (
+                  <>
+                    <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
+                      <span className="font-medium">A-Level</span>
+                      <span className="text-white/80">
+                        {' '}
+                        — Class {className}. Grade bands below are only for the subject you have selected for exam entry
+                        {gradeSettingsSubject ? ` (${gradeSettingsSubject})` : ''}.
+                      </span>
+                    </div>
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Auto Remark</h3>
+                      <label className="flex items-center gap-2 text-white/90 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={autoRemarkEnabled}
+                          onChange={(e) => setAutoRemarkEnabled(e.target.checked)}
+                        />
+                        Automatically set remark based on grade
+                      </label>
+                    </div>
+                    <div className="border border-white/10 rounded-lg p-4">
+                      <h3 className="text-white font-medium mb-3">Grade Remarks (A-Level)</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((g) => (
+                          <div key={g} className="flex flex-col gap-2">
+                            <label className="text-white/80 text-sm">Remark for Grade {g}</label>
+                            <textarea
+                              value={gradeRemarksALevel[g] || ''}
+                              onChange={(e) =>
+                                setGradeRemarksALevel((prev) => ({ ...prev, [g]: e.target.value }))
+                              }
+                              className="w-full min-h-[64px] px-3 py-2 rounded border border-white/20 bg-white/10 text-white text-sm"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Primary: percentage → D1–F9 for the current subject only */}
+                {!isSecondary && !isALevel && gradeSettingsSubject && (
+                  <div className="border border-white/10 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-3">Subject grading (primary) — {gradeSettingsSubject}</h3>
+                    <p className="text-white/60 text-xs mb-3">
+                      Percentage out of 100 → Division / credit grades (D1, D2, C3, … F9). Only this subject is shown.
+                    </p>
                     <div className="space-y-2">
-                      {(gradeSettings[subject] || getDefaultGrades()).map((grade, index) => (
+                      {(
+                        gradeSettings[scopedGradeKey(gradeSettingsSubject)] || getDefaultGrades()
+                      ).map((grade, index) => (
                         <div key={index} className="flex items-center gap-3">
-                          <input type="number" min="0" max="100" value={grade.min} onChange={(e) => {
-                            const newGrades = [...(gradeSettings[subject] || getDefaultGrades())];
-                            newGrades[index].min = parseInt(e.target.value) || 0;
-                            setGradeSettings(prev => ({ ...prev, [subject]: newGrades }));
-                          }} className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={grade.min}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = gradeSettings[sk] || getDefaultGrades();
+                              const newGrades = [...base];
+                              newGrades[index].min = parseInt(e.target.value) || 0;
+                              setGradeSettings((prev) => ({ ...prev, [sk]: newGrades }));
+                            }}
+                            className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
                           <span className="text-white/80">to</span>
-                          <input type="number" min="0" max="100" value={grade.max} onChange={(e) => {
-                            const newGrades = [...(gradeSettings[subject] || getDefaultGrades())];
-                            newGrades[index].max = parseInt(e.target.value) || 100;
-                            setGradeSettings(prev => ({ ...prev, [subject]: newGrades }));
-                          }} className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={grade.max}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = gradeSettings[sk] || getDefaultGrades();
+                              const newGrades = [...base];
+                              newGrades[index].max = parseInt(e.target.value) || 100;
+                              setGradeSettings((prev) => ({ ...prev, [sk]: newGrades }));
+                            }}
+                            className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
                           <span className="text-white/80">=</span>
-                          <input type="text" value={grade.grade} onChange={(e) => {
-                            const newGrades = [...(gradeSettings[subject] || getDefaultGrades())];
-                            newGrades[index].grade = e.target.value;
-                            setGradeSettings(prev => ({ ...prev, [subject]: newGrades }));
-                          }} className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm" />
+                          <input
+                            type="text"
+                            value={grade.grade}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = gradeSettings[sk] || getDefaultGrades();
+                              const newGrades = [...base];
+                              newGrades[index].grade = e.target.value;
+                              setGradeSettings((prev) => ({ ...prev, [sk]: newGrades }));
+                            }}
+                            className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
                         </div>
                       ))}
                     </div>
                   </div>
-                ))}
+                )}
+
+                {!isSecondary && !isALevel && !gradeSettingsSubject && (
+                  <p className="text-amber-200/90 text-sm">
+                    Select a subject on the main page to edit primary grade bands for that subject.
+                  </p>
+                )}
+
+                {/* Secondary final score → A–E for the current subject only (not primary D1–F9) */}
+                {(isSecondary || isALevel) && gradeSettingsSubject && (
+                  <div className="border border-white/10 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-3">Final score bands — {gradeSettingsSubject}</h3>
+                    <p className="text-white/60 text-xs mb-3">
+                      Final score is out of 100. Use letters A–E only (O-Level / A-Level). Adjust percentages per subject as
+                      needed.
+                    </p>
+                    <div className="space-y-2">
+                      {(
+                        secondaryGradeSettings[scopedGradeKey(gradeSettingsSubject)] ||
+                        getDefaultSecondaryGradeBands()
+                      ).map((grade, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={grade.min}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = secondaryGradeSettings[sk] || getDefaultSecondaryGradeBands();
+                              const newGrades = [...base];
+                              newGrades[index].min = parseInt(e.target.value) || 0;
+                              setSecondaryGradeSettings((prev) => ({
+                                ...prev,
+                                [sk]: newGrades,
+                              }));
+                            }}
+                            className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
+                          <span className="text-white/80">to</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={grade.max}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = secondaryGradeSettings[sk] || getDefaultSecondaryGradeBands();
+                              const newGrades = [...base];
+                              newGrades[index].max = parseInt(e.target.value) || 100;
+                              setSecondaryGradeSettings((prev) => ({
+                                ...prev,
+                                [sk]: newGrades,
+                              }));
+                            }}
+                            className="w-20 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
+                          <span className="text-white/80">=</span>
+                          <input
+                            type="text"
+                            value={grade.grade}
+                            onChange={(e) => {
+                              const sk = scopedGradeKey(gradeSettingsSubject);
+                              const base = secondaryGradeSettings[sk] || getDefaultSecondaryGradeBands();
+                              const newGrades = [...base];
+                              newGrades[index].grade = e.target.value;
+                              setSecondaryGradeSettings((prev) => ({
+                                ...prev,
+                                [sk]: newGrades,
+                              }));
+                            }}
+                            className="w-16 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {(isSecondary || isALevel) && !gradeSettingsSubject && (
+                  <p className="text-amber-200/90 text-sm">
+                    Select a subject above to edit A–E percentage bands for that subject.
+                  </p>
+                )}
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button onClick={() => setShowGradeSettings(false)} className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15">Close</button>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-6">
+                <p className="text-white/50 text-xs max-w-md">
+                  Changes apply after you save. They are stored in Supabase for your account and this class.
+                </p>
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowGradeSettings(false)}
+                    className="px-4 py-2 rounded-lg bg-white/10 border border-white/10 text-white hover:bg-white/15"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    disabled={examGradeSettingsSaving || examGradeSettingsLoading || !resolvedSchoolId || !className.trim()}
+                    onClick={() => void saveTeacherExamGradeSettingsToSupabase()}
+                    className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white"
+                  >
+                    {examGradeSettingsSaving ? "Saving…" : "Save settings"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
