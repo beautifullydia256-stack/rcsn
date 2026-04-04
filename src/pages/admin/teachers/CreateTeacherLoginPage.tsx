@@ -144,7 +144,7 @@ export default function CreateTeacherLoginPage() {
         return;
       }
       const apiBase = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-      const url = apiBase ? `${apiBase}/api/admin/resend-portal-credentials` : '/api/admin/resend-portal-credentials';
+      const url = apiBase ? `${apiBase}/api/admin/create-user-account` : '/api/admin/create-user-account';
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -153,6 +153,7 @@ export default function CreateTeacherLoginPage() {
         },
         credentials: 'include',
         body: JSON.stringify({
+          resendPortalCredentials: true,
           userId: teacherUserId,
           email: addr,
         }),

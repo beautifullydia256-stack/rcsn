@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { generateOneTimePassword, validatePasswordLength } from '../../../../lib/passwordPolicy';
+import { isValidRealEmail } from '@/lib/realEmail';
 
 // CORS: allow frontend at www.pwezacore.com (and optional CORS_ORIGIN env) when API is on api.pwezacore.com
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'https://www.pwezacore.com';
@@ -103,6 +104,183 @@ export async function POST(request: NextRequest) {
       body = (await request.json()) as Record<string, unknown>;
     } catch {
       return withCors(NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }));
+    }
+
+    const CRED_RESEND_ROLES = new Set(['parent', 'teacher']);
+    if (body.resendPortalCredentials === true || body.resendPortalCredentials === 'true') {
+      const targetUserId = body.userId != null ? String(body.userId).trim() : '';
+      const emailOverride = body.email != null ? String(body.email).trim() : '';
+      if (!targetUserId) {
+        return withCors(NextResponse.json({ error: 'userId is required.' }, { status: 400 }));
+      }
+      const { data: profile, error: profErr } = await supabaseAdmin
+        .from('users')
+        .select('user_id, email, name, role, school_id, linked_teacher_id')
+        .eq('user_id', targetUserId)
+        .maybeSingle();
+      if (profErr || !profile) {
+        return withCors(NextResponse.json({ error: 'User profile not found.' }, { status: 400 }));
+      }
+      if (String((profile as { school_id?: string }).school_id) !== String(adminData.school_id)) {
+        return withCors(NextResponse.json({ error: 'That account is not in your school.' }, { status: 403 }));
+      }
+      const roleKey = normalizeManagerRole((profile as { role?: string }).role);
+      if (!CRED_RESEND_ROLES.has(roleKey)) {
+        return withCors(
+          NextResponse.json(
+            {
+              error: 'Only parent or teacher accounts can receive a portal password email from here.',
+            },
+            { status: 400 }
+          )
+        );
+      }
+      let deliverEmail = (profile as { email?: string }).email ? String((profile as { email?: string }).email).trim() : '';
+      if (emailOverride) {
+        if (!isValidRealEmail(emailOverride)) {
+          return withCors(NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 }));
+        }
+        const { data: clash } = await supabaseAdmin
+          .from('users')
+          .select('user_id')
+          .eq('email', emailOverride)
+          .neq('user_id', targetUserId)
+          .maybeSingle();
+        if (clash?.user_id) {
+          return withCors(
+            NextResponse.json({ error: 'That email is already used by another account.' }, { status: 400 })
+          );
+        }
+        deliverEmail = emailOverride;
+      }
+      if (!deliverEmail || !isValidRealEmail(deliverEmail)) {
+        return withCors(
+          NextResponse.json(
+            {
+              error:
+                'This account has no email on file. Add a valid email in the form, then send again — we will save it before mailing.',
+            },
+            { status: 400 }
+          )
+        );
+      }
+      const oneTimePassword = generateOneTimePassword();
+      const { data: authUserData, error: getAuthErr } = await supabaseAdmin.auth.admin.getUserById(targetUserId);
+      if (getAuthErr || !authUserData?.user) {
+        return withCors(
+          NextResponse.json({ error: 'No authentication record for this user. Contact support.' }, { status: 400 })
+        );
+      }
+      const prevMeta = authUserData.user.user_metadata || {};
+      const nextMeta = {
+        ...prevMeta,
+        must_change_password: true,
+        role: roleKey,
+        name: (profile as { name?: string }).name || (prevMeta as { name?: string }).name,
+        school_id: adminData.school_id,
+      };
+      const updatePayload: {
+        password: string;
+        user_metadata: Record<string, unknown>;
+        email?: string;
+      } = {
+        password: oneTimePassword,
+        user_metadata: nextMeta,
+      };
+      if (deliverEmail !== authUserData.user.email) {
+        updatePayload.email = deliverEmail;
+      }
+      const { error: updAuthErr } = await supabaseAdmin.auth.admin.updateUserById(targetUserId, updatePayload);
+      if (updAuthErr) {
+        return withCors(
+          NextResponse.json(
+            { error: updAuthErr.message || 'Could not update sign-in credentials.' },
+            { status: 400 }
+          )
+        );
+      }
+      const { error: updProfErr } = await supabaseAdmin
+        .from('users')
+        .update({ email: deliverEmail })
+        .eq('user_id', targetUserId);
+      if (updProfErr) {
+        console.error('[create-user-account] resend users email sync:', updProfErr);
+      }
+      const prof = profile as { linked_teacher_id?: string | null };
+      if (roleKey === 'parent') {
+        try {
+          await supabaseAdmin
+            .from('parents')
+            .update({ email: deliverEmail })
+            .eq('school_id', adminData.school_id)
+            .eq('parent_id', targetUserId);
+        } catch (e) {
+          console.warn('[create-user-account] resend parents email sync:', e);
+        }
+      } else if (roleKey === 'teacher' && prof.linked_teacher_id) {
+        try {
+          await supabaseAdmin
+            .from('teachers')
+            .update({ email: deliverEmail })
+            .eq('school_id', adminData.school_id)
+            .eq('teacher_id', prof.linked_teacher_id);
+        } catch (e) {
+          console.warn('[create-user-account] resend teachers email sync:', e);
+        }
+      }
+      const displayName =
+        String((profile as { name?: string }).name || '').trim() || deliverEmail.split('@')[0] || 'there';
+      const { getPublicSiteOrigin } = require('../../../../lib/emailHtml');
+      const loginUrl = `${getPublicSiteOrigin()}/login?email=${encodeURIComponent(String(deliverEmail))}&first_login=1`;
+      try {
+        const { sendResendInnerHtml } = require('../../../../lib/resendSend');
+        const { buildCredentialInnerHtml, buildCredentialEmailSubject } = require('../../../../lib/credentialInnerHtml');
+        const mailResult = await sendResendInnerHtml({
+          to: String(deliverEmail),
+          subject: buildCredentialEmailSubject(roleKey, '', { isPasswordReset: true }),
+          innerHtml: buildCredentialInnerHtml({
+            recipientName: displayName,
+            email: String(deliverEmail),
+            password: oneTimePassword,
+            role: roleKey,
+            roleLabel: roleKey,
+            loginUrl,
+            firstLoginEnforced: true,
+            isPasswordReset: true,
+          }),
+        });
+        if (!mailResult || mailResult.success !== true) {
+          console.error('[create-user-account] resend email failed:', mailResult?.error);
+          return withCors(
+            NextResponse.json(
+              {
+                error:
+                  mailResult?.error ||
+                  'The password was reset but the email could not be sent. Try again, or check RESEND_API_KEY.',
+              },
+              { status: 502 }
+            )
+          );
+        }
+      } catch (mailErr) {
+        console.error('[create-user-account] resend email exception:', mailErr);
+        return withCors(
+          NextResponse.json(
+            {
+              error:
+                'The password was reset but the email could not be sent. Try Send again, or check email configuration.',
+            },
+            { status: 502 }
+          )
+        );
+      }
+      return withCors(
+        NextResponse.json({
+          success: true,
+          message:
+            'A new one-time password was emailed. They should sign in with it once, then set a new password.',
+        })
+      );
     }
 
     let emailIn = body.email != null ? String(body.email).trim() : '';
