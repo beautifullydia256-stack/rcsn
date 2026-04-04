@@ -98,10 +98,10 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
 .pw-outstanding .ob-search-wrap{flex:1;min-width:min(100%,280px);min-height:44px;display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--border);border-radius:var(--rs);padding:0 12px;transition:border-color .15s,box-shadow .15s;}
 .pw-outstanding .ob-search-wrap:focus-within{border-color:rgba(255,79,106,.45);box-shadow:0 0 0 3px rgba(255,79,106,.12);}
 .pw-outstanding .ob-search-wrap .ob-search-icon{flex-shrink:0;font-size:16px;opacity:.85;user-select:none;}
-.pw-outstanding .ob-search{display:flex;flex:1;align-items:center;min-width:0;border:none;background:transparent;padding:10px 0;box-shadow:none;}
-.pw-outstanding .ob-search:focus-within{box-shadow:none;}
-.pw-outstanding .ob-search input{background:none;border:none;outline:none;color:var(--t1);font-family:'Geist',sans-serif;font-size:14px;width:100%;line-height:1.4;}
-.pw-outstanding .ob-search input::placeholder{color:var(--t3);}
+.pw-outstanding .ob-search-input{flex:1;min-width:0;border:none;background:transparent;padding:10px 0;margin:0;color:var(--t1);font-family:'Geist',sans-serif;font-size:14px;line-height:1.4;
+  -webkit-appearance:none;appearance:none;outline:none;box-shadow:none;}
+.pw-outstanding .ob-search-input:focus,.pw-outstanding .ob-search-input:focus-visible{outline:none;box-shadow:none;}
+.pw-outstanding .ob-search-input::placeholder{color:var(--t3);}
 .pw-outstanding .ob-search-clear{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border:none;border-radius:6px;background:transparent;color:var(--t3);font-size:18px;line-height:1;cursor:pointer;transition:background .15s,color .15s;}
 .pw-outstanding .ob-search-clear:hover{background:var(--s3);color:var(--t1);}
 .pw-outstanding .ob-result-hint{font-size:12px;color:var(--t3);margin:0;width:100%;}
@@ -392,11 +392,9 @@ html.light .pw-outstanding,html[data-theme=light] .pw-outstanding {
   <div class="ob-toolbar ob-fu ob-d2">
     <div class="ob-toolbar-row" style="width:100%;align-items:stretch">
       <label class="ob-visually-hidden" for="ob-search">Search by student, class, or parent</label>
-      <div class="ob-search-wrap" role="search">
+      <div class="ob-search-wrap" role="search" data-outstanding-search-shell>
         <span class="ob-search-icon" aria-hidden="true">🔍</span>
-        <div class="ob-search">
-          <input id="ob-search" name="ob-search" placeholder="Search — results update as you type…" type="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
-        </div>
+        <input id="ob-search" class="ob-search-input" name="ob-search" placeholder="Search — results update as you type…" type="text" inputmode="search" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">
         <button type="button" class="ob-search-clear" id="ob-search-clear" title="Clear search" aria-label="Clear search">×</button>
       </div>
     </div>

@@ -533,16 +533,30 @@ export default function DesignOutstandingPage() {
     requestAnimationFrame(() => renderTable());
   }, [htmlContent, renderTable]);
 
-  useEffect(() => {
-    if (!htmlContent || !containerRef.current) return;
-    const root = containerRef.current;
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
 
-    const onInput = (e: Event) => {
+  /**
+   * Document capture listeners: some environments swallow bubbling on nested inputs.
+   * Scoped to this page container so we do not affect other routes.
+   */
+  useEffect(() => {
+    const scopeOk = (e: Event) => {
+      const root = containerRef.current;
+      const t = e.target;
+      return Boolean(root && t instanceof Node && root.contains(t));
+    };
+
+    const onInputCap = (e: Event) => {
+      if (!scopeOk(e)) return;
       const t = e.target as HTMLElement;
       if (t.id === 'ob-search') setSearchQuery((t as HTMLInputElement).value);
     };
 
-    const onChange = (e: Event) => {
+    const onChangeCap = (e: Event) => {
+      if (!scopeOk(e)) return;
+      const root = containerRef.current;
+      if (!root) return;
       const tgt = e.target as HTMLInputElement;
       if (tgt.id === 'ob-class-filter') setClassFilter(tgt.value);
       else if (tgt.id === 'ob-status-filter') setStatusFilter(tgt.value);
@@ -574,7 +588,10 @@ export default function DesignOutstandingPage() {
       }
     };
 
-    const onClick = (e: MouseEvent) => {
+    const onClickCap = (e: MouseEvent) => {
+      if (!scopeOk(e)) return;
+      const root = containerRef.current;
+      if (!root) return;
       const tgt = e.target as HTMLElement;
       if (tgt.closest('#ob-search-clear')) {
         e.preventDefault();
@@ -583,8 +600,22 @@ export default function DesignOutstandingPage() {
         setSearchQuery('');
         return;
       }
+      if (tgt.closest('#ob-btn-record')) {
+        e.preventDefault();
+        navigateRef.current('/dashboard/accountant/payments');
+        return;
+      }
+      if (tgt.closest('#ob-bulk-clear')) {
+        e.preventDefault();
+        setSelectedIds(new Set());
+        root.querySelectorAll('.ob-row-check').forEach((cb) => ((cb as HTMLInputElement).checked = false));
+        const checkAll = root.querySelector('#ob-check-all') as HTMLInputElement | null;
+        if (checkAll) checkAll.checked = false;
+        return;
+      }
       const pageBtn = tgt.closest('[data-page]') as HTMLButtonElement | null;
       if (pageBtn && !pageBtn.disabled) {
+        e.preventDefault();
         const p = pageBtn.dataset.page;
         const tp = paginationRef.current.totalPages;
         if (p === 'prev') setPage((x) => Math.max(1, x - 1));
@@ -596,32 +627,19 @@ export default function DesignOutstandingPage() {
       if (nav) {
         e.preventDefault();
         const href = nav.getAttribute('data-nav');
-        if (href) navigate(href);
+        if (href) navigateRef.current(href);
       }
     };
 
-    const onRecord = () => navigate('/dashboard/accountant/payments');
-    const onBulkClear = () => {
-      setSelectedIds(new Set());
-      root.querySelectorAll('.ob-row-check').forEach((cb) => ((cb as HTMLInputElement).checked = false));
-      const checkAll = root.querySelector('#ob-check-all') as HTMLInputElement | null;
-      if (checkAll) checkAll.checked = false;
-    };
-
-    root.addEventListener('click', onClick);
-    root.addEventListener('input', onInput);
-    root.addEventListener('change', onChange);
-    root.querySelector('#ob-btn-record')?.addEventListener('click', onRecord);
-    root.querySelector('#ob-bulk-clear')?.addEventListener('click', onBulkClear);
-
+    document.addEventListener('input', onInputCap, true);
+    document.addEventListener('change', onChangeCap, true);
+    document.addEventListener('click', onClickCap, true);
     return () => {
-      root.removeEventListener('click', onClick);
-      root.removeEventListener('input', onInput);
-      root.removeEventListener('change', onChange);
-      root.querySelector('#ob-btn-record')?.removeEventListener('click', onRecord);
-      root.querySelector('#ob-bulk-clear')?.removeEventListener('click', onBulkClear);
+      document.removeEventListener('input', onInputCap, true);
+      document.removeEventListener('change', onChangeCap, true);
+      document.removeEventListener('click', onClickCap, true);
     };
-  }, [htmlContent, navigate]);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;

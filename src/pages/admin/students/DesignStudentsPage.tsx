@@ -472,7 +472,9 @@ export default function DesignStudentsPage() {
               <span style={{ color: 'var(--t3)', fontSize: 14 }}>🔍</span>
               <input
                 placeholder="Search by name, class, or parent…"
-                type="search"
+                type="text"
+                inputMode="search"
+                autoComplete="off"
                 value={q}
                 onChange={(e) => {
                   setQ(e.target.value);

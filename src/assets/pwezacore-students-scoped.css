@@ -271,11 +271,25 @@
 .pw-students .search-bar input {
   background: none;
   border: none;
-  outline: none;
   color: var(--t1);
   font-family: 'Geist', sans-serif;
   font-size: 13px;
   width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  outline: none;
+  box-shadow: none;
+}
+
+.pw-students .search-bar input:focus,
+.pw-students .search-bar input:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.pw-students .search-bar input::-webkit-search-decoration,
+.pw-students .search-bar input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
 }
 
 .pw-students .search-bar input::placeholder { color: var(--t3); }
