@@ -159,7 +159,11 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { data: adminRow } = await supabase
+    // Same as create-user-account.js: read public.users with service role so RLS cannot hide the admin row.
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: adminRow } = await supabaseAdmin
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
@@ -215,6 +219,21 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Same security as adding students: student must belong to this school (not another school's UUID).
+    const { data: studentRow } = await supabaseAdmin
+      .from('students')
+      .select('student_id, school_id')
+      .eq('student_id', student_id)
+      .maybeSingle();
+    if (!studentRow || String(studentRow.school_id) !== String(school_id)) {
+      applyCors();
+      res.status(403).json({
+        error:
+          'That student is not enrolled in your school. You can only link parents to students at your school.',
+      });
+      return;
+    }
+
     const parentName = name;
     const parentEmailRaw = email ? email.trim() : '';
     const parentPhone = phone ? phone.trim() : null;
@@ -229,10 +248,6 @@ module.exports = async function handler(req, res) {
     }
     const parentEmail = parentEmailRaw;
     const authEmail = parentEmail;
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
 
     const { data: existingUser } = await supabaseAdmin
       .from('users')

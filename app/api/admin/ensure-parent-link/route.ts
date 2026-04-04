@@ -53,7 +53,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: adminRow } = await supabase
+    // Match create-user-account: load staff row with service role so RLS never blocks the admin lookup.
+    const { data: adminRow } = await supabaseAdmin
       .from('users')
       .select('school_id, role')
       .eq('user_id', adminUser.id)
@@ -116,6 +117,21 @@ export async function POST(request: NextRequest) {
           error:
             rpcErr?.message ||
             'You do not have permission to link parents for students. Ensure your role is admin/owner/head_teacher/accountant or you have students.manage permission.',
+        },
+        { status: 403 }
+      );
+    }
+
+    const { data: studentRow } = await supabaseAdmin
+      .from('students')
+      .select('student_id, school_id')
+      .eq('student_id', student_id)
+      .maybeSingle();
+    if (!studentRow || String(studentRow.school_id) !== String(school_id)) {
+      return NextResponse.json(
+        {
+          error:
+            'That student is not enrolled in your school. You can only link parents to students at your school.',
         },
         { status: 403 }
       );
