@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Key, UserX, UserCheck } from 'lucide-react';
+import { ChevronDown, Key, Search, UserCheck, UserX, Users } from 'lucide-react';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -18,6 +19,18 @@ const ROLE_OPTIONS = [
   { value: 'student', label: 'Student' },
   { value: 'parent', label: 'Parent' },
 ];
+
+const DASHBOARD_ROLE_KEYS = [
+  'admin',
+  'head_teacher',
+  'accountant',
+  'teacher',
+  'librarian',
+  'lab_technician',
+  'clinician',
+  'student',
+  'parent',
+] as const;
 
 interface UserAccount {
   user_id: string;
@@ -177,110 +190,193 @@ export default function AccountsPage() {
     );
   }
 
+  const actionCell = (a: UserAccount) => (
+    <div className="flex flex-wrap gap-1">
+      <button
+        type="button"
+        onClick={() => handleResetPassword(a.user_id, a.email)}
+        disabled={resetting === a.user_id}
+        className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
+        title="Reset password"
+      >
+        <Key className="w-3 h-3 shrink-0" />
+        {resetting === a.user_id ? '…' : 'Reset'}
+      </button>
+      <button
+        type="button"
+        onClick={() => handleToggleActive(a.user_id, a.is_active !== false)}
+        disabled={toggling === a.user_id}
+        className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
+        title={a.is_active === false ? 'Activate' : 'Deactivate'}
+      >
+        {a.is_active === false ? <UserCheck className="w-3 h-3 shrink-0" /> : <UserX className="w-3 h-3 shrink-0" />}
+        {toggling === a.user_id ? '…' : a.is_active === false ? 'Activate' : 'Deactivate'}
+      </button>
+      <button
+        type="button"
+        onClick={() => handleDelete(a.user_id, a.email)}
+        disabled={deleting === a.user_id}
+        className="min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+        title="Delete (prefer deactivate)"
+      >
+        {deleting === a.user_id ? 'Deleting…' : 'Delete'}
+      </button>
+    </div>
+  );
+
   return (
     <AdminPageWrapper
       title="User Management"
       subtitle="View all users, filter by role, reset password, activate or deactivate."
     >
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-        {['admin', 'head_teacher', 'accountant', 'teacher', 'librarian', 'lab_technician', 'clinician', 'student', 'parent'].map((r) => (
-          <div key={r} className="ac-glass-card flex items-center gap-2 rounded-[18px] p-4">
-            <span className={`px-2 py-1 rounded border text-xs ${getRoleBadgeClass(r)}`}>{getRoleLabel(r)}</span>
-            <span className="text-lg font-bold ac-text-primary">{accounts.filter((a) => a.role === r).length}</span>
+      <div className="space-y-6 font-['Instrument_Sans',system-ui,sans-serif]">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <p className="text-sm text-[var(--ac-text-secondary)] sm:max-w-xl">
+            Roster-wide overview of everyone with access to your school. For logins that still need email, use Send
+            invitations.
+          </p>
+          <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:flex-wrap">
+            <Link
+              to="/dashboard/admin/accounts/invite"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--ac-border)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ac-text-primary)] shadow-sm backdrop-blur-sm transition hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
+            >
+              Send invitations
+            </Link>
+            <Link
+              to="/dashboard/admin/permissions"
+              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--ac-border)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ac-text-primary)] shadow-sm backdrop-blur-sm transition hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
+            >
+              Access &amp; permissions
+            </Link>
           </div>
-        ))}
-      </div>
-
-      <div className={`${adminCardClass} space-y-4`}>
-        <div className="flex flex-col sm:flex-row gap-3">
-          <input
-            type="text"
-            placeholder="Search by name, email, or department..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="ac-input flex-1 rounded-xl px-3 py-2 text-sm min-h-0"
-          />
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="ac-input w-full sm:w-48 rounded-xl px-3 py-2 text-sm min-h-0"
-          >
-            {ROLE_OPTIONS.map((o) => (
-              <option key={o.value || 'all'} value={o.value}>{o.label}</option>
-            ))}
-          </select>
         </div>
-        <div className="overflow-x-auto rounded-xl overflow-hidden ac-glass-card border border-[var(--ac-border)]">
-          <table className="min-w-full text-sm ac-table-wrap">
-            <thead>
-              <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
-                <th className="px-4 py-2 font-medium">Name</th>
-                <th className="px-4 py-2 font-medium">Email</th>
-                <th className="px-4 py-2 font-medium">Role</th>
-                <th className="px-4 py-2 font-medium">Department</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Last Sign-in</th>
-                <th className="px-4 py-2 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredAccounts.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center ac-text-muted">No users found.</td>
-                </tr>
-              ) : (
-                filteredAccounts.map((a) => (
-                  <tr key={a.user_id} className="border-b border-[var(--ac-border)]">
-                    <td className="px-4 py-2 font-medium ac-text-primary">{a.name || '-'}</td>
-                    <td className="px-4 py-2 ac-text-secondary">{a.email}</td>
-                    <td className="px-4 py-2">
-                      <span className={`px-2 py-1 rounded border text-xs ${getRoleBadgeClass(a.role)}`}>{getRoleLabel(a.role)}</span>
-                    </td>
-                    <td className="px-4 py-2 ac-text-secondary">{a.department || '-'}</td>
-                    <td className="px-4 py-2">
-                      <span className={a.is_active === false ? 'text-red-600 dark:text-red-400' : 'ac-text-secondary'}>
-                        {a.is_active === false ? 'Inactive' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 ac-text-secondary">
-                      {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '-'}
-                    </td>
-                    <td className="px-4 py-2 flex flex-wrap gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleResetPassword(a.user_id, a.email)}
-                        disabled={resetting === a.user_id}
-                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
-                        title="Reset password"
-                      >
-                        <Key className="w-3 h-3" />
-                        {resetting === a.user_id ? '…' : 'Reset'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleActive(a.user_id, a.is_active !== false)}
-                        disabled={toggling === a.user_id}
-                        className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
-                        title={a.is_active === false ? 'Activate' : 'Deactivate'}
-                      >
-                        {a.is_active === false ? <UserCheck className="w-3 h-3" /> : <UserX className="w-3 h-3" />}
-                        {toggling === a.user_id ? '…' : a.is_active === false ? 'Activate' : 'Deactivate'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(a.user_id, a.email)}
-                        disabled={deleting === a.user_id}
-                        className="rounded px-2 py-1 text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                        title="Delete (prefer deactivate)"
-                      >
-                        {deleting === a.user_id ? 'Deleting…' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+
+        <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible">
+          {DASHBOARD_ROLE_KEYS.map((r) => (
+            <div
+              key={r}
+              className="ac-glass-card flex min-w-[148px] shrink-0 snap-start items-center justify-between gap-3 rounded-[18px] border border-[var(--ac-border)] px-3 py-3 sm:min-w-0 sm:flex-1 sm:basis-[calc(33.333%-0.5rem)] lg:basis-[calc(20%-0.5rem)]"
+            >
+              <span className={`max-w-[60%] truncate px-2 py-1 text-center text-xs ${getRoleBadgeClass(r)} rounded-md border`}>
+                {getRoleLabel(r)}
+              </span>
+              <span className="text-lg font-bold tabular-nums text-[var(--ac-text-primary)]">
+                {accounts.filter((a) => a.role === r).length}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className={`${adminCardClass} space-y-4 p-4 sm:p-6`}>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]" />
+              <input
+                type="text"
+                placeholder="Search by name, email, or department…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="ac-input min-h-11 w-full rounded-xl py-3 pl-10 pr-3 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/30 sm:text-sm"
+              />
+            </div>
+            <div className="relative w-full sm:w-52 lg:w-56">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="ac-input min-h-11 w-full cursor-pointer appearance-none rounded-xl py-3 pl-3 pr-10 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/30 sm:text-sm"
+              >
+                {ROLE_OPTIONS.map((o) => (
+                  <option key={o.value || 'all'} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]" aria-hidden />
+            </div>
+          </div>
+
+          {filteredAccounts.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-[var(--ac-border)] py-12 text-center">
+              <Users className="mx-auto h-10 w-10 text-[var(--ac-text-muted)] opacity-50" strokeWidth={1.5} aria-hidden />
+              <p className="mt-3 font-medium text-[var(--ac-text-primary)]">No users match</p>
+              <p className="mt-1 text-sm text-[var(--ac-text-secondary)]">
+                {searchQuery || roleFilter ? 'Try clearing search or setting the role filter to All roles.' : 'No accounts returned for this school yet.'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="hidden overflow-x-auto rounded-xl border border-[var(--ac-border)] md:block ac-glass-card">
+                <table className="min-w-full text-sm ac-table-wrap">
+                  <thead>
+                    <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
+                      <th className="px-4 py-3 font-medium">Name</th>
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Role</th>
+                      <th className="px-4 py-3 font-medium">Department</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Last sign-in</th>
+                      <th className="px-4 py-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAccounts.map((a) => (
+                      <tr key={a.user_id} className="border-b border-[var(--ac-border)] last:border-b-0">
+                        <td className="px-4 py-3 font-medium ac-text-primary">{a.name || '—'}</td>
+                        <td className="px-4 py-3 ac-text-secondary">{a.email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-1 rounded-md border text-xs ${getRoleBadgeClass(a.role)}`}>{getRoleLabel(a.role)}</span>
+                        </td>
+                        <td className="px-4 py-3 ac-text-secondary">{a.department || '—'}</td>
+                        <td className="px-4 py-3">
+                          <span className={a.is_active === false ? 'font-medium text-red-600 dark:text-red-400' : 'ac-text-secondary'}>
+                            {a.is_active === false ? 'Inactive' : 'Active'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 ac-text-secondary whitespace-nowrap">
+                          {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-3">{actionCell(a)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {filteredAccounts.map((a) => (
+                  <div
+                    key={a.user_id}
+                    className="rounded-2xl border border-[var(--ac-border)] bg-white/[0.03] p-4 shadow-sm dark:bg-white/[0.04]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-[var(--ac-text-primary)]">{a.name || '—'}</p>
+                        <p className="mt-0.5 break-all text-sm text-[var(--ac-text-secondary)]">{a.email}</p>
+                      </div>
+                      <span className={`shrink-0 px-2 py-1 text-xs ${getRoleBadgeClass(a.role)} rounded-md border`}>{getRoleLabel(a.role)}</span>
+                    </div>
+                    <dl className="mt-3 space-y-1.5 text-sm text-[var(--ac-text-secondary)]">
+                      <div className="flex justify-between gap-2">
+                        <dt className="ac-text-muted">Department</dt>
+                        <dd className="text-right font-medium text-[var(--ac-text-primary)]">{a.department || '—'}</dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="ac-text-muted">Status</dt>
+                        <dd className={a.is_active === false ? 'font-medium text-red-600 dark:text-red-400' : ''}>
+                          {a.is_active === false ? 'Inactive' : 'Active'}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between gap-2">
+                        <dt className="ac-text-muted">Last sign-in</dt>
+                        <dd className="text-right">{a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—'}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4 border-t border-[var(--ac-border)] pt-3">{actionCell(a)}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </AdminPageWrapper>

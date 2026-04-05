@@ -6,7 +6,7 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 |----|-----|--------|-------------------------|
 | 01 | [01-failed-to-send-invitation.md](./01-failed-to-send-invitation.md) | Partial | **Code:** `DesignTeacherProfile` users select uses `created_at`/`last_sign_in_at` (no `updated_at`); `DesignStudentProfile` balance query omits `last_payment_date`; `create-user-account` Node runtime, ESM `passwordPolicy`, `authUserId` guard, rollback on `users` upsert fail. **You verify:** invites in prod. |
 | 02 | [02-failed-to-add-parent.md](./02-failed-to-add-parent.md) | **Done** | **2026-04-04:** Vite `ensureParentLink` sends Bearer; Next/Vercel `ensure-parent-link` accepts cookie or Bearer; add-parent flow verified. |
-| 03 | [03-dashboard-vs-outstanding-term-invoice-mismatch.md](./03-dashboard-vs-outstanding-term-invoice-mismatch.md) | Partial | **Code:** `src/lib/adminFinanceTerm.ts` — shared current term + `student_balances` aggregation; Next `Kpis.tsx` uses it; **Outstanding** lists (Next `app/dashboard/admin/outstanding/page.tsx`, SPA `OutstandingPage`, `DesignOutstandingPage`) use the same ledger as KPIs (term-scoped when a current term exists). **You verify:** totals match after migration `20260403120000_*` applied. |
+| 03 | [03-dashboard-vs-outstanding-term-invoice-mismatch.md](./03-dashboard-vs-outstanding-term-invoice-mismatch.md) | **Done** | **2026-04-05:** Dashboard KPIs and outstanding views aligned (shared term + `student_balances` ledger; migration `20260403120000_*` applied). |
 | 04 | [04-user-management-ui-ux-modernization.md](./04-user-management-ui-ux-modernization.md) | Partial | **Code:** `InviteFromRosterPage` — loading state before “No school linked”; persist `school_id` into auth store when loaded from DB. Full redesign still open. |
 | 05 | [05-assign-class-teacher-visibility-and-rules.md](./05-assign-class-teacher-visibility-and-rules.md) | Partial | Teacher profile: removed bogus term-3 filter; multi-class badges; API blocks second class teacher. |
 | 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | Partial | Toolbar: Print / Save PDF hint; full redesign + chart PDF not done. |
@@ -25,4 +25,4 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 1. `20260403120000_student_balance_current_term_and_users_last_sign_in.sql`
 2. `20260403150000_in_app_notifications.sql`
 
-Last updated: 2026-04-04 (Issue 02 add-parent signed off; NEXT Issue 03).
+Last updated: 2026-04-05 (Issue 03 dashboard/outstanding term signed off; NEXT Issue 04).
