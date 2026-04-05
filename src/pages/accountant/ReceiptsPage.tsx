@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../store/authStore";
 import { fetchReceipts, RECEIPTS_QUERY_KEY } from "./api/receipts";
-import { printReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
+import { formatReceiptDateTime, printReceipt, type PaymentReceiptData } from "../../components/accountant/PaymentReceipt";
 
 const STALE_MS = 2 * 60 * 1000;
 
@@ -22,6 +22,8 @@ export default function ReceiptsPage() {
   const payments = data?.payments ?? [];
   const studentMap = data?.studentMap ?? {};
   const termMap = data?.termMap ?? {};
+  const schoolName = data?.schoolName ?? "";
+  const recorderMap = data?.recorderMap ?? {};
   const filtered = q.trim()
     ? payments.filter((p) => {
         const s = studentMap[p.student_id];
@@ -49,23 +51,47 @@ export default function ReceiptsPage() {
   function handleReprint(receiptNumber: string) {
     const group = paymentsByReceipt.get(receiptNumber) || [];
     if (group.length === 0) return;
-    const first = group[0];
+    const sorted = [...group].sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return ta - tb;
+    });
+    const first = sorted[0];
     const s = studentMap[first.student_id];
-    const total = group.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
-    const allocations = group.map((p) => ({
+    const total = sorted.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+    const allocations = sorted.map((p) => ({
       termLabel: termMap[p.term_id] ?? "—",
       amountApplied: Number(p.amount_paid || 0),
     }));
+    const remRaw = first.receipt_total_remaining_balance;
+    const totalRemainingBalance =
+      remRaw !== null && remRaw !== undefined && String(remRaw) !== "" && Number.isFinite(Number(remRaw))
+        ? Math.max(0, Number(remRaw))
+        : undefined;
+    let transactionTime = "—";
+    if (first.created_at) {
+      transactionTime = formatReceiptDateTime(new Date(first.created_at));
+    } else if (first.payment_date) {
+      transactionTime = formatReceiptDateTime(new Date(first.payment_date + "T12:00:00"));
+    }
+    const recorderId = first.recorded_by;
+    const recordedBy =
+      recorderId && recorderMap[recorderId]?.trim()
+        ? recorderMap[recorderId]!
+        : "—";
     const receiptData: PaymentReceiptData = {
       receiptNumber: first.receipt_number || first.payment_id,
+      schoolName: schoolName.trim() || undefined,
       studentName: s?.name ?? "—",
       studentClass: s?.current_class ?? "—",
       termLabel: allocations.length === 1 ? allocations[0].termLabel : "Multiple terms",
       amountPaid: total,
       paymentMethod: first.payment_method ?? "cash",
-      transactionTime: first.payment_date ? new Date(first.payment_date).toLocaleString() : "—",
-      recordedBy: "—",
-      allocations: allocations.length > 1 ? allocations : undefined,
+      transactionTime,
+      recordedBy,
+      description: first.notes?.trim() || undefined,
+      allocations,
+      totalRemainingBalance,
     };
     printReceipt(receiptData);
   }

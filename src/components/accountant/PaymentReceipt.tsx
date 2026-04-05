@@ -36,6 +36,17 @@ function formatMethod(method: string): string {
   return PAYMENT_METHOD_LABELS[method] ?? method;
 }
 
+/** Same format for first print and reprints (local device time). */
+export function formatReceiptDateTime(d: Date): string {
+  const day = String(d.getDate()).padStart(2, "0");
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  const year = d.getFullYear();
+  const h = String(d.getHours()).padStart(2, "0");
+  const m = String(d.getMinutes()).padStart(2, "0");
+  const s = String(d.getSeconds()).padStart(2, "0");
+  return `${day}-${mon}-${year} ${h}:${m}:${s}`;
+}
+
 /** Open a new window, render receipt HTML, trigger print. Non-blocking; does not block transaction. */
 export function printReceipt(data: PaymentReceiptData): void {
   const methodLabel = formatMethod(data.paymentMethod);

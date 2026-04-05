@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
-import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
+import { PaymentReceipt, formatReceiptDateTime, type PaymentReceiptData } from "./PaymentReceipt";
 import { Receipt, X } from "lucide-react";
 
 type OutstandingBalanceRow = { kind: "term"; term_id: string; term: number; year: number; balance: number };
@@ -97,16 +97,6 @@ async function fetchOutstandingRowsForRecordPayment(
   );
   const rows = buildOutstandingRows(merged);
   return { rows, errorMessage: null };
-}
-
-function formatReceiptTime(d: Date): string {
-  const day = String(d.getDate()).padStart(2, "0");
-  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
-  const year = d.getFullYear();
-  const h = String(d.getHours()).padStart(2, "0");
-  const m = String(d.getMinutes()).padStart(2, "0");
-  const s = String(d.getSeconds()).padStart(2, "0");
-  return `${day}-${mon}-${year} ${h}:${m}:${s}`;
 }
 
 export type RecordPaymentModalProps = {
@@ -475,6 +465,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       }
 
       const paymentDate = new Date().toISOString().slice(0, 10);
+      const totalRemaining = Math.max(0, maxDueNow - amt);
       for (const a of allocations) {
         const payload: Record<string, unknown> = {
           school_id: schoolId,
@@ -486,6 +477,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           recorded_by: userId,
           notes: notes || null,
           receipt_number: receiptNumberForPayments,
+          receipt_total_remaining_balance: totalRemaining,
         };
         payload.term_id = a.term_id;
         const invId = invoiceByTerm.get(a.term_id);
@@ -493,14 +485,23 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         const { error } = await supabase.from("student_payments").insert(payload);
         if (error) throw error;
       }
-
-      const totalRemaining = Math.max(0, maxDueNow - amt);
       const allocationLines = allocations.map((a) => ({
         termLabel: `Term ${a.term}, ${a.year}`,
         amountApplied: a.amount,
       }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
-      const now = new Date();
+      const { data: firstPayRow } = await supabase
+        .from("student_payments")
+        .select("created_at")
+        .eq("school_id", schoolId)
+        .eq("receipt_number", receiptNumberForPayments)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      const transactionTime =
+        firstPayRow?.created_at != null
+          ? formatReceiptDateTime(new Date(firstPayRow.created_at as string))
+          : formatReceiptDateTime(new Date());
       const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
       const recordedByName = (userRow as { name?: string } | null)?.name?.trim() || userName || userEmail || "Staff";
       setReceiptData({
@@ -511,7 +512,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",
         amountPaid: amt,
         paymentMethod: method,
-        transactionTime: formatReceiptTime(now),
+        transactionTime,
         recordedBy: recordedByName,
         description: notes || undefined,
         allocations: allocationLines,
