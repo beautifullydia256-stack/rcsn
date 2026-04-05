@@ -96,6 +96,15 @@ function receiptSchoolBlockHtml(data: PaymentReceiptData): string {
   return `<div class="school-block">${bits.join("")}</div>`;
 }
 
+/** Primary header: school branding on top; “Payment receipt” below (subtitle). If no school row, title only. */
+function receiptTopHeaderHtml(data: PaymentReceiptData): string {
+  const schoolInner = receiptSchoolBlockHtml(data);
+  if (schoolInner) {
+    return `<header class="receipt-top">${schoolInner}<div class="receipt-doc-label">Payment receipt</div></header>`;
+  }
+  return `<header class="receipt-top"><h1 class="receipt-title-only">Payment receipt</h1></header>`;
+}
+
 /** Open a new window, render receipt HTML, trigger print. Non-blocking; does not block transaction. */
 export function printReceipt(data: PaymentReceiptData): void {
   const methodLabel = formatMethod(data.paymentMethod);
@@ -116,10 +125,12 @@ export function printReceipt(data: PaymentReceiptData): void {
   <title>Receipt ${escapeHtml(data.receiptNumber)}</title>
   <style>
     body { font-family: system-ui, sans-serif; padding: 24px; max-width: 360px; margin: 0 auto; color: #1e293b; }
-    h1 { text-align: center; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin: 0 0 8px; font-weight: 700; }
-    .school-block { text-align: center; margin-bottom: 8px; }
-    .school-name { font-weight: 600; font-size: 15px; }
-    .school-contact { font-size: 12px; color: #475569; margin-top: 6px; }
+    .receipt-top { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin: 0 0 8px; }
+    .school-block { margin-bottom: 0; }
+    .school-name { font-weight: 700; font-size: 18px; letter-spacing: 0.02em; }
+    .school-contact { font-size: 12px; color: #475569; margin-top: 8px; line-height: 1.4; }
+    .receipt-doc-label { margin-top: 10px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
+    .receipt-title-only { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
     .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 14px; }
     .label { color: #64748b; }
     .value { font-weight: 500; }
@@ -128,8 +139,7 @@ export function printReceipt(data: PaymentReceiptData): void {
   </style>
 </head>
 <body>
-  <h1>Payment receipt</h1>
-  ${receiptSchoolBlockHtml(data)}
+  ${receiptTopHeaderHtml(data)}
   <div class="row"><span class="label">Receipt No</span><span class="value">${escapeHtml(data.receiptNumber)}</span></div>
   <div class="row"><span class="label">Student</span><span class="value">${escapeHtml(data.studentName)}</span></div>
   <div class="row"><span class="label">Class</span><span>${escapeHtml(data.studentClass)}</span></div>
@@ -170,19 +180,25 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
     return () => clearTimeout(t);
   }, [autoPrint, data.receiptNumber]);
 
+  const hasSchoolBranding = !!(data.schoolName?.trim() || data.schoolPhone?.trim() || data.schoolEmail?.trim());
+
   return (
     <div className="bg-white p-6 text-slate-900 shadow-lg" style={{ maxWidth: 360 }}>
-      <div className="mb-4 border-b-2 border-dashed border-slate-300 pb-3">
-        <h2 className="text-center text-lg font-bold uppercase tracking-wide text-slate-800">Payment receipt</h2>
-        {data.schoolName && (
-          <p className="mt-2 text-center text-sm font-semibold text-slate-700">{data.schoolName}</p>
+      <div className="mb-4 border-b-2 border-dashed border-slate-300 pb-3 text-center">
+        {data.schoolName?.trim() && (
+          <h2 className="text-lg font-bold tracking-wide text-slate-800">{data.schoolName.trim()}</h2>
         )}
         {(data.schoolPhone || data.schoolEmail) && (
-          <p className="mt-1 text-center text-xs text-slate-600">
-            {data.schoolPhone && <>Tel: {data.schoolPhone}</>}
-            {data.schoolPhone && data.schoolEmail && " | "}
-            {data.schoolEmail && <>Email: {data.schoolEmail}</>}
+          <p className="mt-2 text-xs text-slate-600 leading-snug">
+            {data.schoolPhone?.trim() && <>Tel: {data.schoolPhone.trim()}</>}
+            {data.schoolPhone?.trim() && data.schoolEmail?.trim() && " | "}
+            {data.schoolEmail?.trim() && <>Email: {data.schoolEmail.trim()}</>}
           </p>
+        )}
+        {hasSchoolBranding ? (
+          <p className="mt-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Payment receipt</p>
+        ) : (
+          <h2 className="text-center text-lg font-bold uppercase tracking-wide text-slate-800">Payment receipt</h2>
         )}
       </div>
       <div className="space-y-1.5 text-sm">

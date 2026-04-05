@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { RECEIPTS_QUERY_KEY } from "../../pages/accountant/api/receipts";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import {
@@ -542,6 +543,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       setSelectedStudent("");
       setOutstandingBalances([]);
       queryClient.invalidateQueries({ queryKey: ["accountant"] });
+      if (schoolId) queryClient.invalidateQueries({ queryKey: [...RECEIPTS_QUERY_KEY, schoolId] });
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string"

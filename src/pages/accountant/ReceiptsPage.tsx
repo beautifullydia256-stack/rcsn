@@ -40,18 +40,36 @@ export default function ReceiptsPage() {
       })
     : payments;
 
-  const paymentsByReceipt = useMemo(() => {
-    const map = new Map<string, typeof filtered>();
+  /** One logical receipt per group (same receipt_number, or single row keyed by payment_id). Newest receipt first. */
+  const { receiptGroups, paymentsByReceipt } = useMemo(() => {
+    type Row = (typeof filtered)[number];
+    const map = new Map<string, Row[]>();
     filtered.forEach((p) => {
       const key = p.receipt_number || p.payment_id;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(p);
     });
-    return map;
+    const latestTs = (rows: Row[]) =>
+      rows.reduce((acc, p) => {
+        const t1 = p.created_at ? new Date(p.created_at).getTime() : 0;
+        const t2 = p.payment_date ? new Date(p.payment_date + "T12:00:00").getTime() : 0;
+        return Math.max(acc, t1, t2);
+      }, 0);
+    const groups = Array.from(map.entries()).map(([key, rows]) => {
+      const sorted = [...rows].sort((a, b) => {
+        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return ta - tb;
+      });
+      return { key, rows: sorted };
+    });
+    groups.sort((a, b) => latestTs(b.rows) - latestTs(a.rows));
+    const paymentsByReceipt = new Map<string, Row[]>(groups.map((g) => [g.key, g.rows]));
+    return { receiptGroups: groups, paymentsByReceipt };
   }, [filtered]);
 
-  function handleReprint(receiptNumber: string) {
-    const group = paymentsByReceipt.get(receiptNumber) || [];
+  function handleReprint(receiptKey: string) {
+    const group = paymentsByReceipt.get(receiptKey) || [];
     if (group.length === 0) return;
     const sorted = [...group].sort((a, b) => {
       const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -138,7 +156,7 @@ export default function ReceiptsPage() {
           <div className="ac-text-muted p-8 text-center">
             Could not load receipts.{error instanceof Error ? ` ${error.message}` : ""}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : receiptGroups.length === 0 ? (
           <div className="ac-text-muted p-8 text-center">
             {payments.length === 0
               ? "No receipts yet. Record a payment on Payments to see it here."
@@ -160,20 +178,30 @@ export default function ReceiptsPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((p) => {
-                  const s = studentMap[p.student_id];
-                  const receiptNum = p.receipt_number || p.payment_id;
+                {receiptGroups.map((g) => {
+                  const first = g.rows[0];
+                  const s = studentMap[first.student_id];
+                  const total = g.rows.reduce((sum, p) => sum + Number(p.amount_paid || 0), 0);
+                  const termLabel =
+                    g.rows.length === 1 ? (termMap[first.term_id] ?? "—") : "Multiple terms";
+                  const payDates = g.rows.map((p) => p.payment_date).filter(Boolean) as string[];
+                  const dateDisplay =
+                    payDates.length === 0 ? "—" : payDates.reduce((a, b) => (a >= b ? a : b));
                   return (
-                    <tr key={p.payment_id}>
-                      <td className="px-4 py-3 font-mono">{p.receipt_number || "—"}</td>
+                    <tr key={g.key}>
+                      <td className="px-4 py-3 font-mono">{first.receipt_number || "—"}</td>
                       <td className="ac-cell-primary px-4 py-3">{s?.name ?? "—"}</td>
                       <td className="px-4 py-3">{s?.current_class ?? "—"}</td>
-                      <td className="px-4 py-3">{termMap[p.term_id] ?? "—"}</td>
-                      <td className="ac-cell-primary px-4 py-3">{Number(p.amount_paid).toLocaleString()}</td>
-                      <td className="px-4 py-3">{p.payment_date ?? "—"}</td>
-                      <td className="px-4 py-3 capitalize">{p.payment_method ?? "—"}</td>
+                      <td className="px-4 py-3">{termLabel}</td>
+                      <td className="ac-cell-primary px-4 py-3">{total.toLocaleString()}</td>
+                      <td className="px-4 py-3">{dateDisplay}</td>
+                      <td className="px-4 py-3 capitalize">{first.payment_method ?? "—"}</td>
                       <td className="px-4 py-3">
-                        <button type="button" onClick={() => handleReprint(receiptNum)} className="text-emerald-500 hover:underline text-sm font-medium">
+                        <button
+                          type="button"
+                          onClick={() => handleReprint(g.key)}
+                          className="text-emerald-500 hover:underline text-sm font-medium"
+                        >
                           Reprint
                         </button>
                       </td>
