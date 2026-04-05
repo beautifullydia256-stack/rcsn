@@ -17,6 +17,7 @@ import {
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
+import '@/assets/pwezacore-students-scoped.css';
 import './notificationsCenter.css';
 
 const FONT_HREF =
@@ -202,7 +203,7 @@ export default function NotificationsPage() {
   const [processingLogs, setProcessingLogs] = useState(false);
 
   useEffect(() => {
-    const id = 'pw-notif-center-fonts';
+    const id = 'pweza-students-fonts';
     if (document.getElementById(id)) return;
     const link = document.createElement('link');
     link.id = id;
@@ -421,8 +422,10 @@ export default function NotificationsPage() {
   if (loadingToolsContext && tab === 'tools') {
     return (
       <AdminPageWrapper>
-        <div className="pw-notif-center flex min-h-[40vh] items-center justify-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/20 border-t-[#10d9a8]" />
+        <div className="pw-students print:bg-[#07090f]">
+          <div className="page flex min-h-[40vh] items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--teal)]" />
+          </div>
         </div>
       </AdminPageWrapper>
     );
@@ -453,36 +456,43 @@ export default function NotificationsPage() {
 
   return (
     <AdminPageWrapper>
-      <div className="pw-notif-center w-full max-w-7xl xl:max-w-[90rem] 2xl:max-w-[100rem] mx-auto space-y-6 sm:space-y-8 pb-8 sm:pb-12">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-          <h1 className="pw-notif-display text-3xl sm:text-4xl lg:text-5xl ac-text-primary tracking-tight shrink-0">
-            Notification
-          </h1>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end lg:gap-4 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:px-4">
-                <Bell className="h-4 w-4 text-[#10d9a8] shrink-0" aria-hidden />
-                <div className="text-xs sm:text-sm">
-                  <div className="tabular-nums font-bold ac-text-primary leading-tight">{unread.length} new</div>
-                  <div className="ac-text-muted leading-tight">{inboxItems.length} total</div>
-                </div>
+      <div className="pw-students pw-notif-center print:bg-[#07090f]">
+        <div className="page">
+          <div className="page-header fade-up">
+            <div className="page-title-block">
+              <div className="page-eyebrow">Notification registry</div>
+              <h1 className="page-title">Notifications</h1>
+              <p className="page-sub">Manage school alerts, inbox, and parent contacts.</p>
+            </div>
+            <div className="page-actions print:hidden !flex-wrap gap-2 sm:gap-3">
+              <div
+                className="inline-flex items-center gap-2 px-3 py-2"
+                style={{
+                  borderRadius: 'var(--rs, 7px)',
+                  border: '1px solid var(--border)',
+                  background: 'var(--s1)',
+                }}
+              >
+                <Bell className="h-4 w-4 shrink-0" style={{ color: 'var(--teal)' }} aria-hidden />
+                <span className="text-[13px] font-semibold tabular-nums" style={{ color: 'var(--t1)' }}>
+                  {unread.length === 0 ? 'No new' : `${unread.length} new`}
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => void refreshInbox()}
                 disabled={inboxFetching}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-ac-text-primary hover:bg-white/10 disabled:opacity-50 touch-manipulation shrink-0"
+                className="btn btn-ghost !px-3 !min-w-[44px] min-h-[44px] justify-center"
                 title="Refresh inbox"
               >
                 <RefreshCw className={`h-4 w-4 ${inboxFetching ? 'animate-spin' : ''}`} />
               </button>
-            </div>
-            <div className="pw-notif-segment w-full sm:max-w-md lg:w-[min(100%,20rem)] lg:shrink-0">
-              {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Inbox')}
-              {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Broadcast')}
+              <div className="pw-notif-segment w-full basis-full min-[900px]:basis-auto min-[900px]:w-[min(100%,20rem)] sm:max-w-md">
+                {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Inbox')}
+                {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Broadcast')}
+              </div>
             </div>
           </div>
-        </header>
 
         {tab === 'inbox' && (
           <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start">
@@ -518,8 +528,10 @@ export default function NotificationsPage() {
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
                     <Inbox className="h-8 w-8 ac-text-muted" />
                   </div>
-                  <p className="pw-notif-display text-xl ac-text-primary mb-2">You&apos;re all caught up</p>
-                  <p className="text-sm ac-text-secondary max-w-md mx-auto">When the school adds events or enrollments, they will show up here.</p>
+                  <p className="page-title mb-2" style={{ fontSize: '22px' }}>
+                    You&apos;re all caught up
+                  </p>
+                  <p className="page-sub max-w-md mx-auto">When the school adds events or enrollments, they will show up here.</p>
                 </div>
               ) : (
                 <div className="space-y-8 sm:space-y-10">
@@ -793,6 +805,7 @@ export default function NotificationsPage() {
             </details>
           </div>
         )}
+        </div>
       </div>
     </AdminPageWrapper>
   );
