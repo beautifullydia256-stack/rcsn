@@ -55,6 +55,9 @@ export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]
 
 type LoginFilter = 'all' | 'linked' | 'unlinked';
 
+/** First question: will they receive a dashboard login or stay on file only? */
+type StaffRecordIntent = 'login' | 'support';
+
 const fieldStyle: React.CSSProperties = {
   width: '100%',
   boxSizing: 'border-box',
@@ -91,6 +94,7 @@ export default function StaffPage() {
   const [loginFilter, setLoginFilter] = useState<LoginFilter>('all');
   const [q, setQ] = useState('');
 
+  const [recordIntent, setRecordIntent] = useState<StaffRecordIntent | null>(null);
   const [fullName, setFullName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [department, setDepartment] = useState('');
@@ -162,6 +166,7 @@ export default function StaffPage() {
   }, [rows, loginFilter, q]);
 
   const resetForm = () => {
+    setRecordIntent(null);
     setFullName('');
     setJobTitle('');
     setDepartment('');
@@ -182,26 +187,38 @@ export default function StaffPage() {
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+    if (recordIntent == null) {
+      setFormError('Start by choosing how this person is recorded: dashboard login or on-file only.');
+      return;
+    }
     const name = fullName.trim();
     if (!name) {
       setFormError('Full name is required.');
+      return;
+    }
+    if (recordIntent === 'login' && !staffRole.trim()) {
+      setFormError('Choose a dashboard role (e.g. Accountant). Teachers belong under Teachers, not here.');
       return;
     }
     if (!schoolId) {
       setFormError('No school linked to your account.');
       return;
     }
+    const isDashboard = recordIntent === 'login';
+    const jobOut = isDashboard ? jobTitle.trim() || null : jobTitle.trim() || null;
+    const deptOut = isDashboard ? department.trim() || null : null;
+    const roleOut = isDashboard ? staffRole.trim() || null : null;
     setSaving(true);
     try {
       const { error } = await supabase.from('other_staff_members').insert({
         school_id: schoolId,
         full_name: name,
-        job_title: jobTitle.trim() || null,
-        department: department.trim() || null,
+        job_title: jobOut,
+        department: deptOut,
         national_id: nationalId.trim() || null,
         phone: phone.trim() || null,
         email: email.trim() || null,
-        staff_role: staffRole.trim() || null,
+        staff_role: roleOut,
         address: address.trim() || null,
         emergency_contact_name: emergencyName.trim() || null,
         emergency_contact_phone: emergencyPhone.trim() || null,
@@ -260,8 +277,11 @@ export default function StaffPage() {
           <div className="par-eyebrow">Management</div>
           <h1 className="par-title">Staff</h1>
           <p className="par-sub">
-            Non-teachers on file (drivers, accountants, clinicians, etc.). Set a dashboard role if they may get a login.
-            Teachers live under Teachers.
+            <strong>Teachers</strong> are managed under <strong>Teachers</strong> (different table). This page saves to{' '}
+            <code style={{ fontSize: 12 }}>other_staff_members</code> — same columns the database expects. After{' '}
+            <strong>Send invitations</strong>, a successful invite sets <code style={{ fontSize: 12 }}>linked_user_id</code>{' '}
+            to their <code style={{ fontSize: 12 }}>users</code> row; expenses can link via{' '}
+            <code style={{ fontSize: 12 }}>linked_other_staff_id</code>.
           </p>
         </div>
         <div className="par-actions">
@@ -307,7 +327,10 @@ export default function StaffPage() {
       <div className="par-pcard par-fu par-d2" style={{ cursor: 'default' }}>
         <div className="par-pcard-top">
           <div className="par-pcard-name">Add to roster</div>
-          <div className="par-pcard-rel">Save KYC-style details; optional payroll hints (not automatic payroll).</div>
+          <div className="par-pcard-rel">
+            Step 1: how they relate to the app. Step 2: name and details. Job title &amp; department appear only for
+            dashboard roles — not for teachers (use Teachers) and not for on-file-only staff.
+          </div>
         </div>
         <div className="par-pcard-body">
           <form onSubmit={handleAdd} className="space-y-4">
@@ -319,86 +342,182 @@ export default function StaffPage() {
                 {formError}
               </div>
             ) : null}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                gap: 14,
-              }}
-            >
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>
-                  Full name <span style={{ color: 'var(--rose)' }}>*</span>
-                </label>
-                <input style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
-              </div>
-              <div>
-                <label style={labelStyle}>Job title</label>
-                <input style={fieldStyle} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Driver" />
-              </div>
-              <div>
-                <label style={labelStyle}>Department</label>
-                <input style={fieldStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Transport" />
-              </div>
-              <div>
-                <label style={labelStyle}>National ID</label>
-                <input style={fieldStyle} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Phone</label>
-                <input style={fieldStyle} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
-              </div>
-              <div>
-                <label style={labelStyle}>Email</label>
-                <input style={fieldStyle} value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Optional; needed before invite" />
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Dashboard role (for login)</label>
-                <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6 }}>If they may receive an invitation. Not for teachers.</p>
-                <select style={{ ...fieldStyle, cursor: 'pointer' }} value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
-                  <option value="">— None / support only —</option>
-                  {STAFF_ROSTER_ROLES.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Address</label>
-                <input style={fieldStyle} value={address} onChange={(e) => setAddress(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Emergency name</label>
-                <input style={fieldStyle} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Emergency phone</label>
-                <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Hire date</label>
-                <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
-              </div>
-              <div>
-                <label style={labelStyle}>Salary (reference)</label>
-                <input style={fieldStyle} type="number" min={0} step={1000} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="Planning only" />
-              </div>
-              <div>
-                <label style={labelStyle}>Pay cycle</label>
-                <select style={{ ...fieldStyle, cursor: 'pointer' }} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
-                  {PAY_OPTIONS.map((o) => (
-                    <option key={o.value || 'empty'} value={o.value}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label style={labelStyle}>Notes</label>
-                <textarea style={{ ...fieldStyle, minHeight: 72, resize: 'vertical' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract, uniforms…" />
+
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ ...labelStyle, marginBottom: 10 }}>1 — Will they use a dashboard login?</label>
+              <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10, lineHeight: 1.45 }}>
+                Choose first. Dashboard staff get a role (accountant, librarian, …) and may be invited. On-file-only is
+                for people with <strong>no</strong> app account (e.g. drivers). Teachers are added under{' '}
+                <Link to="/dashboard/admin/teachers?add=1" style={{ color: 'var(--violet)' }}>
+                  Teachers
+                </Link>
+                .
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <button
+                  type="button"
+                  className={recordIntent === 'login' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
+                  onClick={() => {
+                    setRecordIntent('login');
+                    setFormError(null);
+                  }}
+                >
+                  Yes — dashboard role (invite later)
+                </button>
+                <button
+                  type="button"
+                  className={recordIntent === 'support' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
+                  onClick={() => {
+                    setRecordIntent('support');
+                    setStaffRole('');
+                    setDepartment('');
+                    setFormError(null);
+                  }}
+                >
+                  No — on file only (no login)
+                </button>
               </div>
             </div>
+
+            {recordIntent != null ? (
+              <>
+                {recordIntent === 'login' ? (
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={labelStyle}>Dashboard role</label>
+                    <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6 }}>
+                      Stored in <code style={{ fontSize: 11 }}>staff_role</code>. Then add job title &amp; department — these
+                      describe their placement; they are not teachers.
+                    </p>
+                    <select
+                      style={{ ...fieldStyle, cursor: 'pointer' }}
+                      value={staffRole}
+                      onChange={(e) => setStaffRole(e.target.value)}
+                      required={recordIntent === 'login'}
+                    >
+                      <option value="">— Select role —</option>
+                      {STAFF_ROSTER_ROLES.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div
+                    className="par-chip muted"
+                    style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 4 }}
+                  >
+                    <strong style={{ color: 'var(--t2)' }}>On-file only</strong>
+                    <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--t3)', fontWeight: 500 }}>
+                      <code style={{ fontSize: 11 }}>staff_role</code> will stay empty. Optionally describe what they do in
+                      one line below — not a duplicate &quot;teacher&quot; record.
+                    </span>
+                  </div>
+                )}
+
+                <div
+                  style={{
+                    borderTop: '1px solid var(--border)',
+                    paddingTop: 16,
+                    marginTop: 4,
+                  }}
+                >
+                  <label style={{ ...labelStyle, marginBottom: 10 }}>2 — Identity</label>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: 14,
+                    }}
+                  >
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>
+                        Full name <span style={{ color: 'var(--rose)' }}>*</span>
+                      </label>
+                      <input style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
+                    </div>
+
+                    {recordIntent === 'login' ? (
+                      <>
+                        <div>
+                          <label style={labelStyle}>Job title</label>
+                          <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Their day-to-day title at school.</p>
+                          <input style={fieldStyle} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Senior accountant" />
+                        </div>
+                        <div>
+                          <label style={labelStyle}>Department / unit</label>
+                          <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Office or unit — not the teaching department.</p>
+                          <input style={fieldStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Finance office" />
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>What they do (optional)</label>
+                        <input
+                          style={fieldStyle}
+                          value={jobTitle}
+                          onChange={(e) => setJobTitle(e.target.value)}
+                          placeholder="e.g. Driver, Security — one short line"
+                        />
+                      </div>
+                    )}
+
+                    <div>
+                      <label style={labelStyle}>Phone</label>
+                      <input style={fieldStyle} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Email</label>
+                      <input
+                        style={fieldStyle}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        type="email"
+                        placeholder={recordIntent === 'login' ? 'Needed before invitation' : 'Optional'}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>National ID</label>
+                      <input style={fieldStyle} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Address</label>
+                      <input style={fieldStyle} value={address} onChange={(e) => setAddress(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Emergency name</label>
+                      <input style={fieldStyle} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Emergency phone</label>
+                      <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Hire date</label>
+                      <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Salary (reference)</label>
+                      <input style={fieldStyle} type="number" min={0} step={1000} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="Planning only" />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Pay cycle</label>
+                      <select style={{ ...fieldStyle, cursor: 'pointer' }} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
+                        {PAY_OPTIONS.map((o) => (
+                          <option key={o.value || 'empty'} value={o.value}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <label style={labelStyle}>Notes</label>
+                      <textarea style={{ ...fieldStyle, minHeight: 72, resize: 'vertical' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract, uniforms…" />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : null}
             <div className="par-pcard-foot" style={{ borderTop: 'none', paddingTop: 0, paddingLeft: 0, paddingRight: 0 }}>
               <button type="submit" disabled={saving} className="par-crd-btn par-crd-primary">
                 {saving ? 'Saving…' : 'Save record'}
