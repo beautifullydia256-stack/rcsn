@@ -55,6 +55,12 @@ function teacherHasLogin(t: TeacherRow, users: UserEmailRow[]): boolean {
   return users.some((u) => u.role === 'teacher' && (u.email?.trim().toLowerCase() === e));
 }
 
+type InviteFilter = 'all' | 'teachers' | 'other_staff';
+
+type InviteRosterEntry =
+  | { kind: 'teacher'; teacher: TeacherRow }
+  | { kind: 'staff'; staff: OtherStaffRow };
+
 export default function InviteFromRosterPage() {
   const authUser = useAuthStore((s) => s.user);
   const schoolIdFromStore = useAuthStore((s) => s.schoolId);
@@ -63,7 +69,7 @@ export default function InviteFromRosterPage() {
   const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdFromStore ?? null);
   /** False until we've tried store + DB for school_id (avoids flashing "No school linked" during hydration). */
   const [schoolResolved, setSchoolResolved] = useState(false);
-  const [tab, setTab] = useState<'staff' | 'teachers'>('staff');
+  const [inviteFilter, setInviteFilter] = useState<InviteFilter>('all');
   const [q, setQ] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherRow | null>(null);
   const [selectedStaff, setSelectedStaff] = useState<OtherStaffRow | null>(null);
@@ -109,6 +115,39 @@ export default function InviteFromRosterPage() {
     return otherStaff.filter((o) => !o.linked_user_id);
   }, [otherStaff]);
 
+  /** Everyone who can still receive an invite (teachers without matching login + other staff unlinked). */
+  const rosterEntries = useMemo((): InviteRosterEntry[] => {
+    const teacherEntries: InviteRosterEntry[] = teachersNeedingInvite.map((t) => ({ kind: 'teacher', teacher: t }));
+    const staffEntries: InviteRosterEntry[] = staffNeedingInvite.map((s) => ({ kind: 'staff', staff: s }));
+    const merged = [...staffEntries, ...teacherEntries];
+    merged.sort((a, b) => {
+      const na = a.kind === 'teacher' ? a.teacher.name : a.staff.full_name;
+      const nb = b.kind === 'teacher' ? b.teacher.name : b.staff.full_name;
+      return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+    });
+    return merged;
+  }, [teachersNeedingInvite, staffNeedingInvite]);
+
+  const filteredEntries = useMemo(() => {
+    let list = rosterEntries;
+    if (inviteFilter === 'teachers') list = list.filter((e) => e.kind === 'teacher');
+    if (inviteFilter === 'other_staff') list = list.filter((e) => e.kind === 'staff');
+    if (!q.trim()) return list;
+    const s = q.toLowerCase();
+    return list.filter((e) => {
+      if (e.kind === 'teacher') {
+        const t = e.teacher;
+        return t.name.toLowerCase().includes(s) || (t.email || '').toLowerCase().includes(s) || 'teacher'.includes(s);
+      }
+      const o = e.staff;
+      return (
+        o.full_name.toLowerCase().includes(s) ||
+        (o.email || '').toLowerCase().includes(s) ||
+        (o.staff_role || '').toLowerCase().includes(s)
+      );
+    });
+  }, [rosterEntries, inviteFilter, q]);
+
   useEffect(() => {
     if (selectedTeacher) {
       setEmailDraft(selectedTeacher.email?.trim() || '');
@@ -118,25 +157,6 @@ export default function InviteFromRosterPage() {
       setEmailDraft('');
     }
   }, [selectedTeacher, selectedStaff]);
-
-  const filteredTeachers = useMemo(() => {
-    const list = tab === 'teachers' ? teachersNeedingInvite : [];
-    if (!q.trim()) return list;
-    const s = q.toLowerCase();
-    return list.filter((t) => t.name.toLowerCase().includes(s) || (t.email || '').toLowerCase().includes(s));
-  }, [teachersNeedingInvite, tab, q]);
-
-  const filteredStaff = useMemo(() => {
-    const list = tab === 'staff' ? staffNeedingInvite : [];
-    if (!q.trim()) return list;
-    const s = q.toLowerCase();
-    return list.filter(
-      (o) =>
-        o.full_name.toLowerCase().includes(s) ||
-        (o.email || '').toLowerCase().includes(s) ||
-        (o.staff_role || '').toLowerCase().includes(s)
-    );
-  }, [staffNeedingInvite, tab, q]);
 
   const sendInvite = async () => {
     const email = emailDraft.trim();
@@ -243,8 +263,8 @@ export default function InviteFromRosterPage() {
           <div className="par-eyebrow">User management</div>
           <h1 className="par-title">Send invitations</h1>
           <p className="par-sub">
-            Same directory cards as Parents. Choose someone on your roster, confirm their email, and we send a one-time
-            password plus sign-in link.
+            All teachers and other staff who still need a login are listed together. Each card shows their type; use the
+            filters if you want to narrow the list.
           </p>
         </div>
         <div className="par-actions">
@@ -260,28 +280,39 @@ export default function InviteFromRosterPage() {
         </div>
       </div>
 
-      <div className="par-view-toggle par-fu par-d1" style={{ marginBottom: 18 }}>
+      <div className="par-fu par-d1" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
         <button
           type="button"
-          className={`par-vbtn ${tab === 'staff' ? 'active' : ''}`}
+          className={inviteFilter === 'all' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
           onClick={() => {
-            setTab('staff');
+            setInviteFilter('all');
             setSelectedTeacher(null);
             setSelectedStaff(null);
           }}
         >
-          Staff &amp; other roles
+          All ({rosterEntries.length})
         </button>
         <button
           type="button"
-          className={`par-vbtn ${tab === 'teachers' ? 'active' : ''}`}
+          className={inviteFilter === 'teachers' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
           onClick={() => {
-            setTab('teachers');
+            setInviteFilter('teachers');
             setSelectedTeacher(null);
             setSelectedStaff(null);
           }}
         >
-          Teachers
+          Teachers ({teachersNeedingInvite.length})
+        </button>
+        <button
+          type="button"
+          className={inviteFilter === 'other_staff' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+          onClick={() => {
+            setInviteFilter('other_staff');
+            setSelectedTeacher(null);
+            setSelectedStaff(null);
+          }}
+        >
+          Other staff ({staffNeedingInvite.length})
         </button>
       </div>
 
@@ -304,79 +335,74 @@ export default function InviteFromRosterPage() {
         <div className="par-empty par-fu par-d2">
           <div className="par-empty-title">Loading roster…</div>
         </div>
-      ) : tab === 'staff' ? (
-        filteredStaff.length === 0 ? (
-          <div className="par-empty par-fu par-d2">
-            <div className="par-empty-sub">No one to invite yet. Add people under Staff and set their dashboard role.</div>
+      ) : rosterEntries.length === 0 ? (
+        <div className="par-empty par-fu par-d2">
+          <div className="par-empty-sub">
+            Everyone on your teacher and staff rosters may already have a login. Add people under Teachers or Staff if you
+            need more.
           </div>
-        ) : (
-          <div className="par-card-grid par-fu par-d2">
-            {filteredStaff.map((o, i) => (
+        </div>
+      ) : filteredEntries.length === 0 ? (
+        <div className="par-empty par-fu par-d2">
+          <div className="par-empty-sub">No one matches this filter or search. Try &quot;All&quot; or clear the search box.</div>
+        </div>
+      ) : (
+        <div className="par-card-grid par-fu par-d2">
+          {filteredEntries.map((entry, i) =>
+            entry.kind === 'staff' ? (
               <PwDirectoryUserCard
-                key={o.id}
-                name={o.full_name}
-                subtitle={(o.staff_role || 'Staff').replace(/_/g, ' ')}
+                key={`staff:${entry.staff.id}`}
+                name={entry.staff.full_name}
+                subtitle={(entry.staff.staff_role || 'Staff').replace(/_/g, ' ')}
                 cornerTone="teal"
-                cornerLabel={(o.staff_role || 'Staff').replace(/_/g, ' ') || 'Staff'}
-                initials={pwDirInitials(o.full_name)}
+                cornerLabel={(entry.staff.staff_role || 'Staff').replace(/_/g, ' ') || 'Staff'}
+                initials={pwDirInitials(entry.staff.full_name)}
                 avatarBackground={pwDirGrad(i)}
-                statusDotActive={!o.linked_user_id}
+                statusDotActive={!entry.staff.linked_user_id}
                 rows={[
                   {
                     label: 'Email',
-                    value: o.email ? (
-                      <span style={{ color: 'var(--blue)', fontSize: 12.5 }}>{o.email}</span>
+                    value: entry.staff.email ? (
+                      <span style={{ color: 'var(--blue)', fontSize: 12.5 }}>{entry.staff.email}</span>
                     ) : (
                       <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>No email yet</span>
                     ),
                   },
                 ]}
                 onCardClick={() => {
-                  setSelectedStaff(o);
+                  setSelectedStaff(entry.staff);
                   setSelectedTeacher(null);
                 }}
-                selected={selectedStaff?.id === o.id}
+                selected={selectedStaff?.id === entry.staff.id}
               />
-            ))}
-          </div>
-        )
-      ) : filteredTeachers.length === 0 ? (
-        <div className="par-empty par-fu par-d2">
-          <div className="par-empty-sub">
-            {teachersNeedingInvite.length === 0
-              ? 'All teachers may already have a login — or add teachers to the roster first.'
-              : 'No matches for your search.'}
-          </div>
-        </div>
-      ) : (
-        <div className="par-card-grid par-fu par-d2">
-          {filteredTeachers.map((t, i) => (
-            <PwDirectoryUserCard
-              key={t.teacher_id}
-              name={t.name}
-              subtitle="Teacher"
-              cornerTone="violet"
-              cornerLabel="Teacher"
-              initials={pwDirInitials(t.name)}
-              avatarBackground={pwDirGrad(i)}
-              statusDotActive
-              rows={[
-                {
-                  label: 'Email',
-                  value: t.email ? (
-                    <span style={{ color: 'var(--blue)', fontSize: 12.5 }}>{t.email}</span>
-                  ) : (
-                    <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>No email yet</span>
-                  ),
-                },
-              ]}
-              onCardClick={() => {
-                setSelectedTeacher(t);
-                setSelectedStaff(null);
-              }}
-              selected={selectedTeacher?.teacher_id === t.teacher_id}
-            />
-          ))}
+            ) : (
+              <PwDirectoryUserCard
+                key={`teacher:${entry.teacher.teacher_id}`}
+                name={entry.teacher.name}
+                subtitle="Teacher"
+                cornerTone="violet"
+                cornerLabel="Teacher"
+                initials={pwDirInitials(entry.teacher.name)}
+                avatarBackground={pwDirGrad(i)}
+                statusDotActive
+                rows={[
+                  {
+                    label: 'Email',
+                    value: entry.teacher.email ? (
+                      <span style={{ color: 'var(--blue)', fontSize: 12.5 }}>{entry.teacher.email}</span>
+                    ) : (
+                      <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>No email yet</span>
+                    ),
+                  },
+                ]}
+                onCardClick={() => {
+                  setSelectedTeacher(entry.teacher);
+                  setSelectedStaff(null);
+                }}
+                selected={selectedTeacher?.teacher_id === entry.teacher.teacher_id}
+              />
+            )
+          )}
         </div>
       )}
 
