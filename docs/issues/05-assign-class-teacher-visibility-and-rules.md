@@ -1,9 +1,9 @@
 # Issue: Assign class teacher — missing or unclear on teacher profile; UX and data rules
 
-**Status:** Partial — UI + client rules in SPA teacher profile (verify in staging/production)  
-**Last updated:** 2026-04-05  
+**Status:** Done (signed off 2026-04-06)  
+**Last updated:** 2026-04-06  
 
-## Implementation notes (2026-04-05)
+## Implementation notes (2026-04-05 / 06)
 
 - [`src/assets/pwezacore-teacher-profile.html`](../../src/assets/pwezacore-teacher-profile.html): hero button **Assign class teacher**; Classes tab split into **Class teacher** card (picker with occupancy labels, hint text, assign / current list + remove) and **Subject teaching** card; removed unused **Role** dropdown on subject form.
 - [`src/pages/admin/teachers/DesignTeacherProfile.tsx`](../../src/pages/admin/teachers/DesignTeacherProfile.tsx): loads all `class_teachers` for the school; explains/hints per class; inserts/deletes via Supabase (DB `UNIQUE (school_id, class_name)` enforces one class teacher per class).
