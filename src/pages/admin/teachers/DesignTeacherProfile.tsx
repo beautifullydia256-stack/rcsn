@@ -541,17 +541,31 @@ export default function DesignTeacherProfile() {
       fromDate.setDate(fromDate.getDate() - 90);
       const fromStr = fromDate.toISOString().slice(0, 10);
 
-      const { data: attRows } = await supabase
-        .from('student_attendance')
-        .select('present, arrived_late')
-        .eq('school_id', school_id)
-        .eq('teacher_id', teacherId)
-        .gte('date', fromStr);
+      const pairSet = new Set(assignments.map((a) => `${a.class_name}|${a.subject}`));
+      const clsForExam = [...new Set(assignments.map((a) => a.class_name).filter(Boolean))];
+      const subForExam = [...new Set(assignments.map((a) => a.subject).filter(Boolean))];
+      const runExamQuery = clsForExam.length > 0 && subForExam.length > 0;
 
-      const { data: payRows } = await supabase
-        .from('school_expenses')
-        .select(
-          `
+      /** Heavy reads run in parallel (were sequential ~8+ round-trips — main cause of slow profile). */
+      const [
+        { data: attRows },
+        { data: payRows },
+        { data: docRows },
+        { data: recentAssignRows },
+        { count: assignSetCount },
+        { data: assignIdRows },
+        erRes,
+      ] = await Promise.all([
+        supabase
+          .from('student_attendance')
+          .select('present, arrived_late')
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .gte('date', fromStr),
+        supabase
+          .from('school_expenses')
+          .select(
+            `
           expense_id,
           amount,
           expense_date,
@@ -564,68 +578,68 @@ export default function DesignTeacherProfile() {
           reference_number,
           expense_subcategories ( name, is_salary )
         `
-        )
-        .eq('school_id', school_id)
-        .eq('linked_teacher_id', teacherId)
-        .order('expense_date', { ascending: false })
-        .limit(150);
-
-      const { data: docRows } = await supabase
-        .from('teacher_documents')
-        .select(
-          'id, doc_kind, doc_category, original_filename, storage_path, mime_type, file_size_bytes, created_at'
-        )
-        .eq('school_id', school_id)
-        .eq('teacher_id', teacherId)
-        .order('created_at', { ascending: false })
-        .limit(80);
-
-      const { data: recentAssignRows } = await supabase
-        .from('assignments')
-        .select('title, class_name, subject, created_at')
-        .eq('school_id', school_id)
-        .eq('teacher_id', teacherId)
-        .order('created_at', { ascending: false })
-        .limit(15);
-
-      const { count: assignSetCount } = await supabase
-        .from('assignments')
-        .select('id', { count: 'exact', head: true })
-        .eq('school_id', school_id)
-        .eq('teacher_id', teacherId);
-
-      const { data: assignIdRows } = await supabase
-        .from('assignments')
-        .select('id')
-        .eq('school_id', school_id)
-        .eq('teacher_id', teacherId)
-        .limit(5000);
+          )
+          .eq('school_id', school_id)
+          .eq('linked_teacher_id', teacherId)
+          .order('expense_date', { ascending: false })
+          .limit(150),
+        supabase
+          .from('teacher_documents')
+          .select(
+            'id, doc_kind, doc_category, original_filename, storage_path, mime_type, file_size_bytes, created_at'
+          )
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .order('created_at', { ascending: false })
+          .limit(80),
+        supabase
+          .from('assignments')
+          .select('title, class_name, subject, created_at')
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .order('created_at', { ascending: false })
+          .limit(15),
+        supabase
+          .from('assignments')
+          .select('id', { count: 'exact', head: true })
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId),
+        supabase
+          .from('assignments')
+          .select('id')
+          .eq('school_id', school_id)
+          .eq('teacher_id', teacherId)
+          .order('created_at', { ascending: false })
+          .limit(400),
+        runExamQuery
+          ? supabase
+              .from('exam_results')
+              .select('class_name, subject, marks_obtained, total_marks')
+              .eq('school_id', school_id)
+              .in('class_name', clsForExam)
+              .in('subject', subForExam)
+              .limit(3000)
+          : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
+      ]);
 
       const aidList = (assignIdRows || []).map((r) => (r as { id: string }).id);
       let markedAssignCount = 0;
       let submissionTotal = 0;
       if (aidList.length > 0) {
-        const { count: mc } = await supabase
-          .from('assignment_submissions')
-          .select('id', { count: 'exact', head: true })
-          .in('assignment_id', aidList)
-          .eq('status', 'graded');
+        const [{ count: mc }, { count: st }] = await Promise.all([
+          supabase
+            .from('assignment_submissions')
+            .select('id', { count: 'exact', head: true })
+            .in('assignment_id', aidList)
+            .eq('status', 'graded'),
+          supabase.from('assignment_submissions').select('id', { count: 'exact', head: true }).in('assignment_id', aidList),
+        ]);
         markedAssignCount = mc ?? 0;
-        const { count: st } = await supabase
-          .from('assignment_submissions')
-          .select('id', { count: 'exact', head: true })
-          .in('assignment_id', aidList);
         submissionTotal = st ?? 0;
       }
 
-      const pairSet = new Set(assignments.map((a) => `${a.class_name}|${a.subject}`));
-      const { data: erRows } = await supabase
-        .from('exam_results')
-        .select('class_name, subject, marks_obtained, total_marks')
-        .eq('school_id', school_id)
-        .limit(8000);
-
-      const erFiltered = (erRows || []).filter((r) => {
+      const erRows = (erRes as { data?: unknown }).data;
+      const erFiltered = (Array.isArray(erRows) ? erRows : []).filter((r) => {
         const row = r as { class_name?: string; subject?: string };
         return pairSet.has(`${String(row.class_name || '').trim()}|${String(row.subject || '').trim()}`);
       });
