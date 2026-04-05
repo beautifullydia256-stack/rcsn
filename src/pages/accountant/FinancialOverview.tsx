@@ -162,6 +162,13 @@ export default function FinancialOverview() {
     .filter((t) => t.outstanding > 0)
     .map((t) => ({ name: t.termLabel, value: t.outstanding }));
 
+  const cfSeries = m.cashflowAllTime.months;
+  const cfRangeLabel =
+    cfSeries.length > 0
+      ? `${cfSeries[0].periodLabel} – ${cfSeries[cfSeries.length - 1].periodLabel}`
+      : "No monthly activity yet";
+  const cfXAxisInterval = cfSeries.length > 36 ? Math.floor(cfSeries.length / 18) : cfSeries.length > 20 ? 1 : 0;
+
   return (
     <div className="min-h-full" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -211,7 +218,7 @@ export default function FinancialOverview() {
             title="School cash position (all terms)"
             subtitle="Total fee money recorded in the system (every payment, including amounts that clear older-term balances) minus every approved or paid expense—any term. This is the closest thing to “cash left if the ledger is complete from day one”; it does not add a manual opening bank balance from before you used the app."
           />
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <KPICard
               icon={Landmark}
               label="Net cash surplus"
@@ -220,17 +227,10 @@ export default function FinancialOverview() {
               variant={m.schoolCashPosition.netCashSurplus >= 0 ? "green" : "orange"}
             />
             <KPICard
-              icon={CreditCard}
-              label="Total fee receipts recorded"
-              value={fmt(m.schoolCashPosition.totalFeeReceiptsRecorded)}
-              subline="Non-reversed payments, every term_id"
-              variant="blue"
-            />
-            <KPICard
               icon={DollarSign}
               label="Total expenses (approved/paid)"
-              value={fmt(m.schoolCashPosition.totalExpensesApprovedPaid)}
-              subline="All terms, any expense_date"
+              value={fmt(m.schoolCashPosition.totalExpensesApprovedPaidCurrentTerm)}
+              subline={`Current term only (${m.currentTerm?.label ?? "—"})`}
               variant="slate"
             />
           </div>
@@ -278,13 +278,6 @@ export default function FinancialOverview() {
               subline="Approved or paid expenses allocated to this term"
               variant="slate"
             />
-            <KPICard
-              icon={TrendingUp}
-              label="Net (fee receipts − expenses)"
-              value={fmt(tp.netTermCash)}
-              subline="This term only: payments with this term_id minus expenses tagged this term. See “School cash position” for all terms."
-              variant={tp.netTermCash >= 0 ? "green" : "orange"}
-            />
           </div>
           {m.discountsSchoolWide > 0 && (
             <p className="ac-text-muted mt-3 text-xs">
@@ -298,14 +291,14 @@ export default function FinancialOverview() {
         <section className="mb-10">
           <SectionTitle
             title="Fee receipt activity (by payment date)"
-            subtitle="Uses payment_date across all terms. A payment toward a prior term still appears here on the day it was received."
+            subtitle="Uses payment_date across all terms, grouped by Uganda local calendar days (Africa/Kampala). A payment toward a prior term still appears on the day it was received."
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <KPICard
               icon={Calendar}
               label="Today"
               value={fmt(ca.todayAllTerms)}
-              subline="All terms · non-reversed payments only"
+              subline="Uganda local date · all terms · non-reversed"
               variant="teal"
             />
             <KPICard
@@ -423,18 +416,22 @@ export default function FinancialOverview() {
           <section className="w-full">
             <div className="ac-glass-card h-full rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
               <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="ac-text-primary text-lg font-semibold">Calendar-year cashflow</h3>
-                <span className="ac-text-muted text-xs font-medium">{m.calendarYear}</span>
+                <h3 className="ac-text-primary text-lg font-semibold">All-time monthly cashflow</h3>
+                <span className="ac-text-muted text-xs font-medium">{cfRangeLabel}</span>
               </div>
               <p className="ac-text-muted mb-4 text-[13px] leading-relaxed">
-                Fee receipts and expenses by calendar month ({m.calendarYear}). Not the same as “current term” above.
-                Expenses count when status is approved or paid.
+                Every month from your first recorded fee receipt or expense through today. Totals are computed in the
+                database (fast). Non-reversed fee payments and approved or paid expenses only—not the same as “current
+                term only.”
               </p>
-              <p className="ac-text-secondary text-[13px] font-medium">Net (fee receipts − expenses)</p>
+              <p className="ac-text-secondary text-[13px] font-medium">Net (all fee receipts − all expenses)</p>
               <p
-                className={`mt-0.5 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowYTD.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                className={`mt-0.5 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
               >
-                {fmt(m.cashflowYTD.netCash)}
+                {fmt(m.cashflowAllTime.netCash)}
+              </p>
+              <p className="ac-text-muted mt-1 text-[11px]">
+                Should match &quot;Net cash surplus&quot; above when both use the same complete ledger.
               </p>
               <div className="ac-text-secondary mt-4 flex flex-wrap gap-4 text-[13px]">
                 <span className="inline-flex items-center gap-1.5">
@@ -446,52 +443,62 @@ export default function FinancialOverview() {
                   Expenses (downward bars)
                 </span>
               </div>
-              <div className="mt-4 h-[260px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={m.cashflowYTD.months.map((row) => ({
-                      ...row,
-                      expenseNeg: -row.expenses,
-                    }))}
-                    margin={{ top: 8, right: 8, left: 8, bottom: 8 }}
-                    barCategoryGap="12%"
-                    barGap={4}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-                    <ReferenceLine y={0} stroke={chartColors.refLine} strokeWidth={1} />
-                    <XAxis
-                      dataKey="monthLabel"
-                      tick={{ fontSize: 11, fill: chartColors.axis }}
-                      axisLine={{ stroke: chartColors.grid }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11, fill: chartColors.axis }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(v) => (Math.abs(v) >= 1000 ? `${v / 1000}K` : String(v))}
-                      domain={["auto", "auto"]}
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (!active || !payload?.length) return null;
-                        const d = payload[0].payload as { monthLabel: string; feeReceipts: number; expenses: number };
-                        return (
-                          <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] px-4 py-3 text-sm shadow-lg">
-                            <p className="ac-text-primary mb-2 font-semibold">
-                              {d.monthLabel} {m.calendarYear}
-                            </p>
-                            <p className="text-emerald-600">Fee receipts {fmt(d.feeReceipts)}</p>
-                            <p className="text-teal-600">Expenses {fmt(d.expenses)}</p>
-                          </div>
-                        );
-                      }}
-                      cursor={{ fill: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(148, 163, 184, 0.08)" }}
-                    />
-                    <Bar dataKey="feeReceipts" fill="#047857" radius={[2, 2, 0, 0]} name="Fee receipts" />
-                    <Bar dataKey="expenseNeg" fill="#86efac" radius={[0, 0, 2, 2]} name="Expenses" />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="mt-4 h-[min(360px,50vh)] min-h-[260px] w-full">
+                {cfSeries.length === 0 ? (
+                  <p className="ac-text-muted py-12 text-center text-sm">No payments or expenses yet to chart.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={cfSeries.map((row) => ({
+                        ...row,
+                        expenseNeg: -row.expenses,
+                      }))}
+                      margin={{ top: 8, right: 8, left: 8, bottom: 52 }}
+                      barCategoryGap="10%"
+                      barGap={3}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
+                      <ReferenceLine y={0} stroke={chartColors.refLine} strokeWidth={1} />
+                      <XAxis
+                        dataKey="periodLabel"
+                        tick={{ fontSize: 9, fill: chartColors.axis }}
+                        axisLine={{ stroke: chartColors.grid }}
+                        tickLine={false}
+                        angle={-38}
+                        textAnchor="end"
+                        height={70}
+                        interval={cfXAxisInterval}
+                      />
+                      <YAxis
+                        tick={{ fontSize: 11, fill: chartColors.axis }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(v) => (Math.abs(v) >= 1000 ? `${v / 1000}K` : String(v))}
+                        domain={["auto", "auto"]}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null;
+                          const d = payload[0].payload as {
+                            periodLabel: string;
+                            feeReceipts: number;
+                            expenses: number;
+                          };
+                          return (
+                            <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] px-4 py-3 text-sm shadow-lg">
+                              <p className="ac-text-primary mb-2 font-semibold">{d.periodLabel}</p>
+                              <p className="text-emerald-600">Fee receipts {fmt(d.feeReceipts)}</p>
+                              <p className="text-teal-600">Expenses {fmt(d.expenses)}</p>
+                            </div>
+                          );
+                        }}
+                        cursor={{ fill: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(148, 163, 184, 0.08)" }}
+                      />
+                      <Bar dataKey="feeReceipts" fill="#047857" radius={[2, 2, 0, 0]} name="Fee receipts" />
+                      <Bar dataKey="expenseNeg" fill="#86efac" radius={[0, 0, 2, 2]} name="Expenses" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
           </section>

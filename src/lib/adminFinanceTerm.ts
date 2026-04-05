@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { calendarDateIsoInTimeZone } from './schoolCalendarDate';
 
 export type SchoolTermBrief = {
   id: string;
@@ -20,7 +21,7 @@ export type SchoolTermBrief = {
 export async function resolveCurrentSchoolTerm(
   client: SupabaseClient,
   schoolId: string,
-  todayIso = new Date().toISOString().slice(0, 10)
+  todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<SchoolTermBrief | null> {
   const { data: allTerms } = await client
     .from('school_terms')
@@ -67,7 +68,7 @@ export type BalanceAgg = {
 export async function loadOutstandingBalanceAggByStudent(
   client: SupabaseClient,
   schoolId: string,
-  todayIso = new Date().toISOString().slice(0, 10)
+  todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<Map<string, BalanceAgg>> {
   const term = await resolveCurrentSchoolTerm(client, schoolId, todayIso);
   const termId = term?.id ?? null;

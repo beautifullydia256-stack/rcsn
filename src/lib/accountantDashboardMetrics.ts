@@ -1,5 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveCurrentSchoolTerm } from "./adminFinanceTerm";
+import {
+  addCalendarDaysToIsoYmd,
+  calendarDateIsoInTimeZone,
+  firstDayOfMonthIsoYmd,
+} from "./schoolCalendarDate";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -50,12 +55,16 @@ export type AccountantDashboardMetrics = {
     monthToDateAllTerms: number;
   };
   /**
-   * Calendar-year view: fee receipts and school expenses by expense_date.
-   * netCash = sum(fee receipts) − sum(approved/paid expenses) for that calendar year.
-   * Not the same scope as “current term” KPIs.
+   * All history, monthly buckets (DB aggregation). netCash = lifetime fee receipts − lifetime expenses.
    */
-  cashflowYTD: {
-    months: Array<{ month: string; monthLabel: string; feeReceipts: number; expenses: number }>;
+  cashflowAllTime: {
+    months: Array<{
+      year: number;
+      month: number;
+      periodLabel: string;
+      feeReceipts: number;
+      expenses: number;
+    }>;
     netCash: number;
   };
   /** Sum of discount amounts recorded for the school (no term filter). */
@@ -66,9 +75,9 @@ export type AccountantDashboardMetrics = {
    * the ledger is complete from day one; does not add a manual opening bank balance.
    */
   schoolCashPosition: {
-    totalFeeReceiptsRecorded: number;
-    totalExpensesApprovedPaid: number;
     netCashSurplus: number;
+    /** Approved/paid school expenses for the current academic term only (`term_id` match). */
+    totalExpensesApprovedPaidCurrentTerm: number;
   };
   collectionsByMethod: {
     cash: number;
@@ -112,19 +121,11 @@ function num(v: unknown): number {
 export async function fetchAccountantDashboardMetrics(
   client: SupabaseClient,
   schoolId: string,
-  todayIso = new Date().toISOString().slice(0, 10)
+  todayIso = calendarDateIsoInTimeZone(new Date())
 ): Promise<AccountantDashboardMetrics> {
-  const now = new Date();
-  const calendarYear = now.getFullYear();
-  const yearStart = `${calendarYear}-01-01`;
-  const yearEnd = `${calendarYear}-12-31`;
-
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() - 7);
-  const weekStartStr = weekStart.toISOString().slice(0, 10);
-
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthStartStr = monthStart.toISOString().slice(0, 10);
+  const calendarYear = Number(todayIso.slice(0, 4));
+  const weekStartStr = addCalendarDaysToIsoYmd(todayIso, -7);
+  const monthStartStr = firstDayOfMonthIsoYmd(todayIso);
 
   const currentTermRaw = await resolveCurrentSchoolTerm(client, schoolId, todayIso);
   const currentTermId = currentTermRaw?.id ?? null;
@@ -134,7 +135,7 @@ export async function fetchAccountantDashboardMetrics(
     balancesRes,
     paymentsRes,
     expensesTermRes,
-    expensesYtdRes,
+    cashflowRpcRes,
     expensesAllTimeRes,
     discountsRes,
     recentPayRes,
@@ -161,12 +162,7 @@ export async function fetchAccountantDashboardMetrics(
           .eq("school_id", schoolId)
           .eq("term_id", currentTermId)
       : Promise.resolve({ data: [] as { amount?: number; status?: string }[] }),
-    client
-      .from("school_expenses")
-      .select("amount, expense_date, status")
-      .eq("school_id", schoolId)
-      .gte("expense_date", yearStart)
-      .lte("expense_date", yearEnd),
+    client.rpc("school_cashflow_monthly_totals", { p_school_id: schoolId }),
     client.from("school_expenses").select("amount, status").eq("school_id", schoolId),
     client.from("student_discounts").select("amount").eq("school_id", schoolId),
     client
@@ -178,6 +174,25 @@ export async function fetchAccountantDashboardMetrics(
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
+
+  if (cashflowRpcRes.error) {
+    if (typeof import.meta !== "undefined" && (import.meta as ImportMeta).env?.DEV) {
+      console.warn("[accountantDashboardMetrics] school_cashflow_monthly_totals:", cashflowRpcRes.error.message);
+    }
+  }
+  type CashflowRpcRow = { yr: number; mo: number; fee_receipts: number | string | null; expenses: number | string | null };
+  const rawCashflow = (cashflowRpcRes.error ? [] : cashflowRpcRes.data ?? []) as CashflowRpcRow[];
+  const cashflowAllTimeMonths = rawCashflow.map((r) => {
+    const mo = Number(r.mo);
+    const yr = Number(r.yr);
+    return {
+      year: yr,
+      month: mo,
+      periodLabel: `${MONTHS[Math.max(0, Math.min(11, mo - 1))]} ${yr}`,
+      feeReceipts: Math.round(num(r.fee_receipts)),
+      expenses: Math.round(num(r.expenses)),
+    };
+  });
 
   const terms = (termsRes.data || []) as {
     id: string;
@@ -289,35 +304,6 @@ export async function fetchAccountantDashboardMetrics(
     if (d >= monthStartStr && d <= todayIso) monthToDateAllTerms += amt;
   }
 
-  const feeReceiptsByMonth: number[] = new Array(12).fill(0);
-  const expenseByMonth: number[] = new Array(12).fill(0);
-
-  for (const p of payments) {
-    const d = p.payment_date;
-    if (!d || d < yearStart || d > yearEnd) continue;
-    const mi = parseInt(d.slice(5, 7), 10) - 1;
-    if (mi >= 0 && mi < 12) feeReceiptsByMonth[mi] += num(p.amount_paid);
-  }
-
-  for (const e of (expensesYtdRes.data || []) as { expense_date?: string; amount?: number; status?: string }[]) {
-    if (!["approved", "paid"].includes((e.status || "").toLowerCase())) continue;
-    const d = e.expense_date;
-    if (!d) continue;
-    const mi = parseInt(d.slice(5, 7), 10) - 1;
-    if (mi >= 0 && mi < 12) expenseByMonth[mi] += num(e.amount);
-  }
-
-  const months = MONTHS.map((label, i) => ({
-    month: String(i + 1),
-    monthLabel: label,
-    feeReceipts: Math.round(feeReceiptsByMonth[i]),
-    expenses: Math.round(expenseByMonth[i]),
-  }));
-
-  const sumFeesYtd = feeReceiptsByMonth.reduce((a, b) => a + b, 0);
-  const sumExpYtd = expenseByMonth.reduce((a, b) => a + b, 0);
-  const netCash = sumFeesYtd - sumExpYtd;
-
   const discountsSchoolWide = (discountsRes.data || []).reduce(
     (s, d: { amount?: number | string | null }) => s + num(d.amount),
     0
@@ -356,14 +342,18 @@ export async function fetchAccountantDashboardMetrics(
   });
 
   const totalFeeReceiptsRecorded = payments.reduce((s, p) => s + num(p.amount_paid), 0);
-  const totalExpensesApprovedPaid = (expensesAllTimeRes.data || []).reduce(
+  const totalExpensesApprovedPaidAllTerms = (expensesAllTimeRes.data || []).reduce(
     (s, e: { amount?: number; status?: string }) => {
       if (!["approved", "paid"].includes((e.status || "").toLowerCase())) return s;
       return s + num(e.amount);
     },
     0
   );
-  const netCashSurplus = totalFeeReceiptsRecorded - totalExpensesApprovedPaid;
+  const netCashSurplus = totalFeeReceiptsRecorded - totalExpensesApprovedPaidAllTerms;
+  const netCashAllTime =
+    rawCashflow.length > 0
+      ? rawCashflow.reduce((s, r) => s + num(r.fee_receipts) - num(r.expenses), 0)
+      : netCashSurplus;
 
   return {
     asOfDate: todayIso,
@@ -389,15 +379,14 @@ export async function fetchAccountantDashboardMetrics(
       last7DaysAllTerms,
       monthToDateAllTerms,
     },
-    cashflowYTD: {
-      months,
-      netCash,
+    cashflowAllTime: {
+      months: cashflowAllTimeMonths,
+      netCash: netCashAllTime,
     },
     discountsSchoolWide,
     schoolCashPosition: {
-      totalFeeReceiptsRecorded,
-      totalExpensesApprovedPaid,
       netCashSurplus,
+      totalExpensesApprovedPaidCurrentTerm: expensesApproved,
     },
     collectionsByMethod: byMethod,
     recentPayments,

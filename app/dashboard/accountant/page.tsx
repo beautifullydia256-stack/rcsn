@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { fetchAccountantDashboardMetrics } from "@/src/lib/accountantDashboardMetrics";
 import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
+import { calendarDateIsoInTimeZone } from "@/src/lib/schoolCalendarDate";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -133,7 +134,7 @@ export default function AccountantDashboardPage() {
         return;
       }
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = calendarDateIsoInTimeZone(new Date());
       const { data: allTerms, error: termsError } = await supabase
         .from("school_terms")
         .select("id, start_date, end_date, year, term")
