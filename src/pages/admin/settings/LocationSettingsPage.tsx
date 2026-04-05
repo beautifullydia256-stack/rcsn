@@ -116,7 +116,7 @@ export default function LocationSettingsPage() {
   if (loading) {
     return (
       <AdminPageWrapper title="School Location Settings">
-        <div className="text-gray-500">Loading...</div>
+        <div className="ac-text-muted">Loading...</div>
       </AdminPageWrapper>
     );
   }
@@ -127,7 +127,7 @@ export default function LocationSettingsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/settings')}
-          className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Settings
         </button>
@@ -135,29 +135,29 @@ export default function LocationSettingsPage() {
 
       <div className={`${adminCardClass} space-y-4`}>
         {error && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+          <div className="rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
             {error}
           </div>
         )}
         {success && (
-          <div className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-200">
+          <div className="rounded-lg border border-emerald-400/35 bg-emerald-950/45 px-3 py-2 text-sm text-emerald-100">
             {success}
           </div>
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Location Name</label>
+          <label className="mb-1 block text-sm font-medium ac-text-secondary">Location Name</label>
           <input
             type="text"
             value={location.name}
             onChange={(e) => setLocation((prev) => ({ ...prev, name: e.target.value }))}
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white placeholder-gray-400"
+            className="ac-input min-h-[44px] w-full"
             placeholder="School Location"
           />
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Latitude</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Latitude</label>
             <input
               type="number"
               step="any"
@@ -165,11 +165,11 @@ export default function LocationSettingsPage() {
               onChange={(e) =>
                 setLocation((prev) => ({ ...prev, latitude: parseFloat(e.target.value) || 0 }))
               }
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
+              className="ac-input min-h-[44px] w-full"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Longitude</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Longitude</label>
             <input
               type="number"
               step="any"
@@ -177,12 +177,12 @@ export default function LocationSettingsPage() {
               onChange={(e) =>
                 setLocation((prev) => ({ ...prev, longitude: parseFloat(e.target.value) || 0 }))
               }
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
+              className="ac-input min-h-[44px] w-full"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Radius (meters)</label>
+          <label className="mb-1 block text-sm font-medium ac-text-secondary">Radius (meters)</label>
           <input
             type="number"
             min={50}
@@ -191,18 +191,18 @@ export default function LocationSettingsPage() {
             onChange={(e) =>
               setLocation((prev) => ({ ...prev, radius: parseInt(e.target.value, 10) || 100 }))
             }
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-white"
+            className="ac-input min-h-[44px] w-full"
           />
-          <p className="mt-1 text-xs text-white/60">
+          <p className="mt-1 text-xs ac-text-muted">
             Teachers must be within this radius to punch in/out.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <button
             type="button"
             onClick={getCurrentLocation}
-            className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-white hover:bg-white/15"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium ac-text-primary"
           >
             Use Current Location
           </button>
@@ -210,7 +210,7 @@ export default function LocationSettingsPage() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Location'}
           </button>

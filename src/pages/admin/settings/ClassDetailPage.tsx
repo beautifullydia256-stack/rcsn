@@ -105,18 +105,18 @@ export default function ClassDetailPage() {
       title={decodedName ? `Class: ${decodedName}` : 'Class'}
       subtitle="Manage class settings and assign class teacher"
     >
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/settings/classes')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Classes
         </button>
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/settings')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Settings
         </button>
@@ -124,20 +124,20 @@ export default function ClassDetailPage() {
 
       <div className={`${adminCardClass} space-y-6`}>
         <section>
-          <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-            <User className="w-5 h-5 text-white/80" />
+          <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold ac-text-primary">
+            <User className="h-5 w-5 ac-text-secondary" />
             Class teacher
           </h3>
-          <p className="text-white/70 text-sm mb-4">
+          <p className="mb-4 text-sm ac-text-secondary">
             The class teacher is used on the students list and on reports (e.g. Class Teacher&apos;s Comment). Assign from here or from the teacher&apos;s profile.
           </p>
           {loading ? (
-            <div className="text-white/60">Loading…</div>
+            <div className="ac-text-muted">Loading…</div>
           ) : (
-            <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
               {currentTeacher ? (
-                <div className="flex items-center gap-3 rounded-xl border border-white/20 bg-white/5 px-4 py-3">
-                  <span className="text-white font-medium">{currentTeacher.name}</span>
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] px-4 py-3">
+                  <span className="font-medium ac-text-primary">{currentTeacher.name}</span>
                   <button
                     type="button"
                     onClick={removeClassTeacher}
@@ -148,19 +148,19 @@ export default function ClassDetailPage() {
                   </button>
                 </div>
               ) : (
-                <span className="text-white/60">No class teacher assigned</span>
+                <span className="ac-text-muted">No class teacher assigned</span>
               )}
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
                 <select
                   value={selectedTeacherId}
                   onChange={(e) => setSelectedTeacherId(e.target.value)}
-                  className="rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-white/30 min-w-[200px]"
+                  className="ac-input min-h-[44px] min-w-0 shrink-0 focus:ring-2 focus:ring-[var(--pw-teal)]/40 sm:min-w-[200px]"
                 >
                   <option value="">Select teacher…</option>
                   {teachers
                     .filter((t) => t.teacher_id !== currentTeacher?.teacher_id)
                     .map((t) => (
-                      <option key={t.teacher_id} value={t.teacher_id} className="bg-slate-900 text-white">
+                      <option key={t.teacher_id} value={t.teacher_id}>
                         {t.name}
                       </option>
                     ))}

@@ -161,7 +161,7 @@ export default function SettingsFinancial({
           title="Financial Settings"
           desc="Configure tuition fees per class and admission/registration fees."
         />
-        <div className="text-gray-500">Loading fee structure...</div>
+        <div className="ac-text-muted">Loading fee structure...</div>
       </div>
     );
   }
@@ -174,13 +174,13 @@ export default function SettingsFinancial({
       />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+        <div className="mb-4 rounded-lg border border-emerald-400/35 bg-emerald-950/45 p-3 text-sm text-emerald-100">
           {success}
         </div>
       )}
@@ -189,24 +189,24 @@ export default function SettingsFinancial({
         <div
           className={`mb-4 rounded-lg border p-4 ${
             displayFeeStatus.status === 'fully_configured'
-              ? 'border-green-300 bg-green-50'
+              ? 'border-emerald-400/40 bg-emerald-950/35'
               : displayFeeStatus.status === 'partially_configured'
-                ? 'border-yellow-300 bg-yellow-50'
+                ? 'border-amber-400/45 bg-amber-950/35'
                 : displayFeeStatus.status === 'not_configured'
-                  ? 'border-orange-300 bg-orange-50'
-                  : 'border-red-300 bg-red-50'
+                  ? 'border-orange-400/45 bg-orange-950/35'
+                  : 'border-red-400/45 bg-red-950/35'
           }`}
         >
           <div className="mb-2 flex items-center justify-between">
             <h3
               className={`text-sm font-medium ${
                 displayFeeStatus.status === 'fully_configured'
-                  ? 'text-green-800'
+                  ? 'text-emerald-200'
                   : displayFeeStatus.status === 'partially_configured'
-                    ? 'text-yellow-800'
+                    ? 'text-amber-100'
                     : displayFeeStatus.status === 'not_configured'
-                      ? 'text-orange-800'
-                      : 'text-red-800'
+                      ? 'text-orange-100'
+                      : 'text-red-100'
               }`}
             >
               {displayFeeStatus.status === 'fully_configured'
@@ -219,38 +219,38 @@ export default function SettingsFinancial({
               {displayFeeStatus.message}
             </h3>
           </div>
-          <p className="mb-2 text-sm text-gray-700">{displayFeeStatus.description}</p>
-          <div className="flex items-center justify-between text-xs text-gray-500">
+          <p className="mb-2 text-sm ac-text-secondary">{displayFeeStatus.description}</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs ac-text-muted">
             <span>
               Classes: {displayFeeStatus.configured_classes || 0}/{displayFeeStatus.total_classes || 0}{' '}
               configured
             </span>
-            <span className="text-gray-500">{displayFeeStatus.action}</span>
+            <span>{displayFeeStatus.action}</span>
           </div>
         </div>
       )}
 
-      <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
-        <h3 className="mb-3 font-medium text-purple-800">🎓 Admission/Registration Fee</h3>
-        <p className="mb-3 text-sm text-gray-500">
+      <div className="mb-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+        <h3 className="mb-3 font-medium text-[#c4b5fd]">🎓 Admission/Registration Fee</h3>
+        <p className="mb-3 text-sm ac-text-secondary">
           This one-time fee is charged when a new student is admitted to the school.
         </p>
-        <div className="flex items-center gap-3">
-          <label className="text-sm text-gray-700">Amount (UGX):</label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <label className="text-sm ac-text-secondary shrink-0">Amount (UGX):</label>
           <input
             type="number"
             min={0}
             value={admissionFee || ''}
             onChange={(e) => setAdmissionFee(e.target.value)}
-            className="w-48 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900"
+            className="ac-input w-full max-w-xs min-h-[44px]"
             placeholder="e.g., 50000"
           />
         </div>
       </div>
 
       <div className="mb-6">
-        <h3 className="mb-3 font-medium text-gray-900">💰 Day Tuition Fees Per Class (Per Term)</h3>
-        <p className="mb-4 text-sm text-gray-500">
+        <h3 className="mb-3 font-medium ac-text-primary">💰 Day Tuition Fees Per Class (Per Term)</h3>
+        <p className="mb-4 text-sm ac-text-secondary">
           Set the tuition amount <strong>per term</strong> for each class. The yearly total will be
           calculated automatically (3 terms).
         </p>
@@ -258,21 +258,21 @@ export default function SettingsFinancial({
           {classList.map((className) => (
             <div
               key={className}
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+              className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4"
             >
-              <label className="mb-2 block text-sm font-medium text-gray-700">{className}</label>
+              <label className="mb-2 block text-sm font-medium ac-text-primary">{className}</label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">UGX</span>
+                <span className="text-sm ac-text-muted">UGX</span>
                 <input
                   type="number"
                   min={0}
                   value={feeStructure[className] || ''}
                   onChange={(e) => updateClassFee(className, e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900"
+                  className="ac-input min-h-[44px] flex-1"
                   placeholder="e.g., 100000"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-600">
+              <p className="mt-1 text-xs ac-text-muted">
                 {feeStructure[className] && parseInt(feeStructure[className], 10) > 0
                   ? `~UGX ${(parseInt(feeStructure[className], 10) * 3).toLocaleString()} per Year`
                   : 'Fee not configured'}
@@ -283,21 +283,21 @@ export default function SettingsFinancial({
       </div>
 
       <div className="mb-6">
-        <h3 className="mb-3 font-medium text-gray-900">🏠 Boarding Fees Per Class (Per Term)</h3>
-        <p className="mb-4 text-sm text-gray-500">
-          Set the boarding fees <strong>per term</strong> for each class.
+        <h3 className="mb-3 font-medium ac-text-primary">🏠 Boarding Fees Per Class (Per Term)</h3>
+        <p className="mb-4 text-sm ac-text-secondary">
+          Set the boarding fees <strong className="ac-text-primary">per term</strong> for each class.
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {classList.map((className) => (
             <div
               key={className}
-              className="rounded-lg border border-blue-200 bg-blue-50 p-4"
+              className="rounded-lg border border-[var(--pw-teal, #10d9a8)]/25 bg-[var(--pw-s3)]/90 p-4"
             >
-              <label className="mb-3 block text-sm font-medium text-blue-800">
+              <label className="mb-3 block text-sm font-medium" style={{ color: 'var(--pw-teal, #10d9a8)' }}>
                 {className} - Boarding
               </label>
               <div className="mb-2">
-                <label className="mb-1 block text-xs text-gray-700">
+                <label className="mb-1 block text-xs ac-text-secondary">
                   Boarding Tuition (UGX)
                 </label>
                 <input
@@ -307,12 +307,12 @@ export default function SettingsFinancial({
                   onChange={(e) =>
                     updateClassFee(`${className}_boarding_tuition`, e.target.value)
                   }
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                  className="ac-input min-h-[44px] w-full text-sm"
                   placeholder="e.g., 150000"
                 />
               </div>
-              <div className="mt-2 rounded bg-gray-50 p-2">
-                <p className="text-xs text-gray-500">
+              <div className="mt-2 rounded border border-[var(--pw-border)] bg-[var(--pw-s2)] p-2">
+                <p className="text-xs ac-text-muted">
                   {(() => {
                     const tuition = parseInt(
                       feeStructure[`${className}_boarding_tuition`] || '0',
@@ -329,7 +329,7 @@ export default function SettingsFinancial({
         </div>
       </div>
 
-      <div className="flex justify-end gap-3">
+      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
         <button
           type="button"
           onClick={async () => {
@@ -361,7 +361,7 @@ export default function SettingsFinancial({
             }
           }}
           disabled={saving}
-          className="rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           🔄 Sync Student Balances
         </button>
@@ -369,15 +369,17 @@ export default function SettingsFinancial({
           type="button"
           onClick={saveFeeStructure}
           disabled={saving}
-          className="rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Fee Structure'}
         </button>
       </div>
 
-      <div className="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <h4 className="mb-2 text-sm font-medium text-blue-800">ℹ️ How This Works</h4>
-        <ul className="space-y-1 text-xs text-gray-500">
+      <div className="mt-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+        <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
+          ℹ️ How This Works
+        </h4>
+        <ul className="space-y-1 text-xs ac-text-muted">
           <li>• Set tuition fees for each class (per term amount)</li>
           <li>• System calculates yearly total (term amount × 3 terms)</li>
           <li>• When adding a student, select their class — fee auto-populates</li>

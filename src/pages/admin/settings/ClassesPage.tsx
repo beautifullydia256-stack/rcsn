@@ -77,7 +77,10 @@ export default function SettingsClassesPage() {
     return (
       <AdminPageWrapper title="Class Management">
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-white/30 border-t-white" />
+          <div
+            className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--pw-border)] border-t-[var(--pw-teal)]"
+            aria-hidden
+          />
         </div>
       </AdminPageWrapper>
     );
@@ -85,27 +88,27 @@ export default function SettingsClassesPage() {
 
   return (
     <AdminPageWrapper title="Class Management" subtitle="Manage settings for all classes">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin/settings')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Settings
         </button>
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white hover:bg-white/20 backdrop-blur-xl"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Dashboard
         </button>
       </div>
 
       {classes.length === 0 ? (
-        <div className={`${adminCardClass} text-center py-12`}>
-          <BookOpen className="w-12 h-12 mx-auto mb-4 text-white/50" />
-          <p className="text-white/70">No classes available. Please set your school type in settings.</p>
+        <div className={`${adminCardClass} py-12 text-center`}>
+          <BookOpen className="mx-auto mb-4 h-12 w-12 ac-text-muted opacity-70" />
+          <p className="ac-text-secondary">No classes available. Please set your school type in settings.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -114,12 +117,12 @@ export default function SettingsClassesPage() {
               key={classItem.name}
               type="button"
               onClick={() => navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(classItem.name)}`)}
-              className={`${adminCardClass} text-left hover:bg-white/15 transition-colors`}
+              className={`${adminCardClass} min-h-[44px] text-left transition-colors hover:brightness-110`}
             >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">{classItem.name}</h3>
-                  <div className="flex items-center gap-4 text-sm text-white/70">
+              <div className="mb-4 flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="mb-2 text-lg font-semibold ac-text-primary">{classItem.name}</h3>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm ac-text-secondary">
                     <div className="flex items-center gap-1">
                       <Users className="w-4 h-4" />
                       <span>{classItem.studentCount} students</span>
@@ -132,10 +135,10 @@ export default function SettingsClassesPage() {
                     )}
                   </div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-white/50 shrink-0" />
+                <ArrowRight className="h-5 w-5 shrink-0 ac-text-muted opacity-80" />
               </div>
-              <div className="pt-4 border-t border-white/20">
-                <span className="text-xs text-white/60">Click to manage class settings</span>
+              <div className="border-t border-[var(--pw-border)] pt-4">
+                <span className="text-xs ac-text-muted">Click to manage class settings</span>
               </div>
             </button>
           ))}

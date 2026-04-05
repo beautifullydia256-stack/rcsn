@@ -12,7 +12,7 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 | 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | **Done** | **2026-04-06:** Dashboard + PDF letterhead + Excel; ledger KPIs (outstanding + fees on record); PDF **ASCII-safe** text for standard fonts (Edge). **You verify:** logo CORS; exports in production. |
 | 07 | [07-record-payment-modal-loop-accountant-outstanding.md](./07-record-payment-modal-loop-accountant-outstanding.md) | **Done** | **2026-04-06:** Record Payment from accountant Outstanding stays closed after dismiss; `openRecordPayment` in place; `payments?student=` cleared on close; PaymentsPage URL auto-open ref-guard. Verified in production. |
 | 08 | [08-notification-center-rebuild.md](./08-notification-center-rebuild.md) | **Done** | **2026-04-08:** Admin notification hub: inbox on `user_in_app_notifications` (unread/read, mark read, filters, desktop layout); **Broadcast** tools; student-registry header pattern; dashboard inbox preview. Apply `20260403150000_in_app_notifications.sql` in prod if not already; extend event sources over time. |
-| 09 | [09-system-settings-ui-visibility-responsive.md](./09-system-settings-ui-visibility-responsive.md) | Not started | |
+| 09 | [09-system-settings-ui-visibility-responsive.md](./09-system-settings-ui-visibility-responsive.md) | Partial | **Code (2026-04-05):** Admin `.pw-main` defines `--ac-*` tokens + dark `select` + glass button overrides so `ac-text-*` / `ac-input` / `ac-glass-card` work without `accountant-glass`. All System Settings routes/tabs restyled for dark contrast (`pw`/`ac` tokens, tables, alerts). Responsive: scrollable tab row, `min-h-[44px]` targets, stacked toolbars on small screens. **You verify:** saves/load unchanged; smoke-test every settings sub-page on mobile. |
 | 10 | [10-headed-paper-vs-identity-cards-sidebar-and-pdf.md](./10-headed-paper-vs-identity-cards-sidebar-and-pdf.md) | Partial | Admin sidebar + `/dashboard/admin/headed-paper`; Next identity list + detail; SPA headed paper link fixed. |
 | 11 | [11-timetable-pdf-download-uganda.md](./11-timetable-pdf-download-uganda.md) | Partial | Teacher timetable: Print/Save PDF; school-wide export not built. |
 | 12 | [12-report-lower-upper-section-preview-pdf-parity.md](./12-report-lower-upper-section-preview-pdf-parity.md) | Partial | Preview wrapped in white/light context; PDF parity (comments, boundaries, school contact) needs `reportGenerator` audit. |
@@ -25,4 +25,4 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 1. `20260403120000_student_balance_current_term_and_users_last_sign_in.sql`
 2. `20260403150000_in_app_notifications.sql`
 
-Last updated: 2026-04-08 (Issues **07** and **08** marked Done on backlog / checklist).
+Last updated: 2026-04-05 (Issue **09** settings UI — code in repo; checklist **Partial** pending QA).

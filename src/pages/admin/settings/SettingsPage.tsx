@@ -79,21 +79,21 @@ export default function SettingsPage() {
         <button
           type="button"
           onClick={() => navigate('/dashboard/admin')}
-          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Dashboard
         </button>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-6 -mx-1 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
         {TABS.map(({ k, label }) => (
           <button
             key={k}
             type="button"
             onClick={() => setTab(k)}
-            className={`rounded-lg px-4 py-2 text-sm transition-colors ${
+            className={`shrink-0 rounded-lg px-4 py-2.5 text-left text-sm transition-colors min-h-[44px] sm:min-h-0 ${
               tab === k
-                ? 'border border-green-500 bg-green-600 text-white'
+                ? 'border border-green-500 bg-green-600 text-white shadow-lg shadow-green-900/30'
                 : 'ac-glass-btn-secondary ac-text-primary'
             }`}
           >
@@ -102,7 +102,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      <div className={`${adminCardClass} p-4`}>
+      <div className={`${adminCardClass} overflow-x-auto p-4 sm:p-6`}>
         {tab === 'subjects' && (
           <SettingsSubjectsPerClass classOptions={classOptions} schoolId={schoolId} />
         )}
@@ -132,7 +132,7 @@ export default function SettingsPage() {
 
       <LocationSettingsWidget />
 
-      <div className={`${adminCardClass} mt-6`}>
+      <div className={`${adminCardClass} mt-6 overflow-x-auto`}>
         <div className="mb-2 font-medium ac-text-primary">Classes</div>
         {classOptions.length === 0 ? (
           <p className="text-sm ac-text-muted">
@@ -147,7 +147,7 @@ export default function SettingsPage() {
                 onClick={() =>
                   navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(c)}`)
                 }
-                className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
+                className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
               >
                 {c}
               </button>
@@ -162,28 +162,28 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/exam-sets')}
-            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
           >
             Exam Sets
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/attendance')}
-            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
           >
             Attendance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/outstanding')}
-            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
           >
             Finance Records
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="ac-glass-btn-secondary rounded-lg px-3 py-2 text-sm ac-text-primary"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
           >
             Report Records
           </button>

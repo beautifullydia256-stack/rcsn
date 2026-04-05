@@ -411,7 +411,7 @@ export default function SettingsExamSets({
                       className={`rounded px-2 py-1 text-xs transition-colors ${
                         es.is_active
                           ? 'bg-green-600 text-white hover:bg-green-500'
-                          : 'bg-gray-600 text-white hover:bg-gray-500'
+                          : 'bg-slate-600 text-white hover:bg-slate-500'
                       }`}
                     >
                       {es.is_active ? 'Active' : 'Inactive'}
@@ -424,7 +424,7 @@ export default function SettingsExamSets({
                       className={`rounded px-2 py-1 text-xs transition-colors ${
                         es.active_for_input
                           ? 'bg-blue-600 text-white hover:bg-blue-500'
-                          : 'bg-gray-600 text-white hover:bg-gray-500'
+                          : 'bg-slate-600 text-white hover:bg-slate-500'
                       }`}
                     >
                       {es.active_for_input ? 'ON' : 'OFF'}

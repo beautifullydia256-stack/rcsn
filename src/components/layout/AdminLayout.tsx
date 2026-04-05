@@ -478,6 +478,53 @@ export default function AdminLayout() {
           background: var(--pw-bg, #05080f);
           color: var(--pw-t1, #eef3ff);
         }
+        /* Admin shell is dark-only: mirror accountant-glass tokens so ac-* utilities work without wrapping the layout. */
+        html.dark .pw-main {
+          --ac-cpu-white: #F0F0F0;
+          --ac-page-bg: transparent;
+          --ac-card-bg: rgba(255, 255, 255, 0.06);
+          --ac-card-bg-fallback: rgba(22, 33, 58, 0.92);
+          --ac-text-primary: #f1f5f9;
+          --ac-text-secondary: rgba(241, 245, 249, 0.88);
+          --ac-text-muted: rgba(241, 245, 249, 0.64);
+          --ac-border: rgba(255, 255, 255, 0.12);
+          --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
+          --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
+          --ac-chart-grid: rgba(255, 255, 255, 0.08);
+          --ac-chart-axis: rgba(255, 255, 255, 0.65);
+          --ac-chart-ref-line: rgba(255, 255, 255, 0.35);
+          --ac-accent-blue: #60a5fa;
+          --ac-accent-green: #34d399;
+          --ac-accent-orange: #fbbf24;
+          --ac-accent-teal: #2dd4bf;
+          --ac-sidebar-active-bg: rgba(255, 255, 255, 0.08);
+        }
+        html.dark .pw-main select {
+          background-color: var(--pw-s3, #16213a);
+          color: var(--pw-t1, #eef3ff);
+          border-color: var(--pw-border, rgba(255,255,255,0.07));
+        }
+        html.dark .pw-main select option {
+          background-color: #1e293b;
+          color: #f1f5f9;
+        }
+        html.dark .pw-main .ac-glass-btn-secondary {
+          background: rgba(255, 255, 255, 0.06);
+          border-color: var(--ac-border);
+        }
+        html.dark .pw-main .ac-glass-btn-secondary:hover {
+          background: rgba(255, 255, 255, 0.1);
+          box-shadow: var(--ac-shadow-strong);
+        }
+        html.dark .pw-main .ac-glass-btn {
+          background: rgba(52, 211, 153, 0.15);
+          border-color: rgba(255, 255, 255, 0.25);
+          box-shadow: 0 2px 16px rgba(52, 211, 153, 0.2);
+        }
+        html.dark .pw-main .ac-glass-btn:hover {
+          background: rgba(52, 211, 153, 0.25);
+          box-shadow: 0 4px 28px rgba(52, 211, 153, 0.4);
+        }
         .pw-main--chat {
           display: flex;
           flex-direction: column;

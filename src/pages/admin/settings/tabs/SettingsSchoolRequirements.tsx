@@ -210,7 +210,7 @@ export default function SettingsSchoolRequirements({
           title="School Requirements"
           desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
         />
-        <div className="text-gray-500">Loading requirements...</div>
+        <div className="ac-text-muted">Loading requirements...</div>
       </div>
     );
   }
@@ -223,51 +223,51 @@ export default function SettingsSchoolRequirements({
       />
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="mb-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
           {error}
         </div>
       )}
       {success && (
-        <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+        <div className="mb-4 rounded-lg border border-emerald-400/35 bg-emerald-950/45 p-3 text-sm text-emerald-100">
           {success}
         </div>
       )}
 
-      <div className="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-        <h3 className="mb-3 font-medium text-gray-900">
+      <div className="mb-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+        <h3 className="mb-3 font-medium ac-text-primary">
           {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
         </h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Requirement Name *</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Requirement Name *</label>
             <input
               type="text"
               value={requirementName}
               onChange={(e) => setRequirementName(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
+              className="ac-input min-h-[44px] w-full"
               placeholder="e.g., School Uniform"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Cost (UGX) *</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Cost (UGX) *</label>
             <input
               type="number"
               min={0}
               step={0.01}
               value={cost}
               onChange={(e) => setCost(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+              className="ac-input min-h-[44px] w-full"
               placeholder="e.g., 50000"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Boarding Type *</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Boarding Type *</label>
             <select
               value={boardingType}
               onChange={(e) =>
                 setBoardingType(e.target.value as 'Day Scholar' | 'Boarding' | 'Both')
               }
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+              className="ac-input min-h-[44px] w-full"
             >
               <option value="Day Scholar">Day Scholar</option>
               <option value="Boarding">Boarding</option>
@@ -275,11 +275,11 @@ export default function SettingsSchoolRequirements({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Class (Optional)</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Class (Optional)</label>
             <select
               value={className}
               onChange={(e) => setClassName(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+              className="ac-input min-h-[44px] w-full"
             >
               <option value="">All Classes</option>
               {classOptions.map((cls) => (
@@ -290,33 +290,33 @@ export default function SettingsSchoolRequirements({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Status</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value as 'Active' | 'Inactive')}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+              className="ac-input min-h-[44px] w-full"
             >
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">Description (Optional)</label>
+            <label className="mb-1 block text-sm font-medium ac-text-secondary">Description (Optional)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
+              className="ac-input min-h-[44px] w-full"
               placeholder="Brief description"
             />
           </div>
         </div>
-        <div className="mt-4 flex gap-3">
+        <div className="mt-4 flex flex-wrap gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={saving || !requirementName.trim()}
-            className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
           >
             {saving ? 'Saving...' : editingId ? 'Update' : 'Add'}
           </button>
@@ -324,7 +324,7 @@ export default function SettingsSchoolRequirements({
             <button
               type="button"
               onClick={handleCancel}
-              className="rounded-lg bg-gray-600 px-4 py-2 text-white hover:bg-gray-500"
+              className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-4 py-2 ac-text-primary"
             >
               Cancel
             </button>
@@ -338,13 +338,13 @@ export default function SettingsSchoolRequirements({
           placeholder="Search requirements..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 placeholder-gray-400"
+          className="ac-input min-h-[44px] flex-1"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+            className="ac-input min-h-[44px] grow sm:grow-0"
           >
             <option value="name">Sort by Name</option>
             <option value="cost">Sort by Cost</option>
@@ -356,51 +356,52 @@ export default function SettingsSchoolRequirements({
           <button
             type="button"
             onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-700 hover:bg-gray-50"
+            className="ac-glass-btn-secondary min-h-[44px] min-w-[44px] ac-text-primary"
+            aria-label={sortOrder === 'asc' ? 'Sort descending' : 'Sort ascending'}
           >
             {sortOrder === 'asc' ? '↑' : '↓'}
           </button>
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-gray-200">
+      <div className="overflow-x-auto rounded-xl border border-[var(--pw-border)]">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
-              <th className="px-4 py-3 font-medium text-gray-700">Requirement Name</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Boarding Type</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Class</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Description</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Cost (UGX)</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Status</th>
-              <th className="px-4 py-3 font-medium text-gray-700">Actions</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Requirement Name</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Boarding Type</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Class</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Description</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Cost (UGX)</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Status</th>
+              <th className="px-4 py-3 font-medium ac-text-muted">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-6 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-6 text-center ac-text-muted">
                   {searchTerm ? 'No requirements found.' : 'No requirements added yet.'}
                 </td>
               </tr>
             ) : (
               filteredAndSorted.map((req) => (
-                <tr key={req.id} className="border-t border-gray-100">
-                  <td className="px-4 py-3 font-medium text-gray-900">{req.requirement_name}</td>
+                <tr key={req.id} className="border-t border-[var(--pw-border)]">
+                  <td className="px-4 py-3 font-medium ac-text-primary">{req.requirement_name}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`rounded px-2 py-1 text-xs ${
                         req.boarding_type === 'Boarding'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
+                          ? 'bg-blue-600/25 text-blue-200'
+                          : 'bg-emerald-600/25 text-emerald-200'
                       }`}
                     >
                       {req.boarding_type || 'Day Scholar'}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-700">{req.class_name || 'All Classes'}</td>
-                  <td className="px-4 py-3 text-gray-700">{req.description || '-'}</td>
-                  <td className="px-4 py-3 text-gray-900">
+                  <td className="px-4 py-3 ac-text-secondary">{req.class_name || 'All Classes'}</td>
+                  <td className="px-4 py-3 ac-text-secondary">{req.description || '-'}</td>
+                  <td className="px-4 py-3 ac-text-primary">
                     {new Intl.NumberFormat('en-UG', {
                       style: 'currency',
                       currency: 'UGX',
@@ -411,8 +412,8 @@ export default function SettingsSchoolRequirements({
                     <span
                       className={`rounded px-2 py-1 text-xs ${
                         req.status === 'Active'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-emerald-600/25 text-emerald-200'
+                          : 'bg-red-600/25 text-red-200'
                       }`}
                     >
                       {req.status}
@@ -444,11 +445,11 @@ export default function SettingsSchoolRequirements({
       </div>
 
       {requirements.length > 0 && (
-        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-          <div className="text-sm text-gray-700">
-            <strong>Total Requirements:</strong> {requirements.length} |{' '}
-            <strong>Active:</strong> {requirements.filter((r) => r.status === 'Active').length} |{' '}
-            <strong>Total Value:</strong>{' '}
+        <div className="mt-4 rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-3">
+          <div className="text-sm ac-text-secondary">
+            <strong className="ac-text-primary">Total Requirements:</strong> {requirements.length} |{' '}
+            <strong className="ac-text-primary">Active:</strong> {requirements.filter((r) => r.status === 'Active').length} |{' '}
+            <strong className="ac-text-primary">Total Value:</strong>{' '}
             {new Intl.NumberFormat('en-UG', {
               style: 'currency',
               currency: 'UGX',

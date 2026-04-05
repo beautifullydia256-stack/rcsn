@@ -189,13 +189,11 @@ export default function SettingsTeacherSubjectClass({
         <select
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
         >
-          <option value="" className="bg-slate-900">
-            Select Teacher
-          </option>
+          <option value="">Select Teacher</option>
           {teachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id} className="bg-slate-900">
+            <option key={t.teacher_id} value={t.teacher_id}>
               {t.name}
             </option>
           ))}
@@ -203,29 +201,29 @@ export default function SettingsTeacherSubjectClass({
         <select
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
-          className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none focus:ring-2 focus:ring-blue-500"
+          className="ac-input min-h-[44px] w-full"
         >
           <option value="">Select Class</option>
           {classOptions.map((c) => (
-            <option key={c} value={c} className="bg-slate-900">
+            <option key={c} value={c}>
               {c}
             </option>
           ))}
         </select>
-        <div className="min-h-[44px] rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900">
+        <div className="min-h-[44px] rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-2 ac-text-primary">
           {selectedClass ? (
             <div className="flex flex-wrap gap-2">
               {classSubjects.length === 0 ? (
-                <span className="text-sm text-gray-600">No subjects in this class yet</span>
+                <span className="text-sm ac-text-muted">No subjects in this class yet</span>
               ) : (
                 classSubjects.map((s) => (
                   <button
                     key={s}
                     type="button"
-                    className={`rounded-lg border px-3 py-1 text-sm ${
+                    className={`rounded-lg border px-3 py-1.5 text-sm min-h-[36px] ${
                       selectedSubjects.includes(s)
                         ? 'border-blue-400 bg-blue-600/80 text-white'
-                        : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                        : 'border-[var(--pw-border)] bg-[var(--pw-s3)] ac-text-secondary hover:brightness-110'
                     }`}
                     onClick={() =>
                       setSelectedSubjects((prev) =>
@@ -239,7 +237,7 @@ export default function SettingsTeacherSubjectClass({
               )}
             </div>
           ) : (
-            <span className="text-sm text-gray-600">Select a class to view subjects</span>
+            <span className="text-sm ac-text-muted">Select a class to view subjects</span>
           )}
         </div>
         <button
@@ -248,52 +246,52 @@ export default function SettingsTeacherSubjectClass({
             !selectedTeacher || !selectedClass || selectedSubjects.length === 0 || saving
           }
           onClick={assign}
-          className="rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
         >
           {saving ? 'Assigning...' : 'Assign'}
         </button>
       </div>
 
-      <div className="mt-4 text-sm text-gray-700">Current assignments</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-lg shadow-black/20 backdrop-blur-md">
+      <div className="mt-4 text-sm ac-text-secondary">Current assignments</div>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] shadow-lg shadow-black/25">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="text-left">
-              <th className="px-4 py-2 text-gray-700">Teacher</th>
-              <th className="px-4 py-2 text-gray-700">Class</th>
-              <th className="px-4 py-2 text-gray-700">Subject</th>
-              <th className="px-4 py-2 text-gray-700">Role</th>
-              <th className="px-4 py-2 text-gray-700">Actions</th>
+            <tr className="border-b border-[var(--pw-border)] bg-[var(--pw-s3)] text-left">
+              <th className="px-4 py-2 ac-text-muted">Teacher</th>
+              <th className="px-4 py-2 ac-text-muted">Class</th>
+              <th className="px-4 py-2 ac-text-muted">Subject</th>
+              <th className="px-4 py-2 ac-text-muted">Role</th>
+              <th className="px-4 py-2 ac-text-muted">Actions</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={5} className="px-4 py-6 text-center ac-text-secondary">
                   Loading...
                 </td>
               </tr>
             ) : assignments.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-6 text-center text-gray-700">
+                <td colSpan={5} className="px-4 py-6 text-center ac-text-secondary">
                   No assignments yet.
                 </td>
               </tr>
             ) : (
               assignments.map((a) => (
-                <tr key={a.id} className="border-t border-gray-100">
-                  <td className="px-4 py-2 text-gray-900">
+                <tr key={a.id} className="border-t border-[var(--pw-border)]">
+                  <td className="px-4 py-2 ac-text-primary">
                     {teachers.find((t) => t.teacher_id === a.teacher_id)?.name || a.teacher_id}
                   </td>
-                  <td className="px-4 py-2 text-gray-800">{a.class_name}</td>
-                  <td className="px-4 py-2 text-gray-800">{a.subject}</td>
-                  <td className="px-4 py-2 text-gray-700">
+                  <td className="px-4 py-2 ac-text-secondary">{a.class_name}</td>
+                  <td className="px-4 py-2 ac-text-secondary">{a.subject}</td>
+                  <td className="px-4 py-2 ac-text-secondary">
                     {a.assignment_role === 'co_teacher' ? 'Co-teacher' : 'Subject teacher'}
                   </td>
                   <td className="px-4 py-2">
                     <button
                       type="button"
-                      className="rounded bg-red-500 px-2 py-1 text-xs text-gray-900 hover:scale-105 hover:bg-red-400 transition-transform"
+                      className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-400"
                       onClick={() => remove(a.id)}
                     >
                       Remove
@@ -306,7 +304,7 @@ export default function SettingsTeacherSubjectClass({
         </table>
       </div>
       {error && (
-        <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-600">
+        <div className="mt-3 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
           {error}
         </div>
       )}

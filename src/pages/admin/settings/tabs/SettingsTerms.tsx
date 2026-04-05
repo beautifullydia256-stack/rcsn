@@ -245,45 +245,47 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         desc="Configure the current school term. Three terms per year (1, 2, 3)."
       />
 
-      <div className="mb-4 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-sm font-medium text-blue-700">📅 Uganda Academic Calendar</h4>
+      <div className="mb-4 rounded-lg border border-[var(--pw-blue)]/35 bg-[var(--pw-s2)] p-4">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
+            📅 Uganda Academic Calendar
+          </h4>
           <button
             type="button"
             onClick={() => setShowTermInfo(!showTermInfo)}
-            className="text-xs text-blue-700 hover:text-blue-800"
+            className="text-xs ac-text-secondary underline decoration-[var(--pw-blue)]/50 hover:brightness-125"
           >
             {showTermInfo ? 'Hide' : 'Show'} Details
           </button>
         </div>
         {showTermInfo && (
-          <div className="mt-3 space-y-2 text-xs text-gray-700">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded bg-gray-50 p-2">
-                <div className="mb-1 font-medium text-gray-900">Term I</div>
+          <div className="mt-3 space-y-2 text-xs ac-text-secondary">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                <div className="mb-1 font-medium ac-text-primary">Term I</div>
                 <div>February - May</div>
-                <div className="text-gray-600">Duration: ~3 months</div>
+                <div className="ac-text-muted">Duration: ~3 months</div>
               </div>
-              <div className="rounded bg-gray-50 p-2">
-                <div className="mb-1 font-medium text-gray-900">Term II</div>
+              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                <div className="mb-1 font-medium ac-text-primary">Term II</div>
                 <div>June - August</div>
-                <div className="text-gray-600">Duration: ~2.5 months</div>
+                <div className="ac-text-muted">Duration: ~2.5 months</div>
               </div>
-              <div className="rounded bg-gray-50 p-2">
-                <div className="mb-1 font-medium text-gray-900">Term III</div>
+              <div className="rounded border border-[var(--pw-border)] bg-[var(--pw-s3)] p-2">
+                <div className="mb-1 font-medium ac-text-primary">Term III</div>
                 <div>September - December</div>
-                <div className="text-gray-600">Duration: ~3 months</div>
+                <div className="ac-text-muted">Duration: ~3 months</div>
               </div>
             </div>
-            <p className="mt-2 italic text-gray-600">
+            <p className="mt-2 italic ac-text-muted">
               ℹ️ These are standard Uganda term dates. You can customize dates below.
             </p>
           </div>
         )}
       </div>
 
-      <div className="mb-3 flex items-center gap-3">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
           <input
             type="radio"
             className="accent-blue-500"
@@ -292,7 +294,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           />
           Edit Current Term
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
+        <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
           <input
             type="radio"
             className="accent-blue-500"
@@ -302,7 +304,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           Edit Next Term
         </label>
         {currentTerm && (
-          <span className="text-sm text-gray-500">
+          <span className="text-sm ac-text-muted">
             Current: Term {currentTerm.term}, {currentTerm.year} (
             {currentTerm.start_date
               ? new Date(currentTerm.start_date).toLocaleDateString()
@@ -317,30 +319,30 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           type="number"
           min={2020}
           max={2099}
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={year}
           onChange={(e) =>
             setYear(parseInt((e.target.value || '').slice(0, 4) || String(new Date().getFullYear()), 10))
           }
         />
         <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={term}
           onChange={(e) => setTerm(parseInt(e.target.value, 10))}
         >
-          <option value={1} className="bg-slate-900">Term 1</option>
-          <option value={2} className="bg-slate-900">Term 2</option>
-          <option value={3} className="bg-slate-900">Term 3</option>
+          <option value={1}>Term 1</option>
+          <option value={2}>Term 2</option>
+          <option value={3}>Term 3</option>
         </select>
         <input
           type="date"
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={start}
           onChange={(e) => setStart(e.target.value)}
         />
         <input
           type="date"
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={end}
           onChange={(e) => setEnd(e.target.value)}
         />
@@ -348,33 +350,33 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           type="button"
           disabled={!schoolId || saving}
           onClick={save}
-          className="rounded-lg bg-green-600 px-3 py-2 hover:bg-green-500 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Term'}
         </button>
       </div>
 
       {error && (
-        <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <div className="mt-3 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
           {error}
         </div>
       )}
 
-      <div className="mt-4 text-sm text-gray-700">Configured terms</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-gray-200">
+      <div className="mt-4 text-sm ac-text-secondary">Configured terms</div>
+      <div className="mt-2 overflow-x-auto rounded-xl border border-[var(--pw-border)]">
         <table className="min-w-full text-sm">
-          <thead className="bg-gray-50">
+          <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
-              <th className="px-4 py-2 text-gray-700">Year</th>
-              <th className="px-4 py-2 text-gray-700">Term</th>
-              <th className="px-4 py-2 text-gray-700">Start</th>
-              <th className="px-4 py-2 text-gray-700">End</th>
+              <th className="px-4 py-2 ac-text-muted">Year</th>
+              <th className="px-4 py-2 ac-text-muted">Term</th>
+              <th className="px-4 py-2 ac-text-muted">Start</th>
+              <th className="px-4 py-2 ac-text-muted">End</th>
             </tr>
           </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-gray-50">
+          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
             {displayRows.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-4 py-3 text-gray-700">
+                <td colSpan={4} className="px-4 py-3 ac-text-secondary">
                   No terms set yet.
                 </td>
               </tr>
@@ -382,21 +384,21 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
               displayRows.map((r) => {
                 const isCurrent = r === currentTermRow;
                 return (
-                  <tr key={`${r.year}-${r.term}`} className="border-t border-gray-200">
-                    <td className="px-4 py-2 text-gray-900">{r.year}</td>
-                    <td className="px-4 py-2 text-gray-800">
+                  <tr key={`${r.year}-${r.term}`} className="border-t border-[var(--pw-border)]">
+                    <td className="px-4 py-2 ac-text-primary">{r.year}</td>
+                    <td className="px-4 py-2 ac-text-secondary">
                       <span
                         className={`rounded px-2 py-1 text-xs ${
-                          isCurrent ? 'bg-green-600/20 text-green-300' : 'bg-blue-600/20 text-blue-700'
+                          isCurrent ? 'bg-green-600/25 text-green-200' : 'bg-blue-600/25 text-blue-200'
                         }`}
                       >
                         {isCurrent ? 'Current' : 'Next'}
                       </span>
                     </td>
-                    <td className="px-4 py-2 text-gray-800">
+                    <td className="px-4 py-2 ac-text-secondary">
                       {r.start_date ? new Date(r.start_date).toLocaleDateString() : 'TBD'}
                     </td>
-                    <td className="px-4 py-2 text-gray-800">
+                    <td className="px-4 py-2 ac-text-secondary">
                       {new Date(r.end_date).toLocaleDateString()}
                     </td>
                   </tr>
@@ -407,29 +409,29 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         </table>
       </div>
 
-      <div className="mt-6 rounded-lg border border-green-500/30 bg-green-600/10 p-4">
-        <h3 className="mb-3 font-medium text-green-800">📅 Next Term Begins Date</h3>
-        <p className="mb-3 text-sm text-gray-500">
+      <div className="mt-6 rounded-lg border border-emerald-500/35 bg-emerald-950/30 p-4">
+        <h3 className="mb-3 font-medium text-emerald-200">📅 Next Term Begins Date</h3>
+        <p className="mb-3 text-sm ac-text-secondary">
           Set the date when the next term begins. This will appear on student report cards.
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <input
             type="date"
             value={nextTermBeginsDate}
             onChange={(e) => setNextTermBeginsDate(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+            className="ac-input min-h-[44px] w-full sm:w-auto"
           />
           <button
             type="button"
             onClick={saveNextTermBeginsDate}
             disabled={!schoolId || !nextTermBeginsDate || savingNextTermDate}
-            className="rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
           >
             {savingNextTermDate ? 'Saving...' : 'Save Date'}
           </button>
         </div>
         {nextTermDateSuccess && (
-          <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-200">
+          <div className="mt-3 rounded-lg border border-emerald-400/35 bg-emerald-950/40 px-3 py-2 text-sm text-emerald-100">
             {nextTermDateSuccess}
           </div>
         )}

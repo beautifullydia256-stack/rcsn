@@ -212,7 +212,7 @@ export default function SettingsTimetable({
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader
           title="Timetable Designer"
           desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
@@ -220,7 +220,7 @@ export default function SettingsTimetable({
         <button
           type="button"
           onClick={handleDownloadPDF}
-          className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-gray-900 hover:bg-red-500"
+          className="flex min-h-[44px] shrink-0 items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500"
         >
           <svg
             className="h-4 w-4"
@@ -240,62 +240,62 @@ export default function SettingsTimetable({
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={selectedClass}
           onChange={(e) => setSelectedClass(e.target.value)}
         >
           <option value="">Select Class</option>
           {classOptions.map((cls) => (
-            <option key={cls} value={cls} className="bg-slate-900">
+            <option key={cls} value={cls}>
               {cls}
             </option>
           ))}
         </select>
         <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={selectedDay}
           onChange={(e) => setSelectedDay(e.target.value)}
         >
           <option value="">Weekday</option>
-          <option value="Monday" className="bg-slate-900">Monday</option>
-          <option value="Tuesday" className="bg-slate-900">Tuesday</option>
-          <option value="Wednesday" className="bg-slate-900">Wednesday</option>
-          <option value="Thursday" className="bg-slate-900">Thursday</option>
-          <option value="Friday" className="bg-slate-900">Friday</option>
+          <option value="Monday">Monday</option>
+          <option value="Tuesday">Tuesday</option>
+          <option value="Wednesday">Wednesday</option>
+          <option value="Thursday">Thursday</option>
+          <option value="Friday">Friday</option>
         </select>
         <input
           type="time"
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={startTime}
           onChange={(e) => setStartTime(e.target.value)}
         />
         <input
           type="time"
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900"
+          className="ac-input min-h-[44px] w-full"
           value={endTime}
           onChange={(e) => setEndTime(e.target.value)}
         />
         <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 md:col-span-2"
+          className="ac-input min-h-[44px] w-full md:col-span-2"
           value={selectedSubject}
           onChange={(e) => setSelectedSubject(e.target.value)}
           disabled={!selectedClass}
         >
           <option value="">Select Subject</option>
           {subjects.map((subj) => (
-            <option key={subj} value={subj} className="bg-slate-900">
+            <option key={subj} value={subj}>
               {subj}
             </option>
           ))}
         </select>
         <select
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 md:col-span-2"
+          className="ac-input min-h-[44px] w-full md:col-span-2"
           value={selectedTeacher}
           onChange={(e) => setSelectedTeacher(e.target.value)}
         >
           <option value="">Select Teacher</option>
           {teachers.map((t) => (
-            <option key={t.teacher_id} value={t.teacher_id} className="bg-slate-900">
+            <option key={t.teacher_id} value={t.teacher_id}>
               {t.name}
             </option>
           ))}
@@ -304,29 +304,29 @@ export default function SettingsTimetable({
           type="button"
           onClick={handleAddPeriod}
           disabled={saving}
-          className="rounded-lg bg-purple-600 px-3 py-2 text-white hover:bg-purple-500 disabled:opacity-50"
+          className="min-h-[44px] rounded-lg bg-purple-600 px-3 py-2 text-white hover:bg-purple-500 disabled:opacity-50"
         >
           {saving ? 'Adding...' : 'Add Period'}
         </button>
       </div>
 
       {error && (
-        <div className="mt-4 rounded-lg border border-red-500/30 bg-red-600/10 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-100">
           {error}
         </div>
       )}
 
       {timetablePeriods.length > 0 && (
         <div className="mt-6">
-          <h3 className="mb-4 font-medium text-gray-900">Current Timetable Periods</h3>
+          <h3 className="mb-4 font-medium ac-text-primary">Current Timetable Periods</h3>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {timetablePeriods.map((period) => (
               <div
                 key={period.id}
-                className="rounded-lg border border-gray-200 bg-gray-50 p-4"
+                className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4"
               >
-                <div className="mb-2 flex items-start justify-between">
-                  <h4 className="font-medium text-gray-900">{period.class_name}</h4>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h4 className="font-medium ac-text-primary">{period.class_name}</h4>
                   <button
                     type="button"
                     onClick={() => handleRemovePeriod(period.id)}
@@ -335,18 +335,18 @@ export default function SettingsTimetable({
                     Remove
                   </button>
                 </div>
-                <div className="space-y-1 text-sm text-gray-700">
+                <div className="space-y-1 text-sm ac-text-secondary">
                   <div>
-                    <strong>Day:</strong> {period.day_of_week}
+                    <strong className="ac-text-primary">Day:</strong> {period.day_of_week}
                   </div>
                   <div>
-                    <strong>Time:</strong> {period.start_time} - {period.end_time}
+                    <strong className="ac-text-primary">Time:</strong> {period.start_time} - {period.end_time}
                   </div>
                   <div>
-                    <strong>Subject:</strong> {period.subject}
+                    <strong className="ac-text-primary">Subject:</strong> {period.subject}
                   </div>
                   <div>
-                    <strong>Teacher:</strong> {period.teacher_name}
+                    <strong className="ac-text-primary">Teacher:</strong> {period.teacher_name}
                   </div>
                 </div>
               </div>
@@ -356,15 +356,17 @@ export default function SettingsTimetable({
       )}
 
       {timetablePeriods.length === 0 && (
-        <div className="mt-4 py-8 text-center text-sm text-gray-600">
+        <div className="mt-4 py-8 text-center text-sm ac-text-muted">
           No periods added yet. Fill in the form above and click &quot;Add Period&quot; to create
           your timetable.
         </div>
       )}
 
-      <div className="mt-6 rounded-lg border border-blue-500/30 bg-blue-600/10 p-4">
-        <h4 className="mb-2 text-sm font-medium text-blue-700">📄 PDF Export</h4>
-        <p className="text-xs text-gray-600">
+      <div className="mt-6 rounded-lg border border-[var(--pw-blue)]/35 bg-[var(--pw-s2)] p-4">
+        <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
+          📄 PDF Export
+        </h4>
+        <p className="text-xs ac-text-muted">
           Click the &quot;Download PDF&quot; button above to export the timetable as a formatted
           PDF document.
         </p>

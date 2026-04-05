@@ -1,7 +1,7 @@
 # Issue: System Settings — dark-mode contrast, typography, mobile, modern polish (UI only)
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** Implemented in repo (pending stakeholder QA in production)  
+**Last updated:** 2026-04-05  
 
 ## Summary
 
