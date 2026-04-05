@@ -398,6 +398,9 @@ export default function StaffPage() {
               : r.job_title || r.department || (r.staff_role ? roleLabel : 'Other staff');
             const payLbl = PAY_OPTIONS.find((p) => p.value === (r.pay_frequency || ''))?.label;
             const cornerTone = isTeacher ? pwRoleToChipTone('teacher') : r.staff_role ? pwRoleToChipTone(r.staff_role) : 'muted';
+            const profilePath = isTeacher
+              ? `/dashboard/admin/teachers/${r.id}`
+              : `/dashboard/admin/staff/member/${r.id}`;
             return (
               <PwDirectoryUserCard
                 key={r.rowKey}
@@ -408,6 +411,7 @@ export default function StaffPage() {
                 initials={pwDirInitials(r.full_name)}
                 avatarBackground={pwDirGrad(i)}
                 statusDotActive={!!r.linked_user_id}
+                onCardClick={() => navigate(profilePath)}
                 rows={[
                   {
                     label: 'Email',
@@ -453,8 +457,13 @@ export default function StaffPage() {
                 footer={
                   isTeacher ? (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%' }}>
-                      <Link to={`/dashboard/admin/teachers/${r.id}`} className="par-crd-btn par-crd-primary" style={{ flex: '1 1 auto' }}>
-                        Profile
+                      <Link
+                        to={profilePath}
+                        className="par-crd-btn par-crd-primary"
+                        style={{ flex: '1 1 auto' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View profile
                       </Link>
                       <button
                         type="button"
@@ -468,16 +477,26 @@ export default function StaffPage() {
                       </button>
                     </div>
                   ) : (
-                    <button
-                      type="button"
-                      className="par-crd-btn par-crd-ghost"
-                      style={{ color: 'var(--rose)', flex: '0 0 auto' }}
-                      onClick={() => void handleDeleteOther(r.id, r.full_name)}
-                      title="Remove record"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Remove
-                    </button>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%' }}>
+                      <Link
+                        to={profilePath}
+                        className="par-crd-btn par-crd-primary"
+                        style={{ flex: '1 1 auto' }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        View profile
+                      </Link>
+                      <button
+                        type="button"
+                        className="par-crd-btn par-crd-ghost"
+                        style={{ color: 'var(--rose)', flex: '0 0 auto' }}
+                        onClick={() => void handleDeleteOther(r.id, r.full_name)}
+                        title="Remove record"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </button>
+                    </div>
                   )
                 }
               />

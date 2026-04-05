@@ -33,7 +33,7 @@ export default function PwDirectoryUserCard({
     <div
       className="par-pcard"
       style={{
-        cursor: onCardClick ? undefined : 'default',
+        cursor: onCardClick ? 'pointer' : 'default',
         ...(selected
           ? {
               outline: '2px solid var(--violet)',

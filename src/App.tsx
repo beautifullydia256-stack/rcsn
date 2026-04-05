@@ -55,6 +55,7 @@ const CreateStaffPage = lazyWithRetry(() => import('./pages/admin/accounts/Creat
 const InviteFromRosterPage = lazyWithRetry(() => import('./pages/admin/accounts/InviteFromRosterPage'));
 const PermissionsPage = lazyWithRetry(() => import('./pages/admin/permissions/PermissionsPage'));
 const StaffPage = lazyWithRetry(() => import('./pages/admin/staff/StaffPage'));
+const OtherStaffProfilePage = lazyWithRetry(() => import('./pages/admin/staff/OtherStaffProfilePage'));
 const ExamSetsPage = lazyWithRetry(() => import('./pages/admin/exam-sets/ExamSetsPage'));
 const AttendanceRecordsPage = lazyWithRetry(() => import('./pages/admin/attendance/AttendanceRecordsPage'));
 const SettingsPage = lazyWithRetry(() => import('./pages/admin/settings/SettingsPage'));
@@ -177,6 +178,7 @@ function App() {
                   <Route path="accounts/add" element={<CreateStaffPage />} />
                   <Route path="accounts/invite" element={<InviteFromRosterPage />} />
                   <Route path="permissions" element={<PermissionsPage />} />
+                  <Route path="staff/member/:member_id" element={<OtherStaffProfilePage />} />
                   <Route path="staff" element={<StaffPage />} />
                   <Route path="exam-sets" element={<ExamSetsPage />} />
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
