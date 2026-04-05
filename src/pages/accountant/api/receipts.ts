@@ -30,7 +30,7 @@ export type ReceiptsData = {
 export const RECEIPTS_QUERY_KEY = ["accountant", "receipts"] as const;
 
 export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
-  const [{ data: payData }, { data: schoolRow }] = await Promise.all([
+  const [{ data: payData, error: payErr }, { data: schoolRow, error: schoolErr }] = await Promise.all([
     supabase
       .from("student_payments")
       .select(
@@ -43,6 +43,8 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
       .limit(200),
     supabase.from("schools").select("name").eq("school_id", schoolId).maybeSingle(),
   ]);
+  if (payErr) throw new Error(payErr.message);
+  if (schoolErr) throw new Error(schoolErr.message);
   const rows = (payData || []) as PaymentRow[];
   const studentIds = [...new Set(rows.map((r) => r.student_id))];
   const termIds = [...new Set(rows.map((r) => r.term_id))];

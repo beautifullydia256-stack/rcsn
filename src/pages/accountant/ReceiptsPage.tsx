@@ -11,7 +11,7 @@ export default function ReceiptsPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const [q, setQ] = useState("");
-  const { data, isLoading } = useQuery({
+  const { data, isPending, isFetching, isError, error } = useQuery({
     queryKey: [...RECEIPTS_QUERY_KEY, schoolId],
     queryFn: () => fetchReceipts(schoolId!),
     enabled: !!schoolId,
@@ -121,8 +121,12 @@ export default function ReceiptsPage() {
         />
       </div>
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
-        {isLoading ? (
+        {!schoolId || (isPending && isFetching) ? (
           <div className="ac-text-muted p-8 text-center">Loading receipts…</div>
+        ) : isError ? (
+          <div className="ac-text-muted p-8 text-center">
+            Could not load receipts.{error instanceof Error ? ` ${error.message}` : ""}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="ac-text-muted p-8 text-center">
             {payments.length === 0
