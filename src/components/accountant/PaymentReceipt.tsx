@@ -13,27 +13,18 @@ export type SchoolBrandingRow = {
   contact_email?: string | null;
 };
 
-/** Map `schools` row fields into receipt letterhead (shared by modal, reprint, print HTML). */
+/** Map `schools` row → receipt header (name + contact only; no motto/address on receipt). */
 export function schoolRowToReceiptHeader(row: SchoolBrandingRow | null | undefined): {
   schoolName?: string;
-  schoolMotto?: string;
-  schoolAddress?: string;
   schoolPhone?: string;
   schoolEmail?: string;
 } {
   if (!row) return {};
   const name = String(row.name ?? "").trim();
-  const motto = String(row.motto ?? "").trim();
-  const address = [row.address, row.location, row.pobox]
-    .map((x) => (x == null ? "" : String(x).trim()))
-    .filter(Boolean)
-    .join("\n");
   const phone = String(row.contact_phone ?? "").trim();
   const email = String(row.contact_email ?? "").trim();
   return {
     schoolName: name || undefined,
-    schoolMotto: motto || undefined,
-    schoolAddress: address || undefined,
     schoolPhone: phone || undefined,
     schoolEmail: email || undefined,
   };
@@ -49,10 +40,8 @@ function escapeHtml(s: string): string {
 
 export type PaymentReceiptData = {
   receiptNumber: string;
-  /** Letterhead — from `schools` */
+  /** From `schools` — name + contact only on slip */
   schoolName?: string;
-  schoolMotto?: string;
-  schoolAddress?: string;
   schoolPhone?: string;
   schoolEmail?: string;
   studentName: string;
@@ -95,21 +84,16 @@ export function formatReceiptDateTime(d: Date): string {
   return `${day}-${mon}-${year} ${h}:${m}:${s}`;
 }
 
-function receiptLetterheadHtml(data: PaymentReceiptData): string {
-  const parts: string[] = [];
-  if (data.schoolName) parts.push(`<div class="rh-name">${escapeHtml(data.schoolName)}</div>`);
-  if (data.schoolMotto) parts.push(`<div class="rh-motto">${escapeHtml(data.schoolMotto)}</div>`);
-  const contactBits: string[] = [];
-  if (data.schoolPhone) contactBits.push(`<span>Tel: ${escapeHtml(data.schoolPhone)}</span>`);
-  if (data.schoolEmail) contactBits.push(`<span>Email: ${escapeHtml(data.schoolEmail)}</span>`);
-  if (contactBits.length)
-    parts.push(`<div class="rh-contact">${contactBits.join(" <span class='rh-sep'>|</span> ")}</div>`);
-  if (data.schoolAddress) {
-    const lines = data.schoolAddress.split(/\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length) parts.push(`<div class="rh-address">${lines.map((l) => escapeHtml(l)).join("<br/>")}</div>`);
-  }
-  if (parts.length === 0) return "";
-  return `<header class="receipt-header">${parts.join("")}</header>`;
+/** School line + optional Tel / Email only (no motto, no address — matches older receipt). */
+function receiptSchoolBlockHtml(data: PaymentReceiptData): string {
+  const bits: string[] = [];
+  if (data.schoolName) bits.push(`<div class="school-name">${escapeHtml(data.schoolName)}</div>`);
+  const contact: string[] = [];
+  if (data.schoolPhone) contact.push(`Tel: ${escapeHtml(data.schoolPhone)}`);
+  if (data.schoolEmail) contact.push(`Email: ${escapeHtml(data.schoolEmail)}`);
+  if (contact.length) bits.push(`<div class="school-contact">${contact.join(" | ")}</div>`);
+  if (bits.length === 0) return "";
+  return `<div class="school-block">${bits.join("")}</div>`;
 }
 
 /** Open a new window, render receipt HTML, trigger print. Non-blocking; does not block transaction. */
@@ -131,40 +115,32 @@ export function printReceipt(data: PaymentReceiptData): void {
   <meta charset="utf-8">
   <title>Receipt ${escapeHtml(data.receiptNumber)}</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; padding: 28px 20px; max-width: 420px; margin: 0 auto; color: #1e293b; }
-    .receipt-header { text-align: center; padding-bottom: 16px; margin-bottom: 4px; border-bottom: 2px solid #0f172a; }
-    .rh-name { font-size: 20px; font-weight: 700; letter-spacing: 0.03em; color: #0f172a; line-height: 1.25; }
-    .rh-motto { font-size: 12px; color: #64748b; font-style: italic; margin-top: 6px; }
-    .rh-contact { font-size: 12px; color: #334155; margin-top: 10px; line-height: 1.5; }
-    .rh-sep { color: #94a3b8; padding: 0 6px; }
-    .rh-address { font-size: 11px; color: #64748b; margin-top: 8px; line-height: 1.45; }
-    .doc-block { text-align: center; margin: 18px 0 16px; padding-bottom: 14px; border-bottom: 1px dashed #cbd5e1; }
-    .doc-title { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #0f172a; }
-    .doc-receipt-no { font-size: 13px; margin-top: 8px; color: #475569; }
-    .doc-receipt-no strong { font-family: ui-monospace, monospace; color: #0f172a; }
-    .row { display: flex; justify-content: space-between; gap: 12px; margin: 8px 0; font-size: 14px; align-items: flex-start; }
-    .label { color: #64748b; flex-shrink: 0; }
-    .value { font-weight: 500; text-align: right; }
-    .amount { font-weight: 700; font-size: 16px; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e2e8f0; }
-    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 20px; border-top: 2px dashed #cbd5e1; padding-top: 14px; }
+    body { font-family: system-ui, sans-serif; padding: 24px; max-width: 360px; margin: 0 auto; color: #1e293b; }
+    h1 { text-align: center; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin: 0 0 8px; font-weight: 700; }
+    .school-block { text-align: center; margin-bottom: 8px; }
+    .school-name { font-weight: 600; font-size: 15px; }
+    .school-contact { font-size: 12px; color: #475569; margin-top: 6px; }
+    .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 14px; }
+    .label { color: #64748b; }
+    .value { font-weight: 500; }
+    .amount { font-weight: 700; font-size: 16px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e2e8f0; }
+    .footer { text-align: center; font-size: 12px; color: #94a3b8; margin-top: 16px; border-top: 2px dashed #cbd5e1; padding-top: 12px; }
   </style>
 </head>
 <body>
-  ${receiptLetterheadHtml(data)}
-  <div class="doc-block">
-    <div class="doc-title">Fee payment receipt</div>
-    <div class="doc-receipt-no">Receipt No. <strong>${escapeHtml(data.receiptNumber)}</strong></div>
-  </div>
+  <h1>Payment receipt</h1>
+  ${receiptSchoolBlockHtml(data)}
+  <div class="row"><span class="label">Receipt No</span><span class="value">${escapeHtml(data.receiptNumber)}</span></div>
   <div class="row"><span class="label">Student</span><span class="value">${escapeHtml(data.studentName)}</span></div>
-  <div class="row"><span class="label">Class</span><span class="value">${escapeHtml(data.studentClass)}</span></div>
-  <div class="row"><span class="label">Term</span><span class="value">${escapeHtml(data.termLabel)}</span></div>
-  <div class="row amount"><span class="label">Amount Paid</span><span class="value">${data.amountPaid.toLocaleString()} UGX</span></div>
+  <div class="row"><span class="label">Class</span><span>${escapeHtml(data.studentClass)}</span></div>
+  <div class="row"><span class="label">Term</span><span>${escapeHtml(data.termLabel)}</span></div>
+  <div class="row amount"><span class="label">Amount Paid</span><span>${data.amountPaid.toLocaleString()} UGX</span></div>
   ${allocationsHtml}
-  ${data.totalRemainingBalance !== undefined && data.totalRemainingBalance >= 0 ? `<div class="row amount"><span class="label">Remaining balance</span><span class="value">${data.totalRemainingBalance.toLocaleString()} UGX</span></div>` : ""}
-  <div class="row"><span class="label">Payment Method</span><span class="value">${escapeHtml(methodLabel)}</span></div>
-  <div class="row"><span class="label">Date & Time</span><span class="value">${escapeHtml(data.transactionTime)}</span></div>
-  <div class="row"><span class="label">Recorded by</span><span class="value">${escapeHtml(data.recordedBy)}</span></div>
-  ${data.description ? `<div class="row" style="margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0"><span class="label">Description</span><span class="value">${escapeHtml(data.description)}</span></div>` : ""}
+  ${data.totalRemainingBalance !== undefined && data.totalRemainingBalance >= 0 ? `<div class="row amount"><span class="label">Remaining balance</span><span>${data.totalRemainingBalance.toLocaleString()} UGX</span></div>` : ""}
+  <div class="row"><span class="label">Payment Method</span><span>${escapeHtml(methodLabel)}</span></div>
+  <div class="row"><span class="label">Date & Time</span><span>${escapeHtml(data.transactionTime)}</span></div>
+  <div class="row"><span class="label">Recorded by</span><span>${escapeHtml(data.recordedBy)}</span></div>
+  ${data.description ? `<div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e8f0"><span class="label">Description</span><span>${escapeHtml(data.description)}</span></div>` : ""}
   <div class="footer">Thank you for your payment</div>
   <script>
     window.onload = function() {
@@ -195,35 +171,25 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
   }, [autoPrint, data.receiptNumber]);
 
   return (
-    <div
-      className="bg-white p-6 text-slate-900 shadow-lg"
-      style={{ maxWidth: 420 }}
-    >
-      <header className="border-b-2 border-slate-900 pb-4 text-center">
+    <div className="bg-white p-6 text-slate-900 shadow-lg" style={{ maxWidth: 360 }}>
+      <div className="mb-4 border-b-2 border-dashed border-slate-300 pb-3">
+        <h2 className="text-center text-lg font-bold uppercase tracking-wide text-slate-800">Payment receipt</h2>
         {data.schoolName && (
-          <div className="text-xl font-bold tracking-wide text-slate-900">{data.schoolName}</div>
-        )}
-        {data.schoolMotto && (
-          <div className="mt-1.5 text-xs italic text-slate-500">{data.schoolMotto}</div>
+          <p className="mt-2 text-center text-sm font-semibold text-slate-700">{data.schoolName}</p>
         )}
         {(data.schoolPhone || data.schoolEmail) && (
-          <div className="mt-2.5 text-xs text-slate-600">
-            {data.schoolPhone && <span>Tel: {data.schoolPhone}</span>}
-            {data.schoolPhone && data.schoolEmail && <span className="px-2 text-slate-400">|</span>}
-            {data.schoolEmail && <span>Email: {data.schoolEmail}</span>}
-          </div>
+          <p className="mt-1 text-center text-xs text-slate-600">
+            {data.schoolPhone && <>Tel: {data.schoolPhone}</>}
+            {data.schoolPhone && data.schoolEmail && " | "}
+            {data.schoolEmail && <>Email: {data.schoolEmail}</>}
+          </p>
         )}
-        {data.schoolAddress && (
-          <div className="mt-2 whitespace-pre-line text-[11px] leading-snug text-slate-500">{data.schoolAddress}</div>
-        )}
-      </header>
-      <div className="my-4 border-b border-dashed border-slate-300 pb-4 text-center">
-        <div className="text-[13px] font-bold uppercase tracking-[0.12em] text-slate-900">Fee payment receipt</div>
-        <div className="mt-2 text-sm text-slate-600">
-          Receipt No. <span className="font-mono font-semibold text-slate-900">{data.receiptNumber}</span>
-        </div>
       </div>
       <div className="space-y-1.5 text-sm">
+        <div className="flex justify-between">
+          <span className="text-slate-500">Receipt No</span>
+          <span className="font-mono font-semibold">{data.receiptNumber}</span>
+        </div>
         <div className="flex justify-between">
           <span className="text-slate-500">Student</span>
           <span className="font-medium">{data.studentName}</span>
@@ -236,9 +202,9 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
           <span className="text-slate-500">Term</span>
           <span>{data.termLabel}</span>
         </div>
-        <div className="flex justify-between border-t border-slate-200 pt-2">
-          <span className="text-slate-500">Amount Paid</span>
-          <span className="font-bold">{data.amountPaid.toLocaleString()} UGX</span>
+        <div className="mt-2 flex justify-between border-t border-slate-200 pt-2 text-base font-bold">
+          <span className="font-normal text-slate-500">Amount Paid</span>
+          <span>{data.amountPaid.toLocaleString()} UGX</span>
         </div>
         {data.allocations && data.allocations.length > 0 && (
           <>

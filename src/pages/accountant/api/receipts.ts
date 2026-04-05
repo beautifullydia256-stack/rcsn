@@ -25,8 +25,6 @@ export type ReceiptsData = {
   studentMap: StudentMap;
   termMap: TermMap;
   schoolName: string;
-  schoolMotto?: string;
-  schoolAddress?: string;
   schoolPhone?: string;
   schoolEmail?: string;
   recorderMap: RecorderMap;
@@ -48,7 +46,7 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
       .limit(200),
     supabase
       .from("schools")
-      .select("name, motto, address, location, pobox, contact_phone, contact_email")
+      .select("name, contact_phone, contact_email")
       .eq("school_id", schoolId)
       .maybeSingle(),
   ]);
@@ -85,8 +83,6 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
     studentMap,
     termMap,
     schoolName: letterhead.schoolName ?? "",
-    schoolMotto: letterhead.schoolMotto,
-    schoolAddress: letterhead.schoolAddress,
     schoolPhone: letterhead.schoolPhone,
     schoolEmail: letterhead.schoolEmail,
     recorderMap,

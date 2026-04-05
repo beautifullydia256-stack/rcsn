@@ -23,8 +23,6 @@ export default function ReceiptsPage() {
   const studentMap = data?.studentMap ?? {};
   const termMap = data?.termMap ?? {};
   const schoolName = data?.schoolName ?? "";
-  const schoolMotto = data?.schoolMotto;
-  const schoolAddress = data?.schoolAddress;
   const schoolPhone = data?.schoolPhone;
   const schoolEmail = data?.schoolEmail;
   const recorderMap = data?.recorderMap ?? {};
@@ -67,11 +65,18 @@ export default function ReceiptsPage() {
       termLabel: termMap[p.term_id] ?? "—",
       amountApplied: Number(p.amount_paid || 0),
     }));
-    const remRaw = first.receipt_total_remaining_balance;
-    const totalRemainingBalance =
-      remRaw !== null && remRaw !== undefined && String(remRaw) !== "" && Number.isFinite(Number(remRaw))
-        ? Math.max(0, Number(remRaw))
-        : undefined;
+    /** Same receipt may have multiple DB rows (split terms); snapshot is on each but earliest row can be null on legacy data. */
+    const remSource =
+      sorted.find((p) => {
+        const v = p.receipt_total_remaining_balance;
+        return v !== null && v !== undefined && String(v).trim() !== "";
+      }) ?? first;
+    const remRaw = remSource.receipt_total_remaining_balance;
+    let totalRemainingBalance: number | undefined;
+    if (remRaw !== null && remRaw !== undefined && String(remRaw).trim() !== "") {
+      const n = typeof remRaw === "bigint" ? Number(remRaw) : Number(String(remRaw).replace(/,/g, ""));
+      if (Number.isFinite(n)) totalRemainingBalance = Math.max(0, n);
+    }
     let transactionTime = "—";
     if (first.created_at) {
       transactionTime = formatReceiptDateTime(new Date(first.created_at));
@@ -86,8 +91,6 @@ export default function ReceiptsPage() {
     const receiptData: PaymentReceiptData = {
       receiptNumber: first.receipt_number || first.payment_id,
       schoolName: schoolName.trim() || undefined,
-      schoolMotto,
-      schoolAddress,
       schoolPhone,
       schoolEmail,
       studentName: s?.name ?? "—",

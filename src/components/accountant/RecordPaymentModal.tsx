@@ -150,7 +150,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
         supabase
           .from("schools")
-          .select("name, motto, address, location, pobox, contact_phone, contact_email")
+          .select("name, contact_phone, contact_email")
           .eq("school_id", schoolId)
           .single(),
       ]);
