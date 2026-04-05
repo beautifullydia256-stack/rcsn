@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, useOutletContext } from "react-router-dom";
 import { Banknote, Receipt } from "lucide-react";
 
@@ -9,9 +9,17 @@ export default function PaymentsPage() {
   const [searchParams] = useSearchParams();
   const { openRecordPayment } = useOutletContext() as OutletContext;
   const studentIdFromUrl = searchParams.get("student") ?? undefined;
+  /** One auto-open per URL student intent; ignores duplicate effect runs (unstable deps / strict remount churn). */
+  const autoOpenedForStudentRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (studentIdFromUrl) openRecordPayment(studentIdFromUrl);
+    if (!studentIdFromUrl) {
+      autoOpenedForStudentRef.current = null;
+      return;
+    }
+    if (autoOpenedForStudentRef.current === studentIdFromUrl) return;
+    autoOpenedForStudentRef.current = studentIdFromUrl;
+    openRecordPayment(studentIdFromUrl);
   }, [studentIdFromUrl, openRecordPayment]);
 
   return (

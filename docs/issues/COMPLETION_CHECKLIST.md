@@ -10,7 +10,7 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 | 04 | [04-user-management-ui-ux-modernization.md](./04-user-management-ui-ux-modernization.md) | **Done** | **2026-04-05:** User management cluster + staff roster UX; non-teaching staff profiles use teacher-profile shell (Geist / Instrument Serif, desktop max-width, documents/KYC, photos). Invite/school context patterns aligned. |
 | 05 | [05-assign-class-teacher-visibility-and-rules.md](./05-assign-class-teacher-visibility-and-rules.md) | **Done** | **2026-04-06:** Class teacher flow on teacher profile verified: dedicated card, occupancy hints, assign/block rules, subject teaching split; profile data loads parallelized. |
 | 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | **Done** | **2026-04-06:** Dashboard + PDF letterhead + Excel; ledger KPIs (outstanding + fees on record); PDF **ASCII-safe** text for standard fonts (Edge). **You verify:** logo CORS; exports in production. |
-| 07 | [07-record-payment-modal-loop-accountant-outstanding.md](./07-record-payment-modal-loop-accountant-outstanding.md) | Partial | `useCallback` for record payment in `AccountantLayout` — retest SPA outstanding → payments flow. |
+| 07 | [07-record-payment-modal-loop-accountant-outstanding.md](./07-record-payment-modal-loop-accountant-outstanding.md) | Partial | **Code (2026-04-05):** Outstanding **Record Payment** calls `openRecordPayment(id)` in place (no navigate to `?student=`); `closeRecordPayment` strips `student` query on payments route; `PaymentsPage` auto-open guarded with a ref. **You verify:** modal stays closed after cancel/complete; deep links `payments?student=` still work once. |
 | 08 | [08-notification-center-rebuild.md](./08-notification-center-rebuild.md) | Partial | New table + trigger (new student); admin Next notifications page simplified — **run migration**; extend event sources as needed. |
 | 09 | [09-system-settings-ui-visibility-responsive.md](./09-system-settings-ui-visibility-responsive.md) | Not started | |
 | 10 | [10-headed-paper-vs-identity-cards-sidebar-and-pdf.md](./10-headed-paper-vs-identity-cards-sidebar-and-pdf.md) | Partial | Admin sidebar + `/dashboard/admin/headed-paper`; Next identity list + detail; SPA headed paper link fixed. |
@@ -25,4 +25,4 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 1. `20260403120000_student_balance_current_term_and_users_last_sign_in.sql`
 2. `20260403150000_in_app_notifications.sql`
 
-Last updated: 2026-04-06 (Issue 06 signed off in backlog plan; Issue 07 next).
+Last updated: 2026-04-05 (Issue 07 modal-loop fix landed; production retest pending).

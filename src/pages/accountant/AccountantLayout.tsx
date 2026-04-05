@@ -96,7 +96,14 @@ export default function AccountantLayout() {
   const closeRecordPayment = useCallback(() => {
     setRecordPaymentOpen(false);
     setRecordPaymentInitialStudentId(null);
-  }, []);
+    // Drop ?student= so PaymentsPage auto-open effect cannot reopen after dismiss (remount / strict / churn).
+    const params = new URLSearchParams(location.search);
+    if (location.pathname.includes("/accountant/payments") && params.has("student")) {
+      params.delete("student");
+      const next = params.toString();
+      navigate({ pathname: location.pathname, search: next ? `?${next}` : "" }, { replace: true });
+    }
+  }, [location.pathname, location.search, navigate]);
 
   const openRecordExpense = useCallback(() => setRecordExpenseOpen(true), []);
 

@@ -67,7 +67,7 @@ export default function AccountantOutstandingPage() {
                     <td className="px-4 py-3">
                       <button
                         type="button"
-                        onClick={() => navigate(`/dashboard/accountant/payments?student=${r.student_id}`)}
+                        onClick={() => openRecordPayment(r.student_id)}
                         className="text-emerald-500 hover:underline text-sm font-medium"
                       >
                         Record Payment
