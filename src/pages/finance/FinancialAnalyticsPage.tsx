@@ -28,8 +28,8 @@ import {
   type PeriodType,
   type TermScope,
 } from "./fetchFinancialAnalytics";
-import { downloadFinancialAnalyticsCsv } from "./financialAnalyticsExport";
-import { downloadFinancialAnalyticsPdf } from "./financialAnalyticsPdf";
+import { downloadFinancialAnalyticsXlsx } from "./financialAnalyticsExport";
+import { downloadFinancialAnalyticsPdf, type FinancialAnalyticsPdfBranding } from "./financialAnalyticsPdf";
 import { loadFaPrefs, saveFaPrefs } from "./financialAnalyticsPrefs";
 import FinancialAnalyticsToolbar from "./FinancialAnalyticsToolbar";
 import FinancialAnalyticsCharts from "./FinancialAnalyticsCharts";
@@ -105,7 +105,6 @@ export default function FinancialAnalyticsPage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
-  const authUser = useAuthStore((s) => s.user);
   const isAdmin = pathname.includes("/dashboard/admin/");
   const backTo = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
   const financeBase = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
@@ -131,12 +130,23 @@ export default function FinancialAnalyticsPage() {
     staleTime: ADMIN_STALE_TIME_MS,
   });
 
-  const { data: schoolDisplayName } = useQuery({
-    queryKey: [...FINANCIAL_ANALYTICS_QUERY_KEY, "school-name", schoolId],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("schools").select("name").eq("id", schoolId!).maybeSingle();
-      if (error) return null;
-      return (data as { name?: string } | null)?.name ?? null;
+  const brandingSelect =
+    "name, logo_url, motto, subtitle, address, pobox, location, contact_email, contact_phone";
+
+  const { data: schoolBranding } = useQuery({
+    queryKey: [...FINANCIAL_ANALYTICS_QUERY_KEY, "school-branding", schoolId],
+    queryFn: async (): Promise<FinancialAnalyticsPdfBranding | null> => {
+      const bySchoolId = await supabase
+        .from("schools")
+        .select(brandingSelect)
+        .eq("school_id", schoolId!)
+        .maybeSingle();
+      let data = bySchoolId.data;
+      if (!data) {
+        const byId = await supabase.from("schools").select(brandingSelect).eq("id", schoolId!).maybeSingle();
+        data = byId.data;
+      }
+      return (data as FinancialAnalyticsPdfBranding | null) ?? null;
     },
     enabled: !!schoolId,
     staleTime: ADMIN_STALE_TIME_MS * 4,
@@ -145,7 +155,7 @@ export default function FinancialAnalyticsPage() {
   const [financialYear, setFinancialYear] = useState<number>(() => currentCalendarYear());
   const [termScope, setTermScope] = useState<TermScope>("one");
   const [termId, setTermId] = useState<string>("");
-  const [period, setPeriod] = useState<PeriodType>("month");
+  const [period, setPeriod] = useState<PeriodType>("term");
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const initPrefsRef = useRef(false);
@@ -165,7 +175,15 @@ export default function FinancialAnalyticsPage() {
       if (tid) setTermId(tid);
       setTermScope("one");
     }
-    if (saved.period) setPeriod(saved.period);
+    if (
+      saved.period === "term" ||
+      saved.period === "week" ||
+      saved.period === "month" ||
+      saved.period === "year" ||
+      saved.period === "custom"
+    ) {
+      setPeriod(saved.period);
+    }
   }, [terms]);
 
   useEffect(() => {
@@ -261,31 +279,41 @@ export default function FinancialAnalyticsPage() {
 
   const periodLabel = useMemo(() => {
     if (termScope === "all") return "Financial year to date (all terms)";
+    if (period === "term") {
+      const t = terms.find((x) => x.id === termId);
+      return t
+        ? `Term to date — ${t.label} (from ${t.start_date} through today, capped at term end)`
+        : "Term to date (term start through today)";
+    }
     if (period === "week") return "This week";
     if (period === "month") return "This month";
     if (period === "year") return "This year (within term)";
     if (period === "custom" && customStart && customEnd) return `Custom: ${customStart} → ${customEnd}`;
     return "Custom period";
-  }, [termScope, period, customStart, customEnd]);
+  }, [termScope, period, customStart, customEnd, terms, termId]);
 
-  const handleExportCsv = useCallback(() => {
+  const handleExportExcel = useCallback(() => {
     if (!data) return;
-    downloadFinancialAnalyticsCsv(data, {
+    downloadFinancialAnalyticsXlsx(data, {
       financialYear,
       termLabel: termLabelForExport,
       periodLabel,
+      schoolName: schoolBranding?.name,
     });
-  }, [data, financialYear, termLabelForExport, periodLabel]);
+  }, [data, financialYear, termLabelForExport, periodLabel, schoolBranding?.name]);
 
-  const handleExportPdf = useCallback(() => {
+  const handleExportPdf = useCallback(async () => {
     if (!data) return;
-    downloadFinancialAnalyticsPdf(data, {
-      financialYear,
-      termLabel: termLabelForExport,
-      periodLabel,
-      schoolName: schoolDisplayName || authUser?.user_metadata?.school_name || undefined,
-    });
-  }, [data, financialYear, termLabelForExport, periodLabel, schoolDisplayName, authUser]);
+    await downloadFinancialAnalyticsPdf(
+      data,
+      {
+        financialYear,
+        termLabel: termLabelForExport,
+        periodLabel,
+      },
+      schoolBranding ?? null
+    );
+  }, [data, financialYear, termLabelForExport, periodLabel, schoolBranding]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -318,11 +346,11 @@ export default function FinancialAnalyticsPage() {
   const pageSub = useMemo(() => {
     const range = `Jan 1 – Dec 31, ${financialYear}`;
     if (termScope === "all") {
-      return `Financial year ${financialYear} (${range}). All terms — year to date. Pick a single term to filter by week or month.`;
+      return `Financial year ${financialYear} (${range}). All terms — year to date. Pick a single term for term-to-date or weekly/monthly views.`;
     }
     const row = terms.find((t) => t.id === termId);
     if (row) {
-      return `Financial analytics for ${financialYear} (${range}). ${row.label} (${row.start_date} → ${row.end_date}).`;
+      return `Financial analytics for ${financialYear} (${range}). ${row.label} (${row.start_date} → ${row.end_date}). Default period is the full term through today unless you pick week, month, year, or custom.`;
     }
     return `Financial year ${financialYear} (${range}). Select a term to unlock period filters.`;
   }, [financialYear, termScope, termId, terms]);
@@ -383,21 +411,21 @@ export default function FinancialAnalyticsPage() {
 
       {schoolId && terms.length > 0 && (
         <FinancialAnalyticsToolbar
-          onExportPdf={handleExportPdf}
-          onExportCsv={handleExportCsv}
+          onExportPdf={() => void handleExportPdf()}
+          onExportExcel={handleExportExcel}
           onPrint={handlePrint}
           receiptsTo={receiptsTo}
           paymentsTo={paymentsTo}
           expensesTo={expensesTo}
           pdfDisabled={!data}
-          csvDisabled={!data}
+          excelDisabled={!data}
         />
       )}
 
       {schoolId && termsInSelectedYear.length > 0 && termScope === "all" && (
         <p className="muted" style={{ fontSize: 12, marginBottom: 12, maxWidth: 640 }}>
-          Period filters (This week / month / year / Custom) apply after you choose a <strong>single term</strong> above.
-          With &quot;All terms&quot;, totals use the full financial year to date.
+          Choose a <strong>single term</strong> above to use <strong>Term to date</strong> (default) or week / month / year / custom
+          slices. With &quot;All terms&quot;, totals use the full financial year to date.
         </p>
       )}
 
@@ -414,15 +442,22 @@ export default function FinancialAnalyticsPage() {
       )}
 
       {showPeriodFilters && (
-        <div className="period-tabs">
-          {(
-            [
-              ["week", "This week"],
-              ["month", "This month"],
-              ["year", "This year"],
-              ["custom", "Custom"],
-            ] as const
-          ).map(([key, label]) => (
+        <>
+          <p className="muted" style={{ fontSize: 12, marginBottom: 10, maxWidth: 720 }}>
+            <strong>Term to date</strong> includes all fee income and expenses from the selected term&apos;s start date
+            through today (or through the term&apos;s end date if the term has already finished). Use the other tabs for
+            shorter windows inside that term.
+          </p>
+          <div className="period-tabs">
+            {(
+              [
+                ["term", "Term to date"],
+                ["week", "This week"],
+                ["month", "This month"],
+                ["year", "This year"],
+                ["custom", "Custom"],
+              ] as const
+            ).map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -432,7 +467,8 @@ export default function FinancialAnalyticsPage() {
               {label}
             </button>
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {showPeriodFilters && period === "custom" && (
@@ -473,16 +509,31 @@ export default function FinancialAnalyticsPage() {
 
       {loading && (
         <>
-          <div className="kpi-strip kpi-strip--six fade-up d1 mb-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="kpi-card c-teal">
-                <div className="fa-skel kpi-ic c-teal" style={{ borderRadius: 11 }} />
-                <div className="kpi-info" style={{ flex: 1 }}>
-                  <div className="fa-skel" style={{ width: "50%", height: 10, marginBottom: 8 }} />
-                  <div className="fa-skel" style={{ width: "65%", height: 28 }} />
+          <div className="fa-kpi-board fade-up d1">
+            <div className="fa-kpi-row">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="fa-kpi fa-kpi-skel" aria-hidden>
+                  <div className="fa-skel" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
+                  <div className="fa-kpi-body" style={{ flex: 1 }}>
+                    <div className="fa-skel" style={{ width: "45%", height: 10, marginBottom: 10 }} />
+                    <div className="fa-skel" style={{ width: "72%", height: 26, marginBottom: 8 }} />
+                    <div className="fa-skel" style={{ width: "90%", height: 9 }} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="fa-kpi-row fa-kpi-row--duo">
+              {[5, 6].map((i) => (
+                <div key={i} className="fa-kpi fa-kpi-skel" aria-hidden>
+                  <div className="fa-skel" style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0 }} />
+                  <div className="fa-kpi-body" style={{ flex: 1 }}>
+                    <div className="fa-skel" style={{ width: "45%", height: 10, marginBottom: 10 }} />
+                    <div className="fa-skel" style={{ width: "72%", height: 26, marginBottom: 8 }} />
+                    <div className="fa-skel" style={{ width: "90%", height: 9 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
           <div className="grid-2 gap-3">
             <div className="card-sm" style={{ minHeight: 200 }}>
@@ -512,95 +563,107 @@ export default function FinancialAnalyticsPage() {
             </div>
           )}
 
-          <div className="kpi-strip kpi-strip--six fade-up d1 mb-4">
-            <div className="kpi-card c-teal">
-              <div className="kpi-ic c-teal" aria-hidden>
-                <Banknote className="fa-kpi-lucide" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Total income</div>
-                <div className="kpi-value c-teal">{formatUGX(data.totalIncome)}</div>
-                <div className="kpi-sub">Fee collections in range</div>
-                <KpiDelta pct={data.comparison?.incomeChangePct ?? null} goodWhenUp />
-              </div>
-            </div>
-            <div className="kpi-card c-amber">
-              <div className="kpi-ic c-amber" aria-hidden>
-                <Landmark className="fa-kpi-lucide" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Total spent</div>
-                <div className="kpi-value c-amber">{formatUGX(data.totalSpent)}</div>
-                <div className="kpi-sub">Operating &amp; payroll</div>
-                <KpiDelta pct={data.comparison?.spentChangePct ?? null} goodWhenUp={false} />
-              </div>
-            </div>
-            <div className="kpi-card c-green">
-              <div className="kpi-ic c-green" aria-hidden>
-                <Wallet className="fa-kpi-lucide" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Net position</div>
-                <div className={`kpi-value ${data.net >= 0 ? "c-green" : "c-rose"}`}>
-                  {data.net >= 0 ? "+" : "−"}
-                  {formatUGX(Math.abs(data.net))}
+          <div className="fa-kpi-board fade-up d1">
+            <div className="fa-kpi-row">
+              <div className="fa-kpi fa-kpi--emerald">
+                <div className="fa-kpi-ic" aria-hidden>
+                  <Banknote className="fa-kpi-lucide" />
                 </div>
-                <div className="kpi-sub">{data.net >= 0 ? "Surplus after expenses" : "Deficit — review costs"}</div>
-                <KpiDelta pct={data.comparison?.netChangePct ?? null} goodWhenUp />
-              </div>
-            </div>
-            <div className="kpi-card c-blue">
-              <div className="kpi-ic c-blue" aria-hidden>
-                <Percent className="fa-kpi-lucide" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Operating margin</div>
-                <div
-                  className={`kpi-value ${operatingMarginPct != null && operatingMarginPct >= 0 ? "c-green" : operatingMarginPct != null ? "c-rose" : ""}`}
-                >
-                  {operatingMarginPct != null ? `${operatingMarginPct}%` : "—"}
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Total income</div>
+                  <div className="fa-kpi-val fa-kpi-val--emerald">{formatUGX(data.totalIncome)}</div>
+                  <div className="fa-kpi-sub">Fee collections in range</div>
+                  <KpiDelta pct={data.comparison?.incomeChangePct ?? null} goodWhenUp />
                 </div>
-                <div className="kpi-sub">Net ÷ income (same period)</div>
-                {data.comparison && data.comparison.marginChangePp != null ? (
-                  <KpiDelta pct={data.comparison.marginChangePp} goodWhenUp variant="pp" />
-                ) : (
-                  <div className="kpi-fa-delta kpi-fa-delta--muted">
-                    <span>
-                      {!data.comparison
-                        ? "Benchmark for sustainability"
-                        : data.totalIncome <= 0
-                          ? "No fee income this period — margin not applicable"
-                          : data.comparison.prevIncome <= 0
-                            ? "Prior period had no fee income — margin not comparable"
-                            : "Margin change not available"}
-                    </span>
+              </div>
+              <div className="fa-kpi fa-kpi--amber">
+                <div className="fa-kpi-ic" aria-hidden>
+                  <Landmark className="fa-kpi-lucide" />
+                </div>
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Total spent</div>
+                  <div className="fa-kpi-val fa-kpi-val--amber">{formatUGX(data.totalSpent)}</div>
+                  <div className="fa-kpi-sub">Operating &amp; payroll</div>
+                  <KpiDelta pct={data.comparison?.spentChangePct ?? null} goodWhenUp={false} />
+                </div>
+              </div>
+              <div className={`fa-kpi ${data.net >= 0 ? "fa-kpi--green" : "fa-kpi--rose"}`}>
+                <div className="fa-kpi-ic" aria-hidden>
+                  <Wallet className="fa-kpi-lucide" />
+                </div>
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Net position</div>
+                  <div
+                    className={`fa-kpi-val ${data.net >= 0 ? "fa-kpi-val--green" : "fa-kpi-val--rose"}`}
+                  >
+                    {data.net >= 0 ? "+" : "−"}
+                    {formatUGX(Math.abs(data.net))}
                   </div>
-                )}
+                  <div className="fa-kpi-sub">{data.net >= 0 ? "Surplus after expenses" : "Deficit — review costs"}</div>
+                  <KpiDelta pct={data.comparison?.netChangePct ?? null} goodWhenUp />
+                </div>
               </div>
-            </div>
-            <div className="kpi-card c-teal">
-              <div className="kpi-ic c-teal" aria-hidden>
-                <CircleDollarSign className="fa-kpi-lucide" />
-              </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Outstanding (ledger)</div>
-                <div className="kpi-value c-teal">{formatUGX(data.ledgerOutstanding)}</div>
-                <div className="kpi-sub">Student balances — same term scope</div>
-                <div className="kpi-fa-delta kpi-fa-delta--muted">
-                  <span>Authoritative receivables from invoices</span>
+              <div className="fa-kpi fa-kpi--blue">
+                <div className="fa-kpi-ic" aria-hidden>
+                  <Percent className="fa-kpi-lucide" />
+                </div>
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Operating margin</div>
+                  <div
+                    className={`fa-kpi-val ${
+                      operatingMarginPct != null && operatingMarginPct >= 0
+                        ? "fa-kpi-val--green"
+                        : operatingMarginPct != null
+                          ? "fa-kpi-val--rose"
+                          : "fa-kpi-val--blue"
+                    }`}
+                  >
+                    {operatingMarginPct != null ? `${operatingMarginPct}%` : "—"}
+                  </div>
+                  <div className="fa-kpi-sub">Net ÷ income (same period)</div>
+                  {data.comparison && data.comparison.marginChangePp != null ? (
+                    <KpiDelta pct={data.comparison.marginChangePp} goodWhenUp variant="pp" />
+                  ) : (
+                    <div className="kpi-fa-delta kpi-fa-delta--muted">
+                      <span>
+                        {!data.comparison
+                          ? "Benchmark for sustainability"
+                          : data.totalIncome <= 0
+                            ? "No fee income this period — margin not applicable"
+                            : data.comparison.prevIncome <= 0
+                              ? "Prior period had no fee income — margin not comparable"
+                              : "Margin change not available"}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="kpi-card c-blue">
-              <div className="kpi-ic c-blue" aria-hidden>
-                <ClipboardList className="fa-kpi-lucide" />
+            <div className="fa-kpi-row fa-kpi-row--duo">
+              <div className="fa-kpi fa-kpi--rose">
+                <div className="fa-kpi-ic" aria-hidden>
+                  <CircleDollarSign className="fa-kpi-lucide" />
+                </div>
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Outstanding (ledger)</div>
+                  <div className="fa-kpi-val fa-kpi-val--rose">{formatUGX(data.ledgerOutstanding)}</div>
+                  <div className="fa-kpi-sub">Student balances — same term scope</div>
+                  <div className="kpi-fa-delta kpi-fa-delta--muted">
+                    <span>Authoritative receivables from invoices</span>
+                  </div>
+                </div>
               </div>
-              <div className="kpi-info">
-                <div className="kpi-label">Fees on record</div>
-                <div className="kpi-value c-blue">{formatUGX(data.ledgerTotalFees)}</div>
-                <div className="kpi-sub">Sum of term fees (ledger)</div>
-                <div className="kpi-fa-delta kpi-fa-delta--muted">
-                  <span>Compare to collections above</span>
+              <div className="fa-kpi fa-kpi--violet">
+                <div className="fa-kpi-ic" aria-hidden>
+                  <ClipboardList className="fa-kpi-lucide" />
+                </div>
+                <div className="fa-kpi-body">
+                  <div className="fa-kpi-label">Fees on record</div>
+                  <div className="fa-kpi-val fa-kpi-val--violet">{formatUGX(data.ledgerTotalFees)}</div>
+                  <div className="fa-kpi-sub">Sum of term fees (ledger)</div>
+                  <div className="kpi-fa-delta kpi-fa-delta--muted">
+                    <span>Compare to collections above</span>
+                  </div>
                 </div>
               </div>
             </div>

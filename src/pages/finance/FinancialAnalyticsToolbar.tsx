@@ -1,26 +1,26 @@
 import { Link } from "react-router-dom";
-import { Download, FileDown, Printer, Receipt, CreditCard, Wallet } from "lucide-react";
+import { FileDown, FileSpreadsheet, Printer, Receipt, CreditCard, Wallet } from "lucide-react";
 
 type Props = {
   onExportPdf: () => void;
-  onExportCsv: () => void;
+  onExportExcel: () => void;
   onPrint: () => void;
   receiptsTo: string;
   paymentsTo: string;
   expensesTo: string;
   pdfDisabled?: boolean;
-  csvDisabled?: boolean;
+  excelDisabled?: boolean;
 };
 
 export default function FinancialAnalyticsToolbar({
   onExportPdf,
-  onExportCsv,
+  onExportExcel,
   onPrint,
   receiptsTo,
   paymentsTo,
   expensesTo,
   pdfDisabled,
-  csvDisabled,
+  excelDisabled,
 }: Props) {
   return (
     <div className="fa-toolbar print:hidden">
@@ -38,12 +38,12 @@ export default function FinancialAnalyticsToolbar({
         <button
           type="button"
           className="fa-btn fa-btn--secondary"
-          onClick={onExportCsv}
-          disabled={csvDisabled}
-          title={csvDisabled ? "Load analytics first" : "Download spreadsheet (CSV)"}
+          onClick={onExportExcel}
+          disabled={excelDisabled}
+          title={excelDisabled ? "Load analytics first" : "Download Microsoft Excel workbook (.xlsx)"}
         >
-          <Download className="fa-btn__ic" aria-hidden />
-          Export CSV
+          <FileSpreadsheet className="fa-btn__ic" aria-hidden />
+          Export Excel
         </button>
         <button
           type="button"

@@ -1,67 +1,81 @@
+import * as XLSX from "xlsx";
 import type { FinancialAnalyticsData } from "./fetchFinancialAnalytics";
 
-function escCsv(s: string): string {
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-export function downloadFinancialAnalyticsCsv(
+export function downloadFinancialAnalyticsXlsx(
   data: FinancialAnalyticsData,
   meta: {
     financialYear: number;
     termLabel: string;
     periodLabel: string;
+    schoolName?: string | null;
   }
 ): void {
-  const lines: string[] = [];
-  lines.push("PwezaCore Financial Analytics export");
-  lines.push(`Financial year,${meta.financialYear}`);
-  lines.push(`Term / scope,${escCsv(meta.termLabel)}`);
-  lines.push(`Period,${escCsv(meta.periodLabel)}`);
-  lines.push(`Effective range,${data.effectiveStart} to ${data.effectiveEnd}`);
-  lines.push("");
-  lines.push("Metric,Value (UGX)");
-  lines.push(`Total income,${data.totalIncome}`);
-  lines.push(`Total spent,${data.totalSpent}`);
-  lines.push(`Net position,${data.net}`);
-  lines.push(`Payroll (est.),${data.payroll}`);
-  lines.push(`Scholarships & waivers,${data.scholarships}`);
-  lines.push(`Outstanding (student ledger, same term scope),${data.ledgerOutstanding}`);
-  lines.push(`Fees on ledger (total_fees, same scope),${data.ledgerTotalFees}`);
+  const wb = XLSX.utils.book_new();
+  const school = meta.schoolName?.trim() || "";
+
+  const overview: (string | number | null)[][] = [
+    ["Financial analytics workbook"],
+    [],
+    ["School", school],
+    ["Financial year", meta.financialYear],
+    ["Term / scope", meta.termLabel],
+    ["Activity period filter", meta.periodLabel],
+    ["Cash movement window (income & expenses)", `${data.effectiveStart} → ${data.effectiveEnd}`],
+    ["Generated", new Date().toISOString()],
+    [],
+    ["Metric", "Value (UGX or text)"],
+    ["Total income (fee collections in range)", data.totalIncome],
+    ["Total spent (approved / paid expenses)", data.totalSpent],
+    ["Net (income − expenses)", data.net],
+    [
+      "Operating margin %",
+      data.totalIncome > 0 ? Math.round((data.net / data.totalIncome) * 1000) / 10 : null,
+    ],
+    ["Payroll (within expenses)", data.payroll],
+    ["Scholarships & waivers (period)", data.scholarships],
+    ["Outstanding (student ledger, same term scope)", data.ledgerOutstanding],
+    ["Fees on ledger (total_fees, same scope)", data.ledgerTotalFees],
+    [],
+    ["Narrative", data.verdict],
+  ];
+
   if (data.comparison) {
-    lines.push("");
-    lines.push("Prior period comparison");
-    lines.push(`Prior range,${data.comparison.prevStart} to ${data.comparison.prevEnd}`);
-    lines.push(`Prior income,${data.comparison.prevIncome}`);
-    lines.push(`Prior spent,${data.comparison.prevSpent}`);
-    lines.push(`Prior net,${data.comparison.prevNet}`);
-    lines.push(
-      `Prior operating margin %,${data.comparison.prevMarginPct != null ? data.comparison.prevMarginPct : ""}`
+    const pr = data.comparison;
+    overview.push(
+      [],
+      ["Prior period comparison"],
+      ["Prior range", `${pr.prevStart} → ${pr.prevEnd}`],
+      ["Prior income", pr.prevIncome],
+      ["Prior spent", pr.prevSpent],
+      ["Prior net", pr.prevNet],
+      ["Prior operating margin %", pr.prevMarginPct],
+      ["Income change vs prior %", pr.incomeChangePct],
+      ["Spent change vs prior %", pr.spentChangePct],
+      ["Net change vs prior %", pr.netChangePct],
+      ["Margin change (pp)", pr.marginChangePp]
     );
-    lines.push(
-      `Margin change (pp vs prior),${data.comparison.marginChangePp != null ? data.comparison.marginChangePp : ""}`
-    );
-  }
-  lines.push("");
-  lines.push("Expense categories,Amount (UGX),Share %");
-  for (const c of data.categories) {
-    lines.push(`${escCsv(c.category)},${c.amount},${c.pct}`);
-  }
-  lines.push("");
-  lines.push("Payment channel,Amount (UGX),Share %");
-  for (const m of data.paymentMethods) {
-    lines.push(`${escCsv(m.method)},${m.amount},${m.pct}`);
-  }
-  lines.push("");
-  lines.push("Month,Income (UGX),Spent (UGX),Net");
-  for (const t of data.trend) {
-    lines.push(`${t.label},${t.income},${t.spent},${t.net}`);
   }
 
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `financial-analytics-${meta.financialYear}-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overview), "Overview");
+
+  const catSheet = [
+    ["Category", "Amount (UGX)", "Share %"],
+    ...data.categories.map((c) => [c.category, Math.round(c.amount), c.pct]),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(catSheet), "Expense categories");
+
+  const paySheet = [
+    ["Channel", "Amount (UGX)", "Share %"],
+    ...data.paymentMethods.map((r) => [r.method, Math.round(r.amount), r.pct]),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(paySheet), "Payment channels");
+
+  const trendSheet = [
+    ["Month", "Income (UGX)", "Spent (UGX)", "Net (UGX)"],
+    ...data.trend.map((t) => [t.label, t.income, t.spent, t.net]),
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(trendSheet), "Six month trend");
+
+  const fname = `financial-analytics-${meta.financialYear}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  XLSX.writeFile(wb, fname);
 }

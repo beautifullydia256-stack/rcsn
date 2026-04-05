@@ -2,7 +2,7 @@ import { supabase } from "../../lib/supabase";
 
 export const FINANCIAL_ANALYTICS_QUERY_KEY = ["financial-analytics"] as const;
 
-export type PeriodType = "week" | "month" | "year" | "custom";
+export type PeriodType = "term" | "week" | "month" | "year" | "custom";
 
 /** Calendar financial year (Jan–Dec), aligned to school_terms.year */
 export type SchoolTermRow = {
@@ -63,6 +63,10 @@ export function getDateRange(
     return { start: custom.start, end: custom.end };
   }
 
+  if (period === "term") {
+    return { start: today, end: today };
+  }
+
   if (period === "week") {
     const copy = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const day = copy.getDay();
@@ -99,6 +103,10 @@ function getPeriodRangeForFinancialYear(
 
   if (period === "custom" && custom?.start && custom?.end) {
     return { start: custom.start, end: custom.end };
+  }
+
+  if (period === "term") {
+    return { start: fy.start, end: yearEnd };
   }
 
   if (period === "week") {
@@ -397,7 +405,12 @@ export async function fetchFinancialAnalytics(params: {
   const { schoolId, financialYear, termScope, termId, period, customRange, terms } = params;
 
   const todayStr = toIsoDate(new Date());
-  const periodRange = getPeriodRangeForFinancialYear(period, customRange, financialYear);
+  const termRow = termScope === "one" && termId ? terms.find((t) => t.id === termId) : undefined;
+
+  const periodRange =
+    period === "term" && termRow
+      ? { start: termRow.start_date, end: todayStr }
+      : getPeriodRangeForFinancialYear(period, customRange, financialYear);
 
   const { start: clipStart, end: clipEnd } = clipToFyTerm(
     periodRange,

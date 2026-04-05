@@ -4,7 +4,7 @@ export type FaPersistedPrefs = {
   financialYear: number;
   termScope: "one" | "all";
   termId: string;
-  period: "week" | "month" | "year" | "custom";
+  period: "term" | "week" | "month" | "year" | "custom";
 };
 
 export function loadFaPrefs(): Partial<FaPersistedPrefs> | null {

@@ -11,7 +11,10 @@
   --fa-navy: #0b1f3b;
   --fa-green: #0f9d58;
   --fa-green2: #0d8a4e;
+  --fa-emerald: #10d9a8;
   --fa-gold: #f4b400;
+  --fa-rose: #ff5c7a;
+  --fa-violet: #9d7eff;
   --fa-surface: #0f2240;
   --fa-text: #e8edf5;
   --fa-text2: #8aa4c8;
@@ -30,7 +33,7 @@
   background: #050d1a;
   min-height: 100%;
   padding: 1rem 1.25rem 1.5rem;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
 }
 
@@ -437,77 +440,210 @@
   font-family: var(--fa-fontd);
 }
 
-/* Finance KPIs: same structure as students page (.kpi-strip / .kpi-card); only add deltas + responsive grid */
-.fa-nze .kpi-strip .kpi-info {
+/* ── KPI board (matches finance overview: two rows, roomy cards, Instrument Serif values) ── */
+.fa-nze .fa-kpi-board {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 
-.fa-nze .kpi-strip .kpi-ic .fa-kpi-lucide {
-  width: 20px;
-  height: 20px;
+.fa-nze .fa-kpi-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 540px) {
+  .fa-nze .fa-kpi-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1080px) {
+  .fa-nze .fa-kpi-row:not(.fa-kpi-row--duo) {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.fa-nze .fa-kpi {
+  background: var(--fa-surface);
+  border: 1px solid var(--fa-border);
+  border-radius: var(--fa-r);
+  padding: 18px 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.fa-nze .fa-kpi:hover {
+  border-color: var(--fa-border2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.fa-nze .fa-kpi::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: var(--fa-r) var(--fa-r) 0 0;
+  pointer-events: none;
+}
+
+.fa-nze .fa-kpi--emerald::after {
+  background: linear-gradient(90deg, var(--fa-emerald), transparent 70%);
+}
+.fa-nze .fa-kpi--amber::after {
+  background: linear-gradient(90deg, var(--fa-gold), transparent 70%);
+}
+.fa-nze .fa-kpi--green::after {
+  background: linear-gradient(90deg, var(--fa-green), transparent 70%);
+}
+.fa-nze .fa-kpi--blue::after {
+  background: linear-gradient(90deg, var(--fa-blue), transparent 70%);
+}
+.fa-nze .fa-kpi--rose::after {
+  background: linear-gradient(90deg, var(--fa-rose), transparent 70%);
+}
+.fa-nze .fa-kpi--violet::after {
+  background: linear-gradient(90deg, var(--fa-violet), transparent 70%);
+}
+
+.fa-nze .fa-kpi-ic {
+  width: 44px;
+  height: 44px;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.fa-nze .fa-kpi--emerald .fa-kpi-ic {
+  background: rgba(16, 217, 168, 0.12);
+  color: var(--fa-emerald);
+}
+.fa-nze .fa-kpi--amber .fa-kpi-ic {
+  background: rgba(244, 180, 0, 0.12);
+  color: var(--fa-gold);
+}
+.fa-nze .fa-kpi--green .fa-kpi-ic {
+  background: rgba(15, 157, 88, 0.14);
+  color: var(--fa-green);
+}
+.fa-nze .fa-kpi--blue .fa-kpi-ic {
+  background: rgba(55, 138, 221, 0.14);
+  color: var(--fa-blue);
+}
+.fa-nze .fa-kpi--rose .fa-kpi-ic {
+  background: rgba(255, 92, 122, 0.12);
+  color: var(--fa-rose);
+}
+.fa-nze .fa-kpi--violet .fa-kpi-ic {
+  background: rgba(157, 126, 255, 0.12);
+  color: var(--fa-violet);
+}
+
+.fa-nze .fa-kpi-ic .fa-kpi-lucide {
+  width: 22px;
+  height: 22px;
   stroke-width: 2;
 }
 
-.fa-nze .kpi-strip .kpi-ic.c-teal .fa-kpi-lucide {
-  color: var(--teal);
-}
-.fa-nze .kpi-strip .kpi-ic.c-blue .fa-kpi-lucide {
-  color: var(--blue);
-}
-.fa-nze .kpi-strip .kpi-ic.c-green .fa-kpi-lucide {
-  color: var(--green);
-}
-.fa-nze .kpi-strip .kpi-ic.c-amber .fa-kpi-lucide {
-  color: var(--amber);
-}
-
-.fa-nze .kpi-value.c-rose {
-  color: var(--rose) !important;
-}
-
-.fa-nze .kpi-fa-delta {
+.fa-nze .fa-kpi-body {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.fa-nze .fa-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--fa-text3);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.fa-nze .fa-kpi-val {
+  font-family: "Instrument Serif", Georgia, serif;
+  font-size: clamp(1.35rem, 2.8vw + 0.6rem, 1.85rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--fa-text);
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.fa-nze .fa-kpi-val--emerald {
+  color: var(--fa-emerald);
+}
+.fa-nze .fa-kpi-val--amber {
+  color: var(--fa-gold);
+}
+.fa-nze .fa-kpi-val--green {
+  color: var(--fa-green);
+}
+.fa-nze .fa-kpi-val--blue {
+  color: var(--fa-blue);
+}
+.fa-nze .fa-kpi-val--rose {
+  color: var(--fa-rose);
+}
+.fa-nze .fa-kpi-val--violet {
+  color: var(--fa-violet);
+}
+
+.fa-nze .fa-kpi-sub {
+  font-size: 12px;
+  color: var(--fa-text2);
+  margin-top: 6px;
+  line-height: 1.45;
+  max-width: 100%;
+}
+
+.fa-nze .fa-kpi .kpi-fa-delta,
+.fa-nze .fa-kpi-delta-slot .kpi-fa-delta {
+  display: flex;
+  align-items: flex-start;
   gap: 5px;
   flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 11px;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
+  max-width: 100%;
 }
 
 .fa-nze .kpi-fa-delta__ic {
   width: 13px;
   height: 13px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .fa-nze .kpi-fa-delta--good {
-  color: var(--green);
+  color: var(--fa-green);
 }
 
 .fa-nze .kpi-fa-delta--bad {
-  color: var(--rose);
+  color: var(--fa-rose);
 }
 
 .fa-nze .kpi-fa-delta--muted {
-  color: var(--t3);
+  color: var(--fa-text3);
   font-weight: 500;
-}
-
-@media (max-width: 1100px) {
-  .fa-nze .kpi-strip:not(.kpi-strip--six) {
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  }
-}
-
-@media (max-width: 520px) {
-  .fa-nze .kpi-strip:not(.kpi-strip--six) {
-    grid-template-columns: 1fr !important;
-  }
 }
 
 .fa-nze .fa-payment-section {
@@ -545,22 +681,6 @@
   min-height: 220px;
 }
 
-.fa-nze .kpi-strip.kpi-strip--six {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@media (min-width: 900px) {
-  .fa-nze .kpi-strip.kpi-strip--six {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1200px) {
-  .fa-nze .kpi-strip.kpi-strip--six {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
-
 @media print {
   .fa-nze {
     background: #050d1a;
@@ -570,11 +690,16 @@
   .fa-nze .page-actions {
     display: none !important;
   }
-  .fa-nze .kpi-card,
+  .fa-nze .fa-kpi,
   .fa-nze .card-sm,
   .fa-nze .fa-pie-card {
     break-inside: avoid;
   }
+}
+
+/* KPI loading skeletons aligned to fa-kpi layout */
+.fa-nze .fa-kpi-skel {
+  min-height: 118px;
 }
 
 @media (max-width: 768px) {
