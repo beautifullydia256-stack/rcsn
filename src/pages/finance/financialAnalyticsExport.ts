@@ -26,6 +26,8 @@ export function downloadFinancialAnalyticsCsv(
   lines.push(`Net position,${data.net}`);
   lines.push(`Payroll (est.),${data.payroll}`);
   lines.push(`Scholarships & waivers,${data.scholarships}`);
+  lines.push(`Outstanding (student ledger, same term scope),${data.ledgerOutstanding}`);
+  lines.push(`Fees on ledger (total_fees, same scope),${data.ledgerTotalFees}`);
   if (data.comparison) {
     lines.push("");
     lines.push("Prior period comparison");

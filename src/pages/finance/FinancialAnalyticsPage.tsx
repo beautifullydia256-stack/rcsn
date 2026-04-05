@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { TrendingDown, TrendingUp, Banknote, Landmark, Scale, Percent, Wallet } from "lucide-react";
+import {
+  TrendingDown,
+  TrendingUp,
+  Banknote,
+  Landmark,
+  Scale,
+  Percent,
+  Wallet,
+  CircleDollarSign,
+  ClipboardList,
+} from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import AdminPageWrapper from "../../components/layout/AdminPageWrapper";
 import { ADMIN_STALE_TIME_MS } from "../../lib/adminQueryDefaults";
+import { supabase } from "../../lib/supabase";
 import {
   FINANCIAL_ANALYTICS_QUERY_KEY,
   currentCalendarYear,
@@ -18,8 +29,10 @@ import {
   type TermScope,
 } from "./fetchFinancialAnalytics";
 import { downloadFinancialAnalyticsCsv } from "./financialAnalyticsExport";
+import { downloadFinancialAnalyticsPdf } from "./financialAnalyticsPdf";
 import { loadFaPrefs, saveFaPrefs } from "./financialAnalyticsPrefs";
 import FinancialAnalyticsToolbar from "./FinancialAnalyticsToolbar";
+import FinancialAnalyticsCharts from "./FinancialAnalyticsCharts";
 import "./financialAnalytics.css";
 import "@/assets/pwezacore-students-scoped.css";
 
@@ -92,6 +105,7 @@ export default function FinancialAnalyticsPage() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
+  const authUser = useAuthStore((s) => s.user);
   const isAdmin = pathname.includes("/dashboard/admin/");
   const backTo = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
   const financeBase = isAdmin ? "/dashboard/admin/finance" : "/dashboard/accountant";
@@ -115,6 +129,17 @@ export default function FinancialAnalyticsPage() {
     queryFn: () => fetchSchoolTerms(schoolId!),
     enabled: !!schoolId,
     staleTime: ADMIN_STALE_TIME_MS,
+  });
+
+  const { data: schoolDisplayName } = useQuery({
+    queryKey: [...FINANCIAL_ANALYTICS_QUERY_KEY, "school-name", schoolId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("schools").select("name").eq("id", schoolId!).maybeSingle();
+      if (error) return null;
+      return (data as { name?: string } | null)?.name ?? null;
+    },
+    enabled: !!schoolId,
+    staleTime: ADMIN_STALE_TIME_MS * 4,
   });
 
   const [financialYear, setFinancialYear] = useState<number>(() => currentCalendarYear());
@@ -243,7 +268,7 @@ export default function FinancialAnalyticsPage() {
     return "Custom period";
   }, [termScope, period, customStart, customEnd]);
 
-  const handleExport = useCallback(() => {
+  const handleExportCsv = useCallback(() => {
     if (!data) return;
     downloadFinancialAnalyticsCsv(data, {
       financialYear,
@@ -251,6 +276,16 @@ export default function FinancialAnalyticsPage() {
       periodLabel,
     });
   }, [data, financialYear, termLabelForExport, periodLabel]);
+
+  const handleExportPdf = useCallback(() => {
+    if (!data) return;
+    downloadFinancialAnalyticsPdf(data, {
+      financialYear,
+      termLabel: termLabelForExport,
+      periodLabel,
+      schoolName: schoolDisplayName || authUser?.user_metadata?.school_name || undefined,
+    });
+  }, [data, financialYear, termLabelForExport, periodLabel, schoolDisplayName, authUser]);
 
   const handlePrint = useCallback(() => {
     window.print();
@@ -348,12 +383,14 @@ export default function FinancialAnalyticsPage() {
 
       {schoolId && terms.length > 0 && (
         <FinancialAnalyticsToolbar
-          onExport={handleExport}
+          onExportPdf={handleExportPdf}
+          onExportCsv={handleExportCsv}
           onPrint={handlePrint}
           receiptsTo={receiptsTo}
           paymentsTo={paymentsTo}
           expensesTo={expensesTo}
-          exportDisabled={!data}
+          pdfDisabled={!data}
+          csvDisabled={!data}
         />
       )}
 
@@ -436,8 +473,8 @@ export default function FinancialAnalyticsPage() {
 
       {loading && (
         <>
-          <div className="kpi-strip fade-up d1 mb-4">
-            {[1, 2, 3, 4].map((i) => (
+          <div className="kpi-strip kpi-strip--six fade-up d1 mb-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="kpi-card c-teal">
                 <div className="fa-skel kpi-ic c-teal" style={{ borderRadius: 11 }} />
                 <div className="kpi-info" style={{ flex: 1 }}>
@@ -475,7 +512,7 @@ export default function FinancialAnalyticsPage() {
             </div>
           )}
 
-          <div className="kpi-strip fade-up d1 mb-4">
+          <div className="kpi-strip kpi-strip--six fade-up d1 mb-4">
             <div className="kpi-card c-teal">
               <div className="kpi-ic c-teal" aria-hidden>
                 <Banknote className="fa-kpi-lucide" />
@@ -541,7 +578,35 @@ export default function FinancialAnalyticsPage() {
                 )}
               </div>
             </div>
+            <div className="kpi-card c-teal">
+              <div className="kpi-ic c-teal" aria-hidden>
+                <CircleDollarSign className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
+                <div className="kpi-label">Outstanding (ledger)</div>
+                <div className="kpi-value c-teal">{formatUGX(data.ledgerOutstanding)}</div>
+                <div className="kpi-sub">Student balances — same term scope</div>
+                <div className="kpi-fa-delta kpi-fa-delta--muted">
+                  <span>Authoritative receivables from invoices</span>
+                </div>
+              </div>
+            </div>
+            <div className="kpi-card c-blue">
+              <div className="kpi-ic c-blue" aria-hidden>
+                <ClipboardList className="fa-kpi-lucide" />
+              </div>
+              <div className="kpi-info">
+                <div className="kpi-label">Fees on record</div>
+                <div className="kpi-value c-blue">{formatUGX(data.ledgerTotalFees)}</div>
+                <div className="kpi-sub">Sum of term fees (ledger)</div>
+                <div className="kpi-fa-delta kpi-fa-delta--muted">
+                  <span>Compare to collections above</span>
+                </div>
+              </div>
+            </div>
           </div>
+
+          <FinancialAnalyticsCharts paymentMethods={data.paymentMethods} categories={data.categories} />
 
           <div className="grid-2 gap-3">
             <div>

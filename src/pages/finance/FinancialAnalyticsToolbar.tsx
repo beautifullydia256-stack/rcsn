@@ -1,44 +1,58 @@
 import { Link } from "react-router-dom";
-import { Download, Printer, Receipt, CreditCard, Wallet } from "lucide-react";
+import { Download, FileDown, Printer, Receipt, CreditCard, Wallet } from "lucide-react";
 
 type Props = {
-  onExport: () => void;
+  onExportPdf: () => void;
+  onExportCsv: () => void;
   onPrint: () => void;
   receiptsTo: string;
   paymentsTo: string;
   expensesTo: string;
-  exportDisabled?: boolean;
+  pdfDisabled?: boolean;
+  csvDisabled?: boolean;
 };
 
 export default function FinancialAnalyticsToolbar({
-  onExport,
+  onExportPdf,
+  onExportCsv,
   onPrint,
   receiptsTo,
   paymentsTo,
   expensesTo,
-  exportDisabled,
+  pdfDisabled,
+  csvDisabled,
 }: Props) {
   return (
     <div className="fa-toolbar print:hidden">
       <div className="fa-toolbar__actions">
         <button
           type="button"
-          className="fa-btn fa-btn--secondary"
-          onClick={onPrint}
-          title="Opens print dialog — choose Save as PDF for a colored export"
+          className="fa-btn fa-btn--primary"
+          onClick={onExportPdf}
+          disabled={pdfDisabled}
+          title={pdfDisabled ? "Load analytics first" : "Download a formatted PDF report"}
         >
-          <Printer className="fa-btn__ic" aria-hidden />
-          Print / Save PDF
+          <FileDown className="fa-btn__ic" aria-hidden />
+          Download PDF
         </button>
         <button
           type="button"
-          className="fa-btn fa-btn--primary"
-          onClick={onExport}
-          disabled={exportDisabled}
-          title={exportDisabled ? "Load analytics first" : "Download CSV"}
+          className="fa-btn fa-btn--secondary"
+          onClick={onExportCsv}
+          disabled={csvDisabled}
+          title={csvDisabled ? "Load analytics first" : "Download spreadsheet (CSV)"}
         >
           <Download className="fa-btn__ic" aria-hidden />
           Export CSV
+        </button>
+        <button
+          type="button"
+          className="fa-btn fa-btn--secondary"
+          onClick={onPrint}
+          title="Print this page (use your browser’s print dialog)"
+        >
+          <Printer className="fa-btn__ic" aria-hidden />
+          Print
         </button>
       </div>
       <nav className="fa-toolbar__links" aria-label="Jump to detailed records">

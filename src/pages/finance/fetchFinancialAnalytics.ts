@@ -268,6 +268,10 @@ export type FinancialAnalyticsData = {
   effectiveEnd: string;
   paymentMethods: PaymentMethodRow[];
   comparison: PeriodComparison | null;
+  /** Sum of positive `student_balances.balance` for the same term scope as the analytics query. */
+  ledgerOutstanding: number;
+  /** Sum of `student_balances.total_fees` for that scope (term invoice totals on record). */
+  ledgerTotalFees: number;
 };
 
 const BAR_ROTATION: CategorySpendRow["barClass"][] = ["bar-green", "bar-red", "bar-blue", "bar-gold"];
@@ -424,6 +428,8 @@ export async function fetchFinancialAnalytics(params: {
       effectiveEnd: clipEnd,
       paymentMethods: [],
       comparison: null,
+      ledgerOutstanding: 0,
+      ledgerTotalFees: 0,
     };
   }
 
@@ -466,8 +472,20 @@ export async function fetchFinancialAnalytics(params: {
       effectiveEnd: end,
       paymentMethods: [],
       comparison: null,
+      ledgerOutstanding: 0,
+      ledgerTotalFees: 0,
     };
   }
+
+  const ledgerBalancesPromise = (() => {
+    let q = supabase.from("student_balances").select("balance, total_fees").eq("school_id", schoolId);
+    if (termScope === "all") {
+      if (!yearTermIds.length) return Promise.resolve({ data: [] as { balance?: number; total_fees?: number }[] });
+      return q.in("term_id", yearTermIds);
+    }
+    if (!termId) return Promise.resolve({ data: [] as { balance?: number; total_fees?: number }[] });
+    return q.eq("term_id", termId);
+  })();
 
   const prevRange = previousComparableRange(start, end, financialYear, terms, termScope, termScope === "one" ? termId : undefined, todayStr);
 
@@ -502,6 +520,7 @@ export async function fetchFinancialAnalytics(params: {
     trendExpensesRes,
     prevPayRes,
     prevExpRes,
+    ledgerRes,
   ] = await Promise.all([
     mainPayFilter.gte("payment_date", start).lte("payment_date", end),
     supabase
@@ -525,7 +544,18 @@ export async function fetchFinancialAnalytics(params: {
       .lte("expense_date", todayStr),
     prevPayPromise || Promise.resolve({ data: [] }),
     prevExpPromise || Promise.resolve({ data: [] }),
+    ledgerBalancesPromise,
   ]);
+
+  const ledgerRows = (ledgerRes.data || []) as { balance?: number; total_fees?: number }[];
+  let ledgerOutstanding = 0;
+  let ledgerTotalFees = 0;
+  for (const row of ledgerRows) {
+    ledgerTotalFees += Number(row.total_fees || 0);
+    ledgerOutstanding += Math.max(0, Number(row.balance || 0));
+  }
+  ledgerOutstanding = Math.round(ledgerOutstanding);
+  ledgerTotalFees = Math.round(ledgerTotalFees);
 
   const payments = (paymentsRes.data || []) as {
     amount_paid?: number;
@@ -688,5 +718,7 @@ export async function fetchFinancialAnalytics(params: {
     effectiveEnd: end,
     paymentMethods,
     comparison,
+    ledgerOutstanding,
+    ledgerTotalFees,
   };
 }

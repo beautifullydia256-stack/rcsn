@@ -8,8 +8,8 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 | 02 | [02-failed-to-add-parent.md](./02-failed-to-add-parent.md) | **Done** | **2026-04-04:** Vite `ensureParentLink` sends Bearer; Next/Vercel `ensure-parent-link` accepts cookie or Bearer; add-parent flow verified. |
 | 03 | [03-dashboard-vs-outstanding-term-invoice-mismatch.md](./03-dashboard-vs-outstanding-term-invoice-mismatch.md) | **Done** | **2026-04-05:** Dashboard KPIs and outstanding views aligned (shared term + `student_balances` ledger; migration `20260403120000_*` applied). |
 | 04 | [04-user-management-ui-ux-modernization.md](./04-user-management-ui-ux-modernization.md) | **Done** | **2026-04-05:** User management cluster + staff roster UX; non-teaching staff profiles use teacher-profile shell (Geist / Instrument Serif, desktop max-width, documents/KYC, photos). Invite/school context patterns aligned. |
-| 05 | [05-assign-class-teacher-visibility-and-rules.md](./05-assign-class-teacher-visibility-and-rules.md) | **Done** | **2026-04-06:** Class teacher flow on teacher profile verified: dedicated card, occupancy hints, assign/block rules, subject teaching split; profile data loads parallelized. **NEXT:** Issue 06. |
-| 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | Partial | Toolbar: Print / Save PDF hint; full redesign + chart PDF not done. |
+| 05 | [05-assign-class-teacher-visibility-and-rules.md](./05-assign-class-teacher-visibility-and-rules.md) | **Done** | **2026-04-06:** Class teacher flow on teacher profile verified: dedicated card, occupancy hints, assign/block rules, subject teaching split; profile data loads parallelized. |
+| 06 | [06-financial-analytics-redesign-and-pdf-export.md](./06-financial-analytics-redesign-and-pdf-export.md) | Partial | **Code:** Primary **Download PDF** (jsPDF: summary, prior-period block, donut charts, tables for categories/channels/trend); CSV + ledger columns; **ledger KPIs** + `student_balances` scope match; **Recharts** donuts on page. **You verify:** PDF content matches filters; print path optional. |
 | 07 | [07-record-payment-modal-loop-accountant-outstanding.md](./07-record-payment-modal-loop-accountant-outstanding.md) | Partial | `useCallback` for record payment in `AccountantLayout` — retest SPA outstanding → payments flow. |
 | 08 | [08-notification-center-rebuild.md](./08-notification-center-rebuild.md) | Partial | New table + trigger (new student); admin Next notifications page simplified — **run migration**; extend event sources as needed. |
 | 09 | [09-system-settings-ui-visibility-responsive.md](./09-system-settings-ui-visibility-responsive.md) | Not started | |
@@ -25,4 +25,4 @@ Use this after testing in staging/production. Update **Status** and **Verified**
 1. `20260403120000_student_balance_current_term_and_users_last_sign_in.sql`
 2. `20260403150000_in_app_notifications.sql`
 
-Last updated: 2026-04-06 (Issue 05 class teacher signed off; NEXT Issue 06 financial analytics / PDF).
+Last updated: 2026-04-05 (Issue 06: PDF export + charts + ledger KPIs shipped — pending your sign-off).
