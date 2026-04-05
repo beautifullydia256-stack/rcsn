@@ -78,6 +78,8 @@ export default function AccountantDashboardPage() {
   const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
   const [kpiExpensesThisTerm, setKpiExpensesThisTerm] = useState<number>(0);
   const [kpiNetBalance, setKpiNetBalance] = useState<number>(0);
+  /** All-term fee receipts minus all approved/paid expenses (treasury-style). */
+  const [kpiCashSurplusAllTerms, setKpiCashSurplusAllTerms] = useState<number>(0);
 
   // Data
   const [balances, setBalances] = useState<StudentBalance[]>([]);
@@ -250,6 +252,7 @@ export default function AccountantDashboardPage() {
       setKpiOutstandingAllTime(dashboardMetrics.receivablesAllTerms.totalOutstanding);
       setKpiExpensesThisTerm(dashboardMetrics.termPerformance.expensesApproved);
       setKpiNetBalance(dashboardMetrics.termPerformance.netTermCash);
+      setKpiCashSurplusAllTerms(dashboardMetrics.schoolCashPosition.netCashSurplus);
 
       // Load expense categories
       const { data: categoriesData } = await supabase
@@ -415,8 +418,13 @@ export default function AccountantDashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
         >
+          <KpiCard
+            title="Net cash surplus (all terms)"
+            value={formatCurrency(kpiCashSurplusAllTerms)}
+            accent={kpiCashSurplusAllTerms >= 0 ? "bg-teal-500" : "bg-amber-600"}
+          />
           <KpiCard title="Outstanding This Term" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
           <KpiCard title="Outstanding All Terms" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
           <KpiCard title="Students Owing (distinct)" value={String(kpiDebtorsCount)} accent="bg-purple-500" />

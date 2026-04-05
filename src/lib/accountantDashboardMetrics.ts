@@ -60,6 +60,16 @@ export type AccountantDashboardMetrics = {
   };
   /** Sum of discount amounts recorded for the school (no term filter). */
   discountsSchoolWide: number;
+  /**
+   * Treasury-style view: every non-reversed fee payment (any term_id) minus every
+   * approved/paid expense (any term). Matches “cash still with the school” only if
+   * the ledger is complete from day one; does not add a manual opening bank balance.
+   */
+  schoolCashPosition: {
+    totalFeeReceiptsRecorded: number;
+    totalExpensesApprovedPaid: number;
+    netCashSurplus: number;
+  };
   collectionsByMethod: {
     cash: number;
     bank: number;
@@ -125,6 +135,7 @@ export async function fetchAccountantDashboardMetrics(
     paymentsRes,
     expensesTermRes,
     expensesYtdRes,
+    expensesAllTimeRes,
     discountsRes,
     recentPayRes,
   ] = await Promise.all([
@@ -156,6 +167,7 @@ export async function fetchAccountantDashboardMetrics(
       .eq("school_id", schoolId)
       .gte("expense_date", yearStart)
       .lte("expense_date", yearEnd),
+    client.from("school_expenses").select("amount, status").eq("school_id", schoolId),
     client.from("student_discounts").select("amount").eq("school_id", schoolId),
     client
       .from("student_payments")
@@ -343,6 +355,16 @@ export async function fetchAccountantDashboardMetrics(
     };
   });
 
+  const totalFeeReceiptsRecorded = payments.reduce((s, p) => s + num(p.amount_paid), 0);
+  const totalExpensesApprovedPaid = (expensesAllTimeRes.data || []).reduce(
+    (s, e: { amount?: number; status?: string }) => {
+      if (!["approved", "paid"].includes((e.status || "").toLowerCase())) return s;
+      return s + num(e.amount);
+    },
+    0
+  );
+  const netCashSurplus = totalFeeReceiptsRecorded - totalExpensesApprovedPaid;
+
   return {
     asOfDate: todayIso,
     calendarYear,
@@ -372,6 +394,11 @@ export async function fetchAccountantDashboardMetrics(
       netCash,
     },
     discountsSchoolWide,
+    schoolCashPosition: {
+      totalFeeReceiptsRecorded,
+      totalExpensesApprovedPaid,
+      netCashSurplus,
+    },
     collectionsByMethod: byMethod,
     recentPayments,
   };

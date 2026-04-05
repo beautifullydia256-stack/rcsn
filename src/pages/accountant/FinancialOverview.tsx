@@ -13,6 +13,7 @@ import {
   Users,
   PieChart as PieChartIcon,
   Calendar,
+  Landmark,
 } from "lucide-react";
 import { useAuthStore } from "../../store/authStore";
 import { useUIStore } from "../../store/uiStore";
@@ -204,11 +205,42 @@ export default function FinancialOverview() {
           </div>
         </div>
 
+        {/* School-wide cash position */}
+        <section className="mb-10">
+          <SectionTitle
+            title="School cash position (all terms)"
+            subtitle="Total fee money recorded in the system (every payment, including amounts that clear older-term balances) minus every approved or paid expense—any term. This is the closest thing to “cash left if the ledger is complete from day one”; it does not add a manual opening bank balance from before you used the app."
+          />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <KPICard
+              icon={Landmark}
+              label="Net cash surplus"
+              value={fmt(m.schoolCashPosition.netCashSurplus)}
+              subline="All fee receipts recorded − all approved/paid expenses"
+              variant={m.schoolCashPosition.netCashSurplus >= 0 ? "green" : "orange"}
+            />
+            <KPICard
+              icon={CreditCard}
+              label="Total fee receipts recorded"
+              value={fmt(m.schoolCashPosition.totalFeeReceiptsRecorded)}
+              subline="Non-reversed payments, every term_id"
+              variant="blue"
+            />
+            <KPICard
+              icon={DollarSign}
+              label="Total expenses (approved/paid)"
+              value={fmt(m.schoolCashPosition.totalExpensesApprovedPaid)}
+              subline="All terms, any expense_date"
+              variant="slate"
+            />
+          </div>
+        </section>
+
         {/* Current term */}
         <section className="mb-10">
           <SectionTitle
             title="Current term performance"
-            subtitle="Figures below use the resolved current school term. “Collected” sums payments whose term_id matches this term (not payment date alone). Expenses are approved or paid rows tagged with this term."
+            subtitle="Ledger slice for the current academic term only. “Collected” sums payments whose term_id matches this term (not payment date alone). Expenses are approved or paid rows tagged with this term."
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <KPICard
@@ -248,9 +280,9 @@ export default function FinancialOverview() {
             />
             <KPICard
               icon={TrendingUp}
-              label="Net term cash"
+              label="Net (this term bucket only)"
               value={fmt(tp.netTermCash)}
-              subline="Attributed collections minus this-term expenses"
+              subline="Payments tagged this term minus expenses tagged this term—not total cash on hand"
               variant={tp.netTermCash >= 0 ? "green" : "orange"}
             />
           </div>
