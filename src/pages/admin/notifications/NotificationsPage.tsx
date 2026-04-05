@@ -453,17 +453,13 @@ export default function NotificationsPage() {
 
   return (
     <AdminPageWrapper>
-      <div className="pw-notif-center mx-auto w-full max-w-3xl space-y-6 sm:space-y-8 pb-8 sm:pb-12">
-        <header className="space-y-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-2 min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#10d9a8]/80">Admin</p>
-              <h1 className="pw-notif-display text-3xl sm:text-4xl ac-text-primary">Notification center</h1>
-              <p className="max-w-xl text-sm sm:text-[15px] leading-relaxed ac-text-secondary">
-                Everything that needs your attention in one place. New items appear first; open one to mark it read.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+      <div className="pw-notif-center w-full max-w-7xl xl:max-w-[90rem] 2xl:max-w-[100rem] mx-auto space-y-6 sm:space-y-8 pb-8 sm:pb-12">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+          <h1 className="pw-notif-display text-3xl sm:text-4xl lg:text-5xl ac-text-primary tracking-tight shrink-0">
+            Notification
+          </h1>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center lg:justify-end lg:gap-4 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-3 py-2 sm:px-4">
                 <Bell className="h-4 w-4 text-[#10d9a8] shrink-0" aria-hidden />
                 <div className="text-xs sm:text-sm">
@@ -475,110 +471,108 @@ export default function NotificationsPage() {
                 type="button"
                 onClick={() => void refreshInbox()}
                 disabled={inboxFetching}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-ac-text-primary hover:bg-white/10 disabled:opacity-50 touch-manipulation"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-ac-text-primary hover:bg-white/10 disabled:opacity-50 touch-manipulation shrink-0"
                 title="Refresh inbox"
               >
                 <RefreshCw className={`h-4 w-4 ${inboxFetching ? 'animate-spin' : ''}`} />
               </button>
             </div>
-          </div>
-
-          <div className="pw-notif-segment max-w-md">
-            {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Your notifications')}
-            {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Send and test delivery')}
+            <div className="pw-notif-segment w-full sm:max-w-md lg:w-[min(100%,20rem)] lg:shrink-0">
+              {tabSegmentBtn('inbox', 'Inbox', <Inbox className="h-4 w-4 shrink-0 opacity-90" />, 'Inbox')}
+              {tabSegmentBtn('tools', 'Broadcast', <Send className="h-4 w-4 shrink-0 opacity-90" />, 'Broadcast')}
+            </div>
           </div>
         </header>
 
         {tab === 'inbox' && (
-          <div className="space-y-5 sm:space-y-6">
-            <div className={`${adminCardClass} !rounded-[20px] border border-white/10 !p-4 sm:!p-5`}>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold ac-text-primary sm:text-base">Filter</h2>
-                  <p className="text-xs ac-text-muted mt-0.5 hidden sm:block">Focus on what you have not opened yet.</p>
-                </div>
+          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-12 lg:gap-8 xl:gap-10 lg:items-start">
+            <aside className="order-1 lg:order-2 lg:col-span-4 xl:col-span-3 space-y-4 lg:sticky lg:top-4 lg:self-start">
+              <div className={`${adminCardClass} !rounded-[20px] border border-white/10 !p-4 sm:!p-5`}>
+                <h2 className="text-sm font-semibold ac-text-primary sm:text-base mb-3">Filter</h2>
                 <div className="flex flex-wrap gap-2">
                   {filterChip('all', 'All', inboxItems.length)}
                   {filterChip('unread', 'Unread', unread.length)}
                   {filterChip('read', 'Read', readList.length)}
                 </div>
+                {unread.length > 0 && inboxFilter !== 'read' && (
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => void markAllRead()}
+                      disabled={markingAll}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#10d9a8]/35 bg-[#10d9a8]/10 px-4 py-2.5 text-sm font-semibold text-[#14f0bb] hover:bg-[#10d9a8]/18 disabled:opacity-50 touch-manipulation"
+                    >
+                      <CheckCheck className="h-4 w-4" />
+                      {markingAll ? 'Marking…' : 'Mark all read'}
+                    </button>
+                  </div>
+                )}
               </div>
-              {unread.length > 0 && inboxFilter !== 'read' && (
-                <div className="mt-4 flex justify-end border-t border-white/10 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => void markAllRead()}
-                    disabled={markingAll}
-                    className="inline-flex items-center gap-2 rounded-xl border border-[#10d9a8]/35 bg-[#10d9a8]/10 px-4 py-2 text-sm font-semibold text-[#14f0bb] hover:bg-[#10d9a8]/18 disabled:opacity-50 touch-manipulation"
-                  >
-                    <CheckCheck className="h-4 w-4" />
-                    {markingAll ? 'Marking…' : 'Mark all read'}
-                  </button>
+            </aside>
+
+            <div className="order-2 lg:order-1 lg:col-span-8 xl:col-span-9 min-w-0 space-y-6">
+              {inboxLoading ? (
+                <InboxSkeleton />
+              ) : inboxItems.length === 0 ? (
+                <div className={`${adminCardClass} !rounded-[20px] text-center py-14 sm:py-16 lg:py-20`}>
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
+                    <Inbox className="h-8 w-8 ac-text-muted" />
+                  </div>
+                  <p className="pw-notif-display text-xl ac-text-primary mb-2">You&apos;re all caught up</p>
+                  <p className="text-sm ac-text-secondary max-w-md mx-auto">When the school adds events or enrollments, they will show up here.</p>
+                </div>
+              ) : (
+                <div className="space-y-8 sm:space-y-10">
+                  {showUnreadBlock && (
+                    <section aria-labelledby="notif-unread-heading">
+                      <h2 id="notif-unread-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#10d9a8]/15">
+                          <Bell className="h-3.5 w-3.5 text-[#10d9a8]" />
+                        </span>
+                        New for you
+                        <span className="ml-1 rounded-full bg-[#10d9a8]/20 px-2 py-0.5 text-[11px] font-bold text-[#14f0bb] tabular-nums">
+                          {unread.length}
+                        </span>
+                      </h2>
+                      {unread.length === 0 ? (
+                        <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center text-sm ac-text-muted">
+                          No unread notifications.
+                        </p>
+                      ) : (
+                        <ul className="space-y-3">
+                          {unread.map((n) => (
+                            <NotifListRow key={n.id} n={n} unread onMarkRead={() => void markRead(n.id)} />
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  )}
+
+                  {showReadBlock && readList.length > 0 && (
+                    <section aria-labelledby="notif-read-heading">
+                      <h2 id="notif-read-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10">
+                          <Check className="h-3.5 w-3.5 ac-text-secondary" />
+                        </span>
+                        Earlier
+                        <span className="ml-1 text-[11px] font-normal opacity-70 tabular-nums">({readList.length})</span>
+                      </h2>
+                      <ul className="space-y-2.5">
+                        {readList.map((n) => (
+                          <NotifListRow key={n.id} n={n} unread={false} />
+                        ))}
+                      </ul>
+                    </section>
+                  )}
+
+                  {showReadBlock && readList.length === 0 && inboxFilter === 'read' && (
+                    <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm ac-text-muted">
+                      Nothing in your read history yet.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
-
-            {inboxLoading ? (
-              <InboxSkeleton />
-            ) : inboxItems.length === 0 ? (
-              <div className={`${adminCardClass} !rounded-[20px] text-center py-14 sm:py-16`}>
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/5 ring-1 ring-white/10">
-                  <Inbox className="h-8 w-8 ac-text-muted" />
-                </div>
-                <p className="pw-notif-display text-xl ac-text-primary mb-2">You&apos;re all caught up</p>
-                <p className="text-sm ac-text-secondary max-w-sm mx-auto">When the school adds events or enrollments, they will show up here.</p>
-              </div>
-            ) : (
-              <div className="space-y-8 sm:space-y-10">
-                {showUnreadBlock && (
-                  <section aria-labelledby="notif-unread-heading">
-                    <h2 id="notif-unread-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#10d9a8]/15">
-                        <Bell className="h-3.5 w-3.5 text-[#10d9a8]" />
-                      </span>
-                      New for you
-                      <span className="ml-1 rounded-full bg-[#10d9a8]/20 px-2 py-0.5 text-[11px] font-bold text-[#14f0bb] tabular-nums">
-                        {unread.length}
-                      </span>
-                    </h2>
-                    {unread.length === 0 ? (
-                      <p className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-4 py-8 text-center text-sm ac-text-muted">
-                        No unread notifications.
-                      </p>
-                    ) : (
-                      <ul className="space-y-3">
-                        {unread.map((n) => (
-                          <NotifListRow key={n.id} n={n} unread onMarkRead={() => void markRead(n.id)} />
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                )}
-
-                {showReadBlock && readList.length > 0 && (
-                  <section aria-labelledby="notif-read-heading">
-                    <h2 id="notif-read-heading" className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider ac-text-muted sm:text-sm">
-                      <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/10">
-                        <Check className="h-3.5 w-3.5 ac-text-secondary" />
-                      </span>
-                      Earlier
-                      <span className="ml-1 text-[11px] font-normal opacity-70 tabular-nums">({readList.length})</span>
-                    </h2>
-                    <ul className="space-y-2.5">
-                      {readList.map((n) => (
-                        <NotifListRow key={n.id} n={n} unread={false} />
-                      ))}
-                    </ul>
-                  </section>
-                )}
-
-                {showReadBlock && readList.length === 0 && inboxFilter === 'read' && (
-                  <p className="rounded-2xl border border-dashed border-white/15 px-4 py-8 text-center text-sm ac-text-muted">
-                    Nothing in your read history yet.
-                  </p>
-                )}
-              </div>
-            )}
           </div>
         )}
 
@@ -617,7 +611,8 @@ export default function NotificationsPage() {
               </div>
             </div>
 
-            <details className={`${adminCardClass} pw-notif-details group !rounded-[20px] !p-0 overflow-hidden`} open>
+            <div className="grid grid-cols-1 gap-4 sm:gap-5 xl:grid-cols-2 xl:items-start">
+            <details className={`${adminCardClass} pw-notif-details group !rounded-[20px] !p-0 overflow-hidden min-w-0`} open>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 hover:bg-white/[0.03] touch-manipulation">
                 <span className="flex items-center gap-3 font-semibold ac-text-primary">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-blue-400">
@@ -673,7 +668,7 @@ export default function NotificationsPage() {
               </div>
             </details>
 
-            <details className={`${adminCardClass} pw-notif-details group !rounded-[20px] !p-0 overflow-hidden`}>
+            <details className={`${adminCardClass} pw-notif-details group !rounded-[20px] !p-0 overflow-hidden min-w-0`}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 hover:bg-white/[0.03] touch-manipulation">
                 <span className="flex items-center gap-3 font-semibold ac-text-primary">
                   <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400">
@@ -718,6 +713,7 @@ export default function NotificationsPage() {
                 </button>
               </div>
             </details>
+            </div>
 
             <details className={`${adminCardClass} pw-notif-details group !rounded-[20px] !p-0 overflow-hidden`}>
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 sm:px-5 sm:py-4 hover:bg-white/[0.03] touch-manipulation">
