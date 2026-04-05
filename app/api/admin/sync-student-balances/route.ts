@@ -145,6 +145,7 @@ export async function POST(request: NextRequest) {
           .eq('school_id', schoolId)
           .eq('student_id', student.student_id)
           .eq('term_id', termId)
+          .eq('is_supplementary', false)
           .maybeSingle();
 
         if (!existingInv) {
@@ -166,6 +167,7 @@ export async function POST(request: NextRequest) {
             total_amount: tuitionAmount,
             amount_paid: totalPaid,
             status: invStatus,
+            is_supplementary: false,
             updated_at: new Date().toISOString(),
           });
           if (!invInsErr) invoicesCreated++;

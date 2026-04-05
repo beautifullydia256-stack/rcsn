@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm, type SchoolTermBrief } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
-import type { TermRow } from "./api/billing";
 
 const STALE_MS = 2 * 60 * 1000;
 
-function termIsStrictlyBefore(a: Pick<TermRow, "year" | "term">, b: Pick<TermRow, "year" | "term">) {
-  return a.year < b.year || (a.year === b.year && a.term < b.term);
-}
+const DEFAULT_SUPPLEMENTARY_LABEL = "Outstanding balance from previous terms";
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -26,7 +23,6 @@ export default function BillingPage() {
     refetchOnWindowFocus: true,
   });
   const fees = data?.fees ?? [];
-  const termsList = data?.terms ?? [];
   const students = data?.students ?? [];
   const studentsError = data?.studentsError ?? null;
   const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
@@ -40,10 +36,9 @@ export default function BillingPage() {
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [carryoverTermId, setCarryoverTermId] = useState("");
-  const [carryoverAmount, setCarryoverAmount] = useState("");
-  const [carryoverIncludeTermFee, setCarryoverIncludeTermFee] = useState(true);
-  const [savingCarryover, setSavingCarryover] = useState(false);
+  const [supplementaryLabel, setSupplementaryLabel] = useState(DEFAULT_SUPPLEMENTARY_LABEL);
+  const [supplementaryAmount, setSupplementaryAmount] = useState("");
+  const [savingSupplementary, setSavingSupplementary] = useState(false);
 
   useEffect(() => {
     if (!schoolId) {
@@ -85,98 +80,61 @@ export default function BillingPage() {
             s.current_class.toLowerCase().includes(q)
         );
 
-  const termsOldestFirst = useMemo(
-    () => [...termsList].sort((a, b) => (a.year !== b.year ? a.year - b.year : a.term - b.term)),
-    [termsList]
-  );
-
-  /** Latest past term before the calendar “current” term — e.g. Term 3, 2025 when current is Term 1, 2026. */
-  const defaultCarryoverTermId = useMemo(() => {
-    if (
-      currentTermResolved &&
-      currentTerm?.year != null &&
-      currentTerm.term != null &&
-      termsOldestFirst.length > 0
-    ) {
-      const past = termsOldestFirst.filter((t) =>
-        termIsStrictlyBefore({ year: t.year, term: t.term }, { year: currentTerm.year!, term: currentTerm.term! })
-      );
-      if (past.length > 0) return past[past.length - 1]!.id;
-    }
-    return termsOldestFirst[0]?.id ?? null;
-  }, [termsOldestFirst, currentTerm, currentTermResolved]);
-
-  const hasPastTermBeforeCurrent =
-    currentTerm?.year != null &&
-    currentTerm.term != null &&
-    termsOldestFirst.some((t) =>
-      termIsStrictlyBefore({ year: t.year, term: t.term }, { year: currentTerm.year!, term: currentTerm.term! })
-    );
-
   useEffect(() => {
-    setCarryoverTermId(defaultCarryoverTermId ?? "");
-    setCarryoverAmount("");
-  }, [selectedStudent, defaultCarryoverTermId]);
+    setSupplementaryLabel(DEFAULT_SUPPLEMENTARY_LABEL);
+    setSupplementaryAmount("");
+  }, [selectedStudent]);
 
   const termOutstandingForSelected = selectedStudent
     ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
     : 0;
 
-  async function handleApplyCarryoverToTerm() {
-    if (!schoolId || !selectedStudent) {
-      setMessage({ type: "err", text: "Select a student first." });
+  async function handleAddSupplementaryInvoice() {
+    const termId = currentTerm?.id;
+    if (!schoolId || !userId || !termId || !selectedStudent) {
+      setMessage({ type: "err", text: "Select a student and ensure the current term is loaded." });
       return;
     }
-    if (!carryoverTermId) {
-      setMessage({
-        type: "err",
-        text: "Select a school term. If no past term appears, add last year’s terms under your school calendar first.",
-      });
+    const amt = Number(supplementaryAmount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      setMessage({ type: "err", text: "Enter a positive amount for this additional charge." });
       return;
     }
-    const carry = Number(carryoverAmount);
-    if (!Number.isFinite(carry) || carry <= 0) {
-      setMessage({ type: "err", text: "Enter a positive carry-over amount (arrears from before Pweza)." });
-      return;
-    }
-    const baseFee =
-      carryoverIncludeTermFee && suggestedAmount > 0 ? Math.round(suggestedAmount * 100) / 100 : 0;
-    setSavingCarryover(true);
+    const label =
+      supplementaryLabel.trim() || DEFAULT_SUPPLEMENTARY_LABEL;
+    setSavingSupplementary(true);
     setMessage(null);
     try {
-      const { data, error } = await supabase.rpc("apply_carryover_balance_to_term_invoice", {
-        p_school_id: schoolId,
-        p_student_id: selectedStudent,
-        p_term_id: carryoverTermId,
-        p_carryover_amount: carry,
-        p_base_term_fee: baseFee,
+      let invNum: string | null = null;
+      try {
+        const res = await supabase.rpc("get_next_invoice_number", { p_school_id: schoolId });
+        invNum = res.data ?? null;
+      } catch {
+        invNum = "INV-" + new Date().getFullYear() + "-" + Date.now().toString().slice(-6);
+      }
+      const { error: invErr } = await supabase.from("student_invoices").insert({
+        school_id: schoolId,
+        student_id: selectedStudent,
+        term_id: termId,
+        total_amount: amt,
+        status: "issued",
+        invoice_number: invNum,
+        invoice_label: label,
+        is_supplementary: true,
+        created_by: userId,
+        updated_at: new Date().toISOString(),
       });
-      if (error) throw new Error(error.message);
-      const row = data as {
-        invoice_number?: string;
-        total_amount?: number;
-        base_term_fee?: number;
-        carryover_amount?: number;
-      } | null;
-      const total = row?.total_amount ?? carry + baseFee;
-      const parts = [
-        `Invoice ${row?.invoice_number ?? ""}`.trim(),
-        `total due for that term: ${Number(total).toLocaleString()}`,
-
-        `(carry-over ${Number(row?.carryover_amount ?? carry).toLocaleString()}` +
-          (baseFee > 0 ? ` + term fee ${Number(row?.base_term_fee ?? baseFee).toLocaleString()}` : "") +
-          ").",
-      ];
+      if (invErr) throw invErr;
       setMessage({
         type: "ok",
-        text: `${parts.join(" — ")} Record Payment will list this under normal term balances.`,
+        text: `Added “${label}” (${amt.toLocaleString()}) on the current term. It appears in Record Payment with the rest of this term’s balance. You can add more lines or generate the main term fee invoice first—order does not matter.`,
       });
-      setCarryoverAmount("");
+      setSupplementaryAmount("");
       await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
     } catch (e: unknown) {
-      setMessage({ type: "err", text: (e as Error).message || "Could not save carry-over on term." });
+      setMessage({ type: "err", text: (e as Error).message || "Could not add this invoice." });
     } finally {
-      setSavingCarryover(false);
+      setSavingSupplementary(false);
     }
   }
 
@@ -201,6 +159,7 @@ export default function BillingPage() {
         .select("student_id")
         .eq("school_id", schoolId)
         .eq("term_id", termId)
+        .eq("is_supplementary", false)
         .in("student_id", allInClassIds)
         .neq("status", "cancelled");
       const hasInvoice = new Set((existingInvRows || []).map((r: { student_id: string }) => r.student_id));
@@ -209,7 +168,7 @@ export default function BillingPage() {
       if (toInvoice.length === 0) {
         setMessage({
           type: "err",
-          text: `No new invoices: every student in ${selectedClass} already has an active invoice for the current term.`,
+          text: `No new invoices: every student in ${selectedClass} already has the main term fee invoice for the current term.`,
         });
         setGenerating(false);
         return;
@@ -230,38 +189,12 @@ export default function BillingPage() {
           total_amount: amount,
           status: "issued",
           invoice_number: invNum,
+          is_supplementary: false,
           created_by: userId,
           updated_at: new Date().toISOString(),
         });
         if (invErr) throw invErr;
         created.push(st.name);
-      }
-      const year = currentTerm?.year ?? new Date().getFullYear();
-      const termNum = currentTerm?.term ?? 1;
-      const newStudentIds = toInvoice.map((s) => s.student_id);
-      const { data: existingBalances } = await supabase
-        .from("student_balances")
-        .select("student_id, total_paid")
-        .eq("school_id", schoolId)
-        .eq("term_id", termId)
-        .in("student_id", newStudentIds);
-      const paidMap = new Map((existingBalances || []).map((b: { student_id: string; total_paid: number }) => [b.student_id, Number(b.total_paid || 0)]));
-      for (const st of toInvoice) {
-        const totalPaid = paidMap.get(st.student_id) ?? 0;
-        const { error: balErr } = await supabase.from("student_balances").upsert(
-          {
-            student_id: st.student_id,
-            school_id: schoolId,
-            term_id: termId,
-            year,
-            term: termNum,
-            total_fees: amount,
-            total_paid: totalPaid,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "student_id,term_id" }
-        );
-        if (balErr) throw balErr;
       }
       const skipPart =
         skippedStudents.length > 0
@@ -296,12 +229,13 @@ export default function BillingPage() {
         .eq("school_id", schoolId)
         .eq("student_id", selectedStudent)
         .eq("term_id", termId)
+        .eq("is_supplementary", false)
         .neq("status", "cancelled")
         .maybeSingle();
       if (existingInv) {
         setMessage({
           type: "err",
-          text: "This student already has an invoice for the current term. Only one invoice per student per term is allowed.",
+          text: "This student already has the main term fee invoice. Use “Additional charge” below to add brought-forward or other amounts on the same term.",
         });
         setGenerating(false);
         return;
@@ -321,33 +255,11 @@ export default function BillingPage() {
         total_amount: amount,
         status: "issued",
         invoice_number: invNum,
+        is_supplementary: false,
         created_by: userId,
         updated_at: new Date().toISOString(),
       });
       if (invErr) throw invErr;
-      const year = currentTerm?.year ?? new Date().getFullYear();
-      const termNum = currentTerm?.term ?? 1;
-      const { data: existing } = await supabase
-        .from("student_balances")
-        .select("total_paid")
-        .eq("student_id", selectedStudent)
-        .eq("term_id", termId)
-        .single();
-      const totalPaid = existing?.total_paid ?? 0;
-      const { error: balErr } = await supabase.from("student_balances").upsert(
-        {
-          student_id: selectedStudent,
-          school_id: schoolId,
-          term_id: termId,
-          year,
-          term: termNum,
-          total_fees: amount,
-          total_paid: Number(totalPaid),
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "student_id,term_id" }
-      );
-      if (balErr) throw balErr;
       setMessage({ type: "ok", text: `Invoice generated for ${st.name}. You can now record payments.` });
       setSelectedStudent("");
       setStudentSearchQuery("");
@@ -533,7 +445,7 @@ export default function BillingPage() {
                   <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
                     <h3 className="ac-text-primary text-sm font-semibold">Outstanding balance</h3>
                     <p className="ac-text-muted text-xs">
-                      All fees and old arrears live on <strong>term invoices</strong>. Use <strong>Carry-over balance</strong> for legacy debt from before Pweza; Record Payment clears oldest terms first. This line is the sum of invoice balances for this student.
+                      This is the total the student still owes across <strong>all</strong> terms. Use <strong>Generate invoice</strong> for the usual term fee (one main invoice per current term). Use <strong>Additional charge</strong> for brought-forward or other amounts—all on the <strong>current term</strong>, with a label you choose so it stays clear in receipts and debugging.
                     </p>
                     <dl className="grid gap-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -543,72 +455,46 @@ export default function BillingPage() {
                         </dd>
                       </div>
                     </dl>
-                    {termsOldestFirst.length > 0 && (
-                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
-                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
-                          Carry-over balance (before Pweza)
-                        </h4>
-                        <p className="ac-text-muted text-xs">
-                          Old arrears go on the <strong>term you choose</strong> as a normal invoice. We pre-select the latest school period <strong>before</strong> today&apos;s active calendar term (for example Term 3, 2025 when you are in Term 1, 2026). You can change the term if the head teacher confirms a different period.
-                        </p>
-                        {currentTermResolved && !hasPastTermBeforeCurrent && currentTerm != null && (
-                          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-                            No term earlier than the current calendar term exists in your school yet. Add last year&apos;s terms (e.g. Term 3, 2025) under Admin / school terms, then refresh—otherwise pick any term from the list if it already exists.
-                          </p>
-                        )}
-                        <div>
-                          <label className="ac-text-secondary mb-1 block text-xs font-medium">Put carry-over on term</label>
-                          <select
-                            value={carryoverTermId}
-                            onChange={(e) => setCarryoverTermId(e.target.value)}
-                            className="ac-input"
-                            disabled={savingCarryover}
-                          >
-                            <option value="">Select term</option>
-                            {termsOldestFirst.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                Term {t.term}, {t.year}
-                                {t.is_closed ? " (closed)" : ""}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Carry-over amount</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={carryoverAmount}
-                            onChange={(e) => setCarryoverAmount(e.target.value)}
-                            className="ac-input tabular-nums"
-                            placeholder="e.g. 150000"
-                            disabled={savingCarryover}
-                          />
-                        </div>
-                        <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
-                          <input
-                            type="checkbox"
-                            className="rounded border-slate-500"
-                            checked={carryoverIncludeTermFee}
-                            onChange={(e) => setCarryoverIncludeTermFee(e.target.checked)}
-                            disabled={savingCarryover || suggestedAmount <= 0}
-                          />
-                          <span>
-                            Include this class&apos;s term fee on the <strong>same</strong> invoice (
-                            {suggestedAmount > 0 ? suggestedAmount.toLocaleString() : "no fee set"})
-                          </span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => void handleApplyCarryoverToTerm()}
-                          disabled={savingCarryover || !userId || !carryoverTermId}
-                          className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
-                        >
-                          {savingCarryover ? "Saving…" : "Save carry-over on this term"}
-                        </button>
+                    <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
+                      <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
+                        Additional charge (same term)
+                      </h4>
+                      <p className="ac-text-muted text-xs">
+                        Creates <strong>another invoice</strong> on the <strong>active term shown above</strong> (not an old calendar term). Payments for this term apply to the main fee first, then these extra lines. Rename the label anything your school understands.
+                      </p>
+                      <div>
+                        <label className="ac-text-secondary mb-1 block text-xs font-medium">Label on invoice</label>
+                        <input
+                          type="text"
+                          value={supplementaryLabel}
+                          onChange={(e) => setSupplementaryLabel(e.target.value)}
+                          className="ac-input text-sm"
+                          disabled={savingSupplementary}
+                          placeholder={DEFAULT_SUPPLEMENTARY_LABEL}
+                        />
                       </div>
-                    )}
+                      <div>
+                        <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={supplementaryAmount}
+                          onChange={(e) => setSupplementaryAmount(e.target.value)}
+                          className="ac-input tabular-nums"
+                          placeholder="e.g. 150000"
+                          disabled={savingSupplementary}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => void handleAddSupplementaryInvoice()}
+                        disabled={savingSupplementary || !userId || !currentTerm?.id}
+                        className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                      >
+                        {savingSupplementary ? "Saving…" : "Add additional charge on current term"}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <button

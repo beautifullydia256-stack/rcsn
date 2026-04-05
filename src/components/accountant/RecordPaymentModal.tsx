@@ -458,10 +458,20 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
               .eq("student_id", selectedStudent)
               .in("term_id", termIds)
               .in("status", ["issued", "partial", "paid"])
+              .order("is_supplementary", { ascending: true })
+              .order("created_at", { ascending: true })
           : { data: [] };
+      const countByTerm = new Map<string, number>();
+      for (const inv of invoices || []) {
+        const tid = (inv as { term_id: string }).term_id;
+        countByTerm.set(tid, (countByTerm.get(tid) ?? 0) + 1);
+      }
       const invoiceByTerm = new Map<string, string>();
       for (const inv of invoices || []) {
-        invoiceByTerm.set((inv as { term_id: string; invoice_id: string }).term_id, (inv as { term_id: string; invoice_id: string }).invoice_id);
+        const row = inv as { term_id: string; invoice_id: string };
+        if (countByTerm.get(row.term_id) === 1) {
+          invoiceByTerm.set(row.term_id, row.invoice_id);
+        }
       }
 
       const paymentDate = new Date().toISOString().slice(0, 10);

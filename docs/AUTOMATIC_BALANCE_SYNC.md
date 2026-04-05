@@ -46,9 +46,9 @@
 
 ---
 
-## Legacy / carry-over debt (term invoices only)
+## Brought-forward / extra charges (current term only)
 
-Arrears from before Pweza are recorded with **Carry-over balance** on **Invoices & Billing**: one **issued** `student_invoices` row on a chosen past `school_terms` row (RPC `apply_carryover_balance_to_term_invoice`). **`prior_system_balance_entries` and prior-only payments have been removed** (migration `20260505120000_remove_prior_system_balance_entries.sql`) once all prior ledger balances are zero and there are no active `student_payments` rows pointing at `prior_system_entry_id`. **Record Payment** allocates **oldest term first** across `student_balances`; every payment row must have a **`term_id`** (except reversed legacy rows).
+**Invoices & Billing** uses **one main** `student_invoices` row per student per term (`is_supplementary = false`, standard fee) and optional **additional** rows on the **same** calendar term (`is_supplementary = true`, optional `invoice_label`). Payments for the term are applied in waterfall order (main invoice first, then supplementary by `created_at`). Migration `20260507120000_current_term_supplementary_invoices.sql` adds the columns and `reconcile_term_invoice_payments`. The legacy RPC `apply_carryover_balance_to_term_invoice` is deprecated. **`prior_system_balance_entries` has been removed** after migration `20260505120000_remove_prior_system_balance_entries.sql`. **Record Payment** works per `term_id`; when several invoices share a term, `invoice_id` on payments may be omitted so reconciliation stays correct.
 
 **Phase 2 (optional):** further KPI tweaks and reversal workflows. Term-scoped **`balance_brought_forward`** remains separate.
 
