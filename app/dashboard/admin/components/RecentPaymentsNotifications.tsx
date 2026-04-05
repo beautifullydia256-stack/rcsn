@@ -66,15 +66,31 @@ export default function RecentPaymentsNotifications() {
               .eq("school_id", u.school_id)
               .order("payment_date", { ascending: false })
               .limit(5),
-          supabase.from("notifications")
-            .select("*")
-            .eq("school_id", u.school_id)
+          supabase
+            .from("user_in_app_notifications")
+            .select("id, title, body, created_at, read_at")
+            .eq("user_id", user.id)
             .order("created_at", { ascending: false })
             .limit(5)
         ]);
 
         setPayments(paymentsResult.data || []);
-        setNotifications(notificationsResult.data || []);
+        const inboxRows = (notificationsResult.data || []) as {
+          id: string;
+          title: string;
+          body: string | null;
+          created_at: string;
+          read_at: string | null;
+        }[];
+        setNotifications(
+          inboxRows.map((n) => ({
+            id: n.id,
+            title: n.title,
+            message: n.body ?? "",
+            created_at: n.created_at,
+            read_at: n.read_at,
+          }))
+        );
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -139,7 +155,7 @@ export default function RecentPaymentsNotifications() {
             <div className="p-2 rounded-xl bg-[#10d9a8]/15">
               <Bell className="w-5 h-5 text-green-600" />
             </div>
-            <h2 className="text-lg font-semibold text-white">Notifications</h2>
+            <h2 className="text-lg font-semibold text-white">Your notifications</h2>
           </div>
           <button
             type="button"
@@ -155,12 +171,20 @@ export default function RecentPaymentsNotifications() {
           ) : notifications.length === 0 ? (
             <div className="text-sm text-white/60">No notifications</div>
           ) : (
-            notifications.map((notification) => (
-              <div key={notification.id} className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="font-medium text-white text-sm mb-1">{notification.title}</div>
-                <div className="text-xs text-white/70">{notification.message}</div>
-                <div className="text-xs text-white/60 mt-1">
-                  {new Date(notification.created_at).toLocaleDateString()}
+            notifications.map((notification: { id: string; title: string; message: string; created_at: string; read_at?: string | null }) => (
+              <div
+                key={notification.id}
+                className={`p-3 rounded-xl border border-white/10 ${notification.read_at ? "bg-white/5 opacity-90" : "bg-[#10d9a8]/10 border-[#10d9a8]/25"}`}
+              >
+                <div className="flex items-start gap-2">
+                  {!notification.read_at && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#10d9a8]" aria-hidden />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-white text-sm mb-1">{notification.title}</div>
+                    <div className="text-xs text-white/70 line-clamp-2">{notification.message}</div>
+                    <div className="text-xs text-white/60 mt-1">
+                      {new Date(notification.created_at).toLocaleDateString()}
+                    </div>
+                  </div>
                 </div>
               </div>
             ))

@@ -25,6 +25,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
     }),
     import('@/pages/admin/notifications/NotificationsPage').then(async (m) => {
       queryClient.setQueryData(['admin', 'notifications', userId], await m.fetchNotificationsPage(userId));
+      queryClient.setQueryData(['admin', 'notifications', 'inbox', userId], await m.fetchInAppNotificationsInbox(userId));
     }),
     import('@/pages/admin/exam-sets/ExamSetsPage').then(async (m) => {
       queryClient.setQueryData(['admin', 'exam-sets', userId], await m.fetchExamSets(userId));

@@ -16,7 +16,7 @@ type PaymentRow = {
 };
 
 type Payment = { payment_id: string; amount_paid: number; payment_date: string; payment_method: string; student_id: string; students?: { name: string } };
-type Notification = { id: string; title: string; message: string; created_at: string };
+type Notification = { id: string; title: string; message: string; created_at: string; read_at?: string | null };
 
 export async function fetchPaymentsNotifications(userId: string): Promise<{ payments: Payment[]; notifications: Notification[] }> {
   const today = new Date().toISOString().slice(0, 10);
@@ -52,7 +52,12 @@ export async function fetchPaymentsNotifications(userId: string): Promise<{ paym
           .eq('school_id', u.school_id)
           .order('payment_date', { ascending: false })
           .limit(5),
-    supabase.from('notifications').select('*').eq('school_id', u.school_id).order('created_at', { ascending: false }).limit(5),
+    supabase
+      .from('user_in_app_notifications')
+      .select('id, title, body, created_at, read_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5),
   ]);
 
   const rawPayments = (paymentsResult.data || []) as PaymentRow[];
@@ -64,7 +69,14 @@ export async function fetchPaymentsNotifications(userId: string): Promise<{ paym
     student_id: p.student_id,
     students: Array.isArray(p.students) ? p.students[0] : p.students ?? undefined,
   }));
-  const notifications = (notificationsResult.data || []) as Notification[];
+  const rawInbox = (notificationsResult.data || []) as { id: string; title: string; body: string | null; created_at: string; read_at: string | null }[];
+  const notifications: Notification[] = rawInbox.map((n) => ({
+    id: n.id,
+    title: n.title,
+    message: n.body ?? '',
+    created_at: n.created_at,
+    read_at: n.read_at,
+  }));
   return { payments, notifications };
 }
 
@@ -134,7 +146,7 @@ export default function RecentPaymentsNotifications() {
             <div className="p-2 rounded-xl bg-[#10d9a8]/15 border border-[#10d9a8]/25">
               <Bell className="w-5 h-5 text-[#10d9a8]" />
             </div>
-            <h2 className="text-lg font-semibold ac-text-primary">Notifications</h2>
+            <h2 className="text-lg font-semibold ac-text-primary">Your notifications</h2>
           </div>
           <button
             type="button"
@@ -151,10 +163,18 @@ export default function RecentPaymentsNotifications() {
             <div className="text-sm ac-text-muted">No notifications</div>
           ) : (
             notifications.map((n) => (
-              <div key={n.id} className="p-3 rounded-xl bg-white/5 border border-white/10">
-                <div className="font-medium ac-text-primary text-sm mb-1">{n.title}</div>
-                <div className="text-xs ac-text-secondary">{n.message}</div>
-                <div className="text-xs ac-text-muted mt-1">{new Date(n.created_at).toLocaleDateString()}</div>
+              <div
+                key={n.id}
+                className={`p-3 rounded-xl border border-white/10 ${n.read_at ? 'bg-white/5 opacity-90' : 'bg-[#10d9a8]/10 border-[#10d9a8]/25'}`}
+              >
+                <div className="flex items-start gap-2">
+                  {!n.read_at && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#10d9a8]" aria-hidden />}
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium ac-text-primary text-sm mb-1">{n.title}</div>
+                    <div className="text-xs ac-text-secondary line-clamp-2">{n.message}</div>
+                    <div className="text-xs ac-text-muted mt-1">{new Date(n.created_at).toLocaleDateString()}</div>
+                  </div>
+                </div>
               </div>
             ))
           )}
