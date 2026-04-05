@@ -11,6 +11,15 @@ import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
 
 const STALE_MS = 60 * 1000;
 
+/** Calendar date in the user's timezone (matches "added to system today"). */
+function localDateYYYYMMDD(): string {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 const PAY_OPTIONS = [
   { value: '', label: '—' },
   { value: 'monthly', label: 'Monthly' },
@@ -188,7 +197,6 @@ export default function StaffPage() {
   const [emergencyName, setEmergencyName] = useState('');
   const [emergencyPhone, setEmergencyPhone] = useState('');
   const [notes, setNotes] = useState('');
-  const [hireDate, setHireDate] = useState('');
   const [salaryAmount, setSalaryAmount] = useState('');
   const [payFrequency, setPayFrequency] = useState('');
   const [staffRole, setStaffRole] = useState('');
@@ -275,7 +283,6 @@ export default function StaffPage() {
     setEmergencyName('');
     setEmergencyPhone('');
     setNotes('');
-    setHireDate('');
     setSalaryAmount('');
     setPayFrequency('');
     setStaffRole('');
@@ -323,7 +330,7 @@ export default function StaffPage() {
         emergency_contact_name: emergencyName.trim() || null,
         emergency_contact_phone: emergencyPhone.trim() || null,
         notes: notes.trim() || null,
-        hire_date: hireDate || null,
+        hire_date: localDateYYYYMMDD(),
         salary_amount: salaryAmount ? Number(salaryAmount) : null,
         pay_frequency: payFrequency || null,
       });
@@ -600,9 +607,12 @@ export default function StaffPage() {
                       <label style={labelStyle}>Emergency phone</label>
                       <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
                     </div>
-                    <div>
-                      <label style={labelStyle}>Hire date</label>
-                      <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <p style={{ fontSize: 12, color: 'var(--t3)', margin: 0, lineHeight: 1.45 }}>
+                        <strong style={{ color: 'var(--t2)' }}>Hire date</strong> is set automatically to{' '}
+                        <strong style={{ color: 'var(--t2)' }}>today&apos;s date</strong> when you save (date they were added to
+                        the system).
+                      </p>
                     </div>
                     <div>
                       <label style={labelStyle}>Salary (reference)</label>
