@@ -1,0 +1,496 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveCurrentSchoolTerm } from "./adminFinanceTerm";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export type AccountantTermBrief = {
+  id: string;
+  label: string;
+  term: number;
+  year: number;
+  start_date?: string | null;
+  end_date?: string | null;
+};
+
+/** One school term’s slice of receivables (for donut / breakdown). */
+export type TermOutstandingSlice = {
+  termId: string;
+  termLabel: string;
+  term: number;
+  year: number;
+  expectedFees: number;
+  totalPaidOnLedger: number;
+  outstanding: number;
+};
+
+export type AccountantDashboardMetrics = {
+  asOfDate: string;
+  calendarYear: number;
+  currentTerm: AccountantTermBrief | null;
+  termPerformance: {
+    feesExpected: number;
+    feesCollectedAttributed: number;
+    outstandingOnTerm: number;
+    /** 0–100 when feesExpected > 0; else null */
+    collectionRatePercent: number | null;
+    expensesApproved: number;
+    netTermCash: number;
+  };
+  receivablesAllTerms: {
+    totalOutstanding: number;
+    onCurrentTerm: number;
+    onPriorTerms: number;
+    debtorStudentCount: number;
+    byTerm: TermOutstandingSlice[];
+  };
+  /** Fee receipts by payment_date — all terms. */
+  cashActivity: {
+    todayAllTerms: number;
+    last7DaysAllTerms: number;
+    monthToDateAllTerms: number;
+  };
+  /**
+   * Calendar-year view: fee receipts and school expenses by expense_date.
+   * netCash = sum(fee receipts) − sum(approved/paid expenses) for that calendar year.
+   * Not the same scope as “current term” KPIs.
+   */
+  cashflowYTD: {
+    months: Array<{ month: string; monthLabel: string; feeReceipts: number; expenses: number }>;
+    netCash: number;
+  };
+  /** Sum of discount amounts recorded for the school (no term filter). */
+  discountsSchoolWide: number;
+  collectionsByMethod: {
+    cash: number;
+    bank: number;
+    mobile_money: number;
+    other: number;
+  };
+  recentPayments: Array<{
+    payment_id: string;
+    student_name: string;
+    class: string;
+    receipt_number: string | null;
+    payment_date: string;
+    amount_paid: number;
+    payment_method: string;
+  }>;
+};
+
+type BalanceRow = {
+  student_id?: string;
+  term_id?: string | null;
+  total_fees?: number | string | null;
+  total_paid?: number | string | null;
+  balance?: number | string | null;
+};
+
+type PaymentRow = {
+  amount_paid?: number | string | null;
+  payment_date?: string | null;
+  payment_method?: string | null;
+  student_id?: string;
+  term_id?: string | null;
+};
+
+function num(v: unknown): number {
+  if (v == null || v === "") return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
+export async function fetchAccountantDashboardMetrics(
+  client: SupabaseClient,
+  schoolId: string,
+  todayIso = new Date().toISOString().slice(0, 10)
+): Promise<AccountantDashboardMetrics> {
+  const now = new Date();
+  const calendarYear = now.getFullYear();
+  const yearStart = `${calendarYear}-01-01`;
+  const yearEnd = `${calendarYear}-12-31`;
+
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 7);
+  const weekStartStr = weekStart.toISOString().slice(0, 10);
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthStartStr = monthStart.toISOString().slice(0, 10);
+
+  const currentTermRaw = await resolveCurrentSchoolTerm(client, schoolId, todayIso);
+  const currentTermId = currentTermRaw?.id ?? null;
+
+  const [
+    termsRes,
+    balancesRes,
+    paymentsRes,
+    expensesTermRes,
+    expensesYtdRes,
+    discountsRes,
+    recentPayRes,
+  ] = await Promise.all([
+    client
+      .from("school_terms")
+      .select("id, term, year, start_date, end_date")
+      .eq("school_id", schoolId)
+      .order("year", { ascending: false })
+      .order("term", { ascending: false }),
+    client
+      .from("student_balances")
+      .select("student_id, term_id, total_fees, total_paid, balance")
+      .eq("school_id", schoolId),
+    client
+      .from("student_payments")
+      .select("amount_paid, payment_date, payment_method, student_id, term_id, reversed_at")
+      .eq("school_id", schoolId)
+      .is("reversed_at", null),
+    currentTermId
+      ? client
+          .from("school_expenses")
+          .select("amount, status")
+          .eq("school_id", schoolId)
+          .eq("term_id", currentTermId)
+      : Promise.resolve({ data: [] as { amount?: number; status?: string }[] }),
+    client
+      .from("school_expenses")
+      .select("amount, expense_date, status")
+      .eq("school_id", schoolId)
+      .gte("expense_date", yearStart)
+      .lte("expense_date", yearEnd),
+    client.from("student_discounts").select("amount").eq("school_id", schoolId),
+    client
+      .from("student_payments")
+      .select("payment_id, amount_paid, payment_date, payment_method, receipt_number, student_id, reversed_at")
+      .eq("school_id", schoolId)
+      .is("reversed_at", null)
+      .order("payment_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(10),
+  ]);
+
+  const terms = (termsRes.data || []) as {
+    id: string;
+    term: number;
+    year: number;
+    start_date?: string | null;
+    end_date?: string | null;
+  }[];
+
+  const currentTerm: AccountantTermBrief | null = currentTermRaw
+    ? {
+        id: currentTermRaw.id,
+        label: `Term ${currentTermRaw.term ?? 1}, ${currentTermRaw.year ?? calendarYear}`,
+        term: currentTermRaw.term ?? 1,
+        year: currentTermRaw.year ?? calendarYear,
+        start_date: currentTermRaw.start_date,
+        end_date: currentTermRaw.end_date,
+      }
+    : null;
+
+  const payments = (paymentsRes.data || []) as PaymentRow[];
+
+  const byTermAgg: Record<
+    string,
+    { expected: number; paidLedger: number; outstanding: number }
+  > = {};
+
+  for (const b of (balancesRes.data || []) as BalanceRow[]) {
+    const tid = b.term_id;
+    if (!tid) continue;
+    if (!byTermAgg[tid]) byTermAgg[tid] = { expected: 0, paidLedger: 0, outstanding: 0 };
+    const tf = num(b.total_fees);
+    const bal = num(b.balance);
+    byTermAgg[tid].expected += tf;
+    byTermAgg[tid].paidLedger += num(b.total_paid);
+    if (tf > 0 && bal > 0) byTermAgg[tid].outstanding += Math.max(0, bal);
+  }
+
+  const debtorIds = new Set<string>();
+  for (const b of (balancesRes.data || []) as BalanceRow[]) {
+    const sid = b.student_id;
+    if (!sid) continue;
+    const tf = num(b.total_fees);
+    const bal = num(b.balance);
+    if (tf > 0 && bal > 0) debtorIds.add(sid);
+  }
+
+  const byTerm: TermOutstandingSlice[] = terms
+    .filter((t) => byTermAgg[t.id])
+    .map((t) => ({
+      termId: t.id,
+      termLabel: `Term ${t.term}, ${t.year}`,
+      term: t.term,
+      year: t.year,
+      expectedFees: byTermAgg[t.id].expected,
+      totalPaidOnLedger: byTermAgg[t.id].paidLedger,
+      outstanding: byTermAgg[t.id].outstanding,
+    }));
+
+  const totalOutstanding = byTerm.reduce((s, r) => s + r.outstanding, 0);
+  const curSlice = currentTermId ? byTerm.find((r) => r.termId === currentTermId) : undefined;
+  const onCurrentTerm = curSlice?.outstanding ?? 0;
+  const onPriorTerms = Math.max(0, totalOutstanding - onCurrentTerm);
+
+  let feesExpected = 0;
+  let outstandingOnTerm = 0;
+  if (currentTermId) {
+    for (const b of (balancesRes.data || []) as BalanceRow[]) {
+      if (b.term_id !== currentTermId) continue;
+      feesExpected += num(b.total_fees);
+      outstandingOnTerm += Math.max(0, num(b.balance));
+    }
+  }
+
+  const paymentsCurrentTerm = currentTermId
+    ? payments.filter((p) => p.term_id === currentTermId)
+    : [];
+  const feesCollectedAttributed = paymentsCurrentTerm.reduce((s, p) => s + num(p.amount_paid), 0);
+
+  const collectionRatePercent =
+    feesExpected > 0.01 ? Math.min(100, Math.round((feesCollectedAttributed / feesExpected) * 1000) / 10) : null;
+
+  const expensesTerm = (expensesTermRes.data || []) as { amount?: number; status?: string }[];
+  const expensesApproved = expensesTerm
+    .filter((e) => ["approved", "paid"].includes((e.status || "").toLowerCase()))
+    .reduce((s, e) => s + num(e.amount), 0);
+
+  const netTermCash = feesCollectedAttributed - expensesApproved;
+
+  const byMethod = { cash: 0, bank: 0, mobile_money: 0, other: 0 };
+  for (const p of paymentsCurrentTerm) {
+    const m = (p.payment_method || "").toLowerCase();
+    const amt = num(p.amount_paid);
+    if (m === "cash") byMethod.cash += amt;
+    else if (m === "bank" || m === "cheque" || m === "pos" || m === "online") byMethod.bank += amt;
+    else if (m === "mobile_money") byMethod.mobile_money += amt;
+    else byMethod.other += amt;
+  }
+
+  let todayAllTerms = 0;
+  let last7DaysAllTerms = 0;
+  let monthToDateAllTerms = 0;
+  for (const p of payments) {
+    const d = p.payment_date;
+    if (!d) continue;
+    const amt = num(p.amount_paid);
+    if (d === todayIso) todayAllTerms += amt;
+    if (d >= weekStartStr && d <= todayIso) last7DaysAllTerms += amt;
+    if (d >= monthStartStr && d <= todayIso) monthToDateAllTerms += amt;
+  }
+
+  const feeReceiptsByMonth: number[] = new Array(12).fill(0);
+  const expenseByMonth: number[] = new Array(12).fill(0);
+
+  for (const p of payments) {
+    const d = p.payment_date;
+    if (!d || d < yearStart || d > yearEnd) continue;
+    const mi = parseInt(d.slice(5, 7), 10) - 1;
+    if (mi >= 0 && mi < 12) feeReceiptsByMonth[mi] += num(p.amount_paid);
+  }
+
+  for (const e of (expensesYtdRes.data || []) as { expense_date?: string; amount?: number; status?: string }[]) {
+    if (!["approved", "paid"].includes((e.status || "").toLowerCase())) continue;
+    const d = e.expense_date;
+    if (!d) continue;
+    const mi = parseInt(d.slice(5, 7), 10) - 1;
+    if (mi >= 0 && mi < 12) expenseByMonth[mi] += num(e.amount);
+  }
+
+  const months = MONTHS.map((label, i) => ({
+    month: String(i + 1),
+    monthLabel: label,
+    feeReceipts: Math.round(feeReceiptsByMonth[i]),
+    expenses: Math.round(expenseByMonth[i]),
+  }));
+
+  const sumFeesYtd = feeReceiptsByMonth.reduce((a, b) => a + b, 0);
+  const sumExpYtd = expenseByMonth.reduce((a, b) => a + b, 0);
+  const netCash = sumFeesYtd - sumExpYtd;
+
+  const discountsSchoolWide = (discountsRes.data || []).reduce(
+    (s, d: { amount?: number | string | null }) => s + num(d.amount),
+    0
+  );
+
+  const recentRows = (recentPayRes.data || []) as {
+    payment_id: string;
+    student_id: string;
+    amount_paid: number;
+    payment_date: string;
+    payment_method: string;
+    receipt_number: string | null;
+  }[];
+  const recentStudentIds = [...new Set(recentRows.map((r) => r.student_id))];
+  const { data: recentStudents } =
+    recentStudentIds.length > 0
+      ? await client
+          .from("students")
+          .select("student_id, name, current_class")
+          .in("student_id", recentStudentIds)
+      : { data: [] as { student_id: string; name: string; current_class: string }[] };
+  const recentStudentMap = new Map(
+    (recentStudents || []).map((s) => [s.student_id, { name: s.name, current_class: s.current_class }])
+  );
+  const recentPayments = recentRows.map((r) => {
+    const st = recentStudentMap.get(r.student_id);
+    return {
+      payment_id: r.payment_id,
+      student_name: st?.name ?? "—",
+      class: st?.current_class ?? "—",
+      receipt_number: r.receipt_number ?? null,
+      payment_date: r.payment_date,
+      amount_paid: num(r.amount_paid),
+      payment_method: r.payment_method ?? "—",
+    };
+  });
+
+  return {
+    asOfDate: todayIso,
+    calendarYear,
+    currentTerm,
+    termPerformance: {
+      feesExpected,
+      feesCollectedAttributed,
+      outstandingOnTerm,
+      collectionRatePercent,
+      expensesApproved,
+      netTermCash,
+    },
+    receivablesAllTerms: {
+      totalOutstanding: totalOutstanding,
+      onCurrentTerm,
+      onPriorTerms,
+      debtorStudentCount: debtorIds.size,
+      byTerm,
+    },
+    cashActivity: {
+      todayAllTerms,
+      last7DaysAllTerms,
+      monthToDateAllTerms,
+    },
+    cashflowYTD: {
+      months,
+      netCash,
+    },
+    discountsSchoolWide,
+    collectionsByMethod: byMethod,
+    recentPayments,
+  };
+}
+
+export type RecentAccountantTransaction = {
+  id: string;
+  type: "payment" | "expense";
+  name: string;
+  sub: string;
+  account: string;
+  date: string;
+  time: string;
+  amount: number;
+  status: "Completed" | "Pending";
+};
+
+export async function fetchRecentAccountantTransactions(
+  client: SupabaseClient,
+  schoolId: string,
+  period: "month" | "year"
+): Promise<RecentAccountantTransaction[]> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const yearStart = `${year}-01-01`;
+  const yearEnd = `${year}-12-31`;
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const monthEnd = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+  const start = period === "month" ? monthStart : yearStart;
+  const end = period === "month" ? monthEnd : yearEnd;
+
+  const [paymentsRes, expensesRes] = await Promise.all([
+    client
+      .from("student_payments")
+      .select("payment_id, student_id, amount_paid, payment_date, payment_method, created_at, reversed_at")
+      .eq("school_id", schoolId)
+      .is("reversed_at", null)
+      .gte("payment_date", start)
+      .lte("payment_date", end)
+      .order("payment_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
+    client
+      .from("school_expenses")
+      .select("expense_id, amount, expense_date, status, category_name, description, created_at")
+      .eq("school_id", schoolId)
+      .gte("expense_date", start)
+      .lte("expense_date", end)
+      .order("expense_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ]);
+
+  const paymentsRaw = paymentsRes.data || [];
+  const studentIds = [...new Set((paymentsRaw as { student_id: string }[]).map((p) => p.student_id))];
+  const { data: studentsData } =
+    studentIds.length > 0
+      ? await client.from("students").select("student_id, name").in("student_id", studentIds)
+      : { data: [] };
+  const studentMap = new Map(
+    (studentsData || []).map((s: { student_id: string; name: string }) => [s.student_id, s.name])
+  );
+
+  const paymentRows: RecentAccountantTransaction[] = (paymentsRaw as {
+    payment_id: string;
+    student_id: string;
+    amount_paid: number;
+    payment_date: string;
+    payment_method: string;
+    created_at: string;
+  }[]).map((p) => {
+    const created = p.created_at ? new Date(p.created_at) : new Date(p.payment_date);
+    const method = (p.payment_method || "").toLowerCase();
+    let account = "Other";
+    if (method === "cash") account = "Cash";
+    else if (["bank", "cheque", "pos", "online"].includes(method)) account = "Bank / Card";
+    else if (method === "mobile_money") account = "Mobile Money";
+    const studentName = studentMap.get(p.student_id);
+    return {
+      id: p.payment_id,
+      type: "payment" as const,
+      name: "Fee payment",
+      sub: "Fee receipt",
+      account: studentName ? `${account} · ${studentName}` : account,
+      date: p.payment_date,
+      time: created.toTimeString().slice(0, 5),
+      amount: num(p.amount_paid),
+      status: "Completed" as const,
+    };
+  });
+
+  const expenseRows: RecentAccountantTransaction[] = ((expensesRes.data || []) as {
+    expense_id: string;
+    amount: number;
+    expense_date: string;
+    status: string;
+    category_name: string;
+    description: string;
+    created_at: string;
+  }[]).map((e) => {
+    const created = e.created_at ? new Date(e.created_at) : new Date(e.expense_date);
+    return {
+      id: e.expense_id,
+      type: "expense" as const,
+      name: e.category_name || "Expense",
+      sub: "Expense",
+      account: "School",
+      date: e.expense_date,
+      time: created.toTimeString().slice(0, 5),
+      amount: -num(e.amount),
+      status: ["approved", "paid"].includes((e.status || "").toLowerCase()) ? ("Completed" as const) : ("Pending" as const),
+    };
+  });
+
+  const merged = [...paymentRows, ...expenseRows].sort((a, b) => {
+    const d = b.date.localeCompare(a.date);
+    if (d !== 0) return d;
+    return b.time.localeCompare(a.time);
+  });
+  return merged.slice(0, 5);
+}

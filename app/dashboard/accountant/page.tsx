@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/src/lib/supabase";
+import { fetchAccountantDashboardMetrics } from "@/src/lib/accountantDashboardMetrics";
+import { resolveCurrentSchoolTerm } from "@/src/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
@@ -129,35 +131,33 @@ export default function AccountantDashboardPage() {
         return;
       }
 
-      // Get current term
       const today = new Date().toISOString().slice(0, 10);
       const { data: allTerms, error: termsError } = await supabase
-        .from('school_terms')
-        .select('id, start_date, end_date, year, term')
-        .eq('school_id', userRow.school_id)
-        .order('year', { ascending: false })
-        .order('term', { ascending: false });
-      
+        .from("school_terms")
+        .select("id, start_date, end_date, year, term")
+        .eq("school_id", userRow.school_id)
+        .order("year", { ascending: false })
+        .order("term", { ascending: false });
+
       if (termsError) {
-        console.error('Error loading terms:', termsError);
+        console.error("Error loading terms:", termsError);
       }
-      
-      // Try to find current term by date range first, then fallback to most recent
-      let currentTerm = (allTerms || []).find((t: any) => 
-        t.start_date && t.end_date &&
-        t.start_date <= today && t.end_date >= today
-      );
-      
-      // If no current term by date, use the most recent term
-      if (!currentTerm && allTerms && allTerms.length > 0) {
-        currentTerm = allTerms[0];
-      }
+
+      const resolvedTerm = await resolveCurrentSchoolTerm(supabase, userRow.school_id, today);
+      const currentTerm = resolvedTerm
+        ? (allTerms || []).find((t: { id: string }) => t.id === resolvedTerm.id) ?? {
+            id: resolvedTerm.id,
+            start_date: resolvedTerm.start_date,
+            end_date: resolvedTerm.end_date,
+            year: resolvedTerm.year,
+            term: resolvedTerm.term,
+          }
+        : null;
 
       if (currentTerm) {
         setCurrentTermId(currentTerm.id);
       } else {
-        console.warn('No terms found for school:', userRow.school_id);
-        // Still set a placeholder so queries don't fail
+        console.warn("No terms found for school:", userRow.school_id);
         setCurrentTermId("");
       }
 
@@ -218,7 +218,7 @@ export default function AccountantDashboardPage() {
       }
       setBalances(balancesData as any || []);
 
-      // Fetch payments (no term_id filter since student_payments doesn't have it)
+      // Active fee payments (reversed rows excluded)
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("student_payments")
         .select(`
@@ -229,9 +229,11 @@ export default function AccountantDashboardPage() {
           payment_method,
           payment_date,
           transaction_ref,
-          description
+          description,
+          reversed_at
         `)
         .eq("school_id", userRow.school_id)
+        .is("reversed_at", null)
         .order("payment_date", { ascending: false });
 
       if (paymentsError) {
@@ -239,38 +241,15 @@ export default function AccountantDashboardPage() {
       }
       setPayments(paymentsData as any || []);
 
-      // Calculate KPIs
-      const todayISO = today;
-      const collectedToday = (paymentsData || [])
-        .filter((p: any) => p.payment_date === todayISO)
-        .reduce((sum, p: any) => sum + Number(p.amount_paid || p.amount || 0), 0);
-      setKpiCollectedToday(collectedToday);
-
-      const collectedThisTerm = (paymentsData || [])
-        .reduce((sum, p: any) => sum + Number(p.amount_paid || p.amount || 0), 0);
-      setKpiCollectedThisTerm(collectedThisTerm);
-
-      // Current Term Outstanding: only positive balances where fees were set
-      const outstanding = (balancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
-        .reduce((sum, b: any) => sum + Number(b.balance || 0), 0);
-      const debtors = (balancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0).length;
-      
-      setKpiOutstanding(outstanding);
-      setKpiDebtorsCount(debtors);
-
-      // Fetch ALL TIME balances (across all terms)
-      const { data: allTimeBalancesData } = await supabase
-        .from("student_balances")
-        .select("total_fees, balance")
-        .eq("school_id", userRow.school_id);
-      
-      const outstandingAllTime = (allTimeBalancesData || [])
-        .filter((b: any) => Number(b.total_fees || 0) > 0 && Number(b.balance || 0) > 0)
-        .reduce((sum, b: any) => sum + Math.max(0, Number(b.balance || 0)), 0);
-      
-      setKpiOutstandingAllTime(outstandingAllTime);
+      // KPIs: shared module — same rules as SPA Financial Overview (term_id for this term, reversals excluded)
+      const dashboardMetrics = await fetchAccountantDashboardMetrics(supabase, userRow.school_id, today);
+      setKpiCollectedToday(dashboardMetrics.cashActivity.todayAllTerms);
+      setKpiCollectedThisTerm(dashboardMetrics.termPerformance.feesCollectedAttributed);
+      setKpiOutstanding(dashboardMetrics.termPerformance.outstandingOnTerm);
+      setKpiDebtorsCount(dashboardMetrics.receivablesAllTerms.debtorStudentCount);
+      setKpiOutstandingAllTime(dashboardMetrics.receivablesAllTerms.totalOutstanding);
+      setKpiExpensesThisTerm(dashboardMetrics.termPerformance.expensesApproved);
+      setKpiNetBalance(dashboardMetrics.termPerformance.netTermCash);
 
       // Load expense categories
       const { data: categoriesData } = await supabase
@@ -299,16 +278,6 @@ export default function AccountantDashboardPage() {
         console.error('Error loading expenses:', expensesError);
       }
       setExpenses(expensesData as any || []);
-
-      // Calculate expense KPIs
-      const approvedExpenses = (expensesData || [])
-        .filter((e: any) => e.status === 'approved' || e.status === 'paid')
-        .reduce((sum: number, e: any) => sum + Number(e.amount || 0), 0);
-      setKpiExpensesThisTerm(approvedExpenses);
-
-      // Calculate net balance (income - expenses)
-      const netBalance = collectedThisTerm - approvedExpenses;
-      setKpiNetBalance(netBalance);
 
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
@@ -435,10 +404,10 @@ export default function AccountantDashboardPage() {
           transition={{ delay: 0.1 }}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
         >
-          <KpiCard title="Collected Today" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
-          <KpiCard title="Collected This Term" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
-          <KpiCard title="Expenses This Term" value={formatCurrency(kpiExpensesThisTerm)} accent="bg-red-500" />
-          <KpiCard title="Net Balance (Income - Expenses)" value={formatCurrency(kpiNetBalance)} accent={kpiNetBalance >= 0 ? "bg-emerald-500" : "bg-red-500"} />
+          <KpiCard title="Collected Today (all terms)" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
+          <KpiCard title="Collected This Term (by term_id)" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
+          <KpiCard title="Expenses This Term (approved/paid)" value={formatCurrency(kpiExpensesThisTerm)} accent="bg-red-500" />
+          <KpiCard title="Net This Term (collections − expenses)" value={formatCurrency(kpiNetBalance)} accent={kpiNetBalance >= 0 ? "bg-emerald-500" : "bg-red-500"} />
         </motion.div>
 
         {/* Secondary KPIs */}
@@ -449,8 +418,8 @@ export default function AccountantDashboardPage() {
           className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8"
         >
           <KpiCard title="Outstanding This Term" value={formatCurrency(kpiOutstanding)} accent="bg-orange-500" />
-          <KpiCard title="Outstanding All Time" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
-          <KpiCard title="Students with Balances" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
+          <KpiCard title="Outstanding All Terms" value={formatCurrency(kpiOutstandingAllTime)} accent="bg-rose-500" />
+          <KpiCard title="Students Owing (distinct)" value={String(kpiDebtorsCount)} accent="bg-purple-500" />
         </motion.div>
 
         {/* Quick Actions */}
