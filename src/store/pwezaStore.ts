@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { queryClient } from '@/lib/queryClient';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
 import { prefetchAdminSidebarRoutes } from '@/pages/admin/api/prefetchAdminSidebarRoutes';
+import { RECEIPTS_QUERY_KEY } from '@/pages/accountant/api/receipts';
 import type { StudentsFetchResult } from '@/pages/admin/students/DesignStudentsPage';
 import type { TeacherDirectoryRow, TeachersStats } from '@/pages/admin/teachers/DesignTeachersPage';
 import type { ParentDirectoryRow, ParentsStats } from '@/pages/admin/parents/DesignParentsPage';
@@ -292,6 +293,10 @@ export const usePwezaStore = create<PwezaState>((set, get) => ({
     const schoolId = get().schoolId;
     if (schoolId) {
       void queryClient.invalidateQueries({ queryKey: adminQueryKeys.adminDashboardKpis(schoolId) });
+    }
+    if (tables.includes('student_payments')) {
+      /** Accountant /receipts list uses React Query; invalidate so new payments appear without reload. */
+      void queryClient.invalidateQueries({ queryKey: RECEIPTS_QUERY_KEY });
     }
   },
 }));

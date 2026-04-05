@@ -127,10 +127,10 @@ export function printReceipt(data: PaymentReceiptData): void {
     body { font-family: system-ui, sans-serif; padding: 24px; max-width: 360px; margin: 0 auto; color: #1e293b; }
     .receipt-top { text-align: center; border-bottom: 2px dashed #cbd5e1; padding-bottom: 12px; margin: 0 0 8px; }
     .school-block { margin-bottom: 0; }
-    .school-name { font-weight: 700; font-size: 18px; letter-spacing: 0.02em; }
+    .school-name { font-weight: 700; font-size: 18px; letter-spacing: 0.02em; text-transform: uppercase; }
     .school-contact { font-size: 12px; color: #475569; margin-top: 8px; line-height: 1.4; }
-    .receipt-doc-label { margin-top: 10px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; }
-    .receipt-title-only { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .receipt-doc-label { margin-top: 10px; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #000000; }
+    .receipt-title-only { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; color: #000000; }
     .row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 14px; }
     .label { color: #64748b; }
     .value { font-weight: 500; }
@@ -186,7 +186,7 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
     <div className="bg-white p-6 text-slate-900 shadow-lg" style={{ maxWidth: 360 }}>
       <div className="mb-4 border-b-2 border-dashed border-slate-300 pb-3 text-center">
         {data.schoolName?.trim() && (
-          <h2 className="text-lg font-bold tracking-wide text-slate-800">{data.schoolName.trim()}</h2>
+          <h2 className="text-lg font-bold uppercase tracking-wide text-slate-800">{data.schoolName.trim()}</h2>
         )}
         {(data.schoolPhone || data.schoolEmail) && (
           <p className="mt-2 text-xs text-slate-600 leading-snug">
@@ -196,9 +196,9 @@ export function PaymentReceipt({ data, autoPrint }: { data: PaymentReceiptData; 
           </p>
         )}
         {hasSchoolBranding ? (
-          <p className="mt-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Payment receipt</p>
+          <p className="mt-3 text-center text-sm font-bold uppercase tracking-wider text-black">Payment receipt</p>
         ) : (
-          <h2 className="text-center text-lg font-bold uppercase tracking-wide text-slate-800">Payment receipt</h2>
+          <h2 className="text-center text-lg font-bold uppercase tracking-wide text-black">Payment receipt</h2>
         )}
       </div>
       <div className="space-y-1.5 text-sm">

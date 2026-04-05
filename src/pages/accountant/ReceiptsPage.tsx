@@ -11,12 +11,15 @@ export default function ReceiptsPage() {
   const navigate = useNavigate();
   const schoolId = useAuthStore((s) => s.schoolId);
   const [q, setQ] = useState("");
-  const { data, isPending, isFetching, isError, error } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: [...RECEIPTS_QUERY_KEY, schoolId],
     queryFn: () => fetchReceipts(schoolId!),
     enabled: !!schoolId,
     staleTime: STALE_MS,
     refetchOnWindowFocus: true,
+    /** Backup if a Realtime event is missed; refetch does not use the full-page loading state (see isLoading). */
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: true,
   });
 
   const payments = data?.payments ?? [];
@@ -150,7 +153,9 @@ export default function ReceiptsPage() {
         />
       </div>
       <div className="ac-glass-card overflow-hidden rounded-[18px]">
-        {!schoolId || (isPending && isFetching) ? (
+        {!schoolId ? (
+          <div className="ac-text-muted p-8 text-center">Receipts require a school context.</div>
+        ) : isLoading ? (
           <div className="ac-text-muted p-8 text-center">Loading receipts…</div>
         ) : isError ? (
           <div className="ac-text-muted p-8 text-center">
