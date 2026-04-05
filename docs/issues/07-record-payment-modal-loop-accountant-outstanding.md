@@ -1,7 +1,7 @@
 # Issue: Record Payment dialog loops / reopens — accountant outstanding page
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** **Done** (verified production 2026-04-06)  
+**Last updated:** 2026-04-08  
 
 ## Summary
 

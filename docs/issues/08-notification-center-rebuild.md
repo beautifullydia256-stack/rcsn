@@ -1,7 +1,7 @@
 # Issue: Notification center — replace current UI with a real notification hub
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** **Done** (verified 2026-04-08; hub + registry-style header shipped)  
+**Last updated:** 2026-04-08  
 
 ## Summary
 
