@@ -40,6 +40,7 @@ type OtherStaffRow = {
   hire_date: string | null;
   salary_amount: number | null;
   pay_frequency: string | null;
+  photo_url: string | null;
   created_at: string;
 };
 
@@ -47,7 +48,7 @@ async function fetchOtherStaffRows(schoolId: string): Promise<OtherStaffRow[]> {
   const { data, error } = await supabase
     .from('other_staff_members')
     .select(
-      'id, full_name, job_title, department, national_id, phone, email, staff_role, linked_user_id, address, emergency_contact_name, emergency_contact_phone, notes, hire_date, salary_amount, pay_frequency, created_at'
+      'id, full_name, job_title, department, national_id, phone, email, staff_role, linked_user_id, address, emergency_contact_name, emergency_contact_phone, notes, hire_date, salary_amount, pay_frequency, photo_url, created_at'
     )
     .eq('school_id', schoolId)
     .order('full_name');
@@ -73,6 +74,8 @@ export type SchoolRosterRow = {
   linked_user_id: string | null;
   pay_frequency: string | null;
   salary_amount: number | null;
+  /** Profile photo (teachers & other staff when set). */
+  photo_url: string | null;
 };
 
 /**
@@ -82,7 +85,7 @@ export async function fetchSchoolRoster(schoolId: string): Promise<SchoolRosterR
   const [teachersRes, otherRows, usersRes] = await Promise.all([
     supabase
       .from('teachers')
-      .select('teacher_id, name, phone, email, salary, pay_frequency, created_at')
+      .select('teacher_id, name, phone, email, salary, pay_frequency, photo_url, created_at')
       .eq('school_id', schoolId)
       .order('name'),
     fetchOtherStaffRows(schoolId),
@@ -116,6 +119,7 @@ export async function fetchSchoolRoster(schoolId: string): Promise<SchoolRosterR
     linked_user_id: teacherToUser.get(t.teacher_id as string) ?? null,
     pay_frequency: t.pay_frequency != null ? String(t.pay_frequency) : null,
     salary_amount: t.salary != null ? Number(t.salary) : null,
+    photo_url: t.photo_url != null ? String(t.photo_url) : null,
   }));
 
   const otherEntries: SchoolRosterRow[] = otherRows.map((r) => ({
@@ -131,6 +135,7 @@ export async function fetchSchoolRoster(schoolId: string): Promise<SchoolRosterR
     linked_user_id: r.linked_user_id,
     pay_frequency: r.pay_frequency,
     salary_amount: r.salary_amount,
+    photo_url: r.photo_url,
   }));
 
   return [...teacherEntries, ...otherEntries].sort((a, b) =>
@@ -410,6 +415,7 @@ export default function StaffPage() {
                 cornerLabel={roleLabel}
                 initials={pwDirInitials(r.full_name)}
                 avatarBackground={pwDirGrad(i)}
+                avatarUrl={r.photo_url}
                 statusDotActive={!!r.linked_user_id}
                 onCardClick={() => navigate(profilePath)}
                 rows={[
