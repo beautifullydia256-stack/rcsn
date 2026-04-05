@@ -29,6 +29,7 @@ const AttendanceRecordsPage = lazy(() => import('../pages/admin/attendance/Atten
 const SettingsPage = lazy(() => import('../pages/admin/settings/SettingsPage'));
 const IdentityPage = lazy(() => import('../pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazy(() => import('../pages/admin/identity/StudentIDCardPage'));
+const HeadedPaperPage = lazy(() => import('../pages/admin/headed-paper/HeadedPaperPage'));
 const TestPage = lazy(() => import('../pages/admin/TestPage'));
 
 // Teacher routes
@@ -113,6 +114,7 @@ export const router: RouteObject[] = [
           { path: 'attendance', element: <AttendanceRecordsPage /> },
           { path: 'identity', element: <IdentityPage /> },
           { path: 'identity/:id', element: <StudentIDCardPage /> },
+          { path: 'headed-paper', element: <HeadedPaperPage /> },
           { path: 'test', element: <TestPage /> },
           { path: 'settings', element: <SettingsPage /> },
           { path: 'reports/snapshots', element: <Navigate to="/dashboard/admin/reports" replace /> },

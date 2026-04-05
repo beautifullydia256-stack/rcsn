@@ -629,7 +629,7 @@ export default function AdminLayout() {
               <SubItem to="/dashboard/admin/report-records" label="Report Records" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
               <SubItem to="/dashboard/admin/settings" label="Report Templates" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             </NavGroup>
-            <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/identity" icon="🪪" label="Identity cards" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
           <div className="pw-nav-section">

@@ -71,6 +71,7 @@ const AdminJobsPage = lazyWithRetry(() => import('./pages/admin/jobs/AdminJobsPa
 const NotificationsPage = lazyWithRetry(() => import('./pages/admin/notifications/NotificationsPage'));
 const IdentityPage = lazyWithRetry(() => import('./pages/admin/identity/IdentityPage'));
 const StudentIDCardPage = lazyWithRetry(() => import('./pages/admin/identity/StudentIDCardPage'));
+const HeadedPaperPage = lazyWithRetry(() => import('./pages/admin/headed-paper/HeadedPaperPage'));
 const TeacherDashboard = lazyWithRetry(() => import('./pages/teacher/TeacherDashboardHome'));
 const TeacherStudentsPage = lazyWithRetry(() => import('./pages/teacher/students/StudentsPage'));
 const TeacherClassesPage = lazyWithRetry(() => import('./pages/teacher/classes/ClassesPage'));
@@ -184,6 +185,7 @@ function App() {
                   <Route path="attendance" element={<AttendanceRecordsPage />} />
                   <Route path="identity" element={<IdentityPage />} />
                   <Route path="identity/:id" element={<StudentIDCardPage />} />
+                  <Route path="headed-paper" element={<HeadedPaperPage />} />
                   <Route path="finance" element={<FinanceLayout />}>
                     <Route index element={<DesignFinanceDashboard />} />
                     <Route path="financial-analytics" element={<FinancialAnalyticsPage />} />

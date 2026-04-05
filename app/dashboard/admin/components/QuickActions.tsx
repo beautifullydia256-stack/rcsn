@@ -30,7 +30,7 @@ export default function AdminQuickActions() {
     { icon: BriefcaseIcon, label: 'Post Job Vacancy', color: '#6b7280', path: '/dashboard/admin/jobs/post' },
     { icon: BookOpen, label: 'Add Librarian', color: '#6b7280', path: '/dashboard/admin/librarian/add' },
     { icon: UserCog, label: 'Appoint Head Teacher', color: '#6b7280', path: '/dashboard/admin/head-teacher/appoint' },
-    { icon: FileCheck, label: 'Headed Paper', color: '#6b7280', path: '/dashboard/head-teacher/headed-paper' },
+    { icon: FileCheck, label: 'Headed Paper', color: '#6b7280', path: '/dashboard/admin/headed-paper' },
     { icon: MapPin, label: 'Location Settings', color: '#6b7280', path: '/dashboard/admin/settings/location' },
     { icon: Settings, label: 'System Settings', color: '#6b7280', path: '/dashboard/admin/settings' },
   ];

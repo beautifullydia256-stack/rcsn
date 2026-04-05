@@ -101,8 +101,8 @@ export default function IdentityPage() {
 
   return (
     <AdminPageWrapper
-      title="Student Identity Cards"
-      subtitle="View and generate ID cards for students. Click a card to open the printable ID."
+      title="Identity cards"
+      subtitle="View and generate student ID cards. Click a student to open the printable ID."
     >
       <div className="space-y-6">
         {/* Header card */}
