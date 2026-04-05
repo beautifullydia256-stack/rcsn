@@ -456,6 +456,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         }
         remaining -= apply;
       }
+      console.log("sortedBalances:", JSON.stringify(sortedBalances));
+      console.log("allocations after loop:", JSON.stringify(allocations));
       if (allocations.length === 0) {
         setMessage("No amount to apply to outstanding balances.");
         return;
