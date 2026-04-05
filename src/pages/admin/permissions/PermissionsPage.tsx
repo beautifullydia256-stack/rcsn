@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Shield, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
+import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
+import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { PERMISSION_CATALOG, PERMISSION_KEYS, type PermissionKey } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
 import { refreshPermissionsForSession } from '@/lib/refreshPermissions';
@@ -193,201 +194,182 @@ export default function PermissionsPage() {
 
   if (!schoolResolved) {
     return (
-      <AdminPageWrapper title="Access & permissions">
-        <div
-          className={`${adminCardClass} mx-auto max-w-4xl px-4 py-10 text-center text-sm font-['Instrument_Sans',system-ui,sans-serif] text-[var(--ac-text-secondary)]`}
-        >
-          <div className="mx-auto h-8 w-8 animate-pulse rounded-full bg-emerald-500/20" aria-hidden />
-          <p className="mt-4">Loading your school context…</p>
+      <PwParentsDirectoryShell>
+        <div className="par-empty">
+          <div className="par-empty-title">Loading your school context…</div>
         </div>
-      </AdminPageWrapper>
+      </PwParentsDirectoryShell>
     );
   }
 
   if (!schoolId) {
     return (
-      <AdminPageWrapper title="Access & permissions">
-        <div className="mx-auto max-w-4xl px-3 font-['Instrument_Sans',system-ui,sans-serif] sm:px-4">
-          <div className="rounded-2xl border border-amber-400/35 bg-amber-50/90 p-5 text-[15px] leading-relaxed text-amber-950 shadow-sm dark:border-amber-500/35 dark:bg-amber-500/10 dark:text-amber-50">
-            <p className="font-semibold text-amber-900 dark:text-amber-100">No school linked</p>
-            <p className="mt-2 text-sm opacity-90">
-              If you are an admin, ask support to set your user&apos;s{' '}
-              <code className="rounded bg-black/5 px-1.5 py-0.5 text-xs dark:bg-white/10">school_id</code>.
-            </p>
+      <PwParentsDirectoryShell>
+        <div className="par-empty">
+          <div className="par-empty-title">No school linked</div>
+          <div className="par-empty-sub">
+            If you are an admin, ask support to set your user&apos;s <code style={{ fontSize: 12 }}>school_id</code>.
           </div>
         </div>
-      </AdminPageWrapper>
+      </PwParentsDirectoryShell>
     );
   }
 
   return (
-    <AdminPageWrapper
-      title="Access & permissions"
-      subtitle="Grant extra capabilities (e.g. teacher can enrol students, or act as accountant). Primary role stays the same; this adds delegated access."
-    >
-      <div className="mx-auto max-w-4xl space-y-6 font-['Instrument_Sans',system-ui,sans-serif]">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-start">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20">
-            <Shield className="h-6 w-6" strokeWidth={1.75} aria-hidden />
-          </div>
-          <p className="text-pretty text-[15px] leading-relaxed text-[var(--ac-text-secondary)] sm:pt-1 sm:text-base">
-            Permission keys such as{' '}
-            <code className="rounded-md bg-black/[0.06] px-1.5 py-0.5 text-xs font-medium dark:bg-white/10">
-              {PERMISSION_KEYS.studentsManage}
-            </code>{' '}
-            and{' '}
-            <code className="rounded-md bg-black/[0.06] px-1.5 py-0.5 text-xs font-medium dark:bg-white/10">
-              {PERMISSION_KEYS.accountingFull}
-            </code>{' '}
-            layer on top of someone&apos;s main role. Admins and head teachers can adjust them for any user in the school.
+    <PwParentsDirectoryShell>
+      <div className="par-header par-fu">
+        <div>
+          <div className="par-eyebrow">User management</div>
+          <h1 className="par-title">Access &amp; permissions</h1>
+          <p className="par-sub">
+            Same card layout as Parents. Pick someone, then toggle extras like{' '}
+            <strong style={{ color: 'var(--violet)' }}>{PERMISSION_KEYS.studentsManage}</strong> or{' '}
+            <strong style={{ color: 'var(--violet)' }}>{PERMISSION_KEYS.accountingFull}</strong> on top of their main role.
           </p>
-        </header>
-
-        <div className={`${adminCardClass} space-y-6 p-4 shadow-[var(--ac-shadow-strong)] sm:p-6`}>
-          {isLoading ? (
-            <div className="ac-text-muted py-10 text-center text-sm">Loading users…</div>
-          ) : users.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--ac-border)] py-10 text-center text-sm text-[var(--ac-text-muted)]">
-              No users loaded for this school. Check access or try again in a moment.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <label htmlFor="perm-user-search" className="block text-sm font-semibold text-[var(--ac-text-primary)]">
-                Find a user
-              </label>
-              <p className="text-sm text-[var(--ac-text-secondary)]">
-                Search by name, email, or role, then choose someone from the list below.
-              </p>
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]"
-                  aria-hidden
-                />
-                <input
-                  id="perm-user-search"
-                  type="search"
-                  autoComplete="off"
-                  placeholder="e.g. Mary, @school.com, teacher…"
-                  value={userSearch}
-                  onChange={(e) => setUserSearch(e.target.value)}
-                  className="ac-input min-h-12 w-full rounded-xl py-3 pl-10 pr-10 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/35"
-                />
-                {userSearch.trim() ? (
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--ac-text-muted)] hover:bg-black/[0.06] dark:hover:bg-white/10"
-                    aria-label="Clear search"
-                    onClick={() => setUserSearch('')}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="overflow-hidden rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg-fallback)] shadow-sm">
-                <div className="flex items-center justify-between border-b border-[var(--ac-border)] px-3 py-2 text-xs text-[var(--ac-text-muted)]">
-                  <span>
-                    {filteredPickerUsers.length === users.length
-                      ? `${users.length} people`
-                      : `${filteredPickerUsers.length} match${filteredPickerUsers.length === 1 ? '' : 'es'}`}
-                  </span>
-                  {selectedUser ? (
-                    <button
-                      type="button"
-                      className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-                      onClick={() => setSelectedId(null)}
-                    >
-                      Clear selection
-                    </button>
-                  ) : null}
-                </div>
-                <ul
-                  className="max-h-[min(60vh,22rem)] divide-y divide-[var(--ac-border)] overflow-y-auto overscroll-contain"
-                  role="listbox"
-                  aria-label="School users"
-                >
-                  {filteredPickerUsers.length === 0 ? (
-                    <li className="px-4 py-8 text-center text-sm text-[var(--ac-text-muted)]">No names match that search.</li>
-                  ) : (
-                    filteredPickerUsers.map((u) => {
-                      const active = u.user_id === selectedId;
-                      return (
-                        <li key={u.user_id}>
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={active}
-                            onClick={() => setSelectedId(u.user_id)}
-                            className={`flex w-full flex-col gap-0.5 px-4 py-3 text-left transition sm:flex-row sm:items-center sm:gap-3 ${
-                              active
-                                ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/30'
-                                : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-                            }`}
-                          >
-                            <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
-                              {u.name?.trim() || u.email || 'Unnamed'}
-                            </span>
-                            <span className="inline-flex w-fit shrink-0 rounded-md border border-[var(--ac-border)] bg-white px-2 py-0.5 text-xs font-medium text-gray-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
-                              {labelRole(u.role)}
-                            </span>
-                            <span className="min-w-0 break-all text-sm text-gray-600 dark:text-slate-300 sm:max-w-[40%] sm:truncate sm:text-right">
-                              {u.email || '—'}
-                            </span>
-                          </button>
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-              </div>
-            </div>
-          )}
-
-          {selectedUser && (
-            <div className="space-y-5 rounded-2xl border border-emerald-500/25 bg-gradient-to-b from-emerald-500/[0.06] to-transparent p-4 sm:p-5">
-              <div>
-                <p className="font-['Cabinet_Grotesk',system-ui,sans-serif] text-lg font-semibold text-[var(--ac-text-primary)]">
-                  {selectedUser.name || selectedUser.email}
-                </p>
-                <p className="mt-1 text-sm text-[var(--ac-text-secondary)]">
-                  <span className="capitalize">{selectedUser.role}</span>
-                  {selectedUser.email ? <span> · {selectedUser.email}</span> : null}
-                </p>
-              </div>
-
-              {loadingPerms ? (
-                <div className="ac-text-muted text-sm">Loading permissions…</div>
-              ) : (
-                <ul className="space-y-4">
-                  {PERMISSION_CATALOG.map((item) => (
-                    <li key={item.key} className="flex gap-3 items-start rounded-xl border border-[var(--ac-border)]/80 bg-white/[0.02] p-3 dark:bg-white/[0.03]">
-                      <input
-                        type="checkbox"
-                        id={`perm-${item.key}`}
-                        checked={localKeys.has(item.key)}
-                        onChange={() => toggleKey(item.key)}
-                        className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--ac-border)] bg-transparent text-emerald-600 focus:ring-2 focus:ring-emerald-500/40"
-                      />
-                      <label htmlFor={`perm-${item.key}`} className="min-w-0 cursor-pointer">
-                        <span className="font-medium text-[var(--ac-text-primary)]">{item.label}</span>
-                        <span className="mt-0.5 block text-sm leading-snug text-[var(--ac-text-secondary)]">{item.description}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <button
-                type="button"
-                disabled={saving || !dirty}
-                onClick={() => void handleSave()}
-                className="flex min-h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 text-sm font-semibold text-white shadow-md shadow-emerald-600/20 transition hover:from-emerald-500 hover:to-teal-500 disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:min-w-[160px]"
-              >
-                {saving ? 'Saving…' : 'Save changes'}
-              </button>
-            </div>
-          )}
         </div>
       </div>
-    </AdminPageWrapper>
+
+      {isLoading ? (
+        <div className="par-empty par-fu par-d1">
+          <div className="par-empty-title">Loading users…</div>
+        </div>
+      ) : users.length === 0 ? (
+        <div className="par-empty par-fu par-d1">
+          <div className="par-empty-title">No users found</div>
+          <div className="par-empty-sub">Check access or try again in a moment.</div>
+        </div>
+      ) : (
+        <>
+          <div className="par-toolbar par-fu par-d1">
+            <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
+              <span style={{ opacity: 0.75 }} aria-hidden>
+                🔍
+              </span>
+              <input
+                type="search"
+                placeholder="Search name, email, role…"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+            {selectedUser ? (
+              <button type="button" className="par-btn par-btn-sm par-btn-ghost" onClick={() => setSelectedId(null)}>
+                Clear selection
+              </button>
+            ) : null}
+            {userSearch.trim() ? (
+              <button type="button" className="par-btn par-btn-sm par-btn-ghost" onClick={() => setUserSearch('')}>
+                Clear search
+              </button>
+            ) : null}
+          </div>
+
+          <p className="par-sub par-fu par-d1" style={{ marginBottom: 12 }}>
+            {filteredPickerUsers.length === users.length
+              ? `${users.length} people — tap a card to edit permissions`
+              : `${filteredPickerUsers.length} match${filteredPickerUsers.length === 1 ? '' : 'es'}`}
+          </p>
+
+          {filteredPickerUsers.length === 0 ? (
+            <div className="par-empty par-fu par-d2">
+              <div className="par-empty-sub">No names match that search.</div>
+            </div>
+          ) : (
+            <div className="par-card-grid par-fu par-d2">
+              {filteredPickerUsers.map((u, i) => (
+                <PwDirectoryUserCard
+                  key={u.user_id}
+                  name={u.name?.trim() || u.email || 'Unnamed'}
+                  subtitle={labelRole(u.role)}
+                  cornerTone={pwRoleToChipTone(u.role)}
+                  cornerLabel={labelRole(u.role)}
+                  initials={pwDirInitials(u.name || u.email || '?')}
+                  avatarBackground={pwDirGrad(i)}
+                  statusDotActive
+                  rows={[
+                    {
+                      label: 'Email',
+                      value: u.email ? (
+                        <span style={{ color: 'var(--blue)', fontSize: 12.5 }}>{u.email}</span>
+                      ) : (
+                        <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
+                      ),
+                    },
+                  ]}
+                  onCardClick={() => setSelectedId(u.user_id)}
+                  selected={selectedId === u.user_id}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {selectedUser ? (
+        <div
+          className="par-pcard par-fu par-d3"
+          style={{ cursor: 'default', marginTop: 24 }}
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          <div className="par-pcard-top">
+            <div className="par-pcard-name">Delegated access</div>
+            <div className="par-pcard-rel">
+              {selectedUser.name || selectedUser.email} · {labelRole(selectedUser.role)}
+            </div>
+          </div>
+          <div className="par-pcard-body" style={{ paddingTop: 4 }}>
+            {loadingPerms ? (
+              <div style={{ color: 'var(--t3)', fontSize: 13 }}>Loading permissions…</div>
+            ) : (
+              PERMISSION_CATALOG.map((item) => (
+                <div
+                  key={item.key}
+                  style={{
+                    padding: '12px 0',
+                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  }}
+                >
+                  <label
+                    htmlFor={`perm-${item.key}`}
+                    style={{
+                      display: 'flex',
+                      gap: 12,
+                      alignItems: 'flex-start',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      id={`perm-${item.key}`}
+                      checked={localKeys.has(item.key)}
+                      onChange={() => toggleKey(item.key)}
+                      style={{ marginTop: 3, width: 16, height: 16, flexShrink: 0, accentColor: 'var(--violet)' }}
+                    />
+                    <span>
+                      <span style={{ color: 'var(--t1)', fontWeight: 600, fontSize: 13 }}>{item.label}</span>
+                      <span style={{ display: 'block', color: 'var(--t2)', fontSize: 12.5, marginTop: 4 }}>
+                        {item.description}
+                      </span>
+                    </span>
+                  </label>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="par-pcard-foot">
+            <button
+              type="button"
+              className="par-crd-btn par-crd-primary"
+              disabled={saving || !dirty}
+              onClick={() => void handleSave()}
+            >
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </PwParentsDirectoryShell>
   );
 }

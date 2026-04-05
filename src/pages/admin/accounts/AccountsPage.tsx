@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDefaults';
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
-import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { Key, Search, UserCheck, UserX, Users } from 'lucide-react';
+import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
+import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
+import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -20,17 +21,7 @@ const ROLE_OPTIONS = [
   { value: 'parent', label: 'Parent' },
 ];
 
-const DASHBOARD_ROLE_KEYS = [
-  'admin',
-  'head_teacher',
-  'accountant',
-  'teacher',
-  'librarian',
-  'lab_technician',
-  'clinician',
-  'student',
-  'parent',
-] as const;
+const PAGE_SIZE = 12;
 
 interface UserAccount {
   user_id: string;
@@ -74,6 +65,7 @@ export default function AccountsPage() {
   const authUser = useAuthStore((s) => s.user);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [page, setPage] = useState(1);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [toggling, setToggling] = useState<string | null>(null);
   const [resetting, setResetting] = useState<string | null>(null);
@@ -100,6 +92,28 @@ export default function AccountsPage() {
     if (roleFilter) result = result.filter((a) => a.role === roleFilter);
     return result;
   }, [accounts, searchQuery, roleFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchQuery, roleFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages));
+  }, [totalPages]);
+
+  const pageSlice = useMemo(() => {
+    const start = (safePage - 1) * PAGE_SIZE;
+    return filteredAccounts.slice(start, start + PAGE_SIZE);
+  }, [filteredAccounts, safePage]);
+
+  const startIdx = filteredAccounts.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
+  const endIdx = Math.min(safePage * PAGE_SIZE, filteredAccounts.length);
+
+  const kpiTeachers = useMemo(() => accounts.filter((a) => a.role === 'teacher').length, [accounts]);
+  const kpiParents = useMemo(() => accounts.filter((a) => a.role === 'parent').length, [accounts]);
+  const kpiActive = useMemo(() => accounts.filter((a) => a.is_active !== false).length, [accounts]);
 
   const handleDelete = async (userId: string, email: string) => {
     if (!confirm(`Are you sure you want to delete the account for ${email}? This action cannot be undone. Prefer deactivating instead.`)) return;
@@ -158,252 +172,239 @@ export default function AccountsPage() {
     }
   };
 
-  const getRoleBadgeClass = (role: string) => {
-    switch (role) {
-      case 'admin': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700';
-      case 'head_teacher': return 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700';
-      case 'librarian': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700';
-      case 'accountant': return 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700';
-      case 'teacher': return 'bg-sky-100 text-sky-800 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700';
-      case 'student': return 'bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-700';
-      case 'parent': return 'bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-700';
-      case 'lab_technician': return 'bg-cyan-100 text-cyan-900 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-200 dark:border-cyan-700';
-      case 'clinician': return 'bg-rose-100 text-rose-900 border-rose-200 dark:bg-rose-900/30 dark:text-rose-200 dark:border-rose-700';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:border-gray-600';
-    }
-  };
-
   const getRoleLabel = (role: string) => {
     const r = ROLE_OPTIONS.find((o) => o.value === role);
     return r?.label || role;
   };
 
-  const loading = isLoading;
-
-  if (loading) {
-    return (
-      <AdminPageWrapper title="User Management">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-[var(--ac-border)] border-t-emerald-500" />
-        </div>
-      </AdminPageWrapper>
-    );
-  }
-
-  const actionCell = (a: UserAccount) => (
-    <div className="flex flex-wrap gap-1">
+  const cardFooter = (a: UserAccount) => (
+    <>
       <button
         type="button"
-        onClick={() => handleResetPassword(a.user_id, a.email)}
+        className="par-crd-btn par-crd-primary"
         disabled={resetting === a.user_id}
-        className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50"
-        title="Reset password"
+        onClick={() => void handleResetPassword(a.user_id, a.email)}
       >
-        <Key className="w-3 h-3 shrink-0" />
-        {resetting === a.user_id ? '…' : 'Reset'}
+        {resetting === a.user_id ? '…' : 'Reset password'}
       </button>
       <button
         type="button"
-        onClick={() => handleToggleActive(a.user_id, a.is_active !== false)}
+        className="par-crd-btn par-crd-ghost"
         disabled={toggling === a.user_id}
-        className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50"
-        title={a.is_active === false ? 'Activate' : 'Deactivate'}
+        onClick={() => void handleToggleActive(a.user_id, a.is_active !== false)}
       >
-        {a.is_active === false ? <UserCheck className="w-3 h-3 shrink-0" /> : <UserX className="w-3 h-3 shrink-0" />}
         {toggling === a.user_id ? '…' : a.is_active === false ? 'Activate' : 'Deactivate'}
       </button>
       <button
         type="button"
-        onClick={() => handleDelete(a.user_id, a.email)}
+        className="par-crd-btn par-crd-ghost"
+        style={{ color: 'var(--rose)' }}
         disabled={deleting === a.user_id}
-        className="min-h-9 rounded-lg px-2.5 py-1.5 text-xs font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-        title="Delete (prefer deactivate)"
+        onClick={() => void handleDelete(a.user_id, a.email)}
       >
-        {deleting === a.user_id ? 'Deleting…' : 'Delete'}
+        {deleting === a.user_id ? '…' : 'Delete'}
       </button>
-    </div>
+    </>
   );
 
+  if (isLoading) {
+    return (
+      <PwParentsDirectoryShell>
+        <div className="par-empty">
+          <div className="par-empty-title">Loading users…</div>
+          <div className="par-empty-sub">Please wait</div>
+        </div>
+      </PwParentsDirectoryShell>
+    );
+  }
+
   return (
-    <AdminPageWrapper
-      title="User Management"
-      subtitle="View all users, filter by role, reset password, activate or deactivate."
-    >
-      <div className="space-y-6 font-['Instrument_Sans',system-ui,sans-serif]">
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <p className="text-sm text-[var(--ac-text-secondary)] sm:max-w-xl">
-            Roster-wide overview of everyone with access to your school. For logins that still need email, use Send
-            invitations.
+    <PwParentsDirectoryShell>
+      <div className="par-header par-fu">
+        <div>
+          <div className="par-eyebrow">User Management</div>
+          <h1 className="par-title">All users</h1>
+          <p className="par-sub">
+            Same card layout as Parents &amp; Guardians — search, filter by role, reset passwords, and manage access.
           </p>
-          <div className="flex flex-col gap-2 min-[400px]:flex-row min-[400px]:flex-wrap">
-            <Link
-              to="/dashboard/admin/accounts/invite"
-              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--ac-border)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ac-text-primary)] shadow-sm backdrop-blur-sm transition hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
-            >
-              Send invitations
-            </Link>
-            <Link
-              to="/dashboard/admin/permissions"
-              className="inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--ac-border)] bg-white/50 px-4 py-2 text-sm font-semibold text-[var(--ac-text-primary)] shadow-sm backdrop-blur-sm transition hover:bg-white/80 dark:bg-white/5 dark:hover:bg-white/10"
-            >
-              Access &amp; permissions
-            </Link>
+        </div>
+        <div className="par-actions">
+          <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-ghost">
+            📨 Send invitations
+          </Link>
+          <Link to="/dashboard/admin/permissions" className="par-btn par-btn-violet">
+            🔐 Access &amp; permissions
+          </Link>
+        </div>
+      </div>
+
+      <div className="par-kpi-strip par-fu par-d1">
+        <div className="par-kpi cv">
+          <div className="par-kpi-ic cv">👥</div>
+          <div>
+            <div className="par-kpi-label">Total users</div>
+            <div className="par-kpi-val cv">{accounts.length}</div>
+            <div className="par-kpi-sub">All roles</div>
           </div>
         </div>
+        <div className="par-kpi cg">
+          <div className="par-kpi-ic cg">✓</div>
+          <div>
+            <div className="par-kpi-label">Active</div>
+            <div className="par-kpi-val cg">{kpiActive}</div>
+            <div className="par-kpi-sub">Can sign in</div>
+          </div>
+        </div>
+        <div className="par-kpi ct">
+          <div className="par-kpi-ic ct">🎓</div>
+          <div>
+            <div className="par-kpi-label">Teachers</div>
+            <div className="par-kpi-val ct">{kpiTeachers}</div>
+            <div className="par-kpi-sub">Teacher role</div>
+          </div>
+        </div>
+        <div className="par-kpi ca">
+          <div className="par-kpi-ic ca">👨‍👩‍👧</div>
+          <div>
+            <div className="par-kpi-label">Parents</div>
+            <div className="par-kpi-val ca">{kpiParents}</div>
+            <div className="par-kpi-sub">Parent role</div>
+          </div>
+        </div>
+      </div>
 
-        <section
-          className="rounded-2xl border border-[var(--ac-border)] p-3 shadow-sm sm:p-4"
-          style={{ background: 'var(--ac-sidebar-active-bg)' }}
-          aria-label="People by role"
-        >
-          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--ac-text-muted)]">
-            People by role
-          </h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-            {DASHBOARD_ROLE_KEYS.map((r) => {
-              const n = accounts.filter((a) => a.role === r).length;
+      <div className="par-toolbar par-fu par-d2">
+        <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
+          <span style={{ opacity: 0.75, fontSize: '14px' }} aria-hidden>
+            🔍
+          </span>
+          <input
+            type="search"
+            placeholder="Search name, email, department…"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+
+      <div className="par-fu par-d2" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+        {ROLE_OPTIONS.map((o) => {
+          const active = roleFilter === o.value;
+          return (
+            <button
+              key={o.value || 'all'}
+              type="button"
+              className={active ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+              onClick={() => setRoleFilter(o.value)}
+            >
+              {o.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {filteredAccounts.length === 0 ? (
+        <div className="par-empty par-fu par-d3">
+          <div className="par-empty-icon">👤</div>
+          <div className="par-empty-title">No users match</div>
+          <div className="par-empty-sub">
+            {searchQuery || roleFilter ? 'Try clearing search or choose All roles.' : 'No accounts returned for this school yet.'}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="par-card-grid par-fu par-d3">
+            {pageSlice.map((a, i) => {
+              const globalIdx = (safePage - 1) * PAGE_SIZE + i;
+              const emailVal = a.email ? (
+                <a href={`mailto:${a.email}`} className="par-contact-link email" onClick={(e) => e.stopPropagation()}>
+                  {a.email}
+                </a>
+              ) : (
+                <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
+              );
+              const phone = String(a.phone ?? '').trim();
+              const rows = [
+                { label: 'Email', value: emailVal },
+                ...(phone
+                  ? [{ label: 'Phone', value: <a href={`tel:${phone}`} className="par-contact-link phone" onClick={(e) => e.stopPropagation()}>{phone}</a> }]
+                  : []),
+                { label: 'Department', value: a.department || <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span> },
+                {
+                  label: 'Status',
+                  value:
+                    a.is_active === false ? (
+                      <span className="par-chip rose" style={{ fontSize: 11 }}>
+                        Inactive
+                      </span>
+                    ) : (
+                      <span className="par-chip green" style={{ fontSize: 11 }}>
+                        Active
+                      </span>
+                    ),
+                },
+                {
+                  label: 'Last sign-in',
+                  value: a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—',
+                },
+              ];
               return (
-                <div
-                  key={r}
-                  className="flex min-h-[4.25rem] flex-col justify-center rounded-xl border border-[var(--ac-border)] px-3 py-2.5 shadow-sm"
-                  style={{ backgroundColor: 'var(--ac-card-bg-fallback)' }}
-                >
-                  <span className="line-clamp-2 text-[11px] font-medium leading-snug text-[var(--ac-text-secondary)] sm:text-xs">
-                    {getRoleLabel(r)}
-                  </span>
-                  <span
-                    className={`mt-0.5 text-xl font-bold tabular-nums sm:text-2xl ${
-                      n === 0 ? 'text-[var(--ac-text-muted)]' : 'text-[var(--ac-text-primary)]'
-                    }`}
-                  >
-                    {n}
-                  </span>
-                </div>
+                <PwDirectoryUserCard
+                  key={a.user_id}
+                  name={a.name?.trim() || a.email || 'Unnamed'}
+                  subtitle={getRoleLabel(a.role)}
+                  cornerTone={pwRoleToChipTone(a.role)}
+                  cornerLabel={getRoleLabel(a.role)}
+                  initials={pwDirInitials(a.name || a.email || '?')}
+                  avatarBackground={pwDirGrad(globalIdx)}
+                  statusDotActive={a.is_active !== false}
+                  rows={rows}
+                  footer={cardFooter(a)}
+                />
               );
             })}
           </div>
-        </section>
 
-        <div className={`${adminCardClass} space-y-4 p-4 sm:p-6`}>
-          <div className="space-y-3">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]" />
-              <input
-                type="text"
-                placeholder="Search by name, email, or department…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="ac-input min-h-11 w-full rounded-xl py-3 pl-10 pr-3 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/30 sm:text-sm"
-              />
+          <div className="par-pagination par-fu par-d4">
+            <div className="par-page-info">
+              {filteredAccounts.length === 0 ? (
+                <>Showing <strong>0</strong></>
+              ) : (
+                <>
+                  Showing <strong>{startIdx}</strong>–<strong>{endIdx}</strong> of <strong>{filteredAccounts.length}</strong> users
+                </>
+              )}
             </div>
-            <div>
-              <p className="mb-2 text-xs font-medium text-[var(--ac-text-muted)]">Filter by role</p>
-              <div className="flex max-h-[9rem] flex-wrap gap-2 overflow-y-auto pr-0.5 sm:max-h-none">
-                {ROLE_OPTIONS.map((o) => {
-                  const active = roleFilter === o.value;
-                  return (
-                    <button
-                      key={o.value || 'all'}
-                      type="button"
-                      onClick={() => setRoleFilter(o.value)}
-                      className={`min-h-9 rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition sm:text-[13px] ${
-                        active
-                          ? 'border-emerald-500/70 bg-emerald-500/15 text-emerald-800 shadow-sm dark:border-emerald-500/50 dark:text-emerald-300'
-                          : 'border-[var(--ac-border)] text-[var(--ac-text-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
-                      }`}
-                    >
-                      {o.label}
-                    </button>
-                  );
-                })}
+            {totalPages > 1 ? (
+              <div className="par-page-btns">
+                <button
+                  type="button"
+                  className="par-pbtn"
+                  disabled={safePage <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  ‹
+                </button>
+                <span
+                  className="par-pbtn"
+                  style={{ pointerEvents: 'none', border: 'none', background: 'transparent', minWidth: 'auto', padding: '0 8px' }}
+                >
+                  <strong>{safePage}</strong> / {totalPages}
+                </span>
+                <button
+                  type="button"
+                  className="par-pbtn"
+                  disabled={safePage >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  ›
+                </button>
               </div>
-            </div>
+            ) : null}
           </div>
-
-          {filteredAccounts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[var(--ac-border)] py-12 text-center">
-              <Users className="mx-auto h-10 w-10 text-[var(--ac-text-muted)] opacity-50" strokeWidth={1.5} aria-hidden />
-              <p className="mt-3 font-medium text-[var(--ac-text-primary)]">No users match</p>
-              <p className="mt-1 text-sm text-[var(--ac-text-secondary)]">
-                {searchQuery || roleFilter ? 'Try clearing search or setting the role filter to All roles.' : 'No accounts returned for this school yet.'}
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="hidden overflow-x-auto rounded-xl border border-[var(--ac-border)] md:block ac-glass-card">
-                <table className="min-w-full text-sm ac-table-wrap">
-                  <thead>
-                    <tr className="border-b border-[var(--ac-border)] ac-text-muted text-left">
-                      <th className="px-4 py-3 font-medium">Name</th>
-                      <th className="px-4 py-3 font-medium">Email</th>
-                      <th className="px-4 py-3 font-medium">Role</th>
-                      <th className="px-4 py-3 font-medium">Department</th>
-                      <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Last sign-in</th>
-                      <th className="px-4 py-3 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredAccounts.map((a) => (
-                      <tr key={a.user_id} className="border-b border-[var(--ac-border)] last:border-b-0">
-                        <td className="px-4 py-3 font-medium ac-text-primary">{a.name || '—'}</td>
-                        <td className="px-4 py-3 ac-text-secondary">{a.email}</td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex px-2 py-1 rounded-md border text-xs ${getRoleBadgeClass(a.role)}`}>{getRoleLabel(a.role)}</span>
-                        </td>
-                        <td className="px-4 py-3 ac-text-secondary">{a.department || '—'}</td>
-                        <td className="px-4 py-3">
-                          <span className={a.is_active === false ? 'font-medium text-red-600 dark:text-red-400' : 'ac-text-secondary'}>
-                            {a.is_active === false ? 'Inactive' : 'Active'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 ac-text-secondary whitespace-nowrap">
-                          {a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—'}
-                        </td>
-                        <td className="px-4 py-3">{actionCell(a)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="space-y-3 md:hidden">
-                {filteredAccounts.map((a) => (
-                  <div
-                    key={a.user_id}
-                    className="rounded-2xl border border-[var(--ac-border)] bg-white/[0.03] p-4 shadow-sm dark:bg-white/[0.04]"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-[var(--ac-text-primary)]">{a.name || '—'}</p>
-                        <p className="mt-0.5 break-all text-sm text-[var(--ac-text-secondary)]">{a.email}</p>
-                      </div>
-                      <span className={`shrink-0 px-2 py-1 text-xs ${getRoleBadgeClass(a.role)} rounded-md border`}>{getRoleLabel(a.role)}</span>
-                    </div>
-                    <dl className="mt-3 space-y-1.5 text-sm text-[var(--ac-text-secondary)]">
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted">Department</dt>
-                        <dd className="text-right font-medium text-[var(--ac-text-primary)]">{a.department || '—'}</dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted">Status</dt>
-                        <dd className={a.is_active === false ? 'font-medium text-red-600 dark:text-red-400' : ''}>
-                          {a.is_active === false ? 'Inactive' : 'Active'}
-                        </dd>
-                      </div>
-                      <div className="flex justify-between gap-2">
-                        <dt className="ac-text-muted">Last sign-in</dt>
-                        <dd className="text-right">{a.last_sign_in_at ? new Date(a.last_sign_in_at).toLocaleString() : '—'}</dd>
-                      </div>
-                    </dl>
-                    <div className="mt-4 border-t border-[var(--ac-border)] pt-3">{actionCell(a)}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </AdminPageWrapper>
+        </>
+      )}
+    </PwParentsDirectoryShell>
   );
 }
