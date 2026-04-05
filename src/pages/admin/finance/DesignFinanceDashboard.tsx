@@ -105,15 +105,7 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
   const yearStart = `${year}-01-01`;
   const yearEnd = `${year}-12-31`;
 
-  const [
-    balancesRes,
-    paysRes,
-    expensesRes,
-    studsRes,
-    paysRecentRes,
-    expRecentRes,
-    priorRes,
-  ] = await Promise.all([
+  const [balancesRes, paysRes, expensesRes, studsRes, paysRecentRes, expRecentRes] = await Promise.all([
     supabase.from('student_balances').select('student_id, total_fees, total_paid, balance').eq('school_id', schoolId),
     supabase
       .from('student_payments')
@@ -141,7 +133,6 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
       .eq('school_id', schoolId)
       .order('expense_date', { ascending: false })
       .limit(8),
-    supabase.from('prior_system_balance_entries').select('student_id, amount_outstanding').eq('school_id', schoolId),
   ]);
 
   const balances = balancesRes.data || [];
@@ -176,13 +167,6 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
     }
   }
 
-  const priorRows = priorRes.data || [];
-  const priorTotalOutstanding = priorRows.reduce(
-    (s, r) => s + Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0)),
-    0
-  );
-  totalOutstanding += priorTotalOutstanding;
-
   const expenseApproved = expensesYear.filter((e) => ['approved', 'paid'].includes(String((e as { status?: string }).status || '')));
   const totalExpenses = expenseApproved.reduce((s, e) => s + Number((e as { amount?: number }).amount ?? 0), 0);
 
@@ -206,13 +190,6 @@ export async function fetchFinanceDashboard(userId: string): Promise<FinanceDash
       const paid = paidByStudent[sid] || 0;
       owingByStudent.set(sid, Math.max(0, exp - paid));
     }
-  }
-
-  for (const r of priorRows) {
-    const sid = (r as { student_id?: string }).student_id;
-    const amt = Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0));
-    if (!sid || !amt) continue;
-    owingByStudent.set(sid, (owingByStudent.get(sid) || 0) + amt);
   }
 
   let studentsOwing = 0;

@@ -131,10 +131,9 @@ export async function fetchOutstandingData(userId: string): Promise<FetchOutstan
     const parent = parentByStudent.get(sid);
     const agg = balanceByStudent.get(sid);
     const expected = Number(agg?.total_fees ?? 0);
-    const prior = Number(agg?.prior_system_balance ?? 0);
     const paid = Number(agg?.total_paid ?? 0);
     const balance = Number(agg?.balance ?? 0);
-    const totalForPct = expected + prior;
+    const totalForPct = expected;
     const pct = totalForPct > 0 ? Math.round((paid / totalForPct) * 100) : 0;
     const status = s ? String((s.status as string) || '') : '';
     const inactive = status && status !== 'active';

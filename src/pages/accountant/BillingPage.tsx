@@ -30,11 +30,6 @@ export default function BillingPage() {
   const students = data?.students ?? [];
   const studentsError = data?.studentsError ?? null;
   const termInvoiceOutstandingByStudent = data?.termInvoiceOutstandingByStudent ?? {};
-  const priorBalanceByStudent = data?.priorBalanceByStudent ?? {};
-  const studentIdsClosedTermHistory = useMemo(
-    () => new Set(data?.studentIdsWithClosedTermInvoiceHistory ?? []),
-    [data?.studentIdsWithClosedTermInvoiceHistory]
-  );
 
   const [generateMode, setGenerateMode] = useState<"bulk" | "single">("bulk");
   const [currentTerm, setCurrentTerm] = useState<SchoolTermBrief | null>(null);
@@ -45,12 +40,6 @@ export default function BillingPage() {
   const [singleAmount, setSingleAmount] = useState("");
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [priorAmount, setPriorAmount] = useState("");
-  const [priorNote, setPriorNote] = useState("");
-  const [savingPrior, setSavingPrior] = useState(false);
-  /** Split lines for move_prior_balance_to_term_opening_invoices (Option 1: real term rows). */
-  const [priorSplitRows, setPriorSplitRows] = useState<{ termId: string; amount: string }[]>([{ termId: "", amount: "" }]);
-  const [movingPrior, setMovingPrior] = useState(false);
   const [carryoverTermId, setCarryoverTermId] = useState("");
   const [carryoverAmount, setCarryoverAmount] = useState("");
   const [carryoverIncludeTermFee, setCarryoverIncludeTermFee] = useState(true);
@@ -74,10 +63,6 @@ export default function BillingPage() {
       cancelled = true;
     };
   }, [schoolId]);
-
-  useEffect(() => {
-    setPriorSplitRows([{ termId: "", amount: "" }]);
-  }, [selectedStudent]);
 
   const classNames = fees.map((r) => r.class_name);
   const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
@@ -136,130 +121,10 @@ export default function BillingPage() {
   const termOutstandingForSelected = selectedStudent
     ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
     : 0;
-  const priorAggForSelected = selectedStudent ? priorBalanceByStudent[selectedStudent] : undefined;
-  const priorTotalForSelected = priorAggForSelected?.sumOutstanding ?? 0;
-  const combinedOutstandingForSelected = termOutstandingForSelected + priorTotalForSelected;
-  /** Hide prior / combined lines when there is no external balance left (only term matters). */
-  const showPriorAndCombinedInSummary = priorTotalForSelected > 0.005;
-
-  const priorEntryBlockedReason = (() => {
-    if (!selectedStudent) return null;
-    if (priorBalanceByStudent[selectedStudent]) {
-      return "A prior-system balance exists for this student. Prefer Move prior onto term invoices below so Record Payment matches multi-term ordering; the one-off prior field is only for when you cannot split by term.";
-    }
-    if (studentIdsClosedTermHistory.has(selectedStudent)) {
-      return "This student has invoices on a closed term, so a one-time prior balance can no longer be added. That step is only for new onboarding before any closed term.";
-    }
-    return null;
-  })();
-
-  async function handleAddPriorEntry() {
-    if (!schoolId || !userId || !selectedStudent) {
-      setMessage({ type: "err", text: "Select a student first." });
-      return;
-    }
-    if (priorEntryBlockedReason) {
-      setMessage({ type: "err", text: priorEntryBlockedReason });
-      return;
-    }
-    const amount = Number(priorAmount);
-    if (!amount || amount <= 0) {
-      setMessage({ type: "err", text: "Enter a positive amount for prior-system balance." });
-      return;
-    }
-    setSavingPrior(true);
-    setMessage(null);
-    try {
-      const { error } = await supabase.from("prior_system_balance_entries").insert({
-        school_id: schoolId,
-        student_id: selectedStudent,
-        amount_outstanding: amount,
-        source_note: priorNote.trim() || null,
-        entered_by_user_id: userId,
-      });
-      if (error) throw new Error(error.message);
-      setPriorAmount("");
-      setPriorNote("");
-      setMessage({ type: "ok", text: "Prior-system balance entry saved." });
-      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
-    } catch (e: unknown) {
-      const msg = (e as Error).message || "Failed to save prior-system entry.";
-      const lower = msg.toLowerCase();
-      if (lower.includes("uq_prior_system_balance") || lower.includes("unique")) {
-        setMessage({
-          type: "err",
-          text: "This student already has a prior-system balance. Only one entry is allowed.",
-        });
-      } else if (lower.includes("prior_system_balance_entries:")) {
-        setMessage({ type: "err", text: msg.replace(/^.*?prior_system_balance_entries:\s*/i, "") });
-      } else {
-        setMessage({ type: "err", text: msg });
-      }
-    } finally {
-      setSavingPrior(false);
-    }
-  }
-
-  async function handleMovePriorToTermInvoices() {
-    if (!schoolId || !selectedStudent) {
-      setMessage({ type: "err", text: "Select a student first." });
-      return;
-    }
-    const target = priorTotalForSelected;
-    if (target <= 0.005) return;
-    const allocations = priorSplitRows
-      .map((r) => ({ term_id: r.termId.trim(), amount: Number(r.amount) }))
-      .filter((r) => r.term_id.length > 0 && Number.isFinite(r.amount) && r.amount > 0);
-    if (allocations.length === 0) {
-      setMessage({ type: "err", text: "Add at least one school term and a positive amount for each line." });
-      return;
-    }
-    const sum = allocations.reduce((s, a) => s + a.amount, 0);
-    if (Math.abs(sum - target) > 0.02) {
-      setMessage({
-        type: "err",
-        text:
-          "Amounts must sum exactly to current prior outstanding (" +
-          target.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-          "). Now: " +
-          sum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-          ".",
-      });
-      return;
-    }
-    setMovingPrior(true);
-    setMessage(null);
-    try {
-      const { error } = await supabase.rpc("move_prior_balance_to_term_opening_invoices", {
-        p_school_id: schoolId,
-        p_student_id: selectedStudent,
-        p_allocations: allocations,
-      });
-      if (error) throw new Error(error.message);
-      setPriorSplitRows([{ termId: "", amount: "" }]);
-      setMessage({
-        type: "ok",
-        text: "Prior moved to issued term invoices. Outstanding now follows normal term rows (oldest term first in Record Payment).",
-      });
-      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
-    } catch (e: unknown) {
-      setMessage({ type: "err", text: (e as Error).message || "Could not move prior balance." });
-    } finally {
-      setMovingPrior(false);
-    }
-  }
 
   async function handleApplyCarryoverToTerm() {
     if (!schoolId || !selectedStudent) {
       setMessage({ type: "err", text: "Select a student first." });
-      return;
-    }
-    if (priorTotalForSelected > 0.005) {
-      setMessage({
-        type: "err",
-        text:
-          "This student already has a prior-system ledger balance. Finish “Move prior onto term invoices” below first, or ask an admin to adjust that entry.",
-      });
       return;
     }
     if (!carryoverTermId) {
@@ -666,21 +531,10 @@ export default function BillingPage() {
                 </div>
                 {selectedStudent && selectedStudentRow && (
                   <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
-                    <h3 className="ac-text-primary text-sm font-semibold">
-                      {showPriorAndCombinedInSummary ? "Prior-system and combined balance" : "Outstanding balance"}
-                    </h3>
-                    {showPriorAndCombinedInSummary ? (
-                      <p className="ac-text-muted text-xs">
-                        This student still has a <strong>prior-system ledger</strong> row. Use <strong>Move prior onto term invoices</strong> below to turn it into normal term debt. New arrears should use <strong>Carry-over balance</strong> first so nothing hits the prior ledger.
-                      </p>
-                    ) : (
-                      <p className="ac-text-muted text-xs">
-                        <strong>Carry-over balance</strong> (below) puts old arrears straight onto a past school term—same as other fees, oldest term first in Record Payment. The summary here uses term invoice balances; generate the current-term invoice separately when you are ready.
-                      </p>
-                    )}
-                    {priorEntryBlockedReason && (
-                      <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">{priorEntryBlockedReason}</p>
-                    )}
+                    <h3 className="ac-text-primary text-sm font-semibold">Outstanding balance</h3>
+                    <p className="ac-text-muted text-xs">
+                      All fees and old arrears live on <strong>term invoices</strong>. Use <strong>Carry-over balance</strong> for legacy debt from before Pweza; Record Payment clears oldest terms first. This line is the sum of invoice balances for this student.
+                    </p>
                     <dl className="grid gap-2 text-sm">
                       <div className="flex justify-between gap-4">
                         <dt className="ac-text-secondary">Term invoices (remaining)</dt>
@@ -688,33 +542,8 @@ export default function BillingPage() {
                           {isLoading ? "…" : termOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </dd>
                       </div>
-                      {showPriorAndCombinedInSummary && (
-                        <>
-                          <div className="flex justify-between gap-4">
-                            <dt className="ac-text-secondary">Prior-system (external)</dt>
-                            <dd className="ac-text-primary font-medium tabular-nums">
-                              {isLoading ? "…" : priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </dd>
-                          </div>
-                          <div className="flex justify-between gap-4 border-t border-[var(--ac-border)] pt-2">
-                            <dt className="ac-text-primary font-medium">Combined</dt>
-                            <dd className="ac-text-primary font-semibold tabular-nums">
-                              {isLoading ? "…" : combinedOutstandingForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </dd>
-                          </div>
-                        </>
-                      )}
                     </dl>
-                    {showPriorAndCombinedInSummary &&
-                      priorAggForSelected &&
-                      (priorAggForSelected.lastSourceNote || priorAggForSelected.lastEnteredAt) && (
-                      <p className="ac-text-muted text-xs">
-                        Latest entry
-                        {priorAggForSelected.lastEnteredAt ? ` (${new Date(priorAggForSelected.lastEnteredAt).toLocaleString()})` : ""}
-                        {priorAggForSelected.lastSourceNote ? `: ${priorAggForSelected.lastSourceNote}` : ""}
-                      </p>
-                    )}
-                    {priorTotalForSelected <= 0.005 && termsOldestFirst.length > 0 && (
+                    {termsOldestFirst.length > 0 && (
                       <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
                         <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
                           Carry-over balance (before Pweza)
@@ -779,135 +608,6 @@ export default function BillingPage() {
                           {savingCarryover ? "Saving…" : "Save carry-over on this term"}
                         </button>
                       </div>
-                    )}
-                    {showPriorAndCombinedInSummary && priorTotalForSelected > 0.005 && (
-                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
-                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
-                          Move prior onto term invoices
-                        </h4>
-                        <p className="ac-text-muted text-xs">
-                          Enter lines that sum exactly to the prior total. Each line creates an <strong>issued</strong> invoice for that term (requires no existing active invoice on that term). Payments then follow normal oldest-term-first rules.
-                        </p>
-                        {priorSplitRows.map((row, idx) => (
-                          <div key={idx} className="flex flex-wrap items-end gap-2">
-                            <div className="min-w-[200px] flex-1">
-                              <label className="ac-text-secondary mb-1 block text-xs font-medium">Term</label>
-                              <select
-                                value={row.termId}
-                                onChange={(e) => {
-                                  const next = [...priorSplitRows];
-                                  next[idx] = { ...next[idx], termId: e.target.value };
-                                  setPriorSplitRows(next);
-                                }}
-                                className="ac-input"
-                                disabled={movingPrior}
-                              >
-                                <option value="">Select term</option>
-                                {termsOldestFirst.map((t) => (
-                                  <option key={t.id} value={t.id}>
-                                    Term {t.term}, {t.year}
-                                    {t.is_closed ? " (closed)" : ""}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="w-36">
-                              <label className="ac-text-secondary mb-1 block text-xs font-medium">Amount</label>
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={row.amount}
-                                onChange={(e) => {
-                                  const next = [...priorSplitRows];
-                                  next[idx] = { ...next[idx], amount: e.target.value };
-                                  setPriorSplitRows(next);
-                                }}
-                                className="ac-input tabular-nums"
-                                disabled={movingPrior}
-                              />
-                            </div>
-                            {priorSplitRows.length > 1 ? (
-                              <button
-                                type="button"
-                                className="ac-text-muted mb-2 text-xs hover:text-red-400"
-                                onClick={() => setPriorSplitRows(priorSplitRows.filter((_, i) => i !== idx))}
-                                disabled={movingPrior}
-                              >
-                                Remove
-                              </button>
-                            ) : null}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          onClick={() => setPriorSplitRows([...priorSplitRows, { termId: "", amount: "" }])}
-                          disabled={movingPrior}
-                          className="ac-text-muted text-xs font-medium hover:text-emerald-400"
-                        >
-                          + Add term line
-                        </button>
-                        <p className="ac-text-muted text-xs tabular-nums">
-                          Prior to allocate:{" "}
-                          {priorTotalForSelected.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · Sum of
-                          lines:{" "}
-                          {priorSplitRows
-                            .reduce((s, r) => s + (Number(r.amount) || 0), 0)
-                            .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => void handleMovePriorToTermInvoices()}
-                          disabled={movingPrior || !userId}
-                          className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
-                        >
-                          {movingPrior ? "Working…" : "Create invoices and clear prior"}
-                        </button>
-                      </div>
-                    )}
-                    {!priorEntryBlockedReason && (
-                      <details className="border-t border-[var(--ac-border)] pt-4">
-                        <summary className="ac-text-muted cursor-pointer text-xs font-medium">
-                          Advanced: prior-system ledger only (avoid if you can use carry-over above)
-                        </summary>
-                        <div className="mt-3 space-y-3">
-                          <p className="ac-text-muted text-xs">
-                            Rare fallback when you cannot map arrears to a school term. Prefer <strong>Carry-over balance</strong> so all debt stays on term invoices.
-                          </p>
-                          <div>
-                            <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={priorAmount}
-                              onChange={(e) => setPriorAmount(e.target.value)}
-                              className="ac-input"
-                              placeholder="e.g. 150000"
-                              disabled={savingPrior}
-                            />
-                          </div>
-                          <div>
-                            <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
-                            <textarea
-                              value={priorNote}
-                              onChange={(e) => setPriorNote(e.target.value)}
-                              className="ac-input min-h-[72px] resize-y"
-                              placeholder="e.g. Old Excel Term 2 2024"
-                              disabled={savingPrior}
-                              rows={2}
-                            />
-                          </div>
-                          <button
-                            type="button"
-                            onClick={handleAddPriorEntry}
-                            disabled={savingPrior || !userId}
-                            className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
-                          >
-                            {savingPrior ? "Saving…" : "Add prior-system entry"}
-                          </button>
-                        </div>
-                      </details>
                     )}
                   </div>
                 )}

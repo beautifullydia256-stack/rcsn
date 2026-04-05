@@ -183,7 +183,7 @@ export default function DesignParentDashboard() {
         if (trow && typeof trow.present === 'boolean') todayPresent = trow.present;
 
         feeBalance = Math.max(0, Number(feeAgg.balance || 0));
-        feePriorLegacy = Math.max(0, Number(feeAgg.prior_system_balance || 0));
+        feePriorLegacy = 0;
         const payRows = (paySumRes.data || []) as { amount_paid?: number }[];
         feePaid = payRows.reduce((s, p) => s + Math.max(0, Number(p.amount_paid || 0)), 0);
         feeTotal = feePaid + feeBalance;

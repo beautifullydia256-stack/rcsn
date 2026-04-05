@@ -11,28 +11,18 @@ import { useAuthStore } from "../../store/authStore";
 import { PaymentReceipt, type PaymentReceiptData } from "./PaymentReceipt";
 import { Receipt, X } from "lucide-react";
 
-type OutstandingBalanceRow =
-  | { kind: "prior"; prior_entry_id: string; balance: number }
-  | { kind: "term"; term_id: string; term: number; year: number; balance: number };
+type OutstandingBalanceRow = { kind: "term"; term_id: string; term: number; year: number; balance: number };
 
 type CurrentTermRow = { id: string; term: number; year: number; start_date?: string; end_date?: string };
 
-type PaymentAllocation =
-  | { kind: "prior"; prior_entry_id: string; amount: number }
-  | { kind: "term"; term_id: string; term: number; year: number; amount: number };
+type PaymentAllocation = { kind: "term"; term_id: string; term: number; year: number; amount: number };
 
-/** Prior / external debt first, then term balances oldest term first. */
+/** Term balances: oldest term first. */
 function sortOutstandingForPayment(rows: OutstandingBalanceRow[]): OutstandingBalanceRow[] {
-  const priors = rows.filter((r): r is Extract<OutstandingBalanceRow, { kind: "prior" }> => r.kind === "prior");
-  const terms = rows.filter((r): r is Extract<OutstandingBalanceRow, { kind: "term" }> => r.kind === "term");
-  terms.sort((a, b) => (a.year !== b.year ? a.year - b.year : a.term - b.term));
-  return [...priors, ...terms];
+  return [...rows].sort((a, b) => (a.year !== b.year ? a.year - b.year : a.term - b.term));
 }
 
-function buildOutstandingRows(
-  termRows: { term_id: string; term: number; year: number; balance: number }[],
-  priorRow: { id: string; amount_outstanding: number } | null
-): OutstandingBalanceRow[] {
+function buildOutstandingRows(termRows: { term_id: string; term: number; year: number; balance: number }[]): OutstandingBalanceRow[] {
   const terms: OutstandingBalanceRow[] = termRows.map((r) => ({
     kind: "term" as const,
     term_id: r.term_id,
@@ -40,15 +30,7 @@ function buildOutstandingRows(
     year: r.year,
     balance: Number(r.balance),
   }));
-  const out: OutstandingBalanceRow[] = [...terms];
-  if (priorRow && Number(priorRow.amount_outstanding) > 0) {
-    out.unshift({
-      kind: "prior",
-      prior_entry_id: priorRow.id,
-      balance: Number(priorRow.amount_outstanding),
-    });
-  }
-  return sortOutstandingForPayment(out);
+  return sortOutstandingForPayment(terms);
 }
 
 /** Outstanding from fees minus paid (same definition as a healthy `balance` column). Do not trust `balance` alone — it can drift if not rewritten when `total_paid` changes. */
@@ -95,24 +77,14 @@ async function fetchOutstandingRowsForRecordPayment(
   schoolId: string,
   studentId: string
 ): Promise<{ rows: OutstandingBalanceRow[]; errorMessage: string | null }> {
-  const [balRes, priorRes] = await Promise.all([
-    supabase
-      .from("student_balances")
-      .select("term_id, term, year, total_fees, total_paid, balance")
-      .eq("school_id", schoolId)
-      .eq("student_id", studentId)
-      .order("year", { ascending: true })
-      .order("term", { ascending: true }),
-    supabase
-      .from("prior_system_balance_entries")
-      .select("id, amount_outstanding")
-      .eq("school_id", schoolId)
-      .eq("student_id", studentId)
-      .order("entered_at", { ascending: true })
-      .limit(1),
-  ]);
+  const balRes = await supabase
+    .from("student_balances")
+    .select("term_id, term, year, total_fees, total_paid, balance")
+    .eq("school_id", schoolId)
+    .eq("student_id", studentId)
+    .order("year", { ascending: true })
+    .order("term", { ascending: true });
   if (balRes.error?.message) return { rows: [], errorMessage: balRes.error.message };
-  if (priorRes.error?.message) return { rows: [], errorMessage: priorRes.error.message };
   const merged = mergeTermBalanceRows(
     (balRes.data || []) as {
       term_id: string;
@@ -123,8 +95,7 @@ async function fetchOutstandingRowsForRecordPayment(
       balance?: number | string | null;
     }[]
   );
-  const priorArr = (priorRes.data || []) as { id: string; amount_outstanding: number }[];
-  const rows = buildOutstandingRows(merged, priorArr[0] ?? null);
+  const rows = buildOutstandingRows(merged);
   return { rows, errorMessage: null };
 }
 
@@ -177,11 +148,10 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
-      const [sRes, tRes, balRes, priorDebtRes, schoolRes] = await Promise.all([
+      const [sRes, tRes, balRes, schoolRes] = await Promise.all([
         supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
         supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
-        supabase.from("prior_system_balance_entries").select("student_id").eq("school_id", schoolId).gt("amount_outstanding", 0),
         supabase.from("schools").select("name").eq("school_id", schoolId).single(),
       ]);
       const school = (schoolRes.data as { name?: string } | null) ?? null;
@@ -201,10 +171,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
             }
           : null
       );
-      const owingIds = new Set<string>([
-        ...(balRes.data || []).map((b: { student_id: string }) => b.student_id),
-        ...(priorDebtRes.data || []).map((p: { student_id: string }) => p.student_id),
-      ]);
+      const owingIds = new Set<string>([...(balRes.data || []).map((b: { student_id: string }) => b.student_id)]);
       const debtorIds = [...owingIds].filter((id) => !active.some((s) => s.student_id === id));
       if (debtorIds.length > 0) {
         const { data: debtors } = await supabase
@@ -443,21 +410,15 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         if (remaining <= 0) break;
         const apply = Math.min(remaining, row.balance);
         if (apply <= 0) continue;
-        if (row.kind === "prior") {
-          allocations.push({ kind: "prior", prior_entry_id: row.prior_entry_id, amount: apply });
-        } else {
-          allocations.push({
-            kind: "term",
-            term_id: row.term_id,
-            term: row.term,
-            year: row.year,
-            amount: apply,
-          });
-        }
+        allocations.push({
+          kind: "term",
+          term_id: row.term_id,
+          term: row.term,
+          year: row.year,
+          amount: apply,
+        });
         remaining -= apply;
       }
-      console.log("sortedBalances:", JSON.stringify(sortedBalances));
-      console.log("allocations after loop:", JSON.stringify(allocations));
       if (allocations.length === 0) {
         setMessage("No amount to apply to outstanding balances.");
         return;
@@ -516,23 +477,18 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           notes: notes || null,
           receipt_number: receiptNumberForPayments,
         };
-        if (a.kind === "term") {
-          payload.term_id = a.term_id;
-          const invId = invoiceByTerm.get(a.term_id);
-          if (invId) payload.invoice_id = invId;
-        } else {
-          payload.prior_system_entry_id = a.prior_entry_id;
-        }
+        payload.term_id = a.term_id;
+        const invId = invoiceByTerm.get(a.term_id);
+        if (invId) payload.invoice_id = invId;
         const { error } = await supabase.from("student_payments").insert(payload);
         if (error) throw error;
       }
 
       const totalRemaining = Math.max(0, maxDueNow - amt);
-      const allocationLines = allocations.map((a) =>
-        a.kind === "prior"
-          ? { termLabel: "Prior / external (legacy)", amountApplied: a.amount }
-          : { termLabel: `Term ${a.term}, ${a.year}`, amountApplied: a.amount }
-      );
+      const allocationLines = allocations.map((a) => ({
+        termLabel: `Term ${a.term}, ${a.year}`,
+        amountApplied: a.amount,
+      }));
       const studentRow = students.find((s) => s.student_id === selectedStudent);
       const now = new Date();
       const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
@@ -688,28 +644,18 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                       ) : outstandingBalances.length > 0 ? (
                         <>
                           <p className="font-medium text-slate-800">
-                            {outstandingBalances.length > 1
-                              ? "Outstanding (prior / external first, then oldest term first)"
-                              : "Outstanding for this period"}
+                            {outstandingBalances.length > 1 ? "Outstanding (oldest term first)" : "Outstanding for this period"}
                           </p>
                           <ul className="mt-1 list-inside list-disc text-slate-700">
-                            {sortOutstandingForPayment(outstandingBalances).map((b) =>
-                              b.kind === "prior" ? (
-                                <li key={`prior-${b.prior_entry_id}`}>
-                                  Prior / external (legacy): {b.balance.toLocaleString()}
-                                </li>
-                              ) : (
-                                <li key={b.term_id}>
-                                  Term {b.term}, {b.year}: {b.balance.toLocaleString()}
-                                </li>
-                              )
-                            )}
+                            {sortOutstandingForPayment(outstandingBalances).map((b) => (
+                              <li key={b.term_id}>
+                                Term {b.term}, {b.year}: {b.balance.toLocaleString()}
+                              </li>
+                            ))}
                           </ul>
                           <p className="mt-2 font-medium text-slate-800">Total due: {totalDue.toLocaleString()}</p>
                           {outstandingBalances.length > 1 && (
-                            <p className="mt-0.5 text-slate-600">
-                              Payments clear prior / external debt first, then the oldest term balance, then newer terms.
-                            </p>
+                            <p className="mt-0.5 text-slate-600">Payments clear the oldest term balance first, then newer terms.</p>
                           )}
                         </>
                       ) : (

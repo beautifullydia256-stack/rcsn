@@ -56,32 +56,9 @@ export async function resolveCurrentSchoolTerm(
 export type BalanceAgg = {
   total_fees: number;
   total_paid: number;
-  /** Term invoice / student_balances remainder plus `prior_system_balance`. */
+  /** Term balances (all invoiced amounts still due across selected rows). */
   balance: number;
-  /** Legacy debt from `prior_system_balance_entries` (also included in `balance`). */
-  prior_system_balance: number;
 };
-
-async function loadPriorSystemBalanceByStudent(
-  client: SupabaseClient,
-  schoolId: string
-): Promise<Map<string, number>> {
-  const { data, error } = await client
-    .from('prior_system_balance_entries')
-    .select('student_id, amount_outstanding')
-    .eq('school_id', schoolId);
-
-  if (error || !data) return new Map();
-
-  const byStudent = new Map<string, number>();
-  for (const r of data) {
-    const sid = (r as { student_id?: string }).student_id;
-    const amt = Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0);
-    if (!sid || !Number.isFinite(amt) || amt <= 0) continue;
-    byStudent.set(sid, (byStudent.get(sid) || 0) + amt);
-  }
-  return byStudent;
-}
 
 /**
  * Per-student aggregates from student_balances for the current term when one is
@@ -106,7 +83,7 @@ export async function loadOutstandingBalanceAggByStudent(
   for (const r of rows || []) {
     const sid = (r as { student_id?: string }).student_id;
     if (!sid) continue;
-    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0, prior_system_balance: 0 };
+    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0 };
     cur.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
     cur.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
     cur.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
@@ -120,27 +97,19 @@ export async function loadOutstandingBalanceAggByStudentAllTerms(
   client: SupabaseClient,
   schoolId: string
 ): Promise<Map<string, BalanceAgg>> {
-  const [{ data: rows }, priorByStudent] = await Promise.all([
-    client.from('student_balances').select('student_id, total_fees, total_paid, balance').eq('school_id', schoolId),
-    loadPriorSystemBalanceByStudent(client, schoolId),
-  ]);
+  const { data: rows } = await client
+    .from('student_balances')
+    .select('student_id, total_fees, total_paid, balance')
+    .eq('school_id', schoolId);
 
   const byStudent = new Map<string, BalanceAgg>();
   for (const r of rows || []) {
     const sid = (r as { student_id?: string }).student_id;
     if (!sid) continue;
-    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0, prior_system_balance: 0 };
+    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0 };
     cur.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
     cur.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
     cur.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
-    byStudent.set(sid, cur);
-  }
-
-  for (const [sid, prior] of priorByStudent) {
-    if (prior <= 0) continue;
-    const cur = byStudent.get(sid) || { total_fees: 0, total_paid: 0, balance: 0, prior_system_balance: 0 };
-    cur.prior_system_balance = prior;
-    cur.balance += prior;
     byStudent.set(sid, cur);
   }
 
@@ -153,38 +122,25 @@ export async function loadStudentBalanceAggAllTerms(
   schoolId: string,
   studentId: string
 ): Promise<BalanceAgg> {
-  const [{ data: rows, error }, { data: priorRows }] = await Promise.all([
-    client
-      .from('student_balances')
-      .select('total_fees, total_paid, balance')
-      .eq('school_id', schoolId)
-      .eq('student_id', studentId),
-    client
-      .from('prior_system_balance_entries')
-      .select('amount_outstanding')
-      .eq('school_id', schoolId)
-      .eq('student_id', studentId),
-  ]);
+  const { data: rows, error } = await client
+    .from('student_balances')
+    .select('total_fees, total_paid, balance')
+    .eq('school_id', schoolId)
+    .eq('student_id', studentId);
 
   if (error) {
     if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
       console.warn('[adminFinanceTerm] loadStudentBalanceAggAllTerms:', error.message);
     }
-    return { total_fees: 0, total_paid: 0, balance: 0, prior_system_balance: 0 };
+    return { total_fees: 0, total_paid: 0, balance: 0 };
   }
 
-  const agg: BalanceAgg = { total_fees: 0, total_paid: 0, balance: 0, prior_system_balance: 0 };
+  const agg: BalanceAgg = { total_fees: 0, total_paid: 0, balance: 0 };
   for (const r of rows || []) {
     agg.total_fees += Number((r as { total_fees?: number }).total_fees ?? 0);
     agg.total_paid += Number((r as { total_paid?: number }).total_paid ?? 0);
     agg.balance += Math.max(0, Number((r as { balance?: number }).balance ?? 0));
   }
-  let prior = 0;
-  for (const r of priorRows || []) {
-    prior += Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0));
-  }
-  agg.prior_system_balance = prior;
-  agg.balance += prior;
   return agg;
 }
 
@@ -196,20 +152,12 @@ export async function sumTotalOverallOutstandingBalance(
   client: SupabaseClient,
   schoolId: string
 ): Promise<number> {
-  const [{ data: rows }, { data: priorRows }] = await Promise.all([
-    client.from('student_balances').select('total_fees, balance').eq('school_id', schoolId),
-    client.from('prior_system_balance_entries').select('amount_outstanding').eq('school_id', schoolId),
-  ]);
+  const { data: rows } = await client.from('student_balances').select('total_fees, balance').eq('school_id', schoolId);
 
-  const fromBalances = (rows || []).reduce((sum, r) => {
+  return (rows || []).reduce((sum, r) => {
     const tf = Number((r as { total_fees?: number }).total_fees ?? 0);
     const bal = Number((r as { balance?: number }).balance ?? 0);
     if (tf > 0 && bal > 0) return sum + Math.max(0, bal);
     return sum;
   }, 0);
-  const fromPrior = (priorRows || []).reduce(
-    (s, r) => s + Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0)),
-    0
-  );
-  return fromBalances + fromPrior;
 }

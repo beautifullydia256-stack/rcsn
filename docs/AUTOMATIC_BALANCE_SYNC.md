@@ -46,13 +46,11 @@
 
 ---
 
-## Prior-system (external) balance
+## Legacy / carry-over debt (term invoices only)
 
-Debt carried from **another system** when there is no clean mapping to a Pweza term is stored in **`prior_system_balance_entries`**: one row per student per school (`amount_outstanding`, `source_note`, `entered_by_user_id`, `entered_at`). The database also **rejects** a new row if that student already has **any** `student_invoices` row for a **`school_terms`** record with **`is_closed = true`**—so this is only for **new onboarding**, not something to add again each term after the cohort has moved on. This is **not** an extra `student_invoices` row for the same term (the unique key `(school_id, student_id, term_id)` on invoices is unchanged). Accountants see term invoice remainder, prior-system sum, and a **combined** total on **Invoices & Billing** (single-student flow). **Admin → Finance → Outstanding balances** and **`loadOutstandingBalanceAggByStudentAllTerms`** include prior amounts in each student’s **balance** and in school-wide outstanding KPIs (`sumTotalOverallOutstandingBalance`); prior debt is not stored inside `student_balances` or a specific term row—it is summed from **`prior_system_balance_entries`**. Schools should **close terms** in settings when a period ends so this rule matches real academic boundaries.
+Arrears from before Pweza are recorded with **Carry-over balance** on **Invoices & Billing**: one **issued** `student_invoices` row on a chosen past `school_terms` row (RPC `apply_carryover_balance_to_term_invoice`). **`prior_system_balance_entries` and prior-only payments have been removed** (migration `20260505120000_remove_prior_system_balance_entries.sql`) once all prior ledger balances are zero and there are no active `student_payments` rows pointing at `prior_system_entry_id`. **Record Payment** allocates **oldest term first** across `student_balances`; every payment row must have a **`term_id`** (except reversed legacy rows).
 
-**Record Payment:** Prior / external amounts are included in **Record Payment** with allocation order **prior first**, then **oldest term** (same as older-term-first for invoice balances). Payments against prior use `student_payments.prior_system_entry_id` with `term_id` NULL; a trigger reduces or removes the linked `prior_system_balance_entries` row (migration `20260423120000_student_payments_prior_system_balance.sql`). Reversals / reallocations of those payments are not automated yet.
-
-**Phase 2 (optional):** further KPI tweaks, parent portal copy, and reversal workflows. Term-scoped **`balance_brought_forward`** remains separate and is not replaced by this ledger.
+**Phase 2 (optional):** further KPI tweaks and reversal workflows. Term-scoped **`balance_brought_forward`** remains separate.
 
 ---
 

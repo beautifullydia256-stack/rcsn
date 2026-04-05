@@ -107,21 +107,19 @@ export type TermStatRow = {
 };
 export type StatisticData = {
   terms: TermStatRow[];
-  /** Total still owed on the ledger (all terms + prior/external) */
+  /** Total still owed on the ledger (all terms) */
   totalOverallBalance: number;
   /** Calendar current term: sum of total_fees (invoiced / expected this term) */
   currentTermFeesInvoiced: number;
   /** Outstanding balance rows for the calendar current term only */
   currentTermOutstanding: number;
-  /** Outstanding from older terms + prior/external (total minus current term slice) */
+  /** Outstanding from older terms (total minus current term slice) */
   priorTermsOutstanding: number;
 };
 
-const PRIOR_EXTERNAL_TERM_ID = "__prior_external__";
-
 async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
   const today = new Date().toISOString().slice(0, 10);
-  const [{ data: terms }, { data: balances }, { data: priorRows }] = await Promise.all([
+  const [{ data: terms }, { data: balances }] = await Promise.all([
     supabase
       .from("school_terms")
       .select("id, term, year, start_date, end_date")
@@ -129,7 +127,6 @@ async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
       .order("year", { ascending: false })
       .order("term", { ascending: false }),
     supabase.from("student_balances").select("term_id, total_fees, total_paid, balance").eq("school_id", schoolId),
-    supabase.from("prior_system_balance_entries").select("amount_outstanding").eq("school_id", schoolId),
   ]);
 
   const currentTermRow =
@@ -163,22 +160,6 @@ async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
       paidThisTerm: byTerm[t.id].paidThisTerm,
       overallBalance: byTerm[t.id].overallBalance,
     }));
-
-  const priorSum = (priorRows || []).reduce(
-    (s, r) => s + Math.max(0, Number((r as { amount_outstanding?: number }).amount_outstanding ?? 0)),
-    0
-  );
-  if (priorSum > 0) {
-    termsList.push({
-      termId: PRIOR_EXTERNAL_TERM_ID,
-      term: 0,
-      year: 0,
-      termLabel: "Prior / external",
-      expected: 0,
-      paidThisTerm: 0,
-      overallBalance: priorSum,
-    });
-  }
 
   const totalOverallBalance = termsList.reduce((s, r) => s + r.overallBalance, 0);
   const cur = calendarCurrentTermId ? termsList.find((r) => r.termId === calendarCurrentTermId) : undefined;
