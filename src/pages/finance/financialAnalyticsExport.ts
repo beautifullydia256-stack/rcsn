@@ -33,8 +33,10 @@ export function downloadFinancialAnalyticsXlsx(
     ],
     ["Payroll (within expenses)", data.payroll],
     ["Scholarships & waivers (period)", data.scholarships],
-    ["Total overall balance (all terms, admin rule)", data.ledgerOutstanding],
-    ["Fees on record total_fees (all terms)", data.ledgerTotalFees],
+    ["Still to collect (school-wide)", data.ledgerOutstanding],
+    ["Outstanding - this term only", data.ledgerOutstandingCurrentTerm],
+    ["Outstanding - older terms / prior", data.ledgerOutstandingPriorTerms],
+    ["This term: fees on ledger (total_fees)", data.ledgerCurrentTermTotalFees],
     [],
     ["Narrative", data.verdict],
   ];

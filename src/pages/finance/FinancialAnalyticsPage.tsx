@@ -645,11 +645,16 @@ export default function FinancialAnalyticsPage() {
                   <CircleDollarSign className="fa-kpi-lucide" />
                 </div>
                 <div className="fa-kpi-body">
-                  <div className="fa-kpi-label">Total overall balance</div>
+                  <div className="fa-kpi-label">Still to collect (school-wide)</div>
                   <div className="fa-kpi-val fa-kpi-val--rose">{formatUGX(data.ledgerOutstanding)}</div>
-                  <div className="fa-kpi-sub">All terms — admin dashboard rule (invoice rows with balance owing)</div>
+                  <div className="fa-kpi-sub">
+                    All terms and prior balances — what parents still owe in total
+                  </div>
                   <div className="kpi-fa-delta kpi-fa-delta--muted">
-                    <span>Same as Total overall balance on the school dashboard</span>
+                    <span>
+                      This term: {formatUGX(data.ledgerOutstandingCurrentTerm)} · Older / prior:{" "}
+                      {formatUGX(data.ledgerOutstandingPriorTerms)}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -658,11 +663,13 @@ export default function FinancialAnalyticsPage() {
                   <ClipboardList className="fa-kpi-lucide" />
                 </div>
                 <div className="fa-kpi-body">
-                  <div className="fa-kpi-label">Fees on record (all terms)</div>
-                  <div className="fa-kpi-val fa-kpi-val--violet">{formatUGX(data.ledgerTotalFees)}</div>
-                  <div className="fa-kpi-sub">Sum of term fee invoices across every term on the ledger</div>
+                  <div className="fa-kpi-label">This term: fees on ledger</div>
+                  <div className="fa-kpi-val fa-kpi-val--violet">{formatUGX(data.ledgerCurrentTermTotalFees)}</div>
+                  <div className="fa-kpi-sub">
+                    Total invoiced for the calendar current term (what this term is supposed to bill)
+                  </div>
                   <div className="kpi-fa-delta kpi-fa-delta--muted">
-                    <span>Compare to fee collections in the selected period above</span>
+                    <span>Compare to fee income in the selected period above</span>
                   </div>
                 </div>
               </div>

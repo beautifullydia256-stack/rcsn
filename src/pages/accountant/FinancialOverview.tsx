@@ -107,19 +107,24 @@ export type TermStatRow = {
 };
 export type StatisticData = {
   terms: TermStatRow[];
-  /** Total expected from older unpaid + current term invoices (all terms) */
-  totalExpected: number;
-  /** Total overall balance according to paid this term (all terms) */
+  /** Total still owed on the ledger (all terms + prior/external) */
   totalOverallBalance: number;
+  /** Calendar current term: sum of total_fees (invoiced / expected this term) */
+  currentTermFeesInvoiced: number;
+  /** Outstanding balance rows for the calendar current term only */
+  currentTermOutstanding: number;
+  /** Outstanding from older terms + prior/external (total minus current term slice) */
+  priorTermsOutstanding: number;
 };
 
 const PRIOR_EXTERNAL_TERM_ID = "__prior_external__";
 
 async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
+  const today = new Date().toISOString().slice(0, 10);
   const [{ data: terms }, { data: balances }, { data: priorRows }] = await Promise.all([
     supabase
       .from("school_terms")
-      .select("id, term, year")
+      .select("id, term, year, start_date, end_date")
       .eq("school_id", schoolId)
       .order("year", { ascending: false })
       .order("term", { ascending: false }),
@@ -127,14 +132,24 @@ async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
     supabase.from("prior_system_balance_entries").select("amount_outstanding").eq("school_id", schoolId),
   ]);
 
+  const currentTermRow =
+    (terms || []).find(
+      (t: { start_date?: string; end_date?: string }) =>
+        t.start_date && t.end_date && t.start_date <= today && t.end_date >= today
+    ) ?? (terms || [])[0];
+  const calendarCurrentTermId = (currentTermRow as { id?: string } | undefined)?.id ?? null;
+
   const byTerm: Record<string, { expected: number; paidThisTerm: number; overallBalance: number }> = {};
   (balances || []).forEach((b: { term_id: string; total_fees?: number; total_paid?: number; balance?: number }) => {
     const tid = b.term_id;
     if (!tid) return;
     if (!byTerm[tid]) byTerm[tid] = { expected: 0, paidThisTerm: 0, overallBalance: 0 };
-    byTerm[tid].expected += Number(b.total_fees ?? 0);
+    const tf = Number(b.total_fees ?? 0);
+    const bal = Number(b.balance ?? 0);
+    byTerm[tid].expected += tf;
     byTerm[tid].paidThisTerm += Number(b.total_paid ?? 0);
-    byTerm[tid].overallBalance += Math.max(0, Number(b.balance ?? 0));
+    /* Same rule as admin / financial analytics: invoice row with amount still owing */
+    if (tf > 0 && bal > 0) byTerm[tid].overallBalance += Math.max(0, bal);
   });
 
   const termsList: TermStatRow[] = (terms || [])
@@ -165,10 +180,19 @@ async function fetchStatisticData(schoolId: string): Promise<StatisticData> {
     });
   }
 
-  const totalExpected = termsList.reduce((s, r) => s + r.expected, 0);
   const totalOverallBalance = termsList.reduce((s, r) => s + r.overallBalance, 0);
+  const cur = calendarCurrentTermId ? termsList.find((r) => r.termId === calendarCurrentTermId) : undefined;
+  const currentTermFeesInvoiced = cur?.expected ?? 0;
+  const currentTermOutstanding = cur?.overallBalance ?? 0;
+  const priorTermsOutstanding = Math.max(0, totalOverallBalance - currentTermOutstanding);
 
-  return { terms: termsList, totalExpected, totalOverallBalance };
+  return {
+    terms: termsList,
+    totalOverallBalance,
+    currentTermFeesInvoiced,
+    currentTermOutstanding,
+    priorTermsOutstanding,
+  };
 }
 
 export type RecentTransaction = {
@@ -746,20 +770,23 @@ export default function FinancialOverview() {
           </section>
           )}
 
-          {/* Statistic — Total expected vs Total overall balance + donut by term */}
+          {/* Statistic — current term invoiced vs total still to collect + donut by term */}
           {statisticData && (
             <section className="w-full">
               <div className="ac-glass-card rounded-[18px] p-6">
                 <h3 className="ac-text-primary mb-4 text-lg font-semibold">Statistic</h3>
                 <div className="mb-4 grid grid-cols-2 gap-3">
                   <div className="ac-glass-card rounded-xl p-3">
-                    <p className="ac-text-secondary text-xs font-medium">Total expected (all terms)</p>
-                    <p className="ac-text-muted mt-0.5 text-[11px]">From older unpaid + current term invoices</p>
-                    <p className="ac-text-primary text-xl font-bold">{fmt(statisticData.totalExpected)}</p>
+                    <p className="ac-text-secondary text-xs font-medium">This term: fees invoiced</p>
+                    <p className="ac-text-muted mt-0.5 text-[11px]">What the calendar current term is meant to bill</p>
+                    <p className="ac-text-primary text-xl font-bold">{fmt(statisticData.currentTermFeesInvoiced)}</p>
                   </div>
                   <div className="ac-glass-card rounded-xl p-3">
-                    <p className="ac-text-secondary text-xs font-medium">Total overall balance (all terms)</p>
-                    <p className="ac-text-muted mt-0.5 text-[11px]">According to paid this term</p>
+                    <p className="ac-text-secondary text-xs font-medium">Still to collect (total)</p>
+                    <p className="ac-text-muted mt-0.5 text-[11px]">
+                      {fmt(statisticData.currentTermOutstanding)} this term · {fmt(statisticData.priorTermsOutstanding)}{" "}
+                      older / prior
+                    </p>
                     <p className="ac-text-primary text-xl font-bold">{fmt(statisticData.totalOverallBalance)}</p>
                   </div>
                 </div>

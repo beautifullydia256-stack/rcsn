@@ -298,8 +298,10 @@ export async function downloadFinancialAnalyticsPdf(
     ["Operating margin", om != null ? `${om}%` : "-"],
     ["Payroll (within expenses)", formatUgxpdf(data.payroll)],
     ["Scholarships & waivers (period)", formatUgxpdf(data.scholarships)],
-    ["Total overall balance (all terms, admin dashboard rule)", formatUgxpdf(data.ledgerOutstanding)],
-    ["Fees on record / total_fees (all terms)", formatUgxpdf(data.ledgerTotalFees)],
+    ["Still to collect (school-wide)", formatUgxpdf(data.ledgerOutstanding)],
+    ["Outstanding - this term only", formatUgxpdf(data.ledgerOutstandingCurrentTerm)],
+    ["Outstanding - older terms / prior", formatUgxpdf(data.ledgerOutstandingPriorTerms)],
+    ["This term: fees on ledger (total_fees)", formatUgxpdf(data.ledgerCurrentTermTotalFees)],
   ];
 
   for (const [k, v] of summaryRows) {

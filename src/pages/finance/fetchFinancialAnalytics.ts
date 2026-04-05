@@ -281,28 +281,48 @@ export type FinancialAnalyticsData = {
    * (`fetchAdminDesignDashboardKpis`: sum of balance where total_fees > 0 and balance > 0).
    */
   ledgerOutstanding: number;
-  /** Sum of `student_balances.total_fees` across all terms for the school (invoice totals on record). */
-  ledgerTotalFees: number;
+  /** Same outstanding rule, but only rows for the calendar **current** term. */
+  ledgerOutstandingCurrentTerm: number;
+  /** Outstanding on older terms, prior rows (`term_id` null or not current), etc. */
+  ledgerOutstandingPriorTerms: number;
+  /** Sum of `student_balances.total_fees` for the calendar current term only (this term's invoiced / expected). */
+  ledgerCurrentTermTotalFees: number;
 };
 
+export type LedgerBalanceRow = { total_fees?: number; balance?: number; term_id?: string | null };
+
 /**
- * Matches admin dashboard **Total overall balance** plus total fees on ledger (all `student_balances` rows).
+ * Ledger KPIs: total still to collect (school-wide), split by current vs older terms, plus this term's invoiced total.
+ * `currentTermId` from `pickCurrentTermId` — operational "this term", not the analytics date filter.
  */
-export function aggregateLedgerSchoolWide(rows: { total_fees?: number; balance?: number }[]): {
+export function aggregateLedgerKpis(rows: LedgerBalanceRow[], currentTermId: string | null): {
   outstanding: number;
-  totalFeesOnLedger: number;
+  outstandingCurrentTerm: number;
+  outstandingPriorTerms: number;
+  currentTermTotalFees: number;
 } {
   let outstanding = 0;
-  let totalFeesOnLedger = 0;
+  let outstandingCurrentTerm = 0;
+  let outstandingPriorTerms = 0;
+  let currentTermTotalFees = 0;
   for (const r of rows) {
     const tf = Number(r.total_fees ?? 0);
     const bal = Number(r.balance ?? 0);
-    totalFeesOnLedger += tf;
-    if (tf > 0 && bal > 0) outstanding += Math.max(0, bal);
+    const tid = r.term_id ?? null;
+    const isCurrent = currentTermId != null && tid === currentTermId;
+    if (isCurrent) currentTermTotalFees += tf;
+    const o = tf > 0 && bal > 0 ? Math.max(0, bal) : 0;
+    outstanding += o;
+    if (o > 0) {
+      if (isCurrent) outstandingCurrentTerm += o;
+      else outstandingPriorTerms += o;
+    }
   }
   return {
     outstanding: Math.round(outstanding),
-    totalFeesOnLedger: Math.round(totalFeesOnLedger),
+    outstandingCurrentTerm: Math.round(outstandingCurrentTerm),
+    outstandingPriorTerms: Math.round(outstandingPriorTerms),
+    currentTermTotalFees: Math.round(currentTermTotalFees),
   };
 }
 
@@ -466,7 +486,9 @@ export async function fetchFinancialAnalytics(params: {
       paymentMethods: [],
       comparison: null,
       ledgerOutstanding: 0,
-      ledgerTotalFees: 0,
+      ledgerOutstandingCurrentTerm: 0,
+      ledgerOutstandingPriorTerms: 0,
+      ledgerCurrentTermTotalFees: 0,
     };
   }
 
@@ -510,14 +532,18 @@ export async function fetchFinancialAnalytics(params: {
       paymentMethods: [],
       comparison: null,
       ledgerOutstanding: 0,
-      ledgerTotalFees: 0,
+      ledgerOutstandingCurrentTerm: 0,
+      ledgerOutstandingPriorTerms: 0,
+      ledgerCurrentTermTotalFees: 0,
     };
   }
 
-  /** All terms: aligns KPIs with admin dashboard total overall balance (not filtered by analytics period/term). */
+  const calendarCurrentTermId = pickCurrentTermId(terms, todayStr);
+
+  /** School-wide ledger snapshot for collection KPIs (split by calendar current term vs older). */
   const ledgerBalancesPromise = supabase
     .from("student_balances")
-    .select("balance, total_fees")
+    .select("balance, total_fees, term_id")
     .eq("school_id", schoolId);
 
   const prevRange = previousComparableRange(start, end, financialYear, terms, termScope, termScope === "one" ? termId : undefined, todayStr);
@@ -580,10 +606,12 @@ export async function fetchFinancialAnalytics(params: {
     ledgerBalancesPromise,
   ]);
 
-  const ledgerRows = (ledgerRes.data || []) as { balance?: number; total_fees?: number }[];
-  const ledgerAgg = aggregateLedgerSchoolWide(ledgerRows);
-  const ledgerOutstanding = ledgerAgg.outstanding;
-  const ledgerTotalFees = ledgerAgg.totalFeesOnLedger;
+  const ledgerRows = (ledgerRes.data || []) as LedgerBalanceRow[];
+  const L = aggregateLedgerKpis(ledgerRows, calendarCurrentTermId);
+  const ledgerOutstanding = L.outstanding;
+  const ledgerOutstandingCurrentTerm = L.outstandingCurrentTerm;
+  const ledgerOutstandingPriorTerms = L.outstandingPriorTerms;
+  const ledgerCurrentTermTotalFees = L.currentTermTotalFees;
 
   const payments = (paymentsRes.data || []) as {
     amount_paid?: number;
@@ -747,6 +775,8 @@ export async function fetchFinancialAnalytics(params: {
     paymentMethods,
     comparison,
     ledgerOutstanding,
-    ledgerTotalFees,
+    ledgerOutstandingCurrentTerm,
+    ledgerOutstandingPriorTerms,
+    ledgerCurrentTermTotalFees,
   };
 }
