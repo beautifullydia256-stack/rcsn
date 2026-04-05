@@ -5,7 +5,7 @@ import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '../../../lib/adminQueryDe
 import { supabase } from '../../../lib/supabase';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { ChevronDown, Key, Search, UserCheck, UserX, Users } from 'lucide-react';
+import { Key, Search, UserCheck, UserX, Users } from 'lucide-react';
 
 const ROLE_OPTIONS = [
   { value: '', label: 'All roles' },
@@ -251,24 +251,41 @@ export default function AccountsPage() {
           </div>
         </div>
 
-        <div className="flex gap-3 overflow-x-auto pb-1 snap-x snap-mandatory [-ms-overflow-style:none] [scrollbar-width:thin] sm:flex-wrap sm:overflow-visible">
-          {DASHBOARD_ROLE_KEYS.map((r) => (
-            <div
-              key={r}
-              className="ac-glass-card flex min-w-[148px] shrink-0 snap-start items-center justify-between gap-3 rounded-[18px] border border-[var(--ac-border)] px-3 py-3 sm:min-w-0 sm:flex-1 sm:basis-[calc(33.333%-0.5rem)] lg:basis-[calc(20%-0.5rem)]"
-            >
-              <span className={`max-w-[60%] truncate px-2 py-1 text-center text-xs ${getRoleBadgeClass(r)} rounded-md border`}>
-                {getRoleLabel(r)}
-              </span>
-              <span className="text-lg font-bold tabular-nums text-[var(--ac-text-primary)]">
-                {accounts.filter((a) => a.role === r).length}
-              </span>
-            </div>
-          ))}
-        </div>
+        <section
+          className="rounded-2xl border border-[var(--ac-border)] p-3 shadow-sm sm:p-4"
+          style={{ background: 'var(--ac-sidebar-active-bg)' }}
+          aria-label="People by role"
+        >
+          <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--ac-text-muted)]">
+            People by role
+          </h2>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+            {DASHBOARD_ROLE_KEYS.map((r) => {
+              const n = accounts.filter((a) => a.role === r).length;
+              return (
+                <div
+                  key={r}
+                  className="flex min-h-[4.25rem] flex-col justify-center rounded-xl border border-[var(--ac-border)] px-3 py-2.5 shadow-sm"
+                  style={{ backgroundColor: 'var(--ac-card-bg-fallback)' }}
+                >
+                  <span className="line-clamp-2 text-[11px] font-medium leading-snug text-[var(--ac-text-secondary)] sm:text-xs">
+                    {getRoleLabel(r)}
+                  </span>
+                  <span
+                    className={`mt-0.5 text-xl font-bold tabular-nums sm:text-2xl ${
+                      n === 0 ? 'text-[var(--ac-text-muted)]' : 'text-[var(--ac-text-primary)]'
+                    }`}
+                  >
+                    {n}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
         <div className={`${adminCardClass} space-y-4 p-4 sm:p-6`}>
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="space-y-3">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]" />
               <input
@@ -279,19 +296,27 @@ export default function AccountsPage() {
                 className="ac-input min-h-11 w-full rounded-xl py-3 pl-10 pr-3 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/30 sm:text-sm"
               />
             </div>
-            <div className="relative w-full sm:w-52 lg:w-56">
-              <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                className="ac-input min-h-11 w-full cursor-pointer appearance-none rounded-xl py-3 pl-3 pr-10 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/30 sm:text-sm"
-              >
-                {ROLE_OPTIONS.map((o) => (
-                  <option key={o.value || 'all'} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]" aria-hidden />
+            <div>
+              <p className="mb-2 text-xs font-medium text-[var(--ac-text-muted)]">Filter by role</p>
+              <div className="flex max-h-[9rem] flex-wrap gap-2 overflow-y-auto pr-0.5 sm:max-h-none">
+                {ROLE_OPTIONS.map((o) => {
+                  const active = roleFilter === o.value;
+                  return (
+                    <button
+                      key={o.value || 'all'}
+                      type="button"
+                      onClick={() => setRoleFilter(o.value)}
+                      className={`min-h-9 rounded-full border px-3 py-1.5 text-left text-xs font-semibold transition sm:text-[13px] ${
+                        active
+                          ? 'border-emerald-500/70 bg-emerald-500/15 text-emerald-800 shadow-sm dark:border-emerald-500/50 dark:text-emerald-300'
+                          : 'border-[var(--ac-border)] text-[var(--ac-text-secondary)] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                      }`}
+                    >
+                      {o.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

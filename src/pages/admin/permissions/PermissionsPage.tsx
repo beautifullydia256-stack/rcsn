@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, Shield } from 'lucide-react';
+import { Search, Shield, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
@@ -27,6 +27,23 @@ export async function fetchSchoolUsers(adminUserId: string): Promise<SchoolUser[
     .order('name');
   if (error) throw error;
   return (data || []) as SchoolUser[];
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Admin',
+  owner: 'Owner',
+  head_teacher: 'Head Teacher',
+  accountant: 'Accountant',
+  teacher: 'Teacher',
+  librarian: 'Librarian',
+  lab_technician: 'Lab technician',
+  clinician: 'School clinician',
+  student: 'Student',
+  parent: 'Parent',
+};
+
+function labelRole(role: string) {
+  return ROLE_LABEL[role] ?? role.replace(/_/g, ' ');
 }
 
 async function fetchPermissionsForUser(userId: string, schoolId: string): Promise<Set<string>> {
@@ -72,6 +89,7 @@ export default function PermissionsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [localKeys, setLocalKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin', 'permissions-users', authUser?.id],
@@ -81,6 +99,18 @@ export default function PermissionsPage() {
   });
 
   const selectedUser = useMemo(() => users.find((u) => u.user_id === selectedId) ?? null, [users, selectedId]);
+
+  const filteredPickerUsers = useMemo(() => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      const name = (u.name || '').toLowerCase();
+      const email = (u.email || '').toLowerCase();
+      const role = (u.role || '').toLowerCase();
+      const rolePretty = labelRole(u.role || '').toLowerCase();
+      return name.includes(q) || email.includes(q) || role.includes(q) || rolePretty.includes(q);
+    });
+  }, [users, userSearch]);
 
   const { data: serverKeys, isLoading: loadingPerms } = useQuery({
     queryKey: ['admin', 'user-permissions', selectedId, schoolId],
@@ -221,28 +251,94 @@ export default function PermissionsPage() {
               No users loaded for this school. Check access or try again in a moment.
             </div>
           ) : (
-            <div className="space-y-2">
-              <label htmlFor="perm-user-select" className="block text-sm font-semibold text-[var(--ac-text-primary)]">
-                Who are you editing?
+            <div className="space-y-3">
+              <label htmlFor="perm-user-search" className="block text-sm font-semibold text-[var(--ac-text-primary)]">
+                Find a user
               </label>
-              <div className="relative max-w-lg">
-                <select
-                  id="perm-user-select"
-                  className="ac-input min-h-12 w-full cursor-pointer appearance-none rounded-xl py-3 pl-4 pr-11 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/35"
-                  value={selectedId ?? ''}
-                  onChange={(e) => setSelectedId(e.target.value || null)}
-                >
-                  <option value="">Select a user from your school…</option>
-                  {users.map((u) => (
-                    <option key={u.user_id} value={u.user_id}>
-                      {(u.name || u.email || 'User') + ` · ${u.role}`}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]"
+              <p className="text-sm text-[var(--ac-text-secondary)]">
+                Search by name, email, or role, then choose someone from the list below.
+              </p>
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ac-text-muted)]"
                   aria-hidden
                 />
+                <input
+                  id="perm-user-search"
+                  type="search"
+                  autoComplete="off"
+                  placeholder="e.g. Mary, @school.com, teacher…"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  className="ac-input min-h-12 w-full rounded-xl py-3 pl-10 pr-10 text-[15px] outline-none transition focus:ring-2 focus:ring-emerald-500/35"
+                />
+                {userSearch.trim() ? (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--ac-text-muted)] hover:bg-black/[0.06] dark:hover:bg-white/10"
+                    aria-label="Clear search"
+                    onClick={() => setUserSearch('')}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-[var(--ac-border)] bg-[var(--ac-card-bg-fallback)] shadow-sm">
+                <div className="flex items-center justify-between border-b border-[var(--ac-border)] px-3 py-2 text-xs text-[var(--ac-text-muted)]">
+                  <span>
+                    {filteredPickerUsers.length === users.length
+                      ? `${users.length} people`
+                      : `${filteredPickerUsers.length} match${filteredPickerUsers.length === 1 ? '' : 'es'}`}
+                  </span>
+                  {selectedUser ? (
+                    <button
+                      type="button"
+                      className="font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                      onClick={() => setSelectedId(null)}
+                    >
+                      Clear selection
+                    </button>
+                  ) : null}
+                </div>
+                <ul
+                  className="max-h-[min(60vh,22rem)] divide-y divide-[var(--ac-border)] overflow-y-auto overscroll-contain"
+                  role="listbox"
+                  aria-label="School users"
+                >
+                  {filteredPickerUsers.length === 0 ? (
+                    <li className="px-4 py-8 text-center text-sm text-[var(--ac-text-muted)]">No names match that search.</li>
+                  ) : (
+                    filteredPickerUsers.map((u) => {
+                      const active = u.user_id === selectedId;
+                      return (
+                        <li key={u.user_id}>
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={active}
+                            onClick={() => setSelectedId(u.user_id)}
+                            className={`flex w-full flex-col gap-0.5 px-4 py-3 text-left transition sm:flex-row sm:items-center sm:gap-3 ${
+                              active
+                                ? 'bg-emerald-500/15 ring-1 ring-inset ring-emerald-500/30'
+                                : 'hover:bg-black/[0.04] dark:hover:bg-white/[0.06]'
+                            }`}
+                          >
+                            <span className="min-w-0 flex-1 font-medium text-gray-900 dark:text-white">
+                              {u.name?.trim() || u.email || 'Unnamed'}
+                            </span>
+                            <span className="inline-flex w-fit shrink-0 rounded-md border border-[var(--ac-border)] bg-white px-2 py-0.5 text-xs font-medium text-gray-800 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100">
+                              {labelRole(u.role)}
+                            </span>
+                            <span className="min-w-0 break-all text-sm text-gray-600 dark:text-slate-300 sm:max-w-[40%] sm:truncate sm:text-right">
+                              {u.email || '—'}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
               </div>
             </div>
           )}
