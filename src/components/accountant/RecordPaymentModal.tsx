@@ -8,7 +8,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
-import { PaymentReceipt, formatReceiptDateTime, type PaymentReceiptData } from "./PaymentReceipt";
+import {
+  PaymentReceipt,
+  formatReceiptDateTime,
+  schoolRowToReceiptHeader,
+  type PaymentReceiptData,
+  type SchoolBrandingRow,
+} from "./PaymentReceipt";
 import { Receipt, X } from "lucide-react";
 
 type OutstandingBalanceRow = { kind: "term"; term_id: string; term: number; year: number; balance: number };
@@ -128,7 +134,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const [hasCurrentTermInvoice, setHasCurrentTermInvoice] = useState<boolean | null>(null);
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [activatingInvoice, setActivatingInvoice] = useState(false);
-  const [schoolName, setSchoolName] = useState("");
+  const [schoolLetterhead, setSchoolLetterhead] = useState(() => schoolRowToReceiptHeader(null));
   const paymentSubmitLockRef = useRef(false);
 
   useEffect(() => {
@@ -142,10 +148,14 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         supabase.from("students").select("student_id, name, current_class, status").eq("school_id", schoolId).eq("status", "active").order("name"),
         supabase.from("school_terms").select("id, term, year, start_date, end_date").eq("school_id", schoolId).order("year", { ascending: false }).order("term", { ascending: false }),
         supabase.from("student_balances").select("student_id").eq("school_id", schoolId).gt("balance", 0),
-        supabase.from("schools").select("name").eq("school_id", schoolId).single(),
+        supabase
+          .from("schools")
+          .select("name, motto, address, location, pobox, contact_phone, contact_email")
+          .eq("school_id", schoolId)
+          .single(),
       ]);
-      const school = (schoolRes.data as { name?: string } | null) ?? null;
-      setSchoolName(school?.name ?? "");
+      const school = (schoolRes.data as SchoolBrandingRow | null) ?? null;
+      setSchoolLetterhead(schoolRowToReceiptHeader(school));
       const active = (sRes.data || []) as { student_id: string; name: string; current_class: string; status?: string }[];
       const termList = (tRes.data || []) as { id: string; term: number; year: number }[];
       setTerms(termList);
@@ -434,9 +444,16 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           receiptNum = null;
         }
       }
-      const year = new Date().getFullYear();
+      const firstAllocTerm = firstTermAlloc?.term ?? currentTerm?.term ?? 1;
+      const now = new Date();
+      const ymd =
+        String(now.getFullYear()) +
+        String(now.getMonth() + 1).padStart(2, "0") +
+        String(now.getDate()).padStart(2, "0");
+      const codeFallback = schoolId.replace(/-/g, "").slice(0, 4).toUpperCase();
+      const seqFallback = Math.max(1, (Date.now() % 9998) + 1);
       const receiptNumberForPayments =
-        receiptNum ?? "RCT-" + year + "-T1-" + Date.now().toString().slice(-4).padStart(4, "0");
+        receiptNum ?? `${codeFallback}${ymd}${firstAllocTerm * 10000 + seqFallback}`;
 
       const termIds = allocations.filter((a): a is Extract<PaymentAllocation, { kind: "term" }> => a.kind === "term").map((a) => a.term_id);
       const { data: invoices } =
@@ -505,8 +522,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
       const { data: userRow } = await supabase.from("users").select("name").eq("user_id", userId).single();
       const recordedByName = (userRow as { name?: string } | null)?.name?.trim() || userName || userEmail || "Staff";
       setReceiptData({
+        ...schoolLetterhead,
         receiptNumber: receiptNumberForPayments,
-        schoolName: schoolName || undefined,
         studentName: studentRow?.name ?? "—",
         studentClass: studentRow?.current_class ?? "—",
         termLabel: allocationLines.length === 1 ? allocationLines[0].termLabel : "Multiple terms",

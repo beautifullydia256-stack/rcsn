@@ -23,6 +23,10 @@ export default function ReceiptsPage() {
   const studentMap = data?.studentMap ?? {};
   const termMap = data?.termMap ?? {};
   const schoolName = data?.schoolName ?? "";
+  const schoolMotto = data?.schoolMotto;
+  const schoolAddress = data?.schoolAddress;
+  const schoolPhone = data?.schoolPhone;
+  const schoolEmail = data?.schoolEmail;
   const recorderMap = data?.recorderMap ?? {};
   const filtered = q.trim()
     ? payments.filter((p) => {
@@ -82,6 +86,10 @@ export default function ReceiptsPage() {
     const receiptData: PaymentReceiptData = {
       receiptNumber: first.receipt_number || first.payment_id,
       schoolName: schoolName.trim() || undefined,
+      schoolMotto,
+      schoolAddress,
+      schoolPhone,
+      schoolEmail,
       studentName: s?.name ?? "—",
       studentClass: s?.current_class ?? "—",
       termLabel: allocations.length === 1 ? allocations[0].termLabel : "Multiple terms",

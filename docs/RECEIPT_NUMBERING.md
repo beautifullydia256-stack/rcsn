@@ -2,22 +2,20 @@
 
 ## Format
 
-**Structure:** `{DocumentType}-{SchoolCode}-{AcademicYear}-{Term}-{SequenceNumber}`
+**Structure:** `{SchoolCode}{YYYYMMDD}{Term×10000 + Sequence}` — compact, no dashes, no `RCT-` prefix.
 
-**Example:** `RCT-KLA-2026-T1-0003` (school code KLA) or `RCT-RAK-2026-T1-0003` (school code RAK)
+**Example:** `RIP2026040410003` — school code `RIP`, date `2026-04-04`, term **1**, sequence **3** → suffix `10003` (= 1×10000 + 3).
 
 | Part | Meaning | Notes |
 |------|---------|--------|
-| RCT | Document type | Fixed for receipts; INV = invoice, CRN = credit note |
-| KLA | School code | From `schools.school_code`; unique per school so **no two schools share the same receipt number** |
-| 2026 | Academic year | From school calendar / term |
-| T1 | Term | T1, T2, T3 only |
-| 0003 | Sequence | 4 digits, zero-padded; resets each term per school |
+| RIP | School code | From `schools.school_code` (uppercase); fallback first 4 hex chars of `school_id` |
+| 20260404 | Calendar date | `CURRENT_DATE` on the database server when the receipt is issued (`YYYYMMDD`) |
+| 10003 | Term + sequence | Term **n** (1–3) and per-term sequence **s** (1–9999): **`n * 10000 + s`**. Examples: term 1 seq 1 → `10001`; term 2 seq 5 → `20005` |
 
 ## Rules
 
-- **Sequence** resets at the start of each term per school (e.g. first receipt in Term 2 is `RCT-KLA-2026-T2-0001`).
-- **Uniqueness:** Receipt numbers are **globally unique** — school code ensures no two schools ever get the same number (e.g. School A never has the same RCT as School B).
+- **Sequence** resets at the start of each **academic term** per school (same bucket as `receipt_sequences_per_term`).
+- **Uniqueness:** School code + date + suffix keeps numbers distinguishable across schools; suffix increments per term.
 - **Storage:** Full number is stored in `student_payments.receipt_number` (use for printing, PDF, email).
 - **Generation:** `get_next_receipt_number(p_school_id, p_term_id)` returns the next number for that school and term.
 
@@ -41,9 +39,10 @@ Migrations live in your repo under **`supabase/migrations/`**. To apply them in 
 
 3. **Receipt-related migrations (run in this order):**
    - `20260219160000_receipt_numbering_rct_year_term_seq.sql` — table + first version of `get_next_receipt_number`
-   - `20260219170000_receipt_number_include_school_code.sql` — same function updated to include school code so receipt numbers are unique across all schools
+   - `20260219170000_receipt_number_include_school_code.sql` — RCT-… format with school code
+   - `20260511120000_receipt_number_compact_date_termseq.sql` — current compact format `{code}{YYYYMMDD}{term×10000+seq}`
 
 ## Optional (future)
 
-- **Multi-campus:** Add campus code, e.g. `RCT-KLA-2026-T1-0001`.
+- **Multi-campus:** Add campus segment to the compact string if needed.
 - **Stored parts:** Add columns `receipt_academic_year`, `receipt_term`, `receipt_sequence_number` if reporting by part is needed.

@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase";
+import { schoolRowToReceiptHeader, type SchoolBrandingRow } from "../../../components/accountant/PaymentReceipt";
 
 export type PaymentRow = {
   payment_id: string;
@@ -12,7 +13,7 @@ export type PaymentRow = {
   recorded_by: string | null;
   notes: string | null;
   created_at: string | null;
-  receipt_total_remaining_balance: number | string | null;
+  receipt_total_remaining_balance?: number | string | null;
 };
 
 export type StudentMap = Record<string, { name: string; current_class: string }>;
@@ -24,6 +25,10 @@ export type ReceiptsData = {
   studentMap: StudentMap;
   termMap: TermMap;
   schoolName: string;
+  schoolMotto?: string;
+  schoolAddress?: string;
+  schoolPhone?: string;
+  schoolEmail?: string;
   recorderMap: RecorderMap;
 };
 
@@ -41,11 +46,16 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
       .order("payment_date", { ascending: false })
       .order("payment_id", { ascending: false })
       .limit(200),
-    supabase.from("schools").select("name").eq("school_id", schoolId).maybeSingle(),
+    supabase
+      .from("schools")
+      .select("name, motto, address, location, pobox, contact_phone, contact_email")
+      .eq("school_id", schoolId)
+      .maybeSingle(),
   ]);
   if (payErr) throw new Error(payErr.message);
   if (schoolErr) throw new Error(schoolErr.message);
   const rows = (payData || []) as PaymentRow[];
+  const letterhead = schoolRowToReceiptHeader((schoolRow as SchoolBrandingRow | null) ?? null);
   const studentIds = [...new Set(rows.map((r) => r.student_id))];
   const termIds = [...new Set(rows.map((r) => r.term_id))];
   const recorderIds = [...new Set(rows.map((r) => r.recorded_by).filter(Boolean))] as string[];
@@ -74,7 +84,11 @@ export async function fetchReceipts(schoolId: string): Promise<ReceiptsData> {
     payments: rows,
     studentMap,
     termMap,
-    schoolName: String(schoolRow?.name ?? "").trim(),
+    schoolName: letterhead.schoolName ?? "",
+    schoolMotto: letterhead.schoolMotto,
+    schoolAddress: letterhead.schoolAddress,
+    schoolPhone: letterhead.schoolPhone,
+    schoolEmail: letterhead.schoolEmail,
     recorderMap,
   };
 }
