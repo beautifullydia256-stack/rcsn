@@ -280,9 +280,9 @@ export default function FinancialOverview() {
             />
             <KPICard
               icon={TrendingUp}
-              label="Net (this term bucket only)"
+              label="Net (fee receipts − expenses)"
               value={fmt(tp.netTermCash)}
-              subline="Payments tagged this term minus expenses tagged this term—not total cash on hand"
+              subline="This term only: payments with this term_id minus expenses tagged this term. See “School cash position” for all terms."
               variant={tp.netTermCash >= 0 ? "green" : "orange"}
             />
           </div>
