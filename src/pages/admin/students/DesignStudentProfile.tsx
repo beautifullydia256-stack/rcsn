@@ -84,6 +84,44 @@ function fmtUGX(n: number | null | undefined): string {
   return `UGX ${Number(n).toLocaleString()}`;
 }
 
+type InvoicePayBadge = { text: string; badgeClass: 'green' | 'amber' | 'rose' | 'muted' };
+
+function invoicePaymentBadge(status: string, amountPaid: number, balance: number): InvoicePayBadge {
+  const st = String(status || '').toLowerCase();
+  const bal = Number(balance);
+  const ap = Number(amountPaid);
+  if (st === 'cancelled') return { text: 'Cancelled', badgeClass: 'muted' };
+  if (st === 'written_off') return { text: 'Written off', badgeClass: 'muted' };
+  if (st === 'draft') return { text: 'Draft', badgeClass: 'muted' };
+  if (st === 'paid' || bal <= 0.005) return { text: 'Paid', badgeClass: 'green' };
+  if (ap > 0.005 && bal > 0.005) return { text: 'Partially paid', badgeClass: 'amber' };
+  return { text: 'Unpaid', badgeClass: 'rose' };
+}
+
+type SchoolTermLabel = { year: number; term: number; end_date: string };
+
+/** PostgREST may type/embed FK as T | T[]; normalize to one row. */
+function normalizeSchoolTermEmbed(v: unknown): SchoolTermLabel | null {
+  if (v == null) return null;
+  if (Array.isArray(v)) {
+    const first = v[0];
+    return first && typeof first === 'object' ? (first as SchoolTermLabel) : null;
+  }
+  return typeof v === 'object' ? (v as SchoolTermLabel) : null;
+}
+
+type ProfileInvoiceRow = {
+  invoice_number: string | null;
+  invoice_label: string | null;
+  is_supplementary: boolean | null;
+  total_amount: number | string;
+  amount_paid: number | string;
+  balance: number | string;
+  status: string;
+  created_at: string | null;
+  school_terms: SchoolTermLabel | null;
+};
+
 function attColor(pct: number): string {
   if (pct >= 80) return 'var(--green)';
   if (pct >= 60) return 'var(--amber)';
@@ -369,7 +407,7 @@ export default function DesignStudentProfile() {
           : Promise.resolve({ data: [], error: null }),
       ]);
 
-      const [feeBal, paymentQ] = await Promise.all([
+      const [feeBal, paymentQ, invoicesQ] = await Promise.all([
         loadStudentBalanceAggAllTerms(supabase, schoolId, studentId),
         supabase
           .from('student_payments')
@@ -379,8 +417,50 @@ export default function DesignStudentProfile() {
           .order('payment_date', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase
+          .from('student_invoices')
+          .select(
+            'invoice_number, invoice_label, is_supplementary, total_amount, amount_paid, balance, status, created_at, school_terms(year, term, end_date)'
+          )
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId),
       ]);
       const paymentRes = { data: paymentQ.error ? null : paymentQ.data };
+      if (invoicesQ.error && import.meta.env.DEV) {
+        console.warn('[DesignStudentProfile] student_invoices:', invoicesQ.error.message);
+      }
+      const invoiceRows: ProfileInvoiceRow[] = (invoicesQ.error ? [] : invoicesQ.data || []).map(
+        (row) => {
+          const r = row as Record<string, unknown>;
+          return {
+            invoice_number: (r.invoice_number as string | null) ?? null,
+            invoice_label: (r.invoice_label as string | null) ?? null,
+            is_supplementary: (r.is_supplementary as boolean | null) ?? null,
+            total_amount: r.total_amount as number | string,
+            amount_paid: r.amount_paid as number | string,
+            balance: r.balance as number | string,
+            status: String(r.status ?? ''),
+            created_at: (r.created_at as string | null) ?? null,
+            school_terms: normalizeSchoolTermEmbed(r.school_terms),
+          };
+        }
+      );
+      invoiceRows.sort((a, b) => {
+        const ta = a.school_terms;
+        const tb = b.school_terms;
+        const yA = ta?.year ?? 0;
+        const yB = tb?.year ?? 0;
+        if (yB !== yA) return yB - yA;
+        const termA = ta?.term ?? 0;
+        const termB = tb?.term ?? 0;
+        if (termB !== termA) return termB - termA;
+        const supA = a.is_supplementary ? 1 : 0;
+        const supB = b.is_supplementary ? 1 : 0;
+        if (supA !== supB) return supA - supB;
+        const ca = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const cb = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return cb - ca;
+      });
 
       /** Same resolution as students list: portal `parents` rows + guardian_* on `students` when unlinked. */
       if (parentsRes.error && import.meta.env.DEV) {
@@ -797,6 +877,59 @@ export default function DesignStudentProfile() {
         );
         set('#sp-payment-method', lastPayment?.payment_method ? String(lastPayment.payment_method) : '—');
         set('#sp-scholarship', disc);
+
+        if (invoiceRows.length === 0) {
+          setHTML(
+            '#sp-invoices-body',
+            `<div class="sp-empty">
+              <div class="sp-empty-icon">📄</div>
+              <div>No invoices yet for this student.</div>
+              <div style="font-size:12px;color:var(--text-muted)">Invoices appear when fees are generated for a term.</div>
+            </div>`
+          );
+        } else {
+          const invCells = invoiceRows
+            .map((row) => {
+              const term = row.school_terms;
+              const termLabel = term ? `Term ${term.term}, ${term.year}` : '—';
+              const invNo = String(row.invoice_number ?? '').trim() || '—';
+              const desc =
+                String(row.invoice_label ?? '').trim() ||
+                (row.is_supplementary ? 'Supplementary' : 'Term invoice');
+              const total = Number(row.total_amount);
+              const paid = Number(row.amount_paid);
+              const bal = Number(row.balance);
+              const { text: payLabel, badgeClass } = invoicePaymentBadge(row.status, paid, bal);
+              const supHtml = row.is_supplementary
+                ? `<div class="sp-inv-sublabel">Supplementary</div>`
+                : '';
+              return `<tr>
+                <td><strong>${escapeHtml(invNo)}</strong>${supHtml}</td>
+                <td>${escapeHtml(termLabel)}</td>
+                <td>${escapeHtml(desc)}</td>
+                <td class="num">${fmtUGX(total)}</td>
+                <td class="num">${fmtUGX(paid)}</td>
+                <td class="num">${bal > 0.005 ? fmtUGX(bal) : '—'}</td>
+                <td><span class="sp-inv-badge ${badgeClass}">${escapeHtml(payLabel)}</span></td>
+              </tr>`;
+            })
+            .join('');
+          setHTML(
+            '#sp-invoices-body',
+            `<table class="sp-invoices-table">
+              <thead><tr>
+                <th>Invoice</th>
+                <th>Term</th>
+                <th>Details</th>
+                <th class="num">Total</th>
+                <th class="num">Paid</th>
+                <th class="num">Balance</th>
+                <th>Payment status</th>
+              </tr></thead>
+              <tbody>${invCells}</tbody>
+            </table>`
+          );
+        }
 
         const monthBars = Object.entries(monthMap).map(([mon, data]) => {
           const pct = data.total > 0 ? Math.round((data.present / data.total) * 100) : 0;

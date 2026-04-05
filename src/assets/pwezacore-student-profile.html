@@ -79,6 +79,7 @@
  *    #sp-last-payment-date        textContent
  *    #sp-payment-method           textContent
  *    #sp-scholarship              textContent
+ *    #sp-invoices-body            innerHTML — invoice table or empty state
  *
  *  TAB: ATTENDANCE
  *    #sp-attendance-months        innerHTML — att-month blocks (template below)
@@ -521,6 +522,48 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-fee-value.green { color: var(--green); }
 .pw-profile .sp-fee-value.amber { color: var(--amber); }
 .pw-profile .sp-fee-value.rose  { color: var(--rose); }
+
+.pw-profile .sp-invoices-wrap { overflow-x: auto; margin-top: 4px; }
+.pw-profile .sp-invoices-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pw-profile .sp-invoices-table th,
+.pw-profile .sp-invoices-table td {
+  padding: 10px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.pw-profile .sp-invoices-table th {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pw-profile .sp-invoices-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pw-profile .sp-inv-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.pw-profile .sp-inv-badge.green { background: var(--green-soft); color: var(--green); }
+.pw-profile .sp-inv-badge.amber { background: var(--amber-soft); color: var(--amber); }
+.pw-profile .sp-inv-badge.rose { background: var(--rose-soft); color: var(--rose); }
+.pw-profile .sp-inv-badge.muted { background: var(--surface-2); color: var(--text-muted); }
+.pw-profile .sp-inv-sublabel {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
 
 /* ── ATTENDANCE BAR ROW ── */
 .pw-profile .sp-att-row {
@@ -968,6 +1011,18 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
                 <span class="sp-field-value muted" id="sp-scholarship">None</span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="sp-card">
+          <div class="sp-card-head">
+            <div class="sp-card-title">
+              <div class="sp-card-title-icon" style="background:var(--accent-soft)">📄</div>
+              Invoices (all terms)
+            </div>
+          </div>
+          <div class="sp-card-body">
+            <div id="sp-invoices-body" class="sp-invoices-wrap"></div>
           </div>
         </div>
       </div>
