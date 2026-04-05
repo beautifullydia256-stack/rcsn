@@ -225,6 +225,7 @@ export default function InviteFromRosterPage() {
       setSelectedStaff(null);
       await queryClient.invalidateQueries({ queryKey: ['admin', 'invite-roster', schoolId] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'other-staff', schoolId] });
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'school-roster', schoolId] });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'accounts', authUser?.id ?? ''] });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Request failed.');

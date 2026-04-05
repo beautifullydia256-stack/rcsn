@@ -14,6 +14,7 @@ export async function prefetchAdminSidebarRoutes(userId: string, schoolId: strin
       queryClient.setQueryData(['admin', 'accounts', userId], await m.fetchAccounts(userId));
     }),
     import('@/pages/admin/staff/StaffPage').then(async (m) => {
+      queryClient.setQueryData(['admin', 'school-roster', schoolId], await m.fetchSchoolRoster(schoolId));
       queryClient.setQueryData(['admin', 'other-staff', schoolId], await m.fetchOtherStaff(schoolId));
     }),
     import('@/pages/admin/accounts/InviteFromRosterPage').then(async (m) => {

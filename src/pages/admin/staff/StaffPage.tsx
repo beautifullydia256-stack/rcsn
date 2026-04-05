@@ -8,6 +8,7 @@ import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/p
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
+import { isValidRealEmail } from '@/lib/realEmail';
 
 const STALE_MS = 60 * 1000;
 
@@ -41,7 +42,7 @@ type OtherStaffRow = {
   created_at: string;
 };
 
-export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]> {
+async function fetchOtherStaffRows(schoolId: string): Promise<OtherStaffRow[]> {
   const { data, error } = await supabase
     .from('other_staff_members')
     .select(
@@ -53,10 +54,96 @@ export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]
   return (data || []) as OtherStaffRow[];
 }
 
+/** @deprecated Prefer fetchSchoolRoster — kept for callers that only need other_staff_members. */
+export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]> {
+  return fetchOtherStaffRows(schoolId);
+}
+
+export type SchoolRosterRow = {
+  rowKey: string;
+  kind: 'teacher' | 'other_staff';
+  id: string;
+  full_name: string;
+  job_title: string | null;
+  department: string | null;
+  email: string | null;
+  phone: string | null;
+  staff_role: string | null;
+  linked_user_id: string | null;
+  pay_frequency: string | null;
+  salary_amount: number | null;
+};
+
+/**
+ * School-wide roster (parents excluded): `teachers` plus `other_staff_members`, with login from `users.linked_teacher_id` / `linked_user_id`.
+ */
+export async function fetchSchoolRoster(schoolId: string): Promise<SchoolRosterRow[]> {
+  const [teachersRes, otherRows, usersRes] = await Promise.all([
+    supabase
+      .from('teachers')
+      .select('teacher_id, name, phone, email, salary, pay_frequency, created_at')
+      .eq('school_id', schoolId)
+      .order('name'),
+    fetchOtherStaffRows(schoolId),
+    supabase
+      .from('users')
+      .select('user_id, linked_teacher_id')
+      .eq('school_id', schoolId)
+      .eq('role', 'teacher')
+      .not('linked_teacher_id', 'is', null),
+  ]);
+
+  if (teachersRes.error) throw teachersRes.error;
+  if (usersRes.error) throw usersRes.error;
+
+  const teacherToUser = new Map<string, string>();
+  for (const u of usersRes.data || []) {
+    const tid = u.linked_teacher_id as string | null;
+    if (tid) teacherToUser.set(tid, u.user_id as string);
+  }
+
+  const teacherEntries: SchoolRosterRow[] = (teachersRes.data || []).map((t) => ({
+    rowKey: `teacher:${t.teacher_id}`,
+    kind: 'teacher',
+    id: t.teacher_id as string,
+    full_name: String(t.name || ''),
+    job_title: null,
+    department: null,
+    email: t.email != null ? String(t.email) : null,
+    phone: t.phone != null ? String(t.phone) : null,
+    staff_role: null,
+    linked_user_id: teacherToUser.get(t.teacher_id as string) ?? null,
+    pay_frequency: t.pay_frequency != null ? String(t.pay_frequency) : null,
+    salary_amount: t.salary != null ? Number(t.salary) : null,
+  }));
+
+  const otherEntries: SchoolRosterRow[] = otherRows.map((r) => ({
+    rowKey: `other:${r.id}`,
+    kind: 'other_staff',
+    id: r.id,
+    full_name: r.full_name,
+    job_title: r.job_title,
+    department: r.department,
+    email: r.email,
+    phone: r.phone,
+    staff_role: r.staff_role,
+    linked_user_id: r.linked_user_id,
+    pay_frequency: r.pay_frequency,
+    salary_amount: r.salary_amount,
+  }));
+
+  return [...teacherEntries, ...otherEntries].sort((a, b) =>
+    a.full_name.localeCompare(b.full_name, undefined, { sensitivity: 'base' })
+  );
+}
+
 type LoginFilter = 'all' | 'linked' | 'unlinked';
 
-/** First question: will they receive a dashboard login or stay on file only? */
+/** Will they receive a dashboard login or stay on file only? */
 type StaffRecordIntent = 'login' | 'support';
+
+/** Teaching vs non-teaching — both use real tables (`teachers` vs `other_staff_members`). */
+type RosterKind = 'teacher' | 'non_teaching';
 
 const fieldStyle: React.CSSProperties = {
   width: '100%',
@@ -95,6 +182,7 @@ export default function StaffPage() {
   const [q, setQ] = useState('');
 
   const [recordIntent, setRecordIntent] = useState<StaffRecordIntent | null>(null);
+  const [rosterKind, setRosterKind] = useState<RosterKind | null>(null);
   const [fullName, setFullName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
   const [department, setDepartment] = useState('');
@@ -133,8 +221,8 @@ export default function StaffPage() {
   }, [authUser?.id, schoolIdFromStore, setSchoolIdStore]);
 
   const { data: rows = [], isLoading } = useQuery({
-    queryKey: ['admin', 'other-staff', schoolId],
-    queryFn: () => fetchOtherStaff(schoolId!),
+    queryKey: ['admin', 'school-roster', schoolId],
+    queryFn: () => fetchSchoolRoster(schoolId!),
     enabled: !!schoolId,
     staleTime: STALE_MS,
   });
@@ -152,21 +240,37 @@ export default function StaffPage() {
     const s = q.trim().toLowerCase();
     if (s) {
       list = list.filter((r) => {
+        const roleStr =
+          r.kind === 'teacher'
+            ? 'teacher teaching'
+            : [
+                r.staff_role || '',
+                dashLabel(r.staff_role) || '',
+                r.job_title || '',
+                r.department || '',
+              ].join(' ');
         return (
           r.full_name.toLowerCase().includes(s) ||
-          (r.job_title || '').toLowerCase().includes(s) ||
-          (r.department || '').toLowerCase().includes(s) ||
+          roleStr.toLowerCase().includes(s) ||
           (r.email || '').toLowerCase().includes(s) ||
-          (r.staff_role || '').toLowerCase().includes(s) ||
-          (dashLabel(r.staff_role) || '').toLowerCase().includes(s)
+          (r.phone || '').toLowerCase().includes(s)
         );
       });
     }
     return list;
   }, [rows, loginFilter, q]);
 
+  const invalidateRoster = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'school-roster', schoolId] });
+    await queryClient.invalidateQueries({ queryKey: ['admin', 'other-staff', schoolId] });
+    if (authUser?.id) {
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'teachers', authUser.id] });
+    }
+  };
+
   const resetForm = () => {
     setRecordIntent(null);
+    setRosterKind(null);
     setFullName('');
     setJobTitle('');
     setDepartment('');
@@ -191,21 +295,57 @@ export default function StaffPage() {
       setFormError('Start by choosing how this person is recorded: dashboard login or on-file only.');
       return;
     }
+    if (rosterKind == null) {
+      setFormError('Choose whether they are teaching staff or non-teaching staff.');
+      return;
+    }
     const name = fullName.trim();
     if (!name) {
       setFormError('Full name is required.');
-      return;
-    }
-    if (recordIntent === 'login' && !staffRole.trim()) {
-      setFormError('Choose a dashboard role (e.g. Accountant). Teachers belong under Teachers, not here.');
       return;
     }
     if (!schoolId) {
       setFormError('No school linked to your account.');
       return;
     }
+
+    if (rosterKind === 'teacher') {
+      const em = email.trim();
+      if (!isValidRealEmail(em)) {
+        setFormError('Enter a valid email for this teacher (same record as the Teachers page; used for invitations).');
+        return;
+      }
+      setSaving(true);
+      try {
+        const { error } = await supabase.from('teachers').insert({
+          school_id: schoolId,
+          name,
+          email: em,
+          phone: phone.trim() || null,
+          address: address.trim() || null,
+          national_id: nationalId.trim() || null,
+          salary: salaryAmount ? Number(salaryAmount) : null,
+          pay_frequency: payFrequency || null,
+          ...(hireDate ? { date_of_hire: hireDate } : {}),
+        });
+        if (error) throw error;
+        resetForm();
+        await invalidateRoster();
+      } catch (err: unknown) {
+        setFormError(err instanceof Error ? err.message : 'Could not save teacher.');
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    if (recordIntent === 'login' && !staffRole.trim()) {
+      setFormError('Choose a dashboard role (e.g. Accountant).');
+      return;
+    }
+
     const isDashboard = recordIntent === 'login';
-    const jobOut = isDashboard ? jobTitle.trim() || null : jobTitle.trim() || null;
+    const jobOut = jobTitle.trim() || null;
     const deptOut = isDashboard ? department.trim() || null : null;
     const roleOut = isDashboard ? staffRole.trim() || null : null;
     setSaving(true);
@@ -229,7 +369,7 @@ export default function StaffPage() {
       });
       if (error) throw error;
       resetForm();
-      await queryClient.invalidateQueries({ queryKey: ['admin', 'other-staff', schoolId] });
+      await invalidateRoster();
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : 'Could not save.');
     } finally {
@@ -237,14 +377,24 @@ export default function StaffPage() {
     }
   };
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDeleteOther = async (id: string, name: string) => {
     if (!confirm(`Remove "${name}" from other staff records?`)) return;
     const { error } = await supabase.from('other_staff_members').delete().eq('id', id);
     if (error) {
       alert(error.message);
       return;
     }
-    await queryClient.invalidateQueries({ queryKey: ['admin', 'other-staff', schoolId] });
+    await invalidateRoster();
+  };
+
+  const handleDeleteTeacher = async (teacherId: string, name: string) => {
+    if (!confirm(`Delete teacher "${name}"? This cannot be undone.`)) return;
+    const { error } = await supabase.from('teachers').delete().eq('teacher_id', teacherId);
+    if (error) {
+      alert(error.message);
+      return;
+    }
+    await invalidateRoster();
   };
 
   if (!schoolResolved) {
@@ -277,16 +427,19 @@ export default function StaffPage() {
           <div className="par-eyebrow">Management</div>
           <h1 className="par-title">Staff</h1>
           <p className="par-sub">
-            <strong>Teachers</strong> are managed under <strong>Teachers</strong> (different table). This page saves to{' '}
-            <code style={{ fontSize: 12 }}>other_staff_members</code> — same columns the database expects. After{' '}
-            <strong>Send invitations</strong>, a successful invite sets <code style={{ fontSize: 12 }}>linked_user_id</code>{' '}
-            to their <code style={{ fontSize: 12 }}>users</code> row; expenses can link via{' '}
+            Unified roster for your school: <strong>teachers</strong> (from <code style={{ fontSize: 12 }}>teachers</code>)
+            and <strong>non-teaching staff</strong> (from <code style={{ fontSize: 12 }}>other_staff_members</code>).
+            Parents and students are not listed here. A login shows as &quot;Linked&quot; when their{' '}
+            <code style={{ fontSize: 12 }}>users</code> row is connected (
+            <code style={{ fontSize: 12 }}>linked_teacher_id</code> or <code style={{ fontSize: 12 }}>linked_user_id</code>
+            ). Open a teacher&apos;s <strong>profile</strong> to edit full teaching details or send an invite — it is the same
+            database row. Non-teaching rows use <strong>Send invitations</strong> and expenses may use{' '}
             <code style={{ fontSize: 12 }}>linked_other_staff_id</code>.
           </p>
         </div>
         <div className="par-actions">
           <Link to="/dashboard/admin/teachers?add=1" className="par-btn par-btn-ghost">
-            ＋ Add teacher
+            ＋ Add teacher (full form)
           </Link>
           <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-violet">
             📨 Send invitations
@@ -303,7 +456,7 @@ export default function StaffPage() {
           <div>
             <div className="par-kpi-label">On file</div>
             <div className="par-kpi-val cv">{rows.length}</div>
-            <div className="par-kpi-sub">Other staff records</div>
+            <div className="par-kpi-sub">Teachers + other staff</div>
           </div>
         </div>
         <div className="par-kpi cg">
@@ -328,8 +481,9 @@ export default function StaffPage() {
         <div className="par-pcard-top">
           <div className="par-pcard-name">Add to roster</div>
           <div className="par-pcard-rel">
-            Step 1: how they relate to the app. Step 2: name and details. Job title &amp; department appear only for
-            dashboard roles — not for teachers (use Teachers) and not for on-file-only staff.
+            Step 1: login vs on-file. Step 2: teaching vs non-teaching. Teachers save to the same table as the Teachers
+            directory; accountants, drivers, etc. save to other staff. Job title and department apply to non-teaching
+            dashboard roles only.
           </div>
         </div>
         <div className="par-pcard-body">
@@ -346,12 +500,9 @@ export default function StaffPage() {
             <div style={{ marginBottom: 8 }}>
               <label style={{ ...labelStyle, marginBottom: 10 }}>1 — Will they use a dashboard login?</label>
               <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 10, lineHeight: 1.45 }}>
-                Choose first. Dashboard staff get a role (accountant, librarian, …) and may be invited. On-file-only is
-                for people with <strong>no</strong> app account (e.g. drivers). Teachers are added under{' '}
-                <Link to="/dashboard/admin/teachers?add=1" style={{ color: 'var(--violet)' }}>
-                  Teachers
-                </Link>
-                .
+                Choose first. <strong>Yes</strong> means you plan to invite them to the app when ready. <strong>No</strong> is
+                for people who stay on file only (e.g. some drivers). This does not change which database table they use —
+                teaching vs non-teaching is the next step.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 <button
@@ -359,16 +510,18 @@ export default function StaffPage() {
                   className={recordIntent === 'login' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
                   onClick={() => {
                     setRecordIntent('login');
+                    setRosterKind(null);
                     setFormError(null);
                   }}
                 >
-                  Yes — dashboard role (invite later)
+                  Yes — dashboard login (invite later)
                 </button>
                 <button
                   type="button"
                   className={recordIntent === 'support' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
                   onClick={() => {
                     setRecordIntent('support');
+                    setRosterKind(null);
                     setStaffRole('');
                     setDepartment('');
                     setFormError(null);
@@ -381,141 +534,195 @@ export default function StaffPage() {
 
             {recordIntent != null ? (
               <>
-                {recordIntent === 'login' ? (
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <label style={labelStyle}>Dashboard role</label>
-                    <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6 }}>
-                      Stored in <code style={{ fontSize: 11 }}>staff_role</code>. Then add job title &amp; department — these
-                      describe their placement; they are not teachers.
-                    </p>
-                    <select
-                      style={{ ...fieldStyle, cursor: 'pointer' }}
-                      value={staffRole}
-                      onChange={(e) => setStaffRole(e.target.value)}
-                      required={recordIntent === 'login'}
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ ...labelStyle, marginBottom: 10 }}>2 — Teaching or non-teaching?</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    <button
+                      type="button"
+                      className={rosterKind === 'teacher' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
+                      onClick={() => {
+                        setRosterKind('teacher');
+                        setStaffRole('');
+                        setDepartment('');
+                        setJobTitle('');
+                        setFormError(null);
+                      }}
                     >
-                      <option value="">— Select role —</option>
-                      {STAFF_ROSTER_ROLES.map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </select>
+                      Teaching staff
+                    </button>
+                    <button
+                      type="button"
+                      className={rosterKind === 'non_teaching' ? 'par-btn par-btn-violet' : 'par-btn par-btn-ghost'}
+                      onClick={() => {
+                        setRosterKind('non_teaching');
+                        setFormError(null);
+                      }}
+                    >
+                      Non-teaching staff
+                    </button>
                   </div>
-                ) : (
+                </div>
+
+                {rosterKind === 'teacher' ? (
                   <div
                     className="par-chip muted"
                     style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 4 }}
                   >
-                    <strong style={{ color: 'var(--t2)' }}>On-file only</strong>
+                    <strong style={{ color: 'var(--t2)' }}>Teacher record</strong>
                     <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--t3)', fontWeight: 500 }}>
-                      <code style={{ fontSize: 11 }}>staff_role</code> will stay empty. Optionally describe what they do in
-                      one line below — not a duplicate &quot;teacher&quot; record.
+                      Saves to <code style={{ fontSize: 11 }}>teachers</code>. Open their profile for classes, subjects,
+                      documents, and invitations — everything stays on that row.
                     </span>
                   </div>
-                )}
+                ) : null}
 
-                <div
-                  style={{
-                    borderTop: '1px solid var(--border)',
-                    paddingTop: 16,
-                    marginTop: 4,
-                  }}
-                >
-                  <label style={{ ...labelStyle, marginBottom: 10 }}>2 — Identity</label>
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                      gap: 14,
-                    }}
-                  >
+                {rosterKind === 'non_teaching' ? (
+                  recordIntent === 'login' ? (
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={labelStyle}>
-                        Full name <span style={{ color: 'var(--rose)' }}>*</span>
-                      </label>
-                      <input style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
-                    </div>
-
-                    {recordIntent === 'login' ? (
-                      <>
-                        <div>
-                          <label style={labelStyle}>Job title</label>
-                          <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Their day-to-day title at school.</p>
-                          <input style={fieldStyle} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Senior accountant" />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Department / unit</label>
-                          <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Office or unit — not the teaching department.</p>
-                          <input style={fieldStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Finance office" />
-                        </div>
-                      </>
-                    ) : (
-                      <div style={{ gridColumn: '1 / -1' }}>
-                        <label style={labelStyle}>What they do (optional)</label>
-                        <input
-                          style={fieldStyle}
-                          value={jobTitle}
-                          onChange={(e) => setJobTitle(e.target.value)}
-                          placeholder="e.g. Driver, Security — one short line"
-                        />
-                      </div>
-                    )}
-
-                    <div>
-                      <label style={labelStyle}>Phone</label>
-                      <input style={fieldStyle} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Email</label>
-                      <input
-                        style={fieldStyle}
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        type="email"
-                        placeholder={recordIntent === 'login' ? 'Needed before invitation' : 'Optional'}
-                      />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>National ID</label>
-                      <input style={fieldStyle} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={labelStyle}>Address</label>
-                      <input style={fieldStyle} value={address} onChange={(e) => setAddress(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Emergency name</label>
-                      <input style={fieldStyle} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Emergency phone</label>
-                      <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Hire date</label>
-                      <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Salary (reference)</label>
-                      <input style={fieldStyle} type="number" min={0} step={1000} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="Planning only" />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Pay cycle</label>
-                      <select style={{ ...fieldStyle, cursor: 'pointer' }} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
-                        {PAY_OPTIONS.map((o) => (
-                          <option key={o.value || 'empty'} value={o.value}>
+                      <label style={labelStyle}>Dashboard role</label>
+                      <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6 }}>
+                        Stored in                         <code style={{ fontSize: 11 }}>staff_role</code> on{' '}
+                        <code style={{ fontSize: 11 }}>other_staff_members</code>.
+                      </p>
+                      <select
+                        style={{ ...fieldStyle, cursor: 'pointer' }}
+                        value={staffRole}
+                        onChange={(e) => setStaffRole(e.target.value)}
+                        required={recordIntent === 'login' && rosterKind === 'non_teaching'}
+                      >
+                        <option value="">— Select role —</option>
+                        {STAFF_ROSTER_ROLES.map((o) => (
+                          <option key={o.value} value={o.value}>
                             {o.label}
                           </option>
                         ))}
                       </select>
                     </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={labelStyle}>Notes</label>
-                      <textarea style={{ ...fieldStyle, minHeight: 72, resize: 'vertical' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract, uniforms…" />
+                  ) : (
+                    <div
+                      className="par-chip muted"
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '12px 14px', marginBottom: 4 }}
+                    >
+                      <strong style={{ color: 'var(--t2)' }}>On-file only (non-teaching)</strong>
+                      <span style={{ display: 'block', marginTop: 6, fontSize: 12.5, color: 'var(--t3)', fontWeight: 500 }}>
+                        <code style={{ fontSize: 11 }}>staff_role</code> stays empty. Optionally describe what they do below.
+                      </span>
+                    </div>
+                  )
+                ) : null}
+
+                {rosterKind != null ? (
+                  <div
+                    style={{
+                      borderTop: '1px solid var(--border)',
+                      paddingTop: 16,
+                      marginTop: 4,
+                    }}
+                  >
+                    <label style={{ ...labelStyle, marginBottom: 10 }}>3 — Identity &amp; details</label>
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                        gap: 14,
+                      }}
+                    >
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>
+                          Full name <span style={{ color: 'var(--rose)' }}>*</span>
+                        </label>
+              <input style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
+                      </div>
+
+                      {rosterKind === 'non_teaching' && recordIntent === 'login' ? (
+                        <>
+                          <div>
+                            <label style={labelStyle}>Job title</label>
+                            <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Their day-to-day title at school.</p>
+                            <input style={fieldStyle} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Senior accountant" />
+                          </div>
+                          <div>
+                            <label style={labelStyle}>Department / unit</label>
+                            <p style={{ fontSize: 11, color: 'var(--t3)', marginBottom: 6 }}>Office or unit.</p>
+                            <input style={fieldStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Finance office" />
+                          </div>
+                        </>
+                      ) : null}
+
+                      {rosterKind === 'non_teaching' && recordIntent === 'support' ? (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={labelStyle}>What they do (optional)</label>
+                          <input
+                            style={fieldStyle}
+                            value={jobTitle}
+                            onChange={(e) => setJobTitle(e.target.value)}
+                            placeholder="e.g. Driver, Security — one short line"
+                          />
+                        </div>
+                      ) : null}
+
+                      <div>
+                        <label style={labelStyle}>Phone</label>
+                        <input style={fieldStyle} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Email{rosterKind === 'teacher' ? ' *' : ''}</label>
+                        <input
+                          style={fieldStyle}
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          type="email"
+                          placeholder={
+                            rosterKind === 'teacher'
+                              ? 'Required — record & invitations'
+                              : recordIntent === 'login'
+                                ? 'Use before invitation'
+                                : 'Optional'
+                          }
+                          required={rosterKind === 'teacher'}
+                        />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>National ID</label>
+                        <input style={fieldStyle} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>Address</label>
+                        <input style={fieldStyle} value={address} onChange={(e) => setAddress(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Emergency name</label>
+                        <input style={fieldStyle} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Emergency phone</label>
+                        <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Hire date</label>
+                        <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Salary (reference)</label>
+                        <input style={fieldStyle} type="number" min={0} step={1000} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="Planning only" />
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Pay cycle</label>
+                        <select style={{ ...fieldStyle, cursor: 'pointer' }} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
+                          {PAY_OPTIONS.map((o) => (
+                            <option key={o.value || 'empty'} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={labelStyle}>Notes</label>
+                        <textarea style={{ ...fieldStyle, minHeight: 72, resize: 'vertical' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract, uniforms…" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                ) : null}
               </>
             ) : null}
             <div className="par-pcard-foot" style={{ borderTop: 'none', paddingTop: 0, paddingLeft: 0, paddingRight: 0 }}>
@@ -569,25 +776,29 @@ export default function StaffPage() {
         </div>
       ) : filteredRows.length === 0 ? (
         <div className="par-empty par-fu par-d4">
-          <div className="par-empty-title">{rows.length === 0 ? 'No staff records yet' : 'No matches'}</div>
+          <div className="par-empty-title">{rows.length === 0 ? 'No staff on file yet' : 'No matches'}</div>
           <div className="par-empty-sub">
             {rows.length === 0
-              ? 'Use the form above to add someone, or adjust search / filters.'
+              ? 'Teachers appear here automatically from the Teachers directory. Add non-teaching staff above, or add teachers via Teaching staff / Teachers.'
               : 'Try clearing search or showing All.'}
           </div>
         </div>
       ) : (
         <div className="par-card-grid par-fu par-d4">
           {filteredRows.map((r, i) => {
-            const roleLabel = dashLabel(r.staff_role) || 'Support staff';
-            const subtitle = r.job_title || r.department || 'Other staff';
+            const isTeacher = r.kind === 'teacher';
+            const roleLabel = isTeacher ? 'Teacher' : dashLabel(r.staff_role) || 'Non-teaching';
+            const subtitle = isTeacher
+              ? 'Teaching staff'
+              : r.job_title || r.department || (r.staff_role ? roleLabel : 'Other staff');
             const payLbl = PAY_OPTIONS.find((p) => p.value === (r.pay_frequency || ''))?.label;
+            const cornerTone = isTeacher ? pwRoleToChipTone('teacher') : r.staff_role ? pwRoleToChipTone(r.staff_role) : 'muted';
             return (
               <PwDirectoryUserCard
-                key={r.id}
+                key={r.rowKey}
                 name={r.full_name}
                 subtitle={subtitle}
-                cornerTone={r.staff_role ? pwRoleToChipTone(r.staff_role) : 'muted'}
+                cornerTone={cornerTone}
                 cornerLabel={roleLabel}
                 initials={pwDirInitials(r.full_name)}
                 avatarBackground={pwDirGrad(i)}
@@ -635,16 +846,34 @@ export default function StaffPage() {
                   },
                 ]}
                 footer={
-                  <button
-                    type="button"
-                    className="par-crd-btn par-crd-ghost"
-                    style={{ color: 'var(--rose)', flex: '0 0 auto' }}
-                    onClick={() => void handleDelete(r.id, r.full_name)}
-                    title="Remove record"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Remove
-                  </button>
+                  isTeacher ? (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', width: '100%' }}>
+                      <Link to={`/dashboard/admin/teachers/${r.id}`} className="par-crd-btn par-crd-primary" style={{ flex: '1 1 auto' }}>
+                        Profile
+                      </Link>
+                      <button
+                        type="button"
+                        className="par-crd-btn par-crd-ghost"
+                        style={{ color: 'var(--rose)', flex: '0 0 auto' }}
+                        onClick={() => void handleDeleteTeacher(r.id, r.full_name)}
+                        title="Delete teacher"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="par-crd-btn par-crd-ghost"
+                      style={{ color: 'var(--rose)', flex: '0 0 auto' }}
+                      onClick={() => void handleDeleteOther(r.id, r.full_name)}
+                      title="Remove record"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove
+                    </button>
+                  )
                 }
               />
             );
