@@ -5,8 +5,13 @@ import { supabase } from "../../lib/supabase";
 import { resolveCurrentSchoolTerm, type SchoolTermBrief } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { fetchBillingData, BILLING_QUERY_KEY } from "./api/billing";
+import type { TermRow } from "./api/billing";
 
 const STALE_MS = 2 * 60 * 1000;
+
+function termIsStrictlyBefore(a: Pick<TermRow, "year" | "term">, b: Pick<TermRow, "year" | "term">) {
+  return a.year < b.year || (a.year === b.year && a.term < b.term);
+}
 
 export default function BillingPage() {
   const navigate = useNavigate();
@@ -46,6 +51,10 @@ export default function BillingPage() {
   /** Split lines for move_prior_balance_to_term_opening_invoices (Option 1: real term rows). */
   const [priorSplitRows, setPriorSplitRows] = useState<{ termId: string; amount: string }[]>([{ termId: "", amount: "" }]);
   const [movingPrior, setMovingPrior] = useState(false);
+  const [carryoverTermId, setCarryoverTermId] = useState("");
+  const [carryoverAmount, setCarryoverAmount] = useState("");
+  const [carryoverIncludeTermFee, setCarryoverIncludeTermFee] = useState(true);
+  const [savingCarryover, setSavingCarryover] = useState(false);
 
   useEffect(() => {
     if (!schoolId) {
@@ -95,6 +104,34 @@ export default function BillingPage() {
     () => [...termsList].sort((a, b) => (a.year !== b.year ? a.year - b.year : a.term - b.term)),
     [termsList]
   );
+
+  /** Latest past term before the calendar “current” term — e.g. Term 3, 2025 when current is Term 1, 2026. */
+  const defaultCarryoverTermId = useMemo(() => {
+    if (
+      currentTermResolved &&
+      currentTerm?.year != null &&
+      currentTerm.term != null &&
+      termsOldestFirst.length > 0
+    ) {
+      const past = termsOldestFirst.filter((t) =>
+        termIsStrictlyBefore({ year: t.year, term: t.term }, { year: currentTerm.year!, term: currentTerm.term! })
+      );
+      if (past.length > 0) return past[past.length - 1]!.id;
+    }
+    return termsOldestFirst[0]?.id ?? null;
+  }, [termsOldestFirst, currentTerm, currentTermResolved]);
+
+  const hasPastTermBeforeCurrent =
+    currentTerm?.year != null &&
+    currentTerm.term != null &&
+    termsOldestFirst.some((t) =>
+      termIsStrictlyBefore({ year: t.year, term: t.term }, { year: currentTerm.year!, term: currentTerm.term! })
+    );
+
+  useEffect(() => {
+    setCarryoverTermId(defaultCarryoverTermId ?? "");
+    setCarryoverAmount("");
+  }, [selectedStudent, defaultCarryoverTermId]);
 
   const termOutstandingForSelected = selectedStudent
     ? Number(termInvoiceOutstandingByStudent[selectedStudent] ?? 0)
@@ -209,6 +246,72 @@ export default function BillingPage() {
       setMessage({ type: "err", text: (e as Error).message || "Could not move prior balance." });
     } finally {
       setMovingPrior(false);
+    }
+  }
+
+  async function handleApplyCarryoverToTerm() {
+    if (!schoolId || !selectedStudent) {
+      setMessage({ type: "err", text: "Select a student first." });
+      return;
+    }
+    if (priorTotalForSelected > 0.005) {
+      setMessage({
+        type: "err",
+        text:
+          "This student already has a prior-system ledger balance. Finish “Move prior onto term invoices” below first, or ask an admin to adjust that entry.",
+      });
+      return;
+    }
+    if (!carryoverTermId) {
+      setMessage({
+        type: "err",
+        text: "Select a school term. If no past term appears, add last year’s terms under your school calendar first.",
+      });
+      return;
+    }
+    const carry = Number(carryoverAmount);
+    if (!Number.isFinite(carry) || carry <= 0) {
+      setMessage({ type: "err", text: "Enter a positive carry-over amount (arrears from before Pweza)." });
+      return;
+    }
+    const baseFee =
+      carryoverIncludeTermFee && suggestedAmount > 0 ? Math.round(suggestedAmount * 100) / 100 : 0;
+    setSavingCarryover(true);
+    setMessage(null);
+    try {
+      const { data, error } = await supabase.rpc("apply_carryover_balance_to_term_invoice", {
+        p_school_id: schoolId,
+        p_student_id: selectedStudent,
+        p_term_id: carryoverTermId,
+        p_carryover_amount: carry,
+        p_base_term_fee: baseFee,
+      });
+      if (error) throw new Error(error.message);
+      const row = data as {
+        invoice_number?: string;
+        total_amount?: number;
+        base_term_fee?: number;
+        carryover_amount?: number;
+      } | null;
+      const total = row?.total_amount ?? carry + baseFee;
+      const parts = [
+        `Invoice ${row?.invoice_number ?? ""}`.trim(),
+        `total due for that term: ${Number(total).toLocaleString()}`,
+
+        `(carry-over ${Number(row?.carryover_amount ?? carry).toLocaleString()}` +
+          (baseFee > 0 ? ` + term fee ${Number(row?.base_term_fee ?? baseFee).toLocaleString()}` : "") +
+          ").",
+      ];
+      setMessage({
+        type: "ok",
+        text: `${parts.join(" — ")} Record Payment will list this under normal term balances.`,
+      });
+      setCarryoverAmount("");
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
+    } catch (e: unknown) {
+      setMessage({ type: "err", text: (e as Error).message || "Could not save carry-over on term." });
+    } finally {
+      setSavingCarryover(false);
     }
   }
 
@@ -568,11 +671,11 @@ export default function BillingPage() {
                     </h3>
                     {showPriorAndCombinedInSummary ? (
                       <p className="ac-text-muted text-xs">
-                        <strong>Preferred:</strong> move prior debt onto real term invoices (below) so Record Payment lists each term oldest-first, like other students. One-off prior entry is a fallback when you cannot split amounts by term. Each student may have only one prior row; closed-term rules still apply for brand-new prior inserts.
+                        This student still has a <strong>prior-system ledger</strong> row. Use <strong>Move prior onto term invoices</strong> below to turn it into normal term debt. New arrears should use <strong>Carry-over balance</strong> first so nothing hits the prior ledger.
                       </p>
                     ) : (
                       <p className="ac-text-muted text-xs">
-                        Amount still due on term invoices for this student. Further school fees use term invoices only (one active invoice per student per term).
+                        <strong>Carry-over balance</strong> (below) puts old arrears straight onto a past school term—same as other fees, oldest term first in Record Payment. The summary here uses term invoice balances; generate the current-term invoice separately when you are ready.
                       </p>
                     )}
                     {priorEntryBlockedReason && (
@@ -610,6 +713,72 @@ export default function BillingPage() {
                         {priorAggForSelected.lastEnteredAt ? ` (${new Date(priorAggForSelected.lastEnteredAt).toLocaleString()})` : ""}
                         {priorAggForSelected.lastSourceNote ? `: ${priorAggForSelected.lastSourceNote}` : ""}
                       </p>
+                    )}
+                    {priorTotalForSelected <= 0.005 && termsOldestFirst.length > 0 && (
+                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
+                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">
+                          Carry-over balance (before Pweza)
+                        </h4>
+                        <p className="ac-text-muted text-xs">
+                          Old arrears go on the <strong>term you choose</strong> as a normal invoice. We pre-select the latest school period <strong>before</strong> today&apos;s active calendar term (for example Term 3, 2025 when you are in Term 1, 2026). You can change the term if the head teacher confirms a different period.
+                        </p>
+                        {currentTermResolved && !hasPastTermBeforeCurrent && currentTerm != null && (
+                          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                            No term earlier than the current calendar term exists in your school yet. Add last year&apos;s terms (e.g. Term 3, 2025) under Admin / school terms, then refresh—otherwise pick any term from the list if it already exists.
+                          </p>
+                        )}
+                        <div>
+                          <label className="ac-text-secondary mb-1 block text-xs font-medium">Put carry-over on term</label>
+                          <select
+                            value={carryoverTermId}
+                            onChange={(e) => setCarryoverTermId(e.target.value)}
+                            className="ac-input"
+                            disabled={savingCarryover}
+                          >
+                            <option value="">Select term</option>
+                            {termsOldestFirst.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                Term {t.term}, {t.year}
+                                {t.is_closed ? " (closed)" : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Carry-over amount</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={carryoverAmount}
+                            onChange={(e) => setCarryoverAmount(e.target.value)}
+                            className="ac-input tabular-nums"
+                            placeholder="e.g. 150000"
+                            disabled={savingCarryover}
+                          />
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-300">
+                          <input
+                            type="checkbox"
+                            className="rounded border-slate-500"
+                            checked={carryoverIncludeTermFee}
+                            onChange={(e) => setCarryoverIncludeTermFee(e.target.checked)}
+                            disabled={savingCarryover || suggestedAmount <= 0}
+                          />
+                          <span>
+                            Include this class&apos;s term fee on the <strong>same</strong> invoice (
+                            {suggestedAmount > 0 ? suggestedAmount.toLocaleString() : "no fee set"})
+                          </span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => void handleApplyCarryoverToTerm()}
+                          disabled={savingCarryover || !userId || !carryoverTermId}
+                          className="ac-glass-btn rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                        >
+                          {savingCarryover ? "Saving…" : "Save carry-over on this term"}
+                        </button>
+                      </div>
                     )}
                     {showPriorAndCombinedInSummary && priorTotalForSelected > 0.005 && (
                       <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
@@ -697,41 +866,48 @@ export default function BillingPage() {
                       </div>
                     )}
                     {!priorEntryBlockedReason && (
-                      <div className="border-t border-[var(--ac-border)] pt-4 space-y-3">
-                        <h4 className="ac-text-secondary text-xs font-semibold uppercase tracking-wide">Add prior-system entry</h4>
-                        <div>
-                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={priorAmount}
-                            onChange={(e) => setPriorAmount(e.target.value)}
-                            className="ac-input"
-                            placeholder="e.g. 150000"
-                            disabled={savingPrior}
-                          />
+                      <details className="border-t border-[var(--ac-border)] pt-4">
+                        <summary className="ac-text-muted cursor-pointer text-xs font-medium">
+                          Advanced: prior-system ledger only (avoid if you can use carry-over above)
+                        </summary>
+                        <div className="mt-3 space-y-3">
+                          <p className="ac-text-muted text-xs">
+                            Rare fallback when you cannot map arrears to a school term. Prefer <strong>Carry-over balance</strong> so all debt stays on term invoices.
+                          </p>
+                          <div>
+                            <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={priorAmount}
+                              onChange={(e) => setPriorAmount(e.target.value)}
+                              className="ac-input"
+                              placeholder="e.g. 150000"
+                              disabled={savingPrior}
+                            />
+                          </div>
+                          <div>
+                            <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
+                            <textarea
+                              value={priorNote}
+                              onChange={(e) => setPriorNote(e.target.value)}
+                              className="ac-input min-h-[72px] resize-y"
+                              placeholder="e.g. Old Excel Term 2 2024"
+                              disabled={savingPrior}
+                              rows={2}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleAddPriorEntry}
+                            disabled={savingPrior || !userId}
+                            className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
+                          >
+                            {savingPrior ? "Saving…" : "Add prior-system entry"}
+                          </button>
                         </div>
-                        <div>
-                          <label className="ac-text-secondary mb-1 block text-sm font-medium">Note</label>
-                          <textarea
-                            value={priorNote}
-                            onChange={(e) => setPriorNote(e.target.value)}
-                            className="ac-input min-h-[72px] resize-y"
-                            placeholder="e.g. Old Excel Term 2 2024"
-                            disabled={savingPrior}
-                            rows={2}
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleAddPriorEntry}
-                          disabled={savingPrior || !userId}
-                          className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium disabled:opacity-50"
-                        >
-                          {savingPrior ? "Saving…" : "Add prior-system entry"}
-                        </button>
-                      </div>
+                      </details>
                     )}
                   </div>
                 )}
