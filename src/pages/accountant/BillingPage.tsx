@@ -10,6 +10,10 @@ const STALE_MS = 2 * 60 * 1000;
 
 const DEFAULT_SUPPLEMENTARY_LABEL = "Outstanding balance from previous terms";
 
+/** Exists when student already has is_supplementary = false invoice for this term */
+const mainInvoiceQueryKey = (schoolId: string, studentId: string, termId: string) =>
+  [...BILLING_QUERY_KEY, "mainInvoice", schoolId, studentId, termId] as const;
+
 export default function BillingPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -58,6 +62,28 @@ export default function BillingPage() {
       cancelled = true;
     };
   }, [schoolId]);
+
+  const canCheckMainInvoice =
+    !!schoolId && !!selectedStudent && !!currentTerm?.id && currentTermResolved;
+  const { data: mainInvoiceRow, isPending: mainInvoicePending } = useQuery({
+    queryKey: mainInvoiceQueryKey(schoolId ?? "", selectedStudent, currentTerm?.id ?? ""),
+    queryFn: async () => {
+      const { data: row, error } = await supabase
+        .from("student_invoices")
+        .select("invoice_id")
+        .eq("school_id", schoolId!)
+        .eq("student_id", selectedStudent)
+        .eq("term_id", currentTerm!.id)
+        .eq("is_supplementary", false)
+        .neq("status", "cancelled")
+        .maybeSingle();
+      if (error) throw error;
+      return row as { invoice_id: string } | null;
+    },
+    enabled: canCheckMainInvoice,
+    staleTime: STALE_MS,
+  });
+  const hasMainInvoiceForCurrentTerm = !!mainInvoiceRow?.invoice_id;
 
   const classNames = fees.map((r) => r.class_name);
   const normalizeClass = (c: string) => (c || "").trim().toLowerCase();
@@ -131,6 +157,7 @@ export default function BillingPage() {
       });
       setSupplementaryAmount("");
       await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, schoolId] });
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, "mainInvoice", schoolId] });
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Could not add this invoice." });
     } finally {
@@ -264,6 +291,7 @@ export default function BillingPage() {
       setSelectedStudent("");
       setStudentSearchQuery("");
       setSingleAmount("");
+      await queryClient.invalidateQueries({ queryKey: [...BILLING_QUERY_KEY, "mainInvoice", schoolId] });
     } catch (e: unknown) {
       setMessage({ type: "err", text: (e as Error).message || "Failed to generate invoice." });
     } finally {
@@ -426,26 +454,50 @@ export default function BillingPage() {
                     </p>
                   )}
                 </div>
-                <div>
-                  <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={singleAmount || (selectedStudent ? suggestedAmount : "")}
-                    onChange={(e) => setSingleAmount(e.target.value)}
-                    className="ac-input"
-                    placeholder={selectedStudent ? String(suggestedAmount) : ""}
-                  />
-                  {selectedStudent && suggestedAmount > 0 && (
-                    <p className="ac-text-muted mt-1 text-xs">Suggested from fee structure: {suggestedAmount.toLocaleString()}</p>
-                  )}
-                </div>
+                {selectedStudent &&
+                  currentTermResolved &&
+                  (canCheckMainInvoice && mainInvoicePending ? (
+                    <p className="ac-text-muted text-sm">Checking whether a main fee invoice already exists for this term…</p>
+                  ) : canCheckMainInvoice && !hasMainInvoiceForCurrentTerm ? (
+                    <div>
+                      <label className="ac-text-secondary mb-1 block text-sm font-medium">Amount</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={singleAmount || (selectedStudent ? suggestedAmount : "")}
+                        onChange={(e) => setSingleAmount(e.target.value)}
+                        className="ac-input"
+                        placeholder={selectedStudent ? String(suggestedAmount) : ""}
+                      />
+                      {selectedStudent && suggestedAmount > 0 && (
+                        <p className="ac-text-muted mt-1 text-xs">
+                          Suggested from fee structure: {suggestedAmount.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ) : canCheckMainInvoice && hasMainInvoiceForCurrentTerm ? (
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+                      Main term fee invoice for <strong>this</strong> term is already created. Use{" "}
+                      <strong>Additional charge</strong> below only if you need another line (brought-forward, etc.) on
+                      the same term.
+                    </div>
+                  ) : null)}
                 {selectedStudent && selectedStudentRow && (
                   <div className="rounded-xl border border-[var(--ac-border)] bg-white/5 p-4 space-y-4">
                     <h3 className="ac-text-primary text-sm font-semibold">Outstanding balance</h3>
                     <p className="ac-text-muted text-xs">
-                      This is the total the student still owes across <strong>all</strong> terms. Use <strong>Generate invoice</strong> for the usual term fee (one main invoice per current term). Use <strong>Additional charge</strong> for brought-forward or other amounts—all on the <strong>current term</strong>, with a label you choose so it stays clear in receipts and debugging.
+                      This is the total the student still owes across <strong>all</strong> terms.
+                      {canCheckMainInvoice &&
+                      !mainInvoicePending &&
+                      !hasMainInvoiceForCurrentTerm &&
+                      currentTerm?.id
+                        ? " Use Generate invoice (below) once for the usual term fee when none exists yet for this term."
+                        : canCheckMainInvoice && !mainInvoicePending && hasMainInvoiceForCurrentTerm
+                          ? " The main fee for the current term is already invoiced; add more with Additional charge if needed."
+                          : ""}{" "}
+                      <strong>Additional charge</strong> adds a labelled invoice line on the <strong>current term</strong>{" "}
+                      only.
                     </p>
                     <dl className="grid gap-2 text-sm">
                       <div className="flex justify-between gap-4">
@@ -497,14 +549,20 @@ export default function BillingPage() {
                     </div>
                   </div>
                 )}
-                <button
-                  type="button"
-                  onClick={handleGenerateSingle}
-                  disabled={generating || !currentTerm?.id || !selectedStudent}
-                  className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
-                >
-                  {generating ? "Generating…" : "Generate invoice"}
-                </button>
+                {!hasMainInvoiceForCurrentTerm &&
+                  !mainInvoicePending &&
+                  canCheckMainInvoice &&
+                  selectedStudent &&
+                  currentTermResolved && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateSingle}
+                    disabled={generating || !currentTerm?.id || !selectedStudent}
+                    className="ac-glass-btn rounded-xl px-4 py-2.5 text-sm font-medium disabled:opacity-50"
+                  >
+                    {generating ? "Generating…" : "Generate invoice"}
+                  </button>
+                )}
               </>
             )}
           </div>
