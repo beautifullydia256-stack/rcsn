@@ -276,11 +276,35 @@ export type FinancialAnalyticsData = {
   effectiveEnd: string;
   paymentMethods: PaymentMethodRow[];
   comparison: PeriodComparison | null;
-  /** Sum of positive `student_balances.balance` for the same term scope as the analytics query. */
+  /**
+   * School-wide outstanding across all terms — same rule as admin **Total overall balance**
+   * (`fetchAdminDesignDashboardKpis`: sum of balance where total_fees > 0 and balance > 0).
+   */
   ledgerOutstanding: number;
-  /** Sum of `student_balances.total_fees` for that scope (term invoice totals on record). */
+  /** Sum of `student_balances.total_fees` across all terms for the school (invoice totals on record). */
   ledgerTotalFees: number;
 };
+
+/**
+ * Matches admin dashboard **Total overall balance** plus total fees on ledger (all `student_balances` rows).
+ */
+export function aggregateLedgerSchoolWide(rows: { total_fees?: number; balance?: number }[]): {
+  outstanding: number;
+  totalFeesOnLedger: number;
+} {
+  let outstanding = 0;
+  let totalFeesOnLedger = 0;
+  for (const r of rows) {
+    const tf = Number(r.total_fees ?? 0);
+    const bal = Number(r.balance ?? 0);
+    totalFeesOnLedger += tf;
+    if (tf > 0 && bal > 0) outstanding += Math.max(0, bal);
+  }
+  return {
+    outstanding: Math.round(outstanding),
+    totalFeesOnLedger: Math.round(totalFeesOnLedger),
+  };
+}
 
 const BAR_ROTATION: CategorySpendRow["barClass"][] = ["bar-green", "bar-red", "bar-blue", "bar-gold"];
 
@@ -490,15 +514,11 @@ export async function fetchFinancialAnalytics(params: {
     };
   }
 
-  const ledgerBalancesPromise = (() => {
-    let q = supabase.from("student_balances").select("balance, total_fees").eq("school_id", schoolId);
-    if (termScope === "all") {
-      if (!yearTermIds.length) return Promise.resolve({ data: [] as { balance?: number; total_fees?: number }[] });
-      return q.in("term_id", yearTermIds);
-    }
-    if (!termId) return Promise.resolve({ data: [] as { balance?: number; total_fees?: number }[] });
-    return q.eq("term_id", termId);
-  })();
+  /** All terms: aligns KPIs with admin dashboard total overall balance (not filtered by analytics period/term). */
+  const ledgerBalancesPromise = supabase
+    .from("student_balances")
+    .select("balance, total_fees")
+    .eq("school_id", schoolId);
 
   const prevRange = previousComparableRange(start, end, financialYear, terms, termScope, termScope === "one" ? termId : undefined, todayStr);
 
@@ -561,14 +581,9 @@ export async function fetchFinancialAnalytics(params: {
   ]);
 
   const ledgerRows = (ledgerRes.data || []) as { balance?: number; total_fees?: number }[];
-  let ledgerOutstanding = 0;
-  let ledgerTotalFees = 0;
-  for (const row of ledgerRows) {
-    ledgerTotalFees += Number(row.total_fees || 0);
-    ledgerOutstanding += Math.max(0, Number(row.balance || 0));
-  }
-  ledgerOutstanding = Math.round(ledgerOutstanding);
-  ledgerTotalFees = Math.round(ledgerTotalFees);
+  const ledgerAgg = aggregateLedgerSchoolWide(ledgerRows);
+  const ledgerOutstanding = ledgerAgg.outstanding;
+  const ledgerTotalFees = ledgerAgg.totalFeesOnLedger;
 
   const payments = (paymentsRes.data || []) as {
     amount_paid?: number;

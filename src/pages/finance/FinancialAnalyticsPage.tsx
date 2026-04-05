@@ -645,11 +645,11 @@ export default function FinancialAnalyticsPage() {
                   <CircleDollarSign className="fa-kpi-lucide" />
                 </div>
                 <div className="fa-kpi-body">
-                  <div className="fa-kpi-label">Outstanding (ledger)</div>
+                  <div className="fa-kpi-label">Total overall balance</div>
                   <div className="fa-kpi-val fa-kpi-val--rose">{formatUGX(data.ledgerOutstanding)}</div>
-                  <div className="fa-kpi-sub">Student balances — same term scope</div>
+                  <div className="fa-kpi-sub">All terms — admin dashboard rule (invoice rows with balance owing)</div>
                   <div className="kpi-fa-delta kpi-fa-delta--muted">
-                    <span>Authoritative receivables from invoices</span>
+                    <span>Same as Total overall balance on the school dashboard</span>
                   </div>
                 </div>
               </div>
@@ -658,11 +658,11 @@ export default function FinancialAnalyticsPage() {
                   <ClipboardList className="fa-kpi-lucide" />
                 </div>
                 <div className="fa-kpi-body">
-                  <div className="fa-kpi-label">Fees on record</div>
+                  <div className="fa-kpi-label">Fees on record (all terms)</div>
                   <div className="fa-kpi-val fa-kpi-val--violet">{formatUGX(data.ledgerTotalFees)}</div>
-                  <div className="fa-kpi-sub">Sum of term fees (ledger)</div>
+                  <div className="fa-kpi-sub">Sum of term fee invoices across every term on the ledger</div>
                   <div className="kpi-fa-delta kpi-fa-delta--muted">
-                    <span>Compare to collections above</span>
+                    <span>Compare to fee collections in the selected period above</span>
                   </div>
                 </div>
               </div>

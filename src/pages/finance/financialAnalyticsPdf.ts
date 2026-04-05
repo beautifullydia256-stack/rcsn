@@ -28,8 +28,33 @@ const BAR_RGB: Record<CategorySpendRow["barClass"], [number, number, number]> = 
   "bar-gold": [244, 180, 0],
 };
 
+/**
+ * jsPDF standard fonts only support WinAnsi. Unicode minus, arrows, en/em dashes,
+ * middle dots, and smart quotes render as garbage in Edge and other PDF viewers.
+ */
+function pdfAsciiSafe(raw: string): string {
+  if (raw == null) return "";
+  return String(raw)
+    .replace(/\u2212/g, "-") // Unicode minus
+    .replace(/[\u2012\u2013\u2014\u2015]/g, "-") // figure/en/em dash
+    .replace(/\u2192/g, " to ") // -> arrow
+    .replace(/\u00b7/g, " | ") // middle dot
+    .replace(/\u2022/g, "*") // bullet
+    .replace(/[\u201c\u201d\u00ab\u00bb]/g, '"')
+    .replace(/[\u2018\u2019\u2032]/g, "'")
+    .replace(/\u2026/g, "...")
+    .replace(/\u00f7/g, "/") // division sign (e.g. Net / income)
+    .replace(/\u00d7/g, "x")
+    .replace(/[\u00a0\u2007\u202f\u2009\u200a]/g, " ")
+    .replace(/[\ufeff]/g, ""); // BOM
+}
+
 function formatUgxpdf(n: number): string {
-  return `UGX ${Math.round(n).toLocaleString("en-UG")}`;
+  return pdfAsciiSafe(`UGX ${Math.round(n).toLocaleString("en-US")}`);
+}
+
+function splitPdfLines(doc: jsPDF, text: string, maxWidth: number): string[] {
+  return doc.splitTextToSize(pdfAsciiSafe(text), maxWidth);
 }
 
 async function logoImageFromUrl(
@@ -97,7 +122,7 @@ function categorySlices(rows: CategorySpendRow[]): { pct: number; rgb: [number, 
 function brandingAddressLines(b: FinancialAnalyticsPdfBranding | null): string[] {
   if (!b) return [];
   const parts: string[] = [];
-  const addr = [b.address, b.pobox, b.location].filter((x) => x?.trim()).join(" · ");
+  const addr = [b.address, b.pobox, b.location].filter((x) => x?.trim()).join(" | ");
   if (addr) parts.push(addr);
   const tel = b.contact_phone?.trim();
   const em = b.contact_email?.trim();
@@ -163,7 +188,7 @@ export async function downloadFinancialAnalyticsPdf(
   setTimes("bold");
   doc.setFontSize(13);
   doc.setTextColor(...NAVY);
-  const titleLines = doc.splitTextToSize(schoolTitle, pageW - textLeft - m);
+  const titleLines = splitPdfLines(doc, schoolTitle, pageW - textLeft - m);
   doc.text(titleLines, textLeft, y + 4);
   let ty = y + 4 + titleLines.length * 5.2;
 
@@ -171,7 +196,7 @@ export async function downloadFinancialAnalyticsPdf(
     setTimes("normal");
     doc.setFontSize(9);
     doc.setTextColor(...MUTED);
-    const sub = doc.splitTextToSize(branding.subtitle.trim(), pageW - textLeft - m);
+    const sub = splitPdfLines(doc, branding.subtitle.trim(), pageW - textLeft - m);
     doc.text(sub, textLeft, ty);
     ty += sub.length * 4.2;
   }
@@ -180,7 +205,7 @@ export async function downloadFinancialAnalyticsPdf(
     setTimes("italic");
     doc.setFontSize(8.5);
     doc.setTextColor(...MUTED);
-    const mot = doc.splitTextToSize(`“${branding.motto.trim()}”`, pageW - textLeft - m);
+    const mot = splitPdfLines(doc, `"${branding.motto.trim()}"`, pageW - textLeft - m);
     doc.text(mot, textLeft, ty + 1);
     ty += mot.length * 4 + 2;
   }
@@ -189,7 +214,7 @@ export async function downloadFinancialAnalyticsPdf(
   doc.setFontSize(8);
   doc.setTextColor(...BODY);
   for (const line of brandingAddressLines(branding)) {
-    const ls = doc.splitTextToSize(line, pageW - textLeft - m);
+    const ls = splitPdfLines(doc, line, pageW - textLeft - m);
     doc.text(ls, textLeft, ty);
     ty += ls.length * 3.6;
   }
@@ -211,9 +236,9 @@ export async function downloadFinancialAnalyticsPdf(
   doc.setFontSize(8.8);
   doc.setTextColor(...MUTED);
   const docSub =
-    "Management summary of fee collections, operating expenditure, student ledger position, and trends — " +
+    "Management summary of fee collections, operating expenditure, student ledger position, and trends - " +
     "prepared from records held in PwezaCore.";
-  const docSubLines = doc.splitTextToSize(docSub, pageW - 2 * m - 10);
+  const docSubLines = splitPdfLines(doc, docSub, pageW - 2 * m - 10);
   doc.text(docSubLines, pageW / 2, y + 11.5, { align: "center" });
 
   y += 20;
@@ -231,10 +256,13 @@ export async function downloadFinancialAnalyticsPdf(
   setTimes("normal");
   doc.setFontSize(9);
   const paramRows: [string, string][] = [
-    ["Financial year", `${meta.financialYear} (January – December)`],
+    ["Financial year", `${meta.financialYear} (January - December)`],
     ["Term / scope", meta.termLabel],
     ["Activity period filter", meta.periodLabel],
-    ["Cash movements (fee income & expenses)", `${data.effectiveStart} → ${data.effectiveEnd}`],
+    [
+      "Cash movements (fee income & expenses)",
+      `${data.effectiveStart} to ${data.effectiveEnd}`,
+    ],
     ["Generated on", new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })],
   ];
   const labelW = 58;
@@ -243,7 +271,7 @@ export async function downloadFinancialAnalyticsPdf(
     doc.setTextColor(...MUTED);
     doc.text(label, m, y);
     doc.setTextColor(...BODY);
-    const vl = doc.splitTextToSize(val, pageW - m * 2 - labelW - 2);
+    const vl = splitPdfLines(doc, val, pageW - m * 2 - labelW - 2);
     doc.text(vl, m + labelW, y);
     y += Math.max(5, vl.length * 4);
   }
@@ -266,22 +294,22 @@ export async function downloadFinancialAnalyticsPdf(
   const summaryRows: [string, string][] = [
     ["Total income (fee collections in range)", formatUgxpdf(data.totalIncome)],
     ["Total spent (approved / paid expenses)", formatUgxpdf(data.totalSpent)],
-    ["Net (income − expenses)", formatUgxpdf(data.net)],
-    ["Operating margin", om != null ? `${om}%` : "—"],
+    ["Net (income - expenses)", formatUgxpdf(data.net)],
+    ["Operating margin", om != null ? `${om}%` : "-"],
     ["Payroll (within expenses)", formatUgxpdf(data.payroll)],
     ["Scholarships & waivers (period)", formatUgxpdf(data.scholarships)],
-    ["Outstanding (student ledger, same term scope)", formatUgxpdf(data.ledgerOutstanding)],
-    ["Fees on ledger (total_fees, same scope)", formatUgxpdf(data.ledgerTotalFees)],
+    ["Total overall balance (all terms, admin dashboard rule)", formatUgxpdf(data.ledgerOutstanding)],
+    ["Fees on record / total_fees (all terms)", formatUgxpdf(data.ledgerTotalFees)],
   ];
 
   for (const [k, v] of summaryRows) {
     ensure(7);
     doc.setTextColor(...BODY);
-    const kl = doc.splitTextToSize(k, pageW - m * 2 - 52);
+    const kl = splitPdfLines(doc, k, pageW - m * 2 - 52);
     doc.text(kl, m, y);
     doc.setTextColor(...NAVY);
     doc.setFont("times", "bold");
-    doc.text(v, pageW - m, y, { align: "right" });
+    doc.text(pdfAsciiSafe(v), pageW - m, y, { align: "right" });
     doc.setFont("times", "normal");
     y += Math.max(5.2, kl.length * 4.2);
   }
@@ -289,7 +317,7 @@ export async function downloadFinancialAnalyticsPdf(
   y += 3;
   ensure(8);
   doc.setTextColor(...MUTED);
-  const verdictLines = doc.splitTextToSize(data.verdict, pageW - 2 * m);
+  const verdictLines = splitPdfLines(doc, data.verdict, pageW - 2 * m);
   doc.text(verdictLines, m, y);
   y += verdictLines.length * 4.5 + 6;
 
@@ -304,25 +332,25 @@ export async function downloadFinancialAnalyticsPdf(
     doc.setFontSize(9);
     const pr = data.comparison;
     const comp: [string, string][] = [
-      ["Prior range", `${pr.prevStart} → ${pr.prevEnd}`],
+      ["Prior range", `${pr.prevStart} to ${pr.prevEnd}`],
       ["Prior income", formatUgxpdf(pr.prevIncome)],
       ["Prior spent", formatUgxpdf(pr.prevSpent)],
       ["Prior net", formatUgxpdf(pr.prevNet)],
       [
         "Income change vs prior",
-        pr.incomeChangePct != null ? `${pr.incomeChangePct > 0 ? "+" : ""}${pr.incomeChangePct}%` : "—",
+        pr.incomeChangePct != null ? `${pr.incomeChangePct > 0 ? "+" : ""}${pr.incomeChangePct}%` : "-",
       ],
       [
         "Spent change vs prior",
-        pr.spentChangePct != null ? `${pr.spentChangePct > 0 ? "+" : ""}${pr.spentChangePct}%` : "—",
+        pr.spentChangePct != null ? `${pr.spentChangePct > 0 ? "+" : ""}${pr.spentChangePct}%` : "-",
       ],
       [
         "Net change vs prior",
-        pr.netChangePct != null ? `${pr.netChangePct > 0 ? "+" : ""}${pr.netChangePct}%` : "—",
+        pr.netChangePct != null ? `${pr.netChangePct > 0 ? "+" : ""}${pr.netChangePct}%` : "-",
       ],
       [
         "Margin change (percentage points)",
-        pr.marginChangePp != null ? `${pr.marginChangePp > 0 ? "+" : ""}${pr.marginChangePp} pp` : "—",
+        pr.marginChangePp != null ? `${pr.marginChangePp > 0 ? "+" : ""}${pr.marginChangePp} pp` : "-",
       ],
     ];
     for (const [k, v] of comp) {
@@ -330,7 +358,7 @@ export async function downloadFinancialAnalyticsPdf(
       doc.setTextColor(...MUTED);
       doc.text(k, m, y);
       doc.setTextColor(...BODY);
-      doc.text(v, pageW - m, y, { align: "right" });
+      doc.text(pdfAsciiSafe(v), pageW - m, y, { align: "right" });
       y += 5.5;
     }
     y += 5;
@@ -364,7 +392,7 @@ export async function downloadFinancialAnalyticsPdf(
         doc.rect(x0, ly - 2.5, 3, 3, "F");
         doc.setTextColor(...BODY);
         const leg = `${row.method} (${row.pct}%)`;
-        doc.text(leg, x0 + 5, ly);
+        doc.text(pdfAsciiSafe(leg), x0 + 5, ly);
         ly += 3.8;
       }
       x0 += pieW + gap;
@@ -383,7 +411,7 @@ export async function downloadFinancialAnalyticsPdf(
         doc.rect(x0, ly - 2.5, 3, 3, "F");
         doc.setTextColor(...BODY);
         const leg = `${row.category} (${row.pct}%)`;
-        doc.text(leg, x0 + 5, ly);
+        doc.text(pdfAsciiSafe(leg), x0 + 5, ly);
         ly += 3.8;
       }
     }
@@ -395,7 +423,7 @@ export async function downloadFinancialAnalyticsPdf(
     setTimes("bold");
     doc.setFontSize(10.5);
     doc.setTextColor(...NAVY);
-    doc.text(title, m, y);
+    doc.text(pdfAsciiSafe(title), m, y);
     y += 6;
     doc.setFillColor(243, 245, 250);
     doc.rect(m, y - 3, pageW - 2 * m, 6, "F");
@@ -405,7 +433,7 @@ export async function downloadFinancialAnalyticsPdf(
     const colW = [(pageW - 2 * m) * 0.52, (pageW - 2 * m) * 0.24, (pageW - 2 * m) * 0.2];
     let cx = m;
     for (let i = 0; i < head.length; i++) {
-      doc.text(head[i], cx + 1, y + 1.5);
+      doc.text(pdfAsciiSafe(head[i]), cx + 1, y + 1.5);
       cx += colW[i] ?? 40;
     }
     y += 8;
@@ -420,7 +448,7 @@ export async function downloadFinancialAnalyticsPdf(
       let rowH = 5;
       for (let j = 0; j < rline.length; j++) {
         doc.setTextColor(...BODY);
-        const cell = doc.splitTextToSize(rline[j], colW[j] - 2);
+        const cell = splitPdfLines(doc, rline[j], colW[j] - 2);
         doc.text(cell, cx + 1, y);
         rowH = Math.max(rowH, cell.length * 3.8);
         cx += colW[j] ?? 40;
@@ -463,7 +491,7 @@ export async function downloadFinancialAnalyticsPdf(
     doc.setFontSize(7.5);
     doc.setTextColor(...MUTED);
     doc.text(
-      `${schoolFoot} · Financial Analytics Report · Page ${p} of ${totalPages}`,
+      pdfAsciiSafe(`${schoolFoot} | Financial Analytics Report | Page ${p} of ${totalPages}`),
       pageW / 2,
       pageH - 7,
       { align: "center" }
