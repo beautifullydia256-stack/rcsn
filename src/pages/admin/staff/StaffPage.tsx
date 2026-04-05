@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Users, UserPlus, Trash2, Briefcase } from 'lucide-react';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { Trash2 } from 'lucide-react';
+import PwParentsDirectoryShell from '@/components/admin/PwParentsDirectoryShell';
+import PwDirectoryUserCard from '@/components/admin/PwDirectoryUserCard';
+import { pwDirGrad, pwDirInitials, pwRoleToChipTone } from '@/components/admin/pwDirectoryUtils';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { STAFF_ROSTER_ROLES } from '@/lib/staffRosterRoles';
@@ -51,10 +53,43 @@ export async function fetchOtherStaff(schoolId: string): Promise<OtherStaffRow[]
   return (data || []) as OtherStaffRow[];
 }
 
+type LoginFilter = 'all' | 'linked' | 'unlinked';
+
+const fieldStyle: React.CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  background: 'var(--s2)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--rs)',
+  color: 'var(--t1)',
+  fontFamily: "'Geist',sans-serif",
+  fontSize: 13,
+  padding: '10px 12px',
+  outline: 'none',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 10.5,
+  fontWeight: 700,
+  letterSpacing: '0.8px',
+  textTransform: 'uppercase',
+  color: 'var(--t3)',
+  marginBottom: 6,
+  display: 'block',
+};
+
 export default function StaffPage() {
   const queryClient = useQueryClient();
   const authUser = useAuthStore((s) => s.user);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
+  const setSchoolIdStore = useAuthStore((s) => s.setSchoolId);
+
+  const [schoolId, setSchoolId] = useState<string | null>(() => schoolIdFromStore ?? null);
+  /** Wait for auth store + DB before treating missing school as real. */
+  const [schoolResolved, setSchoolResolved] = useState(false);
+
+  const [loginFilter, setLoginFilter] = useState<LoginFilter>('all');
+  const [q, setQ] = useState('');
 
   const [fullName, setFullName] = useState('');
   const [jobTitle, setJobTitle] = useState('');
@@ -74,13 +109,24 @@ export default function StaffPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      if (!authUser?.id) return;
+    if (schoolIdFromStore) {
+      setSchoolId(schoolIdFromStore);
+      setSchoolResolved(true);
+      return;
+    }
+    const run = async () => {
+      if (!authUser?.id) {
+        setSchoolResolved(true);
+        return;
+      }
       const { data } = await supabase.from('users').select('school_id').eq('user_id', authUser.id).single();
-      setSchoolId(data?.school_id ?? null);
+      const sid = (data?.school_id as string | undefined) ?? null;
+      setSchoolId(sid);
+      if (sid) setSchoolIdStore(sid);
+      setSchoolResolved(true);
     };
-    load();
-  }, [authUser?.id]);
+    void run();
+  }, [authUser?.id, schoolIdFromStore, setSchoolIdStore]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['admin', 'other-staff', schoolId],
@@ -88,6 +134,32 @@ export default function StaffPage() {
     enabled: !!schoolId,
     staleTime: STALE_MS,
   });
+
+  const dashLabel = (role: string | null) =>
+    STAFF_ROSTER_ROLES.find((x) => x.value === role)?.label || (role ? role.replace(/_/g, ' ') : null);
+
+  const kpiLinked = useMemo(() => rows.filter((r) => r.linked_user_id).length, [rows]);
+  const kpiUnlinked = useMemo(() => rows.filter((r) => !r.linked_user_id).length, [rows]);
+
+  const filteredRows = useMemo(() => {
+    let list = rows;
+    if (loginFilter === 'linked') list = list.filter((r) => !!r.linked_user_id);
+    if (loginFilter === 'unlinked') list = list.filter((r) => !r.linked_user_id);
+    const s = q.trim().toLowerCase();
+    if (s) {
+      list = list.filter((r) => {
+        return (
+          r.full_name.toLowerCase().includes(s) ||
+          (r.job_title || '').toLowerCase().includes(s) ||
+          (r.department || '').toLowerCase().includes(s) ||
+          (r.email || '').toLowerCase().includes(s) ||
+          (r.staff_role || '').toLowerCase().includes(s) ||
+          (dashLabel(r.staff_role) || '').toLowerCase().includes(s)
+        );
+      });
+    }
+    return list;
+  }, [rows, loginFilter, q]);
 
   const resetForm = () => {
     setFullName('');
@@ -158,97 +230,132 @@ export default function StaffPage() {
     await queryClient.invalidateQueries({ queryKey: ['admin', 'other-staff', schoolId] });
   };
 
-  const inputClass =
-    'w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500';
-  const labelClass = 'mb-1 block text-sm font-medium text-gray-700';
+  if (!schoolResolved) {
+    return (
+      <PwParentsDirectoryShell>
+        <div className="par-empty">
+          <div className="par-empty-title">Loading your school context…</div>
+        </div>
+      </PwParentsDirectoryShell>
+    );
+  }
 
   if (!schoolId) {
     return (
-      <AdminPageWrapper title="Staff">
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">You need a school context to manage staff.</div>
-      </AdminPageWrapper>
+      <PwParentsDirectoryShell>
+        <div className="par-empty">
+          <div className="par-empty-title">No school linked</div>
+          <div className="par-empty-sub">
+            Ask support to set your user&apos;s <code style={{ fontSize: 12 }}>school_id</code>.
+          </div>
+        </div>
+      </PwParentsDirectoryShell>
     );
   }
 
   return (
-    <AdminPageWrapper
-      title="Staff"
-      subtitle="Add non-teachers here (accountant, lab tech, clinician, etc.). Set a dashboard role if they may get a login. Teachers belong under Teachers. Invitations are sent from User Management → Send invitations."
-    >
-      <div className="max-w-5xl w-full space-y-8">
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/dashboard/admin/teachers?add=1"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
-          >
-            <UserPlus className="h-4 w-4" />
-            Add teacher
+    <PwParentsDirectoryShell>
+      <div className="par-header par-fu">
+        <div>
+          <div className="par-eyebrow">Management</div>
+          <h1 className="par-title">Staff</h1>
+          <p className="par-sub">
+            Non-teachers on file (drivers, accountants, clinicians, etc.). Set a dashboard role if they may get a login.
+            Teachers live under Teachers.
+          </p>
+        </div>
+        <div className="par-actions">
+          <Link to="/dashboard/admin/teachers?add=1" className="par-btn par-btn-ghost">
+            ＋ Add teacher
           </Link>
-          <Link
-            to="/dashboard/admin/accounts/invite"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
-          >
-            <Briefcase className="h-4 w-4" />
-            Send invitations
+          <Link to="/dashboard/admin/accounts/invite" className="par-btn par-btn-violet">
+            📨 Send invitations
           </Link>
-          <Link
-            to="/dashboard/admin/accounts"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-800 shadow-sm hover:bg-gray-50"
-          >
+          <Link to="/dashboard/admin/accounts" className="par-btn par-btn-ghost">
             All users
           </Link>
         </div>
+      </div>
 
-        <section className={`${adminCardClass} space-y-4`}>
-          <div className="flex items-start gap-3">
-            <div className="rounded-full bg-emerald-100 p-2 text-emerald-800">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Other staff (on file)</h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Drivers, security, cooks, assistants, etc. Store KYC-style details and payroll hints. Most will not need a
-                login. When the accountant records salary under Expenses, they can link the payment to a person once that
-                UI is enabled (database supports <code className="text-xs bg-gray-100 px-1 rounded">linked_other_staff_id</code> on expenses).
-              </p>
-            </div>
+      <div className="par-kpi-strip par-fu par-d1">
+        <div className="par-kpi cv">
+          <div className="par-kpi-ic cv">👥</div>
+          <div>
+            <div className="par-kpi-label">On file</div>
+            <div className="par-kpi-val cv">{rows.length}</div>
+            <div className="par-kpi-sub">Other staff records</div>
           </div>
+        </div>
+        <div className="par-kpi cg">
+          <div className="par-kpi-ic cg">✓</div>
+          <div>
+            <div className="par-kpi-label">With login</div>
+            <div className="par-kpi-val cg">{kpiLinked}</div>
+            <div className="par-kpi-sub">Linked accounts</div>
+          </div>
+        </div>
+        <div className="par-kpi ca">
+          <div className="par-kpi-ic ca">○</div>
+          <div>
+            <div className="par-kpi-label">No login yet</div>
+            <div className="par-kpi-val ca">{kpiUnlinked}</div>
+            <div className="par-kpi-sub">Invite when ready</div>
+          </div>
+        </div>
+      </div>
 
-          <form onSubmit={handleAdd} className="space-y-4 border-t border-gray-100 pt-4">
-            {formError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">{formError}</div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="sm:col-span-2">
-                <label className={labelClass}>
-                  Full name <span className="text-red-500">*</span>
+      <div className="par-pcard par-fu par-d2" style={{ cursor: 'default' }}>
+        <div className="par-pcard-top">
+          <div className="par-pcard-name">Add to roster</div>
+          <div className="par-pcard-rel">Save KYC-style details; optional payroll hints (not automatic payroll).</div>
+        </div>
+        <div className="par-pcard-body">
+          <form onSubmit={handleAdd} className="space-y-4">
+            {formError ? (
+              <div
+                className="par-chip rose"
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 12px' }}
+              >
+                {formError}
+              </div>
+            ) : null}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: 14,
+              }}
+            >
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>
+                  Full name <span style={{ color: 'var(--rose)' }}>*</span>
                 </label>
-                <input className={inputClass} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
+                <input style={fieldStyle} value={fullName} onChange={(e) => setFullName(e.target.value)} required placeholder="Full name" />
               </div>
               <div>
-                <label className={labelClass}>Job title</label>
-                <input className={inputClass} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Driver" />
+                <label style={labelStyle}>Job title</label>
+                <input style={fieldStyle} value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Driver" />
               </div>
               <div>
-                <label className={labelClass}>Department / unit</label>
-                <input className={inputClass} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Transport" />
+                <label style={labelStyle}>Department</label>
+                <input style={fieldStyle} value={department} onChange={(e) => setDepartment(e.target.value)} placeholder="e.g. Transport" />
               </div>
               <div>
-                <label className={labelClass}>National ID</label>
-                <input className={inputClass} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
+                <label style={labelStyle}>National ID</label>
+                <input style={fieldStyle} value={nationalId} onChange={(e) => setNationalId(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Phone</label>
-                <input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
+                <label style={labelStyle}>Phone</label>
+                <input style={fieldStyle} value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" />
               </div>
               <div>
-                <label className={labelClass}>Email</label>
-                <input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Optional on file; required before invite" />
+                <label style={labelStyle}>Email</label>
+                <input style={fieldStyle} value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="Optional; needed before invite" />
               </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Dashboard role (for login)</label>
-                <p className="text-xs text-gray-500 mb-1">Pick a role if this person may receive an invitation. Not for teachers.</p>
-                <select className={inputClass} value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Dashboard role (for login)</label>
+                <p style={{ fontSize: 12, color: 'var(--t3)', marginBottom: 6 }}>If they may receive an invitation. Not for teachers.</p>
+                <select style={{ ...fieldStyle, cursor: 'pointer' }} value={staffRole} onChange={(e) => setStaffRole(e.target.value)}>
                   <option value="">— None / support only —</option>
                   {STAFF_ROSTER_ROLES.map((o) => (
                     <option key={o.value} value={o.value}>
@@ -257,37 +364,29 @@ export default function StaffPage() {
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Address</label>
-                <input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Address</label>
+                <input style={fieldStyle} value={address} onChange={(e) => setAddress(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Emergency contact name</label>
-                <input className={inputClass} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
+                <label style={labelStyle}>Emergency name</label>
+                <input style={fieldStyle} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Emergency contact phone</label>
-                <input className={inputClass} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
+                <label style={labelStyle}>Emergency phone</label>
+                <input style={fieldStyle} value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Hire date</label>
-                <input className={inputClass} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
+                <label style={labelStyle}>Hire date</label>
+                <input style={fieldStyle} type="date" value={hireDate} onChange={(e) => setHireDate(e.target.value)} />
               </div>
               <div>
-                <label className={labelClass}>Salary amount (reference)</label>
-                <input
-                  className={inputClass}
-                  type="number"
-                  min={0}
-                  step="1000"
-                  value={salaryAmount}
-                  onChange={(e) => setSalaryAmount(e.target.value)}
-                  placeholder="For planning; not automatic payroll"
-                />
+                <label style={labelStyle}>Salary (reference)</label>
+                <input style={fieldStyle} type="number" min={0} step={1000} value={salaryAmount} onChange={(e) => setSalaryAmount(e.target.value)} placeholder="Planning only" />
               </div>
               <div>
-                <label className={labelClass}>How often paid</label>
-                <select className={inputClass} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
+                <label style={labelStyle}>Pay cycle</label>
+                <select style={{ ...fieldStyle, cursor: 'pointer' }} value={payFrequency} onChange={(e) => setPayFrequency(e.target.value)}>
                   {PAY_OPTIONS.map((o) => (
                     <option key={o.value || 'empty'} value={o.value}>
                       {o.label}
@@ -295,88 +394,144 @@ export default function StaffPage() {
                   ))}
                 </select>
               </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Notes</label>
-                <textarea className={inputClass} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract end, uniforms issued…" />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Notes</label>
+                <textarea style={{ ...fieldStyle, minHeight: 72, resize: 'vertical' }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Bank details, contract, uniforms…" />
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="submit"
-                disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
-              >
-                Save record
+            <div className="par-pcard-foot" style={{ borderTop: 'none', paddingTop: 0, paddingLeft: 0, paddingRight: 0 }}>
+              <button type="submit" disabled={saving} className="par-crd-btn par-crd-primary">
+                {saving ? 'Saving…' : 'Save record'}
               </button>
-              <button type="button" onClick={resetForm} className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+              <button type="button" onClick={resetForm} className="par-crd-btn par-crd-ghost">
                 Clear
               </button>
             </div>
           </form>
-        </section>
-
-        <section className={`${adminCardClass}`}>
-          <h3 className="text-base font-semibold text-gray-900 mb-3">People on file</h3>
-          {isLoading ? (
-            <p className="text-gray-500 text-sm">Loading…</p>
-          ) : rows.length === 0 ? (
-            <p className="text-gray-500 text-sm">No other staff records yet.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 text-left text-gray-600">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Name</th>
-                    <th className="px-3 py-2 font-medium">Job</th>
-                    <th className="px-3 py-2 font-medium">Dashboard</th>
-                    <th className="px-3 py-2 font-medium">Email</th>
-                    <th className="px-3 py-2 font-medium">Login</th>
-                    <th className="px-3 py-2 font-medium">Phone</th>
-                    <th className="px-3 py-2 font-medium">Salary ref.</th>
-                    <th className="px-3 py-2 font-medium">Pay cycle</th>
-                    <th className="px-3 py-2 font-medium w-24" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => {
-                    const dashLabel = STAFF_ROSTER_ROLES.find((x) => x.value === r.staff_role)?.label;
-                    return (
-                    <tr key={r.id} className="border-t border-gray-100">
-                      <td className="px-3 py-2 font-medium text-gray-900">{r.full_name}</td>
-                      <td className="px-3 py-2 text-gray-700">{r.job_title || r.department || '—'}</td>
-                      <td className="px-3 py-2 text-gray-700 text-xs capitalize">{dashLabel || (r.staff_role ? r.staff_role.replace(/_/g, ' ') : '—')}</td>
-                      <td className="px-3 py-2 text-gray-600 text-xs max-w-[180px] truncate" title={r.email || undefined}>{r.email || '—'}</td>
-                      <td className="px-3 py-2">
-                        {r.linked_user_id ? (
-                          <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">Linked</span>
-                        ) : (
-                          <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">No login</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-gray-600">{r.phone || '—'}</td>
-                      <td className="px-3 py-2 text-gray-700">
-                        {r.salary_amount != null ? Number(r.salary_amount).toLocaleString() : '—'}
-                      </td>
-                      <td className="px-3 py-2 text-gray-600 capitalize">{r.pay_frequency || '—'}</td>
-                      <td className="px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(r.id, r.full_name)}
-                          className="text-red-600 hover:text-red-800 p-1"
-                          title="Remove record"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        </div>
       </div>
-    </AdminPageWrapper>
+
+      <div className="par-toolbar par-fu par-d3">
+        <div className="par-search" style={{ flex: '1 1 260px', maxWidth: '520px' }}>
+          <span style={{ opacity: 0.75 }} aria-hidden>
+            🔍
+          </span>
+          <input type="search" placeholder="Search name, job, email, role…" value={q} onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+        </div>
+      </div>
+
+      <div className="par-fu par-d3" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+        <button
+          type="button"
+          className={loginFilter === 'all' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+          onClick={() => setLoginFilter('all')}
+        >
+          All ({rows.length})
+        </button>
+        <button
+          type="button"
+          className={loginFilter === 'unlinked' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+          onClick={() => setLoginFilter('unlinked')}
+        >
+          No login ({kpiUnlinked})
+        </button>
+        <button
+          type="button"
+          className={loginFilter === 'linked' ? 'par-btn par-btn-sm par-btn-violet' : 'par-btn par-btn-sm par-btn-ghost'}
+          onClick={() => setLoginFilter('linked')}
+        >
+          Linked ({kpiLinked})
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="par-empty par-fu par-d4">
+          <div className="par-empty-title">Loading staff…</div>
+        </div>
+      ) : filteredRows.length === 0 ? (
+        <div className="par-empty par-fu par-d4">
+          <div className="par-empty-title">{rows.length === 0 ? 'No staff records yet' : 'No matches'}</div>
+          <div className="par-empty-sub">
+            {rows.length === 0
+              ? 'Use the form above to add someone, or adjust search / filters.'
+              : 'Try clearing search or showing All.'}
+          </div>
+        </div>
+      ) : (
+        <div className="par-card-grid par-fu par-d4">
+          {filteredRows.map((r, i) => {
+            const roleLabel = dashLabel(r.staff_role) || 'Support staff';
+            const subtitle = r.job_title || r.department || 'Other staff';
+            const payLbl = PAY_OPTIONS.find((p) => p.value === (r.pay_frequency || ''))?.label;
+            return (
+              <PwDirectoryUserCard
+                key={r.id}
+                name={r.full_name}
+                subtitle={subtitle}
+                cornerTone={r.staff_role ? pwRoleToChipTone(r.staff_role) : 'muted'}
+                cornerLabel={roleLabel}
+                initials={pwDirInitials(r.full_name)}
+                avatarBackground={pwDirGrad(i)}
+                statusDotActive={!!r.linked_user_id}
+                rows={[
+                  {
+                    label: 'Email',
+                    value: r.email ? (
+                      <a href={`mailto:${r.email}`} className="par-contact-link email" onClick={(e) => e.stopPropagation()}>
+                        {r.email}
+                      </a>
+                    ) : (
+                      <span style={{ color: 'var(--t3)', fontStyle: 'italic' }}>—</span>
+                    ),
+                  },
+                  {
+                    label: 'Phone',
+                    value: r.phone ? (
+                      <a href={`tel:${r.phone}`} className="par-contact-link phone" onClick={(e) => e.stopPropagation()}>
+                        {r.phone}
+                      </a>
+                    ) : (
+                      '—'
+                    ),
+                  },
+                  {
+                    label: 'Login',
+                    value: r.linked_user_id ? (
+                      <span className="par-chip green" style={{ fontSize: 11 }}>
+                        Linked
+                      </span>
+                    ) : (
+                      <span className="par-chip muted" style={{ fontSize: 11 }}>
+                        No login
+                      </span>
+                    ),
+                  },
+                  {
+                    label: 'Salary ref.',
+                    value: r.salary_amount != null ? Number(r.salary_amount).toLocaleString() : '—',
+                  },
+                  {
+                    label: 'Pay',
+                    value: payLbl && payLbl !== '—' ? payLbl : '—',
+                  },
+                ]}
+                footer={
+                  <button
+                    type="button"
+                    className="par-crd-btn par-crd-ghost"
+                    style={{ color: 'var(--rose)', flex: '0 0 auto' }}
+                    onClick={() => void handleDelete(r.id, r.full_name)}
+                    title="Remove record"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remove
+                  </button>
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+    </PwParentsDirectoryShell>
   );
 }

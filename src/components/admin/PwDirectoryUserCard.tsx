@@ -32,14 +32,15 @@ export default function PwDirectoryUserCard({
   return (
     <div
       className="par-pcard"
-      style={
-        selected
+      style={{
+        cursor: onCardClick ? undefined : 'default',
+        ...(selected
           ? {
               outline: '2px solid var(--violet)',
               outlineOffset: '2px',
             }
-          : undefined
-      }
+          : {}),
+      }}
       onClick={onCardClick}
       role={onCardClick ? 'button' : undefined}
       tabIndex={onCardClick ? 0 : undefined}
