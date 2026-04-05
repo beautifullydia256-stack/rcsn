@@ -413,6 +413,7 @@ export default function DesignTeacherProfile() {
       const [
         { data: schRow },
         { data: ctRows },
+        { data: allSchoolCtRows },
         { data: tcsRows },
         { data: studentsForClasses },
         { data: csRows },
@@ -421,6 +422,7 @@ export default function DesignTeacherProfile() {
       ] = await Promise.all([
         supabase.from('schools').select('type').eq('school_id', school_id).maybeSingle(),
         supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
+        supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', school_id),
         supabase
           .from('teacher_class_subjects')
           .select('id, class_name, subject, assignment_role')
@@ -441,6 +443,28 @@ export default function DesignTeacherProfile() {
           .eq('teacher_id', teacherId)
           .order('start_time'),
       ]);
+
+      const occupantByClass: Record<string, string> = {};
+      for (const r of allSchoolCtRows || []) {
+        const row = r as { class_name?: string; teacher_id?: string };
+        const cn = String(row.class_name || '').trim();
+        const tid = String(row.teacher_id || '').trim();
+        if (cn && tid) occupantByClass[cn] = tid;
+      }
+      const occupantTeacherIds = [...new Set(Object.values(occupantByClass))];
+      const teacherNameById: Record<string, string> = {};
+      if (occupantTeacherIds.length > 0) {
+        const { data: nameRows } = await supabase.from('teachers').select('teacher_id, name').in('teacher_id', occupantTeacherIds);
+        for (const nr of nameRows || []) {
+          const row = nr as { teacher_id?: string; name?: string };
+          if (row.teacher_id) teacherNameById[row.teacher_id] = String(row.name || 'Teacher').trim();
+        }
+      }
+      const occupantForClass = (cls: string): string | undefined => {
+        if (occupantByClass[cls]) return occupantByClass[cls];
+        const hit = Object.keys(occupantByClass).find((k) => k.toLowerCase() === cls.toLowerCase());
+        return hit ? occupantByClass[hit] : undefined;
+      };
 
       const subjectsByClass: Record<string, string[]> = {};
       (csRows || []).forEach((r: { class_name?: string; subject?: string }) => {
@@ -846,10 +870,114 @@ export default function DesignTeacherProfile() {
           renderSubjectPicker(sel.value);
         }
 
+        const ctSel = root.querySelector('#tp-ct-class-select') as HTMLSelectElement | null;
+        const ctHint = root.querySelector('#tp-ct-hint') as HTMLElement | null;
+        const updateCtHint = () => {
+          if (!ctHint || !ctSel) return;
+          const cls = ctSel.value.trim();
+          ctHint.style.color = 'var(--t3)';
+          if (!cls) {
+            ctHint.textContent = 'Select a class to see if it already has a class teacher.';
+            return;
+          }
+          const occ = occupantForClass(cls);
+          if (!occ) {
+            ctHint.textContent = 'This class does not have a class teacher yet. You can assign this teacher.';
+            ctHint.style.color = 'var(--green)';
+          } else if (occ === teacherId) {
+            ctHint.textContent = 'This teacher is already the class teacher for this class.';
+            ctHint.style.color = 'var(--t2)';
+          } else {
+            const nm = teacherNameById[occ] || 'Another teacher';
+            ctHint.textContent = `This class already has a class teacher (${nm}). Unassign them first, then assign someone else.`;
+            ctHint.style.color = 'var(--amber)';
+          }
+        };
+
+        if (ctSel) {
+          ctSel.innerHTML =
+            `<option value="">Select class…</option>` +
+            uniqueClasses
+              .map((c) => {
+                const occ = occupantForClass(c);
+                let suffix = '';
+                if (!occ) suffix = ' — No class teacher yet';
+                else if (occ === teacherId) suffix = ' — You (class teacher)';
+                else suffix = ` — Class teacher: ${teacherNameById[occ] || 'Assigned'}`;
+                return `<option value="${escapeAttr(c)}">${escapeHtml(c + suffix)}</option>`;
+              })
+              .join('');
+          ctSel.onchange = updateCtHint;
+          updateCtHint();
+        }
+
+        const ctListEl = root.querySelector('#tp-ct-current-list') as HTMLElement | null;
+        if (ctListEl) {
+          const ctClasses = [...classTeacherNames].sort((a, b) => a.localeCompare(b));
+          if (ctClasses.length === 0) {
+            ctListEl.innerHTML = `<span style="font-size:13px;color:var(--t3);font-style:italic">Not class teacher for any class yet.</span>`;
+          } else {
+            ctListEl.innerHTML = ctClasses
+              .map(
+                (cn) => `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--s2);border:1px solid var(--border);border-radius:10px">
+                <span style="font-weight:600;color:var(--t1)">${escapeHtml(cn)}</span>
+                <button type="button" class="tp-remove-btn" data-ct-class="${escapeAttr(cn)}">Remove</button>
+              </div>`
+              )
+              .join('');
+            ctListEl.querySelectorAll('[data-ct-class]').forEach((btn) => {
+              (btn as HTMLButtonElement).onclick = async () => {
+                const cname = (btn as HTMLElement).dataset.ctClass;
+                if (!cname || !window.confirm(`Remove class teacher assignment for ${cname}?`)) return;
+                const { error: delErr } = await supabase
+                  .from('class_teachers')
+                  .delete()
+                  .eq('school_id', school_id)
+                  .eq('teacher_id', teacherId)
+                  .eq('class_name', cname);
+                if (delErr) window.alert(delErr.message);
+                else setReloadToken((x) => x + 1);
+              };
+            });
+          }
+        }
+
+        const assignCtBtn = root.querySelector('#tp-btn-assign-ct') as HTMLButtonElement | null;
+        if (assignCtBtn) {
+          assignCtBtn.onclick = async () => {
+            const cls = ctSel?.value.trim();
+            if (!cls || !school_id) {
+              window.alert('Select a class first.');
+              return;
+            }
+            const occ = occupantForClass(cls);
+            if (occ && occ !== teacherId) {
+              const nm = teacherNameById[occ] || 'another teacher';
+              window.alert(`This class already has a class teacher (${nm}). Unassign them first.`);
+              return;
+            }
+            if (occ === teacherId) {
+              window.alert('This teacher is already the class teacher for this class.');
+              return;
+            }
+            const { error: insErr } = await supabase.from('class_teachers').insert({
+              school_id,
+              class_name: cls,
+              teacher_id: teacherId,
+            });
+            if (insErr) {
+              window.alert(insErr.message);
+              return;
+            }
+            setReloadToken((x) => x + 1);
+          };
+        }
+
         setHTML(
           '#tp-assignments-body',
           assignments.length === 0
-            ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No class assignments yet. Use the form above to assign subjects.</div>`
+            ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No subject rows yet. Use <strong>Subject teaching</strong> above to pick a class and subjects.</div>`
             : assignments
                 .map((a) => {
                   const ar = (a.assignment_role || 'subject_teacher') as 'subject_teacher' | 'co_teacher';
@@ -1340,7 +1468,13 @@ export default function DesignTeacherProfile() {
               .then(() => navigate('/dashboard/admin/teachers'));
           };
         const assignClassBtn = root.querySelector('#tp-btn-assign-class') as HTMLElement | null;
-        if (assignClassBtn) assignClassBtn.onclick = () => switchTab('classes');
+        if (assignClassBtn)
+          assignClassBtn.onclick = () => {
+            switchTab('classes');
+            requestAnimationFrame(() => {
+              root.querySelector('#tp-card-class-teacher')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+          };
         const viewSched = root.querySelector('#tp-btn-view-schedule') as HTMLElement | null;
         if (viewSched) viewSched.onclick = () => navigate('/dashboard/teacher/timetable');
         const editTt = root.querySelector('#tp-btn-edit-timetable') as HTMLElement | null;

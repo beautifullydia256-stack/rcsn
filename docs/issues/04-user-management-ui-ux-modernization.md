@@ -1,7 +1,7 @@
 # Issue: User Management area — UI/UX feels disorganized, dated, and not mobile-friendly
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** Done (signed off 2026-04-05)  
+**Last updated:** 2026-04-05  
 
 ## Summary
 

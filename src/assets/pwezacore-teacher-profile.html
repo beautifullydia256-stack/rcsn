@@ -616,7 +616,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
 
         <!-- Actions -->
         <div class="tp-hero-actions">
-          <button class="tp-btn tp-btn-amber" id="tp-btn-assign-class">🏫 Assign to Class</button>
+          <button class="tp-btn tp-btn-amber" id="tp-btn-assign-class">👨‍🏫 Assign class teacher</button>
           <button class="tp-btn tp-btn-ghost" id="tp-btn-view-schedule">📅 View Schedule</button>
           <button type="button" class="tp-btn tp-btn-ghost" id="tp-btn-call">📞 Call</button>
         </div>
@@ -627,7 +627,7 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
     <!-- ═══ TABS ═══ -->
     <div class="tp-tabs tp-fu tp-d1" id="tp-tabs">
       <button class="tp-tab active" data-tab="overview">👤 Overview</button>
-      <button class="tp-tab" data-tab="classes">🏫 Classes &amp; Subjects</button>
+      <button class="tp-tab" data-tab="classes">🏫 Classes &amp; teaching</button>
       <button class="tp-tab" data-tab="timetable">📅 Timetable</button>
       <button class="tp-tab" data-tab="performance">📊 Performance</button>
       <button class="tp-tab" data-tab="kyc">🪪 KYC Documents</button>
@@ -842,19 +842,47 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
     <!-- ══════════════════════════════════════════ -->
     <div id="tp-tab-classes" style="display:none" class="tp-fu tp-d2">
       <div class="tp-grid full">
+        <div class="tp-card" id="tp-card-class-teacher">
+          <div class="tp-card-head">
+            <div class="tp-card-title">
+              <div class="tp-card-title-ic" style="background:var(--teal-s)">👨‍🏫</div>
+              Class teacher
+            </div>
+          </div>
+          <div class="tp-card-body">
+            <p style="font-size:13px;color:var(--t3);line-height:1.55;margin-bottom:14px">
+              Each class may have <strong style="color:var(--t2)">only one</strong> class teacher. The same person can be class teacher for <strong style="color:var(--t2)">several</strong> classes.
+              Subject teaching is separate — use the section below.
+            </p>
+            <div class="tp-assign-form" style="border-bottom:none;padding:0;flex-wrap:wrap;background:transparent">
+              <div class="tp-assign-group" style="flex:1;min-width:220px">
+                <div class="tp-assign-label">Choose class</div>
+                <select class="tp-assign-select" id="tp-ct-class-select">
+                  <option value="">Select class…</option>
+                </select>
+              </div>
+              <button type="button" class="tp-btn tp-btn-teal" id="tp-btn-assign-ct" style="align-self:flex-end;margin-top:18px">Assign as class teacher</button>
+            </div>
+            <div id="tp-ct-hint" style="font-size:12.5px;color:var(--t3);margin:10px 0 16px;line-height:1.45"></div>
+            <div class="tp-assign-label" style="margin-bottom:8px">This teacher is class teacher for</div>
+            <div id="tp-ct-current-list" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+        </div>
+      </div>
+      <div class="tp-grid full" style="margin-top:16px">
         <div class="tp-card">
           <div class="tp-card-head">
             <div class="tp-card-title">
-              <div class="tp-card-title-ic" style="background:var(--amber-s)">🏫</div>
-              Class &amp; Subject Assignments
+              <div class="tp-card-title-ic" style="background:var(--amber-s)">📚</div>
+              Subject teaching
             </div>
-            <button class="tp-btn tp-btn-amber tp-btn-sm" id="tp-btn-assign">＋ Add Assignment</button>
+            <button class="tp-btn tp-btn-amber tp-btn-sm" id="tp-btn-assign">＋ Add subjects</button>
           </div>
 
-          <!-- Assignment form -->
+          <!-- Subject assignment form (class teacher is managed above) -->
           <div class="tp-assign-form">
             <div class="tp-assign-group">
-              <div class="tp-assign-label">Select Class</div>
+              <div class="tp-assign-label">Class</div>
               <select class="tp-assign-select" id="tp-assign-class-select">
                 <option value="">Select class</option>
               </select>
@@ -863,18 +891,9 @@ html.light .pw-teacher-profile .tp-topbar{background:rgba(255,248,240,.94);}
               <div class="tp-assign-label">Subjects for this class</div>
               <div id="tp-assign-subject-wrap" class="tp-assign-input" style="min-height:44px;height:auto;padding:8px 10px"></div>
             </div>
-            <div class="tp-assign-group" style="max-width:120px">
-              <div class="tp-assign-label">Role</div>
-              <select class="tp-assign-select" id="tp-assign-role">
-                <option>Subject Teacher</option>
-                <option>Class Teacher</option>
-                <option>Co-Teacher</option>
-              </select>
-            </div>
-            <button class="tp-btn tp-btn-amber" id="tp-btn-do-assign" style="align-self:flex-end">Assign →</button>
+            <button class="tp-btn tp-btn-amber" id="tp-btn-do-assign" style="align-self:flex-end">Assign subjects →</button>
           </div>
 
-          <!-- Current assignments table header -->
           <div style="display:grid;grid-template-columns:1.4fr 1.6fr 1.2fr 80px;background:var(--s2);border-bottom:1px solid var(--border)">
             <div style="padding:10px 20px;font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3)">Class</div>
             <div style="padding:10px 20px;font-size:9.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--t3)">Subjects</div>
