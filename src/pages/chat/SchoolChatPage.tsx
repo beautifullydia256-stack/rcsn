@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, MessageCircle, Paperclip, Search, Send, Smile, UserPlus, X } from 'lucide-react';
+import { ArrowLeft, Loader2, MessageCircle, Mic, Paperclip, Search, Send, Smile, UserPlus, X } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
   fetchEligibleChatUsers,
@@ -13,11 +13,15 @@ import {
   markConversationRead,
   markPeerMessagesDelivered,
   pingChatPresence,
+  downloadVoiceBlob,
   sendMessage,
+  sendVoiceMessage,
   subscribeToConversationMessages,
   subscribeToPeerLastRead,
   subscribeToPeerPresence,
   formatChatPresence,
+  formatVoiceDurationLabel,
+  VOICE_NOTE_MAX_DURATION_SEC,
   type ChatConversationRow,
   type ChatMessageRow,
   type EligibleChatUser,
@@ -117,6 +121,70 @@ function OutgoingDeliveryTicks({
   );
 }
 
+function VoiceNoteBubble({ message: m }: { message: ChatMessageRow }) {
+  const playable = m.msg_kind === 'voice' && !!m.audio_path;
+  const [url, setUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!playable || !m.audio_path) {
+      setUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
+      setLoading(false);
+      return;
+    }
+    let dead = false;
+    let created: string | null = null;
+    setLoading(true);
+    void downloadVoiceBlob(m.audio_path).then((blob) => {
+      if (dead || !blob) {
+        if (!dead) setLoading(false);
+        return;
+      }
+      const u = URL.createObjectURL(blob);
+      if (dead) {
+        URL.revokeObjectURL(u);
+        return;
+      }
+      created = u;
+      setUrl(u);
+      setLoading(false);
+    });
+    return () => {
+      dead = true;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [m.id, m.audio_path, playable]);
+
+  if (!playable) {
+    return (
+      <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug text-[#667781] italic pr-8">
+        {m.body}
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1 min-w-[200px] max-w-full pr-8">
+      <div className="flex items-center gap-2">
+        <span className="text-[#008069] shrink-0" aria-hidden>
+          <Mic className="h-5 w-5" strokeWidth={2} />
+        </span>
+        {loading ? (
+          <Loader2 className="h-7 w-7 animate-spin text-[#008069] shrink-0" aria-label="Loading voice message" />
+        ) : (
+          <audio src={url ?? undefined} controls preload="metadata" className="h-9 flex-1 max-w-[min(100%,260px)]" />
+        )}
+      </div>
+      <span className="text-[11px] text-[#667781] tabular-nums">
+        {formatVoiceDurationLabel(m.audio_duration_sec ?? 0)}
+      </span>
+    </div>
+  );
+}
+
 export default function SchoolChatPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -142,12 +210,23 @@ export default function SchoolChatPage() {
     role: string;
     user_id: string;
     last_seen_at: string | null;
+    session_active: boolean;
   } | null>(null);
   /** Live merge of peer presence (RPC + realtime). */
   const [peerLastSeenAt, setPeerLastSeenAt] = useState<string | null>(null);
+  const [peerSessionActive, setPeerSessionActive] = useState<boolean | null>(null);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [peerLastReadAt, setPeerLastReadAt] = useState<string | null>(null);
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceSeconds, setVoiceSeconds] = useState(0);
+  const [voiceUploading, setVoiceUploading] = useState(false);
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const mediaChunksRef = useRef<Blob[]>([]);
+  const voiceTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordStartRef = useRef(0);
 
   const home = dashboardHomeForRole(role);
 
@@ -175,33 +254,23 @@ export default function SchoolChatPage() {
   useEffect(() => {
     setSendError(null);
     setPeerLastReadAt(null);
+    setPeerSessionActive(null);
   }, [selectedId]);
 
   useEffect(() => {
-    const fromConv = selectedConv?.peer_last_seen_at ?? null;
-    const fromPrev = peerPreview?.last_seen_at ?? null;
-    setPeerLastSeenAt(fromConv ?? fromPrev ?? null);
-  }, [selectedConv?.conversation_id, selectedConv?.peer_last_seen_at, peerPreview?.user_id, peerPreview?.last_seen_at]);
-
-  useEffect(() => {
-    if (!schoolId || !myId) return;
-    const tick = () => {
-      void pingChatPresence(schoolId);
-    };
-    tick();
-    const id = setInterval(tick, 45_000);
-    const onVis = () => {
-      if (document.visibilityState === 'visible') tick();
-    };
-    const onOnline = () => tick();
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('online', onOnline);
-    return () => {
-      clearInterval(id);
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('online', onOnline);
-    };
-  }, [schoolId, myId]);
+    const ts = selectedConv?.peer_last_seen_at ?? peerPreview?.last_seen_at ?? null;
+    const sa =
+      selectedConv?.peer_session_active ?? peerPreview?.session_active ?? null;
+    setPeerLastSeenAt(ts);
+    setPeerSessionActive(sa);
+  }, [
+    selectedConv?.conversation_id,
+    selectedConv?.peer_last_seen_at,
+    selectedConv?.peer_session_active,
+    peerPreview?.user_id,
+    peerPreview?.last_seen_at,
+    peerPreview?.session_active,
+  ]);
 
   useEffect(() => {
     if (!myId) return;
@@ -246,7 +315,14 @@ export default function SchoolChatPage() {
     const unsub = subscribeToConversationMessages(
       selectedId,
       (row) => {
-        setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
+        setMessages((prev) => {
+          const i = prev.findIndex((m) => m.id === row.id);
+          if (i >= 0) {
+            const merged = { ...prev[i], ...row, audio_path: row.audio_path ?? prev[i].audio_path };
+            return prev.map((m, j) => (j === i ? merged : m));
+          }
+          return [...prev, row];
+        });
         // Unread count uses last_read_at on the server. If we invalidate the list in parallel with
         // markConversationRead, the refetch often finishes before the UPDATE commits — badge stays wrong.
         void (async () => {
@@ -261,7 +337,11 @@ export default function SchoolChatPage() {
         })();
       },
       (row) => {
-        setMessages((prev) => prev.map((m) => (m.id === row.id ? { ...m, ...row } : m)));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === row.id ? { ...m, ...row, audio_path: row.audio_path ?? m.audio_path } : m
+          )
+        );
       }
     );
     return unsub;
@@ -270,7 +350,10 @@ export default function SchoolChatPage() {
   const peerUserId = selectedConv?.peer_user_id ?? peerPreview?.user_id ?? null;
   useEffect(() => {
     if (!peerUserId) return;
-    return subscribeToPeerPresence(peerUserId, (iso) => setPeerLastSeenAt(iso));
+    return subscribeToPeerPresence(peerUserId, ({ last_seen_at, session_active }) => {
+      setPeerLastSeenAt(last_seen_at);
+      setPeerSessionActive(session_active);
+    });
   }, [peerUserId]);
 
   useEffect(() => {
@@ -321,6 +404,7 @@ export default function SchoolChatPage() {
       role: u.role,
       user_id: u.user_id,
       last_seen_at: u.last_seen_at ?? null,
+      session_active: u.session_active,
     });
     try {
       const cid = await getOrCreateDm(u.user_id);
@@ -351,6 +435,140 @@ export default function SchoolChatPage() {
     setNewChatError(null);
   };
 
+  const cancelVoiceRecording = useCallback(() => {
+    if (voiceTickRef.current) {
+      clearInterval(voiceTickRef.current);
+      voiceTickRef.current = null;
+    }
+    const rec = mediaRecorderRef.current;
+    const stream = mediaStreamRef.current;
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current = null;
+    mediaChunksRef.current = [];
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    if (rec && rec.state !== 'inactive') {
+      try {
+        rec.stop();
+      } catch {
+        /* ignore */
+      }
+    }
+    setVoiceRecording(false);
+    setVoiceSeconds(0);
+  }, []);
+
+  const finishRecordingAndSend = useCallback(async () => {
+    if (voiceTickRef.current) {
+      clearInterval(voiceTickRef.current);
+      voiceTickRef.current = null;
+    }
+    const rec = mediaRecorderRef.current;
+    const stream = mediaStreamRef.current;
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current = null;
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+
+    if (!rec || rec.state === 'inactive') {
+      setVoiceRecording(false);
+      setVoiceSeconds(0);
+      return;
+    }
+
+    const chunks = [...mediaChunksRef.current];
+    mediaChunksRef.current = [];
+    const mime = rec.mimeType || 'audio/webm';
+
+    await new Promise<void>((resolve) => {
+      rec.onstop = () => resolve();
+      rec.stop();
+    });
+
+    const durationSec = Math.max(0.5, (Date.now() - recordStartRef.current) / 1000);
+    setVoiceRecording(false);
+    setVoiceSeconds(0);
+
+    const blob = new Blob(chunks, { type: mime });
+    if (blob.size < 400) return;
+
+    if (!selectedId || !schoolId) return;
+
+    setVoiceUploading(true);
+    setSendError(null);
+    try {
+      const row = await sendVoiceMessage(selectedId, schoolId, blob, durationSec);
+      if (row) {
+        setMessages((prev) => {
+          const i = prev.findIndex((m) => m.id === row.id);
+          if (i >= 0) {
+            const merged = { ...prev[i], ...row, audio_path: row.audio_path ?? prev[i].audio_path };
+            return prev.map((m, j) => (j === i ? merged : m));
+          }
+          return [...prev, row];
+        });
+      }
+      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      void markConversationRead(selectedId);
+      if (schoolId) void pingChatPresence(schoolId);
+    } catch (err) {
+      console.error('[SchoolChatPage] voice send', err);
+      const msg =
+        err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Could not send voice note.';
+      setSendError(msg);
+    } finally {
+      setVoiceUploading(false);
+    }
+  }, [selectedId, schoolId, myId, queryClient]);
+
+  const startVoiceRecording = useCallback(async () => {
+    if (!selectedId || !schoolId || sending || voiceUploading || voiceRecording) return;
+    if (typeof window === 'undefined' || !window.MediaRecorder || !navigator.mediaDevices?.getUserMedia) {
+      setSendError('Voice notes are not supported in this browser.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+      const types = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'];
+      const mime = types.find((t) => MediaRecorder.isTypeSupported(t));
+      const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+      mediaChunksRef.current = [];
+      rec.ondataavailable = (ev) => {
+        if (ev.data.size > 0) mediaChunksRef.current.push(ev.data);
+      };
+      rec.start(250);
+      mediaRecorderRef.current = rec;
+      recordStartRef.current = Date.now();
+      setVoiceSeconds(0);
+      setVoiceRecording(true);
+      if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+      voiceTickRef.current = window.setInterval(() => {
+        const sec = Math.floor((Date.now() - recordStartRef.current) / 1000);
+        setVoiceSeconds(sec);
+        if (sec >= VOICE_NOTE_MAX_DURATION_SEC) {
+          if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+          voiceTickRef.current = null;
+          void finishRecordingAndSend();
+        }
+      }, 400);
+    } catch {
+      setSendError('Could not access the microphone. Check browser permissions.');
+    }
+  }, [selectedId, schoolId, sending, voiceUploading, voiceRecording, finishRecordingAndSend]);
+
+  useEffect(() => {
+    return () => {
+      if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+      mediaStreamRef.current?.getTracks().forEach((t) => t.stop());
+      try {
+        mediaRecorderRef.current?.stop();
+      } catch {
+        /* ignore */
+      }
+    };
+  }, []);
+
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     if (!selectedId || !schoolId || !draft.trim()) return;
@@ -360,7 +578,14 @@ export default function SchoolChatPage() {
       const row = await sendMessage(selectedId, schoolId, draft);
       setDraft('');
       if (row) {
-        setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
+        setMessages((prev) => {
+          const i = prev.findIndex((m) => m.id === row.id);
+          if (i >= 0) {
+            const merged = { ...prev[i], ...row, audio_path: row.audio_path ?? prev[i].audio_path };
+            return prev.map((m, j) => (j === i ? merged : m));
+          }
+          return [...prev, row];
+        });
       }
       void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
       void markConversationRead(selectedId);
@@ -498,7 +723,7 @@ export default function SchoolChatPage() {
                   >
                     {(c.peer_name || '?').slice(0, 1).toUpperCase()}
                   </div>
-                  {formatChatPresence(c.peer_last_seen_at).online && (
+                  {formatChatPresence(c.peer_last_seen_at, c.peer_session_active).online && (
                     <span
                       className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#25d366] border-2 border-[var(--wa-list)]"
                       aria-hidden
@@ -544,7 +769,7 @@ export default function SchoolChatPage() {
                 {selectedConv?.peer_name || peerPreview?.name || 'Chat'}
               </div>
               {(() => {
-                const p = formatChatPresence(peerLastSeenAt);
+                const p = formatChatPresence(peerLastSeenAt, peerSessionActive);
                 const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
                 if (p.online) {
                   return (
@@ -595,7 +820,7 @@ export default function SchoolChatPage() {
                   </div>
                   <div className="text-[13px] text-white/80 truncate">
                     {(() => {
-                      const p = formatChatPresence(peerLastSeenAt);
+                      const p = formatChatPresence(peerLastSeenAt, peerSessionActive);
                       const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
                       if (p.online) {
                         return (
@@ -632,9 +857,15 @@ export default function SchoolChatPage() {
                             : 'rounded-bl-none bg-[var(--wa-in)] text-[#111b21] border border-[#e9edef]'
                         }`}
                       >
-                        <p className={`whitespace-pre-wrap break-words text-[14.2px] leading-snug ${mine ? 'pr-[4.5rem]' : 'pr-12'}`}>
-                          {m.body}
-                        </p>
+                        {m.msg_kind === 'voice' ? (
+                          <VoiceNoteBubble message={m} />
+                        ) : (
+                          <p
+                            className={`whitespace-pre-wrap break-words text-[14.2px] leading-snug ${mine ? 'pr-[4.5rem]' : 'pr-12'}`}
+                          >
+                            {m.body}
+                          </p>
+                        )}
                         <div className="absolute bottom-1 right-2 flex items-center gap-1">
                           <span className={`text-[11px] tabular-nums ${mine ? 'text-[#667781]' : 'text-[#667781]'}`}>
                             {formatMsgTime(m.created_at)}
@@ -666,32 +897,94 @@ export default function SchoolChatPage() {
                 onSubmit={handleSend}
                 className="flex items-end gap-2 px-3 py-2 shrink-0 border-t border-[var(--wa-border)] bg-[#f0f2f5]"
               >
-                <button type="button" className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block" aria-label="Emoji">
-                  <Smile className="h-6 w-6" />
-                </button>
-                <button type="button" className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block" aria-label="Attach">
-                  <Paperclip className="h-6 w-6" />
-                </button>
-                <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3">
-                  <input
-                    className="flex-1 wa-input bg-transparent border-0 text-[15px] text-[#111b21] outline-none py-2 placeholder:text-[#8696a0]"
-                    placeholder="Type a message"
-                    value={draft}
-                    onChange={(e) => {
-                      setDraft(e.target.value);
-                      if (sendError) setSendError(null);
-                    }}
-                    disabled={sending}
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={sending || !draft.trim()}
-                  className="p-3 rounded-full bg-[#008069] text-white hover:bg-[#006b58] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-                  aria-label="Send"
-                >
-                  <Send className="h-5 w-5" />
-                </button>
+                {!voiceRecording && (
+                  <>
+                    <button
+                      type="button"
+                      className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block"
+                      aria-label="Emoji"
+                    >
+                      <Smile className="h-6 w-6" />
+                    </button>
+                    <button
+                      type="button"
+                      className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block"
+                      aria-label="Attach"
+                    >
+                      <Paperclip className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+                {voiceRecording ? (
+                  <>
+                    <div className="flex-1 flex items-center gap-2 rounded-lg bg-white border border-[var(--wa-border)] min-h-[42px] px-3 py-2">
+                      <span
+                        className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shrink-0"
+                        aria-hidden
+                      />
+                      <span className="text-[15px] font-semibold tabular-nums text-[#111b21] shrink-0">
+                        {formatVoiceDurationLabel(voiceSeconds)}
+                      </span>
+                      <span className="text-[13px] text-[#667781] truncate flex-1">Recording… tap send to finish</span>
+                      <button
+                        type="button"
+                        className="text-[13px] font-semibold text-[#c0392b] hover:underline shrink-0 px-1"
+                        onClick={cancelVoiceRecording}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={voiceUploading}
+                      onClick={() => void finishRecordingAndSend()}
+                      className="p-3 rounded-full bg-[#008069] text-white hover:bg-[#006b58] disabled:opacity-40 shadow-sm"
+                      aria-label="Send voice note"
+                    >
+                      {voiceUploading ? (
+                        <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3">
+                      <input
+                        className="flex-1 wa-input bg-transparent border-0 text-[15px] text-[#111b21] outline-none py-2 placeholder:text-[#8696a0]"
+                        placeholder="Type a message"
+                        value={draft}
+                        onChange={(e) => {
+                          setDraft(e.target.value);
+                          if (sendError) setSendError(null);
+                        }}
+                        disabled={sending || voiceUploading}
+                      />
+                    </div>
+                    {draft.trim() ? (
+                      <button
+                        type="submit"
+                        disabled={sending || voiceUploading}
+                        className="p-3 rounded-full bg-[#008069] text-white hover:bg-[#006b58] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                        aria-label="Send"
+                      >
+                        <Send className="h-5 w-5" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={!selectedId || !schoolId || sending || voiceUploading}
+                        onClick={() => void startVoiceRecording()}
+                        className="p-3 rounded-full bg-[#008069] text-white hover:bg-[#006b58] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                        aria-label="Record voice note"
+                        title="Voice message"
+                      >
+                        <Mic className="h-5 w-5" />
+                      </button>
+                    )}
+                  </>
+                )}
               </form>
             </>
           )}
@@ -763,7 +1056,7 @@ export default function SchoolChatPage() {
               {loadingElig && <p className="p-3 text-[14px] text-[#667781]">Loading contacts…</p>}
               {!loadingElig &&
                 filteredEligible.map((u) => {
-                  const pres = formatChatPresence(u.last_seen_at);
+                  const pres = formatChatPresence(u.last_seen_at, u.session_active);
                   return (
                     <button
                       key={u.user_id}

@@ -4,6 +4,7 @@ import { useTheme } from "../../lib/theme-provider";
 import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Bell, MessageCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { markChatPresenceOffline } from "../../lib/schoolChatApi";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/usePermission";
 import { PERMISSION_KEYS } from "../../lib/permissions";
@@ -85,6 +86,7 @@ export default function TeacherLayout() {
   }, [location.pathname]);
 
   const handleLogout = async () => {
+    await markChatPresenceOffline();
     await supabase.auth.signOut();
     setUser(null);
     setRole(null);

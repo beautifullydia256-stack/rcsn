@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from 'react';
 import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { markChatPresenceOffline } from '@/lib/schoolChatApi';
 import { ParentPortalProvider, useParentPortal } from '@/context/ParentPortalContext';
 import { PARENT_PORTAL_SCOPED_STYLE } from '@/lib/parentPortalAssets';
 import { displayStudentName } from '@/lib/parentPortalUtils';
@@ -246,6 +247,7 @@ function ParentChrome() {
                 className="pd-footer-btn"
                 id="pd-btn-logout"
                 onClick={async () => {
+                  await markChatPresenceOffline();
                   await supabase.auth.signOut();
                   navigate('/login');
                 }}

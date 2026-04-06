@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { markChatPresenceOffline } from './schoolChatApi';
 
 export interface SessionConfig {
   timeoutMinutes: number;
@@ -94,7 +95,7 @@ class SessionManager {
     // Save current path before logout
     this.saveCurrentPath();
     
-    // Sign out user
+    await markChatPresenceOffline();
     await supabase.auth.signOut();
     
     // Clear session data

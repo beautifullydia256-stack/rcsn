@@ -5,8 +5,10 @@ export type EligibleChatUser = {
   name: string;
   role: string;
   email: string;
-  /** Server heartbeat for online / last seen (via school_chat_presence). */
+  /** Activity time: presence heartbeat or, if none, last_sign_in_at fallback from RPC. */
   last_seen_at: string | null;
+  /** False after explicit logout; true while the user has an active app session (heartbeats). */
+  session_active: boolean;
 };
 
 export type ChatConversationRow = {
@@ -18,6 +20,7 @@ export type ChatConversationRow = {
   last_at: string | null;
   unread_count: number;
   peer_last_seen_at: string | null;
+  peer_session_active: boolean;
 };
 
 export type ChatMessageRow = {
@@ -34,8 +37,38 @@ export type ChatMessageRow = {
   audio_duration_sec: number | null;
 };
 
-/** Treat peer as online when their last heartbeat is within this window. */
-export const CHAT_PRESENCE_ONLINE_MS = 120_000;
+/** Green "online" only if session is active and last heartbeat is within this window (~WhatsApp). */
+export const CHAT_PRESENCE_ONLINE_MS = 3 * 60 * 1000;
+
+/** If heartbeats stop (hidden tab, closed laptop) treat as offline after this idle period even if session flag lagged. */
+export const CHAT_PRESENCE_MAX_IDLE_MS = 20 * 60 * 1000;
+
+export type ChatPeerPresence = {
+  last_seen_at: string | null;
+  session_active: boolean | null;
+};
+
+function formatLastSeenSubtitle(lastSeenAtIso: string, deltaMs: number): string {
+  const seen = new Date(lastSeenAtIso);
+  const now = new Date();
+  const timeStr = seen.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  const mins = Math.floor(deltaMs / 60_000);
+
+  if (mins < 1) return 'Last seen just now';
+  if (mins < 60) return `Last seen ${mins} min ago`;
+  if (seen.toDateString() === now.toDateString()) {
+    return `Last seen today at ${timeStr}`;
+  }
+  const yest = new Date(now);
+  yest.setDate(yest.getDate() - 1);
+  if (seen.toDateString() === yest.toDateString()) {
+    return `Last seen yesterday at ${timeStr}`;
+  }
+  if (deltaMs < 7 * 24 * 60 * 60_000) {
+    return `Last seen ${seen.toLocaleDateString(undefined, { weekday: 'short' })} at ${timeStr}`;
+  }
+  return `Last seen ${seen.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at ${timeStr}`;
+}
 
 /** Voice notes: Opus-in-WebM preferred (~32–64 kbps); Safari may use AAC/mp4. */
 export const VOICE_NOTE_MAX_DURATION_SEC = 120;
@@ -74,8 +107,14 @@ function mapMessageRow(r: Record<string, unknown>): ChatMessageRow {
   };
 }
 
-/** Human-readable online / last seen for thread and lists. */
-export function formatChatPresence(lastSeenAtIso: string | null | undefined): {
+/**
+ * Online: active session + recent visible-tab heartbeat (not logged out, not idle too long).
+ * Otherwise show last-seen line using the same timestamp (from presence or sign-in fallback).
+ */
+export function formatChatPresence(
+  lastSeenAtIso: string | null | undefined,
+  sessionActive: boolean | null | undefined = true
+): {
   online: boolean;
   label: string;
 } {
@@ -83,28 +122,16 @@ export function formatChatPresence(lastSeenAtIso: string | null | undefined): {
   const t = new Date(lastSeenAtIso).getTime();
   if (Number.isNaN(t)) return { online: false, label: '' };
   const delta = Date.now() - t;
-  if (delta < CHAT_PRESENCE_ONLINE_MS) return { online: true, label: 'Online' };
-  const seen = new Date(lastSeenAtIso);
-  const now = new Date();
-  const timeStr = seen.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
-  if (seen.toDateString() === now.toDateString()) {
-    return { online: false, label: `Last seen today at ${timeStr}` };
+
+  const sessionOk = sessionActive !== false;
+  const heartbeatRecent = delta >= 0 && delta < CHAT_PRESENCE_ONLINE_MS;
+  const notLongIdle = delta < CHAT_PRESENCE_MAX_IDLE_MS;
+
+  if (sessionOk && heartbeatRecent && notLongIdle) {
+    return { online: true, label: 'Online' };
   }
-  const yest = new Date(now);
-  yest.setDate(yest.getDate() - 1);
-  if (seen.toDateString() === yest.toDateString()) {
-    return { online: false, label: `Last seen yesterday at ${timeStr}` };
-  }
-  if (delta < 7 * 24 * 60 * 60_000) {
-    return {
-      online: false,
-      label: `Last seen ${seen.toLocaleDateString(undefined, { weekday: 'short' })} at ${timeStr}`,
-    };
-  }
-  return {
-    online: false,
-    label: `Last seen ${seen.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at ${timeStr}`,
-  };
+
+  return { online: false, label: formatLastSeenSubtitle(lastSeenAtIso, delta) };
 }
 
 function mapEligibleRow(raw: Record<string, unknown>): EligibleChatUser {
@@ -114,6 +141,7 @@ function mapEligibleRow(raw: Record<string, unknown>): EligibleChatUser {
     role: String(raw.role ?? ''),
     email: String(raw.email ?? ''),
     last_seen_at: (raw.last_seen_at as string | null | undefined) ?? null,
+    session_active: raw.session_active === true,
   };
 }
 
@@ -127,6 +155,7 @@ function mapConversationRow(raw: Record<string, unknown>): ChatConversationRow {
     last_at: (raw.last_at as string | null | undefined) ?? null,
     unread_count: Number(raw.unread_count ?? 0),
     peer_last_seen_at: (raw.peer_last_seen_at as string | null | undefined) ?? null,
+    peer_session_active: raw.peer_session_active === true,
   };
 }
 
@@ -142,7 +171,7 @@ export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
   return (data || []).map((row: unknown) => mapConversationRow(row as Record<string, unknown>));
 }
 
-/** Upsert this device's activity timestamp (call on an interval while Messages is open). */
+/** Upsert activity while the user is using the app (visible tab). Sets session back to active after login. */
 export async function pingChatPresence(schoolId: string): Promise<void> {
   if (!schoolId) return;
   const {
@@ -150,11 +179,24 @@ export async function pingChatPresence(schoolId: string): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user?.id) return;
   const { error } = await supabase.from('school_chat_presence').upsert(
-    { user_id: user.id, school_id: schoolId, last_seen_at: new Date().toISOString() },
+    {
+      user_id: user.id,
+      school_id: schoolId,
+      last_seen_at: new Date().toISOString(),
+      session_active: true,
+    },
     { onConflict: 'user_id' }
   );
   if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
     console.warn('[schoolChatApi] pingChatPresence', error.message);
+  }
+}
+
+/** Call immediately before supabase.auth.signOut() so peers see offline right away. */
+export async function markChatPresenceOffline(): Promise<void> {
+  const { error } = await supabase.rpc('school_chat_presence_go_offline');
+  if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+    console.warn('[schoolChatApi] markChatPresenceOffline', error.message);
   }
 }
 
@@ -367,10 +409,14 @@ export function subscribeToConversationMessages(
   };
 }
 
-/** Live peer last_seen_at for online / last seen in the thread header. */
-export function subscribeToPeerPresence(peerUserId: string, onLastSeenAt: (iso: string | null) => void) {
-  const apply = (row: { last_seen_at?: string | null } | undefined) => {
-    if (row?.last_seen_at) onLastSeenAt(row.last_seen_at);
+/** Live peer presence row (heartbeat + logout flag) for thread header. */
+export function subscribeToPeerPresence(peerUserId: string, onChange: (p: ChatPeerPresence) => void) {
+  const apply = (row: { last_seen_at?: string | null; session_active?: boolean | null } | undefined) => {
+    if (!row) return;
+    onChange({
+      last_seen_at: row.last_seen_at ?? null,
+      session_active: row.session_active ?? null,
+    });
   };
   const channel = supabase
     .channel(`school-chat-presence:${peerUserId}`)
@@ -382,7 +428,7 @@ export function subscribeToPeerPresence(peerUserId: string, onLastSeenAt: (iso: 
         table: 'school_chat_presence',
         filter: `user_id=eq.${peerUserId}`,
       },
-      (payload) => apply(payload.new as { last_seen_at?: string | null })
+      (payload) => apply(payload.new as { last_seen_at?: string | null; session_active?: boolean | null })
     )
     .on(
       'postgres_changes',
@@ -392,7 +438,7 @@ export function subscribeToPeerPresence(peerUserId: string, onLastSeenAt: (iso: 
         table: 'school_chat_presence',
         filter: `user_id=eq.${peerUserId}`,
       },
-      (payload) => apply(payload.new as { last_seen_at?: string | null })
+      (payload) => apply(payload.new as { last_seen_at?: string | null; session_active?: boolean | null })
     )
     .subscribe((status, err) => {
       if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {

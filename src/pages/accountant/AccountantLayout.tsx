@@ -3,6 +3,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
+import { markChatPresenceOffline } from "../../lib/schoolChatApi";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard } from "../../hooks/usePermission";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
@@ -205,6 +206,7 @@ export default function AccountantLayout() {
   }, [schoolId, queryClient]);
 
   const handleLogout = async () => {
+    await markChatPresenceOffline();
     await supabase.auth.signOut();
     setPermissions([]);
     navigate("/");

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { markChatPresenceOffline } from '../lib/schoolChatApi';
 import { useAuthStore } from '../store/authStore';
 import { userMustChangePassword } from '../lib/postAuthRedirect';
 import { usePwezaStore } from '../store/pwezaStore';
@@ -39,6 +40,7 @@ export default function ProtectedRoute() {
 
         if (userData) {
           if (userData.is_active === false) {
+            await markChatPresenceOffline();
             await supabase.auth.signOut();
             navigate('/login');
             return;

@@ -4,6 +4,7 @@ import { ReactQueryProvider } from './lib/queryClient';
 import { ThemeProvider } from './lib/theme-provider';
 import { ToastProvider } from './components/Toast';
 import ProtectedRoute from './router/ProtectedRoute';
+import SchoolChatPresenceHeartbeat from './components/SchoolChatPresenceHeartbeat';
 import AdminLayout from './components/layout/AdminLayout';
 import TeacherLayout from './pages/teacher/TeacherLayout';
 import StudentLayout from './components/layout/StudentLayout';
@@ -135,6 +136,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="pwezacore-theme">
       <ReactQueryProvider>
+        <SchoolChatPresenceHeartbeat />
         <ToastProvider>
           <Suspense fallback={<ThemedLoadingView />}>
             <Routes>

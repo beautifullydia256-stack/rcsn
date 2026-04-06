@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import AdminContentSkeleton from './AdminContentSkeleton';
 import AdminMobileBottomNav from './AdminMobileBottomNav';
 import { supabase } from '../../lib/supabase';
+import { markChatPresenceOffline } from '../../lib/schoolChatApi';
 import { usePwezaStore } from '../../store/pwezaStore';
 
 interface AdminUser {
@@ -208,6 +209,7 @@ export default function AdminLayout() {
   }, []);
 
   async function handleLogout() {
+    await markChatPresenceOffline();
     await supabase.auth.signOut();
     navigate('/');
   }

@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { markChatPresenceOffline } from './schoolChatApi';
 
 export interface StudentProfileValidationResult {
   isValid: boolean;
@@ -77,7 +78,7 @@ export async function validateStudentProfile(userId: string, userMetadata: any):
  */
 export async function forceLogout(userId: string): Promise<boolean> {
   try {
-    // Sign out the user
+    await markChatPresenceOffline();
     const { error } = await supabase.auth.signOut();
     
     if (error) {

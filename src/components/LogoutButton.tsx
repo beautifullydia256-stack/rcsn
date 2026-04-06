@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
+import { markChatPresenceOffline } from '@/lib/schoolChatApi';
 
 type Props = {
   className?: string;
@@ -13,6 +14,7 @@ export default function LogoutButton({ className, children, clearClientState }: 
 
   const handleLogout = async () => {
     try {
+      await markChatPresenceOffline();
       await supabase.auth.signOut();
     } finally {
       try {
