@@ -22,12 +22,12 @@ import {
   formatChatPresence,
   formatVoiceDurationLabel,
   VOICE_NOTE_MAX_DURATION_SEC,
+  SCHOOL_CHAT_QK,
+  schoolChatConversationsQueryKey,
   type ChatConversationRow,
   type ChatMessageRow,
   type EligibleChatUser,
 } from '@/lib/schoolChatApi';
-
-const CHAT_QK = ['school-chat'] as const;
 
 /** WhatsApp-style chat wallpaper (subtle pattern on #e5ddd5). */
 const WA_CHAT_BG = `linear-gradient(rgba(229, 221, 213, 0.92), rgba(229, 221, 213, 0.92)),
@@ -225,19 +225,20 @@ export default function SchoolChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const mediaChunksRef = useRef<Blob[]>([]);
-  const voiceTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** Browser timer id; typed as number because DOM + merged Node timer types disagree on CI. */
+  const voiceTickRef = useRef<number | null>(null);
   const recordStartRef = useRef(0);
 
   const home = dashboardHomeForRole(role);
 
   const { data: conversations = [], isLoading: loadingConv } = useQuery({
-    queryKey: [...CHAT_QK, 'conversations', myId],
+    queryKey: myId ? schoolChatConversationsQueryKey(myId) : (['school-chat', 'conversations', '__none'] as const),
     queryFn: fetchMyConversations,
     enabled: !!myId,
   });
 
   const { data: eligible = [], isLoading: loadingElig } = useQuery({
-    queryKey: [...CHAT_QK, 'eligible', myId],
+    queryKey: [...SCHOOL_CHAT_QK, 'eligible', myId],
     queryFn: fetchEligibleChatUsers,
     enabled: !!myId && newOpen,
   });
@@ -273,17 +274,19 @@ export default function SchoolChatPage() {
   ]);
 
   useEffect(() => {
-    if (!myId) return;
+    const uid = myId;
+    if (!uid) return;
     const t = setInterval(() => {
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(uid) });
     }, 60_000);
     return () => clearInterval(t);
   }, [myId, queryClient]);
 
   useEffect(() => {
-    if (!myId) return;
+    const uid = myId;
+    if (!uid) return;
     const onFocus = () => {
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(uid) });
     };
     window.addEventListener('focus', onFocus);
     return () => window.removeEventListener('focus', onFocus);
@@ -297,7 +300,7 @@ export default function SchoolChatPage() {
       const peerRead = await fetchPeerLastReadAt(conversationId);
       setPeerLastReadAt(peerRead);
       await markConversationRead(conversationId);
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      if (myId) void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(myId) });
     },
     [myId, queryClient]
   );
@@ -311,7 +314,8 @@ export default function SchoolChatPage() {
   }, [selectedId, loadThread]);
 
   useEffect(() => {
-    if (!selectedId || !myId) return;
+    const uid = myId;
+    if (!selectedId || !uid) return;
     const unsub = subscribeToConversationMessages(
       selectedId,
       (row) => {
@@ -326,14 +330,14 @@ export default function SchoolChatPage() {
         // Unread count uses last_read_at on the server. If we invalidate the list in parallel with
         // markConversationRead, the refetch often finishes before the UPDATE commits — badge stays wrong.
         void (async () => {
-          if (row.sender_id !== myId) {
+          if (row.sender_id !== uid) {
             try {
               await markConversationRead(selectedId);
             } catch (e) {
               console.error('[SchoolChatPage] mark read on live message', e);
             }
           }
-          await queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+          await queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(uid) });
         })();
       },
       (row) => {
@@ -364,13 +368,14 @@ export default function SchoolChatPage() {
   }, [selectedId, peerUserId]);
 
   useEffect(() => {
-    if (!withUserId || !myId) return;
+    const uid = myId;
+    if (!withUserId || !uid) return;
     let cancelled = false;
     void (async () => {
       try {
         const cid = await getOrCreateDm(withUserId);
         if (cancelled) return;
-        await queryClient.refetchQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+        await queryClient.refetchQueries({ queryKey: schoolChatConversationsQueryKey(uid) });
         if (cancelled) return;
         setSelectedId(cid);
         setMobileThread(true);
@@ -411,7 +416,7 @@ export default function SchoolChatPage() {
       if (!cid || typeof cid !== 'string') {
         throw new Error('Could not create conversation. Try again.');
       }
-      await queryClient.refetchQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      if (myId) await queryClient.refetchQueries({ queryKey: schoolChatConversationsQueryKey(myId) });
       closeNewChatModal();
       setSelectedId(cid);
       setMobileThread(true);
@@ -506,7 +511,7 @@ export default function SchoolChatPage() {
           return [...prev, row];
         });
       }
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      if (myId) void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(myId) });
       void markConversationRead(selectedId);
       if (schoolId) void pingChatPresence(schoolId);
     } catch (err) {
@@ -542,16 +547,16 @@ export default function SchoolChatPage() {
       recordStartRef.current = Date.now();
       setVoiceSeconds(0);
       setVoiceRecording(true);
-      if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+      if (voiceTickRef.current != null) clearInterval(voiceTickRef.current);
       voiceTickRef.current = window.setInterval(() => {
         const sec = Math.floor((Date.now() - recordStartRef.current) / 1000);
         setVoiceSeconds(sec);
         if (sec >= VOICE_NOTE_MAX_DURATION_SEC) {
-          if (voiceTickRef.current) clearInterval(voiceTickRef.current);
+          if (voiceTickRef.current != null) clearInterval(voiceTickRef.current);
           voiceTickRef.current = null;
           void finishRecordingAndSend();
         }
-      }, 400);
+      }, 400) as unknown as number;
     } catch {
       setSendError('Could not access the microphone. Check browser permissions.');
     }
@@ -587,7 +592,7 @@ export default function SchoolChatPage() {
           return [...prev, row];
         });
       }
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      if (myId) void queryClient.invalidateQueries({ queryKey: schoolChatConversationsQueryKey(myId) });
       void markConversationRead(selectedId);
       if (schoolId) void pingChatPresence(schoolId);
     } catch (err) {
@@ -624,6 +629,17 @@ export default function SchoolChatPage() {
         .wa-sidebar-item:hover { background: #f5f6f6; }
         .wa-sidebar-item.wa-active { background: #ebebeb; }
         .wa-input::placeholder { color: #8696a0; }
+        /* Scroll without visible scrollbar (wheel / touch / trackpad still work). */
+        .wa-scroll-y {
+          overflow-y: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .wa-scroll-y::-webkit-scrollbar {
+          display: none;
+          width: 0;
+          height: 0;
+        }
       `}</style>
 
       {!embedded && (
@@ -699,7 +715,7 @@ export default function SchoolChatPage() {
               />
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto wa-scroll-y">
             {loadingConv && <p className="p-4 text-[14px] text-[#667781]">Loading…</p>}
             {!loadingConv && conversations.length === 0 && (
               <p className="p-4 text-[14px] text-[#667781]">No chats yet. Tap <strong>New chat</strong>.</p>
@@ -843,7 +859,7 @@ export default function SchoolChatPage() {
               </div>
 
               <div
-                className="flex-1 overflow-y-auto px-[4%] py-3 space-y-1"
+                className="flex-1 overflow-y-auto wa-scroll-y px-[4%] py-3 space-y-1"
                 style={{ background: WA_CHAT_BG }}
               >
                 {messages.map((m) => {
@@ -1052,7 +1068,7 @@ export default function SchoolChatPage() {
                 ))}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-2">
+            <div className="flex-1 overflow-y-auto wa-scroll-y p-2">
               {loadingElig && <p className="p-3 text-[14px] text-[#667781]">Loading contacts…</p>}
               {!loadingElig &&
                 filteredEligible.map((u) => {

@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Search, MessageCircle, Bell, Sun, Moon } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { markChatPresenceOffline } from "../../lib/schoolChatApi";
+import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard } from "../../hooks/usePermission";
 import ThemedLoadingView from "../../components/ui/ThemedLoadingView";
@@ -27,6 +28,8 @@ function NavItem({
   end,
   onClick,
   onPrefetch,
+  badge,
+  badgeColor = "rose",
 }: {
   to: string;
   icon: string;
@@ -34,6 +37,8 @@ function NavItem({
   end?: boolean;
   onClick?: () => void;
   onPrefetch?: () => void;
+  badge?: string | number;
+  badgeColor?: "teal" | "amber" | "rose";
 }) {
   return (
     <NavLink
@@ -45,6 +50,9 @@ function NavItem({
     >
       <span className="pw-nav-ic">{icon}</span>
       <span className="pw-nav-text">{label}</span>
+      {badge !== undefined && badge !== null && String(badge) !== "0" && (
+        <span className={`pw-nav-badge pw-nav-badge--${badgeColor}`}>{badge}</span>
+      )}
     </NavLink>
   );
 }
@@ -75,6 +83,8 @@ export default function AccountantLayout() {
   const theme = useUIStore((s) => s.theme);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const { user, schoolId, setUser, setRole, setSchoolId, setPermissions } = useAuthStore();
+  const chatUnread = useSchoolChatUnreadTotal(user?.id);
+  const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : undefined;
   const canAccessAccountant = useCanAccessAccountantDashboard();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchQ, setSearchQ] = useState("");
@@ -321,7 +331,14 @@ export default function AccountantLayout() {
             onClick={closeSidebar}
             onPrefetch={() => prefetchChunk(ACCOUNTANT_ROUTE_CHUNKS[0])}
           />
-          <NavItem to="/dashboard/accountant/messages" icon="💬" label="Messages" onClick={closeSidebar} />
+          <NavItem
+            to="/dashboard/accountant/messages"
+            icon="💬"
+            label="Messages"
+            badge={chatUnreadBadge}
+            badgeColor="rose"
+            onClick={closeSidebar}
+          />
         </div>
 
         <div className="pw-nav-section">
@@ -358,8 +375,25 @@ export default function AccountantLayout() {
             {theme === "light" ? <Moon className="h-4 w-4 shrink-0" /> : <Sun className="h-4 w-4 shrink-0" />}
             <span>Theme</span>
           </button>
-          <button type="button" aria-label="Messages" title="Messages">
+          <button
+            type="button"
+            aria-label="Messages"
+            title="Messages"
+            className="relative"
+            onClick={() => {
+              navigate("/dashboard/accountant/messages");
+              closeSidebar();
+            }}
+          >
             <MessageCircle className="h-4 w-4 shrink-0" />
+            {chatUnread > 0 && (
+              <span
+                className="pw-nav-badge pw-nav-badge--rose absolute -right-1 -top-1 min-w-[16px] scale-90 px-1 text-[9px] leading-[16px]"
+                style={{ padding: "0 4px" }}
+              >
+                {chatUnread > 99 ? "99+" : chatUnread}
+              </span>
+            )}
           </button>
           <button type="button" aria-label="Notifications" title="Notifications">
             <Bell className="h-4 w-4 shrink-0" />

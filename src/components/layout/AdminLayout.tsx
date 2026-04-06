@@ -4,7 +4,9 @@ import AdminContentSkeleton from './AdminContentSkeleton';
 import AdminMobileBottomNav from './AdminMobileBottomNav';
 import { supabase } from '../../lib/supabase';
 import { markChatPresenceOffline } from '../../lib/schoolChatApi';
+import { useSchoolChatUnreadTotal } from '../../hooks/useSchoolChatUnreadTotal';
 import { usePwezaStore } from '../../store/pwezaStore';
+import { useAuthStore } from '../../store/authStore';
 
 interface AdminUser {
   name: string;
@@ -101,6 +103,10 @@ function SubItem({
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const authUserId = useAuthStore((s) => s.user?.id);
+  const chatUnread = useSchoolChatUnreadTotal(authUserId ?? undefined);
+  const chatUnreadBadge =
+    chatUnread > 0 ? (chatUnread > 99 ? '99+' : chatUnread) : undefined;
   const themeBeforeAdminRef = useRef<'light' | 'dark' | null>(null);
   const prefetchAll = usePwezaStore((s) => s.prefetchAll); // pweza speed system
 
@@ -587,7 +593,15 @@ export default function AdminLayout() {
           <div className="pw-nav-section">
             <span className="pw-nav-label">Main</span>
             <NavItem to="/dashboard/admin" icon="⊞" label="Dashboard" end onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/messages" icon="💬" label="Messages" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem
+              to="/dashboard/admin/messages"
+              icon="💬"
+              label="Messages"
+              badge={chatUnreadBadge}
+              badgeColor="rose"
+              onClick={closeSidebar}
+              onPrefetch={onPrefetchNav}
+            />
             <NavItem to="/dashboard/admin/students" icon="👨‍🎓" label="Students" badge={studentCount ?? undefined} badgeColor="teal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/teachers" icon="🧑‍🏫" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/parents" icon="👨‍👩‍👧" label="Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />

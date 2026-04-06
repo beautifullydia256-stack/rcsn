@@ -123,7 +123,24 @@ export const ACCOUNTANT_PW_SHELL_CSS = `
     border-color: rgba(16,217,168,0.15) !important;
   }
   .accountant-glass .pw-nav-ic { font-size: 15px; flex-shrink: 0; width: 18px; text-align: center; }
-  .accountant-glass .pw-nav-text { flex: 1; text-align: left; }
+  .accountant-glass .pw-nav-text { flex: 1; text-align: left; min-width: 0; }
+  .accountant-glass .pw-nav-badge {
+    margin-left: auto;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+  .accountant-glass .pw-nav-badge--rose { background: var(--pw-rose, #f75c5c); color: #fff; }
+  .accountant-glass .pw-nav-badge--teal { background: var(--pw-teal, #10d9a8); color: #05080f; }
+  .accountant-glass .pw-nav-badge--amber { background: var(--pw-amber, #f5a623); color: #05080f; }
   .accountant-glass .pw-nav-subitems { padding: 2px 0 4px 14px; }
   .accountant-glass .pw-nav-subitem {
     display: flex; align-items: center; gap: 7px;

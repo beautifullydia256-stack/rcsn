@@ -2,6 +2,7 @@ import { Suspense, useEffect, useLayoutEffect, useState, type ReactNode } from '
 import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { markChatPresenceOffline } from '@/lib/schoolChatApi';
+import { useSchoolChatUnreadTotal } from '@/hooks/useSchoolChatUnreadTotal';
 import { ParentPortalProvider, useParentPortal } from '@/context/ParentPortalContext';
 import { PARENT_PORTAL_SCOPED_STYLE } from '@/lib/parentPortalAssets';
 import { displayStudentName } from '@/lib/parentPortalUtils';
@@ -79,9 +80,10 @@ function ParentChrome() {
     children,
     activeStudentId,
     setActiveStudentId,
-    unreadInbox,
+    userId,
   } = useParentPortal();
 
+  const chatUnread = useSchoolChatUnreadTotal(userId);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useLayoutEffect(() => {
@@ -186,12 +188,12 @@ function ParentChrome() {
                 </ParentNavButton>
                 <ParentNavButton to="/dashboard/parent/messages" onAfterClick={() => setSidebarOpen(false)}>
                   <span className="pd-nav-ic">💬</span>Messages
-                  {unreadInbox > 0 ? (
-                    <span className="pd-nav-badge" id="pd-notif-badge" style={{ display: 'flex' }}>
-                      {unreadInbox > 99 ? '99+' : unreadInbox}
+                  {chatUnread > 0 ? (
+                    <span className="pd-nav-badge" id="pd-chat-unread-badge" style={{ display: 'flex' }}>
+                      {chatUnread > 99 ? '99+' : chatUnread}
                     </span>
                   ) : (
-                    <span className="pd-nav-badge" id="pd-notif-badge" style={{ display: 'none' }}>
+                    <span className="pd-nav-badge" id="pd-chat-unread-badge" style={{ display: 'none' }}>
                       0
                     </span>
                   )}

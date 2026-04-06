@@ -5,6 +5,7 @@ import { Outlet, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { Bell, MessageCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { markChatPresenceOffline } from "../../lib/schoolChatApi";
+import { useSchoolChatUnreadTotal } from "../../hooks/useSchoolChatUnreadTotal";
 import { useAuthStore } from "../../store/authStore";
 import { useCanAccessAccountantDashboard, usePermission } from "../../hooks/usePermission";
 import { PERMISSION_KEYS } from "../../lib/permissions";
@@ -56,6 +57,9 @@ export default function TeacherLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const closeSidebar = () => setSidebarOpen(false);
+
+  const chatUnread = useSchoolChatUnreadTotal(user?.id);
+  const chatUnreadBadge = chatUnread > 0 ? (chatUnread > 99 ? "99+" : chatUnread) : null;
 
   const displayLabel = user?.user_metadata?.name ?? user?.email ?? "Teacher";
   const userInitials =
@@ -337,6 +341,9 @@ export default function TeacherLayout() {
           >
             <span className="pw-nav-ic">💬</span>
             <span className="pw-nav-text">Messages</span>
+            {chatUnreadBadge != null && (
+              <span className="pw-nav-badge pw-nav-badge--rose">{chatUnreadBadge}</span>
+            )}
           </NavLink>
           <NavLink
             to="/dashboard/teacher/notifications"
@@ -361,6 +368,7 @@ export default function TeacherLayout() {
         <div className="pw-sidebar-tools">
           <button
             type="button"
+            className="relative"
             onClick={() => {
               navigate("/dashboard/teacher/messages");
               closeSidebar();
@@ -369,6 +377,14 @@ export default function TeacherLayout() {
           >
             <MessageCircle className="h-4 w-4 shrink-0" />
             <span>Chat</span>
+            {chatUnread > 0 && (
+              <span
+                className="pw-nav-badge pw-nav-badge--rose pointer-events-none absolute -right-0.5 -top-1 min-w-[16px] scale-[0.92] px-1 text-[9px]"
+                style={{ lineHeight: "16px", padding: "0 4px" }}
+              >
+                {chatUnread > 99 ? "99+" : chatUnread}
+              </span>
+            )}
           </button>
           <button
             type="button"

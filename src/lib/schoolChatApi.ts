@@ -488,3 +488,49 @@ export function subscribeToPeerLastRead(
     void supabase.removeChannel(channel);
   };
 }
+
+/** React Query root for school chat (shared with dashboard sidebars). */
+export const SCHOOL_CHAT_QK = ['school-chat'] as const;
+
+export function schoolChatConversationsQueryKey(userId: string) {
+  return [...SCHOOL_CHAT_QK, 'conversations', userId] as const;
+}
+
+/**
+ * Keep nav unread badges in sync: new messages, delivery updates, and this user's last_read_at.
+ * Debounce in the caller if needed; RLS limits which message events are visible.
+ */
+export function subscribeSchoolChatInboxRefresh(userId: string, onRefresh: () => void) {
+  const channel = supabase
+    .channel(`school-chat-inbox:${userId}`)
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'school_chat_messages' },
+      () => onRefresh()
+    )
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'school_chat_messages' },
+      () => onRefresh()
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'school_chat_participants',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => onRefresh()
+    )
+    .subscribe((status, err) => {
+      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[schoolChat] inbox refresh channel', status, err?.message ?? err);
+        }
+      }
+    });
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
