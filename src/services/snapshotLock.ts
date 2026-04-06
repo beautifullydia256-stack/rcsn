@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import { getSnapshotData, insertSnapshotData, lockSnapshot } from './snapshotService';
 import type { SnapshotData } from './snapshotService';
 import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from '../lib/reportUtils';
+import { studentAttendanceRowIsPresent } from '../lib/studentAttendanceRow';
 
 export type SnapshotFilter = { studentIds?: string[]; classNames?: string[] };
 
@@ -225,7 +226,7 @@ export async function createSnapshotFromExamSet(
         percentage: 0,
       };
     }
-    if (att.present) {
+    if (studentAttendanceRowIsPresent(att)) {
       attendanceByStudent[att.student_id].presentDays++;
     } else {
       attendanceByStudent[att.student_id].absentDays++;

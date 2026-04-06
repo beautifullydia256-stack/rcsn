@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../../lib/supabase';
+import { studentAttendanceRowIsPresent } from '../../../lib/studentAttendanceRow';
 import { useAuthStore } from '../../../store/authStore';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 
@@ -12,11 +13,11 @@ export async function fetchAttendance(userId: string, date: string) {
   if (!data?.school_id) return [] as any[];
   const { data: att } = await supabase
     .from('student_attendance')
-    .select('student_id, class_name, date, present')
+    .select('student_id, class_name, attendance_date, present, status')
     .eq('school_id', data.school_id)
-    .eq('date', date)
+    .eq('attendance_date', date)
     .order('class_name')
-    .order('date', { ascending: false });
+    .order('attendance_date', { ascending: false });
   return att || [];
 }
 
@@ -78,18 +79,24 @@ export default function AttendanceRecordsPage() {
                   <td colSpan={4} className="px-4 py-8 text-center text-white/70">No attendance records for this date.</td>
                 </tr>
               ) : (
-                rows.map((r, i) => (
-                  <tr key={`${r.student_id}-${r.date}-${i}`} className="border-b border-white/10 hover:bg-white/5">
-                    <td className="px-4 py-2 text-white">{r.student_id}</td>
-                    <td className="px-4 py-2 text-white/90">{r.class_name}</td>
-                    <td className="px-4 py-2 text-white/90">{r.date}</td>
+                rows.map((r: Record<string, unknown>, i) => {
+                  const day = (r.attendance_date ?? r.date) as string;
+                  const isPresent = studentAttendanceRowIsPresent(
+                    r as { present?: boolean | null; status?: string | null }
+                  );
+                  return (
+                  <tr key={`${r.student_id}-${String(day)}-${i}`} className="border-b border-white/10 hover:bg-white/5">
+                    <td className="px-4 py-2 text-white">{String(r.student_id)}</td>
+                    <td className="px-4 py-2 text-white/90">{String(r.class_name ?? '')}</td>
+                    <td className="px-4 py-2 text-white/90">{day}</td>
                     <td className="px-4 py-2">
-                      <span className={`px-2 py-1 rounded text-xs ${r.present ? 'bg-green-500/20 text-green-300 border border-green-400/30' : 'bg-red-500/20 text-red-300 border border-red-400/30'}`}>
-                        {r.present ? 'Present' : 'Absent'}
+                      <span className={`px-2 py-1 rounded text-xs ${isPresent ? 'bg-green-500/20 text-green-300 border border-green-400/30' : 'bg-red-500/20 text-red-300 border border-red-400/30'}`}>
+                        {isPresent ? 'Present' : 'Absent'}
                       </span>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

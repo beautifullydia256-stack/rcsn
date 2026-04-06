@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 import { Users, GraduationCap, DollarSign, CalendarCheck, Clock, FileCheck } from 'lucide-react';
 
@@ -40,9 +41,9 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
     supabase
       .from('student_attendance')
-      .select('student_id, present')
+      .select('student_id, present, status')
       .eq('school_id', schoolId)
-      .eq('date', today),
+      .eq('attendance_date', today),
     supabase
       .from('school_expenses')
       .select('expense_id', { count: 'exact', head: true })
@@ -95,9 +96,13 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
   const enrolled = studentsResult.count ?? 0;
-  const attRows = (attendanceResult.data || []) as { student_id: string; present?: boolean }[];
+  const attRows = (attendanceResult.data || []) as {
+    student_id: string;
+    present?: boolean | null;
+    status?: string | null;
+  }[];
   const presentToday = new Set(
-    attRows.filter((x) => x.present === true).map((x) => x.student_id)
+    attRows.filter((x) => studentAttendanceRowIsPresent(x)).map((x) => x.student_id)
   ).size;
   const markedToday = new Set(attRows.map((x) => x.student_id)).size;
   const pctOfEnrolled = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;

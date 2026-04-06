@@ -5,6 +5,7 @@ import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Calendar, Users, UserCheck, UserX, Search, Download, GraduationCap, Filter } from "lucide-react";
+import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
 
 export default function AttendanceRecordsPage() {
   const router = useRouter();
@@ -62,11 +63,11 @@ export default function AttendanceRecordsPage() {
       
       const { data } = await supabase
         .from('student_attendance')
-        .select('student_id,class_name,date,present')
+        .select('student_id,class_name,date,attendance_date,present,status')
         .eq('school_id', u.school_id)
-        .eq('date', today)
+        .eq('attendance_date', today)
         .order('class_name')
-        .order('date', { ascending: false });
+        .order('attendance_date', { ascending: false });
       setRows(data || []);
       setLoading(false);
     };
@@ -80,10 +81,10 @@ export default function AttendanceRecordsPage() {
     if (role === 'students') {
       let query = supabase
         .from('student_attendance')
-        .select('student_id,class_name,date,present')
+        .select('student_id,class_name,date,attendance_date,present,status')
         .eq('school_id', schoolId)
-        .gte('date', from)
-        .lte('date', to);
+        .gte('attendance_date', from)
+        .lte('attendance_date', to);
       
       // Apply class filter at database level for better performance
       if (selectedClass) {
@@ -92,7 +93,7 @@ export default function AttendanceRecordsPage() {
       
       const { data } = await query
         .order('class_name')
-        .order('date', { ascending: false });
+        .order('attendance_date', { ascending: false });
       setRows(data || []);
     } else {
       const { data } = await supabase
@@ -116,8 +117,8 @@ export default function AttendanceRecordsPage() {
     return rows.filter((r: any) => {
       // Status filter
       if (role === 'students' && statusFilter !== 'all') {
-        if (statusFilter === 'present' && !r.present) return false;
-        if (statusFilter === 'absent' && r.present) return false;
+        if (statusFilter === "present" && !studentAttendanceRowIsPresent(r)) return false;
+        if (statusFilter === "absent" && studentAttendanceRowIsPresent(r)) return false;
       }
       
       // Search filter
@@ -138,8 +139,8 @@ export default function AttendanceRecordsPage() {
   // Calculate stats
   const stats = {
     total: filteredRows.length,
-    present: filteredRows.filter((r: any) => r.present === true).length,
-    absent: filteredRows.filter((r: any) => r.present === false).length,
+    present: filteredRows.filter((r: any) => studentAttendanceRowIsPresent(r)).length,
+    absent: filteredRows.filter((r: any) => !studentAttendanceRowIsPresent(r)).length,
   };
 
   // Get student/teacher name from ID
@@ -344,9 +345,11 @@ export default function AttendanceRecordsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-white/80">{r.class_name}</td>
-                    <td className="px-4 py-3 text-white/80">{new Date(r.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-white/80">
+                      {new Date((r.attendance_date || r.date) + "T12:00:00").toLocaleDateString()}
+                    </td>
                     <td className="px-4 py-3">
-                      {r.present ? (
+                      {studentAttendanceRowIsPresent(r) ? (
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-green-500/20 text-green-300 border border-green-400/30">
                           <UserCheck className="w-3 h-3" /> Present
                         </span>

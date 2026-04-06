@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { useAuthStore } from '@/store/authStore';
 import { ADMIN_GC_TIME_MS, ADMIN_STALE_TIME_MS } from '@/lib/adminQueryDefaults';
@@ -148,9 +149,9 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
     supabase.from('class_teachers').select('class_name, teacher_id').eq('school_id', u.school_id),
     supabase
       .from('student_attendance')
-      .select('student_id, present')
+      .select('student_id, present, status')
       .eq('school_id', u.school_id)
-      .eq('date', today),
+      .eq('attendance_date', today),
     supabase
       .from('student_photos')
       .select('student_id, photo_url')
@@ -211,12 +212,12 @@ export async function fetchStudentsContext(userId: string): Promise<StudentsFetc
 
   const attendanceTodayByStudentId: Record<string, 'present' | 'absent'> = {};
   for (const row of attendanceRes.data || []) {
-    const sid = (row as { student_id?: string; present?: boolean }).student_id;
+    const r = row as { student_id?: string; present?: boolean | null; status?: string | null };
+    const sid = r.student_id;
     if (!sid) continue;
-    const present = (row as { present?: boolean }).present;
-    if (present === true) {
+    if (studentAttendanceRowIsPresent(r)) {
       attendanceTodayByStudentId[sid] = 'present';
-    } else if (present === false && attendanceTodayByStudentId[sid] !== 'present') {
+    } else if (attendanceTodayByStudentId[sid] !== 'present') {
       attendanceTodayByStudentId[sid] = 'absent';
     }
   }

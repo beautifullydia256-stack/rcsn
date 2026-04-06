@@ -1,5 +1,13 @@
 // Utility functions for student report generation
 
+import { studentAttendanceRowIsPresent } from './studentAttendanceRow';
+
+function attendanceRowDayMs(a: { date?: string | null; attendance_date?: string | null }): number {
+  const raw = a.attendance_date ?? a.date;
+  if (raw == null || raw === '') return NaN;
+  return new Date(raw).getTime();
+}
+
 export interface GradeScale {
   min: number;
   max: number;
@@ -96,9 +104,12 @@ export function formatDate(date: string | Date): string {
 
 export function calculateAttendancePercentage(attendance: any[], examSet: any, allExamSets: any[]): number | null {
   if (attendance.length === 0 || !examSet || !allExamSets) return null;
-  
+
+  const dayTimes = attendance.map(attendanceRowDayMs).filter((t) => !Number.isNaN(t));
+  if (dayTimes.length === 0) return null;
+
   // Get the first attendance record date for this class (not just this student)
-  const firstAttendanceDate = new Date(Math.min(...attendance.map(a => new Date(a.date).getTime())));
+  const firstAttendanceDate = new Date(Math.min(...dayTimes));
   
   // Find the LAST exam set for this term (the one with the latest activation date)
   const lastExamSetForTerm = allExamSets
@@ -116,11 +127,15 @@ export function calculateAttendancePercentage(attendance: any[], examSet: any, a
   if (totalSchoolDays === 0) return null;
   
   // Count present days from attendance records within this period
-  const presentDays = attendance.filter(a => {
-    const attendanceDate = new Date(a.date);
-    return a.present === true && attendanceDate >= firstAttendanceDate && attendanceDate <= lastExamSetDate;
+  const presentDays = attendance.filter((a) => {
+    const attendanceDate = new Date(a.attendance_date ?? a.date);
+    return (
+      studentAttendanceRowIsPresent(a) &&
+      attendanceDate >= firstAttendanceDate &&
+      attendanceDate <= lastExamSetDate
+    );
   }).length;
-  
+
   return Math.round((presentDays / totalSchoolDays) * 100);
 }
 
@@ -162,9 +177,22 @@ export function getAttendanceDetails(attendance: any[], examSet: any, allExamSet
       lastExamSetName: 'N/A'
     };
   }
-  
+
+  const dayTimes = attendance.map(attendanceRowDayMs).filter((t) => !Number.isNaN(t));
+  if (dayTimes.length === 0) {
+    return {
+      totalSchoolDays: null,
+      presentDays: null,
+      absentDays: null,
+      percentage: null,
+      firstAttendanceDate: 'N/A',
+      lastSchoolDay: 'N/A',
+      lastExamSetName: 'N/A',
+    };
+  }
+
   // Get the first attendance record date for this class
-  const firstAttendanceDate = new Date(Math.min(...attendance.map(a => new Date(a.date).getTime())));
+  const firstAttendanceDate = new Date(Math.min(...dayTimes));
   
   // Find the LAST exam set for this term (the one with the latest activation date)
   const lastExamSetForTerm = allExamSets
@@ -190,11 +218,15 @@ export function getAttendanceDetails(attendance: any[], examSet: any, allExamSet
   const totalSchoolDays = calculateSchoolDaysBetween(firstAttendanceDate, lastExamSetDate);
   
   // Count present days from attendance records within this period
-  const presentDays = attendance.filter(a => {
-    const attendanceDate = new Date(a.date);
-    return a.present === true && attendanceDate >= firstAttendanceDate && attendanceDate <= lastExamSetDate;
+  const presentDays = attendance.filter((a) => {
+    const attendanceDate = new Date(a.attendance_date ?? a.date);
+    return (
+      studentAttendanceRowIsPresent(a) &&
+      attendanceDate >= firstAttendanceDate &&
+      attendanceDate <= lastExamSetDate
+    );
   }).length;
-  
+
   const absentDays = totalSchoolDays - presentDays;
   
   const percentage = totalSchoolDays > 0 ? Math.round((presentDays / totalSchoolDays) * 100) : null;

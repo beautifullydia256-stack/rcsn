@@ -6,6 +6,7 @@ import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from '@/l
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Users, GraduationCap, DollarSign, CalendarCheck, ArrowUpRight } from 'lucide-react';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 
 export default function AdminKPICards() {
   const [kpis, setKpis] = useState({
@@ -58,10 +59,9 @@ export default function AdminKPICards() {
           supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', u.school_id),
           supabase
             .from('student_attendance')
-            .select('student_id')
+            .select('student_id, present, status')
             .eq('school_id', u.school_id)
-            .eq('date', currentTerm.today)
-            .eq('present', true),
+            .eq('attendance_date', currentTerm.today),
           termId
             ? supabase
                 .from('student_balances')
@@ -96,7 +96,11 @@ export default function AdminKPICards() {
           outstanding,
           totalOverallBalance,
           feesCollected,
-          attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
+          attendance: new Set(
+            (attendanceResult.data || [])
+              .filter((x: unknown) => studentAttendanceRowIsPresent(x as { present?: boolean | null; status?: string | null }))
+              .map((x: { student_id?: string }) => x.student_id)
+          ).size,
         });
       } catch (error) {
         console.error('Error loading admin KPIs:', error);

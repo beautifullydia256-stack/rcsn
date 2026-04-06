@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { resolveCurrentSchoolTerm, sumTotalOverallOutstandingBalance } from "@/lib/adminFinanceTerm";
 import { useRouter } from "next/navigation";
+import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
 
 export function AdminKpis() {
   const [k, setK] = useState({
@@ -46,10 +47,9 @@ export function AdminKpis() {
           supabase.from("teachers").select("*", { count: "exact", head: true }).eq("school_id", u.school_id),
           supabase
             .from("student_attendance")
-            .select("student_id")
+            .select("student_id, present, status")
             .eq("school_id", u.school_id)
-            .eq("date", currentTerm.today)
-            .eq("present", true),
+            .eq("attendance_date", currentTerm.today),
           sumTotalOverallOutstandingBalance(supabase, u.school_id),
         ]);
 
@@ -83,7 +83,13 @@ export function AdminKpis() {
           outstanding,
           totalOverallBalance,
           receipts,
-          attendance: new Set((attendanceResult.data || []).map((x: any) => x.student_id)).size,
+          attendance: new Set(
+            (attendanceResult.data || [])
+              .filter((x: unknown) =>
+                studentAttendanceRowIsPresent(x as { present?: boolean | null; status?: string | null })
+              )
+              .map((x: { student_id?: string }) => x.student_id)
+          ).size,
         });
       } catch (error) {
         console.error('Error loading admin KPIs:', error);

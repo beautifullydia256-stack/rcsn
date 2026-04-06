@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 
 const GREEN_PRIMARY = '#16a34a';
 const GREEN_LIGHT = '#22c55e';
@@ -261,11 +262,13 @@ export default function ChartsAnalytics() {
         const attendancePromises = workingDays.map(async (date) => {
           const { data: attendance } = await supabase
             .from('student_attendance')
-            .select('student_id, present')
+            .select('student_id, present, status')
             .eq('school_id', u.school_id)
-            .eq('date', date);
-          
-          const presentCount = (attendance || []).filter(a => a.present === true).length;
+            .eq('attendance_date', date);
+
+          const presentCount = (attendance || []).filter((a) =>
+            studentAttendanceRowIsPresent(a as { present?: boolean | null; status?: string | null })
+          ).length;
           const percentage = totalActiveStudents > 0 ? Math.round((presentCount / totalActiveStudents) * 100) : 0;
           
           return {

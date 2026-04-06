@@ -8,6 +8,7 @@ import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { displayParentsForStudent, type ParentLite } from '@/lib/studentDisplayParents';
 import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
 
@@ -399,8 +400,19 @@ export default function DesignStudentProfile() {
       ] = await Promise.all([
         supabase.from('parents').select('*').eq('school_id', schoolId).eq('student_id', studentId),
         supabase.from('student_photos').select('photo_url').eq('school_id', schoolId).eq('student_id', studentId).eq('is_primary', true).maybeSingle(),
-        supabase.from('student_attendance').select('present').eq('school_id', schoolId).eq('student_id', studentId).eq('date', today).maybeSingle(),
-        supabase.from('student_attendance').select('present, date').eq('school_id', schoolId).eq('student_id', studentId).order('date'),
+        supabase
+          .from('student_attendance')
+          .select('present, status')
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId)
+          .eq('attendance_date', today)
+          .maybeSingle(),
+        supabase
+          .from('student_attendance')
+          .select('present, status, attendance_date')
+          .eq('school_id', schoolId)
+          .eq('student_id', studentId)
+          .order('attendance_date'),
         supabase.from('exam_results').select('subject, marks_obtained, total_marks, grade').eq('school_id', schoolId).eq('student_id', studentId).limit(50),
         currentClass
           ? supabase.from('class_subjects').select('subject').eq('school_id', schoolId).eq('class_name', currentClass)
@@ -572,8 +584,16 @@ export default function DesignStudentProfile() {
         }
       }
       const photoUrl = (photoRes.data as { photo_url?: string } | null)?.photo_url?.trim() || '';
-      const attToday = attendanceTodayRes.data as { present?: boolean } | null;
-      const attAll = (attendanceAllRes.data || []) as { present?: boolean; date?: string }[];
+      const attToday = attendanceTodayRes.data as {
+        present?: boolean | null;
+        status?: string | null;
+      } | null;
+      const attAll = (attendanceAllRes.data || []) as {
+        present?: boolean | null;
+        status?: string | null;
+        attendance_date?: string;
+        date?: string;
+      }[];
       const examResults = (examRes.data || []) as {
         subject?: string;
         marks_obtained?: number;
@@ -601,18 +621,19 @@ export default function DesignStudentProfile() {
         }
       }
 
-      const presentDays = attAll.filter((a) => a.present === true).length;
-      const absentDays = attAll.filter((a) => a.present === false).length;
+      const presentDays = attAll.filter((a) => studentAttendanceRowIsPresent(a)).length;
+      const absentDays = attAll.filter((a) => !studentAttendanceRowIsPresent(a)).length;
       const totalMarked = presentDays + absentDays;
       const overallRate = totalMarked > 0 ? Math.round((presentDays / totalMarked) * 100) : 0;
 
       const monthMap: Record<string, { present: number; total: number }> = {};
       attAll.forEach((a) => {
-        if (!a.date) return;
-        const month = new Date(a.date).toLocaleString('en', { month: 'short' });
+        const d = a.attendance_date || a.date;
+        if (!d) return;
+        const month = new Date(d).toLocaleString('en', { month: 'short' });
         if (!monthMap[month]) monthMap[month] = { present: 0, total: 0 };
         monthMap[month].total++;
-        if (a.present === true) monthMap[month].present++;
+        if (studentAttendanceRowIsPresent(a)) monthMap[month].present++;
       });
 
       const fullName = displayFullName(s);
@@ -676,7 +697,7 @@ export default function DesignStudentProfile() {
           if (!attToday) {
             attMeta.textContent = 'Not Marked';
             attMeta.className = 'sp-hero-meta-value';
-          } else if (attToday.present === true) {
+          } else if (studentAttendanceRowIsPresent(attToday)) {
             attMeta.textContent = '✓ Present';
             attMeta.className = 'sp-hero-meta-value green';
           } else {

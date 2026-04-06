@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import ParentPageScaffold, { parentPortal } from '@/components/parent/ParentPageScaffold';
 import { useParentPortal } from '@/context/ParentPortalContext';
 import { displayStudentName } from '@/lib/parentPortalUtils';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 export default function ParentAttendancePage() {
   const { schoolId, ready, children, activeStudentId } = useParentPortal();
@@ -21,19 +22,34 @@ export default function ParentAttendancePage() {
     (async () => {
       const { data: all } = await supabase
         .from('student_attendance')
-        .select('date, present')
+        .select('attendance_date, date, present, status')
         .eq('school_id', schoolId)
         .eq('student_id', child.student_id)
-        .order('date', { ascending: false })
+        .order('attendance_date', { ascending: false })
         .limit(120);
       if (cancelled) return;
-      const list = (all || []) as { date: string; present: boolean | null }[];
-      const days = list.filter((a) => a.present === true || a.present === false);
-      const pr = days.filter((a) => a.present === true).length;
+      const list = (all || []) as {
+        attendance_date?: string | null;
+        date?: string | null;
+        present?: boolean | null;
+        status?: string | null;
+      }[];
+      const rowDayKey = (a: (typeof list)[0]) =>
+        String(a.attendance_date || a.date || '').trim();
+      const days = list.filter((a) => {
+        const k = rowDayKey(a);
+        if (!k) return false;
+        const s = String(a.status || '').toLowerCase();
+        return typeof a.present === 'boolean' || s === 'present' || s === 'absent' || s === 'late' || s === 'excused';
+      });
+      const pr = days.filter((a) => studentAttendanceRowIsPresent(a)).length;
       setPct(days.length ? Math.round((pr / days.length) * 100) : null);
       setDayCounts(days.length ? { present: pr, total: days.length } : null);
       setRecent(
-        list.slice(0, 20).map((a) => ({ date: a.date, present: a.present === true }))
+        list.slice(0, 20).map((a) => ({
+          date: rowDayKey(a) || '—',
+          present: studentAttendanceRowIsPresent(a),
+        }))
       );
       setLoading(false);
     })();

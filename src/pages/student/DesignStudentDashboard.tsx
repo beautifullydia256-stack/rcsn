@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardThemeSync } from '@/lib/designDashboardHtml';
 
 import designRaw from '../../../new designs/pwezacore-student-dashboard-react.html?raw';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 const { style: SCOPED_STYLE, body: BODY_HTML } = extractStyleAndBody(designRaw);
 
@@ -51,7 +52,7 @@ export default function DesignStudentDashboard() {
             .eq('student_id', studentId),
           supabase
             .from('student_attendance')
-            .select('present')
+            .select('present, status')
             .eq('school_id', schoolId)
             .eq('student_id', studentId)
             .limit(4000),
@@ -74,8 +75,9 @@ export default function DesignStudentDashboard() {
           weakSubject = results?.[lowIdx]?.subject || '—';
         }
 
-        const rows = attRes.data || [];
-        attendPresent = rows.filter((r: { present?: boolean }) => r.present === true).length;
+        type AttRow = { present?: boolean | null; status?: string | null };
+        const rows = (attRes.data || []) as AttRow[];
+        attendPresent = rows.filter((r) => studentAttendanceRowIsPresent(r)).length;
         attendTotal = rows.length;
         attendPct = attendTotal ? Math.round((attendPresent / attendTotal) * 100) : 0;
       }

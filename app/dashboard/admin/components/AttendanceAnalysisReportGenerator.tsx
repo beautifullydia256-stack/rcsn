@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import GlassCard from '@/components/ui/GlassCard';
 import {
   CalendarCheck, X, Download, Brain, TrendingUp, Users, AlertTriangle,
@@ -90,11 +91,12 @@ export default function AttendanceAnalysisReportGenerator() {
           .select('student_id, name, current_class')
           .eq('school_id', schoolId)
           .eq('status', 'active'),
-        supabase.from('student_attendance')
-          .select('student_id, date, present, class_name')
+        supabase
+          .from('student_attendance')
+          .select('student_id, date, attendance_date, present, status, class_name')
           .eq('school_id', schoolId)
-          .gte('date', startDate)
-          .lte('date', endDate),
+          .gte('attendance_date', startDate)
+          .lte('attendance_date', endDate),
         supabase.from('students')
           .select('current_class')
           .eq('school_id', schoolId)
@@ -102,10 +104,11 @@ export default function AttendanceAnalysisReportGenerator() {
         supabase.from('teachers')
           .select('teacher_id, name')
           .eq('school_id', schoolId),
-        supabase.from('student_attendance')
-          .select('student_id, present')
+        supabase
+          .from('student_attendance')
+          .select('student_id, present, status')
           .eq('school_id', schoolId)
-          .eq('date', today)
+          .eq('attendance_date', today)
       ]);
 
       const students = studentsResult.data || [];
@@ -115,13 +118,13 @@ export default function AttendanceAnalysisReportGenerator() {
 
       // Calculate overview
       const totalStudents = students.length;
-      const presentToday = todayAttendance.filter(a => a.present).length;
+      const presentToday = todayAttendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
       const absentToday = totalStudents - presentToday;
       const attendanceRateToday = totalStudents > 0 ? (presentToday / totalStudents) * 100 : 0;
 
       // Calculate term average
       const totalRecords = attendance.length;
-      const totalPresent = attendance.filter(a => a.present).length;
+      const totalPresent = attendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
       const termAverage = totalRecords > 0 ? (totalPresent / totalRecords) * 100 : 0;
 
       // Calculate class attendance
@@ -132,7 +135,7 @@ export default function AttendanceAnalysisReportGenerator() {
           classStats[className] = { present: 0, absent: 0, total: 0, late: 0 };
         }
         classStats[className].total += 1;
-        if (a.present) {
+        if (studentAttendanceRowIsPresent(a)) {
           classStats[className].present += 1;
         } else {
           classStats[className].absent += 1;
@@ -154,14 +157,16 @@ export default function AttendanceAnalysisReportGenerator() {
       // Calculate daily breakdown
       const dailyBreakdown: Record<string, { present: number; absent: number; total: number }> = {};
       attendance.forEach((a: any) => {
-        if (!dailyBreakdown[a.date]) {
-          dailyBreakdown[a.date] = { present: 0, absent: 0, total: 0 };
+        const day = String(a.attendance_date || a.date || '');
+        if (!day) return;
+        if (!dailyBreakdown[day]) {
+          dailyBreakdown[day] = { present: 0, absent: 0, total: 0 };
         }
-        dailyBreakdown[a.date].total += 1;
-        if (a.present) {
-          dailyBreakdown[a.date].present += 1;
+        dailyBreakdown[day].total += 1;
+        if (studentAttendanceRowIsPresent(a)) {
+          dailyBreakdown[day].present += 1;
         } else {
-          dailyBreakdown[a.date].absent += 1;
+          dailyBreakdown[day].absent += 1;
         }
       });
 
@@ -192,7 +197,7 @@ export default function AttendanceAnalysisReportGenerator() {
       attendance.forEach((a: any) => {
         if (studentStats[a.student_id]) {
           studentStats[a.student_id].total += 1;
-          if (a.present) {
+          if (studentAttendanceRowIsPresent(a)) {
             studentStats[a.student_id].present += 1;
           } else {
             studentStats[a.student_id].absent += 1;
@@ -245,12 +250,14 @@ export default function AttendanceAnalysisReportGenerator() {
       // Calculate weekly trend
       const weeklyData: Record<string, { present: number; total: number }> = {};
       attendance.forEach((a: any) => {
-        const week = getWeekNumber(new Date(a.date));
+        const dayRaw = a.attendance_date || a.date;
+        if (!dayRaw) return;
+        const week = getWeekNumber(new Date(dayRaw));
         if (!weeklyData[week]) {
           weeklyData[week] = { present: 0, total: 0 };
         }
         weeklyData[week].total += 1;
-        if (a.present) weeklyData[week].present += 1;
+        if (studentAttendanceRowIsPresent(a)) weeklyData[week].present += 1;
       });
 
       const weeklyTrend = Object.entries(weeklyData)

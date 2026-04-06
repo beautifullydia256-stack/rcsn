@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { resolveCurrentSchoolTerm } from '@/lib/adminFinanceTerm';
 
 /** Serializable KPI payload for the admin design dashboard HTML shell (applied via DOM). */
@@ -50,9 +51,9 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
       .eq('school_id', schoolId),
     supabase
       .from('student_attendance')
-      .select('student_id, present')
+      .select('student_id, present, status')
       .eq('school_id', schoolId)
-      .eq('date', todayIso),
+      .eq('attendance_date', todayIso),
     termId
       ? supabase
           .from('student_payments')
@@ -84,7 +85,9 @@ export async function fetchAdminDesignDashboardKpis(schoolId: string): Promise<A
 
   const totalStudents = studentsCountRes.count ?? 0;
   const totalTeachers = teachersCountRes.count ?? 0;
-  const present = (attendanceRes.data || []).filter((r: { present?: boolean }) => r.present === true).length;
+  const present = (attendanceRes.data || []).filter((r: { present?: boolean | null; status?: string | null }) =>
+    studentAttendanceRowIsPresent(r)
+  ).length;
   const totalAttendance = (attendanceRes.data || []).length;
   const attendancePct = totalAttendance > 0 ? Math.round((present / totalAttendance) * 100) : 0;
 

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import { extractStyleAndBody, useDesignDashboardNav, useDesignDashboardDarkOnly } from '@/lib/designDashboardHtml';
 import { useTeacherContext } from './useTeacherContext';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import designRaw from '../../../new designs/pwezacore-teacher-dashboard-react.html?raw';
 
@@ -70,7 +71,9 @@ type AssignmentRow = {
 type AttActivity = {
   class_name?: string;
   present?: boolean;
+  status?: string | null;
   date?: string;
+  attendance_date?: string | null;
   created_at?: string;
 };
 
@@ -161,26 +164,26 @@ async function fetchTeacherDashboardData(
     timetableToday = (tdata as TimetableRow[]) ?? [];
   }
 
-  let attendRows: { present?: boolean }[] = [];
+  let attendRows: { present?: boolean; status?: string | null }[] = [];
   if (classNames.length > 0) {
     let q = supabase
       .from('student_attendance')
-      .select('present')
+      .select('present, status')
       .eq('school_id', schoolId)
-      .eq('date', today)
+      .eq('attendance_date', today)
       .in('class_name', classNames);
     const a = await q;
-    attendRows = (a.data as { present?: boolean }[]) || [];
+    attendRows = (a.data as { present?: boolean; status?: string | null }[]) || [];
   }
 
-  const present = attendRows.filter((r) => r.present === true).length;
+  const present = attendRows.filter((r) => studentAttendanceRowIsPresent(r)).length;
   const attendPct = attendRows.length ? Math.round((present / attendRows.length) * 100) : 0;
 
   let recentAtt: AttActivity[] = [];
   if (classNames.length > 0) {
     const { data: adata } = await supabase
       .from('student_attendance')
-      .select('class_name, present, date, created_at')
+      .select('class_name, present, status, date, attendance_date, created_at')
       .eq('school_id', schoolId)
       .in('class_name', classNames)
       .order('created_at', { ascending: false })
@@ -375,8 +378,19 @@ function applyTeacherDashboardPaint(
     } else {
       actList.innerHTML = d.recentAtt
         .map((r, i) => {
-          const status = r.present === true ? 'Present' : r.present === false ? 'Absent' : 'Recorded';
-          const when = r.date || (r.created_at ? r.created_at.slice(0, 10) : '—');
+          const st = String(r.status || '').toLowerCase();
+          const status =
+            st === 'late'
+              ? 'Late'
+              : st === 'excused'
+                ? 'Excused'
+                : studentAttendanceRowIsPresent(r)
+                  ? 'Present'
+                  : st === 'absent' || r.present === false
+                    ? 'Absent'
+                    : 'Recorded';
+          const when =
+            r.attendance_date || r.date || (r.created_at ? r.created_at.slice(0, 10) : '—');
           return `
             <div class="pt-act-row" data-nav="/dashboard/teacher/attendance">
               <div class="pt-act-av" style="background:${grad(i)}">✓</div>

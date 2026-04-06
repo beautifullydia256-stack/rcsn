@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/src/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from '../../components/Sidebar';
 import Navbar from '../../components/Navbar';
@@ -109,10 +110,10 @@ export default function StudentProfilePage() {
       // Fetch attendance data
       const { data: attendance } = await supabase
         .from('student_attendance')
-        .select('date, present')
+        .select('date, attendance_date, present, status')
         .eq('student_id', studentId)
         .eq('school_id', schoolId)
-        .order('date', { ascending: false });
+        .order('attendance_date', { ascending: false });
 
       if (attendance) {
         setAttendanceData(attendance);
@@ -214,7 +215,7 @@ export default function StudentProfilePage() {
 
   // Calculate attendance stats
   const attendanceStats = useMemo(() => {
-    const present = attendanceData.filter(a => a.present).length;
+    const present = attendanceData.filter((a) => studentAttendanceRowIsPresent(a)).length;
     const absent = attendanceData.length - present;
     const percentage = attendanceData.length > 0 ? Math.round((present / attendanceData.length) * 100) : 0;
     return { present, absent, percentage };
@@ -763,18 +764,21 @@ export default function StudentProfilePage() {
                 <div className="mt-4">
                   <div className="text-sm text-white/85 mb-2">Recent Trend</div>
                   <div className="flex items-end gap-1 h-16">
-                    {attendanceData.slice(0, 14).reverse().map((att, index) => (
+                    {attendanceData.slice(0, 14).reverse().map((att, index) => {
+                      const isPresent = studentAttendanceRowIsPresent(att);
+                      const day = att.attendance_date || att.date || '';
+                      return (
                       <div
                         key={index}
                         className="flex-1 rounded-t"
                         style={{
-                          background: att.present ? '#10b981' : '#ef4444',
-                          height: att.present ? '80%' : '20%',
+                          background: isPresent ? '#10b981' : '#ef4444',
+                          height: isPresent ? '80%' : '20%',
                           opacity: 0.7
                         }}
-                        title={`${att.date}: ${att.present ? 'Present' : 'Absent'}`}
+                        title={`${day}: ${isPresent ? 'Present' : 'Absent'}`}
                       />
-                    ))}
+                    );})}
                   </div>
                 </div>
               )}

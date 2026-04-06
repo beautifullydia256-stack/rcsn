@@ -2,11 +2,12 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 import { useTeacherContext } from '../useTeacherContext';
 import { Save, AlertCircle, CheckCircle } from 'lucide-react';
 
 type StudentRow = { student_id: string; name: string; current_class: string; admission_number?: string };
-type AttendanceRow = { student_id: string; present: boolean };
+type AttendanceRow = { student_id: string; present?: boolean | null; status?: string | null };
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -44,17 +45,20 @@ export default function TeacherAttendancePage() {
       if (!schoolId || !selectedClass || !selectedDate) return [];
       const { data } = await supabase
         .from('student_attendance')
-        .select('student_id, present')
+        .select('student_id, present, status')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
-        .eq('date', selectedDate);
+        .eq('attendance_date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
     enabled: !!schoolId && !!selectedClass && !!selectedDate,
   });
 
   const attendanceByStudent = useMemo(
-    () => new Map(existingAttendance.map((a) => [a.student_id, a.present])),
+    () =>
+      new Map(
+        existingAttendance.map((a) => [a.student_id, studentAttendanceRowIsPresent(a)])
+      ),
     [existingAttendance]
   );
 
@@ -78,54 +82,20 @@ export default function TeacherAttendancePage() {
       const entries = Object.entries(localPresent);
       if (entries.length === 0) return;
 
-      const studentIds = entries.map(([id]) => id);
-      // Production DBs may not have UNIQUE(student_id, date); PostgREST upsert requires it.
-      // Update-or-insert works without that constraint (one logical row per student per day).
-      const { data: existingRows, error: fetchErr } = await supabase
-        .from('student_attendance')
-        .select('student_id')
-        .eq('school_id', schoolId)
-        .eq('date', attendanceDate)
-        .in('student_id', studentIds);
+      // Production: UNIQUE(student_id, attendance_date), status present|absent|late|excused
+      const rows = entries.map(([student_id, present]) => ({
+        school_id: schoolId,
+        class_name: selectedClass,
+        student_id,
+        teacher_id: teacherId,
+        attendance_date: attendanceDate,
+        status: present ? 'present' : 'absent',
+      }));
 
-      if (fetchErr) throw fetchErr;
-
-      const already = new Set((existingRows || []).map((r: { student_id: string }) => r.student_id));
-
-      const updatePromises = entries
-        .filter(([student_id]) => already.has(student_id))
-        .map(([student_id, present]) =>
-          supabase
-            .from('student_attendance')
-            .update({
-              present,
-              teacher_id: teacherId,
-              class_name: selectedClass,
-            })
-            .eq('school_id', schoolId)
-            .eq('date', attendanceDate)
-            .eq('student_id', student_id)
-        );
-
-      const toInsert = entries
-        .filter(([student_id]) => !already.has(student_id))
-        .map(([student_id, present]) => ({
-          school_id: schoolId,
-          class_name: selectedClass,
-          student_id,
-          teacher_id: teacherId,
-          date: attendanceDate,
-          present,
-        }));
-
-      const updateResults = await Promise.all(updatePromises);
-      for (const r of updateResults) {
-        if (r.error) throw r.error;
-      }
-      if (toInsert.length > 0) {
-        const { error: insertErr } = await supabase.from('student_attendance').insert(toInsert);
-        if (insertErr) throw insertErr;
-      }
+      const { error } = await supabase.from('student_attendance').upsert(rows, {
+        onConflict: 'student_id,attendance_date',
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({

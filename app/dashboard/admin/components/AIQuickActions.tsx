@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import GlassCard from '@/components/ui/GlassCard';
 import GlassButton from './GlassButton';
 import { Sparkles, FileText, BarChart3, Mail, AlertTriangle, X, CalendarCheck, Award, BookOpen, Target, Users, TrendingUp, Brain } from 'lucide-react';
@@ -107,11 +108,12 @@ export default function AIQuickActions() {
         .eq('school_id', schoolId)
         .gte('created_at', termStart)
         .lte('created_at', termEnd) : { data: [] },
-      supabase.from('student_attendance')
-        .select('student_id, date, present')
+      supabase
+        .from('student_attendance')
+        .select('student_id, date, attendance_date, present, status')
         .eq('school_id', schoolId)
-        .gte('date', termStart)
-        .lte('date', termEnd)
+        .gte('attendance_date', termStart)
+        .lte('attendance_date', termEnd)
     ]);
 
     const students = studentsResult.data || [];
@@ -127,7 +129,7 @@ export default function AIQuickActions() {
 
     // Attendance statistics
     const totalAttendanceRecords = attendance.length;
-    const presentCount = attendance.filter((a: any) => a.present).length;
+    const presentCount = attendance.filter((a: unknown) => studentAttendanceRowIsPresent(a as { present?: boolean | null; status?: string | null })).length;
     const attendanceRate = totalAttendanceRecords > 0 ? (presentCount / totalAttendanceRecords) * 100 : 0;
 
     // Subject performance
@@ -190,15 +192,17 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
         .select('student_id, name, current_class')
         .eq('school_id', schoolId)
         .eq('status', 'active'),
-      supabase.from('student_attendance')
-        .select('student_id, date, present, class_name')
+      supabase
+        .from('student_attendance')
+        .select('student_id, date, attendance_date, present, status, class_name')
         .eq('school_id', schoolId)
-        .gte('date', startDate)
-        .lte('date', endDate),
-      supabase.from('student_attendance')
-        .select('student_id, present')
+        .gte('attendance_date', startDate)
+        .lte('attendance_date', endDate),
+      supabase
+        .from('student_attendance')
+        .select('student_id, present, status')
         .eq('school_id', schoolId)
-        .eq('date', endDate)
+        .eq('attendance_date', endDate)
     ]);
 
     const students = studentsResult.data || [];
@@ -207,13 +211,13 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
 
     // Calculate overview
     const totalStudents = students.length;
-    const presentToday = todayAttendance.filter(a => a.present).length;
+    const presentToday = todayAttendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
     const absentToday = totalStudents - presentToday;
     const attendanceRateToday = totalStudents > 0 ? (presentToday / totalStudents) * 100 : 0;
 
     // Calculate term average
     const totalRecords = attendance.length;
-    const totalPresent = attendance.filter(a => a.present).length;
+    const totalPresent = attendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
     const overallRate = totalRecords > 0 ? (totalPresent / totalRecords) * 100 : 0;
 
     // Find students with poor attendance
@@ -224,7 +228,7 @@ ${avgMarks < 70 ? '• Focus on improving academic performance through targeted 
     attendance.forEach((a: any) => {
       if (studentAttendance[a.student_id]) {
         studentAttendance[a.student_id].total += 1;
-        if (a.present) studentAttendance[a.student_id].present += 1;
+        if (studentAttendanceRowIsPresent(a)) studentAttendance[a.student_id].present += 1;
       }
     });
     Object.keys(studentAttendance).forEach(sid => {
@@ -272,9 +276,9 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
     // Fetch attendance data
     const { data: attendance } = await supabase
       .from('student_attendance')
-      .select('student_id, date, present')
+      .select('student_id, date, attendance_date, present, status')
       .eq('school_id', schoolId)
-      .gte('date', startDate);
+      .gte('attendance_date', startDate);
 
     const { data: students } = await supabase
       .from('students')
@@ -295,7 +299,7 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
     attendanceData.forEach((a: any) => {
       if (studentAttendance[a.student_id]) {
         studentAttendance[a.student_id].total += 1;
-        if (a.present) {
+        if (studentAttendanceRowIsPresent(a)) {
           studentAttendance[a.student_id].present += 1;
         }
       }
@@ -314,17 +318,19 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
 
     // Overall statistics
     const totalRecords = attendanceData.length;
-    const totalPresent = attendanceData.filter(a => a.present).length;
+    const totalPresent = attendanceData.filter((a) => studentAttendanceRowIsPresent(a)).length;
     const overallRate = totalRecords > 0 ? (totalPresent / totalRecords) * 100 : 0;
 
     // Daily trends
     const dailyAttendance: Record<string, { present: number; total: number }> = {};
     attendanceData.forEach((a: any) => {
-      if (!dailyAttendance[a.date]) {
-        dailyAttendance[a.date] = { present: 0, total: 0 };
+      const day = String(a.attendance_date || a.date || '');
+      if (!day) return;
+      if (!dailyAttendance[day]) {
+        dailyAttendance[day] = { present: 0, total: 0 };
       }
-      dailyAttendance[a.date].total += 1;
-      if (a.present) dailyAttendance[a.date].present += 1;
+      dailyAttendance[day].total += 1;
+      if (studentAttendanceRowIsPresent(a)) dailyAttendance[day].present += 1;
     });
 
     const avgDailyRate = Object.values(dailyAttendance).length > 0
@@ -376,10 +382,11 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
         .select('student_id, subject, marks_obtained, total_marks')
         .eq('school_id', schoolId)
         .gte('created_at', startDate),
-      supabase.from('student_attendance')
-        .select('student_id, date, present')
+      supabase
+        .from('student_attendance')
+        .select('student_id, date, attendance_date, present, status')
         .eq('school_id', schoolId)
-        .gte('date', startDate)
+        .gte('attendance_date', startDate)
     ]);
 
     const school = schoolResult.data;
@@ -395,7 +402,9 @@ ${poorAttendance.length > 0 ? '• Contact parents of students with poor attenda
       : 0;
 
     const attendanceRate = attendance.length > 0
-      ? (attendance.filter((a: any) => a.present).length / attendance.length) * 100
+      ? (attendance.filter((a: unknown) => studentAttendanceRowIsPresent(a as { present?: boolean | null; status?: string | null })).length /
+          attendance.length) *
+        100
       : 0;
 
     // Top performers
@@ -465,10 +474,11 @@ Generated on ${today.toLocaleDateString()}
         .select('student_id, subject, marks_obtained, total_marks')
         .eq('school_id', schoolId)
         .gte('created_at', termStart) : { data: [] },
-      supabase.from('student_attendance')
-        .select('student_id, date, present')
+      supabase
+        .from('student_attendance')
+        .select('student_id, date, attendance_date, present, status')
         .eq('school_id', schoolId)
-        .gte('date', attendanceStart)
+        .gte('attendance_date', attendanceStart)
     ]);
 
     const students = studentsResult.data || [];
@@ -497,7 +507,9 @@ Generated on ${today.toLocaleDateString()}
 
       // Calculate attendance
       const attendanceRate = studentAttendance.length > 0
-        ? (studentAttendance.filter((a: any) => a.present).length / studentAttendance.length) * 100
+        ? (studentAttendance.filter((a: unknown) => studentAttendanceRowIsPresent(a as { present?: boolean | null; status?: string | null })).length /
+            studentAttendance.length) *
+          100
         : 100; // If no attendance records, assume good
 
       // Calculate risk score (0-100, higher = more at risk)

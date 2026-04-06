@@ -6,6 +6,7 @@ import { useDesignDashboardNav } from '@/lib/designDashboardHtml';
 import { PARENT_HOME_INNER_HTML } from '@/lib/parentPortalAssets';
 import { displayStudentName, parentInitials } from '@/lib/parentPortalUtils';
 import { useParentPortal } from '@/context/ParentPortalContext';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 const GRADIENTS = [
   'linear-gradient(135deg,#ff6b6b,#9d7eff)',
@@ -112,7 +113,11 @@ export default function DesignParentDashboard() {
             .eq('school_id', schoolId)
             .eq('student_id', sid)
             .limit(80),
-          supabase.from('student_attendance').select('present').eq('school_id', schoolId).eq('student_id', sid),
+          supabase
+            .from('student_attendance')
+            .select('attendance_date, present, status')
+            .eq('school_id', schoolId)
+            .eq('student_id', sid),
           loadStudentBalanceAggAllTerms(supabase, schoolId, sid),
           supabase
             .from('student_payments')
@@ -148,10 +153,10 @@ export default function DesignParentDashboard() {
             .limit(6),
           supabase
             .from('student_attendance')
-            .select('present')
+            .select('present, status')
             .eq('school_id', schoolId)
             .eq('student_id', sid)
-            .eq('date', today)
+            .eq('attendance_date', today)
             .maybeSingle(),
         ]);
 
@@ -177,13 +182,14 @@ export default function DesignParentDashboard() {
         }
         if (scores.length) avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
-        const attData = (attRes.data || []) as { present?: boolean }[];
-        attDayPresent = attData.filter((a) => a.present === true).length;
+        type AttRow = { present?: boolean | null; status?: string | null };
+        const attData = (attRes.data || []) as AttRow[];
+        attDayPresent = attData.filter((a) => studentAttendanceRowIsPresent(a)).length;
         attDayTotal = attData.length;
         attPct = attDayTotal ? Math.round((attDayPresent / attDayTotal) * 100) : 0;
 
-        const trow = todayAttRes.data as { present?: boolean } | null;
-        if (trow && typeof trow.present === 'boolean') todayPresent = trow.present;
+        const trow = todayAttRes.data as AttRow | null;
+        if (trow != null) todayPresent = studentAttendanceRowIsPresent(trow);
 
         feeBalance = Math.max(0, Number(feeAgg.balance || 0));
         feePriorLegacy = 0;

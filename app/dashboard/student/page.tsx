@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/src/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { validateStudentProfile, forceLogout } from '@/src/lib/studentProfileValidator';
@@ -337,10 +338,10 @@ export default function StudentDashboard() {
         supabase.from('student_payments').select('*').eq('student_id', studentId).order('payment_date', { ascending: false }),
         currentTerm ?
           supabase.from('student_attendance').select('*').eq('student_id', studentId)
-            .gte('date', currentTerm.start_date)
-            .lte('date', currentTerm.end_date)
-            .order('date', { ascending: false }) :
-          supabase.from('student_attendance').select('*').eq('student_id', studentId).order('date', { ascending: false }),
+            .gte('attendance_date', currentTerm.start_date)
+            .lte('attendance_date', currentTerm.end_date)
+            .order('attendance_date', { ascending: false }) :
+          supabase.from('student_attendance').select('*').eq('student_id', studentId).order('attendance_date', { ascending: false }),
         supabase.from('students').select('expected_fee_amount').eq('student_id', studentId).single()
       ]);
 
@@ -434,13 +435,12 @@ export default function StudentDashboard() {
         // Count present days for this student within term
         const { data: st } = await supabase
           .from('student_attendance')
-          .select('date,present')
+          .select('present,status')
           .eq('school_id', schoolId)
           .eq('student_id', (student || {}).student_id || 'temp')
-          .eq('present', true)
-          .gte('date', term.start_date)
-          .lte('date', term.end_date);
-        const present = (st || []).length;
+          .gte('attendance_date', term.start_date)
+          .lte('attendance_date', term.end_date);
+        const present = (st || []).filter((r) => studentAttendanceRowIsPresent(r)).length;
         setTermDays({ present, total });
       } catch {}
     };

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar, PieChart, Pie, Cell, LabelList } from "recharts";
+import { studentAttendanceRowIsPresent } from "@/src/lib/studentAttendanceRow";
 
 const COLORS = ["#60a5fa", "#34d399", "#fbbf24", "#f472b6", "#a78bfa", "#f87171"];
 
@@ -82,11 +83,11 @@ export function AdminCharts() {
             .eq('status', 'active'),
           
           // Student attendance today
-          supabase.from('student_attendance')
-            .select('student_id')
+          supabase
+            .from('student_attendance')
+            .select('student_id, present, status')
             .eq('school_id', u.school_id)
-            .eq('date', chartData.todayStr)
-            .eq('present', true),
+            .eq('attendance_date', chartData.todayStr),
           
           // Active students for fee status
           supabase.from("students")
@@ -149,7 +150,13 @@ export function AdminCharts() {
         const absentTeachers = Math.max(0, (teachersCountResult.count || 0) - presentTeachers);
         setTeacherAtt({ name: 'Teachers', present: presentTeachers, absent: absentTeachers });
 
-        const presentStudents = new Set((studentAttendanceResult.data || []).map((s: any) => s.student_id)).size;
+        const presentStudents = new Set(
+          (studentAttendanceResult.data || [])
+            .filter((s: unknown) =>
+              studentAttendanceRowIsPresent(s as { present?: boolean | null; status?: string | null })
+            )
+            .map((s: { student_id?: string }) => s.student_id)
+        ).size;
         const absentStudents = Math.max(0, (studentsCountResult.count || 0) - presentStudents);
         setStudentAtt({ name: 'Students', present: presentStudents, absent: absentStudents });
 

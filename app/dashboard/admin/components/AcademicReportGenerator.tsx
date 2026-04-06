@@ -9,6 +9,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '@/src/lib/supabase';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 import GlassCard from '@/components/ui/GlassCard';
 import { FileText, X, Download, Brain, TrendingUp, Award, AlertTriangle, Users, BookOpen, Target, BarChart3 } from 'lucide-react';
 
@@ -105,11 +106,12 @@ export default function AcademicReportGenerator() {
           .eq('school_id', schoolId)
           .gte('created_at', termStart)
           .lte('created_at', termEnd),
-        supabase.from('student_attendance')
-          .select('student_id, present, date')
+        supabase
+          .from('student_attendance')
+          .select('student_id, present, status, date, attendance_date')
           .eq('school_id', schoolId)
-          .gte('date', termStart)
-          .lte('date', termEnd),
+          .gte('attendance_date', termStart)
+          .lte('attendance_date', termEnd),
         supabase.from('teachers')
           .select('teacher_id, name')
           .eq('school_id', schoolId)
@@ -260,7 +262,7 @@ export default function AcademicReportGenerator() {
           studentAttendanceMap[a.student_id] = { present: 0, total: 0 };
         }
         studentAttendanceMap[a.student_id].total += 1;
-        if (a.present) studentAttendanceMap[a.student_id].present += 1;
+        if (studentAttendanceRowIsPresent(a)) studentAttendanceMap[a.student_id].present += 1;
       });
 
       // Calculate correlation

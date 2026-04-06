@@ -107,7 +107,7 @@ export default function OwnerDashboard() {
     const { count: attendanceCount } = await supabase
       .from('student_attendance')
       .select('*', { count: 'exact', head: true })
-      .eq('date', todayStr);
+      .eq('attendance_date', todayStr);
     setKpiAttendanceToday(attendanceCount || 0);
 
     // Revenue MTD/YTD from payments

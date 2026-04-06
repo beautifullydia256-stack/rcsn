@@ -17,6 +17,7 @@ import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar, PieChart as RechartsPieChart,
   Pie, Cell, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
+import { studentAttendanceRowIsPresent } from '@/src/lib/studentAttendanceRow';
 
 interface AttendanceData {
   totalStudents: number;
@@ -158,15 +159,17 @@ export default function AttendanceAnalysisReport() {
           .select('student_id, name, current_class')
           .eq('school_id', sid)
           .eq('status', 'active'),
-        supabase.from('student_attendance')
-          .select('student_id, present, date, class_name')
+        supabase
+          .from('student_attendance')
+          .select('student_id, present, status, date, attendance_date, class_name')
           .eq('school_id', sid)
-          .eq('date', today),
-        supabase.from('student_attendance')
-          .select('student_id, present, date, class_name')
+          .eq('attendance_date', today),
+        supabase
+          .from('student_attendance')
+          .select('student_id, present, status, date, attendance_date, class_name')
           .eq('school_id', sid)
-          .gte('date', startDate)
-          .lte('date', endDate),
+          .gte('attendance_date', startDate)
+          .lte('attendance_date', endDate),
         supabase.from('students')
           .select('current_class')
           .eq('school_id', sid)
@@ -184,13 +187,13 @@ export default function AttendanceAnalysisReport() {
 
       // Calculate main attendance data
       const totalStudents = students.length;
-      const presentToday = todayAttendance.filter(a => a.present).length;
+      const presentToday = todayAttendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
       const absentToday = totalStudents - presentToday;
       const attendanceRateToday = totalStudents > 0 ? (presentToday / totalStudents) * 100 : 0;
 
       // Calculate term average
       const totalRecords = termAttendance.length;
-      const totalPresent = termAttendance.filter(a => a.present).length;
+      const totalPresent = termAttendance.filter((a) => studentAttendanceRowIsPresent(a)).length;
       const termAverage = totalRecords > 0 ? (totalPresent / totalRecords) * 100 : 0;
 
       // Calculate class attendance
@@ -201,7 +204,7 @@ export default function AttendanceAnalysisReport() {
           classStats[className] = { present: 0, absent: 0, total: 0, late: 0 };
         }
         classStats[className].total += 1;
-        if (a.present) {
+        if (studentAttendanceRowIsPresent(a)) {
           classStats[className].present += 1;
         } else {
           classStats[className].absent += 1;
@@ -252,7 +255,7 @@ export default function AttendanceAnalysisReport() {
 
       termAttendance.forEach((a: any) => {
         if (studentStats[a.student_id]) {
-          if (a.present) {
+          if (studentAttendanceRowIsPresent(a)) {
             studentStats[a.student_id].daysAttended += 1;
           } else {
             studentStats[a.student_id].daysAbsent += 1;
@@ -276,12 +279,14 @@ export default function AttendanceAnalysisReport() {
       // Calculate weekly trend
       const weeklyData: Record<string, { present: number; total: number }> = {};
       termAttendance.forEach((a: any) => {
-        const week = getWeekNumber(new Date(a.date));
+        const dayRaw = a.attendance_date || a.date;
+        if (!dayRaw) return;
+        const week = getWeekNumber(new Date(dayRaw));
         if (!weeklyData[week]) {
           weeklyData[week] = { present: 0, total: 0 };
         }
         weeklyData[week].total += 1;
-        if (a.present) weeklyData[week].present += 1;
+        if (studentAttendanceRowIsPresent(a)) weeklyData[week].present += 1;
       });
 
       setWeeklyTrend(Object.entries(weeklyData).map(([week, data]) => ({

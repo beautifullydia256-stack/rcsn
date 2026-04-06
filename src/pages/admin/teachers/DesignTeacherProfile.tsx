@@ -7,6 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 import { usePwezaStore } from '@/store/pwezaStore';
 import { confirmProfileSave, escapeAttr, readFileAsDataURL } from '@/lib/profileInlineEdit';
 import { mergeClassNamesWithCanonical } from '@/lib/schoolClassNames';
+import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import profileTemplateRaw from '@/assets/pwezacore-teacher-profile.html?raw';
 
@@ -558,10 +559,10 @@ export default function DesignTeacherProfile() {
       ] = await Promise.all([
         supabase
           .from('student_attendance')
-          .select('present, arrived_late')
+          .select('present, status, arrived_late')
           .eq('school_id', school_id)
           .eq('teacher_id', teacherId)
-          .gte('date', fromStr),
+          .gte('attendance_date', fromStr),
         supabase
           .from('school_expenses')
           .select(
@@ -654,10 +655,18 @@ export default function DesignTeacherProfile() {
         avgPct = sum / erFiltered.length;
       }
 
-      const attList = (attRows || []) as { present?: boolean; arrived_late?: boolean }[];
-      const presentDays = attList.filter((r) => r.present === true).length;
-      const absentDays = attList.filter((r) => r.present === false).length;
-      const lateArrivalCount = attList.filter((r) => r.present === true && r.arrived_late === true).length;
+      const attList = (attRows || []) as {
+        present?: boolean;
+        status?: string | null;
+        arrived_late?: boolean;
+      }[];
+      const presentDays = attList.filter((r) => studentAttendanceRowIsPresent(r)).length;
+      const absentDays = attList.filter((r) => !studentAttendanceRowIsPresent(r)).length;
+      const lateArrivalCount = attList.filter(
+        (r) =>
+          String(r.status || '').toLowerCase() === 'late' ||
+          (studentAttendanceRowIsPresent(r) && r.arrived_late === true)
+      ).length;
       const attTotal = attList.length;
       const attRatePct = attTotal > 0 ? Math.round((presentDays / attTotal) * 100) : null;
       const markRatePct =
