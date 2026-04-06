@@ -1061,7 +1061,8 @@ export default function TeacherExamResultsClassPage() {
           const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
             const finalNum = formativeNum + examNum;
-          
+            const letterGrade = calculateSecondaryGrade(finalNum);
+
           const rpcParams = {
             p_school_id: schoolId,
             p_exam_set_id: selectedExamSet,
@@ -1077,6 +1078,7 @@ export default function TeacherExamResultsClassPage() {
             p_teacher_initials: data.initials || teacherInitials || '',
             p_teacher_id: teacherIdForSave,
             p_topic: (data.topic || topicFilter || '').trim(),
+            p_grade: letterGrade,
           };
           
           console.log('Saving secondary exam result with params:', rpcParams);

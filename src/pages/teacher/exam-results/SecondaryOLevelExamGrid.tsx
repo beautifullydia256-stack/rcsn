@@ -262,7 +262,9 @@ export function SecondaryOLevelExamGrid({
         const examNum =
           descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
         const finalNum = Math.trunc(formativeNum + examNum);
+        const letterGrade = calculateSecondaryLetterGrade(finalNum);
 
+        // p_grade included: DB has two overloads (with/without grade); passing grade picks the uuid+grade variant.
         const { data: rpcData, error } = await supabase.rpc('teacher_upsert_exam_result_secondary', {
           p_school_id: schoolId,
           p_exam_set_id: selectedExamSetId,
@@ -278,6 +280,7 @@ export function SecondaryOLevelExamGrid({
           p_teacher_initials: (data.initials || teacherInitials || '').trim(),
           p_teacher_id: teacherId,
           p_topic: (data.topic || topicFilter || '').trim(),
+          p_grade: letterGrade,
         });
         if (error) {
           setSaveError(error.message);
