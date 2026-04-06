@@ -100,6 +100,8 @@ export default function SchoolChatPage() {
   const [pickQ, setPickQ] = useState('');
   const [contactFilter, setContactFilter] = useState<ContactFilter>('all');
   const [mobileThread, setMobileThread] = useState(false);
+  /** Shown in header until `fetchMyConversations` includes the new DM (avoids blank thread after New chat). */
+  const [peerPreview, setPeerPreview] = useState<{ name: string; role: string } | null>(null);
 
   const home = dashboardHomeForRole(role);
 
@@ -119,6 +121,10 @@ export default function SchoolChatPage() {
     () => conversations.find((c) => c.conversation_id === selectedId) ?? null,
     [conversations, selectedId]
   );
+
+  useEffect(() => {
+    if (selectedConv) setPeerPreview(null);
+  }, [selectedConv]);
 
   const loadThread = useCallback(
     async (conversationId: string) => {
@@ -155,6 +161,8 @@ export default function SchoolChatPage() {
       try {
         const cid = await getOrCreateDm(withUserId);
         if (cancelled) return;
+        await queryClient.refetchQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+        if (cancelled) return;
         setSelectedId(cid);
         setMobileThread(true);
         setSearchParams({}, { replace: true });
@@ -165,7 +173,7 @@ export default function SchoolChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [withUserId, myId, setSearchParams]);
+  }, [withUserId, myId, setSearchParams, queryClient]);
 
   const filteredEligible = useMemo(() => {
     const byRole = eligible.filter((u) => matchesContactFilter(u.role, contactFilter));
@@ -181,12 +189,16 @@ export default function SchoolChatPage() {
 
   const openNewConversation = async (u: EligibleChatUser) => {
     setSending(true);
+    setPeerPreview({ name: displayChatName(u), role: u.role });
     try {
       const cid = await getOrCreateDm(u.user_id);
+      await queryClient.refetchQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
       closeNewChatModal();
       setSelectedId(cid);
       setMobileThread(true);
-      await queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+    } catch (e) {
+      console.error('[SchoolChatPage] openNewConversation', e);
+      setPeerPreview(null);
     } finally {
       setSending(false);
     }
@@ -362,7 +374,9 @@ export default function SchoolChatPage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <span className="text-[16px] font-medium truncate">{selectedConv?.peer_name || 'Chat'}</span>
+            <span className="text-[16px] font-medium truncate">
+              {selectedConv?.peer_name || peerPreview?.name || 'Chat'}
+            </span>
           </div>
 
           {!selectedId && (
@@ -380,18 +394,22 @@ export default function SchoolChatPage() {
             </div>
           )}
 
-          {selectedId && selectedConv && (
+          {selectedId && (selectedConv || peerPreview) && (
             <>
               <div className="hidden md:flex items-center gap-3 px-4 py-2.5 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-header)] text-white">
                 <div
                   className="h-10 w-10 rounded-full flex items-center justify-center text-[15px] font-medium bg-white/20"
                   aria-hidden
                 >
-                  {(selectedConv.peer_name || '?').slice(0, 1).toUpperCase()}
+                  {((selectedConv?.peer_name || peerPreview?.name) ?? '?').slice(0, 1).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-[16px] truncate">{selectedConv.peer_name}</div>
-                  <div className="text-[13px] text-white/80 truncate">{roleLabel(selectedConv.peer_role)}</div>
+                  <div className="font-medium text-[16px] truncate">
+                    {selectedConv?.peer_name ?? peerPreview?.name ?? 'Chat'}
+                  </div>
+                  <div className="text-[13px] text-white/80 truncate">
+                    {roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '')}
+                  </div>
                 </div>
               </div>
 
