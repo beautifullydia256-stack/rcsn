@@ -56,81 +56,88 @@ export default function ReportRecordsPage() {
   }, [rows, q, year]);
 
   return (
-    <AdminPageWrapper title="Report Records" subtitle="View and manage historical report records">
-      <div className="flex items-center justify-between mb-6">
+    <AdminPageWrapper
+      eyebrow="History"
+      title="Report Records"
+      subtitle="View and manage historical report records"
+    >
+      <div className="mb-6 flex items-center justify-between">
         <button
+          type="button"
           onClick={() => navigate('/dashboard/admin/reports')}
-          className="rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-white hover:bg-white/20 backdrop-blur-xl"
+          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
         >
           Back to Reports
         </button>
       </div>
 
-      <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Filter by template or student name"
-          className="rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="ac-input rounded-xl px-3 py-2.5"
         />
         <input
           type="number"
           value={year}
           onChange={(e) => setYear(e.target.value)}
-          placeholder="Year (e.g. 2025)"
-          className="rounded-lg border border-white/20 bg-white/10 text-white px-3 py-2 placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Year (e.g. 2026)"
+          className="ac-input rounded-xl px-3 py-2.5"
         />
       </div>
 
-      <div className={`${adminCardClass} overflow-x-auto`}>
+      <div className={`${adminCardClass} overflow-x-auto p-0 sm:p-0`}>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-white/30 border-t-white" />
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500" />
           </div>
         ) : (
-          <table className="min-w-full text-sm">
-            <thead className="bg-white/5">
-              <tr className="text-left">
-                <th className="px-4 py-2 text-white/80">Date</th>
-                <th className="px-4 py-2 text-white/80">Student</th>
-                <th className="px-4 py-2 text-white/80">Template</th>
-                <th className="px-4 py-2 text-white/80">File</th>
-              </tr>
-            </thead>
-            <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-              {filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-white/70">
-                    No reports found
-                  </td>
+          <div className="ac-table-wrap overflow-hidden rounded-xl border border-[var(--ac-border)]">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-card-bg)] text-left">
+                  <th className="px-4 py-3 font-medium ac-text-muted">Date</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Student</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">Template</th>
+                  <th className="px-4 py-3 font-medium ac-text-muted">File</th>
                 </tr>
-              ) : (
-                filtered.map((r: any) => (
-                  <tr key={r.id} className="border-t border-white/10">
-                    <td className="px-4 py-2 text-white/90">
-                      {new Date(r.generated_at).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2 text-white">{r.student_name}</td>
-                    <td className="px-4 py-2 text-white/90">{r.template_name}</td>
-                    <td className="px-4 py-2">
-                      {r.pdf_url ? (
-                        <a
-                          href={r.pdf_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-2 py-1 text-xs rounded bg-blue-600 hover:bg-blue-500 text-white"
-                        >
-                          Open
-                        </a>
-                      ) : (
-                        <span className="text-white/50">—</span>
-                      )}
+              </thead>
+              <tbody className="[&>tr:nth-child(even)]:bg-[var(--ac-sidebar-active-bg)]/50">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="ac-text-muted px-4 py-8 text-center">
+                      No reports found
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filtered.map((r: any) => (
+                    <tr key={r.id} className="border-t border-[var(--ac-border)]">
+                      <td className="ac-text-secondary px-4 py-2.5">
+                        {new Date(r.generated_at).toLocaleString()}
+                      </td>
+                      <td className="ac-text-primary px-4 py-2.5 font-medium">{r.student_name}</td>
+                      <td className="ac-text-secondary px-4 py-2.5">{r.template_name}</td>
+                      <td className="px-4 py-2.5">
+                        {r.pdf_url ? (
+                          <a
+                            href={r.pdf_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex rounded-lg bg-emerald-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+                          >
+                            Open
+                          </a>
+                        ) : (
+                          <span className="ac-text-muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </AdminPageWrapper>

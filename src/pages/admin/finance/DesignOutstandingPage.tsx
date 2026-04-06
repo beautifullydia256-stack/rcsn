@@ -27,13 +27,14 @@ function parseOutstandingBody(raw: string): { html: string; script: string } {
 
 const OUTSTANDING_PARSED = parseOutstandingBody(outstandingTemplateRaw);
 
+/** Match Students list — refined terminal palette */
 const GRADIENTS = [
-  'linear-gradient(135deg,#ff4f6a,#9d7eff)',
-  'linear-gradient(135deg,#3d7eff,#9d7eff)',
-  'linear-gradient(135deg,#ffb547,#ff4f6a)',
-  'linear-gradient(135deg,#9d7eff,#3d7eff)',
-  'linear-gradient(135deg,#27e09f,#3d7eff)',
-  'linear-gradient(135deg,#ff4f6a,#ffb547)',
+  'linear-gradient(135deg, #3d7eff, #9d7eff)',
+  'linear-gradient(135deg, #9d7eff, #00e5c3)',
+  'linear-gradient(135deg, #00e5c3, #3d7eff)',
+  'linear-gradient(135deg, #ffb547, #00e5c3)',
+  'linear-gradient(135deg, #27e09f, #3d7eff)',
+  'linear-gradient(135deg, #9d7eff, #00e5c3)',
 ];
 const grad = (i: number) => GRADIENTS[i % GRADIENTS.length];
 
@@ -66,7 +67,7 @@ function balanceClass(balance: number) {
 }
 
 function fillColor(pctPaid: number) {
-  if (pctPaid === 0) return 'var(--rose)';
+  if (pctPaid === 0) return 'var(--danger)';
   if (pctPaid < 80) return 'var(--amber)';
   return 'var(--em)';
 }
@@ -437,7 +438,7 @@ export default function DesignOutstandingPage() {
                 <div class="ob-trow">
                   <div class="ob-td"><input type="checkbox" class="ob-check ob-row-check" data-student-id="${escapeHtml(
                     s.student_id
-                  )}" style="width:16px;height:16px;accent-color:var(--rose)"></div>
+                  )}" style="width:16px;height:16px;accent-color:var(--accent)"></div>
                   <div class="ob-td">
                     <div class="ob-student-cell">
                       <div class="ob-av" style="background:${bg}">${escapeHtml(ini)}</div>

@@ -291,16 +291,6 @@ export default function StaffPage() {
         <div>
           <div className="par-eyebrow">Management</div>
           <h1 className="par-title">Staff</h1>
-          <p className="par-sub">
-            Unified roster for your school: <strong>teachers</strong> (from <code style={{ fontSize: 12 }}>teachers</code>)
-            and <strong>non-teaching staff</strong> (from <code style={{ fontSize: 12 }}>other_staff_members</code>).
-            Parents and students are not listed here. A login shows as &quot;Linked&quot; when their{' '}
-            <code style={{ fontSize: 12 }}>users</code> row is connected (
-            <code style={{ fontSize: 12 }}>linked_teacher_id</code> or <code style={{ fontSize: 12 }}>linked_user_id</code>
-            ). Open a teacher&apos;s <strong>profile</strong> to edit full teaching details or send an invite — it is the same
-            database row. Non-teaching rows use <strong>Send invitations</strong> and expenses may use{' '}
-            <code style={{ fontSize: 12 }}>linked_other_staff_id</code>.
-          </p>
         </div>
         <div className="par-actions">
           <button

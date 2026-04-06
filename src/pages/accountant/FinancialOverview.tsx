@@ -41,7 +41,8 @@ const CHART_THEME = {
 } as const;
 
 const STALE_TIME_MS = 2 * 60 * 1000;
-const DONUT_COLORS = ["#166534", "#22c55e", "#86efac", "#bbf7d0", "#94a3b8", "#475569"];
+/** Muted teal / slate series — readable on dark glass (matches Students terminal) */
+const DONUT_COLORS = ["#34d399", "#2dd4bf", "#5eead4", "#94a3b8", "#64748b", "#475569"];
 
 const fmt = (n: number) =>
   n == null || Number.isNaN(n) ? "—" : n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
@@ -62,12 +63,12 @@ function KPICard({
   variant?: KPIVariant;
 }) {
   const borderTopClass: Record<KPIVariant, string> = {
-    blue: "border-t-[3px] border-t-blue-500/90",
-    green: "border-t-[3px] border-t-emerald-500/90",
-    orange: "border-t-[3px] border-t-amber-500/90",
-    teal: "border-t-[3px] border-t-teal-500/90",
-    slate: "border-t-[3px] border-t-slate-400/90",
-    violet: "border-t-[3px] border-t-violet-500/90",
+    blue: "border-t-[3px] border-t-sky-500/75 dark:border-t-sky-400/55",
+    green: "border-t-[3px] border-t-emerald-500/85 dark:border-t-emerald-400/55",
+    orange: "border-t-[3px] border-t-amber-500/80 dark:border-t-amber-400/50",
+    teal: "border-t-[3px] border-t-teal-500/80 dark:border-t-teal-400/50",
+    slate: "border-t-[3px] border-t-slate-400/70 dark:border-t-slate-500/45",
+    violet: "border-t-[3px] border-t-violet-500/75 dark:border-t-violet-400/50",
   };
   const iconClass: Record<KPIVariant, string> = {
     blue: "ac-glass-icon ac-icon-blue",
@@ -179,7 +180,7 @@ export default function FinancialOverview() {
             <h1 className="ac-text-primary text-2xl font-bold tracking-tight">Financial overview</h1>
             <p className="ac-text-muted mt-1 text-xs font-medium uppercase tracking-wider">As of {m.asOfDate}</p>
             <p className="ac-text-secondary mt-3 flex flex-wrap items-center gap-2 text-[13px]">
-              <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
                 {m.currentTerm?.label ?? "No current term"}
               </span>
               <span className="ac-text-muted">{termSubtitle}</span>
@@ -191,7 +192,7 @@ export default function FinancialOverview() {
               onClick={() => openRecordPayment?.()}
               className="ac-glass-btn inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
-              <Receipt className="h-4 w-4 shrink-0 text-emerald-600" />
+              <Receipt className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               Record payment
             </button>
             <button
@@ -199,7 +200,7 @@ export default function FinancialOverview() {
               onClick={() => navigate("/dashboard/accountant/billing")}
               className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
-              <FilePlus className="h-4 w-4 shrink-0 text-blue-600" />
+              <FilePlus className="h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
               Invoicing
             </button>
             <button
@@ -207,7 +208,7 @@ export default function FinancialOverview() {
               onClick={() => openRecordExpense?.()}
               className="ac-glass-btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary"
             >
-              <DollarSign className="h-4 w-4 shrink-0 text-amber-600" />
+              <DollarSign className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
               Record expense
             </button>
           </div>
@@ -393,18 +394,18 @@ export default function FinancialOverview() {
                 </p>
               </div>
               <p
-                className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-rose-400"}`}
               >
                 {fmt(m.cashflowAllTime.netCash)}
               </p>
               <p className="ac-text-muted mt-1 text-[11px]">Same total basis as &quot;Net cash surplus&quot; above.</p>
               <div className="ac-text-secondary mt-4 flex flex-wrap gap-4 text-[13px]">
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-700" />
+                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-600 dark:bg-emerald-400" />
                   Fee receipts
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-red-600" />
+                  <span className="h-2.5 w-2.5 rounded-sm bg-red-600 dark:bg-rose-400" />
                   Expenses (red bars)
                 </span>
               </div>
@@ -435,15 +436,23 @@ export default function FinancialOverview() {
                           return (
                             <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] px-4 py-3 text-sm shadow-lg">
                               <p className="ac-text-primary mb-1 font-semibold">{d.name}</p>
-                              <p className={d.name === "Expenses" ? "text-red-600" : "text-emerald-600"}>{fmt(d.amount)}</p>
+                              <p
+                                className={
+                                  d.name === "Expenses"
+                                    ? "text-red-600 dark:text-rose-400"
+                                    : "text-emerald-600 dark:text-emerald-400"
+                                }
+                              >
+                                {fmt(d.amount)}
+                              </p>
                             </div>
                           );
                         }}
                         cursor={{ fill: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(148, 163, 184, 0.08)" }}
                       />
                       <Bar dataKey="amount" radius={[6, 6, 0, 0]} name="Amount">
-                        <Cell fill="#047857" />
-                        <Cell fill="#dc2626" />
+                        <Cell fill={theme === "dark" ? "#34d399" : "#047857"} />
+                        <Cell fill={theme === "dark" ? "#f87171" : "#dc2626"} />
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -516,7 +525,9 @@ export default function FinancialOverview() {
                         <td className="ac-text-secondary py-3">{r.receipt_number ?? "—"}</td>
                         <td className="ac-text-secondary py-3">{r.payment_date}</td>
                         <td className="ac-text-secondary py-3 capitalize">{r.payment_method}</td>
-                        <td className="py-3 text-right font-medium tabular-nums text-emerald-600">{fmt(r.amount_paid)}</td>
+                        <td className="py-3 text-right font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+                          {fmt(r.amount_paid)}
+                        </td>
                       </tr>
                     ))
                   )}
@@ -574,15 +585,23 @@ export default function FinancialOverview() {
                           <p className="ac-text-muted text-xs">{tx.time}</p>
                         </td>
                         <td className="py-3 text-right">
-                          <span className={tx.amount >= 0 ? "font-medium tabular-nums text-emerald-600" : "font-medium tabular-nums text-red-600"}>
+                          <span
+                            className={
+                              tx.amount >= 0
+                                ? "font-medium tabular-nums text-emerald-600 dark:text-emerald-400"
+                                : "font-medium tabular-nums text-red-600 dark:text-rose-400"
+                            }
+                          >
                             {tx.amount >= 0 ? "+" : ""}
                             {fmt(tx.amount)}
                           </span>
                         </td>
                         <td className="py-3">
                           <span
-                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium text-white ${
-                              tx.status === "Completed" ? "bg-emerald-600" : "bg-amber-500"
+                            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              tx.status === "Completed"
+                                ? "bg-emerald-600/90 text-white dark:bg-emerald-500/80 dark:text-emerald-950"
+                                : "bg-amber-500/90 text-amber-950 dark:bg-amber-400/75 dark:text-amber-950"
                             }`}
                           >
                             {tx.status}

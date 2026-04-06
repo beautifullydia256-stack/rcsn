@@ -32,7 +32,7 @@ export default function ExamSetsPage() {
   const loading = isLoading;
 
   return (
-    <AdminPageWrapper title="Exam Sets" subtitle="Manage exam sets and terms">
+    <AdminPageWrapper eyebrow="Exams" title="Exam Sets" subtitle="Manage exam sets and terms">
       <div className="flex items-center justify-end mb-4">
         <button
           type="button"

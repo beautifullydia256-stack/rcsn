@@ -227,12 +227,13 @@ export default function HeadedPaperPage() {
 
   return (
     <AdminPageWrapper
+      eyebrow="Branding"
       title="Headed paper"
       subtitle="Letterhead preview matches your school branding. Edit text in the preview, pick an accent for the footer stripe, then download PDF."
     >
       <div className={`${adminCardClass} flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between`}>
         <div className="flex items-start gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-500/15 text-violet-600 dark:bg-violet-400/15 dark:text-violet-300">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:bg-emerald-400/15 dark:text-emerald-300">
             <FileText className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0">
@@ -259,7 +260,7 @@ export default function HeadedPaperPage() {
             type="button"
             onClick={() => void refetch()}
             disabled={isFetching}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-2.5 text-sm font-medium text-slate-800 shadow-sm transition hover:bg-slate-50 disabled:opacity-60 dark:border-white/15 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
+            className="ac-glass-btn-secondary inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium ac-text-primary disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} aria-hidden />
             Refresh data
@@ -269,7 +270,7 @@ export default function HeadedPaperPage() {
             type="button"
             disabled={busy || !previewHtml}
             onClick={handleDownload}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-violet-600/25 transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-violet-500 dark:hover:bg-violet-400"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <FileDown className="h-4 w-4" aria-hidden />}
             {busy ? "Generating…" : "Download PDF"}
@@ -294,8 +295,8 @@ export default function HeadedPaperPage() {
             {isLoading ? (
               <>
                 <div className="relative h-14 w-14">
-                  <div className="absolute inset-0 animate-ping rounded-full bg-violet-400/30" />
-                  <Loader2 className="relative h-14 w-14 animate-spin text-violet-600 dark:text-violet-400" aria-hidden />
+                  <div className="absolute inset-0 animate-ping rounded-full bg-emerald-400/25" />
+                  <Loader2 className="relative h-14 w-14 animate-spin text-emerald-600 dark:text-emerald-400" aria-hidden />
                 </div>
                 <p className="text-center text-sm font-medium ac-text-primary">Loading letterhead…</p>
                 <p className="max-w-sm text-center text-xs ac-text-secondary">

@@ -270,6 +270,7 @@ export default function SettingsExamSets({
   return (
     <div>
       <SectionHeader
+        eyebrow="Exams"
         title="Exam Sets Management"
         desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
       />
@@ -316,7 +317,7 @@ export default function SettingsExamSets({
                 setAllClasses(e.target.checked);
                 if (e.target.checked) setTargetClasses([]);
               }}
-              className="accent-blue-500"
+              className="accent-emerald-500"
             />
             Apply to all classes
           </label>
@@ -329,7 +330,7 @@ export default function SettingsExamSets({
                   onClick={() => toggleClass(className)}
                   className={`rounded-lg border px-3 py-1 text-sm transition-colors ${
                     targetClasses.includes(className)
-                      ? 'border-blue-400 bg-blue-600/80 text-white'
+                      ? 'border-emerald-400/80 bg-emerald-600/90 text-white shadow-sm shadow-emerald-900/20'
                       : 'border-[var(--ac-border)] bg-[var(--ac-card-bg)] ac-text-primary hover:bg-[var(--ac-sidebar-active-bg)]'
                   }`}
                 >
@@ -345,7 +346,7 @@ export default function SettingsExamSets({
             !schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)
           }
           onClick={saveExamSet}
-          className="mt-3 rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+          className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:bg-emerald-500 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
         >
           {saving ? 'Creating...' : 'Create Exam Set'}
         </button>
@@ -408,10 +409,10 @@ export default function SettingsExamSets({
                     <button
                       type="button"
                       onClick={() => toggleActive(es.id, es.is_active)}
-                      className={`rounded px-2 py-1 text-xs transition-colors ${
+                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                         es.is_active
-                          ? 'bg-green-600 text-white hover:bg-green-500'
-                          : 'bg-slate-600 text-white hover:bg-slate-500'
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500'
+                          : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
                       }`}
                     >
                       {es.is_active ? 'Active' : 'Inactive'}
@@ -421,10 +422,10 @@ export default function SettingsExamSets({
                     <button
                       type="button"
                       onClick={() => toggleActiveForInput(es.id, es.active_for_input)}
-                      className={`rounded px-2 py-1 text-xs transition-colors ${
+                      className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
                         es.active_for_input
-                          ? 'bg-blue-600 text-white hover:bg-blue-500'
-                          : 'bg-slate-600 text-white hover:bg-slate-500'
+                          ? 'bg-teal-600 text-white hover:bg-teal-500 dark:bg-teal-500'
+                          : 'border border-[var(--ac-border)] bg-[var(--ac-sidebar-active-bg)] ac-text-secondary hover:ac-text-primary'
                       }`}
                     >
                       {es.active_for_input ? 'ON' : 'OFF'}

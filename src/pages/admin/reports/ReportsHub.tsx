@@ -58,6 +58,7 @@ export default function ReportsHub() {
 
   return (
     <AdminPageWrapper
+      eyebrow="Academic reports"
       title="Reports"
       subtitle="Generate and manage student academic reports"
     >
@@ -74,7 +75,7 @@ export default function ReportsHub() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <button
           type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] hover:opacity-90 transition-opacity"
+          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
           onClick={() => navigate('/dashboard/admin/reports/generate')}
         >
           <div className="text-center">
@@ -90,7 +91,7 @@ export default function ReportsHub() {
 
         <button
           type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] hover:opacity-90 transition-opacity"
+          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
           onClick={() => navigate('/dashboard/admin/report-records')}
         >
           <div className="text-center">
@@ -106,7 +107,7 @@ export default function ReportsHub() {
 
         <button
           type="button"
-          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] hover:opacity-90 transition-opacity"
+          className="ac-glass-card p-6 text-left cursor-pointer border border-[var(--ac-border)] transition-all hover:border-emerald-500/35 hover:shadow-lg hover:shadow-emerald-900/10 dark:hover:border-emerald-400/25"
           onClick={() => navigate('/dashboard/admin/settings')}
         >
           <div className="text-center">
@@ -123,18 +124,38 @@ export default function ReportsHub() {
       </div>
 
       <div className={`${adminCardClass} mt-6`}>
-        <h3 className="ac-text-primary text-lg font-medium mb-4">Report Statistics</h3>
+        <h3
+          className="ac-text-primary mb-4 text-xl font-normal tracking-tight sm:text-2xl"
+          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+        >
+          Report Statistics
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-500 dark:text-blue-400">{stats.today}</div>
+            <div
+              className="text-2xl font-normal text-emerald-600 dark:text-emerald-400"
+              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+            >
+              {stats.today}
+            </div>
             <div className="ac-text-muted text-sm">Reports Generated Today</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{stats.term}</div>
+            <div
+              className="text-2xl font-normal text-teal-600 dark:text-teal-400"
+              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+            >
+              {stats.term}
+            </div>
             <div className="ac-text-muted text-sm">Total Reports This Term</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-teal-500 dark:text-teal-400">{stats.pending}</div>
+            <div
+              className="text-2xl font-normal text-slate-700 dark:text-slate-200"
+              style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+            >
+              {stats.pending}
+            </div>
             <div className="ac-text-muted text-sm">Pending Reports</div>
           </div>
         </div>

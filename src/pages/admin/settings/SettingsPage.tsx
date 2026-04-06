@@ -74,7 +74,11 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <AdminPageWrapper title="System Settings" subtitle="Configure school settings">
+    <AdminPageWrapper
+      eyebrow="School setup"
+      title="System Settings"
+      subtitle="Configure school settings"
+    >
       <div className="mb-4 flex items-center justify-end">
         <button
           type="button"
@@ -93,7 +97,7 @@ export default function SettingsPage() {
             onClick={() => setTab(k)}
             className={`shrink-0 rounded-lg px-4 py-2.5 text-left text-sm transition-colors min-h-[44px] sm:min-h-0 ${
               tab === k
-                ? 'border border-green-500 bg-green-600 text-white shadow-lg shadow-green-900/30'
+                ? 'border border-emerald-500/80 bg-emerald-600 text-white shadow-lg shadow-emerald-900/25 ring-1 ring-emerald-400/30 dark:bg-emerald-500/95 dark:shadow-emerald-950/40'
                 : 'ac-glass-btn-secondary ac-text-primary'
             }`}
           >
@@ -133,7 +137,12 @@ export default function SettingsPage() {
       <LocationSettingsWidget />
 
       <div className={`${adminCardClass} mt-6 overflow-x-auto`}>
-        <div className="mb-2 font-medium ac-text-primary">Classes</div>
+        <h3
+          className="ac-text-primary mb-3 text-lg font-normal tracking-tight sm:text-xl"
+          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+        >
+          Classes
+        </h3>
         {classOptions.length === 0 ? (
           <p className="text-sm ac-text-muted">
             Classes will appear here after your school type is set.
@@ -157,7 +166,12 @@ export default function SettingsPage() {
       </div>
 
       <div className={`${adminCardClass} mt-6`}>
-        <div className="mb-2 font-medium ac-text-primary">Quick Management</div>
+        <h3
+          className="ac-text-primary mb-3 text-lg font-normal tracking-tight sm:text-xl"
+          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+        >
+          Quick Management
+        </h3>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

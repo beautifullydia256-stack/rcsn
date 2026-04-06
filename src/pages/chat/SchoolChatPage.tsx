@@ -42,9 +42,9 @@ import {
   type EligibleChatUser,
 } from '@/lib/schoolChatApi';
 
-/** WhatsApp-style chat wallpaper (subtle pattern on #e5ddd5). */
-const WA_CHAT_BG = `linear-gradient(rgba(229, 221, 213, 0.92), rgba(229, 221, 213, 0.92)),
-  url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23d4ccc4' fill-opacity='0.35' d='M0 17h17V0H0v17zm17 35h17V35H17v17zM35 0v17h17V0H35z'/%3E%3C/svg%3E")`;
+/** WhatsApp Web–style dark chat wallpaper (subtle doodle on #0b141a). */
+const WA_CHAT_BG = `linear-gradient(rgba(11, 20, 26, 0.97), rgba(11, 20, 26, 0.97)),
+  url("data:image/svg+xml,%3Csvg width='52' height='52' viewBox='0 0 52 52' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%231f2c34' fill-opacity='0.45' d='M0 17h17V0H0v17zm17 35h17V35H17v17zM35 0v17h17V0H35z'/%3E%3C/svg%3E")`;
 
 function dashboardHomeForRole(role: string | null): string {
   switch (role) {
@@ -261,8 +261,8 @@ function VoiceNoteBubble({
     [effectiveDuration]
   );
 
-  const barPlayedColor = mine ? 'rgba(46, 66, 58, 0.92)' : 'rgba(17, 27, 33, 0.85)';
-  const barUnplayedColor = mine ? 'rgba(46, 66, 58, 0.22)' : 'rgba(17, 27, 33, 0.14)';
+  const barPlayedColor = mine ? 'rgba(146, 201, 176, 0.95)' : 'rgba(169, 186, 194, 0.85)';
+  const barUnplayedColor = mine ? 'rgba(146, 201, 176, 0.28)' : 'rgba(169, 186, 194, 0.22)';
   const avatarClass = mine
     ? 'bg-gradient-to-br from-[#6b8f7c] to-[#4a6b5a] text-white'
     : 'bg-gradient-to-br from-[#9ca8b8] to-[#6b7c85] text-white';
@@ -270,7 +270,7 @@ function VoiceNoteBubble({
 
   if (!playable) {
     return (
-      <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug text-[#667781] italic pr-8">
+      <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug text-[var(--wa-text-secondary)] italic pr-8">
         {m.body}
       </p>
     );
@@ -316,21 +316,21 @@ function VoiceNoteBubble({
           {letter}
         </div>
         <div
-          className="absolute -bottom-px -right-px flex h-[14px] w-[14px] items-center justify-center rounded-full border border-[#e9edef] bg-white shadow-sm"
+          className="absolute -bottom-px -right-px flex h-[14px] w-[14px] items-center justify-center rounded-full border border-[var(--wa-border)] bg-[var(--wa-surface)] shadow-sm"
           aria-hidden
         >
-          <Mic className="h-2 w-2 text-[#54656f]" strokeWidth={2.25} />
+          <Mic className="h-2 w-2 text-[var(--wa-text-secondary)]" strokeWidth={2.25} />
         </div>
       </div>
       {loading ? (
-        <Loader2 className="h-7 w-7 shrink-0 animate-spin text-[#008069]" aria-label="Loading voice message" />
+        <Loader2 className="h-7 w-7 shrink-0 animate-spin text-[#00a884]" aria-label="Loading voice message" />
       ) : (
         <>
           <button
             type="button"
             onClick={togglePlay}
             disabled={!url}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--wa-text)] transition-colors hover:bg-white/12 disabled:opacity-40"
             aria-label={playing ? 'Pause voice message' : 'Play voice message'}
           >
             {playing ? (
@@ -377,17 +377,17 @@ function VoiceNoteBubble({
                 );
               })}
             </div>
-            <div className="relative mx-px h-0.5 min-w-0 w-full overflow-hidden rounded-full bg-[#111b21]/12">
+            <div className="relative mx-px h-0.5 min-w-0 w-full overflow-hidden rounded-full bg-white/14">
               <div
-                className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#62c6a9]' : 'bg-[#00a884]'}`}
                 style={{ width: `${progress * 100}%` }}
               />
               <div
-                className={`absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white shadow-sm ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                className={`absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/90 shadow-sm ${mine ? 'bg-[#62c6a9]' : 'bg-[#00a884]'}`}
                 style={{ left: `${progress * 100}%` }}
               />
             </div>
-            <span className="text-[10px] font-medium tabular-nums leading-none text-[#667781]">
+            <span className="text-[10px] font-medium tabular-nums leading-none text-[var(--wa-text-secondary)]">
               {durationLabel}
             </span>
           </div>
@@ -844,13 +844,28 @@ export default function SchoolChatPage() {
 
   return (
     <div
-      className={`wa-root flex flex-col min-h-0 w-full ${embedded ? 'flex-1 h-full max-h-[100dvh]' : 'min-h-[calc(100vh-2rem)]'}`}
+      className={`wa-root flex flex-col min-h-0 w-full bg-[var(--wa-list)] text-[var(--wa-text)] ${embedded ? 'flex-1 h-full max-h-[100dvh]' : 'min-h-[calc(100vh-2rem)]'}`}
       style={{ fontFamily: 'system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' }}
     >
       <style>{`
-        .wa-root { --wa-header: #075e54; --wa-header-light: #008069; --wa-in: #ffffff; --wa-out: #d9fdd3; --wa-list: #f0f2f5; --wa-border: #e9edef; }
-        .wa-sidebar-item:hover { background: #f5f6f6; }
-        .wa-sidebar-item.wa-active { background: #ebebeb; }
+        .wa-root {
+          --wa-header: #202c33;
+          --wa-header-light: #00a884;
+          --wa-in: #202c33;
+          --wa-out: #005c4b;
+          --wa-list: #111b21;
+          --wa-border: #2a3942;
+          --wa-page-bg: #0b141a;
+          --wa-text: #e9edef;
+          --wa-text-secondary: #8696a0;
+          --wa-surface: #2a3942;
+          --wa-input-bar: #202c33;
+          --wa-modal-surface: #202c33;
+          --wa-bubble-meta-out: #92c9b0;
+          --wa-bubble-meta-in: #8696a0;
+        }
+        .wa-sidebar-item:hover { background: #202c33; }
+        .wa-sidebar-item.wa-active { background: #2a3942; }
         .wa-input::placeholder { color: #8696a0; }
         .wa-root .wa-input:focus,
         .wa-root .wa-input:focus-visible,
@@ -873,16 +888,21 @@ export default function SchoolChatPage() {
       `}</style>
 
       {!embedded && (
-        <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 shrink-0 bg-white text-slate-900 border-slate-200">
-          <Link to={home} className="inline-flex items-center gap-1.5 text-sm font-medium text-[#008069] hover:underline">
+        <header className="flex flex-wrap items-center gap-3 border-b px-4 py-3 shrink-0 bg-[var(--wa-list)] text-[var(--wa-text)] border-[var(--wa-border)]">
+          <Link
+            to={home}
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--wa-header-light)] hover:underline"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back
           </Link>
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <MessageCircle className="h-6 w-6 text-[#008069] shrink-0" />
+            <MessageCircle className="h-6 w-6 text-[var(--wa-header-light)] shrink-0" />
             <div className="min-w-0">
               <h1 className="text-lg font-bold truncate">School messages</h1>
-              <p className="text-xs text-slate-500 truncate">People you are allowed to contact at your school.</p>
+              <p className="text-xs text-[var(--wa-text-secondary)] truncate">
+                People you are allowed to contact at your school.
+              </p>
             </div>
           </div>
           <button
@@ -904,10 +924,10 @@ export default function SchoolChatPage() {
       {embedded && (
         <div className="flex items-center justify-between gap-3 px-4 py-3 shrink-0 border-b border-[var(--wa-border)] bg-[var(--wa-list)]">
           <div className="flex items-center gap-2 min-w-0">
-            <MessageCircle className="h-6 w-6 text-[#54656f] shrink-0" />
+            <MessageCircle className="h-6 w-6 text-[var(--wa-text-secondary)] shrink-0" />
             <div>
-              <h1 className="text-[17px] font-semibold text-[#111b21] leading-tight">Messages</h1>
-              <p className="text-[12px] text-[#667781]">School chat</p>
+              <h1 className="text-[17px] font-semibold text-[var(--wa-text)] leading-tight">Messages</h1>
+              <p className="text-[12px] text-[var(--wa-text-secondary)]">School chat</p>
             </div>
           </div>
           <button
@@ -934,21 +954,23 @@ export default function SchoolChatPage() {
           } w-full md:w-[min(100%,380px)] md:max-w-[40%] flex-col border-r border-[var(--wa-border)] bg-[var(--wa-list)] shrink-0`}
         >
           <div className="p-2 border-b border-[var(--wa-border)] bg-[var(--wa-list)]">
-            <div className="relative rounded-lg bg-white flex items-center px-3 py-1.5 border border-[var(--wa-border)]">
-              <Search className="h-4 w-4 text-[#8696a0] shrink-0 mr-2" />
+            <div className="relative rounded-lg bg-[var(--wa-surface)] flex items-center px-3 py-1.5 border border-[var(--wa-border)]">
+              <Search className="h-4 w-4 text-[var(--wa-text-secondary)] shrink-0 mr-2" />
               <input
                 type="search"
                 readOnly
                 placeholder="Search or start new chat"
-                className="w-full text-[14px] text-[#3b4a54] bg-transparent border-0 outline-none placeholder:text-[#8696a0] cursor-default"
+                className="w-full text-[14px] text-[var(--wa-text)] bg-transparent border-0 outline-none placeholder:text-[var(--wa-text-secondary)] cursor-default"
                 aria-hidden
               />
             </div>
           </div>
           <div className="flex-1 overflow-y-auto wa-scroll-y">
-            {loadingConv && <p className="p-4 text-[14px] text-[#667781]">Loading…</p>}
+            {loadingConv && <p className="p-4 text-[14px] text-[var(--wa-text-secondary)]">Loading…</p>}
             {!loadingConv && conversations.length === 0 && (
-              <p className="p-4 text-[14px] text-[#667781]">No chats yet. Tap <strong>New chat</strong>.</p>
+              <p className="p-4 text-[14px] text-[var(--wa-text-secondary)]">
+                No chats yet. Tap <strong className="text-[var(--wa-text)]">New chat</strong>.
+              </p>
             )}
             {conversations.map((c: ChatConversationRow) => (
               <button
@@ -979,12 +1001,14 @@ export default function SchoolChatPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex justify-between gap-2 items-baseline">
-                    <span className="font-medium text-[#111b21] text-[16px] truncate">{c.peer_name}</span>
-                    <span className="text-[11px] text-[#667781] shrink-0 whitespace-nowrap">{formatTime(c.last_at)}</span>
+                    <span className="font-medium text-[var(--wa-text)] text-[16px] truncate">{c.peer_name}</span>
+                    <span className="text-[11px] text-[var(--wa-text-secondary)] shrink-0 whitespace-nowrap">
+                      {formatTime(c.last_at)}
+                    </span>
                   </div>
-                  <div className="text-[12px] text-[#667781] truncate">{roleLabel(c.peer_role)}</div>
+                  <div className="text-[12px] text-[var(--wa-text-secondary)] truncate">{roleLabel(c.peer_role)}</div>
                   <div className="flex justify-between gap-2 items-center mt-0.5">
-                    <span className="text-[14px] text-[#667781] truncate">{c.last_body || ' '}</span>
+                    <span className="text-[14px] text-[var(--wa-text-secondary)] truncate">{c.last_body || ' '}</span>
                     {c.unread_count > 0 && (
                       <span className="shrink-0 rounded-full bg-[#25d366] text-white text-[11px] font-semibold min-w-[20px] h-5 px-1.5 flex items-center justify-center">
                         {c.unread_count}
@@ -999,7 +1023,7 @@ export default function SchoolChatPage() {
 
         {/* Thread — WhatsApp right column */}
         <section
-          className={`${!mobileThread ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-h-0 bg-[#efeae2]`}
+          className={`${!mobileThread ? 'hidden md:flex' : 'flex'} flex-1 flex-col min-h-0 bg-[var(--wa-page-bg)]`}
         >
           <div className="md:hidden flex items-center gap-2 border-b border-[var(--wa-border)] px-2 py-2 shrink-0 bg-[var(--wa-header)] text-white">
             <button
@@ -1041,10 +1065,10 @@ export default function SchoolChatPage() {
               className="hidden md:flex flex-1 flex-col items-center justify-center p-8 text-center border-l border-[var(--wa-border)]"
               style={{ background: WA_CHAT_BG }}
             >
-              <div className="max-w-sm rounded-lg bg-white/90 px-6 py-8 shadow-sm border border-[var(--wa-border)]">
-                <MessageCircle className="h-16 w-16 mx-auto mb-4 text-[#8696a0]" strokeWidth={1.25} />
-                <p className="text-[20px] font-light text-[#41525d]">PwezaCore Web</p>
-                <p className="text-[14px] text-[#667781] mt-2">
+              <div className="max-w-sm rounded-lg bg-[var(--wa-surface)]/95 px-6 py-8 shadow-sm border border-[var(--wa-border)] backdrop-blur-sm">
+                <MessageCircle className="h-16 w-16 mx-auto mb-4 text-[var(--wa-text-secondary)]" strokeWidth={1.25} />
+                <p className="text-[20px] font-light text-[var(--wa-text)]">PwezaCore Web</p>
+                <p className="text-[14px] text-[var(--wa-text-secondary)] mt-2">
                   Select a conversation to start messaging, or start a new chat.
                 </p>
               </div>
@@ -1099,8 +1123,8 @@ export default function SchoolChatPage() {
                       <div
                         className={`min-w-0 max-w-[75%] sm:max-w-[65%] rounded-lg px-2 py-1.5 pb-5 shadow-sm relative ${
                           mine
-                            ? 'rounded-br-none bg-[var(--wa-out)] text-[#111b21]'
-                            : 'rounded-bl-none bg-[var(--wa-in)] text-[#111b21] border border-[#e9edef]'
+                            ? 'rounded-br-none bg-[var(--wa-out)] text-[var(--wa-text)]'
+                            : 'rounded-bl-none bg-[var(--wa-in)] text-[var(--wa-text)] border border-[var(--wa-border)]'
                         }`}
                       >
                         {m.msg_kind === 'voice' ? (
@@ -1117,7 +1141,9 @@ export default function SchoolChatPage() {
                           </p>
                         )}
                         <div className="absolute bottom-1 right-2 flex items-center gap-1">
-                          <span className={`text-[11px] tabular-nums ${mine ? 'text-[#667781]' : 'text-[#667781]'}`}>
+                          <span
+                            className={`text-[11px] tabular-nums ${mine ? 'text-[var(--wa-bubble-meta-out)]' : 'text-[var(--wa-bubble-meta-in)]'}`}
+                          >
                             {formatMsgTime(m.created_at)}
                           </span>
                           {mine && (
@@ -1136,7 +1162,7 @@ export default function SchoolChatPage() {
 
               {sendError && (
                 <div
-                  className="shrink-0 px-3 py-2 text-[13px] text-red-800 bg-red-50 border-t border-red-100"
+                  className="shrink-0 px-3 py-2 text-[13px] text-red-200 bg-red-950/50 border-t border-red-900/60"
                   role="alert"
                 >
                   {sendError}
@@ -1145,20 +1171,20 @@ export default function SchoolChatPage() {
 
               <form
                 onSubmit={handleSend}
-                className="flex items-end gap-2 px-3 py-2 shrink-0 border-t border-[var(--wa-border)] bg-[#f0f2f5]"
+                className="flex items-end gap-2 px-3 py-2 shrink-0 border-t border-[var(--wa-border)] bg-[var(--wa-input-bar)]"
               >
                 {!voiceRecording && (
                   <>
                     <button
                       type="button"
-                      className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block"
+                      className="p-2 text-[var(--wa-text-secondary)] hover:text-[var(--wa-text)] rounded-full hidden sm:block"
                       aria-label="Emoji"
                     >
                       <Smile className="h-6 w-6" />
                     </button>
                     <button
                       type="button"
-                      className="p-2 text-[#8696a0] hover:text-[#54656f] rounded-full hidden sm:block"
+                      className="p-2 text-[var(--wa-text-secondary)] hover:text-[var(--wa-text)] rounded-full hidden sm:block"
                       aria-label="Attach"
                     >
                       <Paperclip className="h-6 w-6" />
@@ -1167,18 +1193,20 @@ export default function SchoolChatPage() {
                 )}
                 {voiceRecording ? (
                   <>
-                    <div className="flex-1 flex items-center gap-2 rounded-lg bg-white border border-[var(--wa-border)] min-h-[42px] px-3 py-2">
+                    <div className="flex-1 flex items-center gap-2 rounded-lg bg-[var(--wa-surface)] border border-[var(--wa-border)] min-h-[42px] px-3 py-2">
                       <span
                         className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse shrink-0"
                         aria-hidden
                       />
-                      <span className="text-[15px] font-semibold tabular-nums text-[#111b21] shrink-0">
+                      <span className="text-[15px] font-semibold tabular-nums text-[var(--wa-text)] shrink-0">
                         {formatVoiceDurationLabel(voiceSeconds)}
                       </span>
-                      <span className="text-[13px] text-[#667781] truncate flex-1">Recording… tap send to finish</span>
+                      <span className="text-[13px] text-[var(--wa-text-secondary)] truncate flex-1">
+                        Recording… tap send to finish
+                      </span>
                       <button
                         type="button"
-                        className="text-[13px] font-semibold text-[#c0392b] hover:underline shrink-0 px-1"
+                        className="text-[13px] font-semibold text-red-300 hover:text-red-200 hover:underline shrink-0 px-1"
                         onClick={cancelVoiceRecording}
                       >
                         Cancel
@@ -1200,9 +1228,9 @@ export default function SchoolChatPage() {
                   </>
                 ) : (
                   <>
-                    <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3 shadow-none">
+                    <div className="flex-1 rounded-lg bg-[var(--wa-surface)] border border-[var(--wa-border)] flex items-center min-h-[42px] px-3 shadow-none">
                       <input
-                        className="flex-1 wa-input min-w-0 bg-transparent border-0 text-[15px] text-[#111b21] py-2 placeholder:text-[#8696a0] outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0"
+                        className="flex-1 wa-input min-w-0 bg-transparent border-0 text-[15px] text-[var(--wa-text)] py-2 placeholder:text-[var(--wa-text-secondary)] outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0"
                         placeholder="Type a message"
                         value={draft}
                         onChange={(e) => {
@@ -1252,27 +1280,34 @@ export default function SchoolChatPage() {
             onClick={closeNewChatModal}
           >
             <div
-              className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)] pointer-events-auto"
+              className="w-full max-w-lg rounded-xl bg-[var(--wa-modal-surface)] shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)] pointer-events-auto"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[#f0f2f5]">
-                <h2 id="new-chat-title" className="font-semibold text-[#111b21]">
+              <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[var(--wa-list)]">
+                <h2 id="new-chat-title" className="font-semibold text-[var(--wa-text)]">
                   New chat
                 </h2>
-                <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={closeNewChatModal}>
+                <button
+                  type="button"
+                  className="p-1.5 rounded-full hover:bg-white/10 text-[var(--wa-text-secondary)]"
+                  onClick={closeNewChatModal}
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
               {newChatError && (
-                <div className="mx-3 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800" role="alert">
+                <div
+                  className="mx-3 mt-3 rounded-lg border border-red-900/50 bg-red-950/45 px-3 py-2 text-[13px] text-red-200"
+                  role="alert"
+                >
                   {newChatError}
                 </div>
               )}
               <div className="p-3 border-b border-[var(--wa-border)] space-y-3">
-              <div className="relative rounded-lg bg-[#f0f2f5] flex items-center px-3 py-2">
-                <Search className="absolute left-5 h-4 w-4 text-[#8696a0]" />
+              <div className="relative rounded-lg bg-[var(--wa-surface)] flex items-center px-3 py-2 border border-[var(--wa-border)]">
+                <Search className="absolute left-5 h-4 w-4 text-[var(--wa-text-secondary)]" />
                 <input
-                  className="w-full rounded-lg bg-white border border-[var(--wa-border)] py-2 pl-9 pr-3 text-[14px] outline-none focus:border-[#008069]"
+                  className="w-full rounded-lg bg-[var(--wa-list)] border border-[var(--wa-border)] py-2 pl-9 pr-3 text-[14px] text-[var(--wa-text)] outline-none focus:border-[var(--wa-header-light)] placeholder:text-[var(--wa-text-secondary)]"
                   placeholder="Search name or email…"
                   value={pickQ}
                   onChange={(e) => setPickQ(e.target.value)}
@@ -1294,7 +1329,7 @@ export default function SchoolChatPage() {
                     className={`rounded-full px-3 py-1.5 text-[13px] font-medium border transition-colors ${
                       contactFilter === id
                         ? 'bg-[#008069] text-white border-[#008069]'
-                        : 'bg-white text-[#54656f] border-[var(--wa-border)] hover:bg-[#f5f6f6]'
+                        : 'bg-[var(--wa-surface)] text-[var(--wa-text-secondary)] border-[var(--wa-border)] hover:bg-[#374955]'
                     }`}
                   >
                     {label}
@@ -1303,7 +1338,7 @@ export default function SchoolChatPage() {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto wa-scroll-y p-2">
-              {loadingElig && <p className="p-3 text-[14px] text-[#667781]">Loading contacts…</p>}
+              {loadingElig && <p className="p-3 text-[14px] text-[var(--wa-text-secondary)]">Loading contacts…</p>}
               {!loadingElig &&
                 filteredEligible.map((u) => {
                   const pres = formatChatPresence(u.last_seen_at, u.session_active);
@@ -1317,32 +1352,32 @@ export default function SchoolChatPage() {
                         e.stopPropagation();
                         void openNewConversation(u);
                       }}
-                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center disabled:opacity-60"
+                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#202c33] flex gap-3 items-center disabled:opacity-60"
                     >
-                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
+                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[#3d4f5c] flex items-center justify-center text-[var(--wa-text)] font-medium">
                         {displayChatName(u).slice(0, 1).toUpperCase()}
                         {pres.online && (
                           <span
-                            className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2 border-white"
+                            className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2 border-[var(--wa-modal-surface)]"
                             aria-hidden
                             title="Online"
                           />
                         )}
                       </div>
                       <div className="min-w-0">
-                        <div className="font-medium text-[#111b21]">{displayChatName(u)}</div>
-                        <div className="text-[13px] text-[#667781] truncate">
+                        <div className="font-medium text-[var(--wa-text)]">{displayChatName(u)}</div>
+                        <div className="text-[13px] text-[var(--wa-text-secondary)] truncate">
                           {roleLabel(u.role)} · {u.email}
                         </div>
                         {!pres.online && pres.label && (
-                          <div className="text-[12px] text-[#8696a0] truncate">{pres.label}</div>
+                          <div className="text-[12px] text-[var(--wa-text-secondary)] truncate">{pres.label}</div>
                         )}
                       </div>
                     </button>
                   );
                 })}
               {!loadingElig && filteredEligible.length === 0 && (
-                <p className="p-4 text-[14px] text-[#667781]">No contacts match filters or search.</p>
+                <p className="p-4 text-[14px] text-[var(--wa-text-secondary)]">No contacts match filters or search.</p>
               )}
             </div>
           </div>

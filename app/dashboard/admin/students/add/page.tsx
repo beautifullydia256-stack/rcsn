@@ -8,7 +8,6 @@ import ImageUpload from "@/src/components/ImageUpload";
 import { createMissedExamRecordsForNewStudent } from "@/src/lib/examResultsUtils";
 import { CompressionResult } from "@/src/lib/imageCompression";
 import { isValidRealEmail } from "@/src/lib/realEmail";
-import { ensureParentLinkForStudent } from "@/src/lib/ensureParentLink";
 
 export default function AddStudentPage() {
   const router = useRouter();
@@ -25,20 +24,9 @@ export default function AddStudentPage() {
   const [nationality, setNationality] = useState("");
   const [religion, setReligion] = useState("");
 
-  // Contact & Address
-  const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
   const [studentPhone, setStudentPhone] = useState("");
   const [studentEmail, setStudentEmail] = useState("");
-
-  // Parent/Guardian
-  const [guardianName, setGuardianName] = useState("");
-  const [guardianRelationship, setGuardianRelationship] = useState("");
-  const [guardianPhone, setGuardianPhone] = useState("");
-  const [guardianEmail, setGuardianEmail] = useState("");
-  const [guardianOccupation, setGuardianOccupation] = useState("");
-  const [guardianAddress, setGuardianAddress] = useState("");
 
   // Academic Information
   const [klass, setKlass] = useState("");
@@ -202,16 +190,9 @@ export default function AddStudentPage() {
       return false;
     }
     const trimStudentEmail = studentEmail.trim();
-    if (!trimStudentEmail || !isValidRealEmail(trimStudentEmail)) {
-      alert('Enter a valid real email address for the student.');
+    if (trimStudentEmail && !isValidRealEmail(trimStudentEmail)) {
+      alert('If you enter a student email, use a valid address.');
       return false;
-    }
-    if (guardianName.trim()) {
-      const ge = guardianEmail.trim();
-      if (!ge || !isValidRealEmail(ge)) {
-        alert('When a parent/guardian name is provided, enter a valid real email for that parent.');
-        return false;
-      }
     }
     setSaving(true);
     try {
@@ -233,11 +214,7 @@ export default function AddStudentPage() {
       }
       
 
-      // Admission number is assigned by DB trigger (set_student_admission_number_if_empty)
-      // in the same transaction as INSERT, so advisory locks in generate_admission_number
-      // apply and concurrent adds cannot get duplicate numbers. Do not call the RPC here.
-
-      const student_email = trimStudentEmail;
+      const student_email = trimStudentEmail || null;
 
       // Compose full name for legacy name column
       const name = [firstName, middleName, lastName].filter(Boolean).join(' ');
@@ -255,17 +232,17 @@ export default function AddStudentPage() {
         date_of_birth: dob || null,
         nationality: nationality || null,
         religion: religion || null,
-        address,
-        city,
-        country,
+        address: null,
+        city: city || null,
+        country: null,
         student_phone: studentPhone || null,
-        student_email: student_email,
-        guardian_name: guardianName,
-        guardian_relationship: guardianRelationship,
-        guardian_phone: guardianPhone,
-        guardian_email: guardianEmail.trim() || null,
-        guardian_occupation: guardianOccupation || null,
-        guardian_address: guardianAddress || null,
+        student_email,
+        guardian_name: null,
+        guardian_relationship: null,
+        guardian_phone: null,
+        guardian_email: null,
+        guardian_occupation: null,
+        guardian_address: null,
         medical_condition: medicalCondition || null,
         stream: stream || null,
         previous_school: previousSchool || null,
@@ -346,26 +323,13 @@ export default function AddStudentPage() {
         }
       }
 
-      if (insertedStudent?.student_id && guardianName.trim() && schoolId) {
-        const linkRes = await ensureParentLinkForStudent({
-          student_id: insertedStudent.student_id,
-          school_id: schoolId,
-          name: guardianName.trim(),
-          email: guardianEmail.trim(),
-          phone: guardianPhone.trim() || undefined,
-          relationship: guardianRelationship || undefined,
-        });
-        if (!linkRes.ok) {
-          console.warn('Parent link failed', linkRes.error);
-        }
-      }
-
-      alert(`Student added successfully. Admission No: ${admission_number}\nTo create login: Go to Student Details page and use "Create Login" button.`);
+      alert(
+        `Student added successfully. Admission No: ${admission_number}\nLink parents from Add parent when ready. To create login: Student Details → Create Login.`
+      );
       // reset minimal fields for add-another flow
       setFirstName(""); setMiddleName(""); setLastName(""); setGender(""); setDob("");
-      setNationality(""); setReligion("");
-      setAddress(""); setCity(""); setCountry(""); setStudentPhone(""); setStudentEmail("");
-      setGuardianName(""); setGuardianRelationship(""); setGuardianPhone(""); setGuardianEmail(""); setGuardianOccupation(""); setGuardianAddress("");
+      setNationality(""); setReligion(""); setCity("");
+      setStudentPhone(""); setStudentEmail("");
       setKlass(""); setStream(""); setPreviousSchool(""); setAdmissionDate(""); setBoardingType("Day Scholar");
       setEnrollmentFee(""); setPaymentStatus("Pending"); setExpectedFee(""); setInitialPayment("");
       setProfilePhoto(null); setCompressionResult(null); setUploadError(null);
@@ -403,6 +367,7 @@ export default function AddStudentPage() {
             <input type="date" className="rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2" placeholder="Date of Birth" value={dob} onChange={(e)=>setDob(e.target.value)} max={new Date().toISOString().slice(0,10)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Nationality" value={nationality} onChange={(e)=>setNationality(e.target.value)} />
             <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Religion (optional)" value={religion} onChange={(e)=>setReligion(e.target.value)} />
+            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2 col-span-full md:col-span-2" placeholder="City / District" value={city} onChange={(e)=>setCity(e.target.value)} />
             
             <div className="text-white/90 font-medium col-span-full mt-2">Profile Photo (Passport Size)</div>
             <div className="col-span-full">
@@ -428,25 +393,10 @@ export default function AddStudentPage() {
               )}
             </div>
 
-            <div className="text-white/90 font-medium col-span-full mt-2">Contact & Address</div>
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Home Address" value={address} onChange={(e)=>setAddress(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="City / District / Village" value={city} onChange={(e)=>setCity(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Country" value={country} onChange={(e)=>setCountry(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student email (required)" value={studentEmail} onChange={(e)=>setStudentEmail(e.target.value)} type="email" />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student Phone (optional)" value={studentPhone} onChange={(e)=>setStudentPhone(e.target.value)} />
-
-            <div className="text-white/90 font-medium col-span-full mt-2">Parent / Guardian Information</div>
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Full Name" value={guardianName} onChange={(e)=>setGuardianName(e.target.value)} />
-            <select className="rounded-lg border border-white/10 bg-white text-black px-3 py-2" value={guardianRelationship} onChange={(e)=>setGuardianRelationship(e.target.value)}>
-              <option value="">Relationship</option>
-              <option value="Father">Father</option>
-              <option value="Mother">Mother</option>
-              <option value="Guardian">Guardian</option>
-            </select>
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Phone Number" value={guardianPhone} onChange={(e)=>setGuardianPhone(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Parent email (required if name filled)" value={guardianEmail} onChange={(e)=>setGuardianEmail(e.target.value)} type="email" />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Occupation (optional)" value={guardianOccupation} onChange={(e)=>setGuardianOccupation(e.target.value)} />
-            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Address (if different)" value={guardianAddress} onChange={(e)=>setGuardianAddress(e.target.value)} />
+            <div className="text-white/90 font-medium col-span-full mt-2">Email & phone (portal / login)</div>
+            <p className="col-span-full text-white/60 text-xs">Optional. Use when you invite the student to the portal.</p>
+            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student email (optional)" value={studentEmail} onChange={(e)=>setStudentEmail(e.target.value)} type="email" />
+            <input className="rounded-lg border border-white/10 bg-white/10 text-white placeholder:text-white/70 px-3 py-2" placeholder="Student phone (optional)" value={studentPhone} onChange={(e)=>setStudentPhone(e.target.value)} />
 
             <div className="text-white/90 font-medium col-span-full mt-2">Academic Information</div>
             <select className="w-full rounded-lg border border-white/10 bg-white text-black px-3 py-2" value={klass} onChange={(e) => setKlass(e.target.value)}>

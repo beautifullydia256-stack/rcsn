@@ -187,5 +187,11 @@ html.dark select option,
   }
 }
 
+/* Admin list/settings pages: explicit Geist body (matches Students terminal; fonts also in index.html) */
+.admin-terminal-page {
+  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
+}
+
 
 

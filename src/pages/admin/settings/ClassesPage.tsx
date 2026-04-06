@@ -75,10 +75,10 @@ export default function SettingsClassesPage() {
 
   if (loading) {
     return (
-      <AdminPageWrapper title="Class Management">
+      <AdminPageWrapper eyebrow="Directory" title="Class Management">
         <div className="flex items-center justify-center py-12">
           <div
-            className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--pw-border)] border-t-[var(--pw-teal)]"
+            className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500"
             aria-hidden
           />
         </div>
@@ -87,7 +87,11 @@ export default function SettingsClassesPage() {
   }
 
   return (
-    <AdminPageWrapper title="Class Management" subtitle="Manage settings for all classes">
+    <AdminPageWrapper
+      eyebrow="Directory"
+      title="Class Management"
+      subtitle="Manage settings for all classes"
+    >
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
         <button
           type="button"
@@ -137,7 +141,7 @@ export default function SettingsClassesPage() {
                 </div>
                 <ArrowRight className="h-5 w-5 shrink-0 ac-text-muted opacity-80" />
               </div>
-              <div className="border-t border-[var(--pw-border)] pt-4">
+              <div className="border-t border-[var(--ac-border)] pt-4">
                 <span className="text-xs ac-text-muted">Click to manage class settings</span>
               </div>
             </button>

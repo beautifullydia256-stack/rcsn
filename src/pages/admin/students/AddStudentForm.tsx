@@ -19,34 +19,13 @@ import {
   Heart,
   MapPin,
   UserCircle2,
-  Users,
 } from 'lucide-react';
 import ImageUpload from '@/components/ImageUpload';
 import { createMissedExamRecordsForNewStudent } from '@/lib/examResultsUtils';
 import { useToast } from '@/components/Toast';
-import { ensureParentLinkForStudent } from '@/lib/ensureParentLink';
 import { isValidRealEmail } from '@/lib/realEmail';
 import { formatStudentSaveError } from '@/lib/supabaseError';
 import { adminQueryKeys } from '@/pages/admin/api/adminQueryKeys';
-
-/** East Africa–focused list; “Other” enables manual entry. */
-const EAC_COUNTRIES = [
-  'Uganda',
-  'Kenya',
-  'Tanzania',
-  'Rwanda',
-  'Burundi',
-  'South Sudan',
-  'Ethiopia',
-  'Somalia',
-  'Eritrea',
-  'Djibouti',
-  'Democratic Republic of the Congo',
-  'Malawi',
-  'Zambia',
-] as const;
-
-const COUNTRY_CUSTOM = '__custom__';
 
 /** Nationality labels aligned with East African / regional countries; custom text if not listed. */
 const NATIONALITY_CUSTOM = '__nat_custom__';
@@ -172,27 +151,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [middleName, setMiddleName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
-  /** Date of birth — browser calendar picker (`input type="date"`). */
   const [dob, setDob] = useState('');
   const [nationalityChoice, setNationalityChoice] = useState('');
   const [nationalityCustomText, setNationalityCustomText] = useState('');
   const [religion, setReligion] = useState('');
-
-  // Contact & Address
-  const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
-  const [countryChoice, setCountryChoice] = useState('');
-  const [countryCustomText, setCountryCustomText] = useState('');
+
   const [studentPhone, setStudentPhone] = useState('');
   const [studentEmail, setStudentEmail] = useState('');
-
-  // Guardian
-  const [guardianName, setGuardianName] = useState('');
-  const [guardianRelationship, setGuardianRelationship] = useState('');
-  const [guardianPhone, setGuardianPhone] = useState('');
-  const [guardianEmail, setGuardianEmail] = useState('');
-  const [guardianOccupation, setGuardianOccupation] = useState('');
-  const [guardianAddress, setGuardianAddress] = useState('');
 
   // Academic
   const [currentClass, setCurrentClass] = useState('');
@@ -200,7 +166,6 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
   const [previousSchool, setPreviousSchool] = useState('');
   const [admissionDate, setAdmissionDate] = useState('');
   const [boardingType, setBoardingType] = useState<'Day Scholar' | 'Boarding'>('Day Scholar');
-  const [generatedAdmNo, setGeneratedAdmNo] = useState<string | null>(null);
 
   // Fees & discount (existing behaviour)
   const [discountPercent, setDiscountPercent] = useState<number>(0);
@@ -309,22 +274,12 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       setError('If you enter a student email, use a valid address (not a placeholder).');
       return;
     }
-    const trimGuardianEmail = guardianEmail.trim();
-    if (trimGuardianEmail && !isValidRealEmail(trimGuardianEmail)) {
-      setError('If you enter a parent/guardian email, use a valid address.');
-      return;
-    }
     setSubmitting(true);
     try {
-      const resolvedCountry =
-        countryChoice === COUNTRY_CUSTOM ? countryCustomText.trim() : countryChoice.trim();
       const resolvedNationality =
         nationalityChoice === NATIONALITY_CUSTOM
           ? nationalityCustomText.trim()
           : nationalityChoice.trim();
-
-      // Admission number: DB trigger assigns in the same transaction as INSERT (avoids
-      // duplicate numbers when RPC + INSERT were separate transactions).
 
       const student_email = trimStudentEmail || null;
 
@@ -333,9 +288,6 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       const baseFee = boardingType === 'Boarding' ? boardingByClass[currentClass] ?? 0 : feeByClass[currentClass] ?? 0;
       const expectedFeeAmount =
         baseFee > 0 ? Math.round(baseFee * (1 - percent / 100)) : expectedFee ? Number(expectedFee) : null;
-
-      // Student address = guardian address unless a different student address is given
-      const studentAddress = (address && address.trim()) ? address.trim() : (guardianAddress && guardianAddress.trim()) ? guardianAddress.trim() : null;
 
       const { data: inserted, error: insertError } = await supabase
         .from('students')
@@ -351,17 +303,17 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
           date_of_birth: dob || null,
           nationality: resolvedNationality || null,
           religion: religion || null,
-          address: studentAddress,
+          address: null,
           city: city || null,
-          country: resolvedCountry || null,
+          country: null,
           student_phone: studentPhone || null,
           student_email,
-          guardian_name: guardianName || null,
-          guardian_relationship: guardianRelationship || null,
-          guardian_phone: guardianPhone || null,
-          guardian_email: trimGuardianEmail || null,
-          guardian_occupation: guardianOccupation || null,
-          guardian_address: guardianAddress || null,
+          guardian_name: null,
+          guardian_relationship: null,
+          guardian_phone: null,
+          guardian_email: null,
+          guardian_occupation: null,
+          guardian_address: null,
           medical_condition: medicalCondition || null,
           stream: stream || null,
           previous_school: previousSchool || null,
@@ -379,26 +331,8 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
         setError(formatStudentSaveError(insertError));
         return;
       }
-      const admission_number = inserted?.admission_number ?? '';
-      setGeneratedAdmNo(admission_number || null);
       const studentId = inserted?.student_id;
       if (!studentId) throw new Error('Student created but no ID returned.');
-
-      if (guardianName.trim() && schoolId) {
-        const linkRes = await ensureParentLinkForStudent({
-          student_id: studentId,
-          school_id: schoolId,
-          name: guardianName.trim(),
-          email: trimGuardianEmail || undefined,
-          phone: guardianPhone.trim() || undefined,
-          relationship: guardianRelationship.trim() || undefined,
-        });
-        if (!linkRes.ok) {
-          toast.warning(
-            `Student saved, but linking the parent failed: ${linkRes.error || 'Unknown error'}. Guardian details are stored on the student; you can fix the link from Parents or support.`
-          );
-        }
-      }
 
       if (initialNum > 0) {
         await supabase.from('payments').insert({
@@ -442,7 +376,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
       await queryClient.invalidateQueries({ queryKey: adminQueryKeys.studentsDesign(user!.id) });
       await queryClient.invalidateQueries({ queryKey: ['admin', 'students', user?.id] });
       toast.success(
-        'Student saved. Add emails later if needed — invite portal users from User Management when ready.'
+        'Student saved. Link parents from Add parent when ready; invite portal users from User Management when ready.'
       );
       onCompleted?.();
     } catch (err: unknown) {
@@ -589,7 +523,7 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                   <option value="Female">Female</option>
                 </SelectField>
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label className={labelClass} htmlFor="add-student-dob">
                   <span className="inline-flex items-center gap-1.5">
                     <CalendarDays className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
@@ -650,154 +584,14 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 />
               </div>
             </div>
-          </Section>
-
-          <Section id="contact" title="Contact & address" icon={MapPin} isOpen={openSections.includes('contact')} onToggle={toggleSection}>
             <div>
-              <label className={labelClass}>Address</label>
+              <label className={labelClass}>City / District</label>
               <input
                 type="text"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
                 className={inputClass}
-                placeholder="Home address (or leave blank to use guardian address)"
-              />
-              <p className={hintClass}>Student address defaults to guardian address if left blank.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>City / District</label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. Kampala"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Country</label>
-                <SelectField
-                  value={countryChoice}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    setCountryChoice(v);
-                    if (v !== COUNTRY_CUSTOM) setCountryCustomText('');
-                  }}
-                  className={selectFieldClass}
-                >
-                  <option value="">Select country</option>
-                  {EAC_COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                  <option value={COUNTRY_CUSTOM}>Other — type manually</option>
-                </SelectField>
-                {countryChoice === COUNTRY_CUSTOM && (
-                  <input
-                    type="text"
-                    value={countryCustomText}
-                    onChange={(e) => setCountryCustomText(e.target.value)}
-                    className={`${inputClass} mt-2`}
-                    placeholder="Type country name"
-                    autoComplete="country-name"
-                  />
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Student email</label>
-                <input
-                  type="email"
-                  value={studentEmail}
-                  onChange={(e) => setStudentEmail(e.target.value)}
-                  className={inputClass}
-                  placeholder="Optional"
-                  autoComplete="email"
-                  inputMode="email"
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Student phone</label>
-                <input
-                  type="tel"
-                  value={studentPhone}
-                  onChange={(e) => setStudentPhone(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. 0700123456"
-                  autoComplete="tel"
-                  inputMode="tel"
-                />
-              </div>
-            </div>
-          </Section>
-
-          <Section id="guardian" title="Parent / Guardian" icon={Users} isOpen={openSections.includes('guardian')} onToggle={toggleSection}>
-            <div>
-              <label className={labelClass}>Full name</label>
-              <input
-                type="text"
-                value={guardianName}
-                onChange={(e) => setGuardianName(e.target.value)}
-                className={inputClass}
-                placeholder="Student name"
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className={labelClass}>Relationship</label>
-                <SelectField
-                  value={guardianRelationship}
-                  onChange={(e) => setGuardianRelationship(e.target.value)}
-                  className={selectFieldClass}
-                >
-                  <option value="">Select</option>
-                  <option value="Father">Father</option>
-                  <option value="Mother">Mother</option>
-                  <option value="Guardian">Guardian</option>
-                </SelectField>
-              </div>
-              <div>
-                <label className={labelClass}>Phone</label>
-                <input
-                  type="text"
-                  value={guardianPhone}
-                  onChange={(e) => setGuardianPhone(e.target.value)}
-                  className={inputClass}
-                  placeholder="e.g. 0700123456"
-                />
-              </div>
-            </div>
-            <div>
-              <label className={labelClass}>Parent / guardian email</label>
-              <input
-                type="email"
-                value={guardianEmail}
-                onChange={(e) => setGuardianEmail(e.target.value)}
-                className={inputClass}
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Occupation</label>
-              <input
-                type="text"
-                value={guardianOccupation}
-                onChange={(e) => setGuardianOccupation(e.target.value)}
-                className={inputClass}
-                placeholder="Optional"
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Guardian address (if different)</label>
-              <input
-                type="text"
-                value={guardianAddress}
-                onChange={(e) => setGuardianAddress(e.target.value)}
-                className={inputClass}
-                placeholder="Optional"
+                placeholder="e.g. Kampala"
               />
             </div>
           </Section>
@@ -879,18 +673,6 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                 max={todayIso}
               />
             </div>
-            <div className="rounded-xl border border-[var(--ac-border)] bg-emerald-500/5 p-4 dark:bg-emerald-500/10">
-              <p className="text-sm font-medium ac-text-primary">Admission number</p>
-              <p className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                Auto-generated when you save (same database transaction as the insert, so concurrent enrollments cannot collide).
-                Format: <strong className="ac-text-primary">SCHOOL-YEAR-MONTH-NUMBER</strong> (e.g. KPS-2026-02-001). The function{' '}
-                <code className="rounded bg-black/5 px-1 py-0.5 text-[11px] dark:bg-white/10">generate_admission_number</code> uses school abbreviation,
-                admission date, and the next sequence for that school/month.
-              </p>
-              {generatedAdmNo && (
-                <p className="mt-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">Generated: {generatedAdmNo}</p>
-              )}
-            </div>
           </Section>
 
           <Section id="fees" title="Fees & finance" icon={Banknote} isOpen={openSections.includes('fees')} onToggle={toggleSection}>
@@ -968,6 +750,38 @@ export function AddStudentForm({ mode, onCompleted, onCancel }: AddStudentFormPr
                   onChange={(e) => setInitialPayment(e.target.value)}
                   className={inputClass}
                   placeholder="0"
+                />
+              </div>
+            </div>
+          </Section>
+
+          <Section id="contact" title="Contact & address" icon={MapPin} isOpen={openSections.includes('contact')} onToggle={toggleSection}>
+            <p className={hintClass}>
+              Optional for now. Use these when you invite the student to the portal (login).
+            </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Student email</label>
+                <input
+                  type="email"
+                  value={studentEmail}
+                  onChange={(e) => setStudentEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="Optional"
+                  autoComplete="email"
+                  inputMode="email"
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Student phone</label>
+                <input
+                  type="tel"
+                  value={studentPhone}
+                  onChange={(e) => setStudentPhone(e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. 0700123456"
+                  autoComplete="tel"
+                  inputMode="tel"
                 />
               </div>
             </div>
