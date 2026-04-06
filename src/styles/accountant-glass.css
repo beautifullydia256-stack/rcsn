@@ -50,9 +50,9 @@
     linear-gradient(180deg, #0f172a 0%, #0c1222 50%, #080d18 100%);
   --ac-card-bg: rgba(255, 255, 255, 0.05);
   --ac-card-bg-fallback: rgba(30, 41, 59, 0.6);
-  --ac-text-primary: #FFFFFF;
-  --ac-text-secondary: rgba(255, 255, 255, 0.65);
-  --ac-text-muted: rgba(255, 255, 255, 0.45);
+  --ac-text-primary: #f8fafc;
+  --ac-text-secondary: rgba(248, 250, 252, 0.88);
+  --ac-text-muted: rgba(226, 232, 240, 0.72);
   --ac-border: rgba(255, 255, 255, 0.1);
   --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
   --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.5);
@@ -285,6 +285,17 @@
 .ac-input option {
   background: var(--ac-card-bg-fallback);
   color: var(--ac-text-primary);
+}
+
+.accountant-glass[data-theme="dark"] select.ac-input {
+  color-scheme: dark;
+  background-color: rgba(30, 41, 59, 0.95);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.14);
+}
+.accountant-glass[data-theme="dark"] select.ac-input option {
+  background-color: #1e293b;
+  color: #f1f5f9;
 }
 
 /* Teacher dropdowns: in dark mode options must be dark bg + light text (browser often draws white list) */

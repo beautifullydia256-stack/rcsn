@@ -233,9 +233,9 @@ export default function AdminLayout() {
           --pw-s2: #101828;
           --pw-s3: #141c2e;
           --pw-s4: #1d2d4e;
-          --pw-t1: #eef3ff;
-          --pw-t2: #8296be;
-          --pw-t3: #3d5278;
+          --pw-t1: #f8fafc;
+          --pw-t2: #c5d4ef;
+          --pw-t3: #94a8d0;
           --pw-border: rgba(255,255,255,0.07);
           --pw-bh: rgba(255,255,255,0.12);
         }
@@ -492,9 +492,9 @@ export default function AdminLayout() {
           --ac-page-bg: transparent;
           --ac-card-bg: rgba(255, 255, 255, 0.06);
           --ac-card-bg-fallback: rgba(22, 33, 58, 0.92);
-          --ac-text-primary: #f1f5f9;
-          --ac-text-secondary: rgba(241, 245, 249, 0.88);
-          --ac-text-muted: rgba(241, 245, 249, 0.64);
+          --ac-text-primary: #f8fafc;
+          --ac-text-secondary: rgba(248, 250, 252, 0.9);
+          --ac-text-muted: rgba(226, 232, 240, 0.75);
           --ac-border: rgba(255, 255, 255, 0.12);
           --ac-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35);
           --ac-shadow-strong: 0 12px 40px 0 rgba(0, 0, 0, 0.45);
@@ -508,9 +508,10 @@ export default function AdminLayout() {
           --ac-sidebar-active-bg: rgba(255, 255, 255, 0.08);
         }
         html.dark .pw-main select {
+          color-scheme: dark;
           background-color: var(--pw-s3, #16213a);
-          color: var(--pw-t1, #eef3ff);
-          border-color: var(--pw-border, rgba(255,255,255,0.07));
+          color: var(--pw-t1, #f8fafc);
+          border: 1px solid var(--pw-border, rgba(255,255,255,0.12));
         }
         html.dark .pw-main select option {
           background-color: #1e293b;
@@ -567,7 +568,7 @@ export default function AdminLayout() {
         }
         html.dark .pw-main table,
         html.dark .pw-main th,
-        html.dark .pw-main td { color: #eef3ff; }
+        html.dark .pw-main td { color: #f8fafc; }
         html.light .pw-main table,
         html.light .pw-main th,
         html.light .pw-main td,

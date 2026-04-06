@@ -39,15 +39,15 @@ export default function ParentNoticesPage() {
       description="Official updates from your school."
     >
       {loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading notices…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading notices…</div>
       ) : rows.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>No notices right now.</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>No notices right now.</div>
       ) : (
         <ul className="flex flex-col gap-3 sm:gap-4">
           {rows.map((n) => (
             <li key={n.id} className={parentPortal.card}>
               <div className={parentPortal.label}>Posted</div>
-              <p className="mt-1 text-xs text-[#7c89b0]">
+              <p className="mt-1 text-xs text-[#b0bdd8]">
                 {n.created_at
                   ? new Date(n.created_at).toLocaleDateString('en-UG', {
                       weekday: 'short',

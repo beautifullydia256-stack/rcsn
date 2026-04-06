@@ -41,14 +41,14 @@ export default function ParentProfilePage() {
       <div className={`${parentPortal.card} mt-6`}>
         <div className={parentPortal.label}>Linked children</div>
         {children.length === 0 ? (
-          <p className="mt-2 text-sm text-[#7c89b0]">No learners linked to this account yet.</p>
+          <p className="mt-2 text-sm text-[#b0bdd8]">No learners linked to this account yet.</p>
         ) : (
           <ul className="mt-3 space-y-2">
             {children.map((c) => (
               <li key={c.student_id} className="text-sm text-[#e8eeff]">
                 {displayStudentName(c)}
                 {c.current_class ? (
-                  <span className="text-[#7c89b0]"> · {c.current_class}</span>
+                  <span className="text-[#b0bdd8]"> · {c.current_class}</span>
                 ) : null}
               </li>
             ))}

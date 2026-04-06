@@ -68,14 +68,14 @@ export default function ParentAttendancePage() {
       }
     >
       {!child ? null : loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading attendance…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading attendance…</div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             <div className={parentPortal.card}>
               <div className={parentPortal.label}>Presence rate</div>
               <p className={`${parentPortal.statVal} mt-2`}>{pct != null ? `${pct}%` : '—'}</p>
-              <p className="text-xs text-[#7c89b0] mt-1">
+              <p className="text-xs text-[#b0bdd8] mt-1">
                 {dayCounts
                   ? `${dayCounts.present} present of ${dayCounts.total} recorded days (${pct}%)`
                   : 'From recent recorded days'}
@@ -85,7 +85,7 @@ export default function ParentAttendancePage() {
           <div className={parentPortal.card}>
             <div className={parentPortal.label}>Recent days</div>
             {recent.length === 0 ? (
-              <p className="mt-3 text-sm text-[#7c89b0]">No attendance records yet.</p>
+              <p className="mt-3 text-sm text-[#b0bdd8]">No attendance records yet.</p>
             ) : (
               <ul className="mt-4 divide-y divide-white/[0.06]">
                 {recent.map((r) => (

@@ -1,7 +1,7 @@
 # Issue: Global dark theme — gray text hard to read; dropdowns white-on-white
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** Fix in repo (verify in production)  
+**Last updated:** 2026-04-06  
 
 ## Summary
 
@@ -31,3 +31,12 @@ Some **dropdowns** render with a **white** panel and **white** (or low-contrast)
 ## Source
 
 Stakeholder message (gray text on dark dashboards, all pages, dropdown white-on-white, dark mode only for now), 2026-04-03.
+
+## Fix notes (2026-04-06)
+
+- **Global (`src/styles/index.css`):** `html.dark` / `.dark` sets `color-scheme: dark`, brighter `--pw-t1–t3`, Tailwind `--foreground` / `--muted-foreground`, and default **`select` / `option`** colors so native dropdowns are not white-on-white.
+- **Admin shell (`AdminLayout.tsx`):** Matched text tokens; `select` uses explicit border + `color-scheme: dark`.
+- **Dashboard template (`DesignAdminDashboard.tsx`):** Dark `--t1–t3` aligned.
+- **Accountant glass (`accountant-glass.css`):** Dark secondary/muted text contrast raised; `select.ac-input` + options forced to slate panel colors.
+- **Parent portal:** Muted copy `#7c89b0` → `#b0bdd8`; `parentPortal.muted` token added.
+- **Teacher/student scoped shells:** `--t2` brightened where it was still the old gray.

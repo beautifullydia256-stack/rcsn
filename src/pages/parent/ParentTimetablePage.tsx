@@ -101,9 +101,9 @@ export default function ParentTimetablePage() {
       }
     >
       {!child || !className ? null : loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading timetable…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading timetable…</div>
       ) : byDay.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>No periods published yet.</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>No periods published yet.</div>
       ) : (
         <div className="flex flex-col gap-6">
           {byDay.map(([day, periods]) => (
@@ -116,7 +116,7 @@ export default function ParentTimetablePage() {
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 py-2 border-b border-white/[0.06] last:border-0"
                   >
                     <span className="text-sm text-[#e8eeff] font-medium">{p.subject || '—'}</span>
-                    <span className="text-xs text-[#7c89b0]">
+                    <span className="text-xs text-[#b0bdd8]">
                       {String(p.start_time || '').slice(0, 5)}–{String(p.end_time || '').slice(0, 5)} ·{' '}
                       {p.teacherName}
                     </span>

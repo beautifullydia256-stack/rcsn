@@ -34,6 +34,41 @@
   --pw-sidebar-width: 232px;
 }
 
+/* Dark mode (html.dark): higher-contrast text + native form theming — Issue 14 */
+html.dark,
+.dark {
+  color-scheme: dark;
+  --pw-t1: #f8fafc;
+  --pw-t2: #c5d4ef;
+  --pw-t3: #94a8d0;
+  --foreground: #f1f5f9;
+  --muted-foreground: #cbd5e1;
+  --background: #0b1120;
+  --muted: #1e293b;
+  --border: rgba(255, 255, 255, 0.12);
+}
+
+html.dark select,
+.dark select {
+  background-color: var(--pw-s3, #16213a);
+  color: var(--pw-t1, #f8fafc);
+  border: 1px solid var(--pw-border, rgba(255, 255, 255, 0.12));
+  border-radius: 0.375rem;
+}
+
+html.dark select:focus-visible,
+.dark select:focus-visible {
+  outline: none;
+  border-color: rgba(16, 217, 168, 0.45);
+  box-shadow: 0 0 0 2px rgba(16, 217, 168, 0.12);
+}
+
+html.dark select option,
+.dark select option {
+  background-color: #1e293b;
+  color: #f1f5f9;
+}
+
 @layer base {
   * {
     border-color: var(--border, hsl(0 0% 90%));
@@ -77,10 +112,10 @@
     @apply px-4 py-2 w-full outline-none;
   }
 
-  /* Teacher dropdowns (Class, Exam set): dark option list so text is visible when open */
+  /* Teacher dropdowns (Class, Exam set): reinforce dark option list when classes are used */
   .teacher-dropdown option,
   .teacher-exam-set-select option {
-    background: #1e293b;
+    background-color: #1e293b;
     color: #f1f5f9;
   }
 }

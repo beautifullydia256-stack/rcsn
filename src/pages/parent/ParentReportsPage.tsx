@@ -108,9 +108,9 @@ export default function ParentReportsPage() {
       description="Published reports for your children. Each card shows the term and learner — open a preview or download the PDF."
     >
       {loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading reports…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading reports…</div>
       ) : rows.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>
           No saved reports yet. When the school generates report cards for your child, they will appear here.
         </div>
       ) : (
@@ -121,7 +121,7 @@ export default function ParentReportsPage() {
                 Term {r.term || '—'} · {r.year || '—'}
               </p>
               <h2 className="mt-2 text-lg font-semibold text-[#e8eeff]">{r.studentName}</h2>
-              <p className="text-sm text-[#7c89b0] mt-1">{r.examLabel}</p>
+              <p className="text-sm text-[#b0bdd8] mt-1">{r.examLabel}</p>
               {r.generatedAt ? (
                 <p className="text-xs text-[#5c6578] mt-2">
                   Issued{' '}
@@ -152,7 +152,7 @@ export default function ParentReportsPage() {
                     </button>
                   </>
                 ) : (
-                  <span className="text-sm text-[#7c89b0]">PDF not attached — contact the school.</span>
+                  <span className="text-sm text-[#b0bdd8]">PDF not attached — contact the school.</span>
                 )}
               </div>
             </li>

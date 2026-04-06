@@ -92,7 +92,7 @@ export default function ParentFeesPage() {
                 'rounded-full px-4 py-2 text-xs font-semibold transition-colors ' +
                 (c.student_id === child?.student_id
                   ? 'bg-[#ff6b6b]/20 text-[#ff6b6b]'
-                  : 'bg-[#161b2b] text-[#7c89b0] border border-white/10')
+                  : 'bg-[#161b2b] text-[#b0bdd8] border border-white/10')
               }
             >
               {displayStudentName(c)}
@@ -102,7 +102,7 @@ export default function ParentFeesPage() {
       ) : null}
 
       {!child ? null : loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading…</div>
       ) : (
         <>
           <div className={`${parentPortal.card} mb-6`}>
@@ -113,7 +113,7 @@ export default function ParentFeesPage() {
             <div className="mt-4 h-2 rounded-full bg-[#161b2b] overflow-hidden">
               <div className="h-full rounded-full bg-[#ff6b6b]/90" style={{ width: `${Math.min(100, pct)}%` }} />
             </div>
-            <p className="mt-2 text-xs text-[#7c89b0]">{pct}% paid · Total {fmt(totalFees)}</p>
+            <p className="mt-2 text-xs text-[#b0bdd8]">{pct}% paid · Total {fmt(totalFees)}</p>
           </div>
 
           <div className="flex flex-col sm:flex-row flex-wrap gap-3">

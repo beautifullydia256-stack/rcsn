@@ -616,9 +616,9 @@ export default function DesignAdminDashboard({ schoolId, adminName }: Props) {
       root.style.setProperty('--s2', '#101828');
       root.style.setProperty('--s3', '#141c2e');
       root.style.setProperty('--s4', '#1d2d4e');
-      root.style.setProperty('--t1', '#eef3ff');
-      root.style.setProperty('--t2', '#8296be');
-      root.style.setProperty('--t3', '#3d5278');
+      root.style.setProperty('--t1', '#f8fafc');
+      root.style.setProperty('--t2', '#c5d4ef');
+      root.style.setProperty('--t3', '#94a8d0');
       root.style.setProperty('--border', 'rgba(255,255,255,0.07)');
       root.style.background = '#05080f';
     } else {

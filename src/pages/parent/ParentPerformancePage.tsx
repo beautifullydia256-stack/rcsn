@@ -50,9 +50,9 @@ export default function ParentPerformancePage() {
       }
     >
       {!child ? null : loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading…</div>
       ) : rows.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>No results published yet.</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>No results published yet.</div>
       ) : (
         <div className="grid gap-3 sm:gap-4">
           {rows.map((r) => {

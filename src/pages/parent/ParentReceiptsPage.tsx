@@ -60,16 +60,16 @@ export default function ParentReceiptsPage() {
       description="Recorded payments for your linked children. Official receipts may also be sent by the school."
     >
       {loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading…</div>
       ) : filtered.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>No payment records found yet.</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>No payment records found yet.</div>
       ) : (
         <ul className="flex flex-col gap-3">
           {filtered.map((r) => (
             <li key={r.payment_id} className={parentPortal.card}>
               <div className="flex flex-wrap justify-between gap-2">
                 <span className="font-semibold text-[#e8eeff]">{fmt(Number(r.amount_paid || 0))}</span>
-                <span className="text-xs text-[#7c89b0]">
+                <span className="text-xs text-[#b0bdd8]">
                   {r.payment_date
                     ? new Date(r.payment_date + 'T12:00:00').toLocaleDateString('en-UG', {
                         day: 'numeric',
@@ -80,7 +80,7 @@ export default function ParentReceiptsPage() {
                 </span>
               </div>
               <p className="text-sm text-[#b8c0d8] mt-2">{nameBy.get(r.student_id) || 'Student'}</p>
-              <p className="text-xs text-[#7c89b0] mt-1 capitalize">
+              <p className="text-xs text-[#b0bdd8] mt-1 capitalize">
                 {(r.payment_method || '—').replace(/_/g, ' ')}
                 {r.transaction_ref ? ` · Ref ${r.transaction_ref}` : ''}
               </p>

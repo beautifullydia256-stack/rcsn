@@ -67,15 +67,15 @@ export default function ParentExamsPage() {
       }
     >
       {!className ? null : loading ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>Loading…</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>Loading…</div>
       ) : rows.length === 0 ? (
-        <div className={`${parentPortal.cardMuted} text-[#7c89b0] text-sm`}>No exam periods listed yet.</div>
+        <div className={`${parentPortal.cardMuted} text-[#b0bdd8] text-sm`}>No exam periods listed yet.</div>
       ) : (
         <ul className="flex flex-col gap-3">
           {rows.map((e) => (
             <li key={e.id} className={parentPortal.card}>
               <p className="font-semibold text-[#e8eeff]">{e.name || 'Exam'}</p>
-              <p className="text-sm text-[#7c89b0] mt-1">
+              <p className="text-sm text-[#b0bdd8] mt-1">
                 Term {e.term ?? '—'} · {e.year ?? '—'} · {className}
               </p>
             </li>
