@@ -42,7 +42,6 @@
     "lucide-react": "0.546.0",
     "nodemailer": "^7.0.6",
     "openai": "^6.9.0",
-    "pdf-lib": "^1.17.1",
     "pdfkit": "^0.15.0",
     "puppeteer": "^24.22.3",
     "puppeteer-core": "^24.22.3",
