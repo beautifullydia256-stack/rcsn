@@ -207,3 +207,27 @@ export async function ensureExamResultsConsistency(
 ): Promise<{ success: boolean; recordsCreated: number; error?: string }> {
   return await backfillMissingExamResultsForClass(schoolId, className);
 }
+
+/** Some RPCs return `{ error: string }` in the JSON body with HTTP 200 — treat as failure. */
+export function throwIfRpcReturnedJsonError(data: unknown): void {
+  if (data == null || typeof data !== 'object') return;
+  const o = data as Record<string, unknown>;
+  if (typeof o.error === 'string' && o.error.trim().length > 0) {
+    throw new Error(o.error.trim());
+  }
+}
+
+/**
+ * Known teacher upsert RPCs return `{ success: true, ... }` on OK, or `{ error: string }` on failure.
+ * PostgREST often still returns HTTP 200 — check `data`, not only `resp.error`.
+ */
+export function assertTeacherUpsertRpcResult(data: unknown): void {
+  throwIfRpcReturnedJsonError(data);
+  if (data == null || typeof data !== 'object') {
+    throw new Error('No response from server. Nothing was saved.');
+  }
+  const o = data as Record<string, unknown>;
+  if (o.success !== true) {
+    throw new Error('Save was not confirmed. Nothing was saved.');
+  }
+}

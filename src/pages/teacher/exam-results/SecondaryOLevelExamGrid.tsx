@@ -4,6 +4,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { assertTeacherUpsertRpcResult } from '@/lib/examResultsUtils';
 import {
   calculateActivityDescriptor,
   calculateSecondaryLetterGrade,
@@ -278,18 +279,18 @@ export function SecondaryOLevelExamGrid({
           p_teacher_id: teacherId,
           p_topic: (data.topic || topicFilter || '').trim(),
         });
-        const res = rpcData as { success?: boolean; error?: string } | null;
         if (error) {
           setSaveError(error.message);
           setSaving(false);
           return;
         }
-        if (res && res.success === false) {
-          setSaveError(res.error || 'Save failed');
+        try {
+          assertTeacherUpsertRpcResult(rpcData);
+        } catch (e) {
+          setSaveError(e instanceof Error ? e.message : 'Save failed');
           setSaving(false);
           return;
         }
-
       }
 
       setSaveSuccess(true);

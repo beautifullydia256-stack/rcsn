@@ -8,6 +8,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
+import { assertTeacherUpsertRpcResult, throwIfRpcReturnedJsonError } from "@/lib/examResultsUtils";
 import { resolveTeacherIdForSchool } from "@/lib/resolveTeacherId";
 import { getSectionForClass } from "@/templates/primary";
 import {
@@ -1226,9 +1227,7 @@ export default function LegacyExamResultsFullPage() {
                   console.error('RPC nursery save error:', resp.error);
                   throw resp.error;
                 }
-                if (resp.data && (resp.data as { success?: boolean }).success === false) {
-                  throw new Error((resp.data as { error?: string }).error || 'Failed to save nursery performance');
-                }
+                assertTeacherUpsertRpcResult(resp.data);
               })()
             );
           }
@@ -1281,7 +1280,7 @@ export default function LegacyExamResultsFullPage() {
               });
               throw resp.error;
             }
-            
+            assertTeacherUpsertRpcResult(resp.data);
           });
           await Promise.all(saves);
           setSuccess(`Successfully saved ${entries.length} exam results`);
@@ -1327,6 +1326,7 @@ export default function LegacyExamResultsFullPage() {
             });
             throw resp.error;
           }
+          throwIfRpcReturnedJsonError(resp.data);
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
@@ -1366,7 +1366,6 @@ export default function LegacyExamResultsFullPage() {
           const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
             const finalNum = formativeNum + examNum;
-            const grade = calculateSecondaryGrade(finalNum, (selectedSubject || '').trim());
           
           const rpcParams = {
             p_school_id: schoolId,
@@ -1383,7 +1382,6 @@ export default function LegacyExamResultsFullPage() {
             p_teacher_initials: data.initials || teacherInitials || '',
             p_teacher_id: teacherIdForSave,
             p_topic: (data.topic || topicFilter || '').trim(),
-            p_grade: grade
           };
           
           console.log('Saving secondary exam result with params:', rpcParams);
@@ -1402,6 +1400,7 @@ export default function LegacyExamResultsFullPage() {
             setError(resp.error.message || 'Failed to save exam results');
             throw resp.error;
           }
+          assertTeacherUpsertRpcResult(resp.data);
         });
         await Promise.all(saves);
         setSuccess(`Successfully saved ${entries.length} exam results`);
@@ -1419,7 +1418,7 @@ export default function LegacyExamResultsFullPage() {
       
     } catch (err) {
       console.error('Error saving results:', err);
-      setError('Failed to save exam results');
+      setError(err instanceof Error ? err.message : 'Failed to save exam results');
     } finally {
       setSaving(false);
     }
