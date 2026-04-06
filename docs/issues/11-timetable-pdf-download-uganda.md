@@ -1,11 +1,13 @@
 # Issue: Timetable — enable PDF download (Ugandan school format, class / school scope)
 
-**Status:** Documented (awaiting fix plan)  
-**Last updated:** 2026-04-03  
+**Status:** **Done** (signed off 2026-04-06)  
+**Last updated:** 2026-04-06  
 
 ## Summary
 
-From the **timetable creation** area, users **cannot download** the timetable today. Expected: a **complete, downloadable PDF** laid out like **Ugandan school timetables**, with clear differentiation by **class**, **section**, and **session** where applicable.
+From **Timetable Designer** (System Settings), admins can download a **PDF**: **whole school** produces **one page per class** that has periods; **single class** produces one page. Layout uses period times as rows and weekdays as columns (ASCII-safe jsPDF). Teacher-facing timetable may still use browser print where applicable.
+
+**Resolved:** `src/lib/timetablePdf.ts`; Vite `SettingsTimetable`; Next.js `TimetableDesigner`.
 
 ## Download scope
 
