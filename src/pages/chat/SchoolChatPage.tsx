@@ -276,8 +276,12 @@ function VoiceNoteBubble({
     );
   }
 
+  const durationLabel = formatVoiceDurationLabel(
+    Math.round(metaDuration > 0 ? metaDuration : effectiveDuration)
+  );
+
   return (
-    <div className="flex w-full min-w-0 max-w-full flex-col gap-1 overflow-hidden pr-9">
+    <div className="flex w-full min-w-0 max-w-full items-center gap-2 overflow-hidden pr-9">
       <audio
         ref={audioRef}
         src={url ?? undefined}
@@ -304,94 +308,92 @@ function VoiceNoteBubble({
           }
         }}
       />
-      <div className="flex min-w-0 items-center gap-2">
-        <div className="relative h-10 w-10 shrink-0">
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold shadow-sm ${avatarClass}`}
-            aria-hidden
-          >
-            {letter}
-          </div>
-          <div
-            className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-[#e9edef] bg-white shadow-sm"
-            aria-hidden
-          >
-            <Mic className="h-2.5 w-2.5 text-[#54656f]" strokeWidth={2.2} />
-          </div>
+      <div className="relative h-8 w-8 shrink-0">
+        <div
+          className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] font-semibold shadow-sm ${avatarClass}`}
+          aria-hidden
+        >
+          {letter}
         </div>
-        {loading ? (
-          <Loader2 className="h-8 w-8 shrink-0 animate-spin text-[#008069]" aria-label="Loading voice message" />
-        ) : (
-          <>
-            <button
-              type="button"
-              onClick={togglePlay}
-              disabled={!url}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
-              aria-label={playing ? 'Pause voice message' : 'Play voice message'}
-            >
-              {playing ? (
-                <Pause className="h-5 w-5 fill-current" fill="currentColor" />
-              ) : (
-                <Play className="h-5 w-5 translate-x-0.5 fill-current" fill="currentColor" />
-              )}
-            </button>
-            <div
-              ref={seekRef}
-              role="slider"
-              tabIndex={0}
-              aria-valuenow={Math.round(progress * 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden py-0.5 select-none"
-              onClick={(e) => seekFromPointer(e.clientX)}
-              onKeyDown={(e) => {
-                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
-                e.preventDefault();
-                const a = audioRef.current;
-                if (!a) return;
-                const step = effectiveDuration * 0.05;
-                a.currentTime = Math.max(0, Math.min(effectiveDuration, a.currentTime + (e.key === 'ArrowRight' ? step : -step)));
-                setCurrentTime(a.currentTime);
-              }}
-            >
-              <div className="mb-1 flex h-[22px] min-w-0 w-full items-end gap-px px-0.5">
-                {waveHeights.map((rh, i) => {
-                  const played = (i + 0.5) / waveHeights.length <= progress;
-                  const hPct = Math.round(rh * 100);
-                  return (
-                    <div
-                      key={i}
-                      className="min-w-0 flex-1 basis-0 rounded-full"
-                      style={{
-                        height: `${hPct}%`,
-                        minHeight: 3,
-                        maxWidth: '100%',
-                        backgroundColor: played ? barPlayedColor : barUnplayedColor,
-                      }}
-                    />
-                  );
-                })}
-              </div>
-              <div className="relative mx-0.5 h-[3px] min-w-0 w-full overflow-hidden rounded-full bg-[#111b21]/10">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
-                  style={{ width: `${progress * 100}%` }}
-                />
-                <div
-                  className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-sm ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
-                  style={{ left: `${progress * 100}%` }}
-                />
-              </div>
+        <div
+          className="absolute -bottom-px -right-px flex h-[14px] w-[14px] items-center justify-center rounded-full border border-[#e9edef] bg-white shadow-sm"
+          aria-hidden
+        >
+          <Mic className="h-2 w-2 text-[#54656f]" strokeWidth={2.25} />
+        </div>
+      </div>
+      {loading ? (
+        <Loader2 className="h-7 w-7 shrink-0 animate-spin text-[#008069]" aria-label="Loading voice message" />
+      ) : (
+        <>
+          {/* Center: waveform + scrub line (stretches wide, stays short in height). */}
+          <div
+            ref={seekRef}
+            role="slider"
+            tabIndex={0}
+            aria-valuenow={Math.round(progress * 100)}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 py-0.5 select-none"
+            onClick={(e) => seekFromPointer(e.clientX)}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+              e.preventDefault();
+              const a = audioRef.current;
+              if (!a) return;
+              const step = effectiveDuration * 0.05;
+              a.currentTime = Math.max(0, Math.min(effectiveDuration, a.currentTime + (e.key === 'ArrowRight' ? step : -step)));
+              setCurrentTime(a.currentTime);
+            }}
+          >
+            <div className="flex h-3 min-w-0 w-full items-end gap-px px-px">
+              {waveHeights.map((rh, i) => {
+                const played = (i + 0.5) / waveHeights.length <= progress;
+                const hPct = Math.round(rh * 100);
+                return (
+                  <div
+                    key={i}
+                    className="min-w-0 flex-1 basis-0 rounded-full"
+                    style={{
+                      height: `${hPct}%`,
+                      minHeight: 2,
+                      maxWidth: '100%',
+                      backgroundColor: played ? barPlayedColor : barUnplayedColor,
+                    }}
+                  />
+                );
+              })}
             </div>
-          </>
-        )}
-      </div>
-      <div className="pl-[3.25rem]">
-        <span className="text-[11.5px] font-medium tabular-nums text-[#667781]">
-          {formatVoiceDurationLabel(Math.round(metaDuration > 0 ? metaDuration : effectiveDuration))}
-        </span>
-      </div>
+            <div className="relative mx-px h-0.5 min-w-0 w-full overflow-hidden rounded-full bg-[#111b21]/12">
+              <div
+                className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                style={{ width: `${progress * 100}%` }}
+              />
+              <div
+                className={`absolute top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white shadow-sm ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                style={{ left: `${progress * 100}%` }}
+              />
+            </div>
+            <span className="text-[10px] font-medium tabular-nums leading-none text-[#667781]">
+              {durationLabel}
+            </span>
+          </div>
+          {/* Play / pause opposite the avatar (right). */}
+          <button
+            type="button"
+            onClick={togglePlay}
+            disabled={!url}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
+            aria-label={playing ? 'Pause voice message' : 'Play voice message'}
+          >
+            {playing ? (
+              <Pause className="h-4 w-4 fill-current" fill="currentColor" />
+            ) : (
+              <Play className="h-4 w-4 translate-x-px fill-current" fill="currentColor" />
+            )}
+          </button>
+        </>
+      )}
     </div>
   );
 }
