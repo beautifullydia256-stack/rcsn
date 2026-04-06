@@ -13,7 +13,9 @@ type Kpis = {
   teachers: number;
   outstanding: number;
   feesCollected: number;
-  attendance: number;
+  /** e.g. "294 / 1,042" present vs active enrolled */
+  attendance: string;
+  attendanceSub: string;
   pendingExpenses: number;
   activeClasses: number;
   totalOverallBalance: number;
@@ -36,7 +38,11 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   ] = await Promise.all([
     supabase.from('students').select('*', { count: 'exact', head: true }).eq('school_id', schoolId).eq('status', 'active'),
     supabase.from('teachers').select('*', { count: 'exact', head: true }).eq('school_id', schoolId),
-    supabase.from('student_attendance').select('student_id').eq('school_id', schoolId).eq('date', today).eq('present', true),
+    supabase
+      .from('student_attendance')
+      .select('student_id, present')
+      .eq('school_id', schoolId)
+      .eq('date', today),
     supabase
       .from('school_expenses')
       .select('expense_id', { count: 'exact', head: true })
@@ -88,12 +94,25 @@ export async function fetchAdminKpis(schoolId: string): Promise<Kpis> {
   const pendingExpenses = pendingExpensesResult.count ?? 0;
   const activeClasses = new Set((activeClassesResult.data || []).map((s: { current_class?: string | null }) => s.current_class).filter(Boolean)).size;
 
+  const enrolled = studentsResult.count ?? 0;
+  const attRows = (attendanceResult.data || []) as { student_id: string; present?: boolean }[];
+  const presentToday = new Set(
+    attRows.filter((x) => x.present === true).map((x) => x.student_id)
+  ).size;
+  const markedToday = new Set(attRows.map((x) => x.student_id)).size;
+  const pctOfEnrolled = enrolled > 0 ? Math.round((presentToday / enrolled) * 100) : 0;
+  const attendanceSub =
+    enrolled > 0
+      ? `${pctOfEnrolled}% of roster present · ${markedToday.toLocaleString()} with attendance saved today`
+      : 'Active enrollments';
+
   return {
-    students: studentsResult.count ?? 0,
+    students: enrolled,
     teachers: teachersResult.count ?? 0,
     outstanding,
     feesCollected,
-    attendance: new Set((attendanceResult.data || []).map((x: { student_id: string }) => x.student_id)).size,
+    attendance: `${presentToday.toLocaleString()} / ${enrolled.toLocaleString()}`,
+    attendanceSub,
     pendingExpenses,
     activeClasses,
     totalOverallBalance,
@@ -242,7 +261,7 @@ export default function AdminKPICards({ schoolId }: AdminKPICardsProps) {
         {
           label: 'Attendance Today',
           value: kpis.attendance,
-          subline: 'Present',
+          subline: kpis.attendanceSub,
           variant: 'teal' as KPIVariant,
           href: undefined,
           icon: CalendarCheck,

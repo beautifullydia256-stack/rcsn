@@ -76,6 +76,8 @@ export default function DesignParentDashboard() {
 
       let avgScore: number | null = null;
       let attPct = 0;
+      let attDayTotal = 0;
+      let attDayPresent = 0;
       let todayPresent: boolean | null = null;
       let feeBalance = 0;
       let feeTotal = 0;
@@ -176,8 +178,9 @@ export default function DesignParentDashboard() {
         if (scores.length) avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
 
         const attData = (attRes.data || []) as { present?: boolean }[];
-        const presentDays = attData.filter((a) => a.present === true).length;
-        attPct = attData.length ? Math.round((presentDays / attData.length) * 100) : 0;
+        attDayPresent = attData.filter((a) => a.present === true).length;
+        attDayTotal = attData.length;
+        attPct = attDayTotal ? Math.round((attDayPresent / attDayTotal) * 100) : 0;
 
         const trow = todayAttRes.data as { present?: boolean } | null;
         if (trow && typeof trow.present === 'boolean') todayPresent = trow.present;
@@ -322,7 +325,11 @@ export default function DesignParentDashboard() {
         }
 
         root.querySelector('[data-kpi="avg-score"]')!.textContent = avgScore !== null ? `${avgScore}%` : '—';
-        root.querySelector('[data-kpi="attendance"]')!.textContent = child ? `${attPct}%` : '—';
+        root.querySelector('[data-kpi="attendance"]')!.textContent = child
+          ? attDayTotal
+            ? `${attPct}% · ${attDayPresent}/${attDayTotal} days`
+            : 'No attendance yet'
+          : '—';
         root.querySelector('[data-kpi="fee-balance"]')!.textContent =
           !child ? '—' : feeBalance > 0 ? fmt(feeBalance) : 'Cleared';
         root.querySelector('[data-kpi="class-rank"]')!.textContent = '—';

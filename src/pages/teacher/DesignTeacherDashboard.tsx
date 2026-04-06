@@ -200,6 +200,7 @@ async function fetchTeacherDashboardData(
     pendingSubmissionCount,
     timetableToday,
     attendRows,
+    presentCount: present,
     attendPct,
     recentAtt,
     assignProgPct,
@@ -245,7 +246,10 @@ function applyTeacherDashboardPaint(
   set('[data-kpi="classes-badge"]', `${classNames.length} class${classNames.length === 1 ? '' : 'es'}`);
   set('[data-kpi="students-badge"]', String(d.studentsCount));
   set('[data-kpi="assign-badge"]', d.dueTodayCount > 0 ? `${d.dueTodayCount} due today` : `${d.openAssignments} open`);
-  set('[data-kpi="attend-badge"]', d.attendRows.length ? `${d.attendPct}% present` : 'No records');
+  set(
+    '[data-kpi="attend-badge"]',
+    d.attendRows.length ? `${d.presentCount} / ${d.attendRows.length} present (${d.attendPct}%)` : 'No records'
+  );
 
   set('[data-kpi="total-classes"]', String(classNames.length));
   set('[data-kpi="total-students"]', String(d.studentsCount));
@@ -263,10 +267,15 @@ function applyTeacherDashboardPaint(
         ? 'No pending submissions'
         : 'No open assignments'
   );
-  set('[data-kpi="attendance-today"]', d.attendRows.length ? `${d.attendPct}%` : '—');
+  set(
+    '[data-kpi="attendance-today"]',
+    d.attendRows.length ? `${d.presentCount} / ${d.attendRows.length}` : '—'
+  );
   set(
     '[data-kpi="attend-sub"]',
-    d.attendRows.length ? `${d.attendRows.length} record${d.attendRows.length === 1 ? '' : 's'} today` : 'No attendance today'
+    d.attendRows.length
+      ? `${d.attendPct}% present · ${d.studentsCount} on your class register${d.studentsCount ? ` (${d.attendRows.length} marked today)` : ''}`
+      : 'No attendance today'
   );
 
   const prog = el.querySelector('[data-kpi-width="attend-progress"]') as HTMLElement | null;

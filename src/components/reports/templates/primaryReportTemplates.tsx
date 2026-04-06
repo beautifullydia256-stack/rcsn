@@ -23,6 +23,40 @@ import type { NurseryDetailedObservationRow } from '../../../templates/primary/p
 import { lightenColor, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 
+/** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
+function AttendanceCountsSupplement({
+  attendance,
+  summary,
+}: {
+  attendance: { percentage?: number | null; presentDays?: unknown; absentDays?: unknown; totalSchoolDays?: unknown };
+  summary?: { attendancePercentage?: unknown };
+}) {
+  const pr = attendance.presentDays;
+  const tot = attendance.totalSchoolDays;
+  const pc =
+    attendance.percentage ??
+    (summary?.attendancePercentage != null && summary.attendancePercentage !== ''
+      ? Number(summary.attendancePercentage)
+      : null);
+  if (typeof pr === 'number' && typeof tot === 'number' && tot > 0) {
+    const pctLabel =
+      pc != null && !Number.isNaN(Number(pc))
+        ? Math.round(Number(pc))
+        : Math.round((pr / tot) * 100);
+    return (
+      <div className="text-[8.4pt] text-slate-600 mt-0.5">
+        {pr} present of {tot} school days ({pctLabel}%)
+      </div>
+    );
+  }
+  if (pc != null && !Number.isNaN(Number(pc)) && (pr == null || tot == null)) {
+    return (
+      <div className="text-[8.4pt] text-slate-600 mt-0.5">Attendance rate: {Math.round(Number(pc))}% (day counts not on record)</div>
+    );
+  }
+  return null;
+}
+
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
   const cls = String(student.current_class || '');
   const isOL = isOLevelClass(cls);
@@ -1622,6 +1656,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
             <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
             <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
             <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+            <AttendanceCountsSupplement attendance={attendance} summary={student.summary} />
           </div>
         </div>
 
@@ -2219,6 +2254,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
           <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
           <div>Total Days: {attendance.totalSchoolDays ?? 'N/A'}</div>
+          <AttendanceCountsSupplement attendance={attendance} summary={student.summary} />
         </div>
       </div>
 

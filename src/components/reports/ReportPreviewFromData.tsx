@@ -6,6 +6,7 @@
 import { getTemplateForClass } from '../../templates/primary';
 import { ReportPreview } from './templates/primaryReportTemplates';
 import { calculatePrimaryGrade } from '../../lib/reportUtils';
+import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
 import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
 
 type ReportPreviewFromDataProps = {
@@ -109,17 +110,33 @@ export function ReportPreviewFromData({
     | { presentDays?: number | null; absentDays?: number | null; totalSchoolDays?: number | null; percentage?: number | null }
     | undefined;
   const summaryAtt = raw.summary as Record<string, unknown> | undefined;
+  const pctRaw =
+    summaryAtt?.attendancePercentage ?? summaryAtt?.attendance_percentage ?? att?.percentage;
+  const inlineFrozen: Record<string, unknown> = {
+    present_days: att?.presentDays ?? summaryAtt?.presentDays ?? summaryAtt?.days_present,
+    absent_days: att?.absentDays ?? summaryAtt?.absentDays ?? summaryAtt?.days_absent,
+    total_school_days: att?.totalSchoolDays ?? summaryAtt?.totalSchoolDays ?? summaryAtt?.total_days,
+  };
+  const existingDetails = summaryAtt?.attendanceDetails as Record<string, unknown> | undefined;
+  const hasStoredDetails =
+    existingDetails &&
+    typeof existingDetails === 'object' &&
+    (existingDetails.presentDays != null ||
+      existingDetails.totalSchoolDays != null ||
+      existingDetails.percentage != null);
+  const attendanceDetails = hasStoredDetails
+    ? existingDetails
+    : buildReportAttendanceDetails(pctRaw as number | null | undefined, inlineFrozen);
   const student = {
     ...raw,
     results,
     subjects,
-    summary: raw.summary ?? {},
-    attendance: {
-      presentDays: att?.presentDays ?? summaryAtt?.presentDays ?? summaryAtt?.days_present,
-      absentDays: att?.absentDays ?? summaryAtt?.absentDays ?? summaryAtt?.days_absent,
-      totalSchoolDays: att?.totalSchoolDays ?? summaryAtt?.totalSchoolDays ?? summaryAtt?.total_days,
-      percentage: att?.percentage ?? summaryAtt?.attendancePercentage ?? summaryAtt?.attendance_percentage,
+    summary: {
+      ...(raw.summary ?? {}),
+      attendanceDetails,
+      attendancePercentage: pctRaw ?? (raw.summary as any)?.attendancePercentage,
     },
+    attendance: attendanceDetails,
     comments: {
       ...comments,
       head_teacher_text: comments.head_teacher_text ?? comments.headteacher_text ?? '',

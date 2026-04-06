@@ -249,8 +249,16 @@ function applyAdminDesignKpisToDom(el: HTMLElement, kpis: AdminDesignDashboardKp
   setText('[data-kpi="outstanding-fees"]', formatUShCompact(kpis.outstanding));
   setText('[data-kpi="outstanding-sub"]', 'This term');
 
-  setText('[data-kpi="attendance-today"]', `${kpis.attendancePct}%`);
-  setText('[data-kpi="attendance-sub"]', `${kpis.present} / ${kpis.totalAttendance} present`);
+  setText(
+    '[data-kpi="attendance-today"]',
+    kpis.totalStudents > 0 ? `${kpis.present} / ${kpis.totalStudents}` : `${kpis.attendancePct}%`
+  );
+  setText(
+    '[data-kpi="attendance-sub"]',
+    kpis.totalStudents > 0
+      ? `${kpis.present} present of ${kpis.totalStudents} enrolled${kpis.totalAttendance ? ` · ${kpis.totalAttendance} marked today` : ''} (${kpis.attendancePct}% of roster)`
+      : `${kpis.present} / ${kpis.totalAttendance} present`
+  );
 
   setText('[data-kpi="pending-expenses"]', String(kpis.expensesCount));
   setText('[data-kpi="active-classes"]', String(kpis.activeClasses));

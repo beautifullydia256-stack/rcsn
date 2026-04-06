@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { buildReportAttendanceDetails } from '../lib/reportAttendanceDetails';
 import { getSnapshotData } from './snapshotService';
 import type { SnapshotData } from './snapshotService';
 
@@ -57,6 +58,10 @@ export async function transformSnapshotToReportFormat(
   });
 
   // 5. Calculate summary from frozen data (already calculated, just extract)
+  const attendanceDetails = buildReportAttendanceDetails(
+    firstRecord.attendance_percentage,
+    frozenData as Record<string, unknown>
+  );
   const summary = {
     totalMarks: studentData.reduce((sum, d) => sum + (d.marks_obtained || 0), 0),
     totalPossibleMarks: studentData.reduce((sum, d) => sum + (d.total_marks || 100), 0),
@@ -72,45 +77,7 @@ export async function transformSnapshotToReportFormat(
     classPosition: firstRecord.position || null,
     totalStudents: frozenData.total_students_in_class || null,
     performanceRemark: firstRecord.division || 'N/A',
-  };
-
-  const fd = frozenData as Record<string, unknown>;
-  const presentFromFrozen = fd.present_days ?? fd.days_present ?? fd.attendance_present;
-  const absentFromFrozen = fd.absent_days ?? fd.days_absent ?? fd.attendance_absent;
-  const totalDaysFromFrozen = fd.total_school_days ?? fd.attendance_total_days;
-  let presentDays: number | null =
-    presentFromFrozen != null && presentFromFrozen !== '' ? Number(presentFromFrozen) : null;
-  let absentDays: number | null =
-    absentFromFrozen != null && absentFromFrozen !== '' ? Number(absentFromFrozen) : null;
-  let totalSchoolDays: number | null =
-    totalDaysFromFrozen != null && totalDaysFromFrozen !== '' ? Number(totalDaysFromFrozen) : null;
-  const pct = firstRecord.attendance_percentage;
-  if (
-    totalSchoolDays != null &&
-    totalSchoolDays > 0 &&
-    pct != null &&
-    !Number.isNaN(Number(pct)) &&
-    presentDays == null
-  ) {
-    const p = Math.round((Number(pct) / 100) * totalSchoolDays);
-    presentDays = p;
-    absentDays = Math.max(0, totalSchoolDays - p);
-  }
-  const pctMissing =
-    pct == null ||
-    (typeof pct === 'string' && String(pct).trim() === '') ||
-    (typeof pct === 'number' && Number.isNaN(pct));
-  if (presentDays == null && absentDays == null && totalSchoolDays == null && pctMissing) {
-    presentDays = null;
-    absentDays = null;
-    totalSchoolDays = null;
-  }
-
-  const attendanceDetails = {
-    presentDays,
-    absentDays,
-    totalSchoolDays,
-    percentage: pct ?? null,
+    attendanceDetails,
   };
 
   // 7. Build exact report format matching old system

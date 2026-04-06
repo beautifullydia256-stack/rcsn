@@ -8,6 +8,7 @@ export default function ParentAttendancePage() {
   const { schoolId, ready, children, activeStudentId } = useParentPortal();
   const child = children.find((c) => c.student_id === activeStudentId) || children[0] || null;
   const [pct, setPct] = useState<number | null>(null);
+  const [dayCounts, setDayCounts] = useState<{ present: number; total: number } | null>(null);
   const [recent, setRecent] = useState<{ date: string; present: boolean }[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -30,6 +31,7 @@ export default function ParentAttendancePage() {
       const days = list.filter((a) => a.present === true || a.present === false);
       const pr = days.filter((a) => a.present === true).length;
       setPct(days.length ? Math.round((pr / days.length) * 100) : null);
+      setDayCounts(days.length ? { present: pr, total: days.length } : null);
       setRecent(
         list.slice(0, 20).map((a) => ({ date: a.date, present: a.present === true }))
       );
@@ -57,7 +59,11 @@ export default function ParentAttendancePage() {
             <div className={parentPortal.card}>
               <div className={parentPortal.label}>Presence rate</div>
               <p className={`${parentPortal.statVal} mt-2`}>{pct != null ? `${pct}%` : '—'}</p>
-              <p className="text-xs text-[#7c89b0] mt-1">From recent recorded days</p>
+              <p className="text-xs text-[#7c89b0] mt-1">
+                {dayCounts
+                  ? `${dayCounts.present} present of ${dayCounts.total} recorded days (${pct}%)`
+                  : 'From recent recorded days'}
+              </p>
             </div>
           </div>
           <div className={parentPortal.card}>

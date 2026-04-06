@@ -40,6 +40,8 @@ export default function DesignStudentDashboard() {
       let results: { subject?: string; marks_obtained?: number; total_marks?: number }[] | null = null;
 
       let attendPct = 0;
+      let attendPresent = 0;
+      let attendTotal = 0;
       if (schoolId && studentId) {
         const [examRes, attRes] = await Promise.all([
           supabase
@@ -73,8 +75,9 @@ export default function DesignStudentDashboard() {
         }
 
         const rows = attRes.data || [];
-        const present = rows.filter((r: { present?: boolean }) => r.present === true).length;
-        attendPct = rows.length ? Math.round((present / rows.length) * 100) : 0;
+        attendPresent = rows.filter((r: { present?: boolean }) => r.present === true).length;
+        attendTotal = rows.length;
+        attendPct = attendTotal ? Math.round((attendPresent / attendTotal) * 100) : 0;
       }
 
       let subjectsHtml = '';
@@ -111,7 +114,10 @@ export default function DesignStudentDashboard() {
           new Date().toLocaleDateString('en-UG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
         );
         set('[data-kpi="overall-avg"]', scores.length ? `${avgPct}%` : '—');
-        set('[data-kpi="attendance"]', `${attendPct}%`);
+        set(
+          '[data-kpi="attendance"]',
+          attendTotal ? `${attendPct}% · ${attendPresent}/${attendTotal} days` : '—'
+        );
         set('[data-kpi="pending-assignments"]', '0');
         set('[data-kpi="fee-balance"]', '—');
         set('#pst-radial-avg', scores.length ? `${avgPct}%` : '—');

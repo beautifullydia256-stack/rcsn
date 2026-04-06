@@ -47,7 +47,7 @@ export default function TeacherAttendancePage() {
         .select('student_id, present')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
-        .eq('attendance_date', selectedDate);
+        .eq('date', selectedDate);
       return (data as AttendanceRow[]) ?? [];
     },
     enabled: !!schoolId && !!selectedClass && !!selectedDate,
@@ -80,11 +80,11 @@ export default function TeacherAttendancePage() {
         class_name: selectedClass,
         student_id,
         teacher_id: teacherId,
-        attendance_date: attendanceDate,
+        date: attendanceDate,
         present,
       }));
       const { error } = await supabase.from('student_attendance').upsert(rows, {
-        onConflict: 'student_id,attendance_date',
+        onConflict: 'student_id,date',
       });
       if (error) throw error;
     },

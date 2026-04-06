@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { buildReportAttendanceDetails } from '../lib/reportAttendanceDetails';
 import { transformSnapshotToReportFormat } from './reportDataTransformer';
 import { calculatePrimaryGrade } from '../lib/reportUtils';
 
@@ -278,6 +279,10 @@ export async function generateReportsBulkClient(
         }
         return s;
       });
+      const attendanceDetails = buildReportAttendanceDetails(
+        firstRecord.attendance_percentage,
+        frozenData as Record<string, unknown>
+      );
       const reportData = {
         school: {
           ...school,
@@ -303,7 +308,7 @@ export async function generateReportsBulkClient(
             profile_photo: firstRecord.student_photo_url || null,
             results,
             subjects,
-            attendance: [],
+            attendance: attendanceDetails,
             fees: {
               expected: firstRecord.fees_expected || 0,
               paid: firstRecord.fees_paid || 0,
@@ -329,6 +334,7 @@ export async function generateReportsBulkClient(
               classPosition: firstRecord.position ?? null,
               totalStudents: frozenData.total_students_in_class ?? null,
               performanceRemark: firstRecord.division || 'N/A',
+              attendanceDetails,
             },
           },
         ],

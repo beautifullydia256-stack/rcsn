@@ -349,7 +349,16 @@ export async function createSnapshotFromExamSet(
         school_email: schoolInfo?.email || schoolInfo?.contact_email || '',
         school_motto: schoolInfo?.motto || '',
         total_students_in_class: Object.keys(studentResultsByClass[result.class_name] || {}).length,
-        // Store all other metadata needed for templates
+        ...(attendance
+          ? {
+              present_days: attendance.presentDays,
+              absent_days: attendance.absentDays,
+              total_school_days: attendance.totalDays,
+              attendance_present_days: attendance.presentDays,
+              attendance_absent_days: attendance.absentDays,
+              attendance_total_days: attendance.totalDays,
+            }
+          : {}),
       },
     });
   });
