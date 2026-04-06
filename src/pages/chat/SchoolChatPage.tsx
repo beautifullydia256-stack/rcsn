@@ -136,6 +136,24 @@ function OutgoingDeliveryTicks({
 
 const VOICE_WAVE_BARS = 52;
 
+/** Single active voice player in the thread (WhatsApp-style: starting one stops another). */
+let activeSchoolChatVoiceEl: HTMLAudioElement | null = null;
+
+function prepareSchoolChatVoicePlay(next: HTMLAudioElement) {
+  if (activeSchoolChatVoiceEl === next) return;
+  const prev = activeSchoolChatVoiceEl;
+  activeSchoolChatVoiceEl = next;
+  if (prev && prev !== next) {
+    prev.pause();
+  }
+}
+
+function releaseSchoolChatVoiceIfCurrent(el: HTMLAudioElement | null) {
+  if (el && activeSchoolChatVoiceEl === el) {
+    activeSchoolChatVoiceEl = null;
+  }
+}
+
 function hashToWaveHeights(seed: string): number[] {
   let h = 2166136261;
   for (let i = 0; i < seed.length; i++) {
@@ -206,11 +224,28 @@ function VoiceNoteBubble({
     };
   }, [m.id, m.audio_path, playable]);
 
+  useEffect(() => {
+    return () => {
+      const a = audioRef.current;
+      if (a && activeSchoolChatVoiceEl === a) {
+        activeSchoolChatVoiceEl = null;
+        a.pause();
+      }
+    };
+  }, []);
+
   const togglePlay = useCallback(() => {
     const a = audioRef.current;
     if (!a || !url) return;
-    if (a.paused) void a.play();
-    else a.pause();
+    if (a.paused) {
+      prepareSchoolChatVoicePlay(a);
+      void a.play().catch(() => {
+        releaseSchoolChatVoiceIfCurrent(a);
+        setPlaying(false);
+      });
+    } else {
+      a.pause();
+    }
   }, [url]);
 
   const seekFromPointer = useCallback(
@@ -242,17 +277,21 @@ function VoiceNoteBubble({
   }
 
   return (
-    <div className="flex flex-col gap-1 min-w-[min(100%,268px)] max-w-[min(100%,300px)] pr-9">
+    <div className="flex w-full min-w-0 max-w-full flex-col gap-1 overflow-hidden pr-9">
       <audio
         ref={audioRef}
         src={url ?? undefined}
         preload="metadata"
         className="hidden"
         onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => {
+        onPause={(e) => {
+          setPlaying(false);
+          releaseSchoolChatVoiceIfCurrent(e.currentTarget);
+        }}
+        onEnded={(e) => {
           setPlaying(false);
           setCurrentTime(0);
+          releaseSchoolChatVoiceIfCurrent(e.currentTarget);
         }}
         onTimeUpdate={() => {
           const a = audioRef.current;
@@ -265,7 +304,7 @@ function VoiceNoteBubble({
           }
         }}
       />
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <div className="relative h-10 w-10 shrink-0">
           <div
             className={`flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold shadow-sm ${avatarClass}`}
@@ -304,7 +343,7 @@ function VoiceNoteBubble({
               aria-valuenow={Math.round(progress * 100)}
               aria-valuemin={0}
               aria-valuemax={100}
-              className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center select-none py-0.5"
+              className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center overflow-hidden py-0.5 select-none"
               onClick={(e) => seekFromPointer(e.clientX)}
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -316,24 +355,25 @@ function VoiceNoteBubble({
                 setCurrentTime(a.currentTime);
               }}
             >
-              <div className="mb-1 flex h-[22px] items-end gap-[2px] px-0.5">
+              <div className="mb-1 flex h-[22px] min-w-0 w-full items-end gap-px px-0.5">
                 {waveHeights.map((rh, i) => {
                   const played = (i + 0.5) / waveHeights.length <= progress;
                   const hPct = Math.round(rh * 100);
                   return (
                     <div
                       key={i}
-                      className="min-w-[2px] flex-1 rounded-full"
+                      className="min-w-0 flex-1 basis-0 rounded-full"
                       style={{
                         height: `${hPct}%`,
                         minHeight: 3,
+                        maxWidth: '100%',
                         backgroundColor: played ? barPlayedColor : barUnplayedColor,
                       }}
                     />
                   );
                 })}
               </div>
-              <div className="relative mx-0.5 h-[3px] rounded-full bg-[#111b21]/10">
+              <div className="relative mx-0.5 h-[3px] min-w-0 w-full overflow-hidden rounded-full bg-[#111b21]/10">
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
                   style={{ width: `${progress * 100}%` }}
@@ -1056,7 +1096,7 @@ export default function SchoolChatPage() {
                   return (
                     <div key={m.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
                       <div
-                        className={`max-w-[75%] sm:max-w-[65%] rounded-lg px-2 py-1.5 pb-5 shadow-sm relative ${
+                        className={`min-w-0 max-w-[75%] sm:max-w-[65%] rounded-lg px-2 py-1.5 pb-5 shadow-sm relative ${
                           mine
                             ? 'rounded-br-none bg-[var(--wa-out)] text-[#111b21]'
                             : 'rounded-bl-none bg-[var(--wa-in)] text-[#111b21] border border-[#e9edef]'
