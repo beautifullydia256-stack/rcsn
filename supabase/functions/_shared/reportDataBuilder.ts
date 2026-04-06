@@ -535,13 +535,19 @@ function oneReportFromSnapshotRows(
         }
       : undefined;
   const reportDate = frozen.report_date || undefined;
+  const phoneOut =
+    frozen.school_phone || (school?.phone as string) || (school?.contact_phone as string) || '';
+  const emailOut =
+    frozen.school_email || (school?.email as string) || (school?.contact_email as string) || '';
   return {
     school: {
       ...school,
       name: frozen.school_name || (school?.name as string) || '',
       address: frozen.school_address || (school?.address as string) || '',
-      phone: frozen.school_phone || (school?.phone as string) || (school?.contact_phone as string) || '',
-      email: frozen.school_email || (school?.email as string) || (school?.contact_email as string) || '',
+      phone: phoneOut,
+      email: emailOut,
+      contact_phone: phoneOut || (school?.contact_phone as string) || '',
+      contact_email: emailOut || (school?.contact_email as string) || '',
       motto: frozen.school_motto || (school?.motto as string) || '',
       subtitle: frozen.school_subtitle || (school?.subtitle as string) || '',
       pobox: frozen.school_pobox || (school?.pobox as string) || '',

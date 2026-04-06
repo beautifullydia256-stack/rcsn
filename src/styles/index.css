@@ -85,7 +85,29 @@
   }
 }
 
-/* Report preview (Issue 12): default readable body text on white cards inside dark admin theme */
+/* Report preview: force table copy to stay dark on white rows (dark shell can still leak --foreground onto cells) */
+#report-preview-print-area .report-preview-doc-surface table {
+  color: #0f172a;
+}
+#report-preview-print-area .report-preview-doc-surface thead th {
+  color: #1e3a8a !important;
+}
+#report-preview-print-area .report-preview-doc-surface tbody td {
+  color: #0f172a !important;
+}
+#report-preview-print-area .report-preview-doc-surface tbody td.text-slate-700 {
+  color: #334155 !important;
+}
+#report-preview-print-area .report-preview-doc-surface tbody td.text-blue-900,
+#report-preview-print-area .report-preview-doc-surface thead th.text-blue-900 {
+  color: #1e3a8a !important;
+}
+#report-preview-print-area .report-preview-doc-surface .text-slate-500,
+#report-preview-print-area .report-preview-doc-surface .text-slate-600 {
+  color: #475569 !important;
+}
+
+/* Default readable body text on the white report card */
 #report-preview-print-area .report-preview-doc-surface {
   color: #0f172a;
 }

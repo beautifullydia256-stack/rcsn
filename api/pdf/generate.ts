@@ -30,6 +30,30 @@ interface GeneratePDFOptions {
   reportDataList?: Record<string, unknown>[];
 }
 
+function escapeHtmlText(raw: unknown): string {
+  return String(raw ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Same resolution order as Vite Template3/4 header: contact_* fields first, then generic email/phone.
+ * Renders the two-line contact block like the on-screen preview (email | phone).
+ */
+function schoolContactBlockHtml(school: Record<string, unknown> | undefined | null): string {
+  const s = (school || {}) as Record<string, unknown>;
+  const str = (v: unknown) => (v == null ? '' : String(v).trim());
+  const email = str(s.contact_email ?? s.email ?? s.school_email);
+  const phone = str(s.contact_phone ?? s.phone ?? s.school_phone);
+  if (!email && !phone) return '';
+  const e = email ? escapeHtmlText(email) : '';
+  const p = phone ? escapeHtmlText(phone) : '';
+  const sep = email && phone ? '<span style="margin:0 8px;color:#64748b">|</span>' : '';
+  return `<div class="school-contact">${e}${sep}${p}</div>`;
+}
+
 function renderReportHTML(templateHtml: string, templateCss: string, reportData: any): string {
   const student = reportData.students?.[0];
   const school = reportData.school || {};
@@ -49,8 +73,8 @@ function renderReportHTML(templateHtml: string, templateCss: string, reportData:
   const placeholders: Record<string, string | number> = {
     SCHOOL_NAME: school.name ?? '',
     SCHOOL_ADDRESS: school.address ?? '',
-    SCHOOL_PHONE: school.phone ?? '',
-    SCHOOL_EMAIL: school.email ?? '',
+    SCHOOL_PHONE: (school as any).phone ?? (school as any).contact_phone ?? '',
+    SCHOOL_EMAIL: (school as any).email ?? (school as any).contact_email ?? '',
     SCHOOL_MOTTO: school.motto ?? '',
     STUDENT_NAME: student.name ?? '',
     STUDENT_ID: student.admission_number ?? student.student_id ?? '',
@@ -143,11 +167,9 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   const schoolSubtitle = (school as any).subtitle ?? '';
   const schoolAddress = (school as any).address ?? '';
   const schoolPobox = (school as any).pobox ?? '';
-  const schoolEmail = (school as any).email ?? (school as any).contact_email ?? '';
-  const schoolPhone = (school as any).phone ?? (school as any).contact_phone ?? '';
   const schoolMotto = (school as any).motto ?? '';
   const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
-  const contactLine = [schoolEmail, schoolPhone].filter(Boolean).join(' | ');
+  const schoolContactHtml = schoolContactBlockHtml(school as Record<string, unknown>);
 
   const term = (examSet as any).term ?? '';
   const year = (examSet as any).year ?? '';
@@ -355,7 +377,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       <div class="school-name">${schoolName}</div>
       ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
       ${(schoolAddress || schoolPobox) ? `<div class="school-address">${schoolAddress}${schoolAddress && schoolPobox ? ' ' : ''}${schoolPobox}</div>` : ''}
-      ${contactLine ? `<div class="school-contact">${contactLine}</div>` : ''}
+      ${schoolContactHtml}
       ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
     </div>
   </div>
@@ -479,11 +501,9 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   const schoolSubtitle = (school as any).subtitle ?? '';
   const schoolAddress = (school as any).address ?? '';
   const schoolPobox = (school as any).pobox ?? '';
-  const schoolEmail = (school as any).email ?? (school as any).contact_email ?? '';
-  const schoolPhone = (school as any).phone ?? (school as any).contact_phone ?? '';
   const schoolMotto = (school as any).motto ?? '';
   const logoUrl = (school as any).logo_url ?? (school as any).logo ?? '';
-  const contactLine = [schoolEmail, schoolPhone].filter(Boolean).join(' | ');
+  const schoolContactHtmlLower = schoolContactBlockHtml(school as Record<string, unknown>);
 
   const term = (examSet as any).term ?? '';
   const year = (examSet as any).year ?? '';
@@ -650,7 +670,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
       <div class="school-name">${schoolName}</div>
       ${schoolSubtitle ? `<div class="school-subtitle">${schoolSubtitle}</div>` : ''}
       ${(schoolAddress || schoolPobox) ? `<div class="school-address">${schoolAddress}${schoolAddress && schoolPobox ? ' ' : ''}${schoolPobox}</div>` : ''}
-      ${contactLine ? `<div class="school-contact">${contactLine}</div>` : ''}
+      ${schoolContactHtmlLower}
       ${schoolMotto ? `<div class="school-motto">"${schoolMotto}"</div>` : ''}
     </div>
   </div>
@@ -759,8 +779,12 @@ function buildMinimalReportHTML(reportData: any): string {
 
   const schoolName = (school as any).name ?? 'School Name';
   const schoolAddress = (school as any).address ?? '';
-  const schoolPhone = (school as any).phone ?? '';
-  const schoolEmail = (school as any).email ?? '';
+  const schoolPhone = String(
+    (school as any).contact_phone ?? (school as any).phone ?? (school as any).school_phone ?? ''
+  ).trim();
+  const schoolEmail = String(
+    (school as any).contact_email ?? (school as any).email ?? (school as any).school_email ?? ''
+  ).trim();
   const schoolMotto = (school as any).motto ?? '';
 
   const term = (examSet as any).term ?? '';
