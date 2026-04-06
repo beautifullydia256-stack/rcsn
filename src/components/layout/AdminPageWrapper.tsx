@@ -9,22 +9,40 @@ export default function AdminPageWrapper({
   eyebrow,
   title,
   subtitle,
+  headerActions,
   children,
 }: {
   eyebrow?: string;
   title?: string;
   subtitle?: string;
+  /** Right side of the top header row, aligned with the eyebrow (e.g. action buttons). */
+  headerActions?: ReactNode;
   children: ReactNode;
 }) {
+  const eyebrowRow = eyebrow ? (
+    <p className="mb-0 flex min-w-0 items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-emerald-500 dark:text-[#00e5c3]">
+      <span className="inline-block h-0.5 w-3.5 shrink-0 rounded-sm bg-emerald-500 dark:bg-[#00e5c3]" aria-hidden />
+      {eyebrow}
+    </p>
+  ) : null;
+
   return (
     <div className="admin-terminal-page space-y-6">
-      {(eyebrow || title || subtitle) && (
+      {(eyebrow || title || subtitle || headerActions) && (
         <div className="space-y-1">
-          {eyebrow && (
-            <p className="mb-0 flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.2em] text-emerald-500 dark:text-[#00e5c3]">
-              <span className="inline-block h-0.5 w-3.5 shrink-0 rounded-sm bg-emerald-500 dark:bg-[#00e5c3]" aria-hidden />
-              {eyebrow}
-            </p>
+          {headerActions ? (
+            <div
+              className={`mb-0 flex flex-col gap-3 sm:flex-row sm:items-center ${
+                eyebrow ? 'sm:justify-between' : 'sm:justify-end'
+              }`}
+            >
+              {eyebrowRow}
+              <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+                {headerActions}
+              </div>
+            </div>
+          ) : (
+            eyebrowRow
           )}
           {title && (
             <h1

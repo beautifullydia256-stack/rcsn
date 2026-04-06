@@ -726,10 +726,12 @@ export default function GenerateReportsPage() {
       eyebrow="Academic reports"
       title="Student Report Generator"
       subtitle="Generate and download student academic reports."
-    >
-      <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-        <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary">
+      headerActions={
+        <>
+          <button
+            type="button"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
+          >
             Customize Header
           </button>
           <button
@@ -739,9 +741,9 @@ export default function GenerateReportsPage() {
           >
             Back to Reports
           </button>
-        </div>
-      </div>
-
+        </>
+      }
+    >
       <div className={`${adminCardClass} rounded-xl border border-[var(--ac-border)]`}>
           <h2
             className="ac-text-primary mb-4 text-lg font-normal tracking-tight sm:text-xl"
