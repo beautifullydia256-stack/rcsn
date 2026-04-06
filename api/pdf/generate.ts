@@ -703,13 +703,14 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
     .grading-table th, .grading-table td { padding: 3px 5px; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; }
-    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 3px; line-height: 1.26; color: #334155; }
-    .comments-box .signature { font-size: 8pt; margin-top: 3px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 6px; margin-top: 6px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; box-sizing: border-box; }
+    /* Slightly tighter than Upper so footer stays on one page when content is at the limit */
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 8px; margin-bottom: 2mm; font-size: 8.1pt; background: #fff; }
+    .comments-box h3 { font-size: 8.4pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.2; color: #334155; }
+    .comments-box .signature { font-size: 7.5pt; margin-top: 2px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.9pt; box-sizing: border-box; }
     .next-term-fees strong { color: #1e3a8a; }
-    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
+    .report-footer { text-align: center; font-size: 6.8pt; margin-top: 2mm; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; }
   </style>
 </head>
 <body>
