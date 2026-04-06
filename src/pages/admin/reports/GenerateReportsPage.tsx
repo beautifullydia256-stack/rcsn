@@ -2,12 +2,15 @@
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
 import { useState, useMemo, useEffect, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
-import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
+import {
+  PRIMARY_TEMPLATES,
+  getTemplateForClass,
+  getPrimaryTemplateOptions,
+} from '../../../templates/primary';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
@@ -15,8 +18,35 @@ import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilen
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
-import { FileDown } from 'lucide-react';
 import JSZip from 'jszip';
+
+/** White PDF-style document icon paired with Acrobat-style red (#EC1C24) on the button. */
+function AcrobatStylePdfIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+    >
+      <path
+        fill="currentColor"
+        d="M13.88 2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v15A2.25 2.25 0 0 0 6.75 21.75h10.5A2.25 2.25 0 0 0 19.5 19.5V9.03l-5.62-5.78Z"
+      />
+      <path
+        fill="currentColor"
+        fillOpacity={0.45}
+        d="M13.5 2.25V8.25h5.85L13.5 2.25Z"
+      />
+      <path
+        fill="currentColor"
+        fillOpacity={0.35}
+        d="M7.88 12.38h8.25v1.5H7.88v-1.5Zm0 2.62h8.25v1.5H7.88V15Zm0 2.62h5.62v1.5H7.88v-1.5Z"
+      />
+    </svg>
+  );
+}
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -173,7 +203,6 @@ async function fetchStudentsWithResultsInClass(
 }
 
 export default function GenerateReportsPage() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const [reportType, setReportType] = useState<'single' | 'class'>('single');
@@ -195,6 +224,8 @@ export default function GenerateReportsPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
   const [prePrimaryReportMode, setPrePrimaryReportMode] = useState<'colour' | 'detailed'>('colour');
+  /** Report layout (template1–template6). Reset to class default whenever class changes; user may override. */
+  const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
   const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
     term: number;
@@ -308,11 +339,24 @@ export default function GenerateReportsPage() {
   const hasReportsReady = previewReports.length > 0 || (generatingStep === 'completed' && !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0);
   const hasSavedReports = !!completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0;
 
+  const recommendedTemplateKey = useMemo(
+    () => (selectedClass ? getTemplateForClass(selectedClass) : ''),
+    [selectedClass]
+  );
+
   const templateDisplayName = useMemo(() => {
-    if (!selectedClass) return 'Report For Baby Class';
-    const key = getTemplateForClass(selectedClass);
-    const t = PRIMARY_TEMPLATES[key as keyof typeof PRIMARY_TEMPLATES];
-    return t?.name ?? 'Report For Baby Class';
+    if (!selectedClass) return '';
+    const t = PRIMARY_TEMPLATES[reportTemplateKey as keyof typeof PRIMARY_TEMPLATES];
+    return t?.name ?? '';
+  }, [selectedClass, reportTemplateKey]);
+
+  const templateMatchesClassSuggestion = Boolean(
+    selectedClass && recommendedTemplateKey === reportTemplateKey
+  );
+
+  useEffect(() => {
+    if (!selectedClass) return;
+    setReportTemplateKey(getTemplateForClass(selectedClass));
   }, [selectedClass]);
 
   const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
@@ -726,23 +770,6 @@ export default function GenerateReportsPage() {
       eyebrow="Academic reports"
       title="Student Report Generator"
       subtitle="Generate and download student academic reports."
-      headerActions={
-        <>
-          <button
-            type="button"
-            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-          >
-            Customize Header
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/reports')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-          >
-            Back to Reports
-          </button>
-        </>
-      }
     >
       <div className={`${adminCardClass} rounded-xl border border-[var(--ac-border)]`}>
           <h2
@@ -752,26 +779,7 @@ export default function GenerateReportsPage() {
             Report Configuration
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Report Template – auto-selected, read-only display */}
-            <div>
-              <label className="block ac-text-secondary text-sm font-medium mb-2">
-                Report Template
-                <span className="ml-2 text-xs text-emerald-500 font-normal">✓ Auto-selected</span>
-              </label>
-              <div className="relative flex items-center rounded-lg border border-[var(--ac-border)] ac-glass-card px-3 py-2 ac-text-primary">
-                <span>{templateDisplayName}</span>
-                <span className="ml-2 text-emerald-400">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </span>
-              </div>
-              <p className="mt-1 text-xs ac-text-muted">
-                Template automatically selected based on class section to ensure consistent formatting.
-              </p>
-            </div>
-
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {/* Report Type */}
             <div>
               <label className="block ac-text-secondary text-sm font-medium mb-2">Report Type</label>
@@ -898,6 +906,39 @@ export default function GenerateReportsPage() {
             )}
           </div>
 
+          {selectedClass && (
+            <div className="mb-6 max-w-xl">
+              <label className="mb-2 block text-sm font-medium ac-text-secondary">
+                Report template
+                {templateMatchesClassSuggestion ? (
+                  <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                    Suggested for this class
+                  </span>
+                ) : (
+                  <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">
+                    Custom layout (override)
+                  </span>
+                )}
+              </label>
+              <select
+                value={reportTemplateKey}
+                onChange={(e) => setReportTemplateKey(e.target.value)}
+                className="ac-input min-h-0 w-full rounded-lg px-3 py-2"
+              >
+                {getPrimaryTemplateOptions().map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                    {opt.value === recommendedTemplateKey ? ' — suggested for ' + selectedClass : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs ac-text-muted">
+                Shown after you pick a class. Default matches your school&apos;s class-to-template mapping; change the
+                dropdown to use a different report layout for this preview and print.
+              </p>
+            </div>
+          )}
+
           {/* Student – only when Single Student */}
           {reportType === 'single' && (
             <div className="mb-6">
@@ -979,9 +1020,9 @@ export default function GenerateReportsPage() {
                 (reportType === 'single' && !selectedStudent)
               }
               title="Generate and save reports if needed, then download PDF"
-              className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-400/35 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
+              className="flex items-center gap-2.5 rounded-lg bg-[#EC1C24] px-5 py-3 text-sm font-semibold text-white shadow-md shadow-[#EC1C24]/35 transition hover:bg-[#c91820] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#EC1C24] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-offset-slate-900"
             >
-              <FileDown className="w-4 h-4" />
+              <AcrobatStylePdfIcon className="h-5 w-5 shrink-0 text-white" />
               Download PDF
             </button>
           </div>
@@ -1003,7 +1044,9 @@ export default function GenerateReportsPage() {
                   >
                     Report Preview
                   </h2>
-                  <span className="text-sm ac-text-secondary">Template: {templateDisplayName}</span>
+                  {templateDisplayName && (
+                    <span className="text-sm ac-text-secondary">Template: {templateDisplayName}</span>
+                  )}
                 </div>
                 <div className="ac-glass-card p-4 rounded-lg overflow-auto max-h-[80vh] border border-[var(--ac-border)]">
                   {prePrimaryStrandWarningCount != null && (
@@ -1021,6 +1064,7 @@ export default function GenerateReportsPage() {
                       <div key={report.id || report.report_data?.students?.[0]?.student_id || idx} className="report-student-card">
                         <ReportPreviewFromData
                           reportData={report.report_data}
+                          templateKey={reportTemplateKey}
                           prePrimaryReportMode={prePrimaryReportMode}
                           detailedObservationItemsByKey={detailedObservationItemsByKey}
                         />
