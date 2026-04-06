@@ -7,6 +7,7 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
+import { PDFDocument } from 'pdf-lib';
 
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = {
@@ -1015,29 +1016,18 @@ function buildMinimalReportHTML(reportData: any): string {
 </html>`;
 }
 
-/** Extra print rules when merging many students into one PDF so each learner stays on one A4 page. */
-const PDF_MULTI_STUDENT_SHEET_HEAD = `
-<style id="pdf-multi-student-sheets">
-  .pdf-student-sheet {
-    page-break-inside: avoid;
-    break-inside: avoid;
+/** Concatenate per-student PDFs (same render path as single download; avoids Chromium splitting one HTML doc across extra pages). */
+async function mergePdfBuffers(buffers: Buffer[]): Promise<Buffer> {
+  if (buffers.length === 0) throw new Error('No PDFs to merge');
+  if (buffers.length === 1) return buffers[0];
+  const mergedPdf = await PDFDocument.create();
+  for (const buf of buffers) {
+    const doc = await PDFDocument.load(buf);
+    const pages = await mergedPdf.copyPages(doc, doc.getPageIndices());
+    pages.forEach((p) => mergedPdf.addPage(p));
   }
-  .pdf-student-sheet:not(:last-child) {
-    page-break-after: always;
-    break-after: page;
-  }
-</style>`;
-
-/** Extract content between <body> and </body> from a full HTML string */
-function extractBodyContent(fullHtml: string): string {
-  const match = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-  return match ? match[1].trim() : fullHtml;
-}
-
-/** Extract <head>...</head> from a full HTML string */
-function extractHeadContent(fullHtml: string): string {
-  const match = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-  return match ? match[1].trim() : '';
+  const bytes = await mergedPdf.save();
+  return Buffer.from(bytes);
 }
 
 /** Safe single-line filename segments for PDF downloads (Windows + URL-safe). */
@@ -1321,42 +1311,43 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
   try {
     const page = await browser.newPage();
     const className = (student?.current_class ?? '') as string;
-    let html: string;
+    const pdfOpts = {
+      format: 'A4' as const,
+      printBackground: true,
+      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
+    };
+
+    let buffer: Buffer;
     if (allCachedReports && allCachedReports.length > 1 && useBuiltIn) {
-      const chunks = allCachedReports.map((item) => {
+      const pdfBuffers: Buffer[] = [];
+      for (const item of allCachedReports) {
         const rd = item.report_data;
         const rdSt = rd.students;
         const rdFirst =
           Array.isArray(rdSt) && rdSt.length > 0 ? (rdSt[0] as Record<string, unknown>) : undefined;
         const cls = (rdFirst?.current_class as string | undefined) ?? className;
-        return isUpperSectionClass(cls)
+        const oneHtml = isUpperSectionClass(cls)
           ? buildTemplate4UpperSectionHTML(rd)
           : isLowerSectionPrimary(cls)
             ? buildTemplate3LowerSectionHTML(rd)
             : buildMinimalReportHTML(rd);
-      });
-      const firstFullHtml = chunks[0];
-      const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
-      const bodyContents = chunks.map(extractBodyContent);
-      const combinedBody = bodyContents.map((body) => `<div class="pdf-student-sheet">${body}</div>`).join('\n');
-      html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
+        await page.setContent(oneHtml, { waitUntil: 'networkidle0' });
+        const pdf = await page.pdf(pdfOpts);
+        pdfBuffers.push(Buffer.from(pdf));
+      }
+      buffer = await mergePdfBuffers(pdfBuffers);
     } else {
-      html = useBuiltIn
+      const html = useBuiltIn
         ? isUpperSectionClass(className)
           ? buildTemplate4UpperSectionHTML(reportData)
           : isLowerSectionPrimary(className)
             ? buildTemplate3LowerSectionHTML(reportData)
             : buildMinimalReportHTML(reportData)
         : renderReportHTML(htmlContent!, cssContent, reportData);
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const pdf = await page.pdf(pdfOpts);
+      buffer = Buffer.from(pdf);
     }
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdf = await page.pdf({
-      format: 'A4',
-      printBackground: true,
-      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
-    });
-    const buffer = Buffer.from(pdf);
     const isMulti =
       Array.isArray(allCachedReports) && allCachedReports.length > 1;
     const filename = isMulti

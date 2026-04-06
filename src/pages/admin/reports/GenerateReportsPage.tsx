@@ -903,6 +903,55 @@ export default function GenerateReportsPage() {
               )}
             </div>
 
+            {/* Report template — same row as Class on md+ */}
+            <div className="min-w-0">
+              <label className="mb-2 flex flex-wrap items-center gap-x-2 text-sm font-medium ac-text-secondary">
+                <span>Report template</span>
+                {selectedClass && (
+                  <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                    {isBabyClassTemplateChoice ? 'Nursery choice' : 'Auto'}
+                  </span>
+                )}
+              </label>
+              {!selectedClass ? (
+                <div className="ac-input flex min-h-[42px] items-center rounded-lg px-3 py-2 text-sm ac-text-muted">
+                  Select a class
+                </div>
+              ) : isBabyClassTemplateChoice ? (
+                <select
+                  value={reportTemplateKey}
+                  onChange={(e) => setReportTemplateKey(e.target.value)}
+                  className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
+                  title="Baby Class: heritage or classic nursery layout"
+                >
+                  <option value="template6">{PRIMARY_TEMPLATES.template6.name} (Heritage)</option>
+                  <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
+                </select>
+              ) : (
+                <div
+                  className="ac-input flex min-h-[42px] items-center gap-2 rounded-lg px-3 py-2 text-sm ac-text-primary"
+                  title={templateDisplayName || PRIMARY_TEMPLATES[recommendedTemplateKey as keyof typeof PRIMARY_TEMPLATES]?.name}
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {templateDisplayName ||
+                      PRIMARY_TEMPLATES[recommendedTemplateKey as keyof typeof PRIMARY_TEMPLATES]?.name}
+                  </span>
+                  <svg
+                    className="h-4 w-4 shrink-0 text-emerald-500 dark:text-emerald-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                    aria-hidden
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+
             {isPrePrimaryClass && (
               <div>
                 <label className="block ac-text-secondary text-sm font-medium mb-2">Pre-primary report layout</label>
@@ -920,52 +969,6 @@ export default function GenerateReportsPage() {
               </div>
             )}
           </div>
-
-          {selectedClass && (
-            <div className="mb-6 max-w-xl">
-              <label className="mb-2 block text-sm font-medium ac-text-secondary">
-                Report template
-                <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                  {isBabyClassTemplateChoice ? 'Choose preferred nursery layout' : '✓ Auto-loaded for this class'}
-                </span>
-              </label>
-              {isBabyClassTemplateChoice ? (
-                <>
-                  <select
-                    value={reportTemplateKey}
-                    onChange={(e) => setReportTemplateKey(e.target.value)}
-                    className="ac-input min-h-0 w-full rounded-lg px-3 py-2"
-                  >
-                    <option value="template6">{PRIMARY_TEMPLATES.template6.name} (Heritage)</option>
-                    <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
-                  </select>
-                  <p className="mt-1 text-xs ac-text-muted">
-                    Baby Class can use the heritage card or the classic Middle/Top style layout. Middle Class, Top Class,
-                    and Primary classes use a single fixed layout per class level.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <div className="relative flex items-center rounded-lg border border-[var(--ac-border)] ac-glass-card px-3 py-2 ac-text-primary">
-                    <span>{templateDisplayName || PRIMARY_TEMPLATES[recommendedTemplateKey as keyof typeof PRIMARY_TEMPLATES]?.name}</span>
-                    <span className="ml-2 text-emerald-500 dark:text-emerald-400" aria-hidden>
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </span>
-                  </div>
-                  <p className="mt-1 text-xs ac-text-muted">
-                    Template is set automatically from your class (e.g. Lower vs Upper Primary). To use a different design,
-                    pick a template option only for Baby Class.
-                  </p>
-                </>
-              )}
-            </div>
-          )}
 
           {/* Student – only when Single Student */}
           {reportType === 'single' && (
