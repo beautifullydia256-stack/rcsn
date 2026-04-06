@@ -28,10 +28,51 @@ export type ChatMessageRow = {
   created_at: string;
   /** Set when the recipient loaded the thread (WhatsApp-style delivered / double gray tick). */
   delivered_at: string | null;
+  msg_kind: 'text' | 'voice';
+  /** Storage object path in bucket `school-chat-voice` when audio is still available. */
+  audio_path: string | null;
+  audio_duration_sec: number | null;
 };
 
 /** Treat peer as online when their last heartbeat is within this window. */
 export const CHAT_PRESENCE_ONLINE_MS = 120_000;
+
+/** Voice notes: Opus-in-WebM preferred (~32–64 kbps); Safari may use AAC/mp4. */
+export const VOICE_NOTE_MAX_DURATION_SEC = 120;
+export const VOICE_NOTE_MAX_BYTES = 1_572_864;
+
+export function formatVoiceDurationLabel(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const m = Math.floor(s / 60);
+  const secRem = s % 60;
+  return `${m}:${secRem.toString().padStart(2, '0')}`;
+}
+
+/** File extension allowed by school_chat_finalize_voice (must match upload path). */
+export function pickVoiceFileExtension(blob: Blob): 'webm' | 'm4a' | 'mp4' {
+  const m = (blob.type || '').toLowerCase();
+  if (m.includes('mp4') || m.includes('aac')) return 'mp4';
+  if (m.includes('m4a')) return 'm4a';
+  return 'webm';
+}
+
+function mapMessageRow(r: Record<string, unknown>): ChatMessageRow {
+  const mk = r.msg_kind === 'voice' ? 'voice' : 'text';
+  return {
+    id: String(r.id),
+    conversation_id: String(r.conversation_id),
+    sender_id: String(r.sender_id),
+    body: String(r.body ?? ''),
+    created_at: String(r.created_at ?? ''),
+    delivered_at: (r.delivered_at as string | null | undefined) ?? null,
+    msg_kind: mk,
+    audio_path: (r.audio_path as string | null | undefined) ?? null,
+    audio_duration_sec:
+      r.audio_duration_sec == null || r.audio_duration_sec === ''
+        ? null
+        : Number(r.audio_duration_sec),
+  };
+}
 
 /** Human-readable online / last seen for thread and lists. */
 export function formatChatPresence(lastSeenAtIso: string | null | undefined): {
@@ -92,13 +133,13 @@ function mapConversationRow(raw: Record<string, unknown>): ChatConversationRow {
 export async function fetchEligibleChatUsers(): Promise<EligibleChatUser[]> {
   const { data, error } = await supabase.rpc('school_chat_list_eligible_users');
   if (error) throw error;
-  return (data || []).map((r) => mapEligibleRow(r as Record<string, unknown>));
+  return (data || []).map((row: unknown) => mapEligibleRow(row as Record<string, unknown>));
 }
 
 export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
   const { data, error } = await supabase.rpc('school_chat_my_conversations');
   if (error) throw error;
-  return (data || []).map((r) => mapConversationRow(r as Record<string, unknown>));
+  return (data || []).map((row: unknown) => mapConversationRow(row as Record<string, unknown>));
 }
 
 /** Upsert this device's activity timestamp (call on an interval while Messages is open). */
@@ -129,14 +170,13 @@ export async function getOrCreateDm(otherUserId: string): Promise<string> {
 export async function fetchMessages(conversationId: string): Promise<ChatMessageRow[]> {
   const { data, error } = await supabase
     .from('school_chat_messages')
-    .select('id, conversation_id, sender_id, body, created_at, delivered_at')
+    .select(
+      'id, conversation_id, sender_id, body, created_at, delivered_at, msg_kind, audio_path, audio_duration_sec'
+    )
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data || []).map((r) => ({
-    ...(r as ChatMessageRow),
-    delivered_at: (r as { delivered_at?: string | null }).delivered_at ?? null,
-  })) as ChatMessageRow[];
+  return (data || []).map((row: unknown) => mapMessageRow(row as Record<string, unknown>));
 }
 
 /** When you open the thread, mark the other person's outgoing lines as delivered (sets delivered_at). */
@@ -185,12 +225,85 @@ export async function sendMessage(
       school_id: schoolId,
       sender_id: user.id,
       body: trimmed,
+      msg_kind: 'text',
     })
-    .select('id, conversation_id, sender_id, body, created_at, delivered_at')
+    .select(
+      'id, conversation_id, sender_id, body, created_at, delivered_at, msg_kind, audio_path, audio_duration_sec'
+    )
     .single();
   if (error) throw error;
-  const r = data as ChatMessageRow;
-  return { ...r, delivered_at: r.delivered_at ?? null };
+  return mapMessageRow(data as Record<string, unknown>);
+}
+
+/**
+ * Upload a short compressed voice blob (WebM/Opus or AAC/mp4). Retention: audio file ~2 days, row ~7 days.
+ */
+export async function sendVoiceMessage(
+  conversationId: string,
+  schoolId: string,
+  audioBlob: Blob,
+  durationSec: number
+): Promise<ChatMessageRow | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) throw new Error('Not signed in');
+  if (audioBlob.size > VOICE_NOTE_MAX_BYTES) {
+    throw new Error('Recording is too large. Try a shorter message.');
+  }
+  const dur = Math.min(VOICE_NOTE_MAX_DURATION_SEC, Math.max(1, Math.round(durationSec)));
+  const preview = `Voice message (${formatVoiceDurationLabel(dur)})`;
+  const ext = pickVoiceFileExtension(audioBlob);
+  const contentType =
+    audioBlob.type ||
+    (ext === 'webm' ? 'audio/webm' : ext === 'm4a' ? 'audio/mp4' : 'audio/mp4');
+
+  const { data: ins, error: e1 } = await supabase
+    .from('school_chat_messages')
+    .insert({
+      conversation_id: conversationId,
+      school_id: schoolId,
+      sender_id: user.id,
+      body: preview,
+      msg_kind: 'voice',
+      audio_duration_sec: dur,
+    })
+    .select(
+      'id, conversation_id, sender_id, body, created_at, delivered_at, msg_kind, audio_path, audio_duration_sec'
+    )
+    .single();
+
+  if (e1) throw e1;
+  const row = mapMessageRow(ins as Record<string, unknown>);
+  const path = `${schoolId}/${row.id}.${ext}`;
+
+  const { error: e2 } = await supabase.storage
+    .from('school-chat-voice')
+    .upload(path, audioBlob, { contentType, upsert: false });
+
+  if (e2) {
+    await supabase.from('school_chat_messages').delete().eq('id', row.id);
+    throw e2;
+  }
+
+  const { error: e3 } = await supabase.rpc('school_chat_finalize_voice', {
+    p_message_id: row.id,
+    p_relative_path: path,
+  });
+
+  if (e3) {
+    await supabase.storage.from('school-chat-voice').remove([path]);
+    await supabase.from('school_chat_messages').delete().eq('id', row.id);
+    throw e3;
+  }
+
+  return { ...row, audio_path: path };
+}
+
+export async function downloadVoiceBlob(audioPath: string): Promise<Blob | null> {
+  const { data, error } = await supabase.storage.from('school-chat-voice').download(audioPath);
+  if (error || !data) return null;
+  return data;
 }
 
 export async function markConversationRead(conversationId: string): Promise<void> {
@@ -222,8 +335,8 @@ export function subscribeToConversationMessages(
         filter: `conversation_id=eq.${conversationId}`,
       },
       (payload) => {
-        const r = payload.new as ChatMessageRow;
-        if (r?.id) onInsert({ ...r, delivered_at: r.delivered_at ?? null });
+        const r = payload.new as Record<string, unknown>;
+        if (r?.id) onInsert(mapMessageRow(r));
       }
     )
     .on(
@@ -236,8 +349,8 @@ export function subscribeToConversationMessages(
       },
       (payload) => {
         if (!onUpdate) return;
-        const r = payload.new as ChatMessageRow;
-        if (r?.id) onUpdate({ ...r, delivered_at: r.delivered_at ?? null });
+        const r = payload.new as Record<string, unknown>;
+        if (r?.id) onUpdate(mapMessageRow(r));
       }
     )
     .subscribe((status, err) => {
