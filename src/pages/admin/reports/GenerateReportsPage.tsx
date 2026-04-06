@@ -9,7 +9,7 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 import {
   PRIMARY_TEMPLATES,
   getTemplateForClass,
-  getPrimaryTemplateOptions,
+  getSectionForClass,
 } from '../../../templates/primary';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
@@ -224,7 +224,10 @@ export default function GenerateReportsPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
   const [prePrimaryReportMode, setPrePrimaryReportMode] = useState<'colour' | 'detailed'>('colour');
-  /** Report layout (template1–template6). Reset to class default whenever class changes; user may override. */
+  /**
+   * Report layout (template1–template6). Synced from class mapping.
+   * Only Baby Class (section) may switch between template6 and template2; all other classes are fixed.
+   */
   const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
   const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
@@ -344,20 +347,32 @@ export default function GenerateReportsPage() {
     [selectedClass]
   );
 
+  const selectedSection = useMemo(
+    () => (selectedClass ? getSectionForClass(selectedClass) : null),
+    [selectedClass]
+  );
+
+  /** Same rule as Next.js PrimaryReportGenerator: only Baby Class may pick heritage vs classic nursery layout. */
+  const isBabyClassTemplateChoice = selectedSection === 'Baby Class';
+
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return '';
     const t = PRIMARY_TEMPLATES[reportTemplateKey as keyof typeof PRIMARY_TEMPLATES];
     return t?.name ?? '';
   }, [selectedClass, reportTemplateKey]);
 
-  const templateMatchesClassSuggestion = Boolean(
-    selectedClass && recommendedTemplateKey === reportTemplateKey
-  );
-
   useEffect(() => {
     if (!selectedClass) return;
-    setReportTemplateKey(getTemplateForClass(selectedClass));
-  }, [selectedClass]);
+    const autoTemplate = getTemplateForClass(selectedClass);
+    if (isBabyClassTemplateChoice) {
+      setReportTemplateKey((prev) => {
+        if (prev === 'template6' || prev === 'template2') return prev;
+        return autoTemplate;
+      });
+    } else {
+      setReportTemplateKey(autoTemplate);
+    }
+  }, [selectedClass, isBabyClassTemplateChoice]);
 
   const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
 
@@ -910,32 +925,45 @@ export default function GenerateReportsPage() {
             <div className="mb-6 max-w-xl">
               <label className="mb-2 block text-sm font-medium ac-text-secondary">
                 Report template
-                {templateMatchesClassSuggestion ? (
-                  <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                    Suggested for this class
-                  </span>
-                ) : (
-                  <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">
-                    Custom layout (override)
-                  </span>
-                )}
+                <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                  {isBabyClassTemplateChoice ? 'Choose preferred nursery layout' : '✓ Auto-loaded for this class'}
+                </span>
               </label>
-              <select
-                value={reportTemplateKey}
-                onChange={(e) => setReportTemplateKey(e.target.value)}
-                className="ac-input min-h-0 w-full rounded-lg px-3 py-2"
-              >
-                {getPrimaryTemplateOptions().map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                    {opt.value === recommendedTemplateKey ? ' — suggested for ' + selectedClass : ''}
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs ac-text-muted">
-                Shown after you pick a class. Default matches your school&apos;s class-to-template mapping; change the
-                dropdown to use a different report layout for this preview and print.
-              </p>
+              {isBabyClassTemplateChoice ? (
+                <>
+                  <select
+                    value={reportTemplateKey}
+                    onChange={(e) => setReportTemplateKey(e.target.value)}
+                    className="ac-input min-h-0 w-full rounded-lg px-3 py-2"
+                  >
+                    <option value="template6">{PRIMARY_TEMPLATES.template6.name} (Heritage)</option>
+                    <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
+                  </select>
+                  <p className="mt-1 text-xs ac-text-muted">
+                    Baby Class can use the heritage card or the classic Middle/Top style layout. Middle Class, Top Class,
+                    and Primary classes use a single fixed layout per class level.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="relative flex items-center rounded-lg border border-[var(--ac-border)] ac-glass-card px-3 py-2 ac-text-primary">
+                    <span>{templateDisplayName || PRIMARY_TEMPLATES[recommendedTemplateKey as keyof typeof PRIMARY_TEMPLATES]?.name}</span>
+                    <span className="ml-2 text-emerald-500 dark:text-emerald-400" aria-hidden>
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs ac-text-muted">
+                    Template is set automatically from your class (e.g. Lower vs Upper Primary). To use a different design,
+                    pick a template option only for Baby Class.
+                  </p>
+                </>
+              )}
             </div>
           )}
 

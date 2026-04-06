@@ -354,9 +354,10 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
+    /* No height:100% — merged class PDFs paginate incorrectly in Chromium. */
+    html, body { margin: 0; padding: 0; }
     body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
-    .report-page { width: 210mm; padding: 4mm 5mm 4mm 5mm; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 4mm 5mm 4mm 5mm; box-sizing: border-box; }
     .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
     .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -662,10 +663,10 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    /* Match Upper Section PDF: same page padding, type scale, section gaps, and footer spacing */
-    html, body { margin: 0; padding: 0; height: 100%; }
+    /* Match Upper Section PDF spacing; no html/body height — breaks merged class pagination in Chromium. */
+    html, body { margin: 0; padding: 0; }
     body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
-    .report-page { width: 210mm; padding: 4mm 5mm 4mm 5mm; }
+    .report-page { width: 100%; max-width: 210mm; margin: 0 auto; padding: 4mm 5mm 4mm 5mm; box-sizing: border-box; }
     .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
     .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
@@ -1014,6 +1015,19 @@ function buildMinimalReportHTML(reportData: any): string {
 </html>`;
 }
 
+/** Extra print rules when merging many students into one PDF so each learner stays on one A4 page. */
+const PDF_MULTI_STUDENT_SHEET_HEAD = `
+<style id="pdf-multi-student-sheets">
+  .pdf-student-sheet {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .pdf-student-sheet:not(:last-child) {
+    page-break-after: always;
+    break-after: page;
+  }
+</style>`;
+
 /** Extract content between <body> and </body> from a full HTML string */
 function extractBodyContent(fullHtml: string): string {
   const match = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
@@ -1309,7 +1323,6 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
     const className = (student?.current_class ?? '') as string;
     let html: string;
     if (allCachedReports && allCachedReports.length > 1 && useBuiltIn) {
-      const pageBreak = '\n<div style="page-break-after: always;"></div>\n';
       const chunks = allCachedReports.map((item) => {
         const rd = item.report_data;
         const rdSt = rd.students;
@@ -1323,11 +1336,9 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
             : buildMinimalReportHTML(rd);
       });
       const firstFullHtml = chunks[0];
-      const head = extractHeadContent(firstFullHtml);
+      const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
       const bodyContents = chunks.map(extractBodyContent);
-      const combinedBody = bodyContents
-        .map((body, i) => (i < bodyContents.length - 1 ? body + pageBreak : body))
-        .join('');
+      const combinedBody = bodyContents.map((body) => `<div class="pdf-student-sheet">${body}</div>`).join('\n');
       html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
     } else {
       html = useBuiltIn
