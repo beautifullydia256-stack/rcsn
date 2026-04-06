@@ -5,6 +5,8 @@ export type EligibleChatUser = {
   name: string;
   role: string;
   email: string;
+  /** Server heartbeat for online / last seen (via school_chat_presence). */
+  last_seen_at: string | null;
 };
 
 export type ChatConversationRow = {
@@ -15,6 +17,7 @@ export type ChatConversationRow = {
   last_body: string | null;
   last_at: string | null;
   unread_count: number;
+  peer_last_seen_at: string | null;
 };
 
 export type ChatMessageRow = {
@@ -27,16 +30,91 @@ export type ChatMessageRow = {
   delivered_at: string | null;
 };
 
+/** Treat peer as online when their last heartbeat is within this window. */
+export const CHAT_PRESENCE_ONLINE_MS = 120_000;
+
+/** Human-readable online / last seen for thread and lists. */
+export function formatChatPresence(lastSeenAtIso: string | null | undefined): {
+  online: boolean;
+  label: string;
+} {
+  if (!lastSeenAtIso) return { online: false, label: '' };
+  const t = new Date(lastSeenAtIso).getTime();
+  if (Number.isNaN(t)) return { online: false, label: '' };
+  const delta = Date.now() - t;
+  if (delta < CHAT_PRESENCE_ONLINE_MS) return { online: true, label: 'Online' };
+  const seen = new Date(lastSeenAtIso);
+  const now = new Date();
+  const timeStr = seen.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  if (seen.toDateString() === now.toDateString()) {
+    return { online: false, label: `Last seen today at ${timeStr}` };
+  }
+  const yest = new Date(now);
+  yest.setDate(yest.getDate() - 1);
+  if (seen.toDateString() === yest.toDateString()) {
+    return { online: false, label: `Last seen yesterday at ${timeStr}` };
+  }
+  if (delta < 7 * 24 * 60 * 60_000) {
+    return {
+      online: false,
+      label: `Last seen ${seen.toLocaleDateString(undefined, { weekday: 'short' })} at ${timeStr}`,
+    };
+  }
+  return {
+    online: false,
+    label: `Last seen ${seen.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} at ${timeStr}`,
+  };
+}
+
+function mapEligibleRow(raw: Record<string, unknown>): EligibleChatUser {
+  return {
+    user_id: String(raw.user_id),
+    name: String(raw.name ?? ''),
+    role: String(raw.role ?? ''),
+    email: String(raw.email ?? ''),
+    last_seen_at: (raw.last_seen_at as string | null | undefined) ?? null,
+  };
+}
+
+function mapConversationRow(raw: Record<string, unknown>): ChatConversationRow {
+  return {
+    conversation_id: String(raw.conversation_id),
+    peer_user_id: String(raw.peer_user_id),
+    peer_name: String(raw.peer_name ?? ''),
+    peer_role: String(raw.peer_role ?? ''),
+    last_body: (raw.last_body as string | null | undefined) ?? null,
+    last_at: (raw.last_at as string | null | undefined) ?? null,
+    unread_count: Number(raw.unread_count ?? 0),
+    peer_last_seen_at: (raw.peer_last_seen_at as string | null | undefined) ?? null,
+  };
+}
+
 export async function fetchEligibleChatUsers(): Promise<EligibleChatUser[]> {
   const { data, error } = await supabase.rpc('school_chat_list_eligible_users');
   if (error) throw error;
-  return (data || []) as EligibleChatUser[];
+  return (data || []).map((r) => mapEligibleRow(r as Record<string, unknown>));
 }
 
 export async function fetchMyConversations(): Promise<ChatConversationRow[]> {
   const { data, error } = await supabase.rpc('school_chat_my_conversations');
   if (error) throw error;
-  return (data || []) as ChatConversationRow[];
+  return (data || []).map((r) => mapConversationRow(r as Record<string, unknown>));
+}
+
+/** Upsert this device's activity timestamp (call on an interval while Messages is open). */
+export async function pingChatPresence(schoolId: string): Promise<void> {
+  if (!schoolId) return;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return;
+  const { error } = await supabase.from('school_chat_presence').upsert(
+    { user_id: user.id, school_id: schoolId, last_seen_at: new Date().toISOString() },
+    { onConflict: 'user_id' }
+  );
+  if (error && typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+    console.warn('[schoolChatApi] pingChatPresence', error.message);
+  }
 }
 
 export async function getOrCreateDm(otherUserId: string): Promise<string> {
@@ -89,20 +167,30 @@ export async function fetchPeerLastReadAt(conversationId: string): Promise<strin
   return (data as { last_read_at?: string | null } | null)?.last_read_at ?? null;
 }
 
-export async function sendMessage(conversationId: string, schoolId: string, body: string): Promise<void> {
+export async function sendMessage(
+  conversationId: string,
+  schoolId: string,
+  body: string
+): Promise<ChatMessageRow | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user?.id) throw new Error('Not signed in');
   const trimmed = body.trim();
-  if (!trimmed) return;
-  const { error } = await supabase.from('school_chat_messages').insert({
-    conversation_id: conversationId,
-    school_id: schoolId,
-    sender_id: user.id,
-    body: trimmed,
-  });
+  if (!trimmed) return null;
+  const { data, error } = await supabase
+    .from('school_chat_messages')
+    .insert({
+      conversation_id: conversationId,
+      school_id: schoolId,
+      sender_id: user.id,
+      body: trimmed,
+    })
+    .select('id, conversation_id, sender_id, body, created_at, delivered_at')
+    .single();
   if (error) throw error;
+  const r = data as ChatMessageRow;
+  return { ...r, delivered_at: r.delivered_at ?? null };
 }
 
 export async function markConversationRead(conversationId: string): Promise<void> {
@@ -152,7 +240,56 @@ export function subscribeToConversationMessages(
         if (r?.id) onUpdate({ ...r, delivered_at: r.delivered_at ?? null });
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+        if (status === 'SUBSCRIBED') {
+          console.debug('[schoolChat] messages channel subscribed', conversationId);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[schoolChat] messages channel', status, err?.message ?? err);
+        }
+      }
+    });
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+/** Live peer last_seen_at for online / last seen in the thread header. */
+export function subscribeToPeerPresence(peerUserId: string, onLastSeenAt: (iso: string | null) => void) {
+  const apply = (row: { last_seen_at?: string | null } | undefined) => {
+    if (row?.last_seen_at) onLastSeenAt(row.last_seen_at);
+  };
+  const channel = supabase
+    .channel(`school-chat-presence:${peerUserId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'school_chat_presence',
+        filter: `user_id=eq.${peerUserId}`,
+      },
+      (payload) => apply(payload.new as { last_seen_at?: string | null })
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'school_chat_presence',
+        filter: `user_id=eq.${peerUserId}`,
+      },
+      (payload) => apply(payload.new as { last_seen_at?: string | null })
+    )
+    .subscribe((status, err) => {
+      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+        if (status === 'SUBSCRIBED') {
+          console.debug('[schoolChat] presence channel subscribed', peerUserId);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[schoolChat] presence channel', status, err?.message ?? err);
+        }
+      }
+    });
   return () => {
     void supabase.removeChannel(channel);
   };
@@ -179,7 +316,15 @@ export function subscribeToPeerLastRead(
         if (row.user_id === peerUserId) onLastRead(row.last_read_at ?? null);
       }
     )
-    .subscribe();
+    .subscribe((status, err) => {
+      if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+        if (status === 'SUBSCRIBED') {
+          console.debug('[schoolChat] read-receipt channel subscribed', conversationId);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[schoolChat] read-receipt channel', status, err?.message ?? err);
+        }
+      }
+    });
   return () => {
     void supabase.removeChannel(channel);
   };

@@ -12,9 +12,12 @@ import {
   getOrCreateDm,
   markConversationRead,
   markPeerMessagesDelivered,
+  pingChatPresence,
   sendMessage,
   subscribeToConversationMessages,
   subscribeToPeerLastRead,
+  subscribeToPeerPresence,
+  formatChatPresence,
   type ChatConversationRow,
   type ChatMessageRow,
   type EligibleChatUser,
@@ -134,7 +137,14 @@ export default function SchoolChatPage() {
   const [contactFilter, setContactFilter] = useState<ContactFilter>('all');
   const [mobileThread, setMobileThread] = useState(false);
   /** Shown in header until `fetchMyConversations` includes the new DM (avoids blank thread after New chat). */
-  const [peerPreview, setPeerPreview] = useState<{ name: string; role: string } | null>(null);
+  const [peerPreview, setPeerPreview] = useState<{
+    name: string;
+    role: string;
+    user_id: string;
+    last_seen_at: string | null;
+  } | null>(null);
+  /** Live merge of peer presence (RPC + realtime). */
+  const [peerLastSeenAt, setPeerLastSeenAt] = useState<string | null>(null);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [peerLastReadAt, setPeerLastReadAt] = useState<string | null>(null);
@@ -166,6 +176,49 @@ export default function SchoolChatPage() {
     setSendError(null);
     setPeerLastReadAt(null);
   }, [selectedId]);
+
+  useEffect(() => {
+    const fromConv = selectedConv?.peer_last_seen_at ?? null;
+    const fromPrev = peerPreview?.last_seen_at ?? null;
+    setPeerLastSeenAt(fromConv ?? fromPrev ?? null);
+  }, [selectedConv?.conversation_id, selectedConv?.peer_last_seen_at, peerPreview?.user_id, peerPreview?.last_seen_at]);
+
+  useEffect(() => {
+    if (!schoolId || !myId) return;
+    const tick = () => {
+      void pingChatPresence(schoolId);
+    };
+    tick();
+    const id = setInterval(tick, 45_000);
+    const onVis = () => {
+      if (document.visibilityState === 'visible') tick();
+    };
+    const onOnline = () => tick();
+    document.addEventListener('visibilitychange', onVis);
+    window.addEventListener('online', onOnline);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+      window.removeEventListener('online', onOnline);
+    };
+  }, [schoolId, myId]);
+
+  useEffect(() => {
+    if (!myId) return;
+    const t = setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+    }, 60_000);
+    return () => clearInterval(t);
+  }, [myId, queryClient]);
+
+  useEffect(() => {
+    if (!myId) return;
+    const onFocus = () => {
+      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, [myId, queryClient]);
 
   const loadThread = useCallback(
     async (conversationId: string) => {
@@ -204,7 +257,12 @@ export default function SchoolChatPage() {
     return unsub;
   }, [selectedId, myId, queryClient]);
 
-  const peerUserId = selectedConv?.peer_user_id ?? null;
+  const peerUserId = selectedConv?.peer_user_id ?? peerPreview?.user_id ?? null;
+  useEffect(() => {
+    if (!peerUserId) return;
+    return subscribeToPeerPresence(peerUserId, (iso) => setPeerLastSeenAt(iso));
+  }, [peerUserId]);
+
   useEffect(() => {
     if (!selectedId || !peerUserId) return;
     return subscribeToPeerLastRead(selectedId, peerUserId, (iso) => {
@@ -248,7 +306,12 @@ export default function SchoolChatPage() {
   const openNewConversation = async (u: EligibleChatUser) => {
     setSending(true);
     setNewChatError(null);
-    setPeerPreview({ name: displayChatName(u), role: u.role });
+    setPeerPreview({
+      name: displayChatName(u),
+      role: u.role,
+      user_id: u.user_id,
+      last_seen_at: u.last_seen_at ?? null,
+    });
     try {
       const cid = await getOrCreateDm(u.user_id);
       if (!cid || typeof cid !== 'string') {
@@ -284,9 +347,14 @@ export default function SchoolChatPage() {
     setSending(true);
     setSendError(null);
     try {
-      await sendMessage(selectedId, schoolId, draft);
+      const row = await sendMessage(selectedId, schoolId, draft);
       setDraft('');
-      await loadThread(selectedId);
+      if (row) {
+        setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
+      }
+      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      void markConversationRead(selectedId);
+      if (schoolId) void pingChatPresence(schoolId);
     } catch (err) {
       console.error('[SchoolChatPage] send', err);
       const msg =
@@ -413,11 +481,20 @@ export default function SchoolChatPage() {
                   selectedId === c.conversation_id ? 'wa-active' : ''
                 }`}
               >
-                <div
-                  className="h-12 w-12 rounded-full shrink-0 flex items-center justify-center text-white text-[15px] font-medium"
-                  style={{ background: 'linear-gradient(180deg, #6b7c85, #54656f)' }}
-                >
-                  {(c.peer_name || '?').slice(0, 1).toUpperCase()}
+                <div className="relative shrink-0">
+                  <div
+                    className="h-12 w-12 rounded-full flex items-center justify-center text-white text-[15px] font-medium"
+                    style={{ background: 'linear-gradient(180deg, #6b7c85, #54656f)' }}
+                  >
+                    {(c.peer_name || '?').slice(0, 1).toUpperCase()}
+                  </div>
+                  {formatChatPresence(c.peer_last_seen_at).online && (
+                    <span
+                      className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-[#25d366] border-2 border-[var(--wa-list)]"
+                      aria-hidden
+                      title="Online"
+                    />
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex justify-between gap-2 items-baseline">
@@ -452,9 +529,30 @@ export default function SchoolChatPage() {
             >
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <span className="text-[16px] font-medium truncate">
-              {selectedConv?.peer_name || peerPreview?.name || 'Chat'}
-            </span>
+            <div className="min-w-0 flex-1">
+              <div className="text-[16px] font-medium truncate">
+                {selectedConv?.peer_name || peerPreview?.name || 'Chat'}
+              </div>
+              {(() => {
+                const p = formatChatPresence(peerLastSeenAt);
+                const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
+                if (p.online) {
+                  return (
+                    <div className="text-[12px] text-emerald-200 truncate">
+                      {roleStr} · Online
+                    </div>
+                  );
+                }
+                if (p.label) {
+                  return (
+                    <div className="text-[12px] text-white/75 truncate">
+                      {roleStr} · {p.label}
+                    </div>
+                  );
+                }
+                return <div className="text-[12px] text-white/75 truncate">{roleStr}</div>;
+              })()}
+            </div>
           </div>
 
           {!selectedId && (
@@ -486,7 +584,25 @@ export default function SchoolChatPage() {
                     {selectedConv?.peer_name ?? peerPreview?.name ?? 'Chat'}
                   </div>
                   <div className="text-[13px] text-white/80 truncate">
-                    {roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '')}
+                    {(() => {
+                      const p = formatChatPresence(peerLastSeenAt);
+                      const roleStr = roleLabel(selectedConv?.peer_role ?? peerPreview?.role ?? '');
+                      if (p.online) {
+                        return (
+                          <>
+                            {roleStr} · <span className="text-emerald-200">Online</span>
+                          </>
+                        );
+                      }
+                      if (p.label) {
+                        return (
+                          <>
+                            {roleStr} · <span className="text-white/75">{p.label}</span>
+                          </>
+                        );
+                      }
+                      return roleStr;
+                    })()}
                   </div>
                 </div>
               </div>
@@ -636,29 +752,42 @@ export default function SchoolChatPage() {
             <div className="flex-1 overflow-y-auto p-2">
               {loadingElig && <p className="p-3 text-[14px] text-[#667781]">Loading contacts…</p>}
               {!loadingElig &&
-                filteredEligible.map((u) => (
-                  <button
-                    key={u.user_id}
-                    type="button"
-                    disabled={sending}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      void openNewConversation(u);
-                    }}
-                    className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center disabled:opacity-60"
-                  >
-                    <div className="h-12 w-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
-                      {displayChatName(u).slice(0, 1).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-[#111b21]">{displayChatName(u)}</div>
-                      <div className="text-[13px] text-[#667781] truncate">
-                        {roleLabel(u.role)} · {u.email}
+                filteredEligible.map((u) => {
+                  const pres = formatChatPresence(u.last_seen_at);
+                  return (
+                    <button
+                      key={u.user_id}
+                      type="button"
+                      disabled={sending}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        void openNewConversation(u);
+                      }}
+                      className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center disabled:opacity-60"
+                    >
+                      <div className="relative h-12 w-12 shrink-0 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
+                        {displayChatName(u).slice(0, 1).toUpperCase()}
+                        {pres.online && (
+                          <span
+                            className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-[#25d366] border-2 border-white"
+                            aria-hidden
+                            title="Online"
+                          />
+                        )}
                       </div>
-                    </div>
-                  </button>
-                ))}
+                      <div className="min-w-0">
+                        <div className="font-medium text-[#111b21]">{displayChatName(u)}</div>
+                        <div className="text-[13px] text-[#667781] truncate">
+                          {roleLabel(u.role)} · {u.email}
+                        </div>
+                        {!pres.online && pres.label && (
+                          <div className="text-[12px] text-[#8696a0] truncate">{pres.label}</div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               {!loadingElig && filteredEligible.length === 0 && (
                 <p className="p-4 text-[14px] text-[#667781]">No contacts match filters or search.</p>
               )}
