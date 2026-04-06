@@ -6,6 +6,7 @@ import { useSnapshot } from '../../../hooks/useSnapshot';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { formatAverageWhole } from '../../../lib/reportUtils';
+import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { Download, Search, Eye } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -84,7 +85,8 @@ export default function ReportViewer() {
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `${report.students?.name || 'report'}_${snapshotId}.pdf`;
+          const safeName = String(report.students?.name || 'report').replace(/\s+/g, '_').slice(0, 80);
+          a.download = pdfDownloadFilenameFromResponse(response, `${safeName}.pdf`);
           a.click();
         } else {
           let errBody: { error?: string } = {};

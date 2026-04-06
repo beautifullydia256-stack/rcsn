@@ -54,10 +54,19 @@ export async function POST(request: NextRequest) {
 
         const student = reportData?.students?.[0];
         const examSet = reportData?.examSet;
-        const filename =
-          student && examSet
-            ? `${student.name}_${student.current_class}_Report_${examSet.name}`.replace(/[^a-zA-Z0-9._-]/g, '_')
-            : 'report';
+        let filename = 'report';
+        if (student && examSet) {
+          const parts = [student.name, student.current_class];
+          if (examSet.term != null && examSet.term !== '') parts.push(`Term_${examSet.term}`);
+          if (examSet.name) parts.push(examSet.name);
+          if (examSet.year != null && examSet.year !== '') parts.push(String(examSet.year));
+          filename =
+            parts
+              .join('_')
+              .replace(/[^a-zA-Z0-9._-]/g, '_')
+              .replace(/_+/g, '_')
+              .replace(/^_|_$/g, '') || 'report';
+        }
 
         return new NextResponse(pdf, {
           headers: {

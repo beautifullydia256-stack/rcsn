@@ -10,6 +10,7 @@ import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/prima
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
+import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
@@ -592,12 +593,12 @@ export default function GenerateReportsPage() {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      const filenamePrefix =
+      const fallbackName =
         reportType === 'single' && selectedStudent
-          ? 'report'
-          : 'class_reports';
+          ? 'student_report.pdf'
+          : 'class_reports.pdf';
       a.href = url;
-      a.download = `${filenamePrefix}_${Date.now()}.pdf`;
+      a.download = pdfDownloadFilenameFromResponse(response, fallbackName);
       a.click();
       window.URL.revokeObjectURL(url);
 
