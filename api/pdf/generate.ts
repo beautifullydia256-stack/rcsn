@@ -662,57 +662,58 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    /* Lower section: extra table columns vs Upper — compact vertical rhythm to fit one A4 like Upper */
-    html, body { margin: 0; padding: 0; font-family: 'Times New Roman', Times, serif; font-size: 9.6pt; line-height: 1.22; color: #1e293b; background: #fff; }
-    .report-page--lower { width: 210mm; padding: 3mm 4mm 2.5mm; }
-    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 2mm; }
-    .logo-cell { width: 118px; height: 118px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
+    /* Match Upper Section PDF: same page padding, type scale, section gaps, and footer spacing */
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 10.2pt; line-height: 1.3; color: #1e293b; background: #fff; }
+    .report-page { width: 210mm; padding: 4mm 5mm 4mm 5mm; }
+    .header-wrap { display: flex; align-items: flex-start; margin-bottom: 3mm; }
+    .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .school-center { flex: 1; text-align: center; margin-left: 10px; }
-    .school-name { font-size: 17pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 2px; }
-    .school-subtitle { font-size: 10pt; color: #3b82f6; margin-bottom: 1px; }
-    .school-address { font-size: 10pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
-    .school-contact { font-size: 10pt; font-weight: 600; color: #1e40af; margin-bottom: 1px; }
-    .school-motto { font-size: 9pt; font-style: italic; font-weight: 600; color: #2563eb; }
-    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 2mm 0; }
-    .badge-wrap { text-align: center; margin-bottom: 2mm; }
-    .badge { display: inline-block; padding: 5px 14px; border-radius: 14px; font-size: 8.3pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
-    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 4px 8px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 2mm; background: #f8fafc; min-height: 22mm; }
-    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px; font-size: 9.6pt; }
+    .school-center { flex: 1; text-align: center; margin-left: 12px; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: #2563eb; }
+    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 3mm 0 3mm; }
+    .badge-wrap { text-align: center; margin-bottom: 3mm; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
+    .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
+    .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
+    .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
     .student-grid strong { color: #1e3a8a; }
-    .photo-cell { width: 2.1cm; height: 2.6cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
+    .photo-cell { width: 2.1cm; height: 2.9cm; border: 1px solid #bfdbfe; border-radius: 4px; background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
     .photo-cell img { width: 100%; height: 100%; object-fit: cover; }
-    table.lower-main { width: 100%; border-collapse: collapse; font-size: 8.2pt; margin-bottom: 2mm; }
-    table.lower-main th, table.lower-main td { border: 1px solid #bfdbfe; padding: 2px 4px; line-height: 1.15; vertical-align: middle; }
-    table.lower-main thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
-    table.lower-main th.tc, table.lower-main td.tc { text-align: center; }
-    table.lower-main td.subj-name { font-weight: 600; color: #0f172a; }
-    table.lower-main td.comment { font-size: 7.9pt; color: #475569; }
-    table.lower-main td.teacher { font-size: 8pt; color: #475569; }
-    table.lower-main tbody tr:nth-child(even) { background: #f0f9ff; }
-    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 3px; margin-bottom: 2mm; font-size: 8pt; }
-    .summary-box { padding: 4px 6px; border: 1px solid #bfdbfe; border-radius: 6px; background: #fff; }
+    table { width: 100%; border-collapse: collapse; font-size: 9.8pt; margin-bottom: 3mm; }
+    th, td { border: 1px solid #bfdbfe; padding: 4px 6px; }
+    thead tr { background: #dbeafe; color: #1e3a8a; text-transform: uppercase; font-weight: 600; }
+    th { text-align: left; }
+    th.tc, td.tc { text-align: center; }
+    td.subj-name { font-weight: 600; color: #0f172a; }
+    td.comment, td.teacher { font-size: 9.2pt; color: #475569; }
+    tbody tr:nth-child(even) { background: #f0f9ff; }
+    .summary-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; margin-bottom: 3mm; font-size: 8.7pt; }
+    .summary-box { padding: 5px 8px; border: 1px solid #bfdbfe; border-radius: 8px; background: #fff; }
     .summary-box strong { color: #1e3a8a; }
-    .grading-section { margin-bottom: 2mm; font-size: 7.9pt; }
-    .grading-section h3 { font-size: 8.4pt; font-weight: 600; margin-bottom: 2px; color: #1e3a8a; }
-    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .grading-section { margin-bottom: 3mm; font-size: 8.6pt; }
+    .grading-section h3 { font-size: 9.2pt; font-weight: 600; margin-bottom: 3px; color: #1e3a8a; }
+    .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
     .grading-table { border: 1px solid #bfdbfe; border-radius: 8px; overflow: hidden; }
-    .grading-table .head { background: #dbeafe; padding: 3px 6px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7pt; color: #1e3a8a; }
-    .grading-table table { width: 100%; margin-bottom: 0; font-size: 7pt; }
-    .grading-table th, .grading-table td { padding: 1px 3px; line-height: 1.12; }
+    .grading-table .head { background: #dbeafe; padding: 4px 8px; font-weight: 600; text-align: center; text-transform: uppercase; font-size: 7.8pt; color: #1e3a8a; }
+    .grading-table table { width: 100%; margin-bottom: 0; font-size: 8pt; }
+    .grading-table th, .grading-table td { padding: 3px 5px; }
     .grading-table tbody tr:nth-child(even) { background: #f0f9ff; }
-    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 6px 8px; margin-bottom: 1.5mm; font-size: 7.9pt; background: #fff; page-break-inside: auto; }
-    .comments-box h3 { font-size: 8.2pt; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; color: #1e3a8a; }
-    .comments-box .comment-p { margin-bottom: 2px; line-height: 1.18; color: #334155; }
-    .comments-box .signature { font-size: 7.5pt; margin-top: 2px; color: #64748b; }
-    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 4px; margin-top: 4px; border-top: 1px solid #bfdbfe; font-size: 7.6pt; box-sizing: border-box; page-break-inside: avoid; }
+    .comments-box { border: 1px solid #bfdbfe; border-radius: 8px; padding: 8px 10px; margin-bottom: 3mm; font-size: 8.5pt; background: #fff; }
+    .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: #1e3a8a; }
+    .comments-box .comment-p { margin-bottom: 3px; line-height: 1.26; color: #334155; }
+    .comments-box .signature { font-size: 8pt; margin-top: 3px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 6px; margin-top: 6px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; box-sizing: border-box; }
     .next-term-fees strong { color: #1e3a8a; }
-    .report-footer { text-align: center; font-size: 6.5pt; margin-top: 1.5mm; padding-top: 2px; border-top: 1px solid #bfdbfe; color: #64748b; page-break-inside: avoid; }
-    .exam-sub { font-size: 7pt; color: #64748b; margin-top: 1px; }
+    .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
   </style>
 </head>
 <body>
-  <div class="report-page report-page--lower">
+  <div class="report-page">
   <div class="header-wrap">
     <div class="logo-cell">${logoUrl ? `<img src="${logoUrl}" alt="School Logo" />` : '<span style="font-size:9pt;color:#94a3b8">School<br/>Logo</span>'}</div>
     <div class="school-center">
@@ -738,7 +739,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     </div>
     <div class="photo-cell">${hasPhoto ? `<img src="${String(photoUrl).replace(/"/g, '&quot;')}" alt="Student photo" width="80" height="105" style="object-fit:cover;display:block;" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}</div>
   </div>
-  <table class="lower-main">
+  <table>
     <thead>
       <tr>
         <th>SUBJECT</th>
