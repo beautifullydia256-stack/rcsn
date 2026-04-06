@@ -326,7 +326,20 @@ function VoiceNoteBubble({
         <Loader2 className="h-7 w-7 shrink-0 animate-spin text-[#008069]" aria-label="Loading voice message" />
       ) : (
         <>
-          {/* Center: waveform + scrub line (stretches wide, stays short in height). */}
+          <button
+            type="button"
+            onClick={togglePlay}
+            disabled={!url}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
+            aria-label={playing ? 'Pause voice message' : 'Play voice message'}
+          >
+            {playing ? (
+              <Pause className="h-4 w-4 fill-current" fill="currentColor" />
+            ) : (
+              <Play className="h-4 w-4 translate-x-px fill-current" fill="currentColor" />
+            )}
+          </button>
+          {/* Center: waveform + scrub (between play and right edge). */}
           <div
             ref={seekRef}
             role="slider"
@@ -378,20 +391,6 @@ function VoiceNoteBubble({
               {durationLabel}
             </span>
           </div>
-          {/* Play / pause opposite the avatar (right). */}
-          <button
-            type="button"
-            onClick={togglePlay}
-            disabled={!url}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
-            aria-label={playing ? 'Pause voice message' : 'Play voice message'}
-          >
-            {playing ? (
-              <Pause className="h-4 w-4 fill-current" fill="currentColor" />
-            ) : (
-              <Play className="h-4 w-4 translate-x-px fill-current" fill="currentColor" />
-            )}
-          </button>
         </>
       )}
     </div>
