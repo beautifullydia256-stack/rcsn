@@ -6,8 +6,6 @@ import {
   firstDayOfMonthIsoYmd,
 } from "./schoolCalendarDate";
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
 export type AccountantTermBrief = {
   id: string;
   label: string;
@@ -61,16 +59,11 @@ export type AccountantDashboardMetrics = {
     monthToDateAllTerms: number;
   };
   /**
-   * All history, monthly buckets (DB aggregation). netCash = lifetime fee receipts − lifetime expenses.
+   * Lifetime totals on the same basis as “Net cash surplus”: all non-reversed fee receipts vs approved/paid expenses.
    */
   cashflowAllTime: {
-    months: Array<{
-      year: number;
-      month: number;
-      periodLabel: string;
-      feeReceipts: number;
-      expenses: number;
-    }>;
+    totalFeeReceipts: number;
+    totalExpenses: number;
     netCash: number;
   };
   /** Sum of discount amounts recorded for the school (no term filter). */
@@ -141,7 +134,6 @@ export async function fetchAccountantDashboardMetrics(
     balancesRes,
     paymentsRes,
     expensesTermRes,
-    cashflowRpcRes,
     expensesAllTimeRes,
     discountsRes,
     recentPayRes,
@@ -168,7 +160,6 @@ export async function fetchAccountantDashboardMetrics(
           .eq("school_id", schoolId)
           .eq("term_id", currentTermId)
       : Promise.resolve({ data: [] as { amount?: number; status?: string }[] }),
-    client.rpc("school_cashflow_monthly_totals", { p_school_id: schoolId }),
     client.from("school_expenses").select("amount, status").eq("school_id", schoolId),
     client.from("student_discounts").select("amount").eq("school_id", schoolId),
     client
@@ -180,25 +171,6 @@ export async function fetchAccountantDashboardMetrics(
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
-
-  if (cashflowRpcRes.error) {
-    if (typeof import.meta !== "undefined" && (import.meta as ImportMeta).env?.DEV) {
-      console.warn("[accountantDashboardMetrics] school_cashflow_monthly_totals:", cashflowRpcRes.error.message);
-    }
-  }
-  type CashflowRpcRow = { yr: number; mo: number; fee_receipts: number | string | null; expenses: number | string | null };
-  const rawCashflow = (cashflowRpcRes.error ? [] : cashflowRpcRes.data ?? []) as CashflowRpcRow[];
-  const cashflowAllTimeMonths = rawCashflow.map((r) => {
-    const mo = Number(r.mo);
-    const yr = Number(r.yr);
-    return {
-      year: yr,
-      month: mo,
-      periodLabel: `${MONTHS[Math.max(0, Math.min(11, mo - 1))]} ${yr}`,
-      feeReceipts: Math.round(num(r.fee_receipts)),
-      expenses: Math.round(num(r.expenses)),
-    };
-  });
 
   const terms = (termsRes.data || []) as {
     id: string;
@@ -375,10 +347,6 @@ export async function fetchAccountantDashboardMetrics(
     0
   );
   const netCashSurplus = totalFeeReceiptsRecorded - totalExpensesApprovedPaidAllTerms;
-  const netCashAllTime =
-    rawCashflow.length > 0
-      ? rawCashflow.reduce((s, r) => s + num(r.fee_receipts) - num(r.expenses), 0)
-      : netCashSurplus;
 
   return {
     asOfDate: todayIso,
@@ -406,8 +374,9 @@ export async function fetchAccountantDashboardMetrics(
       monthToDateAllTerms,
     },
     cashflowAllTime: {
-      months: cashflowAllTimeMonths,
-      netCash: netCashAllTime,
+      totalFeeReceipts: Math.round(totalFeeReceiptsRecorded),
+      totalExpenses: Math.round(totalExpensesApprovedPaidAllTerms),
+      netCash: netCashSurplus,
     },
     discountsSchoolWide,
     schoolCashPosition: {

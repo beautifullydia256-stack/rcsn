@@ -10,7 +10,6 @@ interface PendingExpense {
   category_name: string;
   description: string;
   amount: number;
-  expense_date: string;
   reference_number: string;
   recorded_by: string;
   payment_method: string;
@@ -45,7 +44,6 @@ export function PendingExpenses() {
           category_name,
           description,
           amount,
-          expense_date,
           reference_number,
           recorded_by,
           payment_method,
@@ -207,7 +205,10 @@ export function PendingExpenses() {
                     <div className="flex flex-wrap gap-3 text-xs text-white/50">
                       <span>Amount: <span className="text-red-400 font-semibold">{formatCurrency(expense.amount)}</span></span>
                       <span>•</span>
-                      <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
+                      <span>
+                        Submitted:{' '}
+                        {new Date(expense.created_at).toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' })}
+                      </span>
                       <span>•</span>
                       <span>Method: {expense.payment_method}</span>
                       <span>•</span>

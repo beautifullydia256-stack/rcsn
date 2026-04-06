@@ -3,10 +3,11 @@
  * and legacy flat categories if hierarchy tables are not seeded yet.
  */
 import { useState, useEffect, useCallback, useMemo, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import NativeModal from "@/components/NativeModal";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../lib/supabase";
+import { resolveCurrentSchoolTerm } from "../../lib/adminFinanceTerm";
 import { useAuthStore } from "../../store/authStore";
 import { hasPermission, PERMISSION_KEYS } from "../../lib/permissions";
 import { EXPENSES_QUERY_KEY } from "../../pages/accountant/api/expenses";
@@ -16,6 +17,7 @@ import {
   salaryPeriodLabel,
   type ExistingSalaryRow,
 } from "../../pages/accountant/api/expensePayroll";
+import { calendarDateIsoInTimeZone } from "../../lib/schoolCalendarDate";
 import {
   fetchExpenseMainCategories,
   fetchExpenseSubcategories,
@@ -23,28 +25,19 @@ import {
   type ExpenseMainCategoryRow,
   type ExpenseSubcategoryRow,
 } from "../../pages/accountant/api/expenseHierarchy";
-import { Info, Zap } from "lucide-react";
+import { DollarSign, Zap, X } from "lucide-react";
 
 export type RecordExpenseModalProps = {
   open: boolean;
   onClose: () => void;
 };
 
-type TermRow = { id: string; term: number; year: number; label: string };
 type LegacyCat = { category_id: string; category_name: string };
 
 type TeacherLite = { teacher_id: string; name: string; salary: number | null; employee_id: string | null };
 type OtherStaffLite = { id: string; full_name: string; job_title: string | null; salary_amount: number | null };
 
 type StaffPick = { kind: "teacher"; id: string; name: string } | { kind: "other"; id: string; name: string };
-
-function localTodayIso(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 const PAYMENT_METHODS = [
   { value: "cash", label: "Cash" },
@@ -85,18 +78,15 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
   const [mainCode, setMainCode] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
-  const [terms, setTerms] = useState<TermRow[]>([]);
-  const [termId, setTermId] = useState<string>("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [expenseDate, setExpenseDate] = useState(() => localTodayIso());
   const [paymentMethod, setPaymentMethod] = useState<string>("bank");
   /** When true, expense is pending (default — all entries require admin approval unless user can direct-approve and unchecks). */
   const [submitForApprovalOnly, setSubmitForApprovalOnly] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [receiptUrl, setReceiptUrl] = useState("");
+  const [transactionId, setTransactionId] = useState("");
 
   const [teachers, setTeachers] = useState<TeacherLite[]>([]);
   const [otherStaff, setOtherStaff] = useState<OtherStaffLite[]>([]);
@@ -115,9 +105,8 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
     setDescription("");
     setAmount("");
     setMessage("");
-    setExpenseDate(localTodayIso());
     setSubmitForApprovalOnly(true);
-    setReceiptUrl("");
+    setTransactionId("");
     setStaffSearch("");
     setSelectedStaff(null);
     setSalaryMonth(new Date().getMonth());
@@ -135,16 +124,10 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   useEffect(() => {
     if (!open || !schoolId) return;
     void (async () => {
-      const [mains, subs, sug, termRes, teachersRes, otherRes, legacyRes] = await Promise.all([
+      const [mains, subs, sug, teachersRes, otherRes, legacyRes] = await Promise.all([
         fetchExpenseMainCategories().catch(() => [] as ExpenseMainCategoryRow[]),
         fetchExpenseSubcategories(schoolId).catch(() => [] as ExpenseSubcategoryRow[]),
         fetchRecentExpenseDescriptions(schoolId),
-        supabase
-          .from("school_terms")
-          .select("id, term, year, start_date, end_date")
-          .eq("school_id", schoolId)
-          .order("year", { ascending: false })
-          .order("term", { ascending: false }),
         supabase.from("teachers").select("teacher_id, name, salary, employee_id").eq("school_id", schoolId).order("name"),
         supabase
           .from("other_staff_members")
@@ -169,26 +152,6 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       } else if (!hierarchyReady && legacy.length) {
         setLegacyCategoryId(legacy[0].category_id);
       }
-
-      const trows = (termRes.data || []) as {
-        id: string;
-        term: number;
-        year: number;
-        start_date: string | null;
-        end_date: string | null;
-      }[];
-      setTerms(
-        trows.map((t) => ({
-          id: t.id,
-          term: t.term,
-          year: t.year,
-          label: `Term ${t.term}, ${t.year}`,
-        }))
-      );
-      const today = localTodayIso();
-      const current = trows.find((t) => t.start_date && t.end_date && t.start_date <= today && t.end_date >= today);
-      if (current) setTermId(current.id);
-      else if (trows[0]) setTermId(trows[0].id);
     })();
   }, [open, schoolId]);
 
@@ -317,11 +280,6 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
       setMessage("Not signed in or school missing.");
       return;
     }
-    const today = localTodayIso();
-    if (expenseDate > today) {
-      setMessage("Expense date cannot be in the future.");
-      return;
-    }
     const desc = description.trim();
     if (!desc) {
       setMessage("Enter a description (or pick staff for salary — it fills automatically).");
@@ -359,19 +317,33 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
     setSubmitting(true);
     try {
+      const currentTerm = await resolveCurrentSchoolTerm(supabase, schoolId);
+      if (!currentTerm?.id) {
+        setMessage(
+          "No current school term is set. Configure terms and dates under Admin so expenses are recorded for the active period."
+        );
+        return;
+      }
+
       const status =
         canDirectApproveExpense && !submitForApprovalOnly ? "approved" : "pending";
-      const descWithExternal = receiptUrl.trim() ? `${desc}\n\nExternal receipt / proof: ${receiptUrl.trim()}` : desc;
+      /** Calendar date in school TZ at save time; pending rows get book date on admin approve. */
+      const expenseDateIso = calendarDateIsoInTimeZone(new Date());
+      const descWithTxn = transactionId.trim() ? `${desc}\n\nTransaction ID: ${transactionId.trim()}` : desc;
       const payload: Record<string, unknown> = {
         school_id: schoolId,
-        description: descWithExternal,
+        description: descWithTxn,
         amount: amt,
-        expense_date: expenseDate,
+        expense_date: expenseDateIso,
         payment_method: paymentMethod,
         status,
         recorded_by: userId,
+        term_id: currentTerm.id,
       };
-      if (termId) payload.term_id = termId;
+      if (status === "approved") {
+        payload.approved_by = userId;
+        payload.approved_at = new Date().toISOString();
+      }
 
       let categoryNameForRef = "";
       if (useLegacyCategories) {
@@ -395,7 +367,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
       const { data: refNum, error: refErr } = await supabase.rpc("generate_expense_reference", {
         p_school_id: schoolId,
-        p_expense_date: expenseDate,
+        p_expense_date: expenseDateIso,
         p_category_name: categoryNameForRef,
       });
       if (refErr) console.warn("generate_expense_reference", refErr);
@@ -408,6 +380,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
       setDescription("");
       setAmount("");
+      setTransactionId("");
       setSavedExpenseId(newId ?? null);
       setMessage(
         status === "pending"
@@ -443,26 +416,57 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
 
   if (!open) return null;
 
-  return (
-    <NativeModal isOpen={open} onClose={handleClose} title="Record expense" size="lg">
-      <p className="-mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
-        Structured categories (main → sub) for reporting. Salary lines link to staff. Fees use Record payment.
-      </p>
-      <form onSubmit={handleSubmit} className="flex flex-col">
-        <div className="space-y-4">
-          <div className="flex gap-2 rounded-xl border border-emerald-200/90 bg-emerald-50/80 p-3 text-sm text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-100">
-            <Info className="h-4 w-4 shrink-0 text-emerald-700 dark:text-emerald-400 mt-0.5" aria-hidden />
-            <p>
-              <strong className="font-semibold">Fees vs expenses:</strong> Student fees are <em>Record payment</em>. Everything here is
-              school spending (salaries, fuel, food, etc.). New expenses are <strong>pending</strong> until an admin approves them (unless your school granted you “Approve expenses on entry” on Access & permissions). Cashflow and analytics use <strong>approved</strong> or <strong>paid</strong> lines only.
-            </p>
-          </div>
+  const scrollHide =
+    "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0";
 
-          {useLegacyCategories && (
-            <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-100">
-              Hierarchy not seeded for this school — using legacy categories. Run the latest Supabase migration for full main/sub reporting.
-            </p>
-          )}
+  const modalContent = (
+    <div
+      className="fixed inset-0 z-[240] flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0, 0, 0, 0.5)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Record expense"
+      onClick={handleClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-600 dark:bg-slate-950"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className={`max-h-[90vh] overflow-y-auto overscroll-y-contain ${scrollHide}`}>
+          <div className="flex items-start gap-3 rounded-t-2xl bg-amber-700 px-5 py-4 dark:bg-amber-800">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/20">
+              <DollarSign className="h-5 w-5 text-white" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg font-bold text-white">Record expense</h2>
+              <p className="mt-0.5 text-sm text-white/90">Log school spending. Student fees stay under Record payment.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="shrink-0 rounded-lg p-1.5 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/50"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <form onSubmit={handleSubmit} className="flex flex-col">
+            <div className="space-y-4 p-5">
+              <div className="rounded-lg border border-amber-200 bg-amber-50/90 p-3 text-sm text-amber-950 dark:border-amber-800/60 dark:bg-amber-950/40 dark:text-amber-100">
+                <p>
+                  <strong className="font-semibold">Approval:</strong> Accountants can record expenses here; new lines are usually{" "}
+                  <strong>pending</strong> until a <strong>school admin</strong> approves them. When a <strong>school admin</strong> or{" "}
+                  <strong>owner</strong> enters the expense—or your role has approve-on-entry— it can be saved as{" "}
+                  <strong>approved</strong> right away.
+                </p>
+              </div>
+
+              {useLegacyCategories && (
+                <p className="rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800/50 dark:bg-amber-950/40 dark:text-amber-100">
+                  Hierarchy not seeded for this school — using legacy categories. Run the latest Supabase migration for full main/sub
+                  reporting.
+                </p>
+              )}
 
               {hierarchyReady && (
                 <>
@@ -688,32 +692,19 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                 </datalist>
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Amount (UGX)</label>
-                  {selectedSub?.is_salary && hierarchyReady && (
-                    <p className="mb-1 text-xs text-slate-500">Adjust for partial pay, or use “Fill full amount” in the salary section.</p>
-                  )}
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    className={inputClass}
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-slate-700">Expense date</label>
-                  <input
-                    type="date"
-                    className={inputClass}
-                    value={expenseDate}
-                    max={localTodayIso()}
-                    onChange={(e) => setExpenseDate(e.target.value)}
-                    required
-                  />
-                </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-slate-700">Amount (UGX)</label>
+                {selectedSub?.is_salary && hierarchyReady && (
+                  <p className="mb-1 text-xs text-slate-500">Adjust for partial pay, or use “Fill full amount” in the salary section.</p>
+                )}
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  className={inputClass}
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0"
+                />
               </div>
 
               <div>
@@ -728,34 +719,25 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
               </div>
 
               <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">External receipt / proof (optional)</label>
-                <p className="mb-1 text-xs text-slate-500">
-                  A permanent <strong>payment voucher link</strong> is saved automatically when you save. Add a URL here only for an extra external proof (e.g. mobile money screenshot hosted online).
+                <label className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">
+                  Transaction ID <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
+                </label>
+                <p className="mb-1 text-xs text-slate-500 dark:text-slate-400">
+                  Bank reference, mobile-money transaction ID, or cheque number — saved on this expense line.
                 </p>
                 <input
-                  type="url"
+                  type="text"
                   className={inputClass}
-                  value={receiptUrl}
-                  onChange={(e) => setReceiptUrl(e.target.value)}
-                  placeholder="https://…"
+                  value={transactionId}
+                  onChange={(e) => setTransactionId(e.target.value)}
+                  placeholder="e.g. FT256… / MM123456789"
+                  autoComplete="off"
                 />
               </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Term (optional)</label>
-                <select className={selectFieldClass} value={termId} onChange={(e) => setTermId(e.target.value)}>
-                  <option value="">— Not linked to a term —</option>
-                  {terms.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {!canDirectApproveExpense ? (
-                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                  This expense will be saved as <strong>pending</strong>. An admin must approve it on the admin dashboard before it appears in cashflow and financial analytics.
+                <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-900/40 dark:text-slate-200">
+                  Your entries will be saved as <strong>pending</strong> until an admin approves them.
                 </p>
               ) : (
                 <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
@@ -779,7 +761,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                 </p>
               )}
               {savedExpenseId && (
-                <p className="text-sm text-emerald-800">
+                <p className="text-sm text-emerald-800 dark:text-emerald-400">
                   <Link
                     to={`/dashboard/expense-receipt/${savedExpenseId}`}
                     className="font-medium underline"
@@ -790,29 +772,32 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                   </Link>
                 </p>
               )}
-
-              <div className="flex flex-wrap gap-3 pt-1">
-                <button
-                  type="submit"
-                  disabled={submitting || (useLegacyCategories && !legacyCategories.length) || (!useLegacyCategories && !subcategories.length)}
-                  className="inline-flex flex-1 min-w-[140px] items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {submitting
-                    ? "Saving…"
-                    : !canDirectApproveExpense || submitForApprovalOnly
-                      ? "Submit for approval"
-                      : "Save as approved"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
-                >
-                  Cancel
-                </button>
-              </div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 bg-slate-50/50 px-5 py-4 dark:border-slate-600 dark:bg-slate-900/30">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="rounded-xl border-2 border-amber-600 bg-white px-4 py-2.5 text-sm font-medium text-amber-800 shadow-sm hover:bg-amber-50 dark:border-amber-500 dark:bg-slate-900 dark:text-amber-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={submitting || (useLegacyCategories && !legacyCategories.length) || (!useLegacyCategories && !subcategories.length)}
+                className="inline-flex min-w-[140px] flex-1 items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 sm:flex-none"
+              >
+                {submitting
+                  ? "Saving…"
+                  : !canDirectApproveExpense || submitForApprovalOnly
+                    ? "Submit for approval"
+                    : "Save as approved"}
+              </button>
+            </div>
+          </form>
         </div>
-      </form>
-    </NativeModal>
+      </div>
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

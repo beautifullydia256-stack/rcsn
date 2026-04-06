@@ -132,7 +132,8 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const [studentSearchQuery, setStudentSearchQuery] = useState("");
   const [studentSearchFocused, setStudentSearchFocused] = useState(false);
   const [currentTerm, setCurrentTerm] = useState<CurrentTermRow | null>(null);
-  const [hasCurrentTermInvoice, setHasCurrentTermInvoice] = useState<boolean | null>(null);
+  /** Main term fee invoice only (matches Invoices & Billing); null = still checking. */
+  const [hasMainTermInvoice, setHasMainTermInvoice] = useState<boolean | null>(null);
   const [currentTermFee, setCurrentTermFee] = useState<number | null>(null);
   const [activatingInvoice, setActivatingInvoice] = useState(false);
   const [schoolLetterhead, setSchoolLetterhead] = useState(() => schoolRowToReceiptHeader(null));
@@ -190,14 +191,14 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   useEffect(() => {
     if (!schoolId || !selectedStudent) {
       setOutstandingBalances([]);
-      setHasCurrentTermInvoice(null);
+      setHasMainTermInvoice(null);
       setCurrentTermFee(null);
       return;
     }
     let cancelled = false;
     setBalancesLoading(true);
     setOutstandingBalances([]);
-    setHasCurrentTermInvoice(null);
+    setHasMainTermInvoice(null);
     setCurrentTermFee(null);
     void (async () => {
       try {
@@ -210,22 +211,32 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
                 .eq("school_id", schoolId)
                 .eq("student_id", selectedStudent)
                 .eq("term_id", currentTerm.id)
+                .eq("is_supplementary", false)
+                .neq("status", "cancelled")
                 .maybeSingle()
-            : Promise.resolve({ data: null }),
+            : Promise.resolve({ data: null, error: null }),
           supabase.from("students").select("current_class").eq("school_id", schoolId).eq("student_id", selectedStudent).maybeSingle(),
         ]);
         if (cancelled) return;
+
+        const inv = invRes as { data: { invoice_id?: string } | null; error: { message?: string } | null };
+        const hasMain =
+          !!currentTerm && !inv.error && !!inv.data?.invoice_id;
+        if (!cancelled) {
+          setHasMainTermInvoice(currentTerm ? hasMain : null);
+        }
+
         if (outResult.errorMessage) {
           setMessage("Could not load balances: " + outResult.errorMessage);
           setOutstandingBalances([]);
-          return;
+        } else {
+          setOutstandingBalances(outResult.rows);
         }
-        setOutstandingBalances(outResult.rows);
+
         if (currentTerm) {
-          setHasCurrentTermInvoice(!!invRes.data);
           const cls = (stRes.data as { current_class?: string } | null)?.current_class;
           if (!cls) {
-            setCurrentTermFee(null);
+            if (!cancelled) setCurrentTermFee(null);
           } else {
             const { data: feeRow } = await supabase
               .from("school_fee_structure")
@@ -252,16 +263,17 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
   const selectedStudentRow = students.find((s) => s.student_id === selectedStudent);
 
   const isGraduated = selectedStudentRow?.status === "graduated";
-  /** Opening fees from fee structure / sync live on student_balances only — no student_invoices row yet. */
-  const hasCurrentTermBalanceAlready =
+  /** Ledger already expects this term fees (shows in outstanding); don't duplicate "activate main invoice". */
+  const hasCurrentTermPayableBalance =
     !!currentTerm &&
-    outstandingBalances.some((b) => b.kind === "term" && b.term_id === currentTerm.id);
+    outstandingBalances.some((b) => b.kind === "term" && b.term_id === currentTerm.id && b.balance > 0);
   const showActivateCurrentTerm =
     !!currentTerm &&
-    hasCurrentTermInvoice === false &&
+    hasMainTermInvoice === false &&
+    !balancesLoading &&
     !!selectedStudent &&
     !isGraduated &&
-    !hasCurrentTermBalanceAlready;
+    !hasCurrentTermPayableBalance;
 
   async function handleActivateCurrentTermInvoice() {
     if (!schoolId || !userId || !selectedStudent || !currentTerm || !selectedStudentRow) return;
@@ -288,6 +300,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
           total_amount: feeAmount,
           status: "issued",
           invoice_number: invNum,
+          is_supplementary: false,
           created_by: userId,
           updated_at: new Date().toISOString(),
         },
@@ -323,7 +336,7 @@ export default function RecordPaymentModal({ open, onClose, initialStudentId }: 
         { onConflict: "student_id,term_id" }
       );
       if (balErr) throw balErr;
-      setHasCurrentTermInvoice(true);
+      setHasMainTermInvoice(true);
       setMessage("Current term invoice activated. Refreshing balances…");
       const outResult = await fetchOutstandingRowsForRecordPayment(schoolId, selectedStudent);
       if (!outResult.errorMessage) setOutstandingBalances(outResult.rows);

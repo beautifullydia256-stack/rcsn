@@ -380,7 +380,6 @@ function RecordExpenseModal({
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
-  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().split('T')[0]);
   const [referenceNumber, setReferenceNumber] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -409,7 +408,6 @@ function RecordExpenseModal({
           description,
           amount: parseFloat(amount),
           payment_method: paymentMethod,
-          expense_date: expenseDate,
           reference_number: referenceNumber || null,
           term_id: termId
         })
@@ -425,7 +423,6 @@ function RecordExpenseModal({
       setDescription('');
       setAmount('');
       setPaymentMethod('cash');
-      setExpenseDate(new Date().toISOString().split('T')[0]);
       setReferenceNumber('');
 
       onSuccess();
@@ -526,17 +523,6 @@ function RecordExpenseModal({
                 <option value="cheque" className="bg-slate-800">Cheque</option>
                 <option value="other" className="bg-slate-800">Other</option>
               </select>
-            </div>
-
-            <div>
-              <label className="block text-white/80 text-sm mb-2">Expense Date *</label>
-              <input
-                type="date"
-                value={expenseDate}
-                onChange={(e) => setExpenseDate(e.target.value)}
-                required
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-white"
-              />
             </div>
 
             <div>

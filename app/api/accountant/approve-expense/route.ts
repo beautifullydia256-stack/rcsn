@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { calendarDateIsoInTimeZone } from '@/lib/schoolCalendarDate';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,15 +46,26 @@ export async function POST(request: NextRequest) {
 
     const newStatus = action === 'approve' ? 'approved' : 'rejected';
 
+    const updatePayload: {
+      status: string;
+      approved_by: string;
+      approved_at: string;
+      approval_notes: string | null;
+      expense_date?: string;
+    } = {
+      status: newStatus,
+      approved_by: user.id,
+      approved_at: new Date().toISOString(),
+      approval_notes: notes || null,
+    };
+    if (action === 'approve') {
+      updatePayload.expense_date = calendarDateIsoInTimeZone(new Date());
+    }
+
     // Update expense
     const { data: expense, error: updateError } = await supabase
       .from('school_expenses')
-      .update({
-        status: newStatus,
-        approved_by: user.id,
-        approved_at: new Date().toISOString(),
-        approval_notes: notes || null
-      })
+      .update(updatePayload)
       .eq('expense_id', expense_id)
       .eq('school_id', userRow.school_id)
       .eq('status', 'pending') // Only update if still pending

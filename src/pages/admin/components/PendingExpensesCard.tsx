@@ -7,7 +7,6 @@ interface PendingExpense {
   category_name: string;
   description: string;
   amount: number;
-  expense_date: string;
   reference_number: string;
   recorded_by: string;
   payment_method: string;
@@ -35,7 +34,7 @@ export default function PendingExpensesCard() {
 
       const { data: expensesData } = await supabase
         .from('school_expenses')
-        .select('expense_id, category_name, description, amount, expense_date, reference_number, recorded_by, payment_method, created_at')
+        .select('expense_id, category_name, description, amount, reference_number, recorded_by, payment_method, created_at')
         .eq('school_id', userRow.school_id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -139,7 +138,10 @@ export default function PendingExpensesCard() {
                   <div className="flex flex-wrap gap-3 text-xs ac-text-muted">
                     <span>Amount: <span className="font-semibold text-red-600">{formatCurrency(expense.amount)}</span></span>
                     <span>•</span>
-                    <span>Date: {new Date(expense.expense_date).toLocaleDateString()}</span>
+                    <span>
+                      Submitted:{' '}
+                      {new Date(expense.created_at).toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </span>
                     <span>•</span>
                     <span>Method: {expense.payment_method}</span>
                     <span>•</span>

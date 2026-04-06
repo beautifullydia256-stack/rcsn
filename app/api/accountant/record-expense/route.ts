@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
+import { calendarDateIsoInTimeZone } from '@/lib/schoolCalendarDate';
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,13 +38,14 @@ export async function POST(request: NextRequest) {
       description,
       amount,
       payment_method,
-      expense_date,
       reference_number,
       term_id
     } = body;
 
+    const expense_date = calendarDateIsoInTimeZone(new Date());
+
     // Validation
-    if (!category_name || !description || !amount || !payment_method || !expense_date) {
+    if (!category_name || !description || !amount || !payment_method) {
       return NextResponse.json({ 
         error: 'Missing required fields' 
       }, { status: 400 });

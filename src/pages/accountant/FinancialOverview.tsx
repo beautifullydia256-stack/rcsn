@@ -26,7 +26,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  ReferenceLine,
   PieChart,
   Pie,
   Cell,
@@ -165,12 +164,11 @@ export default function FinancialOverview() {
     .filter((t) => t.outstanding > 0)
     .map((t) => ({ name: t.termLabel, value: t.outstanding }));
 
-  const cfSeries = m.cashflowAllTime.months;
-  const cfRangeLabel =
-    cfSeries.length > 0
-      ? `${cfSeries[0].periodLabel} – ${cfSeries[cfSeries.length - 1].periodLabel}`
-      : "No monthly activity yet";
-  const cfXAxisInterval = cfSeries.length > 36 ? Math.floor(cfSeries.length / 18) : cfSeries.length > 20 ? 1 : 0;
+  const netCashBars = [
+    { name: "Fee receipts" as const, amount: m.cashflowAllTime.totalFeeReceipts },
+    { name: "Expenses" as const, amount: m.cashflowAllTime.totalExpenses },
+  ];
+  const hasNetCashActivity = netCashBars.some((r) => r.amount > 0);
 
   return (
     <div className="min-h-full" style={{ background: "var(--ac-page-bg)", backgroundColor: "var(--ac-page-bg)" }}>
@@ -217,7 +215,7 @@ export default function FinancialOverview() {
 
         {/* School-wide cash position */}
         <section className="mb-10">
-          <SectionTitle title="School cash position (all terms)" />
+          <SectionTitle title="School cash position" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <KPICard
               icon={Landmark}
@@ -274,7 +272,7 @@ export default function FinancialOverview() {
 
         {/* Cash activity */}
         <section className="mb-10">
-          <SectionTitle title="Fee receipt activity (by payment date)" />
+          <SectionTitle title="Fee receipt activity" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <KPICard icon={Calendar} label="Today" value={fmt(ca.todayAllTerms)} variant="teal" />
             <KPICard
@@ -388,82 +386,65 @@ export default function FinancialOverview() {
 
           <section className="w-full">
             <div className="ac-glass-card h-full rounded-2xl border border-[var(--ac-border)]/60 p-6 shadow-sm">
-              <div className="mb-2 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                <h3 className="ac-text-primary text-lg font-semibold">All-time monthly cashflow</h3>
-                <span className="ac-text-muted text-xs font-medium">{cfRangeLabel}</span>
+              <div className="mb-2 flex flex-col gap-1">
+                <h3 className="ac-text-primary text-lg font-semibold">Net cash</h3>
+                <p className="ac-text-secondary text-[13px] font-medium">
+                  Fee receipts compared with what the school has spent (approved/paid expenses). Net is what&apos;s left.
+                </p>
               </div>
-              <p className="ac-text-secondary text-[13px] font-medium">Net (all fee receipts − all expenses)</p>
               <p
-                className={`mt-0.5 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                className={`mt-2 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
               >
                 {fmt(m.cashflowAllTime.netCash)}
               </p>
-              <p className="ac-text-muted mt-1 text-[11px]">
-                Should match &quot;Net cash surplus&quot; above when both use the same complete ledger.
-              </p>
+              <p className="ac-text-muted mt-1 text-[11px]">Same total basis as &quot;Net cash surplus&quot; above.</p>
               <div className="ac-text-secondary mt-4 flex flex-wrap gap-4 text-[13px]">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-sm bg-emerald-700" />
                   Fee receipts
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2.5 w-2.5 rounded-sm bg-emerald-300" />
-                  Expenses (downward bars)
+                  <span className="h-2.5 w-2.5 rounded-sm bg-red-600" />
+                  Expenses (red bars)
                 </span>
               </div>
-              <div className="mt-4 h-[min(360px,50vh)] min-h-[260px] w-full">
-                {cfSeries.length === 0 ? (
-                  <p className="ac-text-muted py-12 text-center text-sm">No payments or expenses yet to chart.</p>
+              <div className="mt-4 h-[min(320px,45vh)] min-h-[220px] w-full">
+                {!hasNetCashActivity ? (
+                  <p className="ac-text-muted py-12 text-center text-sm">No fee receipts or expenses recorded yet.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={cfSeries.map((row) => ({
-                        ...row,
-                        expenseNeg: -row.expenses,
-                      }))}
-                      margin={{ top: 8, right: 8, left: 8, bottom: 52 }}
-                      barCategoryGap="10%"
-                      barGap={3}
-                    >
+                    <BarChart data={netCashBars} margin={{ top: 8, right: 8, left: 8, bottom: 8 }} barCategoryGap="28%">
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
-                      <ReferenceLine y={0} stroke={chartColors.refLine} strokeWidth={1} />
                       <XAxis
-                        dataKey="periodLabel"
-                        tick={{ fontSize: 9, fill: chartColors.axis }}
+                        dataKey="name"
+                        tick={{ fontSize: 12, fill: chartColors.axis }}
                         axisLine={{ stroke: chartColors.grid }}
                         tickLine={false}
-                        angle={-38}
-                        textAnchor="end"
-                        height={70}
-                        interval={cfXAxisInterval}
                       />
                       <YAxis
                         tick={{ fontSize: 11, fill: chartColors.axis }}
                         axisLine={false}
                         tickLine={false}
                         tickFormatter={(v) => (Math.abs(v) >= 1000 ? `${v / 1000}K` : String(v))}
-                        domain={["auto", "auto"]}
+                        domain={[0, "auto"]}
                       />
                       <Tooltip
                         content={({ active, payload }) => {
                           if (!active || !payload?.length) return null;
-                          const d = payload[0].payload as {
-                            periodLabel: string;
-                            feeReceipts: number;
-                            expenses: number;
-                          };
+                          const d = payload[0].payload as { name: string; amount: number };
                           return (
                             <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] px-4 py-3 text-sm shadow-lg">
-                              <p className="ac-text-primary mb-2 font-semibold">{d.periodLabel}</p>
-                              <p className="text-emerald-600">Fee receipts {fmt(d.feeReceipts)}</p>
-                              <p className="text-teal-600">Expenses {fmt(d.expenses)}</p>
+                              <p className="ac-text-primary mb-1 font-semibold">{d.name}</p>
+                              <p className={d.name === "Expenses" ? "text-red-600" : "text-emerald-600"}>{fmt(d.amount)}</p>
                             </div>
                           );
                         }}
                         cursor={{ fill: theme === "dark" ? "rgba(255,255,255,0.06)" : "rgba(148, 163, 184, 0.08)" }}
                       />
-                      <Bar dataKey="feeReceipts" fill="#047857" radius={[2, 2, 0, 0]} name="Fee receipts" />
-                      <Bar dataKey="expenseNeg" fill="#86efac" radius={[0, 0, 2, 2]} name="Expenses" />
+                      <Bar dataKey="amount" radius={[6, 6, 0, 0]} name="Amount">
+                        <Cell fill="#047857" />
+                        <Cell fill="#dc2626" />
+                      </Bar>
                     </BarChart>
                   </ResponsiveContainer>
                 )}
