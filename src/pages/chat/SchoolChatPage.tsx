@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, MessageCircle, Paperclip, Search, Send, Smile, UserPlus, X } from 'lucide-react';
@@ -102,6 +103,7 @@ export default function SchoolChatPage() {
   const [mobileThread, setMobileThread] = useState(false);
   /** Shown in header until `fetchMyConversations` includes the new DM (avoids blank thread after New chat). */
   const [peerPreview, setPeerPreview] = useState<{ name: string; role: string } | null>(null);
+  const [newChatError, setNewChatError] = useState<string | null>(null);
 
   const home = dashboardHomeForRole(role);
 
@@ -189,9 +191,13 @@ export default function SchoolChatPage() {
 
   const openNewConversation = async (u: EligibleChatUser) => {
     setSending(true);
+    setNewChatError(null);
     setPeerPreview({ name: displayChatName(u), role: u.role });
     try {
       const cid = await getOrCreateDm(u.user_id);
+      if (!cid || typeof cid !== 'string') {
+        throw new Error('Could not create conversation. Try again.');
+      }
       await queryClient.refetchQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
       closeNewChatModal();
       setSelectedId(cid);
@@ -199,6 +205,11 @@ export default function SchoolChatPage() {
     } catch (e) {
       console.error('[SchoolChatPage] openNewConversation', e);
       setPeerPreview(null);
+      const msg =
+        e && typeof e === 'object' && 'message' in e && typeof (e as Error).message === 'string'
+          ? (e as Error).message
+          : 'Could not open chat. Check your connection or try again.';
+      setNewChatError(msg);
     } finally {
       setSending(false);
     }
@@ -208,6 +219,7 @@ export default function SchoolChatPage() {
     setNewOpen(false);
     setPickQ('');
     setContactFilter('all');
+    setNewChatError(null);
   };
 
   const handleSend = async (e: FormEvent) => {
@@ -265,6 +277,7 @@ export default function SchoolChatPage() {
             onClick={() => {
               setContactFilter('all');
               setPickQ('');
+              setNewChatError(null);
               setNewOpen(true);
             }}
             className="inline-flex items-center gap-2 rounded-lg bg-[#008069] px-3 py-2 text-sm font-semibold text-white shadow hover:bg-[#006b58]"
@@ -289,6 +302,7 @@ export default function SchoolChatPage() {
             onClick={() => {
               setContactFilter('all');
               setPickQ('');
+              setNewChatError(null);
               setNewOpen(true);
             }}
             className="inline-flex items-center gap-1.5 rounded-full bg-[#008069] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#006b58] shadow-sm"
@@ -475,27 +489,34 @@ export default function SchoolChatPage() {
         </section>
       </div>
 
-      {newOpen && (
-        <div
-          className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/50"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="new-chat-title"
-          onClick={closeNewChatModal}
-        >
+      {typeof document !== 'undefined' &&
+        newOpen &&
+        createPortal(
           <div
-            className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)]"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 pointer-events-auto"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-chat-title"
+            onClick={closeNewChatModal}
           >
-            <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[#f0f2f5]">
-              <h2 id="new-chat-title" className="font-semibold text-[#111b21]">
-                New chat
-              </h2>
-              <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={closeNewChatModal}>
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-3 border-b border-[var(--wa-border)] space-y-3">
+            <div
+              className="w-full max-w-lg rounded-xl bg-white shadow-2xl max-h-[85vh] flex flex-col border border-[var(--wa-border)] pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-[var(--wa-border)] px-4 py-3 bg-[#f0f2f5]">
+                <h2 id="new-chat-title" className="font-semibold text-[#111b21]">
+                  New chat
+                </h2>
+                <button type="button" className="p-1.5 rounded-full hover:bg-black/5 text-[#54656f]" onClick={closeNewChatModal}>
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              {newChatError && (
+                <div className="mx-3 mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[13px] text-red-800" role="alert">
+                  {newChatError}
+                </div>
+              )}
+              <div className="p-3 border-b border-[var(--wa-border)] space-y-3">
               <div className="relative rounded-lg bg-[#f0f2f5] flex items-center px-3 py-2">
                 <Search className="absolute left-5 h-4 w-4 text-[#8696a0]" />
                 <input
@@ -537,8 +558,12 @@ export default function SchoolChatPage() {
                     key={u.user_id}
                     type="button"
                     disabled={sending}
-                    onClick={() => void openNewConversation(u)}
-                    className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      void openNewConversation(u);
+                    }}
+                    className="w-full text-left rounded-lg px-3 py-3 hover:bg-[#f5f6f6] flex gap-3 items-center disabled:opacity-60"
                   >
                     <div className="h-12 w-12 rounded-full bg-[#dfe5e7] flex items-center justify-center text-[#54656f] font-medium">
                       {displayChatName(u).slice(0, 1).toUpperCase()}
@@ -556,8 +581,9 @@ export default function SchoolChatPage() {
               )}
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </div>
   );
 }

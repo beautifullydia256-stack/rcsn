@@ -42,7 +42,8 @@ export async function getOrCreateDm(otherUserId: string): Promise<string> {
     p_other_user_id: otherUserId,
   });
   if (error) throw error;
-  return data as string;
+  if (data == null || data === '') throw new Error('No conversation id returned.');
+  return String(data);
 }
 
 export async function fetchMessages(conversationId: string): Promise<ChatMessageRow[]> {
