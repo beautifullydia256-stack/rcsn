@@ -104,6 +104,7 @@ export default function SchoolChatPage() {
   /** Shown in header until `fetchMyConversations` includes the new DM (avoids blank thread after New chat). */
   const [peerPreview, setPeerPreview] = useState<{ name: string; role: string } | null>(null);
   const [newChatError, setNewChatError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const home = dashboardHomeForRole(role);
 
@@ -127,6 +128,10 @@ export default function SchoolChatPage() {
   useEffect(() => {
     if (selectedConv) setPeerPreview(null);
   }, [selectedConv]);
+
+  useEffect(() => {
+    setSendError(null);
+  }, [selectedId]);
 
   const loadThread = useCallback(
     async (conversationId: string) => {
@@ -226,10 +231,18 @@ export default function SchoolChatPage() {
     e.preventDefault();
     if (!selectedId || !schoolId || !draft.trim()) return;
     setSending(true);
+    setSendError(null);
     try {
       await sendMessage(selectedId, schoolId, draft);
       setDraft('');
       await loadThread(selectedId);
+    } catch (err) {
+      console.error('[SchoolChatPage] send', err);
+      const msg =
+        err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+          ? (err as { message: string }).message
+          : 'Could not send message.';
+      setSendError(msg);
     } finally {
       setSending(false);
     }
@@ -456,6 +469,15 @@ export default function SchoolChatPage() {
                 })}
               </div>
 
+              {sendError && (
+                <div
+                  className="shrink-0 px-3 py-2 text-[13px] text-red-800 bg-red-50 border-t border-red-100"
+                  role="alert"
+                >
+                  {sendError}
+                </div>
+              )}
+
               <form
                 onSubmit={handleSend}
                 className="flex items-end gap-2 px-3 py-2 shrink-0 border-t border-[var(--wa-border)] bg-[#f0f2f5]"
@@ -471,7 +493,10 @@ export default function SchoolChatPage() {
                     className="flex-1 wa-input bg-transparent border-0 text-[15px] text-[#111b21] outline-none py-2 placeholder:text-[#8696a0]"
                     placeholder="Type a message"
                     value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    onChange={(e) => {
+                      setDraft(e.target.value);
+                      if (sendError) setSendError(null);
+                    }}
                     disabled={sending}
                   />
                 </div>
