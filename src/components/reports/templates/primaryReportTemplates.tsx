@@ -31,10 +31,18 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
   // Primary/Nursery path (non O-Level)
   if (!isOL) {
     if (template === 'template3' || isLower) {
-      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
     }
     if (template === 'template4') {
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
     }
     if (template === 'template5') {
       return <Template5CleanReportCard student={student} examSet={examSet} school={school} />;
@@ -77,9 +85,17 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
         />
       );
     case 'template3':
-      return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
     case 'template4':
-      return <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />;
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
     case 'template5':
       return <Template5CleanReportCard student={student} examSet={examSet} school={school} />;
     default:
@@ -1131,7 +1147,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
   return (
     <div
       className="relative px-[0.2cm] py-[0.25cm] bg-white text-slate-800"
-      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.5pt', lineHeight: '1.34', paddingTop: '0.08cm' }}
+      style={{ fontFamily: 'Times New Roman, Times, serif', fontSize: '10.2pt', lineHeight: 1.3, paddingTop: '0.08cm' }}
     >
       {school?.logo_url && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0">
@@ -1322,7 +1338,6 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               <div 
                 style={{
                   fontSize: '7.4pt',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
                   color: '#64748b',
                   marginTop: '0.14cm',
                   fontWeight: '400'
@@ -1351,7 +1366,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
       <div className="relative z-10 space-y-3" style={{ marginTop: '0.2cm' }}>
       {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-[0.55rem] text-[9.9pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2">
+        <div className="flex items-start justify-between gap-[0.55rem] text-[10.2pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2">
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
             <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
             <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
@@ -1377,7 +1392,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
       {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
         <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-[9.5pt]">
+          <table className="w-full text-[9.8pt]">
           <thead>
               <tr className="bg-blue-100/70 text-blue-900 uppercase tracking-wide">
                 <th className="border border-blue-100 px-2.5 py-2 text-center font-semibold">SUBJECT</th>
@@ -1958,7 +1973,6 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               <div 
                 style={{
                   fontSize: '7.4pt',
-                  fontFamily: 'Arial, Helvetica, sans-serif',
                   color: '#64748b',
                   marginTop: '0.14cm',
                   fontWeight: '400'

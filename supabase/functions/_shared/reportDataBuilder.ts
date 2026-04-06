@@ -7,6 +7,13 @@
 
 import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from './reportUtils.ts';
 
+/** Legacy DB placeholder; show MISSED only on reports like the grade column. */
+function normalizeAutoMissedRemarks(text: unknown): string {
+  const s = text == null ? '' : String(text).trim();
+  if (s === 'MISSED - Entry created automatically') return 'MISSED';
+  return s;
+}
+
 export interface BuildReportPayload {
   schoolId: string;
   term: number;
@@ -275,11 +282,12 @@ export async function buildReportDataFromScope(
     const expectedFee = Number(student?.expected_fee_amount || 0);
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
+    const remarksNorm = normalizeAutoMissedRemarks(result.remarks);
     const dbGrade = result.grade && String(result.grade).trim();
     const isOldFormat = dbGrade && ['A', 'B', 'C', 'D', 'E', 'F'].includes(String(dbGrade).toUpperCase());
     const gradeInfo =
       dbGrade && !isOldFormat
-        ? { grade: String(dbGrade), remark: String(result.remarks || '') }
+        ? { grade: String(dbGrade), remark: remarksNorm }
         : calculatePrimaryGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
     const average = studentAverages[result.student_id] || 0;
     const fromDb = processedByStudent[result.student_id];
@@ -295,12 +303,12 @@ export async function buildReportDataFromScope(
       marks_obtained: Number(result.marks_obtained || 0),
       total_marks: Number(result.total_marks || 100),
       grade: gradeInfo.grade,
-      remarks: result.remarks as string | undefined,
+      remarks: result.remarks != null ? remarksNorm : undefined,
       teacher_initials: result.teacher_initials as string | undefined,
       teacher_comment:
         (result.teacher_comment && String(result.teacher_comment).trim())
           ? String(result.teacher_comment)
-          : String(result.remarks || gradeInfo.remark || ''),
+          : String(remarksNorm || gradeInfo.remark || ''),
       class_teacher_comment: resolvedComments[result.student_id]?.classTeacher || '',
       headteacher_comment: resolvedComments[result.student_id]?.headTeacher || '',
       attendance_percentage: attendance?.percentage,
@@ -405,7 +413,9 @@ function oneReportFromSnapshotRows(
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
   const effectiveRemark = (d: SnapshotRowForPersist) =>
-    (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
+    normalizeAutoMissedRemarks(
+      (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '')
+    );
   const results = studentData.map((d) => {
     const remark = effectiveRemark(d);
     return {
