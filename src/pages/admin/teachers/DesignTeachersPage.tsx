@@ -567,7 +567,7 @@ export default function DesignTeachersPage() {
         isOpen={addTeacherModalOpen}
         onClose={closeAddTeacherModal}
         title="Add teacher"
-        size="xl"
+        size="lg"
       >
         <AddTeacherForm
           mode="modal"

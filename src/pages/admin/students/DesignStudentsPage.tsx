@@ -655,7 +655,7 @@ export default function DesignStudentsPage() {
         isOpen={addModalOpen}
         onClose={closeAddStudentModal}
         title="Add student"
-        size="xl"
+        size="lg"
       >
         <AddStudentForm
           mode="modal"

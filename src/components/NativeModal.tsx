@@ -17,6 +17,11 @@ interface NativeModalProps {
 /** Max height fits mobile (dynamic viewport) and desktop; inner body scrolls. */
 const MODAL_MAX_H = 'max-h-[min(88dvh,720px)]';
 
+/**
+ * Desktop: centered panel — width is capped by `size` (do not use max-w-full here;
+ * it overrides max-w-lg/xl and makes the dialog span the whole screen).
+ * Mobile: w-full uses horizontal padding from the overlay wrapper.
+ */
 export default function NativeModal({
   isOpen,
   onClose,
@@ -43,7 +48,8 @@ export default function NativeModal({
     md: `max-w-lg ${MODAL_MAX_H}`,
     lg: `max-w-2xl ${MODAL_MAX_H}`,
     xl: `max-w-3xl ${MODAL_MAX_H}`,
-    full: `max-w-[calc(100vw-1.5rem)] sm:max-w-full sm:mx-4 max-h-[min(92dvh,720px)]`,
+    /** Nearly full width on small screens; on sm+ cap ~1152px so desktop is not edge-to-edge */
+    full: `max-w-[calc(100vw-1.5rem)] sm:max-w-6xl sm:mx-auto ${MODAL_MAX_H}`,
   };
 
   return (
@@ -60,13 +66,13 @@ export default function NativeModal({
           />
 
           {/* Modal: z above accountant pw-sidebar (z-200); centered; inner body scrolls (scrollbar visually hidden). */}
-          <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-4 pointer-events-none overflow-hidden">
+          <div className="fixed inset-0 z-[240] flex items-center justify-center p-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-[max(0.5rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))] sm:p-6 pointer-events-none overflow-y-auto overflow-x-hidden">
             <motion.div
               initial={{ opacity: 0, scale: 0.98, y: 12 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.98, y: 12 }}
               transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className={`relative w-full max-w-full ${sizeClasses[size]} pointer-events-auto flex flex-col min-h-0`}
+              className={`relative w-full shrink-0 ${sizeClasses[size]} pointer-events-auto my-auto flex flex-col min-h-0`}
             >
               <div className="relative flex min-h-0 max-h-full flex-1 flex-col overflow-hidden rounded-2xl group">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 dark:from-white/10 dark:to-white/5 rounded-2xl backdrop-blur-xl border border-white/30 dark:border-white/10 shadow-2xl" />
