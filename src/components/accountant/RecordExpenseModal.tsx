@@ -444,7 +444,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
   if (!open) return null;
 
   return (
-    <NativeModal isOpen={open} onClose={handleClose} title="Record expense" size="xl">
+    <NativeModal isOpen={open} onClose={handleClose} title="Record expense" size="lg">
       <p className="-mt-1 mb-4 text-sm text-slate-600 dark:text-slate-400">
         Structured categories (main → sub) for reporting. Salary lines link to staff. Fees use Record payment.
       </p>
@@ -532,7 +532,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
               {selectedSub?.is_salary && hierarchyReady && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-3">
                   <p className="text-sm font-semibold text-slate-800">Salary payment</p>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-slate-600">Pay period (month)</label>
                       <select className={selectFieldClass} value={salaryMonth} onChange={(e) => setSalaryMonth(Number(e.target.value))}>
@@ -569,7 +569,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <p className="mb-1 text-xs font-medium text-slate-600">Teachers</p>
-                      <ul className="max-h-36 overflow-auto rounded-lg border border-slate-200 bg-white text-sm">
+                      <ul className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0">
                         {staffMatches.teachers.length === 0 ? (
                           <li className="px-3 py-2 text-slate-500">No match</li>
                         ) : (
@@ -594,7 +594,7 @@ export default function RecordExpenseModal({ open, onClose }: RecordExpenseModal
                     </div>
                     <div>
                       <p className="mb-1 text-xs font-medium text-slate-600">Other staff</p>
-                      <ul className="max-h-36 overflow-auto rounded-lg border border-slate-200 bg-white text-sm">
+                      <ul className="max-h-36 overflow-y-auto rounded-lg border border-slate-200 bg-white text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0">
                         {staffMatches.other.length === 0 ? (
                           <li className="px-3 py-2 text-slate-500">No match</li>
                         ) : (
