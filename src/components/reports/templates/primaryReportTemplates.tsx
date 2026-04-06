@@ -2067,12 +2067,14 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 sensitivity: 'base',
               });
             });
-            const fmtMark = (marks: unknown, grade: unknown) => {
+            const fmtMark = (marks: unknown, grade: unknown): string | number => {
               const g = String(grade ?? '').trim().toUpperCase();
               if (g === 'MISSED') return 0;
-              if (marks === '' || marks == null) return marks;
+              if (marks === '' || marks == null) return '';
               if (String(marks).trim().toUpperCase() === 'MISSED') return 0;
-              return marks;
+              if (typeof marks === 'number') return marks;
+              if (typeof marks === 'string') return marks;
+              return String(marks);
             };
             return sortedSubjects.map((subj: any, idx: number) => {
               const bot = fmtMark(subj.bot_marks ?? '', subj.bot_grade ?? '');
