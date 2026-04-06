@@ -153,6 +153,34 @@ function primaryGradeFromMarks(marks: number, total: number): string {
   return 'F9';
 }
 
+/** Same order as on-screen Template 3/4: English → Mathematics → Science, then alphabetical. */
+const PRIORITY_PRIMARY_SUBJECT_NAMES = ['English', 'Mathematics', 'Science'] as const;
+function sortPrimarySubjectNamesForPdf<T extends { subject?: string; subject_name?: string }>(rows: T[]): T[] {
+  const nameOf = (row: T) => String((row as { subject?: string; subject_name?: string }).subject_name ?? row.subject ?? '').trim();
+  const priorityIndex = (name: string) =>
+    PRIORITY_PRIMARY_SUBJECT_NAMES.findIndex((p) => p.toLowerCase() === name.toLowerCase());
+  return [...rows].sort((a, b) => {
+    const na = nameOf(a);
+    const nb = nameOf(b);
+    const ai = priorityIndex(na);
+    const bi = priorityIndex(nb);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return na.localeCompare(nb, undefined, { sensitivity: 'base' });
+  });
+}
+
+/** Marks cells show numeric 0 when the exam was missed; MISSED stays in remarks / grade only. */
+function pdfMarkCellDisplay(marks: unknown, grade: unknown): string | number {
+  const g = String(grade ?? '').trim().toUpperCase();
+  if (g === 'MISSED') return 0;
+  if (marks === '' || marks == null) return '';
+  const ms = String(marks).trim().toUpperCase();
+  if (ms === 'MISSED') return 0;
+  return marks as string | number;
+}
+
 /**
  * Build HTML that matches the on-screen "Report for Upper Section" (Template 4) preview:
  * logo left, school info center, "End of Term Report – Upper Section", student block + photo, table MID | END | Grade | Teacher's Comment | Teacher.
@@ -228,14 +256,18 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     subjects = Array.from(bySubject.values());
   }
 
+  subjects = sortPrimarySubjectNamesForPdf(subjects);
+
   const subjectRows = subjects
     .map((s) => {
       const displayGrade = (s.eot_grade && s.eot_grade !== '—') ? s.eot_grade : (s.mot_grade && s.mot_grade !== '—') ? s.mot_grade : (s.bot_grade && s.bot_grade !== '—') ? s.bot_grade : '—';
+      const motCell = pdfMarkCellDisplay(s.mot_marks, s.mot_grade);
+      const eotCell = pdfMarkCellDisplay(s.eot_marks, s.eot_grade);
       if (showENDColumn) {
         return `<tr>
           <td class="subj-name">${s.subject_name}</td>
-          <td class="tc">${s.mot_marks}</td>
-          <td class="tc">${s.eot_marks}</td>
+          <td class="tc">${motCell}</td>
+          <td class="tc">${eotCell}</td>
           <td class="tc grade">${displayGrade}</td>
           <td class="comment">${s.teacher_comment}</td>
           <td class="teacher">${s.teacher_name}</td>
@@ -243,7 +275,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
       }
       return `<tr>
           <td class="subj-name">${s.subject_name}</td>
-          <td class="tc">${s.mot_marks}</td>
+          <td class="tc">${motCell}</td>
           <td class="tc grade">${displayGrade}</td>
           <td class="comment">${s.teacher_comment}</td>
           <td class="teacher">${s.teacher_name}</td>
@@ -540,13 +572,16 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     if (remark) row.remarks = remark;
     if (initials) row.initials = initials;
   }
-  const subjectRows = Array.from(bySubject.values()).map((row) => {
-    const midCell = showMidTermColumn ? `<td class="tc">${row.mid}</td>` : '';
-    const endCell = showEndOfTermColumn ? `<td class="tc">${row.end}</td>` : '';
+  const sortedLowerRows = sortPrimarySubjectNamesForPdf(Array.from(bySubject.values()));
+  const subjectRows = sortedLowerRows.map((row) => {
+    const midD = pdfMarkCellDisplay(row.mid, '');
+    const endD = pdfMarkCellDisplay(row.end, '');
+    const midCell = showMidTermColumn ? `<td class="tc">${midD}</td>` : '';
+    const endCell = showEndOfTermColumn ? `<td class="tc">${endD}</td>` : '';
     return `<tr><td class="subj-name">${row.subject}</td><td class="tc">${row.total_marks}</td>${midCell}${endCell}<td class="comment">${row.remarks}</td><td class="teacher">${row.initials}</td></tr>`;
   }).join('');
 
-  const totalFullMarks = Array.from(bySubject.values()).reduce((s, r) => s + r.total_marks, 0);
+  const totalFullMarks = sortedLowerRows.reduce((s, r) => s + r.total_marks, 0);
   const summary = (student as any).summary || {};
   const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
   const avg = summary.average != null ? (typeof summary.average === 'number' ? summary.average.toFixed(2) : summary.average) : '—';

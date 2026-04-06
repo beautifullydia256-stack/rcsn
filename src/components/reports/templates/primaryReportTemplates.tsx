@@ -1450,37 +1450,51 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                         };
                       }
                       
-                      // Check if this is a MISSED entry (marks_obtained = 0 AND teacher_remark = 'MISSED')
-                      // All data comes from database: marks, grades, remarks, etc.
-                      const isMissedEntry = (r.marks_obtained === 0 || r.marks_obtained === null) && r.teacher_remark === 'MISSED';
-                      const displayMarks = isMissedEntry ? 'MISSED' : (r.marks_obtained ?? '');
-                      const displayGrade = r.grade ?? ''; // Grade from database
+                      const tr = String(r.teacher_remark ?? '').trim();
+                      const rm = String(r.remarks ?? '').trim();
+                      const tc = String(r.teacher_comment ?? '').trim();
+                      const gr = String(r.grade ?? '').trim().toUpperCase();
+                      const marksNum = Number(r.marks_obtained);
+                      const zeroish =
+                        r.marks_obtained === 0 ||
+                        r.marks_obtained === null ||
+                        r.marks_obtained === '' ||
+                        (!Number.isNaN(marksNum) && marksNum === 0);
+                      const missedFlag = [tr, rm, tc].some((x) => x === 'MISSED') || gr === 'MISSED';
+                      const isMissedEntry = zeroish && missedFlag;
+                      const displayMarks = isMissedEntry ? 0 : (r.marks_obtained ?? '');
+                      const displayGrade = r.grade ?? '';
                       
                       const remark = r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '';
                       const initials = r.teacher_initials ?? '';
                       if (isMid(examSetName)) {
                         subjectGroups[subject].mid = displayMarks;
                         subjectGroups[subject].mid_grade = displayGrade;
-                        if (!subjectGroups[subject].remarks && !isMissedEntry) {
+                        if (!isMissedEntry && remark) {
                           subjectGroups[subject].remarks = remark;
                           subjectGroups[subject].initials = initials;
+                        } else if (isMissedEntry) {
+                          subjectGroups[subject].initials = initials || subjectGroups[subject].initials;
                         }
                       } else if (isEnd(examSetName)) {
                         subjectGroups[subject].end = displayMarks;
                         subjectGroups[subject].end_grade = displayGrade;
-                        if (!isMissedEntry) {
+                        if (!isMissedEntry && remark) {
                           subjectGroups[subject].remarks = remark;
                           subjectGroups[subject].initials = initials;
+                        } else if (isMissedEntry) {
+                          subjectGroups[subject].initials = initials || subjectGroups[subject].initials;
                         }
                       } else {
-                        // Primary / single exam set: one row per subject – show marks and teacher initials
                         subjectGroups[subject].mid = displayMarks;
                         subjectGroups[subject].mid_grade = displayGrade;
                         subjectGroups[subject].end = displayMarks;
                         subjectGroups[subject].end_grade = displayGrade;
-                        if (!isMissedEntry) {
+                        if (!isMissedEntry && remark) {
                           subjectGroups[subject].remarks = remark;
                           subjectGroups[subject].initials = initials;
+                        } else if (isMissedEntry) {
+                          subjectGroups[subject].initials = initials || subjectGroups[subject].initials;
                         }
                       }
                     });
@@ -1493,7 +1507,10 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     Object.values(subjectGroups).forEach((group: any) => {
                       const anyResult = all.find((r: any) => r.subject === group.subject);
                       if (anyResult) {
-                        if (!group.remarks) group.remarks = anyResult.teacher_remark ?? anyResult.remarks ?? anyResult.teacher_comment ?? '';
+                        if (!group.remarks) {
+                          group.remarks =
+                            anyResult.teacher_remark ?? anyResult.remarks ?? anyResult.teacher_comment ?? '';
+                        }
                         if (!group.initials) group.initials = anyResult.teacher_initials ?? '';
                         if (group.mid === undefined && group.end === undefined) {
                           group.mid = anyResult.marks_obtained ?? '';
@@ -1504,22 +1521,14 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     
                     const subjects = Object.values(subjectGroups);
                     
-                    // Sort subjects: English, Mathematics, Science first, then others alphabetically
                     const prioritySubjects = ['English', 'Mathematics', 'Science'];
                     const sortedSubjects = subjects.sort((a, b) => {
-                      const aIndex = prioritySubjects.indexOf(a.subject);
-                      const bIndex = prioritySubjects.indexOf(b.subject);
-                      
-                      // If both are priority subjects, maintain their order
-                      if (aIndex !== -1 && bIndex !== -1) {
-                        return aIndex - bIndex;
-                      }
-                      // If only a is priority, it comes first
+                      const aIndex = prioritySubjects.findIndex((p) => p.toLowerCase() === String(a.subject).trim().toLowerCase());
+                      const bIndex = prioritySubjects.findIndex((p) => p.toLowerCase() === String(b.subject).trim().toLowerCase());
+                      if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
                       if (aIndex !== -1) return -1;
-                      // If only b is priority, it comes first
                       if (bIndex !== -1) return 1;
-                      // If neither is priority, sort alphabetically
-                      return a.subject.localeCompare(b.subject);
+                      return a.subject.localeCompare(b.subject, undefined, { sensitivity: 'base' });
                     });
                     
                     return sortedSubjects.map((group, idx) => {
@@ -2044,46 +2053,64 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           </tr>
         </thead>
         <tbody>
-          {(student?.subjects || []).map((subj: any, idx: number) => {
-            const bot = subj.bot_marks ?? '';
-            const mot = subj.mot_marks ?? '';
-            const eot = subj.eot_marks ?? '';
-            const total = subj.total_marks ?? 100;
-            const totalNum = Number(total) || 100;
+          {(() => {
+            const prioritySubjects = ['English', 'Mathematics', 'Science'];
+            const pri = (name: string) =>
+              prioritySubjects.findIndex((p) => p.toLowerCase() === String(name || '').trim().toLowerCase());
+            const sortedSubjects = [...(student?.subjects || [])].sort((a: any, b: any) => {
+              const ai = pri(a.subject_name || '');
+              const bi = pri(b.subject_name || '');
+              if (ai !== -1 && bi !== -1) return ai - bi;
+              if (ai !== -1) return -1;
+              if (bi !== -1) return 1;
+              return String(a.subject_name || '').localeCompare(String(b.subject_name || ''), undefined, {
+                sensitivity: 'base',
+              });
+            });
+            const fmtMark = (marks: unknown, grade: unknown) => {
+              const g = String(grade ?? '').trim().toUpperCase();
+              if (g === 'MISSED') return 0;
+              if (marks === '' || marks == null) return marks;
+              if (String(marks).trim().toUpperCase() === 'MISSED') return 0;
+              return marks;
+            };
+            return sortedSubjects.map((subj: any, idx: number) => {
+              const bot = fmtMark(subj.bot_marks ?? '', subj.bot_grade ?? '');
+              const mot = fmtMark(subj.mot_marks ?? '', subj.mot_grade ?? '');
+              const eot = fmtMark(subj.eot_marks ?? '', subj.eot_grade ?? '');
 
-            // PRIMARY: use grade from data only (no calculation). Data comes from Supabase
-            // and is already normalized to D1–F9 in ReportPreviewFromData / reportGenerator.
-            let displayGrade = '';
-            if (selectedExamSetForDisplay) {
-              const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
-              if (isBeginning(selectedExamSetName)) {
-                displayGrade = subj.bot_grade ?? '';
-              } else if (isMid(selectedExamSetName)) {
-                displayGrade = subj.mot_grade ?? '';
-              } else if (isEnd(selectedExamSetName)) {
+              let displayGrade = '';
+              if (selectedExamSetForDisplay) {
+                const selectedExamSetName = (selectedExamSetForDisplay.name || '').toLowerCase();
+                if (isBeginning(selectedExamSetName)) {
+                  displayGrade = subj.bot_grade ?? '';
+                } else if (isMid(selectedExamSetName)) {
+                  displayGrade = subj.mot_grade ?? '';
+                } else if (isEnd(selectedExamSetName)) {
+                  displayGrade = subj.eot_grade ?? '';
+                }
+              } else {
                 displayGrade = subj.eot_grade ?? '';
               }
-            } else {
-              displayGrade = subj.eot_grade ?? '';
-            }
-            if (!displayGrade) displayGrade = '—';
-            
-            return (
+              if (!displayGrade) displayGrade = '—';
+
+              return (
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
                   <td className="border border-blue-100 px-2.5 py-1.24 font-semibold text-slate-900">{subj.subject_name || ''}</td>
-                {hasBOTExamSets && !isMidTermSelected && (
+                  {hasBOTExamSets && !isMidTermSelected && (
                     <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{bot}</td>
-                )}
+                  )}
                   <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{mot}</td>
-                {showENDColumn && (
+                  {showENDColumn && (
                     <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{eot}</td>
-                )}
+                  )}
                   <td className="border border-blue-100 px-2.2 py-1.12 text-center font-bold text-blue-900">{displayGrade}</td>
                   <td className="border border-blue-100 px-2.2 py-1.12 text-[9.2pt] text-slate-700 leading-[1.27]">{subj.teacher_comment || ''}</td>
                   <td className="border border-blue-100 px-2.3 py-1.18 text-[9.2pt] text-slate-700 leading-[1.27]">{subj.teacher_name || ''}</td>
-              </tr>
-            );
-          })}
+                </tr>
+              );
+            });
+          })()}
         </tbody>
       </table>
       </div>

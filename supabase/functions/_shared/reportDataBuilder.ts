@@ -14,6 +14,21 @@ function normalizeAutoMissedRemarks(text: unknown): string {
   return s;
 }
 
+/** Match primary report preview: English → Mathematics → Science, then alphabetical. */
+const PRIORITY_PRIMARY_SUBJECT_NAMES = ['English', 'Mathematics', 'Science'] as const;
+function sortPrimarySubjectRowsForReport<T extends { subject_name: string }>(rows: T[]): T[] {
+  const priorityIndex = (name: string) =>
+    PRIORITY_PRIMARY_SUBJECT_NAMES.findIndex((p) => p.toLowerCase() === name.trim().toLowerCase());
+  return [...rows].sort((a, b) => {
+    const ai = priorityIndex(a.subject_name);
+    const bi = priorityIndex(b.subject_name);
+    if (ai !== -1 && bi !== -1) return ai - bi;
+    if (ai !== -1) return -1;
+    if (bi !== -1) return 1;
+    return a.subject_name.localeCompare(b.subject_name, undefined, { sensitivity: 'base' });
+  });
+}
+
 export interface BuildReportPayload {
   schoolId: string;
   term: number;
@@ -502,21 +517,23 @@ function oneReportFromSnapshotRows(
       if (teacherName) existing.teacher_name = teacherName;
     }
   }
-  const subjects = Array.from(subjectMap.values()).map((s) => {
-    if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
-      const first = studentData.find((d) => (d.subject ?? '') === s.subject_name);
-      if (first) {
-        const m = first.marks_obtained ?? '';
-        const t = Number(first.total_marks ?? 100) || 100;
-        const g = toPrimaryGrade(first.grade ?? '', m, t);
-        s.eot_marks = m;
-        s.eot_grade = g;
-        s.mot_marks = m;
-        s.mot_grade = g;
+  const subjects = sortPrimarySubjectRowsForReport(
+    Array.from(subjectMap.values()).map((s) => {
+      if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
+        const first = studentData.find((d) => (d.subject ?? '') === s.subject_name);
+        if (first) {
+          const m = first.marks_obtained ?? '';
+          const t = Number(first.total_marks ?? 100) || 100;
+          const g = toPrimaryGrade(first.grade ?? '', m, t);
+          s.eot_marks = m;
+          s.eot_grade = g;
+          s.mot_marks = m;
+          s.mot_grade = g;
+        }
       }
-    }
-    return s;
-  });
+      return s;
+    }),
+  );
 
   const frozen = frozenData as {
     school_name?: string;
