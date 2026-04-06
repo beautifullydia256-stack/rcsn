@@ -1,11 +1,12 @@
 /**
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
+import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/primary';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
@@ -14,7 +15,7 @@ import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilen
 import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
-import { Eye, Download, FileDown } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import JSZip from 'jszip';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -684,32 +685,70 @@ export default function GenerateReportsPage() {
     window.print();
   };
 
+  const pageShell = (
+    eyebrow: string,
+    title: string,
+    subtitle: string,
+    body: ReactNode
+  ) => (
+    <AdminPageWrapper eyebrow={eyebrow} title={title} subtitle={subtitle}>
+      {body}
+    </AdminPageWrapper>
+  );
+
+  if (isLoading) {
+    return pageShell(
+      'Academic reports',
+      'Student Report Generator',
+      'Generate and download student academic reports.',
+      <div className="flex items-center justify-center py-16">
+        <div
+          className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ac-border)] border-t-emerald-500"
+          aria-hidden
+        />
+      </div>
+    );
+  }
+
+  if (!pageData) {
+    return pageShell(
+      'Academic reports',
+      'Student Report Generator',
+      'Generate and download student academic reports.',
+      <div className={`${adminCardClass} ac-text-secondary`}>
+        Could not load school data. Check your account or try again later.
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold ac-text-primary">Student Report Generator</h1>
-          <p className="ac-text-secondary text-sm mt-1">Generate and download student academic reports.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="ac-glass-btn px-4 py-2 rounded-xl font-medium"
-          >
+    <AdminPageWrapper
+      eyebrow="Academic reports"
+      title="Student Report Generator"
+      subtitle="Generate and download student academic reports."
+    >
+      <div className="mb-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <button type="button" className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary">
             Customize Header
           </button>
           <button
             type="button"
             onClick={() => navigate('/dashboard/admin/reports')}
-            className="ac-glass-btn-secondary rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
+            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
           >
             Back to Reports
           </button>
         </div>
       </div>
 
-      <div className="ac-glass-card rounded-xl border border-[var(--ac-border)] p-6">
-          <h2 className="ac-text-primary text-lg font-medium mb-4">Report Configuration</h2>
+      <div className={`${adminCardClass} rounded-xl border border-[var(--ac-border)]`}>
+          <h2
+            className="ac-text-primary mb-4 text-lg font-normal tracking-tight sm:text-xl"
+            style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+          >
+            Report Configuration
+          </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             {/* Report Template – auto-selected, read-only display */}
@@ -898,7 +937,7 @@ export default function GenerateReportsPage() {
               <button
                 type="button"
                 onClick={() => { setGeneratingStep('idle'); setGenerationError(''); void handlePreviewReport(); }}
-                className="mt-2 underline hover:no-underline"
+                className="mt-2 text-sm font-semibold text-emerald-700 underline hover:no-underline dark:text-emerald-300"
               >
                 Try again
               </button>
@@ -911,12 +950,12 @@ export default function GenerateReportsPage() {
             </div>
           )}
 
-          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={handlePreviewReport}
               disabled={previewing || !selectedClass || (reportType === 'single' && !selectedStudent)}
-              className="px-6 py-3 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
               {previewing ? 'Loading preview…' : 'Preview Report'}
             </button>
@@ -924,7 +963,7 @@ export default function GenerateReportsPage() {
               type="button"
               onClick={handleGenerateAndSave}
               disabled={saving || !selectedClass || (reportType === 'single' && !selectedStudent)}
-              className="px-6 py-3 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl bg-teal-600 px-6 py-3 font-semibold text-white shadow-md shadow-teal-900/20 transition hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-teal-500 dark:hover:bg-teal-400"
             >
               {saving ? 'Saving…' : 'Generate & Save'}
             </button>
@@ -938,7 +977,7 @@ export default function GenerateReportsPage() {
                 (reportType === 'single' && !selectedStudent)
               }
               title="Generate and save reports if needed, then download PDF"
-              className="px-5 py-3 rounded-lg bg-indigo-600/90 text-white font-medium hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="flex items-center gap-2 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-5 py-3 font-semibold text-emerald-800 transition hover:bg-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-400/35 dark:text-emerald-200 dark:hover:bg-emerald-500/15"
             >
               <FileDown className="w-4 h-4" />
               Download PDF
@@ -951,10 +990,18 @@ export default function GenerateReportsPage() {
           {/* Report Preview – from preview API (no DB writes) or from generated_reports after Generate & Save */}
           {(previewReports.length > 0 || (generatingStep === 'completed' && completedSnapshotId && !reportsLoading && !reportsError && generatedReports.length > 0)) && reportsToDisplay.length > 0 && (() => {
             return (
-              <div id="report-preview-print-area" className="report-preview-print mt-8 rounded-xl border border-[var(--ac-border)] ac-glass-card p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="ac-text-primary text-lg font-semibold">Report Preview</h2>
-                  <span className="ac-text-secondary text-sm">Template: {templateDisplayName}</span>
+              <div
+                id="report-preview-print-area"
+                className="report-preview-print ac-glass-card mt-8 rounded-xl border border-[var(--ac-border)] p-6 transition-colors hover:border-emerald-500/30 dark:hover:border-emerald-400/20"
+              >
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <h2
+                    className="ac-text-primary text-lg font-normal tracking-tight sm:text-xl"
+                    style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+                  >
+                    Report Preview
+                  </h2>
+                  <span className="text-sm ac-text-secondary">Template: {templateDisplayName}</span>
                 </div>
                 <div className="ac-glass-card p-4 rounded-lg overflow-auto max-h-[80vh] border border-[var(--ac-border)]">
                   {prePrimaryStrandWarningCount != null && (
@@ -999,7 +1046,7 @@ export default function GenerateReportsPage() {
             <button
               type="button"
               onClick={() => setShowNoResultsModal(false)}
-              className="w-full rounded-xl bg-green-600 hover:bg-green-700 text-white font-medium px-4 py-3"
+              className="w-full rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
               OK
             </button>
@@ -1015,7 +1062,12 @@ export default function GenerateReportsPage() {
             >
               <div className="space-y-4">
                 <div className="rounded-2xl border border-[var(--ac-border)] ac-glass-card p-4">
-                  <h3 className="font-semibold ac-text-primary mb-2">Summary</h3>
+                  <h3
+                    className="ac-text-primary mb-2 font-normal tracking-tight"
+                    style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+                  >
+                    Summary
+                  </h3>
                   <div className="grid grid-cols-2 gap-2 text-sm ac-text-secondary">
                     <div>
                       <span className="ac-text-muted">Average:</span>{' '}
@@ -1031,7 +1083,12 @@ export default function GenerateReportsPage() {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-[var(--ac-border)] ac-glass-card p-4">
-                  <h3 className="font-semibold ac-text-primary mb-2">Subjects</h3>
+                  <h3
+                    className="ac-text-primary mb-2 font-normal tracking-tight"
+                    style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
+                  >
+                    Subjects
+                  </h3>
                   <div className="space-y-2">
                     {viewingReport.reportData?.students?.[0]?.results?.map((result: any, idx: number) => (
                       <div key={idx} className="flex justify-between text-sm ac-text-secondary">
@@ -1052,6 +1109,6 @@ export default function GenerateReportsPage() {
             </GlassModal>
           )}
         </div>
-    </div>
+    </AdminPageWrapper>
   );
 }
