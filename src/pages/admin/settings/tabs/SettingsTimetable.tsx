@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { downloadTimetablePdf } from '@/lib/timetablePdf';
 import SectionHeader from './SectionHeader';
 
 type Period = {
@@ -32,10 +33,20 @@ export default function SettingsTimetable({
   const [timetablePeriods, setTimetablePeriods] = useState<Period[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState('');
+  const [pdfScope, setPdfScope] = useState<'whole_school' | 'single_class'>('whole_school');
+  const [pdfClass, setPdfClass] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       if (!schoolId) return;
+
+      const { data: schRow } = await supabase
+        .from('schools')
+        .select('name')
+        .eq('school_id', schoolId)
+        .single();
+      setSchoolName((schRow as { name?: string } | null)?.name || '');
 
       const { data: teacherData } = await supabase
         .from('teachers')
@@ -205,9 +216,48 @@ export default function SettingsTimetable({
   };
 
   const handleDownloadPDF = () => {
-    alert(
-      'Timetable PDF download will be implemented. This will generate a formatted PDF of the school timetable.'
-    );
+    setError(null);
+    if (!schoolId) {
+      setError('School not loaded yet. Refresh and try again.');
+      return;
+    }
+    if (timetablePeriods.length === 0) {
+      setError('Add timetable periods before exporting a PDF.');
+      return;
+    }
+    if (pdfScope === 'single_class') {
+      if (!pdfClass) {
+        setError('Choose which class to include in the PDF.');
+        return;
+      }
+      const has = timetablePeriods.some((p) => p.class_name === pdfClass);
+      if (!has) {
+        setError('No periods exist for that class yet.');
+        return;
+      }
+    }
+    try {
+      const filtered =
+        pdfScope === 'single_class'
+          ? timetablePeriods.filter((p) => p.class_name === pdfClass)
+          : timetablePeriods;
+      downloadTimetablePdf({
+        schoolName: schoolName || 'School',
+        periods: filtered.map((p) => ({
+          class_name: p.class_name,
+          day_of_week: p.day_of_week,
+          subject: p.subject,
+          start_time: p.start_time,
+          end_time: p.end_time,
+          teacher_name: p.teacher_name,
+        })),
+        scope: pdfScope === 'whole_school' ? 'whole_school' : 'single_class',
+        singleClassName: pdfScope === 'single_class' ? pdfClass : undefined,
+        classOrder: classOptions,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate PDF.');
+    }
   };
 
   return (
@@ -217,6 +267,41 @@ export default function SettingsTimetable({
           title="Timetable Designer"
           desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
         />
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
+              <span className="shrink-0">PDF scope</span>
+              <select
+                className="ac-input min-h-[44px] min-w-[10rem]"
+                value={pdfScope}
+                onChange={(e) => {
+                  const v = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
+                  setPdfScope(v);
+                  if (v === 'whole_school') setPdfClass('');
+                }}
+              >
+                <option value="whole_school">Whole school (all classes)</option>
+                <option value="single_class">Single class</option>
+              </select>
+            </label>
+            {pdfScope === 'single_class' && (
+              <label className="flex min-h-[44px] items-center gap-2 text-sm ac-text-secondary">
+                <span className="shrink-0">Class</span>
+                <select
+                  className="ac-input min-h-[44px] min-w-[10rem]"
+                  value={pdfClass}
+                  onChange={(e) => setPdfClass(e.target.value)}
+                >
+                  <option value="">Select class</option>
+                  {classOptions.map((cls) => (
+                    <option key={cls} value={cls}>
+                      {cls}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         <button
           type="button"
           onClick={handleDownloadPDF}
@@ -237,6 +322,7 @@ export default function SettingsTimetable({
           </svg>
           Download PDF
         </button>
+        </div>
       </div>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
@@ -367,8 +453,9 @@ export default function SettingsTimetable({
           📄 PDF Export
         </h4>
         <p className="text-xs ac-text-muted">
-          Click the &quot;Download PDF&quot; button above to export the timetable as a formatted
-          PDF document.
+          Choose whole-school export (one landscape page per class, Mon–Sun columns as used) or a
+          single-class PDF. Layout uses period times as rows and days as columns (typical Ugandan
+          wall timetable style).
         </p>
       </div>
     </div>

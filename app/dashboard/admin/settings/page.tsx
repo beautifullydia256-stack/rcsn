@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
+import { downloadTimetablePdf } from "@/lib/timetablePdf";
 import { useRouter } from "next/navigation";
 import LocationSettingsWidget from "../components/LocationSettingsWidget";
 
@@ -807,10 +808,20 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
   const [timetablePeriods, setTimetablePeriods] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [schoolName, setSchoolName] = useState('');
+  const [pdfScope, setPdfScope] = useState<'whole_school' | 'single_class'>('whole_school');
+  const [pdfClass, setPdfClass] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       if (!schoolId) return;
+
+      const { data: schRow } = await supabase
+        .from('schools')
+        .select('name')
+        .eq('school_id', schoolId)
+        .single();
+      setSchoolName((schRow as { name?: string } | null)?.name || '');
 
       // Load teachers
       const { data: teacherData } = await supabase
@@ -969,26 +980,100 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
   };
 
   const handleDownloadPDF = () => {
-    // TODO: Implement actual timetable PDF generation
-    alert('Timetable PDF download will be implemented. This will generate a formatted PDF of the school timetable.');
+    setError(null);
+    if (!schoolId) {
+      setError('School not loaded yet. Refresh and try again.');
+      return;
+    }
+    if (timetablePeriods.length === 0) {
+      setError('Add timetable periods before exporting a PDF.');
+      return;
+    }
+    if (pdfScope === 'single_class') {
+      if (!pdfClass) {
+        setError('Choose which class to include in the PDF.');
+        return;
+      }
+      const has = timetablePeriods.some((p: { class_name: string }) => p.class_name === pdfClass);
+      if (!has) {
+        setError('No periods exist for that class yet.');
+        return;
+      }
+    }
+    try {
+      const filtered =
+        pdfScope === 'single_class'
+          ? timetablePeriods.filter((p: { class_name: string }) => p.class_name === pdfClass)
+          : timetablePeriods;
+      downloadTimetablePdf({
+        schoolName: schoolName || 'School',
+        periods: filtered.map((p: any) => ({
+          class_name: p.class_name,
+          day_of_week: p.day_of_week,
+          subject: p.subject,
+          start_time: p.start_time,
+          end_time: p.end_time,
+          teacher_name: p.teacher_name,
+        })),
+        scope: pdfScope === 'whole_school' ? 'whole_school' : 'single_class',
+        singleClassName: pdfScope === 'single_class' ? pdfClass : undefined,
+        classOrder: classOptions,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not generate PDF.');
+    }
   };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader
           title="Timetable Designer"
           desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
         />
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+            <label className="flex items-center gap-2 text-sm text-white/80">
+              <span className="shrink-0">PDF scope</span>
+              <select
+                className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 min-h-[44px] min-w-[10rem]"
+                value={pdfScope}
+                onChange={(e) => {
+                  const v = e.target.value === 'single_class' ? 'single_class' : 'whole_school';
+                  setPdfScope(v);
+                  if (v === 'whole_school') setPdfClass('');
+                }}
+              >
+                <option value="whole_school">Whole school (all classes)</option>
+                <option value="single_class">Single class</option>
+              </select>
+            </label>
+            {pdfScope === 'single_class' && (
+              <label className="flex items-center gap-2 text-sm text-white/80">
+                <span className="shrink-0">Class</span>
+                <select
+                  className="rounded-lg border border-white/10 bg-white text-black px-3 py-2 min-h-[44px] min-w-[10rem]"
+                  value={pdfClass}
+                  onChange={(e) => setPdfClass(e.target.value)}
+                >
+                  <option value="">Select class</option>
+                  {classOptions.map((cls) => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         <button
           onClick={handleDownloadPDF}
-          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium flex items-center gap-2"
+          className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium flex items-center gap-2 min-h-[44px]"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           Download PDF
         </button>
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <select 
@@ -1102,8 +1187,8 @@ function TimetableDesigner({ classOptions, schoolId }: { classOptions: string[];
       <div className="mt-6 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
         <h4 className="text-blue-300 font-medium text-sm mb-2">📄 PDF Export</h4>
         <p className="text-white/60 text-xs">
-          Click the "Download PDF" button above to export the timetable as a professionally formatted PDF document.
-          The PDF will include all classes, subjects, teachers, and time slots in an easy-to-read format.
+          Whole-school export adds one landscape page per class. Single-class export is one page.
+          Days are columns and period times are rows (typical wall-timetable layout).
         </p>
       </div>
     </div>
