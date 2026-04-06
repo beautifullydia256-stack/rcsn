@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import {
   Wallet,
   CreditCard,
+  Banknote,
   FileText,
   TrendingUp,
   Receipt,
@@ -240,7 +241,7 @@ export default function FinancialOverview() {
         <section className="mb-10">
           <SectionTitle
             title="Current term performance"
-            subtitle="Ledger slice for the current academic term only. “Collected” sums payments whose term_id matches this term (not payment date alone). Expenses are approved or paid rows tagged with this term."
+            subtitle="Ledger slice for the current academic term. “Collected” uses term_id on the payment. “Cash in” is every fee receipt dated within this term’s dates (any term_id), including clearing old balances. Expenses are approved or paid rows tagged with this term."
           />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <KPICard
@@ -256,6 +257,13 @@ export default function FinancialOverview() {
               value={fmt(tp.feesCollectedAttributed)}
               subline="Sum of fee payments recorded against this term_id"
               variant="green"
+            />
+            <KPICard
+              icon={Banknote}
+              label="Cash in"
+              value={fmt(tp.cashIn)}
+              subline={`All fee receipts dated in this term’s window (${m.currentTerm?.label ?? "—"}); includes payments toward older terms`}
+              variant="violet"
             />
             <KPICard
               icon={FileText}

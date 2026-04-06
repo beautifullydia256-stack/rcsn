@@ -35,6 +35,12 @@ export type AccountantDashboardMetrics = {
   termPerformance: {
     feesExpected: number;
     feesCollectedAttributed: number;
+    /**
+     * All non-reversed fee payments whose payment_date falls within the current term’s
+     * [start_date, end_date] window (capped at as-of date), any term_id — cash physically
+     * received while this term runs, including clearing older-term balances.
+     */
+    cashIn: number;
     outstandingOnTerm: number;
     /** 0–100 when feesExpected > 0; else null */
     collectionRatePercent: number | null;
@@ -272,6 +278,25 @@ export async function fetchAccountantDashboardMetrics(
     : [];
   const feesCollectedAttributed = paymentsCurrentTerm.reduce((s, p) => s + num(p.amount_paid), 0);
 
+  const termStartIso =
+    currentTerm?.start_date != null && String(currentTerm.start_date).trim() !== ""
+      ? String(currentTerm.start_date).slice(0, 10)
+      : null;
+  const termEndIso =
+    currentTerm?.end_date != null && String(currentTerm.end_date).trim() !== ""
+      ? String(currentTerm.end_date).slice(0, 10)
+      : null;
+  let cashIn = 0;
+  if (termStartIso) {
+    const windowEnd = termEndIso && termEndIso < todayIso ? termEndIso : todayIso;
+    for (const p of payments) {
+      const d = p.payment_date;
+      if (!d) continue;
+      const d0 = d.slice(0, 10);
+      if (d0 >= termStartIso && d0 <= windowEnd) cashIn += num(p.amount_paid);
+    }
+  }
+
   const collectionRatePercent =
     feesExpected > 0.01 ? Math.min(100, Math.round((feesCollectedAttributed / feesExpected) * 1000) / 10) : null;
 
@@ -362,6 +387,7 @@ export async function fetchAccountantDashboardMetrics(
     termPerformance: {
       feesExpected,
       feesCollectedAttributed,
+      cashIn,
       outstandingOnTerm,
       collectionRatePercent,
       expensesApproved,

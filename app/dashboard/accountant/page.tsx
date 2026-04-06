@@ -74,6 +74,7 @@ export default function AccountantDashboardPage() {
   // KPIs
   const [kpiCollectedToday, setKpiCollectedToday] = useState<number>(0);
   const [kpiCollectedThisTerm, setKpiCollectedThisTerm] = useState<number>(0);
+  const [kpiCashInThisTerm, setKpiCashInThisTerm] = useState<number>(0);
   const [kpiOutstanding, setKpiOutstanding] = useState<number>(0);
   const [kpiOutstandingAllTime, setKpiOutstandingAllTime] = useState<number>(0);
   const [kpiDebtorsCount, setKpiDebtorsCount] = useState<number>(0);
@@ -248,6 +249,7 @@ export default function AccountantDashboardPage() {
       const dashboardMetrics = await fetchAccountantDashboardMetrics(supabase, userRow.school_id, today);
       setKpiCollectedToday(dashboardMetrics.cashActivity.todayAllTerms);
       setKpiCollectedThisTerm(dashboardMetrics.termPerformance.feesCollectedAttributed);
+      setKpiCashInThisTerm(dashboardMetrics.termPerformance.cashIn);
       setKpiOutstanding(dashboardMetrics.termPerformance.outstandingOnTerm);
       setKpiDebtorsCount(dashboardMetrics.receivablesAllTerms.debtorStudentCount);
       setKpiOutstandingAllTime(dashboardMetrics.receivablesAllTerms.totalOutstanding);
@@ -406,10 +408,11 @@ export default function AccountantDashboardPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 mb-6"
         >
           <KpiCard title="Collected Today (all terms)" value={formatCurrency(kpiCollectedToday)} accent="bg-emerald-500" />
           <KpiCard title="Collected This Term (by term_id)" value={formatCurrency(kpiCollectedThisTerm)} accent="bg-blue-500" />
+          <KpiCard title="Cash in (this term’s dates, any term_id)" value={formatCurrency(kpiCashInThisTerm)} accent="bg-violet-500" />
           <KpiCard title="Expenses This Term (approved/paid)" value={formatCurrency(kpiExpensesThisTerm)} accent="bg-red-500" />
           <KpiCard title="Net This Term (collections − expenses)" value={formatCurrency(kpiNetBalance)} accent={kpiNetBalance >= 0 ? "bg-emerald-500" : "bg-red-500"} />
         </motion.div>
