@@ -2,7 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { createPortal } from 'react-dom';
 import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, MessageCircle, Mic, Paperclip, Search, Send, Smile, UserPlus, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  Loader2,
+  MessageCircle,
+  Mic,
+  Paperclip,
+  Pause,
+  Play,
+  Search,
+  Send,
+  Smile,
+  UserPlus,
+  X,
+} from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import {
   fetchEligibleChatUsers,
@@ -121,10 +134,43 @@ function OutgoingDeliveryTicks({
   );
 }
 
-function VoiceNoteBubble({ message: m }: { message: ChatMessageRow }) {
+const VOICE_WAVE_BARS = 52;
+
+function hashToWaveHeights(seed: string): number[] {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Array.from({ length: VOICE_WAVE_BARS }, (_, i) => {
+    const t = (i + 1) * 0.812 + (h & 0xffff) * 0.0001;
+    const v = Math.sin(t) * 0.5 + 0.5;
+    return 0.28 + v * 0.72;
+  });
+}
+
+function VoiceNoteBubble({
+  message: m,
+  mine,
+  avatarLetter,
+}: {
+  message: ChatMessageRow;
+  mine: boolean;
+  avatarLetter: string;
+}) {
   const playable = m.msg_kind === 'voice' && !!m.audio_path;
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(Math.max(0, m.audio_duration_sec ?? 0));
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const seekRef = useRef<HTMLDivElement | null>(null);
+
+  const waveHeights = useMemo(() => hashToWaveHeights(m.id), [m.id]);
+  const metaDuration = m.audio_duration_sec ?? 0;
+  const effectiveDuration = Math.max(duration, metaDuration, 0.001);
+  const progress = Math.min(1, Math.max(0, currentTime / effectiveDuration));
 
   useEffect(() => {
     if (!playable || !m.audio_path) {
@@ -133,6 +179,8 @@ function VoiceNoteBubble({ message: m }: { message: ChatMessageRow }) {
         return null;
       });
       setLoading(false);
+      setPlaying(false);
+      setCurrentTime(0);
       return;
     }
     let dead = false;
@@ -158,6 +206,33 @@ function VoiceNoteBubble({ message: m }: { message: ChatMessageRow }) {
     };
   }, [m.id, m.audio_path, playable]);
 
+  const togglePlay = useCallback(() => {
+    const a = audioRef.current;
+    if (!a || !url) return;
+    if (a.paused) void a.play();
+    else a.pause();
+  }, [url]);
+
+  const seekFromPointer = useCallback(
+    (clientX: number) => {
+      const el = seekRef.current;
+      const a = audioRef.current;
+      if (!el || !a || !Number.isFinite(effectiveDuration)) return;
+      const rect = el.getBoundingClientRect();
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+      a.currentTime = ratio * effectiveDuration;
+      setCurrentTime(a.currentTime);
+    },
+    [effectiveDuration]
+  );
+
+  const barPlayedColor = mine ? 'rgba(46, 66, 58, 0.92)' : 'rgba(17, 27, 33, 0.85)';
+  const barUnplayedColor = mine ? 'rgba(46, 66, 58, 0.22)' : 'rgba(17, 27, 33, 0.14)';
+  const avatarClass = mine
+    ? 'bg-gradient-to-br from-[#6b8f7c] to-[#4a6b5a] text-white'
+    : 'bg-gradient-to-br from-[#9ca8b8] to-[#6b7c85] text-white';
+  const letter = (avatarLetter || '?').slice(0, 1).toUpperCase();
+
   if (!playable) {
     return (
       <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug text-[#667781] italic pr-8">
@@ -167,20 +242,116 @@ function VoiceNoteBubble({ message: m }: { message: ChatMessageRow }) {
   }
 
   return (
-    <div className="flex flex-col gap-1 min-w-[200px] max-w-full pr-8">
+    <div className="flex flex-col gap-1 min-w-[min(100%,268px)] max-w-[min(100%,300px)] pr-9">
+      <audio
+        ref={audioRef}
+        src={url ?? undefined}
+        preload="metadata"
+        className="hidden"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onEnded={() => {
+          setPlaying(false);
+          setCurrentTime(0);
+        }}
+        onTimeUpdate={() => {
+          const a = audioRef.current;
+          if (a) setCurrentTime(a.currentTime);
+        }}
+        onLoadedMetadata={() => {
+          const a = audioRef.current;
+          if (a && Number.isFinite(a.duration) && a.duration > 0) {
+            setDuration(a.duration);
+          }
+        }}
+      />
       <div className="flex items-center gap-2">
-        <span className="text-[#008069] shrink-0" aria-hidden>
-          <Mic className="h-5 w-5" strokeWidth={2} />
-        </span>
+        <div className="relative h-10 w-10 shrink-0">
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-full text-[15px] font-semibold shadow-sm ${avatarClass}`}
+            aria-hidden
+          >
+            {letter}
+          </div>
+          <div
+            className="absolute -bottom-0.5 -right-0.5 flex h-[18px] w-[18px] items-center justify-center rounded-full border border-[#e9edef] bg-white shadow-sm"
+            aria-hidden
+          >
+            <Mic className="h-2.5 w-2.5 text-[#54656f]" strokeWidth={2.2} />
+          </div>
+        </div>
         {loading ? (
-          <Loader2 className="h-7 w-7 animate-spin text-[#008069] shrink-0" aria-label="Loading voice message" />
+          <Loader2 className="h-8 w-8 shrink-0 animate-spin text-[#008069]" aria-label="Loading voice message" />
         ) : (
-          <audio src={url ?? undefined} controls preload="metadata" className="h-9 flex-1 max-w-[min(100%,260px)]" />
+          <>
+            <button
+              type="button"
+              onClick={togglePlay}
+              disabled={!url}
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#54656f] transition-colors hover:bg-black/[0.06] disabled:opacity-40"
+              aria-label={playing ? 'Pause voice message' : 'Play voice message'}
+            >
+              {playing ? (
+                <Pause className="h-5 w-5 fill-current" fill="currentColor" />
+              ) : (
+                <Play className="h-5 w-5 translate-x-0.5 fill-current" fill="currentColor" />
+              )}
+            </button>
+            <div
+              ref={seekRef}
+              role="slider"
+              tabIndex={0}
+              aria-valuenow={Math.round(progress * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              className="flex min-w-0 flex-1 cursor-pointer flex-col justify-center select-none py-0.5"
+              onClick={(e) => seekFromPointer(e.clientX)}
+              onKeyDown={(e) => {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                e.preventDefault();
+                const a = audioRef.current;
+                if (!a) return;
+                const step = effectiveDuration * 0.05;
+                a.currentTime = Math.max(0, Math.min(effectiveDuration, a.currentTime + (e.key === 'ArrowRight' ? step : -step)));
+                setCurrentTime(a.currentTime);
+              }}
+            >
+              <div className="mb-1 flex h-[22px] items-end gap-[2px] px-0.5">
+                {waveHeights.map((rh, i) => {
+                  const played = (i + 0.5) / waveHeights.length <= progress;
+                  const hPct = Math.round(rh * 100);
+                  return (
+                    <div
+                      key={i}
+                      className="min-w-[2px] flex-1 rounded-full"
+                      style={{
+                        height: `${hPct}%`,
+                        minHeight: 3,
+                        backgroundColor: played ? barPlayedColor : barUnplayedColor,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="relative mx-0.5 h-[3px] rounded-full bg-[#111b21]/10">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                  style={{ width: `${progress * 100}%` }}
+                />
+                <div
+                  className={`absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-sm ${mine ? 'bg-[#008069]' : 'bg-[#00a884]'}`}
+                  style={{ left: `${progress * 100}%` }}
+                />
+              </div>
+            </div>
+          </>
         )}
       </div>
-      <span className="text-[11px] text-[#667781] tabular-nums">
-        {formatVoiceDurationLabel(m.audio_duration_sec ?? 0)}
-      </span>
+      <div className="pl-[3.25rem]">
+        <span className="text-[11.5px] font-medium tabular-nums text-[#667781]">
+          {formatVoiceDurationLabel(Math.round(metaDuration > 0 ? metaDuration : effectiveDuration))}
+        </span>
+      </div>
     </div>
   );
 }
@@ -190,7 +361,13 @@ export default function SchoolChatPage() {
   const location = useLocation();
   const role = useAuthStore((s) => s.role);
   const schoolId = useAuthStore((s) => s.schoolId);
-  const myId = useAuthStore((s) => s.user?.id) ?? null;
+  const user = useAuthStore((s) => s.user);
+  const myId = user?.id ?? null;
+  const myVoiceInitial = useMemo(() => {
+    const n = (user?.user_metadata?.name as string | undefined)?.trim();
+    const a = n?.charAt(0) || user?.email?.trim()?.charAt(0);
+    return (a || 'Y').toUpperCase();
+  }, [user?.user_metadata?.name, user?.email]);
   const [searchParams, setSearchParams] = useSearchParams();
   const withUserId = searchParams.get('with');
 
@@ -246,6 +423,11 @@ export default function SchoolChatPage() {
   const selectedConv = useMemo(
     () => conversations.find((c) => c.conversation_id === selectedId) ?? null,
     [conversations, selectedId]
+  );
+
+  const peerVoiceInitial = useMemo(
+    () => ((selectedConv?.peer_name || peerPreview?.name || '?').trim().charAt(0) || '?').toUpperCase(),
+    [selectedConv?.peer_name, peerPreview?.name]
   );
 
   useEffect(() => {
@@ -629,6 +811,13 @@ export default function SchoolChatPage() {
         .wa-sidebar-item:hover { background: #f5f6f6; }
         .wa-sidebar-item.wa-active { background: #ebebeb; }
         .wa-input::placeholder { color: #8696a0; }
+        .wa-root .wa-input:focus,
+        .wa-root .wa-input:focus-visible,
+        .wa-root .wa-input:active {
+          outline: none !important;
+          box-shadow: none !important;
+          border-color: transparent !important;
+        }
         /* Scroll without visible scrollbar (wheel / touch / trackpad still work). */
         .wa-scroll-y {
           overflow-y: auto;
@@ -874,7 +1063,11 @@ export default function SchoolChatPage() {
                         }`}
                       >
                         {m.msg_kind === 'voice' ? (
-                          <VoiceNoteBubble message={m} />
+                          <VoiceNoteBubble
+                            message={m}
+                            mine={mine}
+                            avatarLetter={mine ? myVoiceInitial : peerVoiceInitial}
+                          />
                         ) : (
                           <p
                             className={`whitespace-pre-wrap break-words text-[14.2px] leading-snug ${mine ? 'pr-[4.5rem]' : 'pr-12'}`}
@@ -966,9 +1159,9 @@ export default function SchoolChatPage() {
                   </>
                 ) : (
                   <>
-                    <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3">
+                    <div className="flex-1 rounded-lg bg-white border border-[var(--wa-border)] flex items-center min-h-[42px] px-3 shadow-none">
                       <input
-                        className="flex-1 wa-input bg-transparent border-0 text-[15px] text-[#111b21] outline-none py-2 placeholder:text-[#8696a0]"
+                        className="flex-1 wa-input min-w-0 bg-transparent border-0 text-[15px] text-[#111b21] py-2 placeholder:text-[#8696a0] outline-none ring-0 ring-offset-0 focus:outline-none focus:ring-0 focus:ring-offset-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0"
                         placeholder="Type a message"
                         value={draft}
                         onChange={(e) => {
