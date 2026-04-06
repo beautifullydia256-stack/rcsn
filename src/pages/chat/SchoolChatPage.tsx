@@ -8,10 +8,13 @@ import {
   fetchEligibleChatUsers,
   fetchMessages,
   fetchMyConversations,
+  fetchPeerLastReadAt,
   getOrCreateDm,
   markConversationRead,
+  markPeerMessagesDelivered,
   sendMessage,
   subscribeToConversationMessages,
+  subscribeToPeerLastRead,
   type ChatConversationRow,
   type ChatMessageRow,
   type EligibleChatUser,
@@ -82,6 +85,35 @@ function displayChatName(u: EligibleChatUser): string {
   return n || u.email || 'User';
 }
 
+/** WhatsApp-style: one gray ✓ sent, two gray ✓✓ delivered, two blue ✓✓ read. */
+function OutgoingDeliveryTicks({
+  createdAt,
+  deliveredAt,
+  peerLastReadAt,
+}: {
+  createdAt: string;
+  deliveredAt: string | null;
+  peerLastReadAt: string | null;
+}) {
+  const tMsg = new Date(createdAt).getTime();
+  const tRead = peerLastReadAt ? new Date(peerLastReadAt).getTime() : NaN;
+  const read = Number.isFinite(tRead) && tRead >= tMsg - 1500;
+  const delivered = deliveredAt != null && deliveredAt !== '';
+  const colorClass = read ? 'text-[#53bdeb]' : 'text-[#8696a0]';
+  if (read || delivered) {
+    return (
+      <span className={`select-none text-[13px] leading-[1] tracking-[-0.12em] ${colorClass}`} aria-label={read ? 'Read' : 'Delivered'}>
+        ✓✓
+      </span>
+    );
+  }
+  return (
+    <span className={`select-none text-[13px] leading-none ${colorClass}`} aria-label="Sent">
+      ✓
+    </span>
+  );
+}
+
 export default function SchoolChatPage() {
   const queryClient = useQueryClient();
   const location = useLocation();
@@ -105,6 +137,7 @@ export default function SchoolChatPage() {
   const [peerPreview, setPeerPreview] = useState<{ name: string; role: string } | null>(null);
   const [newChatError, setNewChatError] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [peerLastReadAt, setPeerLastReadAt] = useState<string | null>(null);
 
   const home = dashboardHomeForRole(role);
 
@@ -131,12 +164,16 @@ export default function SchoolChatPage() {
 
   useEffect(() => {
     setSendError(null);
+    setPeerLastReadAt(null);
   }, [selectedId]);
 
   const loadThread = useCallback(
     async (conversationId: string) => {
+      await markPeerMessagesDelivered(conversationId);
       const rows = await fetchMessages(conversationId);
       setMessages(rows);
+      const peerRead = await fetchPeerLastReadAt(conversationId);
+      setPeerLastReadAt(peerRead);
       await markConversationRead(conversationId);
       void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
     },
@@ -153,13 +190,27 @@ export default function SchoolChatPage() {
 
   useEffect(() => {
     if (!selectedId) return;
-    const unsub = subscribeToConversationMessages(selectedId, (row) => {
-      setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
-      void markConversationRead(selectedId);
-      void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
-    });
+    const unsub = subscribeToConversationMessages(
+      selectedId,
+      (row) => {
+        setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
+        void markConversationRead(selectedId);
+        void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+      },
+      (row) => {
+        setMessages((prev) => prev.map((m) => (m.id === row.id ? { ...m, ...row } : m)));
+      }
+    );
     return unsub;
   }, [selectedId, myId, queryClient]);
+
+  const peerUserId = selectedConv?.peer_user_id ?? null;
+  useEffect(() => {
+    if (!selectedId || !peerUserId) return;
+    return subscribeToPeerLastRead(selectedId, peerUserId, (iso) => {
+      setPeerLastReadAt(iso);
+    });
+  }, [selectedId, peerUserId]);
 
   useEffect(() => {
     if (!withUserId || !myId) return;
@@ -455,14 +506,21 @@ export default function SchoolChatPage() {
                             : 'rounded-bl-none bg-[var(--wa-in)] text-[#111b21] border border-[#e9edef]'
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words text-[14.2px] leading-snug pr-12">{m.body}</p>
-                        <span
-                          className={`absolute bottom-1 right-2 text-[11px] tabular-nums ${
-                            mine ? 'text-[#667781]' : 'text-[#667781]'
-                          }`}
-                        >
-                          {formatMsgTime(m.created_at)}
-                        </span>
+                        <p className={`whitespace-pre-wrap break-words text-[14.2px] leading-snug ${mine ? 'pr-[4.5rem]' : 'pr-12'}`}>
+                          {m.body}
+                        </p>
+                        <div className="absolute bottom-1 right-2 flex items-center gap-1">
+                          <span className={`text-[11px] tabular-nums ${mine ? 'text-[#667781]' : 'text-[#667781]'}`}>
+                            {formatMsgTime(m.created_at)}
+                          </span>
+                          {mine && (
+                            <OutgoingDeliveryTicks
+                              createdAt={m.created_at}
+                              deliveredAt={m.delivered_at ?? null}
+                              peerLastReadAt={peerLastReadAt}
+                            />
+                          )}
+                        </div>
                       </div>
                     </div>
                   );

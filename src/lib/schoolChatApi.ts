@@ -23,6 +23,8 @@ export type ChatMessageRow = {
   sender_id: string;
   body: string;
   created_at: string;
+  /** Set when the recipient loaded the thread (WhatsApp-style delivered / double gray tick). */
+  delivered_at: string | null;
 };
 
 export async function fetchEligibleChatUsers(): Promise<EligibleChatUser[]> {
@@ -49,11 +51,42 @@ export async function getOrCreateDm(otherUserId: string): Promise<string> {
 export async function fetchMessages(conversationId: string): Promise<ChatMessageRow[]> {
   const { data, error } = await supabase
     .from('school_chat_messages')
-    .select('id, conversation_id, sender_id, body, created_at')
+    .select('id, conversation_id, sender_id, body, created_at, delivered_at')
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data || []) as ChatMessageRow[];
+  return (data || []).map((r) => ({
+    ...(r as ChatMessageRow),
+    delivered_at: (r as { delivered_at?: string | null }).delivered_at ?? null,
+  })) as ChatMessageRow[];
+}
+
+/** When you open the thread, mark the other person's outgoing lines as delivered (sets delivered_at). */
+export async function markPeerMessagesDelivered(conversationId: string): Promise<void> {
+  const { error } = await supabase.rpc('school_chat_mark_peer_messages_delivered', {
+    p_conversation_id: conversationId,
+  });
+  if (error) {
+    if (typeof import.meta !== 'undefined' && (import.meta as ImportMeta).env?.DEV) {
+      console.warn('[schoolChatApi] markPeerMessagesDelivered', error.message);
+    }
+  }
+}
+
+/** Other participant's last_read_at (for blue ticks on your outgoing messages). */
+export async function fetchPeerLastReadAt(conversationId: string): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user?.id) return null;
+  const { data, error } = await supabase
+    .from('school_chat_participants')
+    .select('last_read_at')
+    .eq('conversation_id', conversationId)
+    .neq('user_id', user.id)
+    .maybeSingle();
+  if (error) return null;
+  return (data as { last_read_at?: string | null } | null)?.last_read_at ?? null;
 }
 
 export async function sendMessage(conversationId: string, schoolId: string, body: string): Promise<void> {
@@ -87,7 +120,8 @@ export async function markConversationRead(conversationId: string): Promise<void
 
 export function subscribeToConversationMessages(
   conversationId: string,
-  onInsert: (row: ChatMessageRow) => void
+  onInsert: (row: ChatMessageRow) => void,
+  onUpdate?: (row: ChatMessageRow) => void
 ) {
   const channel = supabase
     .channel(`school-chat:${conversationId}`)
@@ -101,7 +135,48 @@ export function subscribeToConversationMessages(
       },
       (payload) => {
         const r = payload.new as ChatMessageRow;
-        if (r?.id) onInsert(r);
+        if (r?.id) onInsert({ ...r, delivered_at: r.delivered_at ?? null });
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'school_chat_messages',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        if (!onUpdate) return;
+        const r = payload.new as ChatMessageRow;
+        if (r?.id) onUpdate({ ...r, delivered_at: r.delivered_at ?? null });
+      }
+    )
+    .subscribe();
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+/** Live updates when peer updates last_read_at (blue ticks). */
+export function subscribeToPeerLastRead(
+  conversationId: string,
+  peerUserId: string,
+  onLastRead: (iso: string | null) => void
+) {
+  const channel = supabase
+    .channel(`school-chat-read:${conversationId}:${peerUserId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'school_chat_participants',
+        filter: `conversation_id=eq.${conversationId}`,
+      },
+      (payload) => {
+        const row = payload.new as { user_id?: string; last_read_at?: string | null };
+        if (row.user_id === peerUserId) onLastRead(row.last_read_at ?? null);
       }
     )
     .subscribe();
