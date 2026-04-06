@@ -242,13 +242,23 @@ export default function SchoolChatPage() {
   }, [selectedId, loadThread]);
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId || !myId) return;
     const unsub = subscribeToConversationMessages(
       selectedId,
       (row) => {
         setMessages((prev) => (prev.some((m) => m.id === row.id) ? prev : [...prev, row]));
-        void markConversationRead(selectedId);
-        void queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+        // Unread count uses last_read_at on the server. If we invalidate the list in parallel with
+        // markConversationRead, the refetch often finishes before the UPDATE commits — badge stays wrong.
+        void (async () => {
+          if (row.sender_id !== myId) {
+            try {
+              await markConversationRead(selectedId);
+            } catch (e) {
+              console.error('[SchoolChatPage] mark read on live message', e);
+            }
+          }
+          await queryClient.invalidateQueries({ queryKey: [...CHAT_QK, 'conversations', myId] });
+        })();
       },
       (row) => {
         setMessages((prev) => prev.map((m) => (m.id === row.id ? { ...m, ...row } : m)));
