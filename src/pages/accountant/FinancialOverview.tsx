@@ -59,7 +59,7 @@ function KPICard({
   icon: ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  subline: string;
+  subline?: string;
   variant?: KPIVariant;
 }) {
   const borderTopClass: Record<KPIVariant, string> = {
@@ -89,16 +89,18 @@ function KPICard({
       </div>
       <p className="ac-text-primary mt-4 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
       <p className="ac-text-secondary mt-1 text-sm font-medium leading-snug">{label}</p>
-      <p className="ac-text-muted mt-1.5 text-[11px] leading-relaxed">{subline}</p>
+      {subline ? <p className="ac-text-muted mt-1.5 text-[11px] leading-relaxed">{subline}</p> : null}
     </div>
   );
 }
 
-function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
+function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="mb-4">
       <h2 className="ac-text-primary text-base font-semibold tracking-tight">{title}</h2>
-      <p className="ac-text-muted mt-1 max-w-3xl text-[13px] leading-relaxed">{subtitle}</p>
+      {subtitle?.trim() ? (
+        <p className="ac-text-muted mt-1 max-w-3xl text-[13px] leading-relaxed">{subtitle}</p>
+      ) : null}
     </div>
   );
 }
@@ -215,10 +217,7 @@ export default function FinancialOverview() {
 
         {/* School-wide cash position */}
         <section className="mb-10">
-          <SectionTitle
-            title="School cash position (all terms)"
-            subtitle="Total fee money recorded in the system (every payment, including amounts that clear older-term balances) minus every approved or paid expense—any term. This is the closest thing to “cash left if the ledger is complete from day one”; it does not add a manual opening bank balance from before you used the app."
-          />
+          <SectionTitle title="School cash position (all terms)" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <KPICard
               icon={Landmark}
@@ -239,23 +238,13 @@ export default function FinancialOverview() {
 
         {/* Current term */}
         <section className="mb-10">
-          <SectionTitle
-            title="Current term performance"
-            subtitle="Ledger slice for the current academic term. “Collected” uses term_id on the payment. “Cash in” is every fee receipt dated within this term’s dates (any term_id), including clearing old balances. Expenses are approved or paid rows tagged with this term."
-          />
+          <SectionTitle title="Current term performance" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <KPICard
-              icon={Wallet}
-              label="Fees invoiced (expected)"
-              value={fmt(tp.feesExpected)}
-              subline={`All student balance rows for ${m.currentTerm?.label ?? "this term"}`}
-              variant="blue"
-            />
+            <KPICard icon={Wallet} label="Fees invoiced (expected)" value={fmt(tp.feesExpected)} variant="blue" />
             <KPICard
               icon={CreditCard}
               label="Collected (attributed to this term)"
               value={fmt(tp.feesCollectedAttributed)}
-              subline="Sum of fee payments recorded against this term_id"
               variant="green"
             />
             <KPICard
@@ -265,20 +254,8 @@ export default function FinancialOverview() {
               subline={`All fee receipts dated in this term’s window (${m.currentTerm?.label ?? "—"}); includes payments toward older terms`}
               variant="violet"
             />
-            <KPICard
-              icon={FileText}
-              label="Outstanding (this term only)"
-              value={fmt(tp.outstandingOnTerm)}
-              subline="Remaining balance on ledger for this term"
-              variant="orange"
-            />
-            <KPICard
-              icon={TrendingUp}
-              label="Collection rate"
-              value={collectionRateDisplay}
-              subline={tp.feesExpected > 0 ? "Collected ÷ expected for this term" : "Set invoiced fees to compute rate"}
-              variant="teal"
-            />
+            <KPICard icon={FileText} label="Outstanding (this term only)" value={fmt(tp.outstandingOnTerm)} variant="orange" />
+            <KPICard icon={TrendingUp} label="Collection rate" value={collectionRateDisplay} variant="teal" />
             <KPICard
               icon={DollarSign}
               label="Expenses (this term)"
@@ -297,18 +274,9 @@ export default function FinancialOverview() {
 
         {/* Cash activity */}
         <section className="mb-10">
-          <SectionTitle
-            title="Fee receipt activity (by payment date)"
-            subtitle="Uses payment_date across all terms, grouped by Uganda local calendar days (Africa/Kampala). A payment toward a prior term still appears on the day it was received."
-          />
+          <SectionTitle title="Fee receipt activity (by payment date)" />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <KPICard
-              icon={Calendar}
-              label="Today"
-              value={fmt(ca.todayAllTerms)}
-              subline="Uganda local date · all terms · non-reversed"
-              variant="teal"
-            />
+            <KPICard icon={Calendar} label="Today" value={fmt(ca.todayAllTerms)} variant="teal" />
             <KPICard
               icon={Calendar}
               label="Last 7 days"
@@ -334,9 +302,6 @@ export default function FinancialOverview() {
                 <PieChartIcon className="ac-text-muted h-5 w-5" />
                 <h3 className="ac-text-primary text-lg font-semibold">School receivables</h3>
               </div>
-              <p className="ac-text-muted mb-5 text-[13px] leading-relaxed">
-                All terms: positive balances where fees were set. Prior vs current split matches the centre total.
-              </p>
               <div className="mb-5 grid grid-cols-2 gap-3">
                 <div className="ac-glass-card rounded-xl border border-[var(--ac-border)]/50 p-3.5">
                   <p className="ac-text-secondary text-xs font-medium">Total still to collect</p>
@@ -427,11 +392,6 @@ export default function FinancialOverview() {
                 <h3 className="ac-text-primary text-lg font-semibold">All-time monthly cashflow</h3>
                 <span className="ac-text-muted text-xs font-medium">{cfRangeLabel}</span>
               </div>
-              <p className="ac-text-muted mb-4 text-[13px] leading-relaxed">
-                Every month from your first recorded fee receipt or expense through today. Totals are computed in the
-                database (fast). Non-reversed fee payments and approved or paid expenses only—not the same as “current
-                term only.”
-              </p>
               <p className="ac-text-secondary text-[13px] font-medium">Net (all fee receipts − all expenses)</p>
               <p
                 className={`mt-0.5 text-3xl font-bold tabular-nums tracking-tight ${m.cashflowAllTime.netCash >= 0 ? "text-emerald-600" : "text-red-500"}`}
