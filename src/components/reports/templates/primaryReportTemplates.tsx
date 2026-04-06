@@ -978,6 +978,13 @@ function Template2KasoziReport({
 
 // Template 3 - Kyotera Parents' Secondary School Format
 function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
+  const streamDisplay =
+    student?.stream ||
+    student?.current_stream ||
+    student?.stream_name ||
+    student?.class_stream ||
+    student?.section ||
+    'N/A';
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
@@ -1348,7 +1355,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
             <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
             <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
-            <div><strong className="text-blue-900">STREAM:</strong> EAST</div>
+            <div><strong className="text-blue-900">STREAM:</strong> {streamDisplay}</div>
             <div><strong className="text-blue-900">CLASS:</strong> {student.current_class}</div>
             <div><strong className="text-blue-900">LIN:</strong> {student.admission_number || student.student_id}</div>
             <div><strong className="text-blue-900">Date:</strong> {examSet?.date || '26/05/2025'}</div>
@@ -1393,7 +1400,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 const colspan = 4 + (showMidTermColumn ? 1 : 0) + (showEndOfTermColumn ? 1 : 0);
                 return (
                   <tr>
-                    <td colSpan={colspan} className="border border-blue-100 px-3 py-2 text-center text-slate-500">No results available</td>
+                    <td colSpan={colspan} className="border border-blue-100 px-3 py-2 text-center text-slate-600">No results available</td>
                   </tr>
                 );
               }
@@ -1504,23 +1511,23 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                       totalFullMarks += group.total_marks;
                       return (
                         <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/30'}>
-                          <td className="border border-blue-100 px-2.5 py-1.6 font-semibold text-left">{group.subject}</td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.total_marks}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 font-semibold text-left text-slate-900">{group.subject}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.total_marks}</td>
                           {showMidTermColumn && (
-                            <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.mid ?? ''}</td>
+                            <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.mid ?? ''}</td>
                           )}
                           {showEndOfTermColumn && (
-                            <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.end ?? ''}</td>
+                            <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.end ?? ''}</td>
                           )}
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-left">{group.remarks}</td>
-                          <td className="border border-blue-100 px-2.5 py-1.6 text-center">{group.initials}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-left text-slate-700">{group.remarks}</td>
+                          <td className="border border-blue-100 px-2.5 py-1.6 text-center text-slate-800">{group.initials}</td>
                         </tr>
                       );
                     });
                   })()}
                   <tr className="bg-blue-100/60">
-                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-left">TOTAL</td>
-                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-center">{totalFullMarks}</td>
+                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-left text-slate-900">TOTAL</td>
+                    <td className="border border-blue-100 px-2.5 py-1.8 font-semibold text-center text-slate-900">{totalFullMarks}</td>
                     {showMidTermColumn && (
                       <td className="border border-blue-100 px-2.5 py-1.8"></td>
                     )}
@@ -1538,15 +1545,15 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
         {/* SUMMARY SECTION - Separate Cards */}
         <div className="grid grid-cols-3 gap-3 text-[9.2pt]">
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5 text-slate-800">
             <div><strong className="text-blue-900">Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
             <div><strong className="text-blue-900">Average:</strong> {student.summary?.average ?? 'N/A'}</div>
           </div>
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5 text-slate-800">
             <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student.summary?.totalStudents || 'N/A'} students</div>
         </div>
-          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5">
+          <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5 text-slate-800">
             <div><strong className="text-blue-900">Attendance:</strong></div>
             <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
             <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
@@ -1570,7 +1577,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 <tbody>
                   {gradeScale.map((range: { min: number; max: number; grade: string }, idx: number) => (
                     <tr key={`${range.grade}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
-                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-slate-800">{`${range.min} - ${range.max}`}</td>
                       <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.grade}</td>
                     </tr>
                   ))}
@@ -1589,7 +1596,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 <tbody>
                   {divisionScale.map((range: { min: number; max: number; division: string }, idx: number) => (
                     <tr key={`${range.division}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
-                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-slate-800">{`${range.min} - ${range.max}`}</td>
                       <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.division}</td>
                     </tr>
                   ))}
@@ -2051,11 +2058,11 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/35'}>
                   <td className="border border-blue-100 px-2.5 py-1.24 font-semibold text-slate-900">{subj.subject_name || ''}</td>
                 {hasBOTExamSets && !isMidTermSelected && (
-                    <td className="border border-blue-100 px-2.2 py-1.12 text-center">{bot}</td>
+                    <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{bot}</td>
                 )}
-                  <td className="border border-blue-100 px-2.2 py-1.12 text-center">{mot}</td>
+                  <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{mot}</td>
                 {showENDColumn && (
-                    <td className="border border-blue-100 px-2.2 py-1.12 text-center">{eot}</td>
+                    <td className="border border-blue-100 px-2.2 py-1.12 text-center text-slate-800">{eot}</td>
                 )}
                   <td className="border border-blue-100 px-2.2 py-1.12 text-center font-bold text-blue-900">{displayGrade}</td>
                   <td className="border border-blue-100 px-2.2 py-1.12 text-[9.2pt] text-slate-700 leading-[1.27]">{subj.teacher_comment || ''}</td>
@@ -2079,7 +2086,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
             <div><strong className="text-blue-900">Class Position:</strong> {student?.summary?.classPosition || 'N/A'}</div>
             <div><strong className="text-blue-900">Out of:</strong> {student?.summary?.totalStudents || 'N/A'} students</div>
         </div>
-          <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.5 py-1.6">
+          <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.5 py-1.6 text-slate-800">
             <div className="text-blue-900 font-semibold">Attendance:</div>
           <div>Days Present: {attendance.presentDays ?? 'N/A'}</div>
           <div>Days Absent: {attendance.absentDays ?? 'N/A'}</div>
@@ -2103,7 +2110,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 <tbody>
                   {gradeScale.map((range, idx) => (
                     <tr key={`${range.grade}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
-                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-slate-800">{`${range.min} - ${range.max}`}</td>
                       <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.grade}</td>
                     </tr>
                   ))}
@@ -2122,7 +2129,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 <tbody>
                   {divisionScale.map((range, idx) => (
                     <tr key={`${range.division}-${idx}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-blue-50/45'}>
-                      <td className="border border-blue-100 px-2.1 py-1.02">{`${range.min} - ${range.max}`}</td>
+                      <td className="border border-blue-100 px-2.1 py-1.02 text-slate-800">{`${range.min} - ${range.max}`}</td>
                       <td className="border border-blue-100 px-2.1 py-1.02 text-center font-semibold text-blue-900">{range.division}</td>
                     </tr>
                   ))}

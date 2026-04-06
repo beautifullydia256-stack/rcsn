@@ -85,6 +85,11 @@
   }
 }
 
+/* Report preview (Issue 12): default readable body text on white cards inside dark admin theme */
+#report-preview-print-area .report-preview-doc-surface {
+  color: #0f172a;
+}
+
 /* Report preview: when printing, show only the report cards */
 @media print {
   body * {

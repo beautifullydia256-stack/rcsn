@@ -963,7 +963,7 @@ export default function GenerateReportsPage() {
                     </div>
                   )}
                   <div
-                    className="mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
+                    className="report-preview-doc-surface mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
                     style={{ width: '210mm', maxWidth: '100%' }}
                   >
                     {reportsToDisplay.map((report: any, idx: number) => (
