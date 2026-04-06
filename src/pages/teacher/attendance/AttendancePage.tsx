@@ -75,18 +75,57 @@ export default function TeacherAttendancePage() {
       setSaveError(null);
       if (!schoolId || !teacherId || !selectedClass) throw new Error('Missing context');
       const attendanceDate = todayISO();
-      const rows = Object.entries(localPresent).map(([student_id, present]) => ({
-        school_id: schoolId,
-        class_name: selectedClass,
-        student_id,
-        teacher_id: teacherId,
-        date: attendanceDate,
-        present,
-      }));
-      const { error } = await supabase.from('student_attendance').upsert(rows, {
-        onConflict: 'student_id,date',
-      });
-      if (error) throw error;
+      const entries = Object.entries(localPresent);
+      if (entries.length === 0) return;
+
+      const studentIds = entries.map(([id]) => id);
+      // Production DBs may not have UNIQUE(student_id, date); PostgREST upsert requires it.
+      // Update-or-insert works without that constraint (one logical row per student per day).
+      const { data: existingRows, error: fetchErr } = await supabase
+        .from('student_attendance')
+        .select('student_id')
+        .eq('school_id', schoolId)
+        .eq('date', attendanceDate)
+        .in('student_id', studentIds);
+
+      if (fetchErr) throw fetchErr;
+
+      const already = new Set((existingRows || []).map((r: { student_id: string }) => r.student_id));
+
+      const updatePromises = entries
+        .filter(([student_id]) => already.has(student_id))
+        .map(([student_id, present]) =>
+          supabase
+            .from('student_attendance')
+            .update({
+              present,
+              teacher_id: teacherId,
+              class_name: selectedClass,
+            })
+            .eq('school_id', schoolId)
+            .eq('date', attendanceDate)
+            .eq('student_id', student_id)
+        );
+
+      const toInsert = entries
+        .filter(([student_id]) => !already.has(student_id))
+        .map(([student_id, present]) => ({
+          school_id: schoolId,
+          class_name: selectedClass,
+          student_id,
+          teacher_id: teacherId,
+          date: attendanceDate,
+          present,
+        }));
+
+      const updateResults = await Promise.all(updatePromises);
+      for (const r of updateResults) {
+        if (r.error) throw r.error;
+      }
+      if (toInsert.length > 0) {
+        const { error: insertErr } = await supabase.from('student_attendance').insert(toInsert);
+        if (insertErr) throw insertErr;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
