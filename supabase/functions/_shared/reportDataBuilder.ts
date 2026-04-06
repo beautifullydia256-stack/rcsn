@@ -614,7 +614,12 @@ function oneReportFromSnapshotRows(
         summary: {
           totalMarks: summaryRows.reduce((s, d) => s + (d.marks_obtained || 0), 0),
           totalPossibleMarks: summaryRows.reduce((s, d) => s + (d.total_marks || 100), 0),
-          average: firstSummaryRecord.average_percentage ?? null,
+          average: (() => {
+            const v = firstSummaryRecord.average_percentage;
+            if (v === null || v === undefined || v === '') return null;
+            const n = Number(v);
+            return Number.isNaN(n) ? null : Math.round(n);
+          })(),
           aggregate: firstSummaryRecord.aggregate ?? null,
           division: firstSummaryRecord.division ?? null,
           attendancePercentage: firstSummaryRecord.attendance_percentage ?? null,

@@ -60,7 +60,12 @@ export async function transformSnapshotToReportFormat(
   const summary = {
     totalMarks: studentData.reduce((sum, d) => sum + (d.marks_obtained || 0), 0),
     totalPossibleMarks: studentData.reduce((sum, d) => sum + (d.total_marks || 100), 0),
-    average: firstRecord.average_percentage || null,
+    average: (() => {
+      const v = firstRecord.average_percentage;
+      if (v === null || v === undefined) return null;
+      const n = Number(v);
+      return Number.isNaN(n) ? null : Math.round(n);
+    })(),
     aggregate: firstRecord.aggregate || null,
     division: firstRecord.division || null,
     attendancePercentage: firstRecord.attendance_percentage || null,

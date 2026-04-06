@@ -130,7 +130,10 @@ export async function renderReportFromSnapshot(
     
     // Summary (all pre-calculated)
     TOTAL_MARKS: student.summary.totalMarks,
-    AVERAGE: student.summary.average?.toFixed(2),
+    AVERAGE:
+      student.summary.average != null && student.summary.average !== ''
+        ? String(Math.round(Number(student.summary.average)))
+        : '',
     AGGREGATE: student.summary.aggregate?.toFixed(2),
     DIVISION: student.summary.division,
     POSITION: student.summary.classPosition,

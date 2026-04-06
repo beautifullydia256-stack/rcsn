@@ -10,7 +10,7 @@
  */
 
 import { supabase } from '../lib/supabase';
-import { formatCurrency } from '../lib/reportUtils';
+import { formatAverageWhole, formatCurrency } from '../lib/reportUtils';
 
 // ============================================================================
 // TYPES AND CONSTANTS
@@ -201,7 +201,7 @@ export function replaceTemplatePlaceholders(
     .replace(/\[STUDENT_CLASS\]/g, student.current_class || '')
     .replace(/\[TERM\]/g, examSet?.term || '')
     .replace(/\[YEAR\]/g, examSet?.year || '')
-    .replace(/\[AVERAGE_SCORE\]/g, student.summary?.average || '')
+    .replace(/\[AVERAGE_SCORE\]/g, formatAverageWhole(student.summary?.average, ''))
     .replace(/\[OVERALL_GRADE\]/g, student.summary?.division || '')
     .replace(/\[POSITION\]/g, student.summary?.position || '')
     .replace(/\[TEACHER_COMMENT\]/g, student.comments?.class_teacher_text || '')
@@ -671,7 +671,6 @@ export function generateTemplate1OLevelHTML(
   const daysPresent = attendance.presentDays ?? '';
   const totalDays = attendance.totalSchoolDays ?? '';
   const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
-  const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 

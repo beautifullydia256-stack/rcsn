@@ -78,6 +78,14 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+/** Whole-number average for reports (avoids float artifacts like 28.999999999999996). */
+export function formatAverageWhole(value: unknown, emptyLabel = 'N/A'): string {
+  if (value === null || value === undefined || value === '') return emptyLabel;
+  const n = typeof value === 'number' ? value : Number(value);
+  if (Number.isNaN(n)) return emptyLabel;
+  return String(Math.round(n));
+}
+
 export function formatDate(date: string | Date): string {
   return new Intl.DateTimeFormat('en-UG', {
     year: 'numeric',

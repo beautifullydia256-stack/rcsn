@@ -2,6 +2,8 @@
  * Renders one report card from report_data (school header + student results).
  * Matches the old 2f00b44 layout: logo, school name, contact, motto, then student report.
  */
+import { formatAverageWhole } from '../../lib/reportUtils';
+
 export function ReportCardPreview({ reportData }: { reportData: any }) {
   if (!reportData?.students?.[0]) return null;
   const school = reportData.school || {};
@@ -70,7 +72,14 @@ export function ReportCardPreview({ reportData }: { reportData: any }) {
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 p-3 bg-gray-50 rounded-lg text-sm">
-        <div><span className="text-gray-600">Average:</span> <span className="font-semibold">{summary.average != null ? summary.average.toFixed(1) + '%' : '—'}</span></div>
+        <div>
+          <span className="text-gray-600">Average:</span>{' '}
+          <span className="font-semibold">
+            {summary.average != null && summary.average !== ''
+              ? `${formatAverageWhole(summary.average)}%`
+              : '—'}
+          </span>
+        </div>
         <div><span className="text-gray-600">Position:</span> <span className="font-semibold">{summary.classPosition ?? '—'}</span></div>
         <div><span className="text-gray-600">Division:</span> <span className="font-semibold">{summary.division ?? '—'}</span></div>
         <div><span className="text-gray-600">Aggregate:</span> <span className="font-semibold">{summary.aggregate != null ? summary.aggregate.toFixed(1) : '—'}</span></div>

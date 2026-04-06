@@ -21,7 +21,7 @@ import {
 import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { lightenColor, isOLevelClass, isLowerSectionPrimary } from './helpers';
-import { formatCurrency } from '../../../lib/reportUtils';
+import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
   const cls = String(student.current_class || '');
@@ -110,7 +110,6 @@ function Template1OLevelReport({ student, examSet, school }: { student: any; exa
   const daysPresent = attendance.presentDays ?? '';
   const totalDays = attendance.totalSchoolDays ?? '';
   const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
-  const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const displayDivision = (() => {
     if (typeof avgGrade !== 'string') return avgGrade;
@@ -1002,7 +1001,6 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   })();
   const attendance = student.summary.attendanceDetails || {};
-  const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
@@ -1613,7 +1611,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
         <div className="grid grid-cols-3 gap-3 text-[9.2pt]">
           <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5 text-slate-800">
             <div><strong className="text-blue-900">Total Marks:</strong> {student.summary?.totalMarks || 'N/A'}</div>
-            <div><strong className="text-blue-900">Average:</strong> {student.summary?.average ?? 'N/A'}</div>
+            <div><strong className="text-blue-900">Average:</strong> {formatAverageWhole(student.summary?.average)}</div>
           </div>
           <div className="bg-white border border-blue-100/40 rounded-lg shadow-sm px-3.5 py-2.5 text-slate-800">
             <div><strong className="text-blue-900">Class Position:</strong> {student.summary?.classPosition || 'N/A'}</div>
@@ -1715,7 +1713,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
     return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   })();
 
-  const avg = student?.summary?.average ?? '';
+  const avgDisplay = formatAverageWhole(student?.summary?.average);
   const avgGrade = student?.summary?.division ?? '';
   const displayDivision = (() => {
     if (typeof avgGrade !== 'string') return avgGrade;
@@ -2208,7 +2206,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       <div className="grid grid-cols-3 gap-1.6 text-[8.7pt]">
           <div className="rounded-xl bg-white border border-blue-100/60 shadow-sm px-2.5 py-1.6">
             <div><strong className="text-blue-900">Total Marks:</strong> {student?.summary?.totalMarks || 'N/A'}</div>
-            <div><strong className="text-blue-900">Average:</strong> {avg}</div>
+            <div><strong className="text-blue-900">Average:</strong> {avgDisplay}</div>
             <div><strong className="text-blue-900">Aggregates:</strong> {student?.summary?.aggregate !== null && student?.summary?.aggregate !== undefined ? student.summary.aggregate : 'N/A'}</div>
             <div><strong className="text-blue-900">Division:</strong> {displayDivision || 'N/A'}</div>
         </div>

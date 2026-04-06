@@ -38,6 +38,14 @@ function escapeHtmlText(raw: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
+/** Report average as a whole number (matches on-screen reports). */
+function formatAverageForPdf(raw: unknown): string {
+  if (raw === null || raw === undefined || raw === '') return '—';
+  const n = typeof raw === 'number' ? raw : Number(raw);
+  if (Number.isNaN(n)) return String(raw);
+  return String(Math.round(n));
+}
+
 /**
  * Same resolution order as Vite Template3/4 header: contact_* fields first, then generic email/phone.
  * Renders the two-line contact block like the on-screen preview (email | phone).
@@ -83,7 +91,10 @@ function renderReportHTML(templateHtml: string, templateCss: string, reportData:
     EXAM_TERM: examSet.term ?? '',
     EXAM_YEAR: examSet.year ?? '',
     TOTAL_MARKS: student.summary?.totalMarks ?? '',
-    AVERAGE: student.summary?.average != null ? String(student.summary.average) : '',
+    AVERAGE:
+      student.summary?.average != null && student.summary?.average !== ''
+        ? formatAverageForPdf(student.summary.average)
+        : '',
     AGGREGATE: student.summary?.aggregate != null ? String(student.summary.aggregate) : '',
     DIVISION: student.summary?.division ?? '',
     POSITION: student.summary?.classPosition ?? '',
@@ -298,7 +309,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
 
   const summary = (student as any).summary || {};
   const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
-  const avg = summary.average != null ? (typeof summary.average === 'number' ? summary.average.toFixed(2) : summary.average) : '—';
+  const avg = formatAverageForPdf(summary.average);
   const position =
     summary.classPosition != null && summary.totalStudents != null
       ? `${summary.classPosition} of ${summary.totalStudents}`
@@ -584,7 +595,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   const totalFullMarks = sortedLowerRows.reduce((s, r) => s + r.total_marks, 0);
   const summary = (student as any).summary || {};
   const totalMarks = summary.totalMarks ?? summary.total_marks ?? 'N/A';
-  const avg = summary.average != null ? (typeof summary.average === 'number' ? summary.average.toFixed(2) : summary.average) : '—';
+  const avg = formatAverageForPdf(summary.average);
   const position = summary.classPosition != null && summary.totalStudents != null ? `${summary.classPosition} of ${summary.totalStudents}` : summary.classPosition ?? '—';
   const attendance = summary.attendanceDetails || summary.attendance_details || {};
   const daysPresent = attendance.presentDays ?? attendance.present_days ?? 'N/A';
@@ -692,6 +703,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     .comments-box h3 { font-size: 9pt; font-weight: 600; text-transform: uppercase; margin-bottom: 3px; color: #1e3a8a; }
     .comments-box .comment-p { margin-bottom: 3px; line-height: 1.26; color: #334155; }
     .comments-box .signature { font-size: 8pt; margin-top: 3px; color: #64748b; }
+    .next-term-fees { display: flex; justify-content: space-between; align-items: center; flex-wrap: nowrap; width: 100%; padding-top: 6px; margin-top: 6px; border-top: 1px solid #bfdbfe; font-size: 8.1pt; box-sizing: border-box; }
     .next-term-fees strong { color: #1e3a8a; }
     .report-footer { text-align: center; font-size: 7pt; margin-top: 3mm; padding-top: 3px; border-top: 1px solid #bfdbfe; color: #64748b; }
     .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
@@ -788,7 +800,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     <p class="comment-p">${headTeacherComment}</p>
     <div class="signature">Signature: ____________________</div>
     <div class="next-term-fees">
-      <div><strong>Next Term Begins:</strong> ${nextTermBegins}</div>
+      <div><strong>Next term begins on:</strong> ${nextTermBegins}</div>
       <div><strong>Fees Balance:</strong> ${feesFormatted}</div>
     </div>
   </div>
@@ -827,7 +839,10 @@ function buildMinimalReportHTML(reportData: any): string {
   const examName = (examSet as any).name ?? '';
 
   const summary = student.summary || {};
-  const avg = summary.average != null ? `${summary.average.toFixed?.(2) ?? summary.average}%` : '—';
+  const avg =
+    summary.average != null && summary.average !== undefined && summary.average !== ''
+      ? `${formatAverageForPdf(summary.average)}%`
+      : '—';
   const position =
     summary.classPosition != null && summary.totalStudents != null
       ? `${summary.classPosition} of ${summary.totalStudents}`

@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabase';
 import { useSnapshot } from '../../../hooks/useSnapshot';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { GlassModal } from '../../../components/Glass/GlassModal';
+import { formatAverageWhole } from '../../../lib/reportUtils';
 import { Download, Search, Eye } from 'lucide-react';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
@@ -174,7 +175,9 @@ export default function ReportViewer() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-white/70">Average:</span>
                   <span className="font-semibold text-white">
-                    {summary?.average ? summary.average.toFixed(2) + '%' : 'N/A'}
+                    {summary?.average != null && summary?.average !== ''
+                      ? `${formatAverageWhole(summary.average)}%`
+                      : 'N/A'}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
@@ -239,7 +242,14 @@ export default function ReportViewer() {
             <div className="rounded-2xl border border-white/20 bg-white/10 backdrop-blur-xl p-4">
               <h3 className="font-semibold text-white mb-2">Summary</h3>
               <div className="grid grid-cols-2 gap-2 text-sm text-white/85">
-                <div><span className="text-white/70">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) || 'N/A'}%</div>
+                <div>
+                  <span className="text-white/70">Average:</span>{' '}
+                  {(() => {
+                    const a = viewingReport.reportData?.students?.[0]?.summary?.average;
+                    if (a == null || a === '') return 'N/A';
+                    return `${formatAverageWhole(a)}%`;
+                  })()}
+                </div>
                 <div><span className="text-white/70">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition || 'N/A'}</div>
                 <div><span className="text-white/70">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division || 'N/A'}</div>
                 <div><span className="text-white/70">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) || 'N/A'}</div>

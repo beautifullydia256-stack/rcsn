@@ -10,6 +10,7 @@ import { PRIMARY_TEMPLATES, getTemplateForClass } from '../../../templates/prima
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
+import { formatAverageWhole } from '../../../lib/reportUtils';
 import { GlassModal } from '../../../components/Glass/GlassModal';
 import { ReportPreviewFromData } from '../../../components/reports/ReportPreviewFromData';
 import { Eye, Download, FileDown } from 'lucide-react';
@@ -1015,7 +1016,14 @@ export default function GenerateReportsPage() {
                 <div className="rounded-2xl border border-[var(--ac-border)] ac-glass-card p-4">
                   <h3 className="font-semibold ac-text-primary mb-2">Summary</h3>
                   <div className="grid grid-cols-2 gap-2 text-sm ac-text-secondary">
-                    <div><span className="ac-text-muted">Average:</span> {viewingReport.reportData?.students?.[0]?.summary?.average?.toFixed(2) ?? '—'}%</div>
+                    <div>
+                      <span className="ac-text-muted">Average:</span>{' '}
+                      {(() => {
+                        const a = viewingReport.reportData?.students?.[0]?.summary?.average;
+                        if (a == null || a === '') return '—';
+                        return `${formatAverageWhole(a)}%`;
+                      })()}
+                    </div>
                     <div><span className="ac-text-muted">Position:</span> {viewingReport.reportData?.students?.[0]?.summary?.classPosition ?? '—'}</div>
                     <div><span className="ac-text-muted">Division:</span> {viewingReport.reportData?.students?.[0]?.summary?.division ?? '—'}</div>
                     <div><span className="ac-text-muted">Aggregate:</span> {viewingReport.reportData?.students?.[0]?.summary?.aggregate?.toFixed(2) ?? '—'}</div>
