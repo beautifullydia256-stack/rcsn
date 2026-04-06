@@ -994,13 +994,13 @@ function Template2KasoziReport({
 
 // Template 3 - Kyotera Parents' Secondary School Format
 function Template3KyoteraReport({ student, examSet, school, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
-  const streamDisplay =
-    student?.stream ||
-    student?.current_stream ||
-    student?.stream_name ||
-    student?.class_stream ||
-    student?.section ||
-    'N/A';
+  const reportDateDisplayLower = (() => {
+    const raw = examSet?.date || student?.report_date || student?.summary?.reportDate;
+    if (!raw) return 'N/A';
+    const parsed = new Date(raw);
+    if (isNaN(parsed.getTime())) return String(raw);
+    return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  })();
   const attendance = student.summary.attendanceDetails || {};
   const avg = student.summary.average ?? '';
   const avgGrade = student.summary.division ?? '';
@@ -1365,30 +1365,72 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
       </div>
 
       <div className="relative z-10 space-y-3" style={{ marginTop: '0.2cm' }}>
-      {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-[0.55rem] text-[10.2pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3 py-2">
-          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 flex-1">
-            <div><strong className="text-blue-900">STUDENT'S NAME:</strong> {student.name}</div>
-            <div><strong className="text-blue-900">YEAR:</strong> {examSet?.year || '2025'}</div>
-            <div><strong className="text-blue-900">STREAM:</strong> {streamDisplay}</div>
-            <div><strong className="text-blue-900">CLASS:</strong> {student.current_class}</div>
-            <div><strong className="text-blue-900">LIN:</strong> {student.admission_number || student.student_id}</div>
-            <div><strong className="text-blue-900">Date:</strong> {examSet?.date || '26/05/2025'}</div>
+      {/* STUDENT INFO — match PDF (generate.ts Template 3 student-block / student-grid) */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            padding: '6px 10px',
+            border: '1px solid #bfdbfe',
+            borderRadius: '8px',
+            marginBottom: '3mm',
+            background: '#f8fafc',
+            minHeight: '28mm',
+            fontSize: '10.2pt',
+            lineHeight: 1.3,
+            color: '#1e293b',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              columnGap: '10px',
+              rowGap: '4px',
+              fontSize: '10.2pt',
+              flex: 1,
+            }}
+          >
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Name:</strong> {student.name ?? ''}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Class:</strong> {student.current_class ?? ''}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Admission No:</strong>{' '}
+              {student.admission_number ?? student.student_id ?? 'N/A'}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Term:</strong> {examSet?.term ?? 'N/A'} /{' '}
+              {examSet?.year || new Date().getFullYear()}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Date:</strong> {reportDateDisplayLower}
+            </div>
           </div>
-          
-          {/* Student Photo */}
-          <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div
+            style={{
+              width: '2.1cm',
+              height: '2.9cm',
+              border: '1px solid #bfdbfe',
+              borderRadius: '4px',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
+          >
             {student.profile_photo ? (
-              <img
-                src={student.profile_photo}
-                alt="Student Photo"
-                className="w-full h-full object-cover"
-              />
+              <img src={student.profile_photo} alt="Student Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div className="text-xs text-gray-500">Photo</div>
+              <span style={{ fontSize: '8pt', color: '#94a3b8' }}>Photo</span>
             )}
+          </div>
         </div>
-      </div>
 
       {/* SUBJECTS TABLE - Lower Section (P.1 - P.3) */}
         <div className="bg-white border border-blue-100/50 rounded-lg shadow-sm overflow-hidden">
@@ -2009,27 +2051,72 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
       </div>
 
       <div className="relative z-10 flex flex-col gap-[0.9rem]" style={{ marginTop: '0.08cm' }}>
-      {/* STUDENT INFO */}
-        <div className="flex items-start justify-between gap-[0.7rem] text-[10.2pt] bg-white border border-blue-100/60 rounded-xl shadow-sm px-3.4 py-2.4 min-h-[3.2cm]">
-          <div className="grid grid-cols-2 gap-x-5 gap-y-1.8 flex-1">
-            <div><strong className="text-blue-900">Name:</strong> {student?.name || 'Student Name'}</div>
-            <div><strong className="text-blue-900">Class:</strong> {student?.current_class || 'Class'}</div>
-            <div><strong className="text-blue-900">Admission No:</strong> {student?.admission_number || 'N/A'}</div>
-            <div><strong className="text-blue-900">Term:</strong> {examSet?.term || 'N/A'} / {examSet?.year || new Date().getFullYear()}</div>
-            <div><strong className="text-blue-900">Stream:</strong> {streamDisplay}</div>
-            <div><strong className="text-blue-900">Date:</strong> {reportDateDisplay}</div>
+      {/* STUDENT INFO — match PDF (generate.ts Template 4 student-block / student-grid) */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            padding: '6px 10px',
+            border: '1px solid #bfdbfe',
+            borderRadius: '8px',
+            marginBottom: '3mm',
+            background: '#f8fafc',
+            minHeight: '28mm',
+            fontSize: '10.2pt',
+            lineHeight: 1.3,
+            color: '#1e293b',
+          }}
+        >
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              columnGap: '10px',
+              rowGap: '4px',
+              fontSize: '10.2pt',
+              flex: 1,
+            }}
+          >
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Name:</strong> {student?.name ?? ''}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Class:</strong> {student?.current_class ?? ''}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Admission No:</strong>{' '}
+              {student?.admission_number ?? student?.student_id ?? 'N/A'}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Term:</strong> {examSet?.term ?? 'N/A'} /{' '}
+              {examSet?.year || new Date().getFullYear()}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Stream:</strong> {streamDisplay}
+            </div>
+            <div>
+              <strong style={{ color: '#1e3a8a' }}>Date:</strong> {reportDateDisplay}
+            </div>
           </div>
-          
-          {/* Student Photo */}
-          <div className="w-[2.1cm] h-[2.9cm] border border-blue-200 bg-white rounded-md shadow-sm flex items-center justify-center overflow-hidden flex-shrink-0">
+          <div
+            style={{
+              width: '2.1cm',
+              height: '2.9cm',
+              border: '1px solid #bfdbfe',
+              borderRadius: '4px',
+              background: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              flexShrink: 0,
+            }}
+          >
             {student?.profile_photo ? (
-              <img
-                src={student.profile_photo}
-                alt="Student Photo"
-                className="w-full h-full object-cover"
-              />
+              <img src={student.profile_photo} alt="Student Photo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : (
-              <div className="text-[0.55rem] text-gray-500">Photo</div>
+              <span style={{ fontSize: '8pt', color: '#94a3b8' }}>Photo</span>
             )}
           </div>
         </div>
