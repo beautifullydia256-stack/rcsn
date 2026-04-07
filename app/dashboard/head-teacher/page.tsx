@@ -217,6 +217,7 @@ export default function HeadTeacherDashboard() {
             <h2 className="text-white font-medium mb-3">Quick Actions</h2>
             <div className="flex flex-wrap gap-3">
               <button onClick={()=>router.push('/dashboard/head-teacher/headed-paper')} className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white">Headed Paper</button>
+              <button onClick={()=>router.push('/dashboard/admin/students')} className="px-4 py-2 rounded-lg bg-slate-600 hover:bg-slate-500 text-white">Students / UACE profiles</button>
               <button onClick={()=>router.push('/dashboard/admin/teachers')} className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white">Manage Teachers</button>
               <button onClick={()=>router.push('/dashboard/admin/reports/generate')} className="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white">Generate Reports</button>
               <button onClick={()=>router.push('/dashboard/head-teacher/headteacher-comments-settings')} className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-500 text-white">Headteacher's Comments Settings</button>

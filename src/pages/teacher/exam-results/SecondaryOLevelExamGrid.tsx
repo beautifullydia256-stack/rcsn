@@ -280,6 +280,8 @@ export function SecondaryOLevelExamGrid({
           p_teacher_initials: (data.initials || teacherInitials || '').trim(),
           p_teacher_id: teacherId,
           p_topic: (data.topic || topicFilter || '').trim(),
+          p_paper_code: null,
+          p_paper_number: null,
           p_grade: letterGrade,
         });
         if (error) {

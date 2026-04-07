@@ -15,6 +15,10 @@ import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
 import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
+import { studentsVisibleForAlevelExam } from "@/src/lib/studentAlevelExamFilter";
+import type { SchoolUaceClassSubjectPaperRow } from "@/src/lib/uaceClassSubjectPapers";
+import { fetchUacePapersForClassSubject } from "@/src/lib/uaceClassSubjectPapers";
+import { matchesAlevelExamPaperLine } from "@/src/lib/alevelExamPaperLine";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -56,6 +60,8 @@ export default function TeacherExamResultsClassPage() {
   
   const [examSets, setExamSets] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  /** student_id → UACE subject names (Senior 5–6); drives exam grid filtering per selected subject. */
+  const [alevelSubjectsByStudent, setAlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
   const [resolvedTeacherId, setResolvedTeacherId] = useState<string>("");
   const [resolvedSchoolId, setResolvedSchoolId] = useState<string>("");
@@ -84,6 +90,8 @@ export default function TeacherExamResultsClassPage() {
     initials: string;
   }>>({});
   const [topicFilter, setTopicFilter] = useState<string>("");
+  const [uacePaperOptions, setUacePaperOptions] = useState<SchoolUaceClassSubjectPaperRow[]>([]);
+  const [selectedAlevelPaperCode, setSelectedAlevelPaperCode] = useState<string>("");
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
   const [showTeacherRemarks, setShowTeacherRemarks] = useState(false);
@@ -159,6 +167,34 @@ export default function TeacherExamResultsClassPage() {
     E: 'Your effort needs Improvement. Work diligently to boost your performance.',
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
+
+  const studentsForAlevelExam = useMemo(
+    () => studentsVisibleForAlevelExam(isALevel, selectedSubject, students, alevelSubjectsByStudent),
+    [isALevel, selectedSubject, students, alevelSubjectsByStudent],
+  );
+
+  useEffect(() => {
+    if (!isALevel || !resolvedSchoolId || !className?.trim() || !selectedSubject?.trim()) {
+      setUacePaperOptions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await fetchUacePapersForClassSubject(
+          resolvedSchoolId,
+          className.trim(),
+          selectedSubject
+        );
+        if (!cancelled) setUacePaperOptions(rows);
+      } catch {
+        if (!cancelled) setUacePaperOptions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isALevel, resolvedSchoolId, className, selectedSubject]);
 
   useEffect(() => {
     if (isNursery) {
@@ -532,6 +568,23 @@ export default function TeacherExamResultsClassPage() {
 
         setStudents(studentsData);
 
+        if (isALevel && (studentsData?.length ?? 0) > 0) {
+          const ids = studentsData.map((s: { student_id: string }) => s.student_id);
+          const { data: arows } = await supabase
+            .from("student_alevel_subjects")
+            .select("student_id, subject_name")
+            .in("student_id", ids);
+          const map: Record<string, string[]> = {};
+          for (const row of arows || []) {
+            const sid = row.student_id as string;
+            if (!map[sid]) map[sid] = [];
+            map[sid].push(row.subject_name as string);
+          }
+          setAlevelSubjectsByStudent(map);
+        } else {
+          setAlevelSubjectsByStudent({});
+        }
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -541,7 +594,7 @@ export default function TeacherExamResultsClassPage() {
     };
 
     fetchData();
-  }, [className, router]);
+  }, [className, router, isALevel]);
 
   const calculatePrimaryGrade = (marks: number, totalMarks: number, subject: string): string => {
     if (!marks && marks !== 0) return '';
@@ -978,7 +1031,10 @@ export default function TeacherExamResultsClassPage() {
         }
       } else if (isALevel) {
         // A-Level format - simple marks only
-        const entries = Object.entries(examResults).filter(([_, data]) => data.marks && data.totalMarks);
+        const allowedIds = new Set(studentsForAlevelExam.map((s) => s.student_id));
+        const entries = Object.entries(examResults)
+          .filter(([studentId]) => allowedIds.has(studentId))
+          .filter(([_, data]) => data.marks && data.totalMarks);
         if (entries.length === 0) {
           setError('Please enter marks for at least one student');
           return;
@@ -1001,7 +1057,8 @@ export default function TeacherExamResultsClassPage() {
             p_remarks: computedRemark,
             p_teacher_id: teacherIdForSave,
             p_teacher_comment: computedRemark,
-            p_paper_number: topicFilter || null
+            p_paper_number: topicFilter.trim() || null,
+            p_paper_code: selectedAlevelPaperCode.trim() || null,
           });
           if (resp.error) {
             console.error('RPC A-Level save error:', {
@@ -1068,6 +1125,8 @@ export default function TeacherExamResultsClassPage() {
             p_teacher_initials: data.initials || teacherInitials || '',
             p_teacher_id: teacherIdForSave,
             p_topic: (data.topic || topicFilter || '').trim(),
+            p_paper_code: null,
+            p_paper_number: null,
             p_grade: letterGrade,
           };
 
@@ -1114,7 +1173,8 @@ export default function TeacherExamResultsClassPage() {
   useEffect(() => {
     const prefill = async () => {
       if (isNursery) return;
-      if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject || students.length === 0) return;
+      const rosterForPrefill = isALevel ? studentsForAlevelExam : students;
+      if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject || rosterForPrefill.length === 0) return;
       try {
         const { data, error } = await supabase
           .from('exam_results')
@@ -1154,7 +1214,7 @@ export default function TeacherExamResultsClassPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, isSecondary, className, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, studentsForAlevelExam, isSecondary, isALevel, className, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1243,18 +1303,25 @@ export default function TeacherExamResultsClassPage() {
         });
         setExamResults(map);
       } else if (isALevel) {
-        const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
-        rows.forEach(r => {
+        const lineRows = rows.filter((r) =>
+          matchesAlevelExamPaperLine(r, selectedAlevelPaperCode, topicFilter)
+        );
+        const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
+        lineRows.forEach((r) => {
           map[r.student_id] = {
             marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
             totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || ''
+            grade: r.grade || '',
+            remark: (r.remarks ?? r.overall_remark ?? '') as string,
           };
         });
         setExamResults(map);
-        // Set the paper field from the first result (all should have the same paper)
-        if (rows.length > 0 && rows[0].paper_number) {
-          setTopicFilter(rows[0].paper_number);
+        const sample = lineRows[0];
+        if (sample) {
+          const pc = (sample.paper_code ?? '').toString().trim();
+          const pn = (sample.paper_number ?? '').toString().trim();
+          if (pc) setSelectedAlevelPaperCode(pc);
+          if (pn) setTopicFilter(pn);
         }
       } else {
         const map: Record<string, any> = {};
@@ -1295,7 +1362,7 @@ export default function TeacherExamResultsClassPage() {
     setExamResultsSecondary({});
     void reloadSavedResults();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedExamSet, selectedSubject, isNursery]);
+  }, [selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, isNursery, isALevel]);
 
   useEffect(() => {
     if (!isNursery) {
@@ -1583,7 +1650,13 @@ export default function TeacherExamResultsClassPage() {
               <label className="block text_white/80 text-sm mb-2">Subject</label>
               <select
                 value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
+                onChange={(e) => {
+                  setSelectedSubject(e.target.value);
+                  if (isALevel) {
+                    setSelectedAlevelPaperCode('');
+                    setTopicFilter('');
+                  }
+                }}
                 className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
               >
                 <option value="">Select Subject</option>
@@ -1594,17 +1667,58 @@ export default function TeacherExamResultsClassPage() {
                 ))}
               </select>
             </div>
-            {(isSecondary || isALevel) && (
+            {isSecondary && (
               <div>
-                <label className="block text_white/80 text-sm mb-2">Paper</label>
+                <label className="block text_white/80 text-sm mb-2">Topic</label>
                 <input
                   type="text"
                   value={topicFilter}
                   onChange={(e) => setTopicFilter(e.target.value)}
-                  placeholder={isALevel ? "e.g., Paper 1" : "e.g., 1 Classification"}
+                  placeholder="e.g., 1 Classification"
                   className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
                 />
               </div>
+            )}
+            {isALevel && (
+              <>
+                <div>
+                  <label className="block text_white/80 text-sm mb-2">UNEB paper (school config)</label>
+                  {uacePaperOptions.length > 0 ? (
+                    <select
+                      value={selectedAlevelPaperCode}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setSelectedAlevelPaperCode(v);
+                        const row = uacePaperOptions.find((p) => p.paper_code === v);
+                        if (row?.paper_label) setTopicFilter(row.paper_label);
+                      }}
+                      className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
+                    >
+                      <option value="">— Optional label only (no official code) —</option>
+                      {uacePaperOptions.map((p) => (
+                        <option key={p.id} value={p.paper_code} className="bg-slate-800">
+                          {p.paper_code}
+                          {p.paper_label ? ` — ${p.paper_label}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-white/60 text-xs">
+                      No papers in Admin → Settings for this class/subject. Use the field below (paper number only).
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text_white/80 text-sm mb-2">Paper label / number</label>
+                  <input
+                    type="text"
+                    value={topicFilter}
+                    onChange={(e) => setTopicFilter(e.target.value)}
+                    placeholder="e.g., Paper 1"
+                    className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
+                  />
+                </div>
+              </>
             )}
           </div>
         </motion.div>
@@ -1769,6 +1883,15 @@ export default function TeacherExamResultsClassPage() {
                   </table>
                 )
               ) : isALevel ? (
+                <>
+                {selectedSubject.trim() &&
+                  students.length > 0 &&
+                  studentsForAlevelExam.length < students.length &&
+                  Object.values(alevelSubjectsByStudent).some((l) => l.length > 0) && (
+                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                    Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile. Set combinations on each student in Admin → Students.
+                  </div>
+                )}
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -1780,7 +1903,7 @@ export default function TeacherExamResultsClassPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {students.map((student) => {
+                    {studentsForAlevelExam.map((student) => {
                       const marks = examResults[student.student_id]?.marks || '';
                       const totalMarks = examResults[student.student_id]?.totalMarks || '100';
                       const grade = examResults[student.student_id]?.grade || '';
@@ -1805,6 +1928,7 @@ export default function TeacherExamResultsClassPage() {
                     })}
                   </tbody>
                 </table>
+                </>
               ) : (
                 <table className="min-w-full">
                   <thead className="bg-white/5">

@@ -1,19 +1,25 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { isOLevelClass } from '@/components/reports/templates/helpers';
+import {
+  canRemoveClassSubjectRow,
+  classSubjectBadge,
+  type ClassSubjectRow,
+} from '@/lib/classSubjectRowGuards';
 import SectionHeader from './SectionHeader';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
-async function fetchSubjectsPerClass(schoolId: string, selectedClass: string): Promise<string[]> {
+async function fetchSubjectsPerClass(schoolId: string, selectedClass: string): Promise<ClassSubjectRow[]> {
   const { data, error: err } = await supabase
     .from('class_subjects')
-    .select('subject')
+    .select('subject, uce_offering_type, is_non_removable_default')
     .eq('school_id', schoolId)
     .eq('class_name', selectedClass)
     .order('subject');
   if (err) throw err;
-  return (data || []).map((r: { subject: string }) => r.subject);
+  return (data || []) as ClassSubjectRow[];
 }
 
 export default function SettingsSubjectsPerClass({
@@ -26,10 +32,11 @@ export default function SettingsSubjectsPerClass({
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState('');
   const [newSubject, setNewSubject] = useState('');
+  const [addAsCompulsory, setAddAsCompulsory] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: subjects = [], isLoading } = useQuery({
+  const { data: subjectRows = [], isLoading } = useQuery({
     queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId, selectedClass],
     queryFn: () => fetchSubjectsPerClass(schoolId!, selectedClass),
     enabled: !!schoolId && !!selectedClass,
@@ -43,11 +50,14 @@ export default function SettingsSubjectsPerClass({
     if (!schoolId || !selectedClass) return;
     const s = newSubject.trim();
     if (!s) return;
-    if (subjects.includes(s)) return;
+    if (subjectRows.some((r) => r.subject === s)) return;
     setSaving(true);
-    const { error: insertError } = await supabase
-      .from('class_subjects')
-      .insert({ school_id: schoolId, class_name: selectedClass, subject: s });
+    const payload: Record<string, unknown> = { school_id: schoolId, class_name: selectedClass, subject: s };
+    if (isOLevelClass(selectedClass)) {
+      payload.uce_offering_type = addAsCompulsory ? 'compulsory' : 'subsidiary';
+      payload.is_non_removable_default = false;
+    }
+    const { error: insertError } = await supabase.from('class_subjects').insert(payload);
     setSaving(false);
     if (insertError) {
       setError(insertError.message || 'Failed to add subject');
@@ -57,15 +67,16 @@ export default function SettingsSubjectsPerClass({
     await queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'subjectsPerClass', schoolId, selectedClass] });
   };
 
-  const removeSubject = async (subj: string) => {
+  const removeSubject = async (row: ClassSubjectRow) => {
     setError(null);
     if (!schoolId || !selectedClass) return;
+    if (!canRemoveClassSubjectRow(selectedClass, row)) return;
     const { error: err } = await supabase
       .from('class_subjects')
       .delete()
       .eq('school_id', schoolId)
       .eq('class_name', selectedClass)
-      .eq('subject', subj);
+      .eq('subject', row.subject);
     if (err) {
       setError(err.message || 'Failed to remove subject');
       return;
@@ -77,7 +88,7 @@ export default function SettingsSubjectsPerClass({
     <div>
       <SectionHeader
         title="Subjects per Class"
-        desc="Manage the list of subjects taught in each class/grade."
+        desc="Senior 1–4: default nationwide compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: UACE subsidiaries are fixed."
       />
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <select
@@ -106,6 +117,17 @@ export default function SettingsSubjectsPerClass({
         >
           {saving ? 'Saving...' : 'Add Subject'}
         </button>
+        {isOLevelClass(selectedClass) && (
+          <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary md:col-span-3">
+            <input
+              type="checkbox"
+              checked={addAsCompulsory}
+              onChange={(e) => setAddAsCompulsory(e.target.checked)}
+              className="rounded border-[var(--pw-border)]"
+            />
+            Add as compulsory UCE (otherwise subsidiary)
+          </label>
+        )}
       </div>
       <div className="mt-4">
         {error && (
@@ -117,28 +139,41 @@ export default function SettingsSubjectsPerClass({
           <div className="text-sm ac-text-secondary">Loading subjects...</div>
         ) : !selectedClass ? (
           <div className="text-sm ac-text-secondary">Select a class to view its subjects.</div>
-        ) : subjects.length === 0 ? (
+        ) : subjectRows.length === 0 ? (
           <div className="text-sm ac-text-secondary">
             No subjects yet for {selectedClass}. Add one above.
           </div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {subjects.map((s) => (
-              <span
-                key={s}
-                className="flex gap-2 rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-1.5 text-sm ac-text-primary"
-              >
-                {s}
-                <button
-                  type="button"
-                  onClick={() => removeSubject(s)}
-                  className="text-rose-300 hover:text-rose-100"
-                  aria-label={`Remove ${s}`}
+            {subjectRows.map((row) => {
+              const badge = classSubjectBadge(row);
+              const rem = canRemoveClassSubjectRow(selectedClass, row);
+              return (
+                <span
+                  key={row.subject}
+                  className="flex gap-2 rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-1.5 text-sm ac-text-primary"
                 >
-                  ×
-                </button>
-              </span>
-            ))}
+                  {row.subject}
+                  {badge && (
+                    <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">{badge}</span>
+                  )}
+                  {!rem ? (
+                    <span className="text-[var(--pw-muted)] text-xs" title="Cannot remove this slot">
+                      locked
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => removeSubject(row)}
+                      className="text-rose-300 hover:text-rose-100"
+                      aria-label={`Remove ${row.subject}`}
+                    >
+                      ×
+                    </button>
+                  )}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>

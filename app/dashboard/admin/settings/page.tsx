@@ -6,6 +6,9 @@ import { supabase } from "@/src/lib/supabase";
 import { downloadTimetablePdf } from "@/lib/timetablePdf";
 import { useRouter } from "next/navigation";
 import LocationSettingsWidget from "../components/LocationSettingsWidget";
+import SettingsUaceClassSubjectPapers from "@/src/components/admin/SettingsUaceClassSubjectPapers";
+import { canRemoveClassSubjectRow, classSubjectBadge, type ClassSubjectRow } from "@/lib/classSubjectRowGuards";
+import { isOLevelClass } from "@/src/components/reports/templates/helpers";
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
@@ -94,7 +97,14 @@ export default function AdminSystemSettingsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 p-4 text-white"
         >
-          {tab === "subjects" && <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />}
+          {tab === "subjects" && (
+            <>
+              <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />
+              {schoolType === "Secondary" && (
+                <SettingsUaceClassSubjectPapers variant="next" classOptions={classOptions} schoolId={schoolId} />
+              )}
+            </>
+          )}
           {tab === "assignments" && <TeacherSubjectClass classOptions={classOptions} />}
           {tab === "finance" && <FinancialSettings schoolId={schoolId} classes={classOptions} />}
           {tab === "requirements" && <SchoolRequirements schoolId={schoolId} />}
@@ -163,8 +173,9 @@ function SectionHeader({ title, desc }: { title: string; desc?: string }) {
 
 function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; schoolId: string | null }) {
   const [selectedClass, setSelectedClass] = useState<string>("");
-  const [subjects, setSubjects] = useState<string[]>([]);
+  const [subjectRows, setSubjectRows] = useState<ClassSubjectRow[]>([]);
   const [newSubject, setNewSubject] = useState("");
+  const [addAsCompulsory, setAddAsCompulsory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -172,16 +183,16 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
   useEffect(() => {
     const load = async () => {
       setError(null);
-      if (!schoolId || !selectedClass) { setSubjects([]); return; }
+      if (!schoolId || !selectedClass) { setSubjectRows([]); return; }
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error: qErr } = await supabase
         .from('class_subjects')
-        .select('subject')
+        .select('subject, uce_offering_type, is_non_removable_default')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
         .order('subject');
-      if (error) setError(error.message);
-      setSubjects((data || []).map((r: any) => r.subject));
+      if (qErr) setError(qErr.message);
+      setSubjectRows((data || []) as ClassSubjectRow[]);
       setLoading(false);
     };
     load();
@@ -192,41 +203,51 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
     if (!schoolId || !selectedClass) return;
     const s = newSubject.trim();
     if (!s) return;
-    // optimistic
-    if (!subjects.includes(s)) setSubjects(prev => [...prev, s]);
+    if (!subjectRows.some((r) => r.subject === s)) {
+      setSubjectRows((prev) => [...prev, { subject: s, uce_offering_type: null, is_non_removable_default: false }]);
+    }
     setSaving(true);
-    const { error: insertError } = await supabase.from('class_subjects').insert({ school_id: schoolId, class_name: selectedClass, subject: s });
+    const payload: Record<string, unknown> = { school_id: schoolId, class_name: selectedClass, subject: s };
+    if (isOLevelClass(selectedClass)) {
+      payload.uce_offering_type = addAsCompulsory ? 'compulsory' : 'subsidiary';
+      payload.is_non_removable_default = false;
+    }
+    const { error: insertError } = await supabase.from('class_subjects').insert(payload);
     setSaving(false);
     if (insertError) {
       setError(insertError.message || 'Failed to add subject');
-      // rollback optimistic if failed
-      setSubjects(prev => prev.filter(x => x !== s));
+      const { data } = await supabase
+        .from('class_subjects')
+        .select('subject, uce_offering_type, is_non_removable_default')
+        .eq('school_id', schoolId)
+        .eq('class_name', selectedClass)
+        .order('subject');
+      setSubjectRows((data || []) as ClassSubjectRow[]);
       return;
     }
     setNewSubject("");
   };
 
-  const removeSubject = async (s: string) => {
+  const removeSubject = async (row: ClassSubjectRow) => {
     setError(null);
     if (!schoolId || !selectedClass) return;
-    // optimistic
-    setSubjects(prev => prev.filter(x => x !== s));
-    const { error } = await supabase
+    if (!canRemoveClassSubjectRow(selectedClass, row)) return;
+    setSubjectRows((prev) => prev.filter((r) => r.subject !== row.subject));
+    const { error: delErr } = await supabase
       .from('class_subjects')
       .delete()
       .eq('school_id', schoolId)
       .eq('class_name', selectedClass)
-      .eq('subject', s);
-    if (error) {
-      setError(error.message || 'Failed to remove subject');
-      // reload to recover
+      .eq('subject', row.subject);
+    if (delErr) {
+      setError(delErr.message || 'Failed to remove subject');
       const { data } = await supabase
         .from('class_subjects')
-        .select('subject')
+        .select('subject, uce_offering_type, is_non_removable_default')
         .eq('school_id', schoolId)
         .eq('class_name', selectedClass)
         .order('subject');
-      setSubjects((data || []).map((r: any) => r.subject));
+      setSubjectRows((data || []) as ClassSubjectRow[]);
     }
   };
 
@@ -234,7 +255,7 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
     <div>
       <SectionHeader
         title="Subjects per Class"
-        desc="Manage the list of subjects taught in each class/grade."
+        desc="Senior 1–4: nationwide default compulsory subjects cannot be removed; add more compulsory or unlimited subsidiary. Senior 5–6: UACE subsidiaries stay fixed."
       />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <select value={selectedClass} onChange={(e)=>setSelectedClass(e.target.value)} className="w-full md:w-64 rounded-xl border border-white/10 bg-white text-black px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
@@ -245,6 +266,12 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
         </select>
         <input value={newSubject} onChange={(e)=>setNewSubject(e.target.value)} placeholder="Add subject (e.g., Mathematics)" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 placeholder:text-white/60" />
         <button disabled={!selectedClass || saving} onClick={addSubject} className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-2">{saving? 'Saving...' : 'Add Subject'}</button>
+        {isOLevelClass(selectedClass) && (
+          <label className="flex items-center gap-2 text-white/80 text-sm md:col-span-3 cursor-pointer">
+            <input type="checkbox" checked={addAsCompulsory} onChange={(e) => setAddAsCompulsory(e.target.checked)} className="rounded border-white/30" />
+            Add as compulsory UCE (otherwise subsidiary) — default nationwide compulsories are locked.
+          </label>
+        )}
       </div>
       <div className="mt-4">
         {error && <div className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">{error}</div>}
@@ -252,16 +279,24 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
           <div className="text-white/80 text-sm">Loading subjects...</div>
         ) : !selectedClass ? (
           <div className="text-white/80 text-sm">Select a class to view its subjects.</div>
-        ) : subjects.length === 0 ? (
+        ) : subjectRows.length === 0 ? (
           <div className="text-white/80 text-sm">No subjects yet for {selectedClass}. Add one above.</div>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {subjects.map(s => (
-              <span key={s} className="px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-sm text-white flex items-center gap-2">
-                {s}
-                <button onClick={()=>removeSubject(s)} className="text-red-300 hover:text-red-200">×</button>
+            {subjectRows.map((row) => {
+              const badge = classSubjectBadge(row);
+              const rem = canRemoveClassSubjectRow(selectedClass, row);
+              return (
+              <span key={row.subject} className="px-3 py-1 rounded-lg bg-white/10 border border-white/10 text-sm text-white flex items-center gap-2">
+                {row.subject}
+                {badge && <span className="text-white/50 text-[10px] uppercase tracking-wide">{badge}</span>}
+                {!rem ? (
+                  <span className="text-white/50 text-xs" title="Cannot remove this timetable slot">locked</span>
+                ) : (
+                  <button type="button" onClick={()=>removeSubject(row)} className="text-red-300 hover:text-red-200">×</button>
+                )}
               </span>
-            ))}
+            );})}
           </div>
         )}
       </div>

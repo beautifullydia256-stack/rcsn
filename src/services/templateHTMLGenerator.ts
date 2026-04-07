@@ -18,6 +18,7 @@ import {
   generateTemplate3KyoteraHTML,
   generateSecondaryReportHTML,
 } from './legacySecondaryPdfTemplatesFrom3918d26';
+import { generateTemplate4AlevelHTML } from './template4AlevelHtml';
 import { assertSecondaryBuiltinTemplatesAllowed } from './reportSecondaryBuiltinGuards';
 
 // ============================================================================
@@ -658,11 +659,15 @@ export function generateTemplate4UpperSectionHTML(
   schoolLogoBase64?: string | null,
   studentPhotoBase64?: string | null
 ): string {
-  void reportData;
+  const student = reportData?.students?.[0];
+  const className = student?.current_class || '';
+  if (isALevelClass(className)) {
+    return generateTemplate4AlevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);
+  }
   void schoolLogoBase64;
   void studentPhotoBase64;
   throw new Error(
-    'generateTemplate4UpperSectionHTML — implement or use api/pdf buildTemplate4UpperSectionHTML'
+    'generateTemplate4UpperSectionHTML: primary upper (P4–P7) template4 is built in api/pdf/generate.ts, not this browser bundle.'
   );
 }
 

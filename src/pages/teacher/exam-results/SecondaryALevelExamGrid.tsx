@@ -1,5 +1,5 @@
 /**
- * A-Level (Senior 5–6) exam entry — simple marks table like legacy Next.js teacher page (~250a17c).
+ * A-Level (Senior 5–6) exam entry — marks table; persists via `teacher_upsert_exam_result_alevel`.
  */
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -24,6 +24,8 @@ export function SecondaryALevelExamGrid({
   selectedExamSetId,
   existingRows,
   onRefetch,
+  paperCode,
+  paperNumber,
 }: {
   students: Student[];
   schoolId: string;
@@ -33,6 +35,10 @@ export function SecondaryALevelExamGrid({
   selectedExamSetId: string;
   existingRows: Existing[];
   onRefetch: () => void;
+  /** UNEB code from `school_uace_class_subject_papers` when configured */
+  paperCode?: string | null;
+  /** Optional label / legacy paper number */
+  paperNumber?: string | null;
 }) {
   const [edits, setEdits] = useState<Record<string, { marks: string; remark: string }>>({});
   const [saving, setSaving] = useState(false);
@@ -80,7 +86,7 @@ export function SecondaryALevelExamGrid({
         const marksNum = parseFloat(marks) || 0;
         const { grade, remark: computedRemark } = calculateGrade(marksNum, totalMarks);
         const remarkToSave = remark.trim() || computedRemark;
-        const { data, error } = await supabase.rpc('teacher_upsert_exam_result_primary', {
+        const { data, error } = await supabase.rpc('teacher_upsert_exam_result_alevel', {
           p_school_id: schoolId,
           p_exam_set_id: selectedExamSetId,
           p_student_id: studentId,
@@ -92,7 +98,8 @@ export function SecondaryALevelExamGrid({
           p_remarks: remarkToSave,
           p_teacher_id: teacherId,
           p_teacher_comment: remarkToSave,
-          p_nursery_skills: null,
+          p_paper_number: paperNumber?.trim() || null,
+          p_paper_code: paperCode?.trim() || null,
         });
         const result = data as { success?: boolean; error?: string } | null;
         if (result && !result.success) {
@@ -119,17 +126,20 @@ export function SecondaryALevelExamGrid({
   return (
     <div className="space-y-4">
       <p className="ac-text-primary text-sm font-medium">
-        A-Level format: marks out of 100 with secondary grades (A–E).
+        A-Level format: marks out of 100 with secondary grades (A–E). Paper line:{' '}
+        <span className="font-semibold">
+          {paperCode?.trim() || paperNumber?.trim() || 'default (single line per subject)'}
+        </span>
       </p>
       <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
         <table className="w-full min-w-[520px] border-collapse ac-text-primary text-sm">
           <thead>
             <tr className="border-b border-[var(--ac-border)] bg-[var(--ac-bg-muted)]">
-              <th className="text-left p-2 font-medium">Student</th>
-              <th className="text-left p-2 font-medium w-28">Marks</th>
-              <th className="text-left p-2 font-medium w-28">Total</th>
-              <th className="text-left p-2 font-medium">Grade</th>
-              <th className="text-left p-2 font-medium">Remark</th>
+              <th className="w-[min-content] p-2 text-left font-medium">Student</th>
+              <th className="w-28 p-2 text-left font-medium">Marks</th>
+              <th className="w-28 p-2 text-left font-medium">Total</th>
+              <th className="p-2 text-left font-medium">Grade</th>
+              <th className="p-2 text-left font-medium">Remark</th>
             </tr>
           </thead>
           <tbody>
@@ -151,7 +161,7 @@ export function SecondaryALevelExamGrid({
                       onChange={(e) => setRow(stu.student_id, 'marks', e.target.value)}
                     />
                   </td>
-                  <td className="p-2 ac-text-muted">100</td>
+                  <td className="ac-text-muted p-2">100</td>
                   <td className="p-2">{marks !== '' ? grade : '—'}</td>
                   <td className="p-2">
                     <input
@@ -177,8 +187,8 @@ export function SecondaryALevelExamGrid({
         >
           {saving ? 'Saving…' : 'Save Exam Results'}
         </button>
-        {saveSuccess && <span className="text-emerald-600 dark:text-emerald-400 text-sm">Saved.</span>}
-        {saveError && <span className="text-red-600 dark:text-red-400 text-sm">{saveError}</span>}
+        {saveSuccess && <span className="text-sm text-emerald-600 dark:text-emerald-400">Saved.</span>}
+        {saveError && <span className="text-sm text-red-600 dark:text-red-400">{saveError}</span>}
       </div>
     </div>
   );

@@ -14,6 +14,18 @@ export function isOLevelClass(className: string): boolean {
   return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(trimmed);
 }
 
+/** Senior 1–2 (leading class label). */
+export function isSenior12Class(className: string): boolean {
+  if (!className) return false;
+  return /^(senior\s*[12]|s\.?\s*[12])\b/i.test(className.trim());
+}
+
+/** Senior 3–4 (leading class label). */
+export function isSenior34Class(className: string): boolean {
+  if (!className) return false;
+  return /^(senior\s*[34]|s\.?\s*[34])\b/i.test(className.trim());
+}
+
 /** Senior 5–6 / S.5–S.6 — A-Level (UACE-style) stream; matches leading class label before stream suffix. */
 export function isALevelClass(className: string): boolean {
   if (!className) return false;

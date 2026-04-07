@@ -6,6 +6,7 @@ import { supabase } from "@/src/lib/supabase";
 import { motion } from "framer-motion";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
+import { isALevelClass, isOLevelClass, isSenior34Class } from "@/src/components/reports/templates/helpers";
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -36,6 +37,23 @@ export default function StudentDetailPage() {
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
   const [expectedFeeFromStructure, setExpectedFeeFromStructure] = useState<number | null>(null);
   const [syncingFees, setSyncingFees] = useState(false);
+
+  const [uacePrincipalOptions, setUacePrincipalOptions] = useState<string[]>([]);
+  const [uaceSubsidiaryOptions, setUaceSubsidiaryOptions] = useState<string[]>([]);
+  const [uacePrincipalsPicked, setUacePrincipalsPicked] = useState<string[]>([]);
+  const [uaceSubsPicked, setUaceSubsPicked] = useState<string[]>([]);
+  const [uaceSubjectsLoading, setUaceSubjectsLoading] = useState(false);
+  const [uaceSubjectsSaving, setUaceSubjectsSaving] = useState(false);
+  const [uaceSubjectsError, setUaceSubjectsError] = useState<string | null>(null);
+
+  const studentIsAlevel = isALevelClass(String((form?.current_class ?? student?.current_class) ?? ""));
+  const studentIsOlevel = isOLevelClass(String((form?.current_class ?? student?.current_class) ?? ""));
+
+  const [oLevelClassRows, setOLevelClassRows] = useState<{ subject: string; uce_offering_type: string | null }[]>([]);
+  const [oLevelSubsPicked, setOLevelSubsPicked] = useState<string[]>([]);
+  const [oLevelLoading, setOLevelLoading] = useState(false);
+  const [oLevelSaving, setOLevelSaving] = useState(false);
+  const [oLevelError, setOLevelError] = useState<string | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -80,6 +98,216 @@ export default function StudentDetailPage() {
     };
     run();
   }, [studentId]);
+
+  useEffect(() => {
+    if (!studentIsAlevel || !student?.school_id || !student?.student_id) {
+      setUacePrincipalOptions([]);
+      setUaceSubsidiaryOptions([]);
+      setUacePrincipalsPicked([]);
+      setUaceSubsPicked([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setUaceSubjectsLoading(true);
+      setUaceSubjectsError(null);
+      try {
+        const [{ data: p }, { data: s }] = await Promise.all([
+          supabase.from("uace_subject_catalog").select("subject_name").eq("subject_type", "principal").order("sort_order"),
+          supabase.from("uace_subject_catalog").select("subject_name").eq("subject_type", "subsidiary").order("sort_order"),
+        ]);
+        if (cancelled) return;
+        setUacePrincipalOptions((p ?? []).map((r: { subject_name: string }) => r.subject_name));
+        setUaceSubsidiaryOptions((s ?? []).map((r: { subject_name: string }) => r.subject_name));
+
+        const { data: rows, error } = await supabase
+          .from("student_alevel_subjects")
+          .select("subject_name, subject_role")
+          .eq("student_id", student.student_id);
+        if (error) throw error;
+        if (cancelled) return;
+        const pr = (rows ?? [])
+          .filter((r: { subject_role: string }) => r.subject_role === "principal")
+          .map((r: { subject_name: string }) => r.subject_name);
+        const su = (rows ?? [])
+          .filter((r: { subject_role: string }) => r.subject_role === "subsidiary")
+          .map((r: { subject_name: string }) => r.subject_name);
+        setUacePrincipalsPicked(pr);
+        setUaceSubsPicked(su);
+      } catch (e: unknown) {
+        if (!cancelled) setUaceSubjectsError(e instanceof Error ? e.message : "Failed to load UACE subjects");
+      } finally {
+        if (!cancelled) setUaceSubjectsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [studentIsAlevel, student?.school_id, student?.student_id, form?.current_class]);
+
+  useEffect(() => {
+    if (!studentIsOlevel || !student?.school_id || !student?.student_id) {
+      setOLevelClassRows([]);
+      setOLevelSubsPicked([]);
+      return;
+    }
+    const cls = String(form?.current_class ?? student?.current_class ?? "").trim();
+    if (!cls) return;
+    let cancelled = false;
+    (async () => {
+      setOLevelLoading(true);
+      setOLevelError(null);
+      try {
+        const { data: csRows, error: csErr } = await supabase
+          .from("class_subjects")
+          .select("subject, uce_offering_type")
+          .eq("school_id", student.school_id)
+          .eq("class_name", cls)
+          .order("subject");
+        if (csErr) throw csErr;
+        if (cancelled) return;
+        setOLevelClassRows((csRows ?? []) as { subject: string; uce_offering_type: string | null }[]);
+
+        const { data: stRows, error: stErr } = await supabase
+          .from("student_olevel_subjects")
+          .select("subject_name")
+          .eq("student_id", student.student_id);
+        if (stErr) throw stErr;
+        if (cancelled) return;
+        const subOffered = new Set(
+          (csRows ?? [])
+            .filter((r: { uce_offering_type: string | null }) => r.uce_offering_type === "subsidiary")
+            .map((r: { subject: string }) => r.subject),
+        );
+        const loaded = (stRows ?? []).map((r: { subject_name: string }) => r.subject_name);
+        setOLevelSubsPicked(loaded.filter((s) => subOffered.has(s)));
+      } catch (e: unknown) {
+        if (!cancelled) setOLevelError(e instanceof Error ? e.message : "Failed to load UCE learner subjects");
+      } finally {
+        if (!cancelled) setOLevelLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [studentIsOlevel, student?.school_id, student?.student_id, form?.current_class]);
+
+  const toggleOlevelSub = (name: string) => {
+    const cls = String(form?.current_class ?? student?.current_class ?? "").trim();
+    setOLevelSubsPicked((prev) => {
+      if (prev.includes(name)) return prev.filter((x) => x !== name);
+      if (isSenior34Class(cls) && prev.length >= 3) return prev;
+      return [...prev, name];
+    });
+  };
+
+  const saveOlevelCombination = async () => {
+    if (!student) return;
+    const cls = String(form?.current_class ?? student?.current_class ?? "").trim();
+    const compulsory = oLevelClassRows.filter((r) => r.uce_offering_type === "compulsory").map((r) => r.subject);
+    const subOffered = new Set(
+      oLevelClassRows.filter((r) => r.uce_offering_type === "subsidiary").map((r) => r.subject),
+    );
+    const subPick = oLevelSubsPicked.filter((s) => subOffered.has(s));
+    if (isSenior34Class(cls)) {
+      if (subPick.length > 3) {
+        alert("Senior 3–4: at most 3 subsidiary subjects.");
+        return;
+      }
+      if (compulsory.length + subPick.length > 10) {
+        alert("Senior 3–4: at most 10 subjects in total (compulsory + subsidiary).");
+        return;
+      }
+    }
+    const all = [...compulsory, ...subPick];
+    setOLevelSaving(true);
+    setOLevelError(null);
+    try {
+      const { error } = await supabase.rpc("save_student_olevel_subjects", {
+        p_student_id: student.student_id,
+        p_subject_names: all,
+      });
+      if (error) throw error;
+      alert("UCE (O-Level) subjects saved.");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setOLevelError(msg);
+      alert(msg);
+    } finally {
+      setOLevelSaving(false);
+    }
+  };
+
+  const toggleUacePrincipal = (name: string) => {
+    setUacePrincipalsPicked((prev) => {
+      if (prev.includes(name)) return prev.filter((x) => x !== name);
+      if (prev.length >= 3) return prev;
+      return [...prev, name];
+    });
+  };
+
+  const toggleUaceSub = (name: string) => {
+    setUaceSubsPicked((prev) => {
+      if (prev.includes(name)) return prev.filter((x) => x !== name);
+      if (prev.length >= 2) return prev;
+      return [...prev, name];
+    });
+  };
+
+  const saveUaceCombination = async () => {
+    if (!student) return;
+    if (uacePrincipalsPicked.length > 3) {
+      alert("At most 3 principal subjects.");
+      return;
+    }
+    if (uaceSubsPicked.length > 2) {
+      alert("At most 2 subsidiary subjects.");
+      return;
+    }
+    if (uacePrincipalsPicked.length + uaceSubsPicked.length > 5) {
+      alert("At most 5 UACE subjects in total.");
+      return;
+    }
+    const seen = new Set<string>();
+    for (const x of [...uacePrincipalsPicked, ...uaceSubsPicked]) {
+      if (seen.has(x)) {
+        alert(`Duplicate subject: ${x}`);
+        return;
+      }
+      seen.add(x);
+    }
+    setUaceSubjectsSaving(true);
+    setUaceSubjectsError(null);
+    try {
+      const { error: delErr } = await supabase.from("student_alevel_subjects").delete().eq("student_id", student.student_id);
+      if (delErr) throw delErr;
+      const inserts = [
+        ...uacePrincipalsPicked.map((subject_name) => ({
+          school_id: student.school_id,
+          student_id: student.student_id,
+          subject_name,
+          subject_role: "principal" as const,
+        })),
+        ...uaceSubsPicked.map((subject_name) => ({
+          school_id: student.school_id,
+          student_id: student.student_id,
+          subject_name,
+          subject_role: "subsidiary" as const,
+        })),
+      ];
+      if (inserts.length > 0) {
+        const { error: insErr } = await supabase.from("student_alevel_subjects").insert(inserts);
+        if (insErr) throw insErr;
+      }
+      alert("UACE combination saved.");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setUaceSubjectsError(msg);
+      alert(msg);
+    } finally {
+      setUaceSubjectsSaving(false);
+    }
+  };
 
   const checkExistingLogin = async (studentId: string, admissionNumber: string) => {
     try {
@@ -370,6 +598,136 @@ export default function StudentDetailPage() {
             {field('Stream / Section','stream')}
             {field('Previous School','previous_school')}
             {field('Admission Date','admission_date','date')}
+
+            {studentIsOlevel && (
+              <>
+                <div className="text-white/90 font-medium col-span-full mt-2">UCE learner subjects (Senior 1–4)</div>
+                <div className="col-span-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/90">
+                  <p className="text-white/70 mb-2">
+                    All <strong>compulsory</strong> subjects for this class are included automatically. Tick{" "}
+                    <strong>subsidiary</strong> subjects this learner takes.
+                    {isSenior34Class(String(form?.current_class ?? student?.current_class ?? "")) ? (
+                      <> Senior 3–4: at most <strong>3</strong> subsidiaries and <strong>10</strong> subjects total.</>
+                    ) : (
+                      <> Senior 1–2: any number of subsidiaries offered on the class list.</>
+                    )}
+                  </p>
+                  {oLevelError && (
+                    <div className="mb-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-200">{oLevelError}</div>
+                  )}
+                  {oLevelLoading ? (
+                    <div className="text-white/60">Loading class subjects…</div>
+                  ) : oLevelClassRows.length === 0 ? (
+                    <div className="text-amber-200/90 text-xs">No class subjects found for this class name. Check Admin → Subjects per class.</div>
+                  ) : (
+                    <>
+                      <div className="mb-3">
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">Compulsory (always included)</div>
+                        <ul className="list-disc pl-5 text-white/85 text-xs space-y-0.5">
+                          {oLevelClassRows
+                            .filter((r) => r.uce_offering_type === "compulsory")
+                            .map((r) => (
+                              <li key={r.subject}>{r.subject}</li>
+                            ))}
+                        </ul>
+                      </div>
+                      <div className="mb-3">
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">
+                          Subsidiary (optional)
+                          {isSenior34Class(String(form?.current_class ?? student?.current_class ?? "")) ? (
+                            <span className="text-white/60 font-normal"> — {oLevelSubsPicked.length}/3</span>
+                          ) : null}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {oLevelClassRows
+                            .filter((r) => r.uce_offering_type === "subsidiary")
+                            .map((r) => (
+                              <label key={r.subject} className="flex items-center gap-2 cursor-pointer text-xs">
+                                <input
+                                  type="checkbox"
+                                  checked={oLevelSubsPicked.includes(r.subject)}
+                                  onChange={() => toggleOlevelSub(r.subject)}
+                                  className="rounded border-white/20"
+                                />
+                                <span>{r.subject}</span>
+                              </label>
+                            ))}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={oLevelSaving}
+                        onClick={saveOlevelCombination}
+                        className="rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 px-3 py-2 text-white text-sm"
+                      >
+                        {oLevelSaving ? "Saving…" : "Save UCE (O-Level) subjects"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+
+            {studentIsAlevel && (
+              <>
+                <div className="text-white/90 font-medium col-span-full mt-2">UACE combination (Senior 5–6)</div>
+                <div className="col-span-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/90">
+                  <p className="text-white/70 mb-2">
+                    Admin or head teacher: choose exactly what this learner offers — up to <strong>3 principals</strong> and{" "}
+                    <strong>2 subsidiaries</strong> (max <strong>5</strong> subjects). Teachers only see learners who take each subject when entering A-Level results.
+                  </p>
+                  {uaceSubjectsError && (
+                    <div className="mb-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-200">{uaceSubjectsError}</div>
+                  )}
+                  {uaceSubjectsLoading ? (
+                    <div className="text-white/60">Loading UACE catalog…</div>
+                  ) : (
+                    <>
+                      <div className="mb-3">
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">Principal ({uacePrincipalsPicked.length}/3)</div>
+                        <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
+                          {uacePrincipalOptions.map((name) => (
+                            <label key={name} className="flex items-center gap-2 cursor-pointer text-xs">
+                              <input
+                                type="checkbox"
+                                checked={uacePrincipalsPicked.includes(name)}
+                                onChange={() => toggleUacePrincipal(name)}
+                                className="rounded border-white/20"
+                              />
+                              <span>{name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mb-3">
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">Subsidiary ({uaceSubsPicked.length}/2)</div>
+                        <div className="flex flex-wrap gap-2">
+                          {uaceSubsidiaryOptions.map((name) => (
+                            <label key={name} className="flex items-center gap-2 cursor-pointer text-xs">
+                              <input
+                                type="checkbox"
+                                checked={uaceSubsPicked.includes(name)}
+                                onChange={() => toggleUaceSub(name)}
+                                className="rounded border-white/20"
+                              />
+                              <span>{name}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={uaceSubjectsSaving}
+                        onClick={saveUaceCombination}
+                        className="rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 px-3 py-2 text-white text-sm"
+                      >
+                        {uaceSubjectsSaving ? "Saving…" : "Save UACE combination"}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
 
             <div className="text-white/90 font-medium col-span-full mt-2">Fees & Finance</div>
             {field('Enrollment / Registration Fee','enrollment_fee')}
