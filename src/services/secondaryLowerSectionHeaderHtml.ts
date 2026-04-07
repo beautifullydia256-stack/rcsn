@@ -52,6 +52,29 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
         }
 `;
 
+/**
+ * Passport-style student photo box — matches Template3KyoteraReport Lower Section (P.1–P.3).
+ */
+export const SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS = `
+        .student-photo {
+          width: 2.1cm;
+          height: 2.9cm;
+          border: 1px solid #bfdbfe;
+          border-radius: 4px;
+          background: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .student-photo img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+`;
+
 function escText(s: unknown): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')

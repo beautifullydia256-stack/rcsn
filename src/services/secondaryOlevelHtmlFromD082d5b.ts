@@ -8,6 +8,7 @@ import {
   buildSecondaryLowerSectionHeaderHtml,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
+  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
@@ -50,23 +51,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
-        
-        .student-photo {
-          width: 80px;
-          height: 96px;
-          border: 2px solid #ccc;
-          background: #f0f0f0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-        }
-        
-        .student-photo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+        ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
         
         .student-info {
           margin-bottom: 12px;
@@ -224,7 +209,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         
         <!-- Student Photo - Right side -->
         <div class="student-photo">
-          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<div style="font-size: 10px; color: #666; display: flex; align-items: center; justify-content: center; height: 100%; border: 1px solid #ddd; background: #f9f9f9;">STUDENT<br/>PHOTO</div>'}
+          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
         </div>
       </div>
 

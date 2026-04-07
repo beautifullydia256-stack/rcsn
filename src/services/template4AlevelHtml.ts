@@ -8,6 +8,7 @@ import {
   buildSecondaryLowerSectionHeaderHtml,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
+  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 export function generateTemplate4AlevelHTML(
@@ -217,11 +218,7 @@ export function generateTemplate4AlevelHTML(
     }
     .student-panel .meta { flex: 1; font-size: 10pt; line-height: 1.45; }
     .student-panel .meta div { margin-bottom: 3px; }
-    .student-panel .photo {
-      width: 76px; height: 94px; border: 2px solid #00695c;
-      background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
-    }
-    .student-panel .photo img { width: 100%; height: 100%; object-fit: cover; }
+    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
     .charts-row {
       display: flex;
       flex-wrap: wrap;
@@ -376,8 +373,8 @@ export function generateTemplate4AlevelHTML(
         <div><strong>Class / Stream:</strong> ${escapeHtml(classLine)}${stream ? ` — ${escapeHtml(stream)}` : ''}</div>
         ${combination ? `<div><strong>Combination:</strong> ${escapeHtml(combination)}</div>` : ''}
       </div>
-      <div class="photo">
-        ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="photo" />` : '<span style="font-size:8px;color:#666">Photo</span>'}
+      <div class="student-photo">
+        ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
       </div>
     </div>
 

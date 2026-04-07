@@ -8,6 +8,7 @@ import {
   buildSecondaryLowerSectionHeaderHtml,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
+  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 function esc(s: unknown): string {
@@ -156,9 +157,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
     .student-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 10pt; }
-    .student-photo { width: 72px; height: 88px; border: 1px solid #000; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
     table.main { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     table.main th, table.main td { border: 1px solid #000; padding: 5px 4px; vertical-align: middle; }
     table.main th {
@@ -211,7 +211,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       <div><strong>Term:</strong> ${esc(examSet?.term)} &nbsp; <strong>Year:</strong> ${esc(year)}</div>
     </div>
     <div class="student-photo">
-      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt">PHOTO</span>'}
+      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
 
@@ -403,13 +403,16 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
+    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
+    .secondary-report-progressive .student-photo {
+      float: right;
+      margin-left: 10px;
+    }
     .meta-band {
       background: #b71c1c; color: #fff; padding: 8px 10px; margin-bottom: 10px;
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9.5pt;
     }
     .meta-band strong { color: #ffeb3b; }
-    .student-photo { width: 68px; height: 84px; border: 1px solid #000; float: right; margin-left: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
     table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
     table.grid th, table.grid td { border: 1px solid #000; padding: 4px 3px; }
     table.grid th { background: #eeeeee; font-weight: 700; text-align: center; vertical-align: bottom; line-height: 1.15; }
@@ -432,7 +435,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body>
+<body class="secondary-report-progressive">
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
@@ -447,7 +450,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
 
   <div style="overflow:hidden">
     <div class="student-photo">
-      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:7pt">PHOTO</span>'}
+      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
     </div>
   </div>
 
