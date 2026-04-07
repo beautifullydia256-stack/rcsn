@@ -61,7 +61,7 @@ export function SecondaryBuiltInHtmlPreview({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-300/60 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+      <div className="rounded-lg border border-red-300/60 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-100">
         {error}
       </div>
     );
@@ -69,7 +69,7 @@ export function SecondaryBuiltInHtmlPreview({
 
   if (!html) {
     return (
-      <div className="rounded-lg border border-white/10 bg-white/5 px-4 py-8 text-center text-sm text-white/70">
+      <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
         Loading preview…
       </div>
     );

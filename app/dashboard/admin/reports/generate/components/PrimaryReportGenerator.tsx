@@ -55,6 +55,7 @@ import {
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
 import { PRIMARY_TEMPLATES, getPrimaryTemplateOptions, getTemplateForClass, getSectionForClass } from "@/src/templates/primary";
+import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
 import {
   NURSERY_PERFORMANCE_OPTIONS,
   NURSERY_PERFORMANCE_COLOR_MAP,
@@ -1907,6 +1908,7 @@ export function PrimaryReportGenerator() {
               {classes.map((className) => {
                 const currentSetting = classTemplateSettings.find(s => s.class_name === className);
                 const isOLevel = isOLevelClass(className);
+                const isALevel = isALevelClass(className);
                 
                 return (
                   <div key={className} className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
@@ -1915,7 +1917,7 @@ export function PrimaryReportGenerator() {
                       <div>
                         <div className="text-white font-medium">{className}</div>
                         <div className="text-white/60 text-sm">
-                          {isOLevel ? 'O-Level Class' : 'Secondary Class'}
+                          {isOLevel ? 'O-Level Class' : isALevel ? 'A-Level Class' : 'Primary / other'}
                         </div>
                       </div>
                     </div>
@@ -1935,7 +1937,7 @@ export function PrimaryReportGenerator() {
                                 body: JSON.stringify({
                                   class_name: className,
                                   template_id: templateId,
-                                  is_o_level: isOLevel
+                                  is_o_level: isOLevel || isALevel
                                 }),
                               });
                               
@@ -2388,20 +2390,6 @@ export function PrimaryReportGenerator() {
 }
 
 // Helpers
-function isSecondaryClass(className: string): boolean {
-  if (!className) return false;
-  return /^S\d/i.test(className.trim());
-}
-
-function isOLevelClass(className: string): boolean {
-  if (!className) return false;
-  const trimmed = className.trim();
-  // O-Level classes: Senior 1 - Senior 4 (S1-S4)
-  // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
-  return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
-}
-
-// Report Preview Component
 function isLowerSectionPrimary(className: string): boolean {
   if (!className) return false;
   return /(primary\s*1|primary\s*2|primary\s*3|^p\.?\s*1$|^p\.?\s*2$|^p\.?\s*3$)/i.test(className.trim());
@@ -2409,11 +2397,11 @@ function isLowerSectionPrimary(className: string): boolean {
 
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
   const cls = String(student.current_class || '');
-  const isOL = isOLevelClass(cls);
+  const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
 
-  // Primary/Nursery path (non O-Level)
-  if (!isOL) {
+  // Primary/Nursery path (not O-Level / A-Level secondary)
+  if (!isSecondaryTrack) {
     if (template === 'template3' || isLower) {
       return <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />;
     }

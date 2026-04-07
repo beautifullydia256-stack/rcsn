@@ -1,17 +1,20 @@
 /**
- * Renders one report using the ported primary templates (Template1–5, SecondaryReportPreview).
- * Uses getTemplateForClass so each class gets its assigned template.
- * Primary grades always use Subject Grade Boundaries (D1–F9), never A–F.
+ * Primary: React templates (Template1–6); grades use D1–F9.
+ * Secondary (O/A-Level): same HTML as PDF via SecondaryBuiltInHtmlPreview + renderTemplateHTML.
  */
 import { getTemplateForClass } from '../../templates/primary';
+import { getDefaultSecondaryTemplateKey } from '../../templates/secondary';
 import { ReportPreview } from './templates/primaryReportTemplates';
 import { calculatePrimaryGrade } from '../../lib/reportUtils';
 import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
 import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
+import { isALevelClass, isOLevelClass } from './templates/helpers';
+import { SecondaryBuiltInHtmlPreview } from './SecondaryBuiltInHtmlPreview';
+import { buildSecondaryShapedStudent } from '../../reports/secondary/buildSecondaryShapedStudent';
 
 type ReportPreviewFromDataProps = {
   reportData: any;
-  /** Template key (e.g. 'template4'). If not set, derived from reportData.students[0].current_class via getTemplateForClass. */
+  /** Template key. Primary: via getTemplateForClass. Secondary: via getDefaultSecondaryTemplateKey when omitted. */
   templateKey?: string;
   prePrimaryReportMode?: 'colour' | 'detailed';
   detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow>;
@@ -31,6 +34,24 @@ export function ReportPreviewFromData({
   if (!reportData?.students?.[0]) return null;
 
   const raw = reportData.students[0];
+  const classNameEarly = String(raw.current_class || '').trim();
+  if (isOLevelClass(classNameEarly) || isALevelClass(classNameEarly)) {
+    const student = buildSecondaryShapedStudent(reportData);
+    const school = (reportData.school || {}) as Record<string, unknown>;
+    const examSet = (reportData.examSet || {}) as Record<string, unknown>;
+    const template = templateKey || getDefaultSecondaryTemplateKey(classNameEarly);
+    return (
+      <div className="report-preview-pdf-fonts-primary">
+        <SecondaryBuiltInHtmlPreview
+          student={student}
+          examSet={examSet}
+          school={school}
+          templateKey={template}
+        />
+      </div>
+    );
+  }
+
   const comments = raw.comments ?? {};
   const rawResults = raw.results ?? [];
   const results = rawResults.map((r: any) => {

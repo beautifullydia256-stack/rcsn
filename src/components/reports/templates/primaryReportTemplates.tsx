@@ -20,7 +20,7 @@ import {
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
-import { lightenColor, isOLevelClass, isLowerSectionPrimary } from './helpers';
+import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 
 /** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
@@ -59,11 +59,11 @@ function AttendanceCountsSupplement({
 
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
   const cls = String(student.current_class || '');
-  const isOL = isOLevelClass(cls);
+  const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
 
-  // Primary/Nursery path (non O-Level)
-  if (!isOL) {
+  // Primary/Nursery path (not O-Level / A-Level secondary)
+  if (!isSecondaryTrack) {
     if (template === 'template3' || isLower) {
       return (
         <div className="report-preview-pdf-fonts-primary">
