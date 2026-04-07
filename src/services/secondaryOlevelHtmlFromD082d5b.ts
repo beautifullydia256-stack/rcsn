@@ -1,8 +1,10 @@
-﻿/**
+/**
  * O-Level built-in report HTML: verbatim from commit d082d5b
  * app/api/reports/generate-pdf/route.ts (lines 572-1760).
  * Used for senior secondary preview/PDF only; primary/nursery uses separate layouts.
  */
+
+import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
 
 export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
@@ -29,6 +31,11 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     if (finalScore >= 50) return "D";
     return "E";
   };
+
+  const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
+    chipTitle: `Learner's end of term report card for term ${examSet?.term ?? '2'}, ${examSet?.year ?? '2025'}`,
+    metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,
+  });
 
   return `
     <!DOCTYPE html>
@@ -62,54 +69,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           -moz-osx-font-smoothing: grayscale;
         }
         
-        .header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 12px;
-        }
-        
-        .school-logo {
-          width: 200px;
-          height: 200px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          border: none;
-        }
-        
-        .school-logo img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          border: none;
-        }
-        
-        .school-info {
-          text-align: right;
-          flex: 1;
-        }
-        
-        .school-name {
-          font-weight: bold;
-          font-size: 18pt;
-          text-transform: uppercase;
-          margin-bottom: 5px;
-        }
-        
-        .school-contact {
-          font-size: 11pt;
-          font-weight: bold;
-          margin-bottom: 5px;
-        }
-        
-        .school-motto {
-          font-size: 11pt;
-          font-weight: bold;
-          font-style: italic;
-        }
-        
         .student-photo {
           width: 80px;
           height: 96px;
@@ -125,17 +84,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           width: 100%;
           height: 100%;
           object-fit: cover;
-        }
-        
-        .report-title {
-          background: #4CAF50;
-          color: white;
-          text-align: center;
-          padding: 8px;
-          margin: 12px 0;
-          font-size: 12.5pt;
-          font-weight: bold;
-          text-transform: uppercase;
         }
         
         .student-info {
@@ -272,6 +220,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           text-align: center;
           line-height: 1.2;
         }
+        ${SECONDARY_LOWER_HEADER_PRINT_CSS}
       </style>
     </head>
     <body>
@@ -280,26 +229,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Watermark" />` : '<div class="watermark-placeholder">SCHOOL<br/>LOGO</div>'}
       </div>
       
-      <!-- HEADER - School Logo and Info -->
-      <div class="header">
-        <!-- School Logo -->
-        <div class="school-logo">
-          ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="School Logo" />` : '<div style="text-align: center; font-size: 8px; display: flex; flex-direction: column; justify-content: center; height: 100%;"><div style="font-weight: bold;">SCHOOL</div><div style="font-weight: bold;">LOGO</div></div>'}
-        </div>
-        
-        <!-- School Name and Contact -->
-        <div class="school-info">
-          <div class="school-name">${school?.name || 'EMIRATES COLLEGE SCHOOL'}</div>
-          <div class="school-contact">TEL :: ${school?.phone || '0701395594'} | EMAIL :: ${school?.email || 'info@emiratescollege.sc.ug'} | ${school?.address || 'P.O.BOX 31175, KAMPALA, UGANDA'}</div>
-          <div class="school-motto">SCHOOL MOTTO: ${school?.motto || 'Education the Future'}</div>
-        </div>
-        
-      </div>
-
-      <!-- REPORT TITLE -->
-      <div class="report-title">
-        LEARNER'S END OF TERM REPORT CARD FOR TERM ${examSet?.term || '2'}, ${examSet?.year || '2025'}
-      </div>
+      ${headerHtml}
 
       <!-- Student Info and Photo - Side by side -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">

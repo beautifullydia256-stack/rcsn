@@ -4,6 +4,8 @@
  * Header + student strip: school-driven placeholders; table + below match sample structure.
  */
 
+import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
+
 function esc(s: unknown): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')
@@ -109,6 +111,11 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     student.processed?.nextTermBeginsDate ??
     '____________________';
 
+  const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
+    chipTitle: `Learner's End of Year Summative Assessment Results ${year}`,
+    metaLine: [examSet?.name, String(year)].filter(Boolean).join(' · '),
+  });
+
   const tbody =
     rows.length > 0
       ? rows
@@ -158,16 +165,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
-    .school-logo { width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; border: 1px solid #000; overflow: hidden; flex-shrink: 0; }
-    .school-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .school-info { text-align: right; flex: 1; padding-left: 12px; }
-    .school-name { font-weight: 700; font-size: 14pt; text-transform: uppercase; }
-    .school-contact { font-size: 9pt; margin-top: 4px; }
-    .table-title {
-      text-align: center; font-weight: 700; font-size: 11pt; text-transform: uppercase;
-      margin: 14px 0 8px; letter-spacing: 0.06em;
-    }
     .student-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 10pt; }
     .student-photo { width: 72px; height: 88px; border: 1px solid #000; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -208,20 +205,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
       opacity: 0.06; z-index: -1; pointer-events: none; max-width: 70%;
     }
+    ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
 <body>
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
-  <div class="header">
-    <div class="school-logo">${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="Logo" />` : '<span style="font-size:7pt">LOGO</span>'}</div>
-    <div class="school-info">
-      <div class="school-name">${esc(school?.name || 'SCHOOL NAME')}</div>
-      <div class="school-contact">${esc([school?.address, school?.phone, school?.email].filter(Boolean).join(' | '))}</div>
-      ${school?.motto ? `<div style="font-style:italic;margin-top:4px">"${esc(school.motto)}"</div>` : ''}
-    </div>
-  </div>
-
-  <div class="table-title">Learner's End of Year Summative Assessment Results ${esc(year)}</div>
+  ${headerHtml}
 
   <div class="student-row">
     <div>
@@ -382,6 +371,11 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     student.processed?.nextTermBeginsDate ??
     '____________________';
 
+  const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
+    chipTitle: `End of Term ${termWord(examSet?.term)} Student's Progressive Report`,
+    metaLine: `Report No. ${reportNo} · Year ${year}${examSet?.name ? ` · ${examSet.name}` : ''}`,
+  });
+
   const tbody =
     rows.length > 0
       ? rows
@@ -431,22 +425,11 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .school-logo { width: 72px; height: 72px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-    .school-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .school-block { flex: 1; text-align: right; padding-left: 10px; }
-    .school-name { font-weight: 700; font-size: 13pt; text-transform: uppercase; }
-    .contact { font-size: 9pt; margin-top: 4px; font-weight: 600; }
-    .report-no { font-size: 10pt; margin-top: 6px; font-weight: 700; }
     .meta-band {
       background: #b71c1c; color: #fff; padding: 8px 10px; margin-bottom: 10px;
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9.5pt;
     }
     .meta-band strong { color: #ffeb3b; }
-    .title-box {
-      border: 3px double #000; text-align: center; padding: 8px; margin: 12px 0 10px;
-      font-weight: 700; text-transform: uppercase; font-size: 10.5pt; letter-spacing: 0.03em;
-    }
     .student-photo { width: 68px; height: 84px; border: 1px solid #000; float: right; margin-left: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
     table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
@@ -468,18 +451,12 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .comments { flex: 1; min-width: 200px; }
     .comments h4 { margin: 0 0 4px; font-size: 10pt; }
     .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.05; z-index: -1; max-width: 55%; }
+    ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
 <body>
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
-  <div class="top-row">
-    <div class="school-logo">${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="Logo" />` : '<span style="font-size:7pt">LOGO</span>'}</div>
-    <div class="school-block">
-      <div class="school-name">${esc(school?.name || 'SECONDARY SCHOOL')}</div>
-      <div class="contact">${esc([school?.address, school?.phone, school?.email].filter(Boolean).join(' | '))}</div>
-      <div class="report-no">No. ${esc(reportNo)}</div>
-    </div>
-  </div>
+  ${headerHtml}
 
   <div class="meta-band">
     <div><strong>STUDENT'S NAME:</strong> ${esc(student.name)}</div>
@@ -495,8 +472,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:7pt">PHOTO</span>'}
     </div>
   </div>
-
-  <div class="title-box">End of Term ${termWord(examSet?.term)} Student's Progressive Report</div>
 
   <table class="grid">
     <thead>

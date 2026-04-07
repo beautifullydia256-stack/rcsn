@@ -4,6 +4,8 @@
  * per docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md §3 A-1. Preview/PDF via `renderTemplateHTML`.
  */
 
+import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
+
 export function generateTemplate4AlevelHTML(
   reportData: any,
   schoolLogoBase64?: string | null,
@@ -15,7 +17,6 @@ export function generateTemplate4AlevelHTML(
     throw new Error('generateTemplate4AlevelHTML: no student in reportData');
   }
 
-  const schoolName = school?.name ?? 'School Name';
   const term = examSet?.term ?? '';
   const year = examSet?.year ?? '';
 
@@ -176,7 +177,14 @@ export function generateTemplate4AlevelHTML(
     `Scan to access your interactive student profile on Zoraki Analytics — <strong>${escapeHtml(zorakiUser)}</strong>`
   : 'Scan to access your interactive student profile on Zoraki Analytics';
 
-  const motto = String(school?.motto ?? '').trim();
+  const sessionMeta = [classLine, stream || null, year !== '' || term !== '' ? `${year} Term ${term}`.trim() : null]
+    .filter(Boolean)
+    .join(' — ');
+
+  const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
+    chipTitle: 'ACADEMIC REPORT FORM',
+    metaLine: sessionMeta,
+  });
 
   return `<!DOCTYPE html>
 <html>
@@ -205,45 +213,6 @@ export function generateTemplate4AlevelHTML(
       padding: 10mm 11mm 12mm;
       background: linear-gradient(180deg, #f7f4eb 0%, #f0ecdf 100%);
       border: 1px solid #c9c2b0;
-    }
-    .top-band {
-      background: linear-gradient(90deg, #006064 0%, #00838f 45%, #4db6ac 100%);
-      color: #fff;
-      padding: 10px 14px;
-      margin: -10mm -11mm 12px -11mm;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 12px;
-    }
-    .top-band .school-logo {
-      width: 72px; height: 72px; background: #fff; border: 2px solid rgba(255,255,255,.85);
-      display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
-    }
-    .top-band .school-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .top-contact { flex: 1; text-align: right; font-size: 9pt; line-height: 1.35; }
-    .top-contact .school-name {
-      font-weight: 700; font-size: 13pt; letter-spacing: .04em;
-      text-transform: uppercase; text-shadow: 0 1px 0 rgba(0,0,0,.2);
-    }
-    .form-banner {
-      text-align: center;
-      font-weight: 700;
-      font-size: 11pt;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: #004d40;
-      border: 2px solid #00695c;
-      background: rgba(255,255,255,.65);
-      padding: 8px 10px;
-      margin-bottom: 10px;
-    }
-    .session-line {
-      text-align: center;
-      font-size: 10pt;
-      font-weight: 700;
-      color: #263238;
-      margin-bottom: 10px;
     }
     .student-panel {
       display: flex;
@@ -401,36 +370,13 @@ export function generateTemplate4AlevelHTML(
       text-align: center;
       padding: 8px;
     }
-    .footer-motto {
-      text-align: center;
-      font-style: italic;
-      font-size: 9pt;
-      color: #424242;
-      border-top: 1px solid #90a4ae;
-      padding-top: 8px;
-      margin-top: 6px;
-    }
     .print-tag { text-align: center; font-size: 7.5pt; color: #78909c; margin-top: 8px; }
+    ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
 <body>
   <div class="sheet">
-    <div class="top-band">
-      <div class="school-logo">
-        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="logo" />` : '<span style="font-size:8px;color:#006064">Logo</span>'}
-      </div>
-      <div class="top-contact">
-        <div class="school-name">${escapeHtml(schoolName)}</div>
-        <div>${escapeHtml(school?.phone ?? '')}</div>
-        <div>${escapeHtml(school?.email ?? '')}</div>
-        <div>${escapeHtml(school?.address ?? '')}</div>
-      </div>
-    </div>
-
-    <div class="form-banner">Academic Report Form</div>
-    <div class="session-line">
-      ${escapeHtml(classLine)}${stream ? ` — ${escapeHtml(stream)}` : ''} — ${escapeHtml(String(year))} Term ${escapeHtml(String(term))}
-    </div>
+    ${headerHtml}
 
     <div class="student-panel">
       <div class="meta">
@@ -498,7 +444,6 @@ export function generateTemplate4AlevelHTML(
       <div class="stamp">Official stamp &amp; signature</div>
     </div>
 
-    ${motto ? `<div class="footer-motto">School motto: ${escapeHtml(motto)}</div>` : ''}
     <div class="print-tag">Generated report — A-Level template</div>
   </div>
 </body>
