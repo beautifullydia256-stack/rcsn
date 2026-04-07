@@ -1,0 +1,551 @@
+/**
+ * O-Level Template 2 (Basic / Kasozi-style) and Template 3 (Progressive / Kyotera-style)
+ * HTML aligned to docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md §3 (O-2, O-3).
+ * Header + student strip: school-driven placeholders; table + below match sample structure.
+ */
+
+function esc(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/** LEVEL OF ACHIEVEMENT / 3 from ECS-style descriptor (§7.5). */
+function basicLoBand(descriptor: string): string {
+  const d = String(descriptor || '').trim().toLowerCase();
+  if (d === 'missed' || d === '') return '—';
+  if (d === 'outstanding') return '3';
+  if (d === 'moderate') return '2';
+  return '1';
+}
+
+function parseNum(v: unknown): number {
+  const n = parseFloat(String(v ?? ''));
+  return Number.isFinite(n) ? n : NaN;
+}
+
+/** Maps term index to words for progressive title (plan §3 O-3). */
+function termWord(term: unknown): string {
+  const n = parseInt(String(term), 10);
+  if (n === 1) return 'ONE';
+  if (n === 2) return 'TWO';
+  if (n === 3) return 'THREE';
+  const s = String(term ?? '').trim();
+  return s ? s.toUpperCase() : '—';
+}
+
+export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
+  const { school, examSet, students } = reportData;
+  const student = students?.[0];
+  if (!student) return '<html><body>Missing student</body></html>';
+
+  const year = examSet?.year ?? new Date().getFullYear();
+  const results: any[] = Array.isArray(student.results) ? student.results : [];
+
+  type Row = {
+    subject: string;
+    formative: string;
+    eoy: string;
+    total: string;
+    grade: string;
+    lo: string;
+    descriptor: string;
+    initials: string;
+    finalNum: number;
+  };
+
+  const rows: Row[] = results.map((r: any) => {
+    const activityNum = parseNum(r.activity_score);
+    const descriptor =
+      (r.descriptor as string) ||
+      (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+    const formative = r.formative_score != null ? String(r.formative_score) : '';
+    const eoy = r.exam_score != null ? String(r.exam_score) : '';
+    const total = r.final_score != null ? String(r.final_score) : '';
+    const finalNum = parseNum(r.final_score);
+    const grade =
+      (r.grade as string) ||
+      (Number.isFinite(finalNum)
+        ? finalNum >= 80
+          ? 'A'
+          : finalNum >= 70
+            ? 'B'
+            : finalNum >= 60
+              ? 'C'
+              : finalNum >= 50
+                ? 'D'
+                : 'E'
+        : '');
+    return {
+      subject: String(r.subject ?? ''),
+      formative,
+      eoy,
+      total,
+      grade,
+      lo: basicLoBand(descriptor),
+      descriptor: descriptor.charAt(0).toUpperCase() + descriptor.slice(1).toLowerCase(),
+      initials: String(r.teacher_initials ?? ''),
+      finalNum: Number.isFinite(finalNum) ? finalNum : NaN,
+    };
+  });
+
+  const finals = rows.map((r) => r.finalNum).filter((n) => Number.isFinite(n));
+  const avgFinal = finals.length ? (finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(1) : '';
+  const los = rows.map((r) => parseInt(r.lo, 10)).filter((n) => n >= 1 && n <= 3);
+  const avgLo = los.length ? (los.reduce((a, b) => a + b, 0) / los.length).toFixed(0) : '';
+  const avgLoNum = los.length ? los.reduce((a, b) => a + b, 0) / los.length : 0;
+  const bandWord =
+    avgLoNum >= 2.5 ? 'Outstanding' : avgLoNum >= 1.5 ? 'Moderate' : avgLoNum >= 1 ? 'Basic' : 'Moderate';
+
+  const ct =
+    student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
+  const ht =
+    student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
+  const nextBegins =
+    student.nextTermBegins ??
+    student.next_term_begins_date ??
+    student.processed?.nextTermBeginsDate ??
+    '____________________';
+
+  const tbody =
+    rows.length > 0
+      ? rows
+          .map(
+            (r) => `
+          <tr>
+            <td>${esc(r.subject)}</td>
+            <td class="c">${esc(r.formative)}</td>
+            <td class="c">${esc(r.eoy)}</td>
+            <td class="c">${esc(r.total)}</td>
+            <td class="c">${esc(r.grade)}</td>
+            <td class="c">${esc(r.lo)}</td>
+            <td class="c desc">${esc(r.descriptor)}</td>
+            <td class="c">${esc(r.initials)}</td>
+          </tr>`
+          )
+          .join('') +
+        `
+          <tr class="foot-row">
+            <td colspan="3"><strong>OVERALL AVERAGE</strong></td>
+            <td class="c"><strong>${esc(avgFinal)}</strong></td>
+            <td class="c"></td>
+            <td class="c"><strong>${esc(avgLo)}</strong></td>
+            <td class="c"><strong>${esc(bandWord)}</strong></td>
+            <td class="c"></td>
+          </tr>`
+      : `<tr><td colspan="8" class="c muted">No results available</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Learner Summative Assessment</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 10mm 12mm;
+      background: #fff;
+      color: #000;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .school-logo { width: 88px; height: 88px; display: flex; align-items: center; justify-content: center; border: 1px solid #000; overflow: hidden; flex-shrink: 0; }
+    .school-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .school-info { text-align: right; flex: 1; padding-left: 12px; }
+    .school-name { font-weight: 700; font-size: 14pt; text-transform: uppercase; }
+    .school-contact { font-size: 9pt; margin-top: 4px; }
+    .table-title {
+      text-align: center; font-weight: 700; font-size: 11pt; text-transform: uppercase;
+      margin: 14px 0 8px; letter-spacing: 0.06em;
+    }
+    .student-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 10pt; }
+    .student-photo { width: 72px; height: 88px; border: 1px solid #000; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
+    table.main { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+    table.main th, table.main td { border: 1px solid #000; padding: 5px 4px; vertical-align: middle; }
+    table.main th {
+      background: #e8e8e8; font-weight: 700; text-align: center; font-size: 8.5pt;
+      text-transform: uppercase; line-height: 1.2;
+    }
+    table.main td:first-child { font-weight: 600; text-align: left; }
+    table.main td.desc { text-align: center; }
+    .c { text-align: center; }
+    .muted { color: #555; }
+    .summary-strip {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #000;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 10pt;
+    }
+    .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .id-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .id-box { border: 1px solid #000; width: 100%; text-align: center; font-weight: 700; font-size: 14pt; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+    .italic-note { font-style: italic; }
+    .bold-word { font-weight: 700; font-size: 11pt; }
+    .key-title { text-align: center; font-weight: 700; margin: 12px 0 6px; text-transform: uppercase; font-size: 10pt; }
+    table.key { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
+    table.key th, table.key td { border: 1px solid #000; padding: 4px 6px; }
+    .comments { margin-bottom: 10px; font-size: 10pt; }
+    .comments h4 { margin: 10px 0 4px; font-size: 10pt; }
+    .sig { margin-top: 20px; border-top: 1px solid #000; padding-top: 4px; min-height: 28px; }
+    .footer-admin { margin-top: 14px; font-size: 9pt; }
+    .footer-admin .disc { text-align: center; margin-top: 8px; font-weight: 600; }
+    .watermark {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      opacity: 0.06; z-index: -1; pointer-events: none; max-width: 70%;
+    }
+  </style>
+</head>
+<body>
+  ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
+  <div class="header">
+    <div class="school-logo">${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="Logo" />` : '<span style="font-size:7pt">LOGO</span>'}</div>
+    <div class="school-info">
+      <div class="school-name">${esc(school?.name || 'SCHOOL NAME')}</div>
+      <div class="school-contact">${esc([school?.address, school?.phone, school?.email].filter(Boolean).join(' | '))}</div>
+      ${school?.motto ? `<div style="font-style:italic;margin-top:4px">"${esc(school.motto)}"</div>` : ''}
+    </div>
+  </div>
+
+  <div class="table-title">Learner's End of Year Summative Assessment Results ${esc(year)}</div>
+
+  <div class="student-row">
+    <div>
+      <div><strong>Name:</strong> ${esc(student.name)}</div>
+      <div><strong>Class:</strong> ${esc(student.current_class)}</div>
+      <div><strong>Admission:</strong> ${esc(student.admission_number || student.student_id)}</div>
+      <div><strong>Term:</strong> ${esc(examSet?.term)} &nbsp; <strong>Year:</strong> ${esc(year)}</div>
+    </div>
+    <div class="student-photo">
+      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt">PHOTO</span>'}
+    </div>
+  </div>
+
+  <table class="main">
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>Formative Score (20%)</th>
+        <th>EOY Summative Assessment (80%)</th>
+        <th>Total 100%</th>
+        <th>Grade</th>
+        <th>Level of Achievement/3</th>
+        <th>Descriptor</th>
+        <th>TR'S Initial</th>
+      </tr>
+    </thead>
+    <tbody>${tbody}</tbody>
+  </table>
+
+  <div class="summary-strip">
+    <div class="id-cell">
+      <div class="id-label">Identified</div>
+      <div class="id-box">${esc(avgLo || '—')}</div>
+    </div>
+    <div class="italic-note">Overall Learner's achievements for the subjects attended:</div>
+    <div class="bold-word">${esc(bandWord)}</div>
+  </div>
+
+  <div class="key-title">Key to Terms Used</div>
+  <table class="key">
+    <tbody>
+      <tr><td style="width:18%">—</td><td>Learner does not do the subject/was absent</td></tr>
+      <tr><td>0.9–1.49</td><td><strong>(Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement</td></tr>
+      <tr><td>1.5–2.49</td><td><strong>(Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement</td></tr>
+      <tr><td>2.5–3.00</td><td><strong>(Outstanding):</strong> Most or all learning outcomes achieved</td></tr>
+    </tbody>
+  </table>
+
+  <div class="comments">
+    <h4>Class Teacher's Comment:</h4>
+    <p>${esc(ct) || '—'}</p>
+    <div class="sig">Signature: _________________________</div>
+    <h4>Head Teacher's Comment:</h4>
+    <p>${esc(ht) || '—'}</p>
+    <div class="sig">Signature: _________________________</div>
+  </div>
+
+  <div class="footer-admin">
+    <p><strong>Next Term Begins:</strong> ${esc(typeof nextBegins === 'string' ? nextBegins : new Date(nextBegins).toLocaleDateString('en-GB'))}</p>
+    <p><strong>Ends On:</strong> ____________________</p>
+    <p class="disc">This report is not valid without a school stamp</p>
+  </div>
+</body>
+</html>`;
+}
+
+function progressiveIdentifier(finalScore: number): string {
+  if (!Number.isFinite(finalScore)) return '';
+  if (finalScore >= 80) return '3';
+  if (finalScore >= 60) return '2';
+  if (finalScore >= 50) return '1';
+  return '';
+}
+
+export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
+  const { school, examSet, students } = reportData;
+  const student = students?.[0];
+  if (!student) return '<html><body>Missing student</body></html>';
+
+  const year = examSet?.year ?? new Date().getFullYear();
+  const results: any[] = Array.isArray(student.results) ? student.results : [];
+  const reportNo = student.report_serial ?? student.admission_number ?? student.student_id ?? '—';
+  const stream = student.stream ?? student.current_stream ?? student.stream_name ?? '—';
+  const examDate =
+    examSet?.date ??
+    examSet?.exam_date ??
+    new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  type PRow = {
+    subject: string;
+    c1: string;
+    c2: string;
+    avg20: string;
+    exam80: string;
+    total: string;
+    id: string;
+    init: string;
+    finalNum: number;
+    avg20Num: number;
+  };
+
+  const rows: PRow[] = results.map((r: any) => {
+    const c1raw = r.continuous_c1 ?? r.c1 ?? null;
+    const c2raw = r.continuous_c2 ?? r.c2 ?? null;
+    const formative = parseNum(r.formative_score);
+    let c1 = c1raw != null ? parseNum(c1raw) : NaN;
+    let c2 = c2raw != null ? parseNum(c2raw) : NaN;
+    if (!Number.isFinite(c1) && Number.isFinite(formative)) {
+      c1 = formative / 2;
+      c2 = formative / 2;
+    }
+    const c1s = Number.isFinite(c1) ? String(Math.round(c1 * 10) / 10) : '';
+    const c2s = Number.isFinite(c2) ? String(Math.round(c2 * 10) / 10) : '';
+    const avg20Num = Number.isFinite(c1) && Number.isFinite(c2) ? (c1 + c2) / 2 : Number.isFinite(formative) ? formative : NaN;
+    const avg20 = Number.isFinite(avg20Num) ? String(Math.round(avg20Num * 10) / 10) : '';
+    const exam80 = r.exam_score != null ? String(r.exam_score) : '';
+    const total = r.final_score != null ? String(r.final_score) : '';
+    const finalNum = parseNum(r.final_score);
+    return {
+      subject: String(r.subject ?? ''),
+      c1: c1s,
+      c2: c2s,
+      avg20,
+      exam80,
+      total,
+      id: progressiveIdentifier(finalNum),
+      init: String(r.teacher_initials ?? ''),
+      finalNum: Number.isFinite(finalNum) ? finalNum : NaN,
+      avg20Num: Number.isFinite(avg20Num) ? avg20Num : NaN,
+    };
+  });
+
+  const finals = rows.map((r) => r.finalNum).filter((n) => Number.isFinite(n));
+  const avgs20 = rows.map((r) => r.avg20Num).filter((n) => Number.isFinite(n));
+  const ids = rows.map((r) => parseInt(r.id, 10)).filter((n) => n >= 1 && n <= 3);
+
+  const sumRow = {
+    avgScore: finals.length ? (finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(1) : '',
+    pts20: avgs20.length ? (avgs20.reduce((a, b) => a + b, 0) / avgs20.length).toFixed(1) : '',
+    id: ids.length ? (ids.reduce((a, b) => a + b, 0) / ids.length).toFixed(0) : '',
+  };
+
+  const overallWord =
+    parseFloat(sumRow.id) >= 2.5 ? 'Accomplished' : parseFloat(sumRow.id) >= 1.5 ? 'Moderate' : 'Basic';
+
+  const feesRaw = student.progressiveFeesBalance ?? student.feesBalance ?? student.fees?.balance ?? 0;
+  const feesLabel =
+    typeof feesRaw === 'number'
+      ? new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(
+          feesRaw
+        )
+      : esc(feesRaw);
+
+  const ct = student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
+  const ht = student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
+  const nextBegins =
+    student.nextTermBegins ??
+    student.next_term_begins_date ??
+    student.processed?.nextTermBeginsDate ??
+    '____________________';
+
+  const tbody =
+    rows.length > 0
+      ? rows
+          .map(
+            (r) => `
+        <tr>
+          <td>${esc(r.subject)}</td>
+          <td class="c">${esc(r.c1)}</td>
+          <td class="c">${esc(r.c2)}</td>
+          <td class="c">${esc(r.avg20)}</td>
+          <td class="c">${esc(r.exam80)}</td>
+          <td class="c">${esc(r.total)}</td>
+          <td class="c">${esc(r.id)}</td>
+          <td class="c">${esc(r.init)}</td>
+        </tr>`
+          )
+          .join('') +
+        `
+        <tr class="sum">
+          <td colspan="3"><strong>Average score</strong></td>
+          <td class="c"><strong>${esc(sumRow.pts20)}</strong><div class="sum-hint">Pts (out of 20)</div></td>
+          <td class="c"></td>
+          <td class="c"><strong>${esc(sumRow.avgScore)}</strong><div class="sum-hint">Total 100%</div></td>
+          <td class="c"><strong>${esc(sumRow.id)}</strong><div class="sum-hint">Identifier</div></td>
+          <td class="c"></td>
+        </tr>`
+      : `<tr><td colspan="8" class="c muted">No results available</td></tr>`;
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Progressive Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    @page { size: A4; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 8mm 10mm;
+      background: #fff;
+      color: #000;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .school-logo { width: 72px; height: 72px; border: 1px solid #333; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .school-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .school-block { flex: 1; text-align: right; padding-left: 10px; }
+    .school-name { font-weight: 700; font-size: 13pt; text-transform: uppercase; }
+    .contact { font-size: 9pt; margin-top: 4px; font-weight: 600; }
+    .report-no { font-size: 10pt; margin-top: 6px; font-weight: 700; }
+    .meta-band {
+      background: #b71c1c; color: #fff; padding: 8px 10px; margin-bottom: 10px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9.5pt;
+    }
+    .meta-band strong { color: #ffeb3b; }
+    .title-box {
+      border: 3px double #000; text-align: center; padding: 8px; margin: 12px 0 10px;
+      font-weight: 700; text-transform: uppercase; font-size: 10.5pt; letter-spacing: 0.03em;
+    }
+    .student-photo { width: 68px; height: 84px; border: 1px solid #000; float: right; margin-left: 10px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
+    table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
+    table.grid th, table.grid td { border: 1px solid #000; padding: 4px 3px; }
+    table.grid th { background: #eeeeee; font-weight: 700; text-align: center; vertical-align: bottom; line-height: 1.15; }
+    .c { text-align: center; }
+    tr.sum td { background: #f5f5f5; font-weight: 600; }
+    .sum-hint { font-size: 7pt; font-weight: 400; text-transform: none; margin-top: 2px; }
+    .muted { color: #555; }
+    .overall-line { margin: 10px 0; font-size: 10pt; }
+    .overall-line strong { font-size: 11pt; }
+    .lo-key { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
+    .lo-key th, .lo-key td { border: 1px solid #000; padding: 4px 6px; }
+    .lo-key th { background: #e0e0e0; }
+    .grades { margin: 10px 0; font-size: 9pt; }
+    .grades strong { display: block; margin-bottom: 4px; }
+    .footer-grid { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 14px; font-size: 9.5pt; }
+    .fees { color: #c62828; font-weight: 700; font-size: 11pt; }
+    .comments { flex: 1; min-width: 200px; }
+    .comments h4 { margin: 0 0 4px; font-size: 10pt; }
+    .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.05; z-index: -1; max-width: 55%; }
+  </style>
+</head>
+<body>
+  ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
+  <div class="top-row">
+    <div class="school-logo">${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="Logo" />` : '<span style="font-size:7pt">LOGO</span>'}</div>
+    <div class="school-block">
+      <div class="school-name">${esc(school?.name || 'SECONDARY SCHOOL')}</div>
+      <div class="contact">${esc([school?.address, school?.phone, school?.email].filter(Boolean).join(' | '))}</div>
+      <div class="report-no">No. ${esc(reportNo)}</div>
+    </div>
+  </div>
+
+  <div class="meta-band">
+    <div><strong>STUDENT'S NAME:</strong> ${esc(student.name)}</div>
+    <div><strong>YEAR:</strong> ${esc(year)}</div>
+    <div><strong>CLASS:</strong> ${esc(student.current_class)}</div>
+    <div><strong>STREAM:</strong> ${esc(stream)}</div>
+    <div><strong>DATE:</strong> ${esc(examDate)}</div>
+    <div><strong>LIN:</strong> ${esc(student.lin ?? '__________')}</div>
+  </div>
+
+  <div style="overflow:hidden">
+    <div class="student-photo">
+      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:7pt">PHOTO</span>'}
+    </div>
+  </div>
+
+  <div class="title-box">End of Term ${termWord(examSet?.term)} Student's Progressive Report</div>
+
+  <table class="grid">
+    <thead>
+      <tr>
+        <th>Subject</th>
+        <th>C1</th>
+        <th>C2</th>
+        <th>Avg Score /20</th>
+        <th>Final Exam /80</th>
+        <th>Total Score 100%</th>
+        <th>Identifier</th>
+        <th>Init</th>
+      </tr>
+    </thead>
+    <tbody>${tbody}</tbody>
+  </table>
+
+  <p class="overall-line"><strong>Overall Learner Achievement:</strong> ${esc(overallWord)} &nbsp; <strong>Identifier:</strong> ${esc(sumRow.id || '—')}</p>
+  <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> = Continuous assessment component 1; <strong>C2</strong> = component 2 (when not stored separately, formative is split evenly for display).</p>
+
+  <table class="lo-key">
+    <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>
+    <tbody>
+      <tr><td>—</td><td>No Learning outcomes achieved (Learner was absent)</td></tr>
+      <tr><td>1</td><td>Some LOs achieved but not sufficient for overall achievement — <strong>Basic</strong></td></tr>
+      <tr><td>2</td><td>Most LOs achieved, enough for overall learning achievement — <strong>Moderate</strong></td></tr>
+      <tr><td>3</td><td>All LOs achieved, achievement with ease — <strong>Accomplished</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="grades">
+    <strong>Letter-grade scale</strong>
+    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
+  </div>
+
+  <div class="footer-grid">
+    <div>
+      <p><strong>NEXT TERM BEGINS ON:</strong> ${esc(typeof nextBegins === 'string' ? nextBegins : new Date(nextBegins).toLocaleDateString('en-GB'))}</p>
+      <p class="fees">Fees Balance: ${feesLabel}</p>
+    </div>
+    <div class="comments">
+      <h4>Class Teacher</h4>
+      <p>${esc(ct) || '—'}</p>
+      <p>Signature: ____________________</p>
+      <h4>Head Teacher</h4>
+      <p>${esc(ht) || '—'}</p>
+      <p>Signature: ____________________</p>
+    </div>
+  </div>
+</body>
+</html>`;
+}

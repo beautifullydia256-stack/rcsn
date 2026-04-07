@@ -3,38 +3,47 @@
 
 import { isALevelClass, isOLevelClass } from '../../components/reports/templates/helpers';
 
+/** Display names match docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md (canonical names). */
 export const SECONDARY_TEMPLATES = {
   template1: {
     id: 'secondary_template1',
-    name: 'Secondary Template 1 - Standard',
+    name: 'Standard',
     description:
-      'O-Level S.1–S.4 only. Spec: standard-template.pdf — rich ECS-style layout (attendance, multi-page subjects, projects, grading key).',
+      'O-1 · O-Level S.1–S.4. Spec: standard-template.pdf — ECS-style layout (subjects & topics, activity, formative, exam, grading key).',
     schoolType: 'Secondary' as const
   },
   template2: {
     id: 'secondary_template2',
-    name: 'Secondary Template 2 - Basic',
+    name: 'Basic',
     description:
-      'O-Level S.1–S.4 only. Spec: basic-template.png — compact summative grid, KEY TO TERMS, comments (e.g. Kasozi-style scan).',
+      'O-2 · O-Level S.1–S.4. Spec: basic-template.png — summative grid, KEY TO TERMS, comments (Kasozi-style).',
     schoolType: 'Secondary' as const
   },
   template3: {
     id: 'secondary_template3',
     name: 'Progressive',
     description:
-      'O-Level S.1–S.4 only. End-of-term progressive report: C1/C2, LO identifier key, letter-grade scale. Spec: progressive-template.png.',
+      'O-3 · O-Level S.1–S.4. Spec: progressive-template.png — C1/C2, LO identifier, letter scale (Kyotera-style).',
     schoolType: 'Secondary' as const
   },
   template4: {
     id: 'secondary_template4',
     name: 'Alevel',
     description:
-      'A-Level S.5–S.6 only (UACE-style). Charts + multi-paper subject table, passes/points, remarks, Zoraki-style QR line. Spec: alevel-template.png. Not for O-Level.',
+      'A-1 · A-Level S.5–S.6 only. Spec: alevel-template.png — charts, multi-paper table, passes/points, remarks, Zoraki QR line.',
     schoolType: 'Secondary' as const
   }
 };
 
 export type SecondaryTemplateKey = keyof typeof SECONDARY_TEMPLATES;
+
+/** Which built-in layouts apply for this class (plan: O-Level → Standard/Basic/Progressive; A-Level → Alevel only). */
+export function getSecondaryTemplateKeysForClass(className: string): SecondaryTemplateKey[] {
+  const trimmed = (className || '').trim();
+  if (isALevelClass(trimmed)) return ['template4'];
+  if (isOLevelClass(trimmed)) return ['template1', 'template2', 'template3'];
+  return ['template1', 'template2', 'template3', 'template4'];
+}
 
 /** Default layout key for SPA + PDF when class is senior secondary. */
 export function getDefaultSecondaryTemplateKey(className: string): SecondaryTemplateKey {

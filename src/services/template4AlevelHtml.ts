@@ -1,11 +1,9 @@
 /**
- * A-Level (template4) HTML — multi-paper subject table + optional shaped `reportData.alevel` stats/charts.
- * Preview/PDF use the same path via `renderTemplateHTML` (see templateHTMLGenerator.ts).
+ * A-Level (template4) HTML — multi-paper subject table + optional `reportData.alevel` stats/charts.
+ * Visual target: Gangu-style academic report (cream paper, teal/cyan bands, green table header)
+ * per docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md §3 A-1. Preview/PDF via `renderTemplateHTML`.
  */
 
-/**
- * Build template4 HTML for Senior 5–6. Uses `student.results[]` with optional `paper_code`, `paper_number`.
- */
 export function generateTemplate4AlevelHTML(
   reportData: any,
   schoolLogoBase64?: string | null,
@@ -48,33 +46,39 @@ export function generateTemplate4AlevelHTML(
           comment: string | null;
           teacherDisplayName: string | null;
         }>;
+        classTeacherName?: string;
+        principalName?: string;
+        closingDate?: string;
+        openingDate?: string;
+        zorakiUsername?: string;
+        zorakiQrImageUrl?: string;
       }
     | undefined;
 
   const tableRows =
     alevel?.paperRows?.length ?
       alevel.paperRows
-      : sorted.map((r) => ({
-          subjectLabel: String(r.subject ?? ''),
-          paperCode: String(r.paper_code ?? r.paper_number ?? '—'),
-          marksPercent:
-            r.marks_obtained != null && r.total_marks != null
-              ? (Number(r.marks_obtained) / Number(r.total_marks || 100)) * 100
-              : null,
-          gradeDisplay: String(r.grade ?? '—'),
-          comment: (r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '') as string,
-          teacherDisplayName: (r.teacher_initials ?? r.teacher_name ?? '') as string,
-        }));
+    : sorted.map((r) => ({
+        subjectLabel: String(r.subject ?? ''),
+        paperCode: String(r.paper_code ?? r.paper_number ?? '—'),
+        marksPercent:
+          r.marks_obtained != null && r.total_marks != null
+            ? (Number(r.marks_obtained) / Number(r.total_marks || 100)) * 100
+            : null,
+        gradeDisplay: String(r.grade ?? '—'),
+        comment: (r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '') as string,
+        teacherDisplayName: (r.teacher_initials ?? r.teacher_name ?? '') as string,
+      }));
 
   const rowHtml = tableRows
     .map(
       (row) => `
           <tr>
             <td>${escapeHtml(row.subjectLabel)}</td>
-            <td class="tc">${escapeHtml(row.paperCode)}</td>
+            <td class="tc mono">${escapeHtml(row.paperCode)}</td>
             <td class="tc">${row.marksPercent != null && !Number.isNaN(row.marksPercent) ? `${Math.round(row.marksPercent)}%` : '—'}</td>
             <td class="tc">${escapeHtml(row.gradeDisplay)}</td>
-            <td>${escapeHtml(row.comment ?? '')}</td>
+            <td class="comment">${escapeHtml(row.comment ?? '')}</td>
             <td class="tc">${escapeHtml(row.teacherDisplayName ?? '')}</td>
           </tr>`
     )
@@ -89,6 +93,33 @@ export function generateTemplate4AlevelHTML(
     alevel?.totalPointsNumerator != null && alevel?.totalPointsDenominator
       ? `${alevel.totalPointsNumerator}/${alevel.totalPointsDenominator}`
       : '—';
+
+  const ctName =
+    alevel?.classTeacherName ?? (student.comments?.class_teacher_name as string) ?? '';
+  const prName = alevel?.principalName ?? (student.comments?.head_teacher_name as string) ?? '';
+  const ctText =
+    (student.comments?.class_teacher_text as string) ??
+    (student.comments?.class_teacher_comment as string) ??
+    '';
+  const prText =
+    (student.comments?.head_teacher_text as string) ??
+    (student.comments?.headteacher_text as string) ??
+    '';
+
+  const closing = alevel?.closingDate ?? (student.closing_date as string) ?? '—';
+  const opening = alevel?.openingDate ?? (student.opening_date as string) ?? '—';
+  const combination =
+    (student.combination as string) ??
+    (student.subject_combination as string) ??
+    (student.alevel_combination as string) ??
+    '';
+  const admNo = String(student.admission_number ?? student.student_id ?? '');
+
+  const zorakiUser = alevel?.zorakiUsername ?? '';
+  const zorakiQr = alevel?.zorakiQrImageUrl ?? '';
+
+  const classLine = String(student.current_class ?? '').trim();
+  const stream = String(student.stream ?? student.stream_name ?? '').trim();
 
   const chartSection = (() => {
     const line = alevel?.lineChartStudentVsClass;
@@ -105,13 +136,13 @@ export function generateTemplate4AlevelHTML(
     const polyStudent = points.map((p) => `${p.x},${p.ys}`).join(' ');
     const polyClass = points.map((p) => `${p.x},${p.yc}`).join(' ');
     return `
-      <div class="charts">
-        <div class="chart-title">Student vs class (by subject — shaped payload)</div>
-        <svg viewBox="0 0 280 140" width="100%" height="160" xmlns="http://www.w3.org/2000/svg">
-          <polyline fill="none" stroke="#1e3a8a" stroke-width="2" points="${polyStudent}" />
-          <polyline fill="none" stroke="#94a3b8" stroke-width="2" stroke-dasharray="4 3" points="${polyClass}" />
+      <div class="chart-card">
+        <div class="chart-title">Subject performance — Student vs Class</div>
+        <svg viewBox="0 0 280 140" width="100%" height="150" xmlns="http://www.w3.org/2000/svg">
+          <polyline fill="none" stroke="#00838f" stroke-width="2.5" points="${polyStudent}" />
+          <polyline fill="none" stroke="#558b2f" stroke-width="2" stroke-dasharray="5 3" points="${polyClass}" />
         </svg>
-        <div class="chart-legend"><span class="lg s">Student</span><span class="lg c">Class avg</span></div>
+        <div class="chart-legend"><span class="lg s">Student</span><span class="lg c">Class</span></div>
       </div>`;
   })();
 
@@ -120,14 +151,14 @@ export function generateTemplate4AlevelHTML(
     if (!bars || bars.length === 0) return '';
     const maxV = Math.max(1, ...bars.map((b) => b.studentMetric));
     return `
-      <div class="charts">
-        <div class="chart-title">Trend (UACE points proxy — shaped payload)</div>
+      <div class="chart-card bar-card">
+        <div class="chart-title">Performance over time</div>
         <div class="bars">
           ${bars
             .map(
               (b) => `
             <div class="bar-wrap">
-              <div class="bar" style="height:${(b.studentMetric / maxV) * 72}px"></div>
+              <div class="bar" style="height:${(b.studentMetric / maxV) * 76}px"></div>
               <div class="bar-lbl">${escapeHtml(b.periodLabel)}</div>
             </div>`
             )
@@ -135,6 +166,17 @@ export function generateTemplate4AlevelHTML(
         </div>
       </div>`;
   })();
+
+  const qrBlock =
+    zorakiQr ?
+      `<div class="qr-img-wrap"><img src="${escapeHtml(zorakiQr)}" alt="QR" class="qr-img" /></div>`
+    : `<div class="qr-placeholder">QR</div>`;
+
+  const zorakiLine = zorakiUser ?
+    `Scan to access your interactive student profile on Zoraki Analytics — <strong>${escapeHtml(zorakiUser)}</strong>`
+  : 'Scan to access your interactive student profile on Zoraki Analytics';
+
+  const motto = String(school?.motto ?? '').trim();
 
   return `<!DOCTYPE html>
 <html>
@@ -144,82 +186,321 @@ export function generateTemplate4AlevelHTML(
   <style>
     @page { size: A4; margin: 0; }
     * { box-sizing: border-box; }
-    body { font-family: 'Times New Roman', Times, serif; width: 210mm; min-height: 297mm; margin: 0; padding: 12mm;
-      background: white; color: #111827; font-size: 10pt; }
-    .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; }
-    .school-logo { width: 96px; height: 96px; display: flex; align-items: center; justify-content: center;
-      border: 1px solid #ccc; overflow: hidden; }
-    .school-logo img { width: 100%; height: 100%; object-fit: contain; }
-    .school-info { text-align: right; flex: 1; }
-    .school-name { font-weight: bold; font-size: 14pt; text-transform: uppercase; }
-    .report-title { text-align: center; font-weight: bold; font-size: 12pt; margin: 12px 0; }
-    .student-meta { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 10pt; }
-    .student-photo { width: 72px; height: 88px; border: 1px solid #ccc; display: flex; align-items: center;
-      justify-content: center; overflow: hidden; }
-    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
-    th, td { border: 1px solid #000; padding: 4px 6px; text-align: left; }
-    th { background: #f3f4f6; font-weight: bold; text-align: center; }
-    td.tc { text-align: center; }
-    .stats { display: flex; gap: 12px; margin-bottom: 12px; font-size: 10pt; }
-    .stats span strong { color: #1e3a8a; }
-    .charts { margin: 10px 0; padding: 8px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fafafa; }
-    .chart-title { font-weight: 600; font-size: 9pt; margin-bottom: 6px; color: #1e3a8a; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0;
+      padding: 0;
+      background: #e8e4d9;
+      color: #1a1a1a;
+      font-size: 10pt;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .sheet {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 10mm 11mm 12mm;
+      background: linear-gradient(180deg, #f7f4eb 0%, #f0ecdf 100%);
+      border: 1px solid #c9c2b0;
+    }
+    .top-band {
+      background: linear-gradient(90deg, #006064 0%, #00838f 45%, #4db6ac 100%);
+      color: #fff;
+      padding: 10px 14px;
+      margin: -10mm -11mm 12px -11mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .top-band .school-logo {
+      width: 72px; height: 72px; background: #fff; border: 2px solid rgba(255,255,255,.85);
+      display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+    }
+    .top-band .school-logo img { width: 100%; height: 100%; object-fit: contain; }
+    .top-contact { flex: 1; text-align: right; font-size: 9pt; line-height: 1.35; }
+    .top-contact .school-name {
+      font-weight: 700; font-size: 13pt; letter-spacing: .04em;
+      text-transform: uppercase; text-shadow: 0 1px 0 rgba(0,0,0,.2);
+    }
+    .form-banner {
+      text-align: center;
+      font-weight: 700;
+      font-size: 11pt;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: #004d40;
+      border: 2px solid #00695c;
+      background: rgba(255,255,255,.65);
+      padding: 8px 10px;
+      margin-bottom: 10px;
+    }
+    .session-line {
+      text-align: center;
+      font-size: 10pt;
+      font-weight: 700;
+      color: #263238;
+      margin-bottom: 10px;
+    }
+    .student-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,.5);
+      border: 1px solid #b2dfdb;
+    }
+    .student-panel .meta { flex: 1; font-size: 10pt; line-height: 1.45; }
+    .student-panel .meta div { margin-bottom: 3px; }
+    .student-panel .photo {
+      width: 76px; height: 94px; border: 2px solid #00695c;
+      background: #fff; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+    }
+    .student-panel .photo img { width: 100%; height: 100%; object-fit: cover; }
+    .charts-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .chart-card {
+      flex: 1;
+      min-width: 240px;
+      padding: 8px 10px;
+      background: #fffef8;
+      border: 1px solid #00897b;
+      box-shadow: 0 1px 2px rgba(0,0,0,.06);
+    }
+    .chart-title {
+      font-weight: 700;
+      font-size: 9pt;
+      color: #006064;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
     .chart-legend { font-size: 8pt; margin-top: 4px; }
-    .chart-legend .lg { margin-right: 12px; }
-    .chart-legend .s { color: #1e3a8a; font-weight: 600; }
-    .chart-legend .c { color: #64748b; }
-    .bars { display: flex; align-items: flex-end; gap: 10px; min-height: 88px; padding: 8px 0; }
-    .bar-wrap { text-align: center; font-size: 7pt; }
-    .bar { width: 28px; margin: 0 auto 4px; background: #1e3a8a; border-radius: 2px 2px 0 0; min-height: 2px; }
-    .bar-lbl { max-width: 56px; word-break: break-word; }
-    .footer { text-align: center; font-size: 8pt; color: #6b7280; margin-top: 14px; }
+    .chart-legend .lg { margin-right: 14px; }
+    .chart-legend .s { color: #00838f; font-weight: 700; }
+    .chart-legend .c { color: #558b2f; font-weight: 600; }
+    .bars { display: flex; align-items: flex-end; gap: 12px; min-height: 92px; padding: 6px 0 4px; }
+    .bar-wrap { text-align: center; font-size: 7pt; color: #37474f; }
+    .bar {
+      width: 26px; margin: 0 auto 4px;
+      background: linear-gradient(180deg, #43a047 0%, #2e7d32 100%);
+      border-radius: 2px 2px 0 0;
+      min-height: 2px;
+    }
+    .bar-lbl { max-width: 64px; word-break: break-word; margin: 0 auto; }
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .stat-pill {
+      background: #e0f2f1;
+      border: 1px solid #00897b;
+      padding: 6px 12px;
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #004d40;
+    }
+    .stat-pill strong { color: #006064; margin-right: 6px; }
+    table.marks {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+      font-size: 8.5pt;
+      background: #fff;
+    }
+    table.marks th, table.marks td {
+      border: 1px solid #1b5e20;
+      padding: 4px 5px;
+      vertical-align: top;
+    }
+    table.marks th {
+      background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+    }
+    table.marks td.tc { text-align: center; }
+    table.marks td.comment { font-size: 8pt; line-height: 1.25; }
+    table.marks td.mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; }
+    .remarks {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .remark-box {
+      background: #fff;
+      border: 1px solid #546e7a;
+      padding: 8px 10px;
+      min-height: 100px;
+    }
+    .remark-box h4 {
+      margin: 0 0 6px;
+      font-size: 9.5pt;
+      color: #37474f;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .remark-box .who { font-size: 8.5pt; font-weight: 700; color: #006064; margin-bottom: 6px; }
+    .dates {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 12px;
+      font-size: 9.5pt;
+      font-weight: 600;
+    }
+    .zoraki {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: rgba(227, 242, 253, .5);
+      border: 1px dashed #0277bd;
+      font-size: 8.5pt;
+    }
+    .qr-img-wrap { flex-shrink: 0; }
+    .qr-img { width: 72px; height: 72px; display: block; }
+    .qr-placeholder {
+      width: 72px; height: 72px;
+      border: 1px solid #90caf9;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 8pt; color: #1565c0; background: #fff;
+    }
+    .stamp-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .stamp {
+      flex: 1;
+      min-height: 56px;
+      border: 2px solid #1565c0;
+      background: linear-gradient(180deg, rgba(227,242,253,.4) 0%, rgba(255,255,255,.8) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8pt;
+      font-weight: 700;
+      color: #0d47a1;
+      text-align: center;
+      padding: 8px;
+    }
+    .footer-motto {
+      text-align: center;
+      font-style: italic;
+      font-size: 9pt;
+      color: #424242;
+      border-top: 1px solid #90a4ae;
+      padding-top: 8px;
+      margin-top: 6px;
+    }
+    .print-tag { text-align: center; font-size: 7.5pt; color: #78909c; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="school-logo">
-      ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="logo" />` : '<span style="font-size:8px">Logo</span>'}
+  <div class="sheet">
+    <div class="top-band">
+      <div class="school-logo">
+        ${schoolLogoBase64 ? `<img src="${schoolLogoBase64}" alt="logo" />` : '<span style="font-size:8px;color:#006064">Logo</span>'}
+      </div>
+      <div class="top-contact">
+        <div class="school-name">${escapeHtml(schoolName)}</div>
+        <div>${escapeHtml(school?.phone ?? '')}</div>
+        <div>${escapeHtml(school?.email ?? '')}</div>
+        <div>${escapeHtml(school?.address ?? '')}</div>
+      </div>
     </div>
-    <div class="school-info">
-      <div class="school-name">${escapeHtml(schoolName)}</div>
-      <div>${escapeHtml(school?.phone ?? '')} ${escapeHtml(school?.email ?? '')}</div>
+
+    <div class="form-banner">Academic Report Form</div>
+    <div class="session-line">
+      ${escapeHtml(classLine)}${stream ? ` — ${escapeHtml(stream)}` : ''} — ${escapeHtml(String(year))} Term ${escapeHtml(String(term))}
     </div>
+
+    <div class="student-panel">
+      <div class="meta">
+        <div><strong>Name:</strong> ${escapeHtml(student.name ?? '')}</div>
+        <div><strong>ADM No:</strong> ${escapeHtml(admNo)}</div>
+        <div><strong>Class / Stream:</strong> ${escapeHtml(classLine)}${stream ? ` — ${escapeHtml(stream)}` : ''}</div>
+        ${combination ? `<div><strong>Combination:</strong> ${escapeHtml(combination)}</div>` : ''}
+      </div>
+      <div class="photo">
+        ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="photo" />` : '<span style="font-size:8px;color:#666">Photo</span>'}
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-pill"><strong>Principal Passes</strong> ${escapeHtml(pp)}</div>
+      <div class="stat-pill"><strong>Subsidiary Passes</strong> ${escapeHtml(sp)}</div>
+      <div class="stat-pill"><strong>Total Points</strong> ${escapeHtml(pts)}</div>
+    </div>
+
+    <div class="charts-row">
+      ${chartSection}
+      ${barSection}
+    </div>
+
+    <table class="marks">
+      <thead>
+        <tr>
+          <th>Subjects</th>
+          <th>Paper</th>
+          <th>Marks</th>
+          <th>Grade</th>
+          <th>Comment</th>
+          <th>Teacher</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rowHtml || '<tr><td colspan="6" class="tc">No results</td></tr>'}
+      </tbody>
+    </table>
+
+    <div class="remarks">
+      <div class="remark-box">
+        <h4>Class Teacher</h4>
+        ${ctName ? `<div class="who">${escapeHtml(ctName)}</div>` : ''}
+        <div>${escapeHtml(ctText) || '—'}</div>
+      </div>
+      <div class="remark-box">
+        <h4>Principal</h4>
+        ${prName ? `<div class="who">${escapeHtml(prName)}</div>` : ''}
+        <div>${escapeHtml(prText) || '—'}</div>
+      </div>
+    </div>
+
+    <div class="dates">
+      <div><strong>Closing Date:</strong> ${escapeHtml(String(closing))}</div>
+      <div><strong>Opening Date:</strong> ${escapeHtml(String(opening))}</div>
+    </div>
+
+    <div class="zoraki">
+      ${qrBlock}
+      <div>${zorakiLine}</div>
+    </div>
+
+    <div class="stamp-row">
+      <div class="stamp">Official stamp &amp; signature</div>
+    </div>
+
+    ${motto ? `<div class="footer-motto">School motto: ${escapeHtml(motto)}</div>` : ''}
+    <div class="print-tag">Generated report — A-Level template</div>
   </div>
-  <div class="report-title">A-LEVEL END OF TERM REPORT — TERM ${escapeHtml(String(term))}, ${escapeHtml(String(year))}</div>
-  <div class="student-meta">
-    <div>
-      <div><strong>Name:</strong> ${escapeHtml(student.name ?? '')}</div>
-      <div><strong>Class:</strong> ${escapeHtml(student.current_class ?? '')}</div>
-      <div><strong>Admission:</strong> ${escapeHtml(student.admission_number ?? student.student_id ?? '')}</div>
-    </div>
-    <div class="student-photo">
-      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="photo" />` : '<span style="font-size:8px">Photo</span>'}
-    </div>
-  </div>
-  <div class="stats">
-    <span><strong>Principal passes:</strong> ${escapeHtml(pp)}</span>
-    <span><strong>Subsidiary passes:</strong> ${escapeHtml(sp)}</span>
-    <span><strong>Total points:</strong> ${escapeHtml(pts)}</span>
-  </div>
-  ${chartSection}
-  ${barSection}
-  <table>
-    <thead>
-      <tr>
-        <th>SUBJECT</th>
-        <th>PAPER</th>
-        <th>MARKS (%)</th>
-        <th>GRADE</th>
-        <th>COMMENT</th>
-        <th>TEACHER</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowHtml || '<tr><td colspan="6" class="tc">No results</td></tr>'}
-    </tbody>
-  </table>
-  <div class="footer">Printed from Pwezacore — template4 (A-Level)</div>
 </body>
 </html>`;
 }

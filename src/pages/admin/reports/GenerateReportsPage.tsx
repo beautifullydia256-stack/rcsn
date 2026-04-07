@@ -11,7 +11,12 @@ import {
   getTemplateForClass,
   getSectionForClass,
 } from '../../../templates/primary';
-import { SECONDARY_TEMPLATES, getDefaultSecondaryTemplateKey } from '../../../templates/secondary';
+import {
+  SECONDARY_TEMPLATES,
+  getDefaultSecondaryTemplateKey,
+  getSecondaryTemplateKeysForClass,
+  type SecondaryTemplateKey,
+} from '../../../templates/secondary';
 import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
@@ -402,6 +407,15 @@ export default function GenerateReportsPage() {
 
     prevClassForTemplateRef.current = selectedClass;
   }, [selectedClass, isBabyClassTemplateChoice]);
+
+  useEffect(() => {
+    if (!selectedClass) return;
+    if (!isOLevelClass(selectedClass) && !isALevelClass(selectedClass)) return;
+    const allowed = getSecondaryTemplateKeysForClass(selectedClass);
+    setReportTemplateKey((prev) =>
+      allowed.includes(prev as SecondaryTemplateKey) ? prev : allowed[0]
+    );
+  }, [selectedClass]);
 
   const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
 
@@ -968,10 +982,11 @@ export default function GenerateReportsPage() {
                   className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
                   title="O-Level / A-Level report card layout (matches PDF)"
                 >
-                  <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
-                  <option value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
-                  <option value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
-                  <option value="template4">{SECONDARY_TEMPLATES.template4.name}</option>
+                  {getSecondaryTemplateKeysForClass(selectedClass).map((k) => (
+                    <option key={k} value={k}>
+                      {SECONDARY_TEMPLATES[k].name}
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <div

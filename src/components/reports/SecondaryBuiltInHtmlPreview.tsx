@@ -4,6 +4,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { renderTemplateHTML } from '../../services/templateHTMLGenerator';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../lib/reportImageDataUrl';
+import { buildSecondaryShapedStudent } from '../../reports/secondary/buildSecondaryShapedStudent';
+import { getSecondaryPlaceholderReportData } from '../../reports/secondary/secondaryTemplatePlaceholderData';
+import type { SecondaryTemplateKey } from '../../templates/secondary';
 
 function normalizeTemplateKey(raw: string): string {
   return typeof raw === 'string' && /^template[1-6]$/.test(raw) ? raw : 'template1';
@@ -15,6 +18,10 @@ export type SecondaryBuiltInHtmlPreviewProps = {
   school: Record<string, unknown>;
   /** e.g. template1 — same key sent to /api/pdf/generate */
   templateKey: string;
+  /** Demo rows and [Placeholder] labels — same HTML path as production. */
+  usePlaceholderData?: boolean;
+  /** Shorter iframe for grid previews (placeholder gallery). */
+  compact?: boolean;
 };
 
 export function SecondaryBuiltInHtmlPreview({
@@ -22,20 +29,42 @@ export function SecondaryBuiltInHtmlPreview({
   examSet,
   school,
   templateKey,
+  usePlaceholderData = false,
+  compact = false,
 }: SecondaryBuiltInHtmlPreviewProps) {
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const key = normalizeTemplateKey(templateKey);
 
-  const reportData = useMemo(
-    () => ({
-      school,
-      examSet,
-      students: [student],
-    }),
-    [school, examSet, student, key]
-  );
+  const reportData = useMemo(() => {
+    if (!usePlaceholderData) {
+      return {
+        school,
+        examSet,
+        students: [student],
+      };
+    }
+    const stub = getSecondaryPlaceholderReportData(key as SecondaryTemplateKey) as {
+      school: Record<string, unknown>;
+      examSet: Record<string, unknown>;
+      students: Record<string, unknown>[];
+      alevel?: unknown;
+    };
+    const merged = {
+      school: { ...stub.school, ...school },
+      examSet: { ...stub.examSet, ...examSet },
+      students: stub.students,
+      ...(stub.alevel != null ? { alevel: stub.alevel } : {}),
+    };
+    const shaped = buildSecondaryShapedStudent(merged);
+    return { ...merged, students: [shaped] };
+  }, [usePlaceholderData, school, examSet, student, key]);
+
+  const photoPayloadStudent = useMemo(() => {
+    if (!usePlaceholderData) return student;
+    return reportData.students[0] as Record<string, unknown>;
+  }, [usePlaceholderData, student, reportData.students]);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,8 +73,8 @@ export function SecondaryBuiltInHtmlPreview({
         setError(null);
         if (cancelled) return;
         const { logo: logoB64, photo: photoB64 } = await resolveSchoolAndStudentPhotosForReportData({
-          school: school as Record<string, unknown>,
-          students: [student],
+          school: reportData.school as Record<string, unknown>,
+          students: [photoPayloadStudent],
         });
         if (cancelled) return;
         const doc = renderTemplateHTML(reportData, key, logoB64, photoB64);
@@ -57,7 +86,7 @@ export function SecondaryBuiltInHtmlPreview({
     return () => {
       cancelled = true;
     };
-  }, [reportData, key]);
+  }, [reportData, key, photoPayloadStudent]);
 
   if (error) {
     return (
@@ -83,8 +112,8 @@ export function SecondaryBuiltInHtmlPreview({
       className="mx-auto block max-w-full border-0 bg-white shadow-lg"
       style={{
         width: '210mm',
-        minHeight: '297mm',
-        height: '85vh',
+        minHeight: compact ? '320mm' : '297mm',
+        height: compact ? 'min(70vh, 520px)' : '85vh',
       }}
     />
   );
