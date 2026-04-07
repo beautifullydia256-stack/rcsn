@@ -1,7 +1,7 @@
 /**
  * Student Report Generator: Report Type, Term, Class, Student, Preview Report.
  */
-import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
+import { useState, useMemo, useEffect, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/authStore';
 import { supabase } from '../../../lib/supabase';
@@ -11,8 +11,6 @@ import {
   getTemplateForClass,
   getSectionForClass,
 } from '../../../templates/primary';
-import { SECONDARY_TEMPLATES } from '../../../templates/secondary';
-import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
@@ -231,8 +229,6 @@ export default function GenerateReportsPage() {
    * Only Baby Class (section) may switch between template6 and template2; all other classes are fixed.
    */
   const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
-  /** Prior class for template defaults (preserve template2/3 when switching Senior 1 → Senior 2). */
-  const prevClassForTemplateRef = useRef<string | null>(null);
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
   const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
     term: number;
@@ -359,48 +355,23 @@ export default function GenerateReportsPage() {
   /** Same rule as Next.js PrimaryReportGenerator: only Baby Class may pick heritage vs classic nursery layout. */
   const isBabyClassTemplateChoice = selectedSection === 'Baby Class';
 
-  /** O-Level / A-Level: same template keys as deprecated SecondaryReportGenerator (template1–3 → Kasozi/Kyotera-style layouts on the secondary branch). */
-  const isSecondaryLayoutChoice = useMemo(
-    () => !!selectedClass && (isOLevelClass(selectedClass) || isALevelClass(selectedClass)),
-    [selectedClass]
-  );
-
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return '';
-    if (isSecondaryLayoutChoice) {
-      const st =
-        SECONDARY_TEMPLATES[reportTemplateKey as keyof typeof SECONDARY_TEMPLATES] ?? SECONDARY_TEMPLATES.template1;
-      return st.name;
-    }
     const t = PRIMARY_TEMPLATES[reportTemplateKey as keyof typeof PRIMARY_TEMPLATES];
     return t?.name ?? '';
-  }, [selectedClass, reportTemplateKey, isSecondaryLayoutChoice]);
+  }, [selectedClass, reportTemplateKey]);
 
   useEffect(() => {
     if (!selectedClass) return;
     const autoTemplate = getTemplateForClass(selectedClass);
-    const prevClass = prevClassForTemplateRef.current;
-    const wasSecondary =
-      !!prevClass && (isOLevelClass(prevClass) || isALevelClass(prevClass));
-    const isSecondary = isOLevelClass(selectedClass) || isALevelClass(selectedClass);
-
     if (isBabyClassTemplateChoice) {
       setReportTemplateKey((prev) => {
         if (prev === 'template6' || prev === 'template2') return prev;
         return autoTemplate;
       });
-    } else if (isSecondary) {
-      setReportTemplateKey((prev) => {
-        const keep =
-          wasSecondary && (prev === 'template1' || prev === 'template2' || prev === 'template3');
-        if (keep) return prev;
-        return autoTemplate;
-      });
     } else {
       setReportTemplateKey(autoTemplate);
     }
-
-    prevClassForTemplateRef.current = selectedClass;
   }, [selectedClass, isBabyClassTemplateChoice]);
 
   const isPrePrimaryClass = isPrePrimaryNurseryClass(selectedClass);
@@ -659,7 +630,6 @@ export default function GenerateReportsPage() {
         body: JSON.stringify({
           reportDataList: reports,
           schoolId: pageData.schoolId,
-          templateKey: reportTemplateKey,
         }),
       });
 
@@ -939,11 +909,7 @@ export default function GenerateReportsPage() {
                 <span>Report template</span>
                 {selectedClass && (
                   <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                    {isBabyClassTemplateChoice
-                      ? 'Nursery choice'
-                      : isSecondaryLayoutChoice
-                        ? 'Secondary layout'
-                        : 'Auto'}
+                    {isBabyClassTemplateChoice ? 'Nursery choice' : 'Auto'}
                   </span>
                 )}
               </label>
@@ -960,17 +926,6 @@ export default function GenerateReportsPage() {
                 >
                   <option value="template6">{PRIMARY_TEMPLATES.template6.name} (Heritage)</option>
                   <option value="template2">{PRIMARY_TEMPLATES.template2.name}</option>
-                </select>
-              ) : isSecondaryLayoutChoice ? (
-                <select
-                  value={reportTemplateKey}
-                  onChange={(e) => setReportTemplateKey(e.target.value)}
-                  className="ac-input w-full min-h-0 rounded-lg px-3 py-2 text-sm"
-                  title="O-Level / A-Level report card layout (matches secondary school generator)"
-                >
-                  <option value="template1">{SECONDARY_TEMPLATES.template1.name}</option>
-                  <option value="template2">{SECONDARY_TEMPLATES.template2.name}</option>
-                  <option value="template3">{SECONDARY_TEMPLATES.template3.name}</option>
                 </select>
               ) : (
                 <div

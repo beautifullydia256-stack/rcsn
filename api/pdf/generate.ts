@@ -7,13 +7,6 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
-import { renderTemplateHTML } from '../../src/services/templateHTMLGenerator';
-import { resolveSchoolAndStudentPhotosForReportData } from '../../src/lib/reportImageDataUrl';
-import {
-  extractBodyContent,
-  extractHeadContent,
-  PDF_MULTI_STUDENT_SHEET_HEAD,
-} from '../../src/lib/pdfHtmlExtract';
 
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = {
@@ -35,8 +28,6 @@ interface GeneratePDFOptions {
   schoolId?: string;
   /** Fast path (like preview): list of report_data from generate-report-preview. No DB reads; combine into one PDF. */
   reportDataList?: Record<string, unknown>[];
-  /** When useBuiltIn: O-Level / A-Level use same template HTML as on-screen preview (`template1`–`template3`). */
-  templateKey?: string;
 }
 
 function escapeHtmlText(raw: unknown): string {
@@ -149,44 +140,6 @@ function isUpperSectionClass(className: string): boolean {
 function isLowerSectionPrimary(className: string): boolean {
   if (!className || typeof className !== 'string') return false;
   return /(primary\s*[123]|p\.\s*[123]|p[123])/i.test(className.trim());
-}
-
-/** Match SPA `helpers.ts`: Senior 1–4 / S.1-style (O-Level). */
-function isOLevelClassPdf(className: string): boolean {
-  if (!className || typeof className !== 'string') return false;
-  return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(className.trim());
-}
-
-/** Senior 5–6 / S.5-style (A-Level). */
-function isALevelClassPdf(className: string): boolean {
-  if (!className || typeof className !== 'string') return false;
-  return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
-}
-
-function normalizeSecondaryTemplateKey(templateKey: string): 'template1' | 'template2' | 'template3' {
-  if (templateKey === 'template2' || templateKey === 'template3') return templateKey;
-  return 'template1';
-}
-
-/**
- * Built-in HTML for one learner — same layouts as admin report preview / templateHTMLGenerator.
- * Secondary (O/A-Level) → UCE-style template1–3; primary → Template 3/4; else minimal marks table.
- */
-function selectBuiltInFullHtml(
-  reportData: any,
-  className: string,
-  templateKey: string,
-  schoolLogoBase64?: string | null,
-  studentPhotoBase64?: string | null
-): string {
-  const cls = (className || '').trim();
-  if (isOLevelClassPdf(cls) || isALevelClassPdf(cls)) {
-    const key = normalizeSecondaryTemplateKey(templateKey);
-    return renderTemplateHTML(reportData, key, schoolLogoBase64, studentPhotoBase64);
-  }
-  if (isUpperSectionClass(cls)) return buildTemplate4UpperSectionHTML(reportData);
-  if (isLowerSectionPrimary(cls)) return buildTemplate3LowerSectionHTML(reportData);
-  return buildMinimalReportHTML(reportData);
 }
 
 /** True if DB template is the default placeholder (not a real custom design). */
@@ -1063,6 +1016,30 @@ function buildMinimalReportHTML(reportData: any): string {
 }
 
 /** Extra print rules when merging many students into one PDF so each learner stays on one A4 page. */
+const PDF_MULTI_STUDENT_SHEET_HEAD = `
+<style id="pdf-multi-student-sheets">
+  .pdf-student-sheet {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .pdf-student-sheet:not(:last-child) {
+    page-break-after: always;
+    break-after: page;
+  }
+</style>`;
+
+/** Extract content between <body> and </body> from a full HTML string */
+function extractBodyContent(fullHtml: string): string {
+  const match = fullHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return match ? match[1].trim() : fullHtml;
+}
+
+/** Extract <head>...</head> from a full HTML string */
+function extractHeadContent(fullHtml: string): string {
+  const match = fullHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+  return match ? match[1].trim() : '';
+}
+
 /** Safe single-line filename segments for PDF downloads (Windows + URL-safe). */
 function sanitizeReportPdfFilenamePart(raw: unknown): string {
   const s = String(raw ?? '').trim();
@@ -1122,17 +1099,7 @@ function buildClassBundleReportPdfFilename(reportDataList: Record<string, unknow
 }
 
 async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffer; filename: string }> {
-  const {
-    snapshotId,
-    studentIds,
-    templateId,
-    reportData: inlineReportData,
-    schoolId: inlineSchoolId,
-    reportDataList: inlineReportDataList,
-    templateKey: rawTemplateKey,
-  } = options;
-  const templateKey =
-    typeof rawTemplateKey === 'string' && /^template[1-6]$/.test(rawTemplateKey) ? rawTemplateKey : 'template1';
+  const { snapshotId, studentIds, templateId, reportData: inlineReportData, schoolId: inlineSchoolId, reportDataList: inlineReportDataList } = options;
 
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -1356,51 +1323,39 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
     const className = (student?.current_class ?? '') as string;
     let html: string;
     if (allCachedReports && allCachedReports.length > 1 && useBuiltIn) {
-      const chunks = await Promise.all(
-        allCachedReports.map(async (item) => {
-          const rd = item.report_data;
-          const rdSt = rd.students;
-          const rdFirst =
-            Array.isArray(rdSt) && rdSt.length > 0 ? (rdSt[0] as Record<string, unknown>) : undefined;
-          const cls = (rdFirst?.current_class as string | undefined) ?? className;
-          const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(rd);
-          return selectBuiltInFullHtml(rd, cls, templateKey, logo, photo);
-        })
-      );
+      const chunks = allCachedReports.map((item) => {
+        const rd = item.report_data;
+        const rdSt = rd.students;
+        const rdFirst =
+          Array.isArray(rdSt) && rdSt.length > 0 ? (rdSt[0] as Record<string, unknown>) : undefined;
+        const cls = (rdFirst?.current_class as string | undefined) ?? className;
+        return isUpperSectionClass(cls)
+          ? buildTemplate4UpperSectionHTML(rd)
+          : isLowerSectionPrimary(cls)
+            ? buildTemplate3LowerSectionHTML(rd)
+            : buildMinimalReportHTML(rd);
+      });
       const firstFullHtml = chunks[0];
       const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
       const bodyContents = chunks.map(extractBodyContent);
       const combinedBody = bodyContents.map((body) => `<div class="pdf-student-sheet">${body}</div>`).join('\n');
       html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
-    } else if (useBuiltIn) {
-      const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(reportData);
-      html = selectBuiltInFullHtml(reportData, className, templateKey, logo, photo);
     } else {
-      html = renderReportHTML(htmlContent!, cssContent, reportData);
-    }
-    if (useBuiltIn) {
-      await page.setViewport({ width: 794, height: 1123, deviceScaleFactor: 1 });
+      html = useBuiltIn
+        ? isUpperSectionClass(className)
+          ? buildTemplate4UpperSectionHTML(reportData)
+          : isLowerSectionPrimary(className)
+            ? buildTemplate3LowerSectionHTML(reportData)
+            : buildMinimalReportHTML(reportData)
+        : renderReportHTML(htmlContent!, cssContent, reportData);
     }
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    if (useBuiltIn) {
-      await new Promise((r) => setTimeout(r, 500));
-    }
 
-    const pdf = await page.pdf(
-      useBuiltIn
-        ? {
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '0mm', right: '0mm', bottom: '0mm', left: '0mm' },
-            preferCSSPageSize: false,
-            scale: 1.0,
-          }
-        : {
-            format: 'A4',
-            printBackground: true,
-            margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
-          }
-    );
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
+    });
     const buffer = Buffer.from(pdf);
     const isMulti =
       Array.isArray(allCachedReports) && allCachedReports.length > 1;
@@ -1443,22 +1398,16 @@ export default async function handler(req: Req, res: Res) {
       reportData?: Record<string, unknown>;
       reportDataList?: Record<string, unknown>[];
       schoolId?: string;
-      templateKey?: string;
     };
     const snapshotId = body.snapshotId;
     const reportData = body.reportData;
     const reportDataList = body.reportDataList;
     const schoolId = body.schoolId;
-    const templateKey =
-      typeof body.templateKey === 'string' && /^template[1-6]$/.test(body.templateKey)
-        ? body.templateKey
-        : 'template1';
 
     if (reportDataList && Array.isArray(reportDataList) && reportDataList.length > 0) {
       const { buffer: pdfBuffer, filename } = await generatePDF({
         reportDataList,
         schoolId: schoolId ?? (reportDataList[0]?.school as any)?.school_id,
-        templateKey,
       });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
@@ -1472,7 +1421,6 @@ export default async function handler(req: Req, res: Res) {
         reportData,
         schoolId,
         templateId: body.templateId,
-        templateKey,
       });
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
@@ -1488,7 +1436,6 @@ export default async function handler(req: Req, res: Res) {
       snapshotId,
       studentIds: body.studentIds,
       templateId: body.templateId,
-      templateKey,
     });
 
     res.setHeader('Content-Type', 'application/pdf');

@@ -20,8 +20,7 @@ import {
 } from '../../../templates/primary/prePrimaryHolisticRatings';
 import { buildPrePrimaryDetailedSections } from '../../../templates/primary/prePrimaryDetailedCommentResolve';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
-import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
-import { SecondaryBuiltInHtmlPreview } from '../SecondaryBuiltInHtmlPreview';
+import { lightenColor, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
 
 /** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
@@ -60,11 +59,11 @@ function AttendanceCountsSupplement({
 
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, examSets, gradeSystem, prePrimaryReportMode = 'colour', detailedObservationItemsByKey }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> }; prePrimaryReportMode?: 'colour' | 'detailed'; detailedObservationItemsByKey?: Record<string, NurseryDetailedObservationRow> }) {
   const cls = String(student.current_class || '');
-  const isSecondaryTrack = isOLevelClass(cls) || isALevelClass(cls);
+  const isOL = isOLevelClass(cls);
   const isLower = isLowerSectionPrimary(cls);
 
-  // Primary/Nursery path (not O-Level / A-Level secondary)
-  if (!isSecondaryTrack) {
+  // Primary/Nursery path (non O-Level)
+  if (!isOL) {
     if (template === 'template3' || isLower) {
       return (
         <div className="report-preview-pdf-fonts-primary">
@@ -105,17 +104,297 @@ function ReportPreview({ student, examSet, school, template, reportTitleSettings
     );
   }
 
-  /* O-Level / A-Level: identical HTML pipeline to PDF (legacy generators). */
-  return (
-    <SecondaryBuiltInHtmlPreview
-      student={student}
-      examSet={examSet}
-      school={school}
-      templateKey={template}
-    />
-  );
+  // O-Level/Secondary path
+  switch (template) {
+    case 'template1':
+      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+    case 'template2':
+      return (
+        <Template2KasoziReport
+          student={student}
+          examSet={examSet}
+          school={school}
+          prePrimaryReportMode={prePrimaryReportMode}
+          detailedObservationItemsByKey={detailedObservationItemsByKey}
+        />
+      );
+    case 'template3':
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template3KyoteraReport student={student} examSet={examSet} school={school} reportTitleSettings={reportTitleSettings} currentTermInfo={currentTermInfo} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
+    case 'template4':
+      return (
+        <div className="report-preview-pdf-fonts-primary">
+          <Template4UpperSectionReport student={student} examSet={examSet} school={school} examSets={examSets} gradeSystem={gradeSystem} />
+        </div>
+      );
+    case 'template5':
+      return <Template5CleanReportCard student={student} examSet={examSet} school={school} />;
+    default:
+      return <Template1OLevelReport student={student} examSet={examSet} school={school} />;
+  }
 }
 
+
+// Template 1 - O-Level Report Card (Exact format from sample)
+function Template1OLevelReport({ student, examSet, school }: { student: any; examSet: any; school: any }) {
+  const attendance = student.summary.attendanceDetails || {};
+  const daysPresent = attendance.presentDays ?? '';
+  const totalDays = attendance.totalSchoolDays ?? '';
+  const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
+  const avgGrade = student.summary.division ?? '';
+  const displayDivision = (() => {
+    if (typeof avgGrade !== 'string') return avgGrade;
+    const trimmed = avgGrade.trim();
+    if (trimmed.toLowerCase().startsWith('division')) {
+      return trimmed.replace(/division\s*/i, '').trim();
+    }
+    return trimmed;
+  })();
+  const overallPerf = student.summary.performanceRemark ?? '';
+
+  // O-Level calculation functions (matching exam results page logic)
+  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
+    if (activityScore < 1) return "Missed";
+    if (activityScore < 2.5) return "Moderate";
+    return "Outstanding";
+  };
+
+  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
+    if (finalScore >= 80) return "A";
+    if (finalScore >= 70) return "B";
+    if (finalScore >= 60) return "C";
+    if (finalScore >= 50) return "D";
+    return "E";
+  };
+
+  return (
+    <div style={{ 
+      fontFamily: 'Times New Roman, Arial, sans-serif',
+      width: '210mm',
+      minHeight: '297mm',
+      margin: '0 auto',
+      padding: '12mm',
+      boxSizing: 'border-box'
+    }} className="bg-white text-black print:shadow-none print:rounded-none print:p-0 print:m-0 print:w-full print:min-h-full">
+      
+      {/* WATERMARK */}
+      <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-10 -z-10 pointer-events-none">
+        <div className="w-[864px] h-[864px] border-2 border-gray-300 rounded-full flex items-center justify-center bg-gray-100">
+          <div className="text-center text-9xl font-bold text-gray-400">
+            SCHOOL<br/>LOGO
+          </div>
+        </div>
+      </div>
+      
+      {/* HEADER - School Logo and Info Side by Side */}
+      <div className="flex items-start justify-between mb-4">
+        {/* School Logo - Left side */}
+        <div className="w-48 h-48 flex items-center justify-center overflow-hidden border-0">
+          {school?.logo_url || school?.logo ? (
+            <img
+              src={school.logo_url || school.logo}
+              alt="School Logo"
+              className="w-full h-full object-cover border-0"
+            />
+          ) : (
+            <div className="text-center text-xs">
+              <div className="font-bold">SCHOOL</div>
+              <div className="font-bold">LOGO</div>
+            </div>
+          )}
+        </div>
+        
+        {/* School Info - Right side */}
+        <div className="text-center flex-1">
+          {school?.name && (
+            <div className="font-bold text-[22pt] uppercase tracking-wide leading-[1.1] mb-3 text-slate-900">
+              {school.name}
+            </div>
+          )}
+          {(school?.phone || school?.email || school?.address) && (
+            <div className="text-[10pt] font-normal leading-relaxed mb-2 text-slate-700">
+              {school?.address && <span className="font-medium">{school.address}</span>}
+              {school?.address && (school?.phone || school?.email) && <span className="mx-2 text-slate-400">|</span>}
+              {school?.phone && <span>Tel: <span className="font-medium">{school.phone}</span></span>}
+              {school?.phone && school?.email && <span className="mx-2 text-slate-400">|</span>}
+              {school?.email && <span>Email: <span className="font-medium">{school.email}</span></span>}
+            </div>
+          )}
+          {school?.motto && (
+            <div className="text-[11pt] font-normal italic text-slate-600 mt-2 leading-relaxed">
+              &quot;{school.motto}&quot;
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* REPORT TITLE */}
+      <div className="text-center bg-green-600 text-white py-2.5 mb-5">
+        <h1 className="text-[14pt] font-bold uppercase tracking-wide leading-tight">
+          LEARNER'S END OF TERM REPORT CARD FOR TERM {examSet?.term || '2'}, {examSet?.year || '2025'}
+        </h1>
+      </div>
+
+      {/* Student Info and Photo - Side by side */}
+      <div className="flex justify-between items-start mb-3">
+        {/* LEARNER INFO - Left side */}
+        <div className="text-[11pt]">
+        <div><strong>LNo.:</strong> {student.admission_number || student.student_id}</div>
+        <div><strong>NAME:</strong> {student.name}</div>
+        <div><strong>CLASS & STREAM:</strong> {student.current_class}</div>
+        </div>
+        
+        {/* Student Photo - Right side */}
+        <div className="w-20 h-24 border-2 border-gray-300 bg-gray-100 flex items-center justify-center overflow-hidden">
+          {student.profile_photo ? (
+            <img
+              src={student.profile_photo}
+              alt="Student Photo"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-gray-500">Photo</div>
+          )}
+        </div>
+      </div>
+
+
+      {/* SUBJECTS TABLE */}
+      <table className="w-full mb-3" style={{ borderCollapse: 'collapse', fontSize: '9.5pt' }}>
+        <thead>
+          <tr>
+            {['Subjects & Topics Covered','Activity Score [3]','Descriptor','Formative Score [20%]','Exam Score [80%]','Final Score [100%]','Grade','Overall Remark','Subject Teacher'].map(h => (
+              <th key={h} className="text-center font-bold" style={{ border: '1px solid #000', background: '#4CAF50', color: 'white', padding: '6px' }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(student.results?.length ?? 0) > 0 ? (
+            (student.results || []).map((result: any, index: number) => {
+              // O-Level or primary: support both activity_score/formative_score and marks_obtained/final_score
+              const activity = result.activity_score ?? '';
+              const activityNum = parseFloat(activity) || 0;
+              const descriptor = result.descriptor || calculateDescriptor(activityNum);
+              const formative = result.formative_score ?? '';
+              const exam = result.exam_score ?? '';
+              const finalScore = result.final_score ?? result.marks_obtained ?? '';
+              const finalNum = parseFloat(String(finalScore)) || 0;
+              const gradeText = result.grade || calculateGrade(finalNum);
+              const overallRemark = result.overall_remark ?? result.remarks ?? result.teacher_comment ?? '';
+              const teacherInitials = result.teacher_initials ?? '';
+              const topic = result.topic || '';
+              
+              return (
+                <tr key={index}>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>
+                    <div className="font-bold">{result.subject}</div>
+                    <div className="text-[9pt] leading-snug mt-1">
+                      {topic}
+                    </div>
+                  </td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{activity}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{descriptor}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{formative}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{exam}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{finalScore}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{gradeText}</td>
+                  <td className="text-[9pt]" style={{ border: '1px solid #000', padding: '4px' }}>{overallRemark}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{teacherInitials}</td>
+                </tr>
+              );
+            })
+          ) : (
+            <tr>
+              <td colSpan={9} style={{ border: '1px solid #000', padding: '8px', textAlign: 'center', color: '#555' }}>N/A - Student did not sit for this term</td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* COMMENTS & SIGNATURES (Reworked, remove average/overall text) */}
+      <div className="mb-3 text-[10.5pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
+        <div style={{ height: '48px', borderBottom: '1px solid #000', marginBottom: '6px' }} />
+        <p>
+          Name: {student.comments?.class_teacher_name || ''} | Signature: ____________________
+        </p>
+
+        <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
+        <div style={{ height: '48px', borderBottom: '1px solid #000', marginBottom: '6px' }} />
+        <p>
+          Name: {student.comments?.head_teacher_name || ''} | Signature: ____________________
+        </p>
+      </div>
+
+
+      {/* COMMENTS */}
+      <div className="mb-4 text-[10pt]">
+        <h3 className="text-[11pt] font-semibold mb-1">Class Teacher's Comment</h3>
+        <div style={{ height: '60px', borderBottom: '1px solid #000', marginBottom: '8px' }} />
+        <p>Name: {student.comments?.class_teacher_name || ''} | Signature: ____________________</p>
+
+        <h3 className="text-[11pt] font-semibold mt-3 mb-1">Head Teacher's Comment</h3>
+        <div style={{ height: '60px', borderBottom: '1px solid #000', marginBottom: '8px' }} />
+        <p>Name: {student.comments?.head_teacher_name || ''} | Signature: ____________________</p>
+      </div>
+
+      {/* Next Term removed for this template per request */}
+
+      {/* Grading system & descriptions */}
+      <div className="mb-4">
+        <h3 className="text-[11pt] font-semibold">Grading System</h3>
+        <p className="text-[10pt]"><strong>80 - A | 70 - B | 50 - C | 40 - D | 0 - E</strong></p>
+        
+        <h3 className="text-[11pt] font-semibold mt-2">Description</h3>
+        <table className="w-full" style={{ borderCollapse: 'collapse', fontSize: '10pt' }}>
+          <thead>
+            <tr>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Grade</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Achievement Level</th>
+              <th style={{ border: '1px solid #000', padding: '4px', background: '#f0f0f0' }}>Descriptor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>A</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Exceptional</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an extraordinary level of competence by applying innovatively and creatively the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>B</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Outstanding</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a high level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>C</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Satisfactory</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates an adequate level of competence by applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>D</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Basic</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates a minimum level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+            <tr>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>E</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Elementary</td>
+              <td style={{ border: '1px solid #000', padding: '4px' }}>Demonstrates below the basic level of competence in applying the acquired knowledge and skills in real life situations</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* FOOTER */}
+      <div className="flex justify-between items-center text-[9pt] mt-4">
+        <div>Printed from: Pwezacore</div>
+        <div>School Motto: '{school?.motto || 'Education the Future'}'</div>
+      </div>
+    </div>
+  );
+}
 
 // Template 2 - St. Adrian Kasozi Secondary School Format
 function Template2KasoziReport({
