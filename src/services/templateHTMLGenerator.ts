@@ -18,6 +18,7 @@ import {
   generateTemplate3KyoteraHTML,
   generateSecondaryReportHTML,
 } from './legacySecondaryPdfTemplatesFrom3918d26';
+import { assertSecondaryBuiltinTemplatesAllowed } from './reportSecondaryBuiltinGuards';
 
 // ============================================================================
 // TYPES AND CONSTANTS
@@ -711,6 +712,14 @@ export function renderTemplateHTML(
   const className = student?.current_class || '';
   const isLowerSection = /(primary\s*[123]|p\.\s*[123]|p[123])/i.test(className);
   const isUpperSection = /(primary\s*[4567]|p\.\s*[4567]|p[4567])/i.test(className);
+
+  const schoolObj = reportData?.school as Record<string, unknown> | undefined;
+  const usesD082d5bSeniorCards =
+    isOLevelClass(className) ||
+    (isALevelClass(className) && (templateKey === 'template2' || templateKey === 'template3'));
+  if (usesD082d5bSeniorCards) {
+    assertSecondaryBuiltinTemplatesAllowed(schoolObj, 'renderTemplateHTML');
+  }
 
   // O-Level (S1–S4): historic route used Template 1–3 card layouts only here.
   if (isOLevelClass(className)) {

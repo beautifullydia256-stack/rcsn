@@ -3,25 +3,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import { renderTemplateHTML } from '../../services/templateHTMLGenerator';
-
-async function urlToDataUrl(url: string): Promise<string | null> {
-  const u = String(url || '').trim();
-  if (!u) return null;
-  if (u.startsWith('data:')) return u;
-  try {
-    const res = await fetch(u);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onloadend = () => resolve(typeof r.result === 'string' ? r.result : null);
-      r.onerror = () => reject(new Error('read failed'));
-      r.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
+import { resolveSchoolAndStudentPhotosForReportData } from '../../lib/reportImageDataUrl';
 
 function normalizeTemplateKey(raw: string): string {
   return typeof raw === 'string' && /^template[1-6]$/.test(raw) ? raw : 'template1';
@@ -60,14 +42,11 @@ export function SecondaryBuiltInHtmlPreview({
     (async () => {
       try {
         setError(null);
-        const s = school as { logo_url?: string; logo?: string };
-        const st = student as { profile_photo?: string; photo_url?: string; student_photo_url?: string };
-        const logoUrl = s?.logo_url || s?.logo || '';
-        const photoUrl = st?.profile_photo || st?.photo_url || st?.student_photo_url || '';
-        const [logoB64, photoB64] = await Promise.all([
-          logoUrl ? urlToDataUrl(String(logoUrl)) : Promise.resolve(null),
-          photoUrl ? urlToDataUrl(String(photoUrl)) : Promise.resolve(null),
-        ]);
+        if (cancelled) return;
+        const { logo: logoB64, photo: photoB64 } = await resolveSchoolAndStudentPhotosForReportData({
+          school: school as Record<string, unknown>,
+          students: [student],
+        });
         if (cancelled) return;
         const doc = renderTemplateHTML(reportData, key, logoB64, photoB64);
         if (!cancelled) setHtml(doc);
