@@ -14,6 +14,7 @@ import { assertTeacherUpsertRpcResult, throwIfRpcReturnedJsonError } from "@/src
 import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
+import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -38,18 +39,8 @@ export default function TeacherExamResultsClassPage() {
   const params = useParams();
   const className = decodeURIComponent(params.class as string);
   
-  // Detect if this is a Secondary school class
-  const isSecondary = useMemo(() => {
-    const trimmed = className?.trim() || "";
-    // O-Level classes: Senior 1 - Senior 4 (S1-S4)
-    // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
-    const matches = /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
-    return matches;
-  }, [className]);
-  const isALevel = useMemo(() => {
-    const trimmed = className?.trim() || "";
-    return /^(senior\s*[5-6]|s\s*[5-6])/i.test(trimmed);
-  }, [className]);
+  const isSecondary = useMemo(() => isOLevelClass(className?.trim() || ""), [className]);
+  const isALevel = useMemo(() => isALevelClass(className?.trim() || ""), [className]);
   
   // Detect Primary school section (Baby Class, Nursery, Lower, Upper)
   const primarySection = useMemo(() => {

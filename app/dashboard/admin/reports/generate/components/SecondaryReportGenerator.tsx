@@ -1019,7 +1019,8 @@ export function SecondaryReportGenerator() {
               {classes.map((className) => {
                 const currentSetting = classTemplateSettings.find(s => s.class_name === className);
                 const isOLevel = isOLevelClass(className);
-                
+                const isALevel = isALevelClass(className);
+
                 return (
                   <div key={className} className="flex items-center justify-between p-4 rounded-lg border border-white/10 bg-white/5">
                     <div className="flex items-center gap-3">
@@ -1027,7 +1028,7 @@ export function SecondaryReportGenerator() {
                       <div>
                         <div className="text-white font-medium">{className}</div>
                         <div className="text-white/60 text-sm">
-                          {isOLevel ? 'O-Level Class' : 'Secondary Class'}
+                          {isOLevel ? 'O-Level Class' : isALevel ? 'A-Level Class' : 'Secondary / other'}
                         </div>
                       </div>
                     </div>
@@ -1047,7 +1048,7 @@ export function SecondaryReportGenerator() {
                                 body: JSON.stringify({
                                   class_name: className,
                                   template_id: templateId,
-                                  is_o_level: isOLevel
+                                  is_o_level: isOLevel || isALevel
                                 }),
                               });
                               
@@ -1143,8 +1144,8 @@ export function SecondaryReportGenerator() {
           <h2 className="text-white text-lg font-medium mb-4">Report Configuration</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Template Selection - Only show for O-Level classes (Senior 1-4) */}
-            {isOLevelClass(selectedClass) && (
+            {/* Template Selection - O-Level (S1–4) and A-Level (S5–6) */}
+            {(isOLevelClass(selectedClass) || isALevelClass(selectedClass)) && (
               <div>
                 <label className="block text-white/80 text-sm font-medium mb-2">
                   Report Template
@@ -1455,14 +1456,18 @@ function isSecondaryClass(className: string): boolean {
 function isOLevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
-  // O-Level classes: Senior 1 - Senior 4 (S1-S4)
-  // Matches variants like: "Senior 1", "Senior1", "S1", "S 1", case-insensitive, and allows suffix like streams
-  return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
+  return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(trimmed);
+}
+
+function isALevelClass(className: string): boolean {
+  if (!className) return false;
+  const trimmed = className.trim();
+  return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(trimmed);
 }
 
 // Report Preview Component
 function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any }) {
-  if (isOLevelClass(student.current_class)) {
+  if (isOLevelClass(student.current_class) || isALevelClass(student.current_class)) {
     switch (template) {
       case 'template1':
         return <Template1OLevelReport student={student} examSet={examSet} school={school} />;

@@ -11,6 +11,7 @@
 
 import { supabase } from '../lib/supabase';
 import { formatAverageWhole, formatCurrency } from '../lib/reportUtils';
+import { isALevelClass, isOLevelClass } from '../components/reports/templates/helpers';
 
 // ============================================================================
 // TYPES AND CONSTANTS
@@ -97,15 +98,6 @@ export const NURSERY_SKILL_GRID: NurserySkillCell[][] = [
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-/**
- * Check if class is O-Level
- */
-export function isOLevelClass(className: string): boolean {
-  if (!className) return false;
-  const trimmed = className.trim();
-  return /^(senior\s*[1-4]|s\s*[1-4])/i.test(trimmed);
-}
 
 /**
  * Load nursery auto comments from database
@@ -242,9 +234,10 @@ export function replaceTemplatePlaceholders(
     );
   }
   
-  // For primary format (non O-Level), strip attendance table/fields so PDF matches preview
+  // For primary format (not secondary O/A-Level), strip attendance table/fields so PDF matches preview
   try {
-    const isPrimary = !isOLevelClass(student.current_class || '');
+    const cls = student.current_class || '';
+    const isPrimary = !isOLevelClass(cls) && !isALevelClass(cls);
     if (isPrimary) {
       // Remove attendance placeholders if present
       processedHtml = processedHtml
@@ -1962,10 +1955,9 @@ export function renderTemplateHTML(
   const student = reportData.students[0];
   const className = student?.current_class || '';
 
-  // Check if O-Level class
-  const isOLevel = isOLevelClass(className);
+  const isSecondaryReport = isOLevelClass(className) || isALevelClass(className);
 
-  if (isOLevel) {
+  if (isSecondaryReport) {
     switch (templateKey) {
       case 'template1':
         return generateTemplate1OLevelHTML(reportData, schoolLogoBase64, studentPhotoBase64);

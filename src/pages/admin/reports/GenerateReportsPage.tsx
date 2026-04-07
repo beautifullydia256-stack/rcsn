@@ -11,6 +11,7 @@ import {
   getTemplateForClass,
   getSectionForClass,
 } from '../../../templates/primary';
+import { isALevelClass, isOLevelClass } from '../../../components/reports/templates/helpers';
 import { isPrePrimaryNurseryClass, countPrePrimaryStrandsWithData } from '../../../templates/primary/prePrimaryHolisticRatings';
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { getCurrentTerm } from '../../../lib/termStructure';
@@ -357,6 +358,8 @@ export default function GenerateReportsPage() {
 
   const templateDisplayName = useMemo(() => {
     if (!selectedClass) return '';
+    if (isOLevelClass(selectedClass)) return 'O-Level report card (Senior 1–4)';
+    if (isALevelClass(selectedClass)) return 'A-Level report card (Senior 5–6)';
     const t = PRIMARY_TEMPLATES[reportTemplateKey as keyof typeof PRIMARY_TEMPLATES];
     return t?.name ?? '';
   }, [selectedClass, reportTemplateKey]);

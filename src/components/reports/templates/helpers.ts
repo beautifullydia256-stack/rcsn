@@ -11,14 +11,15 @@ export function isSecondaryClass(className: string): boolean {
 export function isOLevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
-  return /^(senior\s*[1-4]|s\.?\s*[1-4])/i.test(trimmed);
+  return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(trimmed);
 }
 
 /** Senior 5–6 / S.5–S.6 — A-Level (UACE-style) stream; matches leading class label before stream suffix. */
 export function isALevelClass(className: string): boolean {
   if (!className) return false;
   const trimmed = className.trim();
-  return /^(senior\s*[56]|s\.?\s*[56])/i.test(trimmed);
+  // Match "Senior 5", "S5", "S.6", optional stream suffix (leading label only).
+  return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(trimmed);
 }
 
 /**

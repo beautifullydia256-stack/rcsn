@@ -1,3 +1,5 @@
+import { isALevelClass, isOLevelClass } from '../../components/reports/templates/helpers';
+
 // Primary/Nursery School Report Templates Configuration
 // These templates are specifically designed for Primary schools (Baby Class - P.7)
 // Each template is designed for a specific section of the primary school
@@ -128,28 +130,40 @@ export const PRIMARY_CLASS_TEMPLATE_MAPPING: Record<string, string> = {
 
 // Helper function to get recommended template for a class
 export const getTemplateForClass = (className: string): string => {
+  const trimmed = (className || '').trim();
+  if (!trimmed) return 'template1';
+
+  // Secondary (O-Level Senior 1–4, A-Level Senior 5–6): use template1 on the *secondary* branch
+  // of ReportPreview / PDF (not primary "Baby Class" template1 metadata).
+  if (isOLevelClass(trimmed) || isALevelClass(trimmed)) {
+    return 'template1';
+  }
+
   // Try exact match first
   if (PRIMARY_CLASS_TEMPLATE_MAPPING[className]) {
     return PRIMARY_CLASS_TEMPLATE_MAPPING[className];
   }
-  
+
   // Try case-insensitive match
   const lowerClassName = className.toLowerCase();
   const matchedKey = Object.keys(PRIMARY_CLASS_TEMPLATE_MAPPING).find(
     key => key.toLowerCase() === lowerClassName
   );
-  
+
   if (matchedKey) {
     return PRIMARY_CLASS_TEMPLATE_MAPPING[matchedKey];
   }
-  
-  // Default to template1 if no match
+
+  // Default if no match (legacy behaviour)
   return 'template1';
 };
 
 // Get section name for a class
 export const getSectionForClass = (className: string): string => {
-  // Updated: Nursery class is now Baby Class
+  const trimmed = (className || '').trim();
+  if (isOLevelClass(trimmed)) return 'O-Level';
+  if (isALevelClass(trimmed)) return 'A-Level';
+
   const template = getTemplateForClass(className);
   const templateData = PRIMARY_TEMPLATES[template as keyof typeof PRIMARY_TEMPLATES];
   return templateData?.section || 'Unknown';
