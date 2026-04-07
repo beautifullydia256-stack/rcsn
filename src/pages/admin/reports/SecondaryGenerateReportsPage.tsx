@@ -1,5 +1,5 @@
 /**
- * Secondary-only report generator (O-Level / A-Level). PDF: POST /api/pdf/generate with secondaryPipeline: true.
+ * Secondary-only report generator (O-Level / A-Level). PDF: /api/pdf/generate-secondary (primary uses /api/pdf/generate only).
  * Primary schools use GenerateReportsPage at /dashboard/admin/reports/generate.
  */
 import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
@@ -604,11 +604,10 @@ export default function SecondaryGenerateReportsPage() {
         setDownloadPdfStatus('Preparing PDF…');
       }
 
-      const response = await fetch(`${baseUrl}/api/pdf/generate`, {
+      const response = await fetch(`${baseUrl}/api/pdf/generate-secondary`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secondaryPipeline: true,
           reportDataList: reports,
           schoolId: pageData.schoolId,
           templateKey: reportTemplateKey,
