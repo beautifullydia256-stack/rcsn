@@ -84,8 +84,10 @@ export default function ReportsHub() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <h3 className="ac-text-primary text-lg font-medium mb-2">Generate Reports</h3>
-            <p className="ac-text-muted text-sm">Create student academic reports for exams and terms</p>
+            <h3 className="ac-text-primary text-lg font-medium mb-2">Generate reports</h3>
+            <p className="ac-text-muted text-sm">
+              Opens the primary or secondary generator from your school type (System Settings).
+            </p>
           </div>
         </button>
 

@@ -37,7 +37,8 @@ const RegisterPage = lazyWithRetry(() => import('./pages/auth/Register'));
 const DashboardEntry = lazyWithRetry(() => import('./pages/dashboard/DashboardEntry'));
 const AdminDashboard = lazyWithRetry(() => import('./pages/admin/Dashboard'));
 const ReportsHub = lazyWithRetry(() => import('./pages/admin/reports/ReportsHub'));
-const GenerateReportsPage = lazyWithRetry(() => import('./pages/admin/reports/GenerateReportsPage'));
+const ReportGeneratorEntryPage = lazyWithRetry(() => import('./pages/admin/reports/ReportGeneratorEntryPage'));
+const SecondaryGenerateReportsPage = lazyWithRetry(() => import('./pages/admin/reports/SecondaryGenerateReportsPage'));
 const ReportRecordsPage = lazyWithRetry(() => import('./pages/admin/reports/ReportRecordsPage'));
 const BulkGenerator = lazyWithRetry(() => import('./pages/admin/reports/BulkGenerator'));
 const ReportViewer = lazyWithRetry(() => import('./pages/admin/reports/ReportViewer'));
@@ -208,7 +209,8 @@ function App() {
                   <Route path="jobs" element={<AdminJobsPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="report-records" element={<ReportRecordsPage />} />
-                  <Route path="reports/generate" element={<GenerateReportsPage />} />
+                  <Route path="reports/generate-secondary" element={<SecondaryGenerateReportsPage />} />
+                  <Route path="reports/generate" element={<ReportGeneratorEntryPage />} />
                   <Route path="reports/snapshots" element={<Navigate to="/dashboard/admin/reports" replace />} />
                   <Route path="reports/bulk" element={<BulkGenerator />} />
                   <Route path="reports/viewer" element={<ReportViewer />} />

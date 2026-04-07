@@ -4,7 +4,11 @@
  */
 import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails';
 
-export function buildSecondaryShapedStudent(reportData: { students?: any[]; school?: unknown; examSet?: unknown }): Record<string, unknown> {
+export function buildSecondaryShapedStudent(reportData: {
+  students?: any[];
+  school?: unknown;
+  examSet?: unknown;
+}): Record<string, unknown> {
   const raw = reportData.students?.[0];
   if (!raw) throw new Error('No student in report data');
 
