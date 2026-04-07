@@ -1357,16 +1357,15 @@ export default function LegacyExamResultsFullPage() {
           setError('Please enter at least one secondary record');
           return;
         }
-        const autoTeacherComment = (_finalNum: number): string => '';
-
-        const saves = entries.map(async ({ studentId, data }) => {
-            const activityNum = parseFloat(data.activityScore) || 0;
-            const descriptor = calculateDescriptor(activityNum);
+        // Sequential RPCs: parallel saves on exam_results often deadlock (triggers / index updates).
+        for (const { studentId, data } of entries) {
+          const activityNum = parseFloat(data.activityScore) || 0;
+          const descriptor = calculateDescriptor(activityNum);
           const formativeCap = typeof oLevelFormativeMax === 'number' ? oLevelFormativeMax : 40;
           const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
           const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
-            const finalNum = formativeNum + examNum;
-            const letterGrade = calculateSecondaryGrade(finalNum, (selectedSubject || '').trim());
+          const finalNum = formativeNum + examNum;
+          const letterGrade = calculateSecondaryGrade(finalNum, (selectedSubject || '').trim());
 
           const rpcParams = {
             p_school_id: schoolId,
@@ -1385,13 +1384,13 @@ export default function LegacyExamResultsFullPage() {
             p_topic: (data.topic || topicFilter || '').trim(),
             p_grade: letterGrade,
           };
-          
+
           console.log('Saving secondary exam result with params:', rpcParams);
-          
+
           const resp = await supabase.rpc('teacher_upsert_exam_result_secondary', rpcParams);
-          
+
           console.log('RPC response:', resp);
-          
+
           if (resp.error) {
             console.error('RPC olevel save error:', {
               code: resp.error.code,
@@ -1403,8 +1402,7 @@ export default function LegacyExamResultsFullPage() {
             throw resp.error;
           }
           assertTeacherUpsertRpcResult(resp.data);
-        });
-        await Promise.all(saves);
+        }
         setSuccess(`Successfully saved ${entries.length} exam results`);
         
         // Force reload saved results after successful save

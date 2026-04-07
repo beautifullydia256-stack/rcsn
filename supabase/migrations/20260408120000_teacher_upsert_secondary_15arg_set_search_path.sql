@@ -1,44 +1,42 @@
--- Create RPC function for teachers to upsert exam results (secondary schools)
--- This function handles the secure insertion/update of exam results for secondary schools
-
--- Drop the function if it exists to avoid conflicts
-DROP FUNCTION IF EXISTS public.teacher_upsert_exam_result_secondary(UUID, UUID, UUID, TEXT, TEXT, NUMERIC, TEXT, NUMERIC, NUMERIC, NUMERIC, TEXT, TEXT, UUID, TEXT);
+-- The UI calls teacher_upsert_exam_result_secondary with p_grade (15 parameters).
+-- PostgREST uses that overload, not the 14-arg version in 20250927.
+-- Recreate it with SET search_path and qualified public.exam_results so empty search_path
+-- from older migrations cannot break saves after CREATE OR REPLACE elsewhere.
 
 CREATE OR REPLACE FUNCTION public.teacher_upsert_exam_result_secondary(
-    p_school_id UUID,
-    p_exam_set_id UUID,
-    p_student_id UUID,
-    p_class_name TEXT,
-    p_subject TEXT,
-    p_activity_score NUMERIC(3,1),
-    p_descriptor TEXT,
-    p_formative_score NUMERIC(4,1),
-    p_exam_score NUMERIC(4,1),
-    p_final_score NUMERIC(4,1),
-    p_overall_remark TEXT,
-    p_teacher_initials TEXT,
-    p_teacher_id UUID,
-    p_topic TEXT DEFAULT NULL
+    p_school_id uuid,
+    p_exam_set_id uuid,
+    p_student_id uuid,
+    p_class_name text,
+    p_subject text,
+    p_activity_score numeric,
+    p_descriptor text,
+    p_formative_score numeric,
+    p_exam_score numeric,
+    p_final_score numeric,
+    p_overall_remark text,
+    p_teacher_initials text,
+    p_teacher_id uuid,
+    p_topic text DEFAULT NULL,
+    p_grade text DEFAULT NULL
 )
-RETURNS JSON
+RETURNS json
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    result_id UUID;
-    result JSON;
+    result_id uuid;
+    result json;
 BEGIN
-    -- Validate inputs
     IF p_school_id IS NULL OR p_exam_set_id IS NULL OR p_student_id IS NULL THEN
         RETURN json_build_object('error', 'Missing required parameters');
     END IF;
-    
+
     IF p_activity_score IS NULL OR p_formative_score IS NULL OR p_exam_score IS NULL OR p_final_score IS NULL THEN
         RETURN json_build_object('error', 'All scores are required');
     END IF;
-    
-    -- Check if exam result already exists
+
     SELECT id INTO result_id
     FROM public.exam_results
     WHERE school_id = p_school_id
@@ -46,11 +44,10 @@ BEGIN
       AND student_id = p_student_id
       AND class_name = p_class_name
       AND subject = p_subject;
-    
+
     IF result_id IS NOT NULL THEN
-        -- Update existing record
         UPDATE public.exam_results
-        SET 
+        SET
             activity_score = p_activity_score,
             descriptor = p_descriptor,
             formative_score = p_formative_score,
@@ -60,16 +57,16 @@ BEGIN
             teacher_initials = p_teacher_initials,
             teacher_id = p_teacher_id,
             topic = p_topic,
-            updated_at = NOW()
+            grade = p_grade,
+            updated_at = now()
         WHERE id = result_id;
-        
+
         result := json_build_object(
             'success', true,
             'action', 'updated',
             'id', result_id
         );
     ELSE
-        -- Insert new record
         INSERT INTO public.exam_results (
             school_id,
             exam_set_id,
@@ -85,6 +82,7 @@ BEGIN
             teacher_initials,
             teacher_id,
             topic,
+            grade,
             created_at,
             updated_at
         ) VALUES (
@@ -102,19 +100,20 @@ BEGIN
             p_teacher_initials,
             p_teacher_id,
             p_topic,
-            NOW(),
-            NOW()
+            p_grade,
+            now(),
+            now()
         ) RETURNING id INTO result_id;
-        
+
         result := json_build_object(
             'success', true,
             'action', 'inserted',
             'id', result_id
         );
     END IF;
-    
+
     RETURN result;
-    
+
 EXCEPTION
     WHEN OTHERS THEN
         RETURN json_build_object(
@@ -123,12 +122,10 @@ EXCEPTION
 END;
 $$;
 
--- Grant execute permission to authenticated users (signature required when overloaded)
 GRANT EXECUTE ON FUNCTION public.teacher_upsert_exam_result_secondary(
-    uuid, uuid, uuid, text, text, numeric, text, numeric, numeric, numeric, text, text, uuid, text
+    uuid, uuid, uuid, text, text, numeric, text, numeric, numeric, numeric, text, text, uuid, text, text
 ) TO authenticated;
 
--- Add comment for documentation
 COMMENT ON FUNCTION public.teacher_upsert_exam_result_secondary(
-    uuid, uuid, uuid, text, text, numeric, text, numeric, numeric, numeric, text, text, uuid, text
-) IS 'Secure RPC function for teachers to insert/update exam results for secondary schools';
+    uuid, uuid, uuid, text, text, numeric, text, numeric, numeric, numeric, text, text, uuid, text, text
+) IS 'Secure RPC for secondary O-Level exam results (includes p_grade; search_path safe).';

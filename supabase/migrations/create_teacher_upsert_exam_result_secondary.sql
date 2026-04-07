@@ -96,8 +96,10 @@ EXCEPTION
 END;
 $$;
 
--- Grant execute permission to authenticated users
-GRANT EXECUTE ON FUNCTION teacher_upsert_exam_result_secondary TO authenticated;
+-- Grant execute permission to authenticated users (signature required when overloaded)
+GRANT EXECUTE ON FUNCTION public.teacher_upsert_exam_result_secondary(
+    uuid, uuid, uuid, text, text, numeric, text, numeric, numeric, numeric, text, text, text, text
+) TO authenticated;
 
 -- Force schema cache refresh
 SELECT pg_notify('pgrst', 'reload schema');
