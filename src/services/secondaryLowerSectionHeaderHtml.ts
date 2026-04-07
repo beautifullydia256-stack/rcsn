@@ -18,6 +18,40 @@ export const SECONDARY_LOWER_HEADER_PRINT_CSS = `
           }
 `;
 
+/**
+ * One A4 "page" shell for all built-in secondary HTML reports — matches primary
+ * Template3KyoteraReport (Report for Lower Section): `px-[0.2cm] py-[0.25cm]` plus extra `padding-top: 0.08cm`,
+ * `font-size: 10.2pt`, `line-height: 1.3`, exact 210mm × min 297mm, `@page { margin: 0 }`.
+ */
+export const SECONDARY_A4_PAGE_SHELL_CSS = `
+        @page {
+          size: A4;
+          margin: 0;
+        }
+        * {
+          box-sizing: border-box;
+        }
+        html {
+          margin: 0;
+          padding: 0;
+        }
+        body {
+          margin: 0 auto;
+          width: 210mm;
+          min-height: 297mm;
+          padding: 0.33cm 0.2cm 0.25cm 0.2cm;
+          font-family: 'Times New Roman', 'Times', serif;
+          font-size: 10.2pt;
+          line-height: 1.3;
+          background: #ffffff;
+          color: #0f172a;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+`;
+
 function escText(s: unknown): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')

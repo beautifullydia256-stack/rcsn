@@ -4,7 +4,11 @@
  * Used for senior secondary preview/PDF only; primary/nursery uses separate layouts.
  */
 
-import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
+import {
+  buildSecondaryLowerSectionHeaderHtml,
+  SECONDARY_A4_PAGE_SHELL_CSS,
+  SECONDARY_LOWER_HEADER_PRINT_CSS,
+} from './secondaryLowerSectionHeaderHtml';
 
 export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
@@ -45,29 +49,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <title>Student Report</title>
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
-        @page {
-          size: A4;
-          margin: 0;
-        }
-        
-        * {
-          box-sizing: border-box;
-        }
-        
-        body {
-          font-family: 'Times New Roman', 'Times', serif;
-          width: 210mm;
-          min-height: 297mm;
-          margin: 0;
-          padding: 15mm;
-          box-sizing: border-box;
-          background: white;
-          color: black;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-          -webkit-font-smoothing: antialiased;
-          -moz-osx-font-smoothing: grayscale;
-        }
+        ${SECONDARY_A4_PAGE_SHELL_CSS}
         
         .student-photo {
           width: 80px;

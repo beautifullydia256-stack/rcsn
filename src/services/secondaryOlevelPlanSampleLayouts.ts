@@ -4,7 +4,11 @@
  * Header + student strip: school-driven placeholders; table + below match sample structure.
  */
 
-import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
+import {
+  buildSecondaryLowerSectionHeaderHtml,
+  SECONDARY_A4_PAGE_SHELL_CSS,
+  SECONDARY_LOWER_HEADER_PRINT_CSS,
+} from './secondaryLowerSectionHeaderHtml';
 
 function esc(s: unknown): string {
   return String(s ?? '')
@@ -151,20 +155,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <title>Learner Summative Assessment</title>
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4; margin: 10mm; }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Times New Roman', Times, serif;
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      padding: 10mm 12mm;
-      background: #fff;
-      color: #000;
-      font-size: 10pt;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+    ${SECONDARY_A4_PAGE_SHELL_CSS}
     .student-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 10pt; }
     .student-photo { width: 72px; height: 88px; border: 1px solid #000; flex-shrink: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -411,20 +402,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <title>Progressive Report</title>
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
-    @page { size: A4; margin: 8mm; }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Times New Roman', Times, serif;
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      padding: 8mm 10mm;
-      background: #fff;
-      color: #000;
-      font-size: 10pt;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
+    ${SECONDARY_A4_PAGE_SHELL_CSS}
     .meta-band {
       background: #b71c1c; color: #fff; padding: 8px 10px; margin-bottom: 10px;
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9.5pt;

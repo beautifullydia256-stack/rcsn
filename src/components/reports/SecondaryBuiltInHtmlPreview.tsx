@@ -113,7 +113,8 @@ export function SecondaryBuiltInHtmlPreview({
       style={{
         width: '210mm',
         minHeight: compact ? '320mm' : '297mm',
-        height: compact ? 'min(70vh, 520px)' : '85vh',
+        // A4 height in non-compact mode so preview matches primary Lower Section card proportions.
+        height: compact ? 'min(70vh, 520px)' : '297mm',
       }}
     />
   );

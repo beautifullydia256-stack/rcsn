@@ -4,7 +4,11 @@
  * per docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md §3 A-1. Preview/PDF via `renderTemplateHTML`.
  */
 
-import { buildSecondaryLowerSectionHeaderHtml, SECONDARY_LOWER_HEADER_PRINT_CSS } from './secondaryLowerSectionHeaderHtml';
+import {
+  buildSecondaryLowerSectionHeaderHtml,
+  SECONDARY_A4_PAGE_SHELL_CSS,
+  SECONDARY_LOWER_HEADER_PRINT_CSS,
+} from './secondaryLowerSectionHeaderHtml';
 
 export function generateTemplate4AlevelHTML(
   reportData: any,
@@ -192,27 +196,14 @@ export function generateTemplate4AlevelHTML(
   <meta charset="utf-8">
   <title>A-Level Report</title>
   <style>
-    @page { size: A4; margin: 0; }
-    * { box-sizing: border-box; }
-    body {
-      font-family: 'Times New Roman', Times, serif;
-      width: 210mm;
-      min-height: 297mm;
+    ${SECONDARY_A4_PAGE_SHELL_CSS}
+    .sheet {
+      width: 100%;
+      min-height: 0;
       margin: 0;
       padding: 0;
-      background: #e8e4d9;
-      color: #1a1a1a;
-      font-size: 10pt;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    .sheet {
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      padding: 10mm 11mm 12mm;
-      background: linear-gradient(180deg, #f7f4eb 0%, #f0ecdf 100%);
-      border: 1px solid #c9c2b0;
+      background: transparent;
+      border: none;
     }
     .student-panel {
       display: flex;
