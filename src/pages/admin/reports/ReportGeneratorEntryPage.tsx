@@ -1,6 +1,6 @@
 /**
  * Chooses the report generator from `schools.type` (same source as Settings):
- * Secondary → generate-secondary; Nursery/Primary (or unknown) → primary GenerateReportsPage.
+ * Secondary → SPA /reports/generate-secondary; PDF still POST /api/pdf/generate + secondaryPipeline.
  */
 import { lazy, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';

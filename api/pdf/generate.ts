@@ -1368,6 +1368,93 @@ async function generatePDF(options: GeneratePDFOptions): Promise<{ buffer: Buffe
   }
 }
 
+/**
+ * Secondary school PDF only: built-in O/A-Level cards. Loaded on demand so primary `generatePDF`
+ * never imports `templateHTMLGenerator` (keeps Hobby single-route deployment under function limits).
+ */
+function isOLevelClassForSecondaryPdf(className: string): boolean {
+  if (!className || typeof className !== 'string') return false;
+  return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(className.trim());
+}
+
+function isALevelClassForSecondaryPdf(className: string): boolean {
+  if (!className || typeof className !== 'string') return false;
+  return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
+}
+
+function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: string): string {
+  const t =
+    typeof templateKey === 'string' && /^template[1-6]$/.test(templateKey) ? templateKey : 'template1';
+  if (isALevelClassForSecondaryPdf(className)) {
+    if (t === 'template2' || t === 'template3' || t === 'template4') return t;
+    return 'template4';
+  }
+  if (t === 'template2' || t === 'template3') return t;
+  return 'template1';
+}
+
+async function generateSecondaryPipelinePdfResponse(
+  reportDataList: Record<string, unknown>[],
+  templateKey: string
+): Promise<{ buffer: Buffer; filename: string }> {
+  const { renderTemplateHTML } = await import('../../src/services/templateHTMLGenerator');
+
+  const first = reportDataList[0];
+  const st0 = first?.students;
+  const student0 =
+    Array.isArray(st0) && st0.length > 0 ? (st0[0] as Record<string, unknown>) : undefined;
+  const className0 = String(student0?.current_class ?? '');
+
+  if (!isOLevelClassForSecondaryPdf(className0) && !isALevelClassForSecondaryPdf(className0)) {
+    throw new Error('Secondary pipeline supports O-Level / A-Level classes only');
+  }
+
+  const executablePath = await chromium.executablePath();
+  const ch = chromium as typeof chromium & {
+    defaultViewport?: { width: number; height: number };
+    headless?: boolean | 'shell';
+  };
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: ch.defaultViewport,
+    executablePath,
+    headless: ch.headless,
+  });
+
+  try {
+    const page = await browser.newPage();
+    const chunks = reportDataList.map((rd) => {
+      const sts = rd.students;
+      const st =
+        Array.isArray(sts) && sts.length > 0 ? (sts[0] as Record<string, unknown>) : undefined;
+      const cls = String(st?.current_class ?? className0);
+      const key = normalizeSecondaryTemplateKeyForPdf(cls, templateKey);
+      return renderTemplateHTML(rd, key);
+    });
+
+    const firstFullHtml = chunks[0];
+    const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
+    const bodyContents = chunks.map(extractBodyContent);
+    const combinedBody = bodyContents.map((body) => `<div class="pdf-student-sheet">${body}</div>`).join('\n');
+    const html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
+
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
+    });
+    const buffer = Buffer.from(pdf);
+    const filename =
+      reportDataList.length > 1
+        ? buildClassBundleReportPdfFilename(reportDataList)
+        : buildSingleStudentReportPdfFilename(reportDataList[0]);
+    return { buffer, filename };
+  } finally {
+    await browser.close();
+  }
+}
+
 export default async function handler(req: Req, res: Res) {
   const sendError = (status: number, error: string) => {
     try {
@@ -1398,11 +1485,40 @@ export default async function handler(req: Req, res: Res) {
       reportData?: Record<string, unknown>;
       reportDataList?: Record<string, unknown>[];
       schoolId?: string;
+      templateKey?: string;
+      /** Secondary built-in PDFs only; avoids a second Vercel serverless function (Hobby limit). */
+      secondaryPipeline?: boolean;
     };
     const snapshotId = body.snapshotId;
     const reportData = body.reportData;
     const reportDataList = body.reportDataList;
     const schoolId = body.schoolId;
+    const templateKey =
+      typeof body.templateKey === 'string' && /^template[1-6]$/.test(body.templateKey)
+        ? body.templateKey
+        : 'template1';
+
+    if (body.secondaryPipeline === true) {
+      if (!reportDataList || !Array.isArray(reportDataList) || reportDataList.length === 0) {
+        return sendError(400, 'reportDataList is required for secondary pipeline');
+      }
+      try {
+        const { buffer: pdfBuffer, filename } = await generateSecondaryPipelinePdfResponse(
+          reportDataList,
+          templateKey
+        );
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename.replace(/"/g, '')}"`);
+        res.status(200).end(pdfBuffer);
+        return;
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('PDF secondary pipeline error:', message);
+        const clientErr =
+          message.includes('Secondary pipeline supports') || message.includes('O-Level / A-Level');
+        return sendError(clientErr ? 400 : 500, message);
+      }
+    }
 
     if (reportDataList && Array.isArray(reportDataList) && reportDataList.length > 0) {
       const { buffer: pdfBuffer, filename } = await generatePDF({
