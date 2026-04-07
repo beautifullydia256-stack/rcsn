@@ -34,10 +34,12 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
         html {
           margin: 0;
           padding: 0;
+          overflow-x: hidden;
         }
         body {
           margin: 0 auto;
-          width: 210mm;
+          width: 100%;
+          max-width: 210mm;
           min-height: 297mm;
           padding: 0.33cm 0.2cm 0.25cm 0.2cm;
           font-family: 'Times New Roman', 'Times', serif;
@@ -45,10 +47,20 @@ export const SECONDARY_A4_PAGE_SHELL_CSS = `
           line-height: 1.3;
           background: #ffffff;
           color: #0f172a;
+          overflow-x: hidden;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
+        }
+        table {
+          width: 100%;
+          max-width: 100%;
+          table-layout: fixed;
+        }
+        th, td {
+          word-wrap: break-word;
+          overflow-wrap: break-word;
         }
 `;
 

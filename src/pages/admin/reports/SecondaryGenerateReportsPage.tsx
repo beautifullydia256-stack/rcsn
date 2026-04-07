@@ -1169,7 +1169,7 @@ export default function SecondaryGenerateReportsPage() {
                     )}
                   </div>
                 </div>
-                <div className="ac-glass-card p-4 rounded-lg overflow-auto max-h-[80vh] border border-[var(--ac-border)]">
+                <div className="ac-glass-card max-h-[80vh] overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--ac-border)] p-4">
                   <div
                     className="report-preview-doc-surface mx-auto space-y-8 rounded-lg border border-slate-200 bg-white p-4 text-slate-900 shadow-sm print:border-0 print:bg-white print:shadow-none"
                     style={{ width: '210mm', maxWidth: '100%' }}

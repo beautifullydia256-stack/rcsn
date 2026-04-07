@@ -1,7 +1,9 @@
 /**
  * O-Level / A-Level built-in reports: preview uses the same HTML as PDF (`renderTemplateHTML`).
+ * Iframe is width: 100% inside the doc surface (like primary React previews) and height follows
+ * content to avoid nested scrollbars; HTML shell uses max-width 210mm so it scales with the panel.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { renderTemplateHTML } from '../../services/templateHTMLGenerator';
 import { resolveSchoolAndStudentPhotosForReportData } from '../../lib/reportImageDataUrl';
 import { buildSecondaryShapedStudent } from '../../reports/secondary/buildSecondaryShapedStudent';
@@ -34,6 +36,7 @@ export function SecondaryBuiltInHtmlPreview({
 }: SecondaryBuiltInHtmlPreviewProps) {
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const key = normalizeTemplateKey(templateKey);
 
@@ -66,6 +69,17 @@ export function SecondaryBuiltInHtmlPreview({
     return reportData.students[0] as Record<string, unknown>;
   }, [usePlaceholderData, student, reportData.students]);
 
+  const syncIframeHeight = useCallback(() => {
+    if (compact) return;
+    const frame = iframeRef.current;
+    const doc = frame?.contentDocument;
+    const body = doc?.body;
+    const root = doc?.documentElement;
+    if (!frame || !body || !root) return;
+    const next = Math.max(body.scrollHeight, root.scrollHeight);
+    frame.style.height = `${next}px`;
+  }, [compact]);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -88,6 +102,12 @@ export function SecondaryBuiltInHtmlPreview({
     };
   }, [reportData, key, photoPayloadStudent]);
 
+  useEffect(() => {
+    if (!html || compact) return;
+    const t = window.setTimeout(syncIframeHeight, 0);
+    return () => clearTimeout(t);
+  }, [html, compact, syncIframeHeight]);
+
   if (error) {
     return (
       <div className="rounded-lg border border-red-300/60 bg-red-50 px-4 py-3 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-100">
@@ -105,17 +125,29 @@ export function SecondaryBuiltInHtmlPreview({
   }
 
   return (
-    <iframe
-      title="Secondary report preview"
-      srcDoc={html}
-      sandbox="allow-same-origin"
-      className="mx-auto block max-w-full border-0 bg-white shadow-lg"
-      style={{
-        width: '210mm',
-        minHeight: compact ? '320mm' : '297mm',
-        // A4 height in non-compact mode so preview matches primary Lower Section card proportions.
-        height: compact ? 'min(70vh, 520px)' : '297mm',
-      }}
-    />
+    <div className="w-full">
+      <iframe
+        ref={iframeRef}
+        title="Secondary report preview"
+        srcDoc={html}
+        sandbox="allow-same-origin"
+        className="mx-auto block max-h-none w-full max-w-full border-0 bg-white shadow-lg print:h-auto print:min-h-0"
+        style={
+          compact
+            ? {
+                width: '100%',
+                minHeight: '320mm',
+                height: 'min(70vh, 520px)',
+              }
+            : {
+                width: '100%',
+                minHeight: '297mm',
+                height: '297mm',
+                display: 'block',
+              }
+        }
+        onLoad={syncIframeHeight}
+      />
+    </div>
   );
 }

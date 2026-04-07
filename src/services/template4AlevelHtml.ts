@@ -226,8 +226,9 @@ export function generateTemplate4AlevelHTML(
       margin-bottom: 12px;
     }
     .chart-card {
-      flex: 1;
-      min-width: 240px;
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: 100%;
       padding: 8px 10px;
       background: #fffef8;
       border: 1px solid #00897b;
