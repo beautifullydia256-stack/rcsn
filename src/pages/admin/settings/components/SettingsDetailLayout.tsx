@@ -51,7 +51,9 @@ export default function SettingsDetailLayout({
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto pt-4 md:pt-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-y-contain pt-4 md:pt-5">
+        {children}
+      </div>
     </div>
   );
 }

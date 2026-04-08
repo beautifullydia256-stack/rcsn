@@ -100,6 +100,15 @@ function SubItem({
   );
 }
 
+function isSettingsMasterDetailPath(pathname: string): boolean {
+  if (!pathname.startsWith('/dashboard/admin/settings')) return false;
+  if (pathname.startsWith('/dashboard/admin/settings/classes')) return false;
+  if (pathname.startsWith('/dashboard/admin/settings/location')) return false;
+  const rest = pathname.slice('/dashboard/admin/settings'.length);
+  if (rest === '' || rest === '/') return true;
+  return /^\/(subjects|assignments|finance|requirements|timetable|terms|exams|branding)\/?$/.test(rest);
+}
+
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -566,6 +575,19 @@ export default function AdminLayout() {
             padding-top: 0;
           }
         }
+        /* System Settings master/detail: lock main scroll on desktop; each pane scrolls independently */
+        @media (min-width: 769px) {
+          .pw-main.pw-main--settings-split {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+          }
+          .pw-main.pw-main--settings-split > * {
+            flex: 1 1 0%;
+            min-height: 0;
+            min-width: 0;
+          }
+        }
         html.dark .pw-main table,
         html.dark .pw-main th,
         html.dark .pw-main td { color: #f8fafc; }
@@ -679,11 +701,13 @@ export default function AdminLayout() {
         </aside>
 
         <main
-          className={
-            location.pathname.startsWith('/dashboard/admin/messages')
-              ? 'pw-main pw-main--chat'
-              : 'pw-main'
-          }
+          className={[
+            'pw-main',
+            location.pathname.startsWith('/dashboard/admin/messages') ? 'pw-main--chat' : '',
+            isSettingsMasterDetailPath(location.pathname) ? 'pw-main--settings-split' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           <Suspense fallback={<AdminContentSkeleton />}>
             <Outlet />

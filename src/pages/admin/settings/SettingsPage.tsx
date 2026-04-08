@@ -159,10 +159,10 @@ export default function SettingsPage() {
   const onBackMobile = () => navigate('/dashboard/admin/settings');
 
   return (
-    <div className="admin-terminal-page">
-      <div className="flex min-h-[min(72vh,920px)] flex-col gap-0 md:flex-row md:gap-8 md:items-start">
+    <div className="admin-terminal-page md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden">
+      <div className="flex min-h-[min(72vh,920px)] flex-1 flex-col gap-0 md:min-h-0 md:flex-row md:gap-8 md:items-stretch md:overflow-hidden">
         <aside
-          className={`md:w-[min(100%,340px)] md:shrink-0 md:sticky md:top-4 md:self-start ${
+          className={`md:w-[min(100%,340px)] md:shrink-0 md:min-h-0 md:overflow-y-auto md:overscroll-y-contain ${
             showMaster ? '' : 'hidden'
           }`}
           aria-hidden={!showMaster}
@@ -181,7 +181,9 @@ export default function SettingsPage() {
 
         {showDetail && activeTab && sectionMeta && (
           <section
-            className={`min-w-0 flex-1 ${!isMd && !section ? 'hidden' : ''}`}
+            className={`flex min-h-0 min-w-0 flex-1 flex-col md:overflow-hidden md:overscroll-y-contain ${
+              !isMd && !section ? 'hidden' : ''
+            }`}
             aria-label={sectionMeta.title}
           >
             <SettingsDetailLayout
