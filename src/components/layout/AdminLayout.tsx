@@ -471,7 +471,9 @@ export default function AdminLayout() {
         .pw-hamburger {
           display: none;
           position: fixed;
-          top: 14px; left: 14px;
+          top: 14px;
+          right: calc(14px + env(safe-area-inset-right, 0px));
+          left: auto;
           z-index: 300;
           width: 36px; height: 36px;
           border-radius: 8px;
