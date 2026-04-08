@@ -68,7 +68,7 @@
  *    #sp-exam-results-body        innerHTML — exam result rows or empty-state div
  *    #sp-current-term             textContent
  *    #sp-class-position           textContent
- *    #sp-subjects-list            innerHTML — <span class="sp-tag">Subject</span> per subject
+ *    #sp-subjects-enrolled-block  innerHTML — status line + principal/subsidiary tiers (secondary) or flat tags
  *    #sp-report-card-status       textContent
  *
  *  TAB: FEES
@@ -597,8 +597,25 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
   background: var(--surface-3); color: var(--text-secondary);
   border: 1px solid var(--border);
 }
+.pw-profile .sp-tag-row {
+  display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px;
+}
+.pw-profile .sp-subject-tier-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-muted); margin-top: 10px; margin-bottom: 2px;
+}
+.pw-profile .sp-subject-tier-label:first-child { margin-top: 2px; }
+.pw-profile .sp-profile-prose {
+  font-size: 12.5px; line-height: 1.45; color: var(--text-secondary); margin-top: 6px;
+}
+.pw-profile .sp-profile-prose.ok { color: var(--green); font-weight: 600; }
+.pw-profile .sp-profile-prose.warn { color: var(--amber); font-weight: 600; }
+.pw-profile .sp-profile-prose.bad { color: var(--rose); font-weight: 600; }
+.pw-profile .sp-profile-note {
+  font-size: 11.5px; color: var(--text-muted); font-style: italic; margin-top: 4px;
+}
 
-/* ── EMPTY STATE ── */
+/* ── INTERNAL STATE ── */
 .pw-profile .sp-empty {
   display: flex; flex-direction: column; align-items: center;
   gap: 9px; padding: 34px 22px;
@@ -954,9 +971,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
                 <span class="sp-field-value muted" id="sp-class-position">Not yet ranked</span>
               </div>
               <div class="sp-field">
-                <span class="sp-field-label">Subjects Enrolled</span>
-                <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="sp-subjects-list">
-                  <span class="sp-tag" style="color:var(--text-muted);font-style:italic">None recorded</span>
+                <span class="sp-field-label">Subjects &amp; programme</span>
+                <div id="sp-subjects-enrolled-block">
+                  <span class="sp-tag" style="color:var(--text-muted);font-style:italic">Loading…</span>
                 </div>
               </div>
               <div class="sp-field">
