@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { isALevelClass } from '../reports/templates/helpers';
+import { settingsInsetSurface, settingsPrimaryActionClass } from '@/pages/admin/settings/tabs/settingsTabStyles';
 import type { SchoolUaceClassSubjectPaperRow } from '../../lib/uaceClassSubjectPapers';
 import { fetchUacePapersForClassSubject } from '../../lib/uaceClassSubjectPapers';
 
@@ -10,10 +11,13 @@ export default function SettingsUaceClassSubjectPapers({
   classOptions,
   schoolId,
   variant = 'vite',
+  embedded,
 }: {
   classOptions: string[];
   schoolId: string | null;
   variant?: Variant;
+  /** When true, shell already shows section title—only show helper copy. */
+  embedded?: boolean;
 }) {
   const alevelClasses = useMemo(() => classOptions.filter((c) => isALevelClass(c)), [classOptions]);
 
@@ -131,12 +135,27 @@ export default function SettingsUaceClassSubjectPapers({
   };
 
   return (
-    <div className="mt-10 border-t border-[var(--pw-border)] pt-8 dark:border-white/10">
+    <div
+      className={
+        embedded
+          ? 'mt-8 border-t border-slate-200/25 pt-6 dark:border-white/10'
+          : 'mt-10 border-t border-[var(--pw-border)] pt-8 dark:border-white/10'
+      }
+    >
       <div className="mb-4">
-        <div className={variant === 'next' ? 'font-medium text-white' : 'ac-text-primary font-medium'}>
-          UACE papers (Senior 5–6)
-        </div>
-        <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
+        {!embedded && (
+          <div className={variant === 'next' ? 'font-medium text-white' : 'ac-text-primary font-medium'}>
+            UACE papers (Senior 5–6)
+          </div>
+        )}
+        <div
+          className={
+            variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'
+          }
+        >
+          {embedded ? (
+            <span className="font-medium ac-text-primary">UACE papers (Senior 5–6). </span>
+          ) : null}
           Configure UNEB-style paper codes per class and subject. Teachers pick a paper line when entering A-Level marks;
           report template4 uses <code className="text-xs">paper_code</code> in the PAPER column.
         </div>
@@ -154,7 +173,7 @@ export default function SettingsUaceClassSubjectPapers({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className={`grid grid-cols-1 gap-3 p-4 sm:p-5 md:grid-cols-2 lg:grid-cols-4 ${settingsInsetSurface}`}>
         <div>
           <label className={labelClass}>Class (A-Level)</label>
           <select
@@ -233,7 +252,7 @@ export default function SettingsUaceClassSubjectPapers({
             className={
               variant === 'next'
                 ? 'min-h-[44px] w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50'
-                : 'ac-glass-btn-primary min-h-[44px] w-full rounded-xl px-4 py-2 text-sm font-medium'
+                : settingsPrimaryActionClass
             }
           >
             {saving ? 'Saving…' : 'Add paper'}

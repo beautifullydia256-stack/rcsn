@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
-import LocationSettingsWidget from '@/components/LocationSettingsWidget';
 import SettingsSubjectsPerClass from './tabs/SettingsSubjectsPerClass';
 import SettingsTeacherSubjectClass from './tabs/SettingsTeacherSubjectClass';
 import SettingsFinancial from './tabs/SettingsFinancial';
@@ -12,34 +11,47 @@ import SettingsTerms from './tabs/SettingsTerms';
 import SettingsExamSets from './tabs/SettingsExamSets';
 import SettingsBranding from './tabs/SettingsBranding';
 import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
+import SettingsMasterList from './components/SettingsMasterList';
+import SettingsDetailLayout from './components/SettingsDetailLayout';
+import {
+  isSettingsTabKey,
+  SETTINGS_LAST_SECTION_KEY,
+  SETTINGS_SECTIONS,
+  type SettingsTabKey,
+} from './settingsNavConfig';
 
-type TabKey =
-  | 'subjects'
-  | 'assignments'
-  | 'finance'
-  | 'requirements'
-  | 'timetable'
-  | 'terms'
-  | 'exams'
-  | 'branding';
+const MD_QUERY = '(min-width: 768px)';
 
-const TABS: { k: TabKey; label: string }[] = [
-  { k: 'subjects', label: 'Subjects per Class' },
-  { k: 'assignments', label: 'Teacher ↔ Subject ↔ Class' },
-  { k: 'finance', label: 'Financial Settings' },
-  { k: 'requirements', label: 'School Requirements' },
-  { k: 'timetable', label: 'Timetable Designer' },
-  { k: 'terms', label: 'Term Settings' },
-  { k: 'exams', label: 'Exam Sets' },
-  { k: 'branding', label: 'School Branding' },
-];
+function useIsMd() {
+  const [isMd, setIsMd] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(MD_QUERY).matches : true
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(MD_QUERY);
+    const update = () => setIsMd(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  return isMd;
+}
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabKey>('subjects');
+  const location = useLocation();
+  const { section } = useParams<{ section?: string }>();
+  const isMd = useIsMd();
+
   const [schoolType, setSchoolType] = useState<'Nursery/Primary' | 'Secondary' | null>(null);
   const [schoolId, setSchoolId] = useState<string | null>(null);
   const [classOptions, setClassOptions] = useState<string[]>([]);
+  const [schoolProfile, setSchoolProfile] = useState<{
+    name: string;
+    logoUrl: string | null;
+    subtitle: string | null;
+  } | null>(null);
 
   useEffect(() => {
     const run = async () => {
@@ -56,9 +68,22 @@ export default function SettingsPage() {
       setSchoolId(data.school_id);
       const { data: sch } = await supabase
         .from('schools')
-        .select('type')
+        .select('type, name, logo_url, subtitle')
         .eq('school_id', data.school_id)
         .single();
+      if (sch) {
+        const row = sch as {
+          type?: string;
+          name?: string;
+          logo_url?: string | null;
+          subtitle?: string | null;
+        };
+        setSchoolProfile({
+          name: row.name?.trim() || 'Your school',
+          logoUrl: row.logo_url || null,
+          subtitle: row.subtitle?.trim() || null,
+        });
+      }
       if (sch?.type) {
         setSchoolType(sch.type as 'Nursery/Primary' | 'Secondary');
         const opts: string[] = [];
@@ -74,142 +99,161 @@ export default function SettingsPage() {
     run();
   }, []);
 
+  useEffect(() => {
+    if (section && !isSettingsTabKey(section)) {
+      navigate('/dashboard/admin/settings/subjects', { replace: true });
+    }
+  }, [section, navigate]);
+
+  useEffect(() => {
+    if (section && isSettingsTabKey(section)) {
+      try {
+        sessionStorage.setItem(SETTINGS_LAST_SECTION_KEY, section);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [section]);
+
+  useEffect(() => {
+    const mq = window.matchMedia(MD_QUERY);
+    const redirectIfDesktopHub = () => {
+      if (!mq.matches) return;
+      const path = location.pathname.replace(/\/$/, '');
+      if (path.endsWith('/dashboard/admin/settings')) {
+        let target: SettingsTabKey = 'subjects';
+        try {
+          const last = sessionStorage.getItem(SETTINGS_LAST_SECTION_KEY);
+          if (last && isSettingsTabKey(last)) target = last;
+        } catch {
+          /* ignore */
+        }
+        navigate(`/dashboard/admin/settings/${target}`, { replace: true });
+      }
+    };
+    redirectIfDesktopHub();
+    mq.addEventListener('change', redirectIfDesktopHub);
+    return () => mq.removeEventListener('change', redirectIfDesktopHub);
+  }, [navigate, location.pathname]);
+
+  const activeTab: SettingsTabKey | null =
+    section && isSettingsTabKey(section) ? section : isMd ? 'subjects' : null;
+
+  const isMobileDetail = !isMd && !!section && isSettingsTabKey(section);
+  const showMaster = isMd || !section;
+  const showDetail = activeTab !== null;
+
+  const sectionMeta = activeTab ? SETTINGS_SECTIONS.find((s) => s.id === activeTab) : undefined;
+
+  const goSection = (id: SettingsTabKey) => {
+    try {
+      sessionStorage.setItem(SETTINGS_LAST_SECTION_KEY, id);
+    } catch {
+      /* ignore */
+    }
+    navigate(`/dashboard/admin/settings/${id}`);
+  };
+
+  const goExtras = (to: string) => navigate(to);
+
+  const onBackMobile = () => navigate('/dashboard/admin/settings');
+
   return (
     <AdminPageWrapper
-      eyebrow="School setup"
-      title="System Settings"
-      subtitle="Configure school settings"
+      eyebrow={isMobileDetail ? undefined : 'School setup'}
+      title={isMobileDetail ? undefined : 'System Settings'}
+      subtitle={isMobileDetail ? undefined : 'Configure school settings'}
     >
-      <div className="mb-4 flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/admin')}
-          className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-        >
-          Back to Dashboard
-        </button>
-      </div>
-
-      <div className="mb-6 -mx-1 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible">
-        {TABS.map(({ k, label }) => (
-          <button
-            key={k}
-            type="button"
-            onClick={() => setTab(k)}
-            className={`shrink-0 rounded-lg px-4 py-2.5 text-left text-sm transition-colors min-h-[44px] sm:min-h-0 ${
-              tab === k
-                ? 'border border-emerald-500/80 bg-emerald-600 text-white shadow-lg shadow-emerald-900/25 ring-1 ring-emerald-400/30 dark:bg-emerald-500/95 dark:shadow-emerald-950/40'
-                : 'ac-glass-btn-secondary ac-text-primary'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
-
-      <div className={`${adminCardClass} overflow-x-auto p-4 sm:p-6`}>
-        {tab === 'subjects' && (
-          <>
-            <SettingsSubjectsPerClass classOptions={classOptions} schoolId={schoolId} />
-            {schoolType === 'Secondary' && (
-              <SettingsUaceClassSubjectPapers classOptions={classOptions} schoolId={schoolId} />
-            )}
-          </>
-        )}
-        {tab === 'assignments' && <SettingsTeacherSubjectClass classOptions={classOptions} />}
-        {tab === 'finance' && (
-          <SettingsFinancial schoolId={schoolId} classes={classOptions} />
-        )}
-        {tab === 'requirements' && (
-          <SettingsSchoolRequirements
-            schoolId={schoolId}
-            classOptionsFallback={classOptions}
-          />
-        )}
-        {tab === 'timetable' && (
-          <SettingsTimetable classOptions={classOptions} schoolId={schoolId} />
-        )}
-        {tab === 'terms' && <SettingsTerms schoolId={schoolId} />}
-        {tab === 'exams' && (
-          <SettingsExamSets
-            classOptions={classOptions}
-            schoolId={schoolId}
-            schoolType={schoolType}
-          />
-        )}
-        {tab === 'branding' && <SettingsBranding schoolId={schoolId} />}
-      </div>
-
-      <LocationSettingsWidget />
-
-      <div className={`${adminCardClass} mt-6 overflow-x-auto`}>
-        <h3
-          className="ac-text-primary mb-3 text-lg font-normal tracking-tight sm:text-xl"
-          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-        >
-          Classes
-        </h3>
-        {classOptions.length === 0 ? (
-          <p className="text-sm ac-text-muted">
-            Classes will appear here after your school type is set.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {classOptions.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() =>
-                  navigate(`/dashboard/admin/settings/classes/${encodeURIComponent(c)}`)
-                }
-                className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className={`${adminCardClass} mt-6`}>
-        <h3
-          className="ac-text-primary mb-3 text-lg font-normal tracking-tight sm:text-xl"
-          style={{ fontFamily: "'Instrument Serif', Georgia, serif" }}
-        >
-          Quick Management
-        </h3>
-        <div className="flex flex-wrap gap-2">
+      {(!isMobileDetail || !section) && (
+        <div className="mb-4 flex items-center justify-end">
           <button
             type="button"
-            onClick={() => navigate('/dashboard/admin/exam-sets')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
+            onClick={() => navigate('/dashboard/admin')}
+            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
           >
-            Exam Sets
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/attendance')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
-          >
-            Attendance Records
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/outstanding')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
-          >
-            Finance Records
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin/reports')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-lg px-3 py-2 text-sm ac-text-primary sm:min-h-0"
-          >
-            Report Records
+            Back to Dashboard
           </button>
         </div>
-      </div>
+      )}
 
+      <div className="flex min-h-[min(72vh,920px)] flex-col gap-0 md:flex-row md:gap-8 md:items-start">
+        <aside
+          className={`md:w-[min(100%,340px)] md:shrink-0 md:sticky md:top-4 md:self-start ${
+            showMaster ? '' : 'hidden'
+          }`}
+          aria-hidden={!showMaster}
+        >
+          <h2 className="mb-4 px-0.5 text-[28px] font-bold tracking-tight text-slate-900 dark:text-[#e8eeff] md:text-[22px]">
+            Settings
+          </h2>
+          <SettingsMasterList
+            activeSection={activeTab}
+            onSelectSection={goSection}
+            onNavigate={goExtras}
+            schoolProfile={schoolProfile}
+            onSchoolProfileClick={() => goSection('branding')}
+          />
+        </aside>
+
+        {showDetail && activeTab && sectionMeta && (
+          <section
+            className={`min-w-0 flex-1 ${!isMd && !section ? 'hidden' : ''}`}
+            aria-label={sectionMeta.title}
+          >
+            <SettingsDetailLayout
+              title={sectionMeta.title}
+              subtitle={sectionMeta.description}
+              showMobileChrome={isMobileDetail}
+              onBack={onBackMobile}
+            >
+              <div className={`${adminCardClass} overflow-x-auto p-4 sm:p-6`}>
+                {activeTab === 'subjects' && (
+                  <>
+                    <SettingsSubjectsPerClass
+                      embedded
+                      classOptions={classOptions}
+                      schoolId={schoolId}
+                    />
+                    {schoolType === 'Secondary' && (
+                      <SettingsUaceClassSubjectPapers
+                        embedded
+                        classOptions={classOptions}
+                        schoolId={schoolId}
+                      />
+                    )}
+                  </>
+                )}
+                {activeTab === 'assignments' && (
+                  <SettingsTeacherSubjectClass embedded classOptions={classOptions} />
+                )}
+                {activeTab === 'finance' && (
+                  <SettingsFinancial embedded schoolId={schoolId} classes={classOptions} />
+                )}
+                {activeTab === 'requirements' && (
+                  <SettingsSchoolRequirements
+                    embedded
+                    schoolId={schoolId}
+                    classOptionsFallback={classOptions}
+                  />
+                )}
+                {activeTab === 'timetable' && (
+                  <SettingsTimetable embedded classOptions={classOptions} schoolId={schoolId} />
+                )}
+                {activeTab === 'terms' && <SettingsTerms embedded schoolId={schoolId} />}
+                {activeTab === 'exams' && (
+                  <SettingsExamSets
+                    embedded
+                    classOptions={classOptions}
+                    schoolId={schoolId}
+                    schoolType={schoolType}
+                  />
+                )}
+                {activeTab === 'branding' && <SettingsBranding embedded schoolId={schoolId} />}
+              </div>
+            </SettingsDetailLayout>
+          </section>
+        )}
+      </div>
     </AdminPageWrapper>
   );
 }

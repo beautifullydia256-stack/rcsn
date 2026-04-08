@@ -202,10 +202,11 @@ function App() {
                     <Route path="reports" element={<FinanceSubPagePlaceholder />} />
                   </Route>
                   <Route path="outstanding" element={<Navigate to="/dashboard/admin/finance/outstanding" replace />} />
-                  <Route path="settings" element={<SettingsPage />} />
-                  <Route path="settings/classes" element={<SettingsClassesPage />} />
                   <Route path="settings/classes/:className" element={<ClassDetailPage />} />
+                  <Route path="settings/classes" element={<SettingsClassesPage />} />
                   <Route path="settings/location" element={<LocationSettingsPage />} />
+                  <Route path="settings/:section" element={<SettingsPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
                   <Route path="jobs" element={<AdminJobsPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="report-records" element={<ReportRecordsPage />} />

@@ -2,11 +2,21 @@ export default function SectionHeader({
   eyebrow,
   title,
   desc,
+  embedded,
 }: {
   eyebrow?: string;
   title: string;
   desc?: string;
+  /** When true (settings shell), skip the large title—parent already shows it. */
+  embedded?: boolean;
 }) {
+  if (embedded) {
+    return desc ? (
+      <p className="mb-5 max-w-3xl text-[13px] leading-relaxed text-slate-600 dark:text-[#b0bdd8]">
+        {desc}
+      </p>
+    ) : null;
+  }
   return (
     <div className="mb-6 space-y-1">
       {eyebrow && (

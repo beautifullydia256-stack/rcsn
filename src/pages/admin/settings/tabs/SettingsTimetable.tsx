@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { downloadTimetablePdf } from '@/lib/timetablePdf';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 type Period = {
   id: number;
@@ -18,9 +19,11 @@ type Period = {
 export default function SettingsTimetable({
   classOptions,
   schoolId,
+  embedded,
 }: {
   classOptions: string[];
   schoolId: string | null;
+  embedded?: boolean;
 }) {
   const [teachers, setTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -264,6 +267,7 @@ export default function SettingsTimetable({
     <div>
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <SectionHeader
+          embedded={embedded}
           title="Timetable Designer"
           desc="Design the school timetable: set periods per day, assign classes, subjects and teachers."
         />
@@ -324,6 +328,7 @@ export default function SettingsTimetable({
         </button>
         </div>
       </div>
+      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
           className="ac-input min-h-[44px] w-full"
@@ -390,10 +395,11 @@ export default function SettingsTimetable({
           type="button"
           onClick={handleAddPeriod}
           disabled={saving}
-          className="min-h-[44px] rounded-lg bg-purple-600 px-3 py-2 text-white hover:bg-purple-500 disabled:opacity-50"
+          className={settingsPrimaryActionClass}
         >
           {saving ? 'Adding...' : 'Add Period'}
         </button>
+      </div>
       </div>
 
       {error && (
@@ -409,7 +415,7 @@ export default function SettingsTimetable({
             {timetablePeriods.map((period) => (
               <div
                 key={period.id}
-                className="rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4"
+                className={`${settingsInsetSurface} p-4`}
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <h4 className="font-medium ac-text-primary">{period.class_name}</h4>
@@ -448,7 +454,7 @@ export default function SettingsTimetable({
         </div>
       )}
 
-      <div className="mt-6 rounded-lg border border-[var(--pw-blue)]/35 bg-[var(--pw-s2)] p-4">
+      <div className={`mt-6 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
         <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
           📄 PDF Export
         </h4>

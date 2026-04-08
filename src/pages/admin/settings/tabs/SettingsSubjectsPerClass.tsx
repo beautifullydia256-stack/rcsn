@@ -8,6 +8,7 @@ import {
   type ClassSubjectRow,
 } from '@/lib/classSubjectRowGuards';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -25,9 +26,11 @@ async function fetchSubjectsPerClass(schoolId: string, selectedClass: string): P
 export default function SettingsSubjectsPerClass({
   classOptions,
   schoolId,
+  embedded,
 }: {
   classOptions: string[];
   schoolId: string | null;
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [selectedClass, setSelectedClass] = useState('');
@@ -87,9 +90,11 @@ export default function SettingsSubjectsPerClass({
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         title="Subjects per Class"
         desc="Senior 1–4: default nationwide compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: UACE subsidiaries are fixed."
       />
+      <div className={`${settingsInsetSurface} space-y-4 p-4 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <select
           value={selectedClass}
@@ -113,7 +118,7 @@ export default function SettingsSubjectsPerClass({
           type="button"
           disabled={!selectedClass || saving}
           onClick={addSubject}
-          className="min-h-[44px] rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+          className={settingsPrimaryActionClass}
         >
           {saving ? 'Saving...' : 'Add Subject'}
         </button>
@@ -129,7 +134,7 @@ export default function SettingsSubjectsPerClass({
           </label>
         )}
       </div>
-      <div className="mt-4">
+      <div>
         {error && (
           <div className="mb-2 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">
             {error}
@@ -176,6 +181,7 @@ export default function SettingsSubjectsPerClass({
             })}
           </div>
         )}
+      </div>
       </div>
     </div>
   );

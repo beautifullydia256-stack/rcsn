@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -40,9 +41,11 @@ async function fetchRequirementsPage(
 export default function SettingsSchoolRequirements({
   schoolId,
   classOptionsFallback,
+  embedded,
 }: {
   schoolId: string | null;
   classOptionsFallback: string[];
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
@@ -207,6 +210,7 @@ export default function SettingsSchoolRequirements({
     return (
       <div>
         <SectionHeader
+          embedded={embedded}
           title="School Requirements"
           desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
         />
@@ -218,6 +222,7 @@ export default function SettingsSchoolRequirements({
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         title="School Requirements"
         desc="Manage mandatory school materials, uniforms, books, and other requirements with their costs."
       />
@@ -233,7 +238,7 @@ export default function SettingsSchoolRequirements({
         </div>
       )}
 
-      <div className="mb-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
         <h3 className="mb-3 font-medium ac-text-primary">
           {editingId ? '✏️ Edit Requirement' : '➕ Add New Requirement'}
         </h3>
@@ -316,7 +321,7 @@ export default function SettingsSchoolRequirements({
             type="button"
             onClick={handleSave}
             disabled={saving || !requirementName.trim()}
-            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+            className={settingsPrimaryActionClass}
           >
             {saving ? 'Saving...' : editingId ? 'Update' : 'Add'}
           </button>
@@ -364,8 +369,8 @@ export default function SettingsSchoolRequirements({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--pw-border)]">
-        <table className="min-w-full text-sm">
+      <div className={`overflow-x-auto ${settingsInsetSurface}`}>
+        <table className="min-w-full min-w-[640px] text-sm md:min-w-0">
           <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
               <th className="px-4 py-3 font-medium ac-text-muted">Requirement Name</th>

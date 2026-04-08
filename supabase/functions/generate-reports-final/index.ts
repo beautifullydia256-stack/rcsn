@@ -39,7 +39,30 @@ interface FinalRequestLegacy {
 
 const REPORT_GENERATION_ROLES = ['admin', 'owner', 'head_teacher', 'headteacher'];
 
+/** Nested in frozen_data so senior secondary line fields round-trip without new DB columns. */
+const SNAPSHOT_ROW_EXTENSIONS_KEY = '__snapshot_row_extensions';
+
 function mapSnapshotRowToDb(row: SnapshotRowForPersist, snapshotId: string) {
+  const frozenIn = { ...(row.frozen_data ?? {}) } as Record<string, unknown>;
+  const ext: Record<string, unknown> = {
+    activity_score: row.activity_score,
+    formative_score: row.formative_score,
+    exam_score: row.exam_score,
+    final_score: row.final_score,
+    descriptor: row.descriptor,
+    paper_code: row.paper_code,
+    paper_number: row.paper_number,
+    topic: row.topic,
+    continuous_c1: row.continuous_c1,
+    continuous_c2: row.continuous_c2,
+  };
+  const extClean = Object.fromEntries(
+    Object.entries(ext).filter(([, v]) => v !== undefined && v !== null)
+  );
+  if (Object.keys(extClean).length > 0) {
+    frozenIn[SNAPSHOT_ROW_EXTENSIONS_KEY] = extClean;
+  }
+
   return {
     snapshot_id: snapshotId,
     student_id: row.student_id,
@@ -55,15 +78,35 @@ function mapSnapshotRowToDb(row: SnapshotRowForPersist, snapshotId: string) {
     headteacher_comment: row.headteacher_comment ?? null,
     attendance_percentage: row.attendance_percentage ?? null,
     position: row.position ?? null,
+    position_in_class: row.position ?? null,
     aggregate: row.aggregate ?? null,
+    average_percentage: row.average_percentage ?? null,
+    division: row.division ?? null,
     fees_balance: row.fees_balance ?? null,
     fees_paid: row.fees_paid ?? null,
     fees_expected: row.fees_expected ?? null,
-    frozen_data: row.frozen_data ?? {},
+    exam_set_name: row.exam_set_name ?? null,
+    exam_set_term: row.exam_set_term ?? null,
+    exam_set_year: row.exam_set_year ?? null,
+    student_photo_url: row.student_photo_url ?? null,
+    school_logo_url: row.school_logo_url ?? null,
+    nursery_skill_performance: row.nursery_skill_performance ?? null,
+    frozen_data: frozenIn,
   };
 }
 
+function optNumNull(v: unknown): number | null | undefined {
+  if (v == null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 function mapDbRowToSnapshotRow(d: Record<string, unknown>): SnapshotRowForPersist {
+  const frozen = { ...((d.frozen_data as Record<string, unknown>) ?? {}) };
+  const ext = (frozen[SNAPSHOT_ROW_EXTENSIONS_KEY] as Record<string, unknown>) ?? {};
+  const pos = d.position != null ? Number(d.position) : d.position_in_class != null ? Number(d.position_in_class) : undefined;
+  const agg = d.aggregate != null ? Number(d.aggregate) : d.aggregate_score != null ? Number(d.aggregate_score) : undefined;
+
   return {
     student_id: d.student_id as string,
     class_name: d.class_name as string,
@@ -77,12 +120,35 @@ function mapDbRowToSnapshotRow(d: Record<string, unknown>): SnapshotRowForPersis
     class_teacher_comment: d.class_teacher_comment as string | undefined,
     headteacher_comment: d.headteacher_comment as string | undefined,
     attendance_percentage: d.attendance_percentage != null ? Number(d.attendance_percentage) : undefined,
-    position: d.position != null ? Number(d.position) : undefined,
-    aggregate: d.aggregate != null ? Number(d.aggregate) : undefined,
+    position: pos,
+    aggregate: agg,
+    average_percentage: d.average_percentage != null ? Number(d.average_percentage) : undefined,
+    division: (d.division as string | undefined) ?? undefined,
     fees_balance: d.fees_balance != null ? Number(d.fees_balance) : undefined,
     fees_paid: d.fees_paid != null ? Number(d.fees_paid) : undefined,
     fees_expected: d.fees_expected != null ? Number(d.fees_expected) : undefined,
-    frozen_data: (d.frozen_data as Record<string, unknown>) ?? {},
+    frozen_data: frozen,
+    exam_set_name: (d.exam_set_name as string | undefined) ?? undefined,
+    exam_set_term: d.exam_set_term != null ? Number(d.exam_set_term) : undefined,
+    exam_set_year: d.exam_set_year != null ? Number(d.exam_set_year) : undefined,
+    student_photo_url: (d.student_photo_url as string | null | undefined) ?? null,
+    school_logo_url: (d.school_logo_url as string | null | undefined) ?? null,
+    nursery_skill_performance:
+      d.nursery_skill_performance != null &&
+      typeof d.nursery_skill_performance === 'object' &&
+      !Array.isArray(d.nursery_skill_performance)
+        ? (d.nursery_skill_performance as Record<string, unknown>)
+        : undefined,
+    activity_score: ext.activity_score !== undefined ? optNumNull(ext.activity_score) ?? null : undefined,
+    formative_score: ext.formative_score !== undefined ? optNumNull(ext.formative_score) ?? null : undefined,
+    exam_score: ext.exam_score !== undefined ? optNumNull(ext.exam_score) ?? null : undefined,
+    final_score: ext.final_score !== undefined ? optNumNull(ext.final_score) ?? null : undefined,
+    descriptor: ext.descriptor !== undefined ? (ext.descriptor != null ? String(ext.descriptor) : null) : undefined,
+    paper_code: ext.paper_code !== undefined ? (ext.paper_code != null ? String(ext.paper_code) : null) : undefined,
+    paper_number: ext.paper_number !== undefined ? (ext.paper_number != null ? String(ext.paper_number) : null) : undefined,
+    topic: ext.topic !== undefined ? (ext.topic != null ? String(ext.topic) : null) : undefined,
+    continuous_c1: ext.continuous_c1 !== undefined ? optNumNull(ext.continuous_c1) ?? null : undefined,
+    continuous_c2: ext.continuous_c2 !== undefined ? optNumNull(ext.continuous_c2) ?? null : undefined,
   };
 }
 

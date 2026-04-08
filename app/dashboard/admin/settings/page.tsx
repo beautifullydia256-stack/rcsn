@@ -1,4 +1,5 @@
 "use client";
+/* Production dashboard uses the Vite SPA (vercel.json → framework: vite). Canonical UI: src/pages/admin/settings/SettingsPage.tsx */
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";

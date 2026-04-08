@@ -1382,14 +1382,17 @@ function isALevelClassForSecondaryPdf(className: string): boolean {
   return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(className.trim());
 }
 
+/** Match getSecondaryTemplateKeysForClass (src/templates/secondary): A-Level → template4 only; O-Level → 1–3. */
 function normalizeSecondaryTemplateKeyForPdf(className: string, templateKey: string): string {
   const t =
     typeof templateKey === 'string' && /^template[1-6]$/.test(templateKey) ? templateKey : 'template1';
   if (isALevelClassForSecondaryPdf(className)) {
-    if (t === 'template2' || t === 'template3' || t === 'template4') return t;
     return 'template4';
   }
-  if (t === 'template2' || t === 'template3') return t;
+  if (isOLevelClassForSecondaryPdf(className)) {
+    if (t === 'template2' || t === 'template3') return t;
+    return 'template1';
+  }
   return 'template1';
 }
 
@@ -1397,7 +1400,10 @@ async function generateSecondaryPipelinePdfResponse(
   reportDataList: Record<string, unknown>[],
   templateKey: string
 ): Promise<{ buffer: Buffer; filename: string }> {
-  const { renderTemplateHTML } = await import('../../src/services/templateHTMLGenerator');
+  const [{ renderTemplateHTML }, { resolveSchoolAndStudentPhotosForReportData }] = await Promise.all([
+    import('../../src/services/templateHTMLGenerator'),
+    import('../../src/lib/reportImageDataUrl'),
+  ]);
 
   const first = reportDataList[0];
   const st0 = first?.students;
@@ -1423,14 +1429,19 @@ async function generateSecondaryPipelinePdfResponse(
 
   try {
     const page = await browser.newPage();
-    const chunks = reportDataList.map((rd) => {
-      const sts = rd.students;
-      const st =
-        Array.isArray(sts) && sts.length > 0 ? (sts[0] as Record<string, unknown>) : undefined;
-      const cls = String(st?.current_class ?? className0);
-      const key = normalizeSecondaryTemplateKeyForPdf(cls, templateKey);
-      return renderTemplateHTML(rd, key);
-    });
+    const chunks = await Promise.all(
+      reportDataList.map(async (rd) => {
+        const sts = rd.students;
+        const st =
+          Array.isArray(sts) && sts.length > 0 ? (sts[0] as Record<string, unknown>) : undefined;
+        const cls = String(st?.current_class ?? className0);
+        const key = normalizeSecondaryTemplateKeyForPdf(cls, templateKey);
+        const { logo, photo } = await resolveSchoolAndStudentPhotosForReportData(
+          rd as { school?: Record<string, unknown>; students?: unknown[] }
+        );
+        return renderTemplateHTML(rd, key, logo, photo);
+      })
+    );
 
     const firstFullHtml = chunks[0];
     const head = extractHeadContent(firstFullHtml) + PDF_MULTI_STUDENT_SHEET_HEAD;
@@ -1439,10 +1450,11 @@ async function generateSecondaryPipelinePdfResponse(
     const html = `<!DOCTYPE html>\n<html>\n<head>\n${head}\n</head>\n<body>\n${combinedBody}\n</body>\n</html>`;
 
     await page.setContent(html, { waitUntil: 'networkidle0' });
+    /** Match in-app secondary preview: HTML shell already applies A4 padding via `SECONDARY_A4_PAGE_SHELL_CSS`. */
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
-      margin: { top: '4mm', right: '5mm', bottom: '4mm', left: '5mm' },
+      margin: { top: '0', right: '0', bottom: '0', left: '0' },
     });
     const buffer = Buffer.from(pdf);
     const filename =

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 type TermRow = {
   id?: string;
@@ -10,7 +11,13 @@ type TermRow = {
   end_date: string;
 };
 
-export default function SettingsTerms({ schoolId }: { schoolId: string | null }) {
+export default function SettingsTerms({
+  schoolId,
+  embedded,
+}: {
+  schoolId: string | null;
+  embedded?: boolean;
+}) {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [term, setTerm] = useState<number>(1);
   const [start, setStart] = useState('');
@@ -241,11 +248,12 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         title="Term Settings"
         desc="Configure the current school term. Three terms per year (1, 2, 3)."
       />
 
-      <div className="mb-4 rounded-lg border border-[var(--pw-blue)]/35 bg-[var(--pw-s2)] p-4">
+      <div className={`mb-4 ${settingsInsetSurface} border border-[var(--pw-blue)]/35 p-4`}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h4 className="text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
             📅 Uganda Academic Calendar
@@ -284,7 +292,8 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         )}
       </div>
 
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className={`${settingsInsetSurface} mb-4 space-y-4 p-4 sm:p-5`}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <label className="flex min-h-[44px] cursor-pointer items-center gap-2 text-sm ac-text-secondary">
           <input
             type="radio"
@@ -350,10 +359,11 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
           type="button"
           disabled={!schoolId || saving}
           onClick={save}
-          className="min-h-[44px] rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+          className={settingsPrimaryActionClass}
         >
           {saving ? 'Saving...' : 'Save Term'}
         </button>
+      </div>
       </div>
 
       {error && (
@@ -363,7 +373,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
       )}
 
       <div className="mt-4 text-sm ac-text-secondary">Configured terms</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-[var(--pw-border)]">
+      <div className={`mt-2 overflow-x-auto ${settingsInsetSurface}`}>
         <table className="min-w-full text-sm">
           <thead className="bg-[var(--pw-s3)]">
             <tr className="text-left">
@@ -409,7 +419,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
         </table>
       </div>
 
-      <div className="mt-6 rounded-lg border border-emerald-500/35 bg-emerald-950/30 p-4">
+      <div className={`mt-6 ${settingsInsetSurface} border border-emerald-500/35 bg-emerald-950/20 p-4 dark:bg-emerald-950/25`}>
         <h3 className="mb-3 font-medium text-emerald-200">📅 Next Term Begins Date</h3>
         <p className="mb-3 text-sm ac-text-secondary">
           Set the date when the next term begins. This will appear on student report cards.
@@ -425,7 +435,7 @@ export default function SettingsTerms({ schoolId }: { schoolId: string | null })
             type="button"
             onClick={saveNextTermBeginsDate}
             disabled={!schoolId || !nextTermBeginsDate || savingNextTermDate}
-            className="min-h-[44px] rounded-lg bg-green-600 px-4 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+            className={settingsPrimaryActionClass}
           >
             {savingNextTermDate ? 'Saving...' : 'Save Date'}
           </button>

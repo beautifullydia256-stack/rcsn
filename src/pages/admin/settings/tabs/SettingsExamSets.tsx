@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -84,10 +85,12 @@ export default function SettingsExamSets({
   classOptions,
   schoolId,
   schoolType,
+  embedded,
 }: {
   classOptions: string[];
   schoolId: string | null;
   schoolType: 'Nursery/Primary' | 'Secondary' | null;
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [examSets, setExamSets] = useState<ExamSet[]>([]);
@@ -270,12 +273,13 @@ export default function SettingsExamSets({
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         eyebrow="Exams"
         title="Exam Sets Management"
         desc={`Create different exam sets for your school. Showing exam sets for ${currentTerm?.year ?? 'current year'}.`}
       />
 
-      <div className="ac-glass-card mb-6 rounded-lg border border-[var(--ac-border)] p-4">
+      <div className={`${settingsInsetSurface} ac-glass-card mb-6 p-4 sm:p-5`}>
         <h3 className="ac-text-primary mb-3 font-medium">Create New Exam Set</h3>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <input
@@ -346,7 +350,7 @@ export default function SettingsExamSets({
             !schoolId || !name.trim() || saving || (!allClasses && targetClasses.length === 0)
           }
           onClick={saveExamSet}
-          className="mt-3 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-emerald-900/20 transition hover:bg-emerald-500 disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
+          className={`${settingsPrimaryActionClass} mt-3`}
         >
           {saving ? 'Creating...' : 'Create Exam Set'}
         </button>
@@ -361,8 +365,8 @@ export default function SettingsExamSets({
       <div className="ac-text-secondary mb-3 text-sm">
         Current Exam Sets ({currentTerm?.year ?? 'Current Year'})
       </div>
-      <div className="ac-glass-card overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-        <table className="min-w-full text-sm">
+      <div className={`${settingsInsetSurface} ac-glass-card overflow-x-auto`}>
+        <table className="min-w-full min-w-[720px] text-sm md:min-w-0">
           <thead>
             <tr className="border-b border-[var(--ac-border)] text-left">
               <th className="ac-text-muted px-4 py-2">Name</th>

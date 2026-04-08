@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
-export default function SettingsBranding({ schoolId }: { schoolId: string | null }) {
+export default function SettingsBranding({
+  schoolId,
+  embedded,
+}: {
+  schoolId: string | null;
+  embedded?: boolean;
+}) {
   const [logo, setLogo] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [schoolName, setSchoolName] = useState('');
@@ -161,11 +168,12 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
   return (
     <div className="space-y-6">
       <SectionHeader
+        embedded={embedded}
         title="School Branding"
         desc="Upload your school badge and customize branding information."
       />
 
-      <div className="rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-6">
+      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
         <h3 className="mb-4 text-lg font-semibold ac-text-primary">School Badge / Logo</h3>
         <div className="flex flex-col items-start gap-6 md:flex-row">
           <div className="flex-shrink-0">
@@ -218,7 +226,7 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-6">
+      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
         <h3 className="mb-4 text-lg font-semibold ac-text-primary">School Information</h3>
         <div className="space-y-4">
           <div>
@@ -310,7 +318,7 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
               type="button"
               onClick={handleSaveBranding}
               disabled={saving}
-              className="flex min-h-[44px] items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
+              className={settingsPrimaryActionClass}
             >
               {saving ? (
                 <>
@@ -325,7 +333,7 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
         </div>
       </div>
 
-      <div className="rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-6">
+      <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
         <h3 className="mb-4 text-lg font-semibold ac-text-primary">Report Header Colors</h3>
         <p className="mb-4 text-sm ac-text-secondary">
           Customize the colors used in report headers.
@@ -364,7 +372,7 @@ export default function SettingsBranding({ schoolId }: { schoolId: string | null
             type="button"
             onClick={handleSaveBranding}
             disabled={saving}
-            className="flex min-h-[44px] items-center gap-2 rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-500 disabled:opacity-50"
+            className={settingsPrimaryActionClass}
           >
             {saving ? 'Saving...' : 'Save Colors'}
           </button>

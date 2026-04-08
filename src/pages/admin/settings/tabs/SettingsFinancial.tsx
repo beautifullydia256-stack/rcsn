@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass, settingsSecondaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -51,9 +52,11 @@ async function fetchFinancialSettings(schoolId: string): Promise<{
 export default function SettingsFinancial({
   schoolId,
   classes: classList,
+  embedded,
 }: {
   schoolId: string | null;
   classes: string[];
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const [feeStructure, setFeeStructure] = useState<Record<string, string>>({});
@@ -158,6 +161,7 @@ export default function SettingsFinancial({
     return (
       <div>
         <SectionHeader
+          embedded={embedded}
           title="Financial Settings"
           desc="Configure tuition fees per class and admission/registration fees."
         />
@@ -169,6 +173,7 @@ export default function SettingsFinancial({
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         title="Financial Settings"
         desc="Configure tuition fees per class and admission/registration fees. These will auto-populate when adding students."
       />
@@ -230,7 +235,7 @@ export default function SettingsFinancial({
         </div>
       )}
 
-      <div className="mb-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
         <h3 className="mb-3 font-medium text-[#c4b5fd]">🎓 Admission/Registration Fee</h3>
         <p className="mb-3 text-sm ac-text-secondary">
           This one-time fee is charged when a new student is admitted to the school.
@@ -248,7 +253,7 @@ export default function SettingsFinancial({
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
         <h3 className="mb-3 font-medium ac-text-primary">💰 Day Tuition Fees Per Class (Per Term)</h3>
         <p className="mb-4 text-sm ac-text-secondary">
           Set the tuition amount <strong>per term</strong> for each class. The yearly total will be
@@ -282,7 +287,7 @@ export default function SettingsFinancial({
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className={`mb-6 ${settingsInsetSurface} p-4 sm:p-5`}>
         <h3 className="mb-3 font-medium ac-text-primary">🏠 Boarding Fees Per Class (Per Term)</h3>
         <p className="mb-4 text-sm ac-text-secondary">
           Set the boarding fees <strong className="ac-text-primary">per term</strong> for each class.
@@ -329,7 +334,7 @@ export default function SettingsFinancial({
         </div>
       </div>
 
-      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row">
+      <div className="flex flex-col-reverse justify-end gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="button"
           onClick={async () => {
@@ -361,7 +366,7 @@ export default function SettingsFinancial({
             }
           }}
           disabled={saving}
-          className="min-h-[44px] rounded-lg bg-blue-600 px-6 py-2 font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className={settingsSecondaryActionClass}
         >
           🔄 Sync Student Balances
         </button>
@@ -369,13 +374,13 @@ export default function SettingsFinancial({
           type="button"
           onClick={saveFeeStructure}
           disabled={saving}
-          className="min-h-[44px] rounded-lg bg-green-600 px-6 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+          className={settingsPrimaryActionClass}
         >
           {saving ? 'Saving...' : 'Save Fee Structure'}
         </button>
       </div>
 
-      <div className="mt-6 rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] p-4">
+      <div className={`mt-6 ${settingsInsetSurface} p-4 sm:p-5`}>
         <h4 className="mb-2 text-sm font-medium" style={{ color: 'var(--pw-blue, #3d8ef8)' }}>
           ℹ️ How This Works
         </h4>

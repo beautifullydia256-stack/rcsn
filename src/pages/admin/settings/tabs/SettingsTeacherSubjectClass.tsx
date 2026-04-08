@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import SectionHeader from './SectionHeader';
+import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -46,8 +47,10 @@ async function fetchClassSubjects(schoolId: string, selectedClass: string): Prom
 
 export default function SettingsTeacherSubjectClass({
   classOptions,
+  embedded,
 }: {
   classOptions: string[];
+  embedded?: boolean;
 }) {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
@@ -182,9 +185,11 @@ export default function SettingsTeacherSubjectClass({
   return (
     <div>
       <SectionHeader
+        embedded={embedded}
         title="Teacher ↔ Subject ↔ Class Assignments"
         desc="Each class+subject has one subject teacher; additional staff can be co-teachers. Class teachers are set under Classes."
       />
+      <div className={`${settingsInsetSurface} mb-4 p-4 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
         <select
           value={selectedTeacher}
@@ -246,15 +251,16 @@ export default function SettingsTeacherSubjectClass({
             !selectedTeacher || !selectedClass || selectedSubjects.length === 0 || saving
           }
           onClick={assign}
-          className="min-h-[44px] rounded-lg bg-green-600 px-3 py-2 text-white hover:bg-green-500 disabled:opacity-50"
+          className={settingsPrimaryActionClass}
         >
           {saving ? 'Assigning...' : 'Assign'}
         </button>
       </div>
+      </div>
 
-      <div className="mt-4 text-sm ac-text-secondary">Current assignments</div>
-      <div className="mt-2 overflow-x-auto rounded-xl border border-[var(--pw-border)] bg-[var(--pw-s2)] shadow-lg shadow-black/25">
-        <table className="min-w-full text-sm">
+      <div className="mb-2 text-sm font-medium ac-text-secondary">Current assignments</div>
+      <div className={`overflow-x-auto ${settingsInsetSurface}`}>
+        <table className="min-w-full text-sm md:min-w-0">
           <thead>
             <tr className="border-b border-[var(--pw-border)] bg-[var(--pw-s3)] text-left">
               <th className="px-4 py-2 ac-text-muted">Teacher</th>

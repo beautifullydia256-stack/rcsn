@@ -650,6 +650,10 @@ export default function SecondaryGenerateReportsPage() {
 
   const handleDownloadSavedPdf = async () => {
     if (!pageData?.schoolId || !selectedClass) return;
+    if (layoutPreviewUsesSampleData) {
+      setGenerationError('Turn off “Preview card layout with sample data only” to download a PDF from live exam data.');
+      return;
+    }
     if (reportType === 'single' && !selectedStudent) {
       setError('Please select a student');
       return;
@@ -1035,11 +1039,11 @@ export default function SecondaryGenerateReportsPage() {
                 <span className="font-medium ac-text-primary">Preview card layout with sample data only</span>
                 <span className="block text-xs ac-text-muted">
                   Fills <strong>Standard</strong>, <strong>Basic</strong>, <strong>Progressive</strong>, and{' '}
-                  <strong>Alevel</strong> with demo rows (see <code className="text-[11px]">secondaryTemplatePlaceholderData.ts</code>
-                  ). Same HTML as PDF via <code className="text-[11px]">renderTemplateHTML</code>. With an O-Level class
-                  selected, choosing <strong>Alevel</strong> still previews correctly using an internal S.5 label for routing
-                  only. Your school name and contacts from settings are merged into the header. Generate &amp; Save and
-                  Download PDF still require real exam data.
+                  <strong>Alevel</strong> with demo rows. School name and contacts from settings are merged into the header.
+                  <strong className="block mt-1 text-amber-800 dark:text-amber-200">
+                    While this is on: preview is demo-only — Generate &amp; Save and Download PDF are disabled. Turn it off
+                    to use real exam data for preview and PDF (same pipeline as primary reports).
+                  </strong>
                 </span>
               </span>
             </label>

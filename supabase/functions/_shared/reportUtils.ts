@@ -37,7 +37,7 @@ export function calculateDivision(average: number): string {
   return 'Ungraded';
 }
 
-function calculateGradeOLevel(marks: number, totalMarks: number): { grade: string; points: number } {
+export function calculateGradeOLevel(marks: number, totalMarks: number): { grade: string; points: number } {
   const percentage = totalMarks > 0 ? (marks / totalMarks) * 100 : 0;
   const gradeInfo = UGANDA_GRADE_SCALE.find((scale) => percentage >= scale.min && percentage <= scale.max);
   return gradeInfo || { grade: 'E', points: 1 };

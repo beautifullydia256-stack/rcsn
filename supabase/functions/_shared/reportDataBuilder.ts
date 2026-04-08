@@ -5,7 +5,7 @@
  * Position calculation always uses full class; studentIds filter only which report_data to return.
  */
 
-import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from './reportUtils.ts';
+import { calculatePrimaryGrade, calculateDivision, calculateAggregate, calculateGradeOLevel } from './reportUtils.ts';
 
 /** Legacy DB placeholder; show MISSED only on reports like the grade column. */
 function normalizeAutoMissedRemarks(text: unknown): string {
@@ -65,6 +65,18 @@ export interface SnapshotRowForPersist {
   exam_set_year?: number;
   frozen_data?: Record<string, unknown>;
   nursery_skill_performance?: Record<string, unknown>;
+  /** Senior secondary (exam_results): Activity Score [3], formative, exam, final, descriptor, line keys. */
+  activity_score?: number | null;
+  formative_score?: number | null;
+  exam_score?: number | null;
+  final_score?: number | null;
+  descriptor?: string | null;
+  paper_code?: string | null;
+  paper_number?: string | null;
+  topic?: string | null;
+  /** Progressive report: Mid Term activity [3] / End of Term activity [3]. */
+  continuous_c1?: number | null;
+  continuous_c2?: number | null;
 }
 
 export interface BuildReportResult {
@@ -83,6 +95,128 @@ function isMidTermName(name: string | null | undefined): boolean {
 function isEotName(name: string | null | undefined): boolean {
   const n = String(name || '').trim().toLowerCase();
   return n.includes('end') || n.includes('eot') || n.includes('end of term');
+}
+
+/** Senior 1–6 class labels (matches app `isOLevelClass` ∪ `isALevelClass`). */
+function isSeniorSecondaryClassName(className: string | null | undefined): boolean {
+  const c = String(className || '').trim();
+  return /^(senior\s*[1-6]|s\.?\s*[1-6])\b/i.test(c);
+}
+
+function isALevelClassName(className: string | null | undefined): boolean {
+  const c = String(className || '').trim();
+  return /^(senior\s*[56]|s\.?\s*[56])\b/i.test(c);
+}
+
+function numOrUndef(v: unknown): number | undefined {
+  if (v == null || v === '') return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * One row per subject/topic/paper line: Mid Term activity → continuous_c1, End of Term activity → continuous_c2;
+ * scores/grade prefer End of Term row when both exam sets exist.
+ */
+function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
+  if (rows.length === 0) return rows;
+  const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
+  /** Align with `isEotName` — avoid matching arbitrary "final" in set names. */
+  const isEot = (n: string) => isEotName(n);
+  const lineKey = (d: SnapshotRowForPersist) =>
+    `${d.subject}\0${d.topic ?? ''}\0${d.paper_code ?? ''}\0${d.paper_number ?? ''}`;
+  const byKey = new Map<string, SnapshotRowForPersist[]>();
+  for (const d of rows) {
+    const k = lineKey(d);
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k)!.push(d);
+  }
+  const merged: SnapshotRowForPersist[] = [];
+  for (const group of byKey.values()) {
+    if (group.length === 1) {
+      const only = group[0];
+      if (only.continuous_c1 != null || only.continuous_c2 != null) {
+        merged.push({ ...only });
+        continue;
+      }
+      const n = only.exam_set_name ?? '';
+      const mid = isMid(n);
+      const eot = isEot(n);
+      const act = only.activity_score;
+      merged.push({
+        ...only,
+        continuous_c1: mid ? act ?? null : null,
+        continuous_c2: eot ? act ?? null : null,
+      });
+      continue;
+    }
+    const midRow = group.find((d) => isMid(d.exam_set_name ?? ''));
+    const eotRow = group.find((d) => isEot(d.exam_set_name ?? ''));
+    const base = eotRow || midRow || group[0];
+    const c1 = midRow?.activity_score ?? null;
+    const c2 = eotRow?.activity_score ?? null;
+    const marks = Number(eotRow?.marks_obtained ?? eotRow?.final_score ?? midRow?.marks_obtained ?? base.marks_obtained ?? 0);
+    const total = Number(eotRow?.total_marks ?? midRow?.total_marks ?? base.total_marks ?? 100);
+    merged.push({
+      ...base,
+      marks_obtained: marks,
+      total_marks: total,
+      grade: String(eotRow?.grade ?? base.grade ?? ''),
+      remarks: eotRow?.remarks ?? base.remarks,
+      teacher_initials: eotRow?.teacher_initials ?? base.teacher_initials,
+      teacher_comment: eotRow?.teacher_comment ?? base.teacher_comment,
+      exam_set_name: eotRow?.exam_set_name ?? midRow?.exam_set_name ?? base.exam_set_name,
+      exam_set_term: eotRow?.exam_set_term ?? base.exam_set_term,
+      exam_set_year: eotRow?.exam_set_year ?? base.exam_set_year,
+      activity_score: eotRow?.activity_score ?? midRow?.activity_score ?? base.activity_score,
+      formative_score: eotRow?.formative_score ?? midRow?.formative_score ?? base.formative_score,
+      exam_score: eotRow?.exam_score ?? midRow?.exam_score ?? base.exam_score,
+      final_score: numOrUndef(eotRow?.final_score) ?? numOrUndef(eotRow?.marks_obtained) ?? base.final_score ?? base.marks_obtained ?? null,
+      descriptor: eotRow?.descriptor ?? base.descriptor ?? null,
+      paper_code: eotRow?.paper_code ?? midRow?.paper_code ?? base.paper_code,
+      paper_number: eotRow?.paper_number ?? midRow?.paper_number ?? base.paper_number,
+      topic: eotRow?.topic ?? midRow?.topic ?? base.topic,
+      continuous_c1: c1,
+      continuous_c2: c2,
+    });
+  }
+  return merged;
+}
+
+/** After raw exam rows are flattened into snapshot rows, merge Mid/Term activity into C1/C2 for seniors only. */
+function mergeSnapshotRowsByStudent(snapshotData: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
+  const byStudent = new Map<string, SnapshotRowForPersist[]>();
+  for (const row of snapshotData) {
+    if (!byStudent.has(row.student_id)) byStudent.set(row.student_id, []);
+    byStudent.get(row.student_id)!.push(row);
+  }
+  const out: SnapshotRowForPersist[] = [];
+  for (const rows of byStudent.values()) {
+    const cls = rows[0]?.class_name ?? '';
+    if (isSeniorSecondaryClassName(cls)) out.push(...mergeSeniorSecondarySnapshotRows(rows));
+    else out.push(...rows);
+  }
+  return out;
+}
+
+/** Snapshot row grade: primary uses D1–F9 unless DB already holds a non A–F scale; senior uses A–E / DB as stored. */
+function gradeInfoForSnapshotRow(
+  result: { grade?: unknown; marks_obtained?: unknown; total_marks?: unknown },
+  className: string,
+  remarksNorm: string
+): { grade: string; remark: string } {
+  if (isSeniorSecondaryClassName(className)) {
+    const dbGrade = result.grade != null && String(result.grade).trim();
+    if (dbGrade) return { grade: dbGrade, remark: remarksNorm };
+    const marks = Number(result.marks_obtained ?? 0);
+    const total = Number(result.total_marks || 100);
+    const og = calculateGradeOLevel(marks, total);
+    return { grade: og.grade, remark: remarksNorm };
+  }
+  const dbGrade = result.grade != null && String(result.grade).trim();
+  const isOldFormat = dbGrade && ['A', 'B', 'C', 'D', 'E', 'F'].includes(String(dbGrade).toUpperCase());
+  if (dbGrade && !isOldFormat) return { grade: String(dbGrade), remark: remarksNorm };
+  return calculatePrimaryGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
 }
 
 /**
@@ -298,16 +432,20 @@ export async function buildReportDataFromScope(
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
     const remarksNorm = normalizeAutoMissedRemarks(result.remarks);
-    const dbGrade = result.grade && String(result.grade).trim();
-    const isOldFormat = dbGrade && ['A', 'B', 'C', 'D', 'E', 'F'].includes(String(dbGrade).toUpperCase());
-    const gradeInfo =
-      dbGrade && !isOldFormat
-        ? { grade: String(dbGrade), remark: remarksNorm }
-        : calculatePrimaryGrade(Number(result.marks_obtained || 0), Number(result.total_marks || 100));
+    const className = (result.class_name || (result.students as { current_class?: string })?.current_class) as string;
+    const gradeInfo = gradeInfoForSnapshotRow(result, className, remarksNorm);
+    const raw = result as Record<string, unknown>;
+    const activity_score = raw.activity_score != null && raw.activity_score !== '' ? numOrUndef(raw.activity_score) ?? null : null;
+    const formative_score = raw.formative_score != null && raw.formative_score !== '' ? numOrUndef(raw.formative_score) ?? null : null;
+    const exam_score = raw.exam_score != null && raw.exam_score !== '' ? numOrUndef(raw.exam_score) ?? null : null;
+    const final_score_raw = raw.final_score != null && raw.final_score !== '' ? numOrUndef(raw.final_score) ?? null : null;
+    const descriptor = raw.descriptor != null && String(raw.descriptor).trim() ? String(raw.descriptor) : null;
+    const paper_code = raw.paper_code != null && String(raw.paper_code).trim() ? String(raw.paper_code) : null;
+    const paper_number = raw.paper_number != null && String(raw.paper_number).trim() ? String(raw.paper_number) : null;
+    const topic = raw.topic != null && String(raw.topic).trim() ? String(raw.topic) : null;
     const average = studentAverages[result.student_id] || 0;
     const fromDb = processedByStudent[result.student_id];
     const division = fromDb?.division ?? calculateDivision(average);
-    const className = (result.class_name || (result.students as { current_class?: string })?.current_class) as string;
     const presentDays = attendance?.presentDays ?? 0;
     const totalDays = attendance?.totalDays ?? 0;
     const absentDays = totalDays - presentDays;
@@ -339,6 +477,14 @@ export async function buildReportDataFromScope(
       exam_set_name: (result.exam_sets as { name?: string })?.name || baseExamSet?.name || '',
       exam_set_term: (result.exam_sets as { term?: number })?.term ?? baseExamSet?.term ?? term,
       exam_set_year: (result.exam_sets as { year?: number })?.year ?? baseExamSet?.year ?? year,
+      activity_score,
+      formative_score,
+      exam_score,
+      final_score: final_score_raw,
+      descriptor,
+      paper_code,
+      paper_number,
+      topic,
       frozen_data: {
         student_name: (result.students as { name?: string })?.name || '',
         admission_number: (result.students as { admission_number?: string })?.admission_number || '',
@@ -379,6 +525,7 @@ export async function buildReportDataFromScope(
       })
     : reportDataList;
 
+  /** Raw exam-set rows persisted to snapshot; merge for C1/C2 happens in `buildReportDataListFromSnapshotRows`. */
   return { reportDataList: toReturn, snapshotRowsForPersist: snapshotData };
 }
 
@@ -405,12 +552,13 @@ function buildReportDataListFromSnapshotRows(
   baseExamSet: { id: string; name?: string; term?: number; year?: number },
   examSetId: string
 ): unknown[] {
-  const uniqueStudentIds = [...new Set(snapshotData.map((d) => d.student_id))];
+  const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
+  const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
   const list: unknown[] = [];
   const examSetName = baseExamSet?.name || '';
 
   for (const studentId of uniqueStudentIds) {
-    const studentData = snapshotData.filter((d) => d.student_id === studentId);
+    const studentData = mergedSnapshot.filter((d) => d.student_id === studentId);
     if (studentData.length === 0) continue;
     const reportData = oneReportFromSnapshotRows(studentData, school, baseExamSet, examSetId, examSetName);
     list.push(reportData);
@@ -427,14 +575,17 @@ function oneReportFromSnapshotRows(
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
+  const isSeniorClass = isSeniorSecondaryClassName(firstRecord.class_name);
   const effectiveRemark = (d: SnapshotRowForPersist) =>
     normalizeAutoMissedRemarks(
       (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '')
     );
   const results = studentData.map((d) => {
     const remark = effectiveRemark(d);
+    const finalScore = numOrUndef(d.final_score) ?? d.marks_obtained;
     return {
       subject: d.subject,
+      topic: d.topic ?? '',
       marks_obtained: d.marks_obtained,
       total_marks: d.total_marks,
       grade: d.grade,
@@ -445,14 +596,24 @@ function oneReportFromSnapshotRows(
       teacher_remark: remark,
       overall_remark: remark,
       remark,
-      final_score: d.marks_obtained,
+      final_score: finalScore,
       nursery_skill_performance: d.nursery_skill_performance,
+      activity_score: d.activity_score,
+      formative_score: d.formative_score,
+      exam_score: d.exam_score,
+      descriptor: d.descriptor,
+      paper_code: d.paper_code,
+      paper_number: d.paper_number,
+      continuous_c1: d.continuous_c1,
+      continuous_c2: d.continuous_c2,
+      c1: d.continuous_c1,
+      c2: d.continuous_c2,
     };
   });
 
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
   const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
-  const isEot = (n: string) => /end|eot/i.test(String(n || '').trim());
+  const isEot = (n: string) => isEotName(n);
   const eotRows = studentData.filter((d) => isEot(d.exam_set_name ?? ''));
   const summaryRows = eotRows.length > 0 ? eotRows : studentData;
   const firstSummaryRecord = eotRows.length > 0 ? eotRows[0] : firstRecord;
@@ -464,76 +625,110 @@ function oneReportFromSnapshotRows(
     if (m !== '' && m != null && !Number.isNaN(marksNum)) return calculatePrimaryGrade(marksNum, total).grade;
     return grade || '';
   };
-  const subjectMap = new Map<
-    string,
-    {
-      subject_name: string;
-      eot_marks: number | '';
-      mot_marks: number | '';
-      bot_marks: number | '';
-      eot_grade: string;
-      mot_grade: string;
-      bot_grade: string;
-      total_marks: number;
-      teacher_comment: string;
-      teacher_name: string;
-    }
-  >();
-  for (const d of studentData) {
-    const sub = d.subject ?? '';
-    if (!sub) continue;
-    const existing = subjectMap.get(sub);
-    const marks = d.marks_obtained ?? '';
-    const total = Number(d.total_marks ?? 100);
-    const grade = toPrimaryGrade(d.grade ?? '', marks, total);
-    const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
-    const teacherName = d.teacher_initials ?? '';
-    const examName = d.exam_set_name ?? examSetName;
-    if (!existing) {
-      subjectMap.set(sub, {
-        subject_name: sub,
-        eot_marks: isEot(examName) ? marks : '',
-        mot_marks: isMid(examName) ? marks : '',
-        bot_marks: isBot(examName) ? marks : '',
-        eot_grade: isEot(examName) ? grade : '',
-        mot_grade: isMid(examName) ? grade : '',
-        bot_grade: isBot(examName) ? grade : '',
-        total_marks: total,
-        teacher_comment: teacherComment,
-        teacher_name: teacherName,
-      });
-    } else {
-      if (isEot(examName)) {
-        existing.eot_marks = marks;
-        existing.eot_grade = grade;
-      } else if (isMid(examName)) {
-        existing.mot_marks = marks;
-        existing.mot_grade = grade;
-      } else if (isBot(examName)) {
-        existing.bot_marks = marks;
-        existing.bot_grade = grade;
+  let subjects: {
+    subject_name: string;
+    eot_marks: number | '';
+    mot_marks: number | '';
+    bot_marks: number | '';
+    eot_grade: string;
+    mot_grade: string;
+    bot_grade: string;
+    total_marks: number;
+    teacher_comment: string;
+    teacher_name: string;
+  }[] = [];
+  if (!isSeniorClass) {
+    const subjectMap = new Map<
+      string,
+      {
+        subject_name: string;
+        eot_marks: number | '';
+        mot_marks: number | '';
+        bot_marks: number | '';
+        eot_grade: string;
+        mot_grade: string;
+        bot_grade: string;
+        total_marks: number;
+        teacher_comment: string;
+        teacher_name: string;
       }
-      if (teacherComment) existing.teacher_comment = teacherComment;
-      if (teacherName) existing.teacher_name = teacherName;
-    }
-  }
-  const subjects = sortPrimarySubjectRowsForReport(
-    Array.from(subjectMap.values()).map((s) => {
-      if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
-        const first = studentData.find((d) => (d.subject ?? '') === s.subject_name);
-        if (first) {
-          const m = first.marks_obtained ?? '';
-          const t = Number(first.total_marks ?? 100) || 100;
-          const g = toPrimaryGrade(first.grade ?? '', m, t);
-          s.eot_marks = m;
-          s.eot_grade = g;
-          s.mot_marks = m;
-          s.mot_grade = g;
+    >();
+    for (const d of studentData) {
+      const sub = d.subject ?? '';
+      if (!sub) continue;
+      const existing = subjectMap.get(sub);
+      const marks = d.marks_obtained ?? '';
+      const total = Number(d.total_marks ?? 100);
+      const grade = toPrimaryGrade(d.grade ?? '', marks, total);
+      const teacherComment = (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '');
+      const teacherName = d.teacher_initials ?? '';
+      const examName = d.exam_set_name ?? examSetName;
+      if (!existing) {
+        subjectMap.set(sub, {
+          subject_name: sub,
+          eot_marks: isEot(examName) ? marks : '',
+          mot_marks: isMid(examName) ? marks : '',
+          bot_marks: isBot(examName) ? marks : '',
+          eot_grade: isEot(examName) ? grade : '',
+          mot_grade: isMid(examName) ? grade : '',
+          bot_grade: isBot(examName) ? grade : '',
+          total_marks: total,
+          teacher_comment: teacherComment,
+          teacher_name: teacherName,
+        });
+      } else {
+        if (isEot(examName)) {
+          existing.eot_marks = marks;
+          existing.eot_grade = grade;
+        } else if (isMid(examName)) {
+          existing.mot_marks = marks;
+          existing.mot_grade = grade;
+        } else if (isBot(examName)) {
+          existing.bot_marks = marks;
+          existing.bot_grade = grade;
         }
+        if (teacherComment) existing.teacher_comment = teacherComment;
+        if (teacherName) existing.teacher_name = teacherName;
       }
-      return s;
-    }),
-  );
+    }
+    subjects = sortPrimarySubjectRowsForReport(
+      Array.from(subjectMap.values()).map((s) => {
+        if (s.eot_marks === '' && s.mot_marks === '' && s.bot_marks === '') {
+          const first = studentData.find((d) => (d.subject ?? '') === s.subject_name);
+          if (first) {
+            const m = first.marks_obtained ?? '';
+            const t = Number(first.total_marks ?? 100) || 100;
+            const g = toPrimaryGrade(first.grade ?? '', m, t);
+            s.eot_marks = m;
+            s.eot_grade = g;
+            s.mot_marks = m;
+            s.mot_grade = g;
+          }
+        }
+        return s;
+      }),
+    );
+  }
+
+  let alevel: { paperRows?: Array<Record<string, unknown>> } | undefined;
+  if (isALevelClassName(firstRecord.class_name)) {
+    const paperRows = studentData
+      .filter((d) => String(d.subject || '').trim())
+      .map((d) => {
+        const remark = effectiveRemark(d);
+        const tm = Number(d.total_marks ?? 100) || 100;
+        const mo = Number(d.marks_obtained ?? 0);
+        return {
+          subjectLabel: String(d.subject ?? ''),
+          paperCode: String(d.paper_code ?? d.paper_number ?? '—'),
+          marksPercent: tm > 0 ? (mo / tm) * 100 : null,
+          gradeDisplay: String(d.grade ?? '—'),
+          comment: remark,
+          teacherDisplayName: d.teacher_initials ?? null,
+        };
+      });
+    if (paperRows.length) alevel = { paperRows };
+  }
 
   const frozen = frozenData as {
     school_name?: string;
@@ -566,7 +761,7 @@ function oneReportFromSnapshotRows(
     frozen.school_phone || (school?.phone as string) || (school?.contact_phone as string) || '';
   const emailOut =
     frozen.school_email || (school?.email as string) || (school?.contact_email as string) || '';
-  return {
+  const baseReport: Record<string, unknown> = {
     school: {
       ...school,
       name: frozen.school_name || (school?.name as string) || '',
@@ -632,4 +827,6 @@ function oneReportFromSnapshotRows(
       },
     ],
   };
+  if (alevel) baseReport.alevel = alevel;
+  return baseReport;
 }
