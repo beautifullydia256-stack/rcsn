@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { REPORT_HEADER_DEFAULTS } from '@/lib/reportHeaderBrandingDefaults';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+
+const H = REPORT_HEADER_DEFAULTS;
 
 export default function SettingsBranding({
   schoolId,
@@ -22,12 +25,17 @@ export default function SettingsBranding({
   const [contactPhone, setContactPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const [schoolNameColor, setSchoolNameColor] = useState('#1e3a8a');
-  const [subtitleColor, setSubtitleColor] = useState('#3b82f6');
-  const [addressColor, setAddressColor] = useState('#1e40af');
-  const [contactColor, setContactColor] = useState('#1e40af');
-  const [mottoColor, setMottoColor] = useState('#2563eb');
-  const [dividerColor, setDividerColor] = useState('#1e3a8a');
+  const [schoolNameColor, setSchoolNameColor] = useState<string>(H.schoolName);
+  const [subtitleColor, setSubtitleColor] = useState<string>(H.subtitle);
+  const [addressColor, setAddressColor] = useState<string>(H.address);
+  const [contactColor, setContactColor] = useState<string>(H.contact);
+  const [mottoColor, setMottoColor] = useState<string>(H.motto);
+  const [dividerColor, setDividerColor] = useState<string>(H.divider);
+  const [chipTextColor, setChipTextColor] = useState<string>(H.chipText);
+  const [chipBgColor, setChipBgColor] = useState<string>(H.chipBackground);
+  const [chipBorderColor, setChipBorderColor] = useState<string>(H.chipBorder);
+  const [metaLineColor, setMetaLineColor] = useState<string>(H.metaLine);
+  const [contactSeparatorColor, setContactSeparatorColor] = useState<string>(H.contactSeparator);
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -36,7 +44,7 @@ export default function SettingsBranding({
         let { data, error } = await supabase
           .from('schools')
           .select(
-            'name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone, header_school_name_color, header_subtitle_color, header_address_color, header_contact_color, header_motto_color, header_divider_color'
+            'name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone, header_school_name_color, header_subtitle_color, header_address_color, header_contact_color, header_motto_color, header_divider_color, header_chip_text_color, header_chip_background_color, header_chip_border_color, header_meta_line_color, header_contact_separator_color'
           )
           .eq('school_id', schoolId)
           .single();
@@ -60,12 +68,17 @@ export default function SettingsBranding({
             setWebsite(d.website || '');
             setContactEmail(d.contact_email || '');
             setContactPhone(d.contact_phone || '');
-            setSchoolNameColor('#1e3a8a');
-            setSubtitleColor('#3b82f6');
-            setAddressColor('#1e40af');
-            setContactColor('#1e40af');
-            setMottoColor('#2563eb');
-            setDividerColor('#1e3a8a');
+            setSchoolNameColor(H.schoolName);
+            setSubtitleColor(H.subtitle);
+            setAddressColor(H.address);
+            setContactColor(H.contact);
+            setMottoColor(H.motto);
+            setDividerColor(H.divider);
+            setChipTextColor(H.chipText);
+            setChipBgColor(H.chipBackground);
+            setChipBorderColor(H.chipBorder);
+            setMetaLineColor(H.metaLine);
+            setContactSeparatorColor(H.contactSeparator);
           }
           return;
         }
@@ -79,12 +92,17 @@ export default function SettingsBranding({
           setWebsite(data.website || '');
           setContactEmail(data.contact_email || '');
           setContactPhone(data.contact_phone || '');
-          setSchoolNameColor(data.header_school_name_color || '#1e3a8a');
-          setSubtitleColor(data.header_subtitle_color || '#3b82f6');
-          setAddressColor(data.header_address_color || '#1e40af');
-          setContactColor(data.header_contact_color || '#1e40af');
-          setMottoColor(data.header_motto_color || '#2563eb');
-          setDividerColor(data.header_divider_color || '#1e3a8a');
+          setSchoolNameColor(data.header_school_name_color || H.schoolName);
+          setSubtitleColor(data.header_subtitle_color || H.subtitle);
+          setAddressColor(data.header_address_color || H.address);
+          setContactColor(data.header_contact_color || H.contact);
+          setMottoColor(data.header_motto_color || H.motto);
+          setDividerColor(data.header_divider_color || H.divider);
+          setChipTextColor(data.header_chip_text_color || H.chipText);
+          setChipBgColor(data.header_chip_background_color || H.chipBackground);
+          setChipBorderColor(data.header_chip_border_color || H.chipBorder);
+          setMetaLineColor(data.header_meta_line_color || H.metaLine);
+          setContactSeparatorColor(data.header_contact_separator_color || H.contactSeparator);
         }
       } catch (err) {
         console.error('Error loading branding:', err);
@@ -151,6 +169,11 @@ export default function SettingsBranding({
         header_contact_color: contactColor,
         header_motto_color: mottoColor,
         header_divider_color: dividerColor,
+        header_chip_text_color: chipTextColor,
+        header_chip_background_color: chipBgColor,
+        header_chip_border_color: chipBorderColor,
+        header_meta_line_color: metaLineColor,
+        header_contact_separator_color: contactSeparatorColor,
       };
       const { error } = await supabase
         .from('schools')
@@ -336,7 +359,8 @@ export default function SettingsBranding({
       <div className={`${settingsInsetSurface} p-5 sm:p-6`}>
         <h3 className="mb-4 text-lg font-semibold ac-text-primary">Report Header Colors</h3>
         <p className="mb-4 text-sm ac-text-secondary">
-          Customize the colors used in report headers.
+          Control how your school name, details, line, report-title chip, and contact separator appear on every report
+          template. Defaults use black text for main header lines; adjust as you like.
         </p>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {[
@@ -344,8 +368,13 @@ export default function SettingsBranding({
             { label: 'Subtitle Color', value: subtitleColor, set: setSubtitleColor },
             { label: 'Address Color', value: addressColor, set: setAddressColor },
             { label: 'Contact Info Color', value: contactColor, set: setContactColor },
+            { label: 'Email | Phone Separator', value: contactSeparatorColor, set: setContactSeparatorColor },
             { label: 'Motto Color', value: mottoColor, set: setMottoColor },
             { label: 'Divider Line Color', value: dividerColor, set: setDividerColor },
+            { label: 'Report Title Chip — Text', value: chipTextColor, set: setChipTextColor },
+            { label: 'Report Title Chip — Background', value: chipBgColor, set: setChipBgColor },
+            { label: 'Report Title Chip — Border', value: chipBorderColor, set: setChipBorderColor },
+            { label: 'Subtitle Under Chip (exam / year line)', value: metaLineColor, set: setMetaLineColor },
           ].map(({ label, value, set }) => (
             <div key={label}>
               <label className="mb-2 block text-sm font-medium ac-text-secondary">{label}</label>
@@ -361,7 +390,7 @@ export default function SettingsBranding({
                   value={value}
                   onChange={(e) => set(e.target.value)}
                   className="ac-input min-h-[44px] flex-1"
-                  placeholder="#1e3a8a"
+                  placeholder={H.schoolName}
                 />
               </div>
             </div>

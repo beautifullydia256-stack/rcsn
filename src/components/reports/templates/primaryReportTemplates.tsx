@@ -22,6 +22,7 @@ import { buildPrePrimaryDetailedSections } from '../../../templates/primary/preP
 import type { NurseryDetailedObservationRow } from '../../../templates/primary/prePrimaryDetailedCommentMapping';
 import { lightenColor, isALevelClass, isOLevelClass, isLowerSectionPrimary } from './helpers';
 import { formatAverageWhole, formatCurrency } from '../../../lib/reportUtils';
+import { REPORT_HEADER_DEFAULTS } from '../../../lib/reportHeaderBrandingDefaults';
 
 /** Explicit fraction + % for attendance cards (stakeholder: counts not only %). */
 function AttendanceCountsSupplement({
@@ -1176,6 +1177,20 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
     }
   }
 
+  const hdr = {
+    name: school?.header_school_name_color || REPORT_HEADER_DEFAULTS.schoolName,
+    subtitle: school?.header_subtitle_color || REPORT_HEADER_DEFAULTS.subtitle,
+    address: school?.header_address_color || REPORT_HEADER_DEFAULTS.address,
+    contact: school?.header_contact_color || REPORT_HEADER_DEFAULTS.contact,
+    motto: school?.header_motto_color || REPORT_HEADER_DEFAULTS.motto,
+    divider: school?.header_divider_color || REPORT_HEADER_DEFAULTS.divider,
+    chipText: school?.header_chip_text_color || REPORT_HEADER_DEFAULTS.chipText,
+    chipBg: school?.header_chip_background_color || REPORT_HEADER_DEFAULTS.chipBackground,
+    chipBorder: school?.header_chip_border_color || REPORT_HEADER_DEFAULTS.chipBorder,
+    meta: school?.header_meta_line_color || REPORT_HEADER_DEFAULTS.metaLine,
+    contactSep: school?.header_contact_separator_color || REPORT_HEADER_DEFAULTS.contactSeparator,
+  };
+
   return (
     <div
       className="relative px-[0.2cm] py-[0.25cm] bg-white text-slate-800"
@@ -1255,7 +1270,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     letterSpacing: '0.04em',
                     lineHeight: '1.06',
                     marginBottom: '0.22cm',
-                    color: school?.header_school_name_color || '#1e3a8a',
+                    color: hdr.name,
                     marginTop: 0,
                     whiteSpace: 'nowrap'
                   }}
@@ -1271,7 +1286,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
-                    color: school?.header_subtitle_color || '#3b82f6',
+                    color: hdr.subtitle,
                     marginBottom: '0.18cm',
                     lineHeight: '1.32'
                   }}
@@ -1287,7 +1302,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: school?.header_address_color || '#1e40af',
+                    color: hdr.address,
                     marginBottom: '0.16cm',
                     lineHeight: '1.32'
                   }}
@@ -1303,13 +1318,13 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: school?.header_contact_color || '#1e40af',
+                    color: hdr.contact,
                     marginBottom: '0.16cm',
                     lineHeight: '1.32'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
+                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: hdr.contactSep }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
       </div>
               )}
@@ -1322,7 +1337,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
-                    color: school?.header_motto_color || '#2563eb',
+                    color: hdr.motto,
                     marginBottom: '0.22cm',
                     lineHeight: '1.32',
                     letterSpacing: '0.02em'
@@ -1338,7 +1353,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
           <div 
             style={{
               height: '1px',
-              background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
+              background: `linear-gradient(to right, ${hdr.divider} 0%, ${lightenColor(hdr.divider)} 50%, ${hdr.divider} 100%)`,
               marginTop: '0.22cm',
               marginBottom: '0.12cm',
               WebkitPrintColorAdjust: 'exact',
@@ -1357,9 +1372,9 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
                 fontWeight: '600',
                 textTransform: 'uppercase',
                 letterSpacing: '0.07em',
-                color: '#1e3a8a',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                color: hdr.chipText,
+                background: hdr.chipBg,
+                border: `1px solid ${hdr.chipBorder}`,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact'
               }}
@@ -1370,7 +1385,7 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
               <div 
                 style={{
                   fontSize: '7.4pt',
-                  color: '#64748b',
+                  color: hdr.meta,
                   marginTop: '0.14cm',
                   fontWeight: '400'
                 }}
@@ -1730,6 +1745,20 @@ function Template3KyoteraReport({ student, examSet, school, reportTitleSettings,
 
 
 function Template4UpperSectionReport({ student, examSet, school, examSets, gradeSystem }: { student: any; examSet: any; school: any; examSets?: any[]; gradeSystem?: { grades?: Array<{ min: number; max: number; grade: string }>; divisions?: Array<{ min: number; max: number; division: string }> } }) {
+  const hdr = {
+    name: school?.header_school_name_color || REPORT_HEADER_DEFAULTS.schoolName,
+    subtitle: school?.header_subtitle_color || REPORT_HEADER_DEFAULTS.subtitle,
+    address: school?.header_address_color || REPORT_HEADER_DEFAULTS.address,
+    contact: school?.header_contact_color || REPORT_HEADER_DEFAULTS.contact,
+    motto: school?.header_motto_color || REPORT_HEADER_DEFAULTS.motto,
+    divider: school?.header_divider_color || REPORT_HEADER_DEFAULTS.divider,
+    chipText: school?.header_chip_text_color || REPORT_HEADER_DEFAULTS.chipText,
+    chipBg: school?.header_chip_background_color || REPORT_HEADER_DEFAULTS.chipBackground,
+    chipBorder: school?.header_chip_border_color || REPORT_HEADER_DEFAULTS.chipBorder,
+    meta: school?.header_meta_line_color || REPORT_HEADER_DEFAULTS.metaLine,
+    contactSep: school?.header_contact_separator_color || REPORT_HEADER_DEFAULTS.contactSeparator,
+  };
+
   const attendance = student?.summary?.attendanceDetails || {};
 
   const streamDisplay =
@@ -1942,7 +1971,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     letterSpacing: '0.04em',
                     lineHeight: '1.06',
                     marginBottom: '0.22cm',
-                    color: school?.header_school_name_color || '#1e3a8a',
+                    color: hdr.name,
                     marginTop: 0,
                     whiteSpace: 'nowrap'
                   }}
@@ -1958,7 +1987,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '400',
-                    color: school?.header_subtitle_color || '#3b82f6',
+                    color: hdr.subtitle,
                     marginBottom: '0.18cm',
                     lineHeight: '1.32'
                   }}
@@ -1974,7 +2003,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: school?.header_address_color || '#1e40af',
+                    color: hdr.address,
                     marginBottom: '0.16cm',
                     lineHeight: '1.32'
                   }}
@@ -1990,13 +2019,13 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontSize: '11pt',
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontWeight: '600',
-                    color: school?.header_contact_color || '#1e40af',
+                    color: hdr.contact,
                     marginBottom: '0.16cm',
                     lineHeight: '1.32'
                   }}
                 >
                   {school?.contact_email && <span>{school.contact_email}</span>}
-                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: '#64748b' }}>|</span>}
+                  {school?.contact_email && school?.contact_phone && <span style={{ margin: '0 8px', color: hdr.contactSep }}>|</span>}
                   {school?.contact_phone && <span>{school.contact_phone}</span>}
                 </div>
               )}
@@ -2009,7 +2038,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                     fontFamily: 'Times New Roman, Georgia, serif',
                     fontStyle: 'italic',
                     fontWeight: '600',
-                    color: school?.header_motto_color || '#2563eb',
+                    color: hdr.motto,
                     marginBottom: '0.22cm',
                     lineHeight: '1.32',
                     letterSpacing: '0.02em'
@@ -2025,7 +2054,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
           <div 
             style={{
               height: '1px',
-              background: `linear-gradient(to right, ${school?.header_divider_color || '#1e3a8a'} 0%, ${school?.header_divider_color ? lightenColor(school.header_divider_color) : '#60a5fa'} 50%, ${school?.header_divider_color || '#1e3a8a'} 100%)`,
+              background: `linear-gradient(to right, ${hdr.divider} 0%, ${lightenColor(hdr.divider)} 50%, ${hdr.divider} 100%)`,
               marginTop: '0.3cm',
               marginBottom: '0.18cm',
               WebkitPrintColorAdjust: 'exact',
@@ -2044,9 +2073,9 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
                 fontWeight: '600',
                 textTransform: 'uppercase',
                 letterSpacing: '0.07em',
-                color: '#1e3a8a',
-                background: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                color: hdr.chipText,
+                background: hdr.chipBg,
+                border: `1px solid ${hdr.chipBorder}`,
                 WebkitPrintColorAdjust: 'exact',
                 printColorAdjust: 'exact'
               }}
@@ -2057,7 +2086,7 @@ function Template4UpperSectionReport({ student, examSet, school, examSets, grade
               <div 
                 style={{
                   fontSize: '7.4pt',
-                  color: '#64748b',
+                  color: hdr.meta,
                   marginTop: '0.14cm',
                   fontWeight: '400'
                 }}

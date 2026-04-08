@@ -10,6 +10,7 @@ import LocationSettingsWidget from "../components/LocationSettingsWidget";
 import SettingsUaceClassSubjectPapers from "@/src/components/admin/SettingsUaceClassSubjectPapers";
 import { canRemoveClassSubjectRow, classSubjectBadge, type ClassSubjectRow } from "@/lib/classSubjectRowGuards";
 import { isOLevelClass } from "@/src/components/reports/templates/helpers";
+import { REPORT_HEADER_DEFAULTS } from "@/lib/reportHeaderBrandingDefaults";
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
@@ -2090,6 +2091,7 @@ function ExamSets({ classOptions, schoolId, schoolType }: { classOptions: string
 }
 
 function SchoolBranding({ schoolId }: { schoolId: string | null }) {
+  const H = REPORT_HEADER_DEFAULTS;
   const [logo, setLogo] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [schoolName, setSchoolName] = useState('');
@@ -2102,13 +2104,18 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
   const [contactPhone, setContactPhone] = useState('');
   const [saving, setSaving] = useState(false);
   
-  // Header color states
-  const [schoolNameColor, setSchoolNameColor] = useState('#1e3a8a');
-  const [subtitleColor, setSubtitleColor] = useState('#3b82f6');
-  const [addressColor, setAddressColor] = useState('#1e40af');
-  const [contactColor, setContactColor] = useState('#1e40af');
-  const [mottoColor, setMottoColor] = useState('#2563eb');
-  const [dividerColor, setDividerColor] = useState('#1e3a8a');
+  // Header color states (defaults: black / neutral — same as SettingsBranding tab)
+  const [schoolNameColor, setSchoolNameColor] = useState<string>(H.schoolName);
+  const [subtitleColor, setSubtitleColor] = useState<string>(H.subtitle);
+  const [addressColor, setAddressColor] = useState<string>(H.address);
+  const [contactColor, setContactColor] = useState<string>(H.contact);
+  const [mottoColor, setMottoColor] = useState<string>(H.motto);
+  const [dividerColor, setDividerColor] = useState<string>(H.divider);
+  const [chipTextColor, setChipTextColor] = useState<string>(H.chipText);
+  const [chipBgColor, setChipBgColor] = useState<string>(H.chipBackground);
+  const [chipBorderColor, setChipBorderColor] = useState<string>(H.chipBorder);
+  const [metaLineColor, setMetaLineColor] = useState<string>(H.metaLine);
+  const [contactSeparatorColor, setContactSeparatorColor] = useState<string>(H.contactSeparator);
 
   useEffect(() => {
     const loadBranding = async () => {
@@ -2118,7 +2125,7 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         // First try with all columns including subtitle, address, pobox, and colors
         let { data, error } = await supabase
           .from('schools')
-          .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone, header_school_name_color, header_subtitle_color, header_address_color, header_contact_color, header_motto_color, header_divider_color')
+          .select('name, logo_url, motto, subtitle, address, pobox, location, website, contact_email, contact_phone, header_school_name_color, header_subtitle_color, header_address_color, header_contact_color, header_motto_color, header_divider_color, header_chip_text_color, header_chip_background_color, header_chip_border_color, header_meta_line_color, header_contact_separator_color')
           .eq('school_id', schoolId)
           .single();
 
@@ -2139,23 +2146,43 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         }
 
         if (data) {
-          setSchoolName(data.name || '');
-          setLogo(data.logo_url || null);
-          setMotto(data.motto || '');
-          setSubtitle(data.subtitle || '');
-          setAddress(data.address || data.location || '');
-          setPobox(data.pobox || '');
-          setWebsite(data.website || '');
-          setContactEmail(data.contact_email || '');
-          setContactPhone(data.contact_phone || '');
+          const d = data as Record<string, unknown>;
+          const hasHeaderColorColumns = typeof d.header_school_name_color !== 'undefined';
+          setSchoolName((data.name as string) || '');
+          setLogo((data.logo_url as string) || null);
+          setMotto((data.motto as string) || '');
+          setSubtitle((data.subtitle as string) || '');
+          setAddress((data.address as string) || (data.location as string) || '');
+          setPobox((data.pobox as string) || '');
+          setWebsite((data.website as string) || '');
+          setContactEmail((data.contact_email as string) || '');
+          setContactPhone((data.contact_phone as string) || '');
           
-          // Set header colors with defaults if not present
-          setSchoolNameColor(data.header_school_name_color || '#1e3a8a');
-          setSubtitleColor(data.header_subtitle_color || '#3b82f6');
-          setAddressColor(data.header_address_color || '#1e40af');
-          setContactColor(data.header_contact_color || '#1e40af');
-          setMottoColor(data.header_motto_color || '#2563eb');
-          setDividerColor(data.header_divider_color || '#1e3a8a');
+          if (hasHeaderColorColumns) {
+            setSchoolNameColor((d.header_school_name_color as string) || H.schoolName);
+            setSubtitleColor((d.header_subtitle_color as string) || H.subtitle);
+            setAddressColor((d.header_address_color as string) || H.address);
+            setContactColor((d.header_contact_color as string) || H.contact);
+            setMottoColor((d.header_motto_color as string) || H.motto);
+            setDividerColor((d.header_divider_color as string) || H.divider);
+            setChipTextColor((d.header_chip_text_color as string) || H.chipText);
+            setChipBgColor((d.header_chip_background_color as string) || H.chipBackground);
+            setChipBorderColor((d.header_chip_border_color as string) || H.chipBorder);
+            setMetaLineColor((d.header_meta_line_color as string) || H.metaLine);
+            setContactSeparatorColor((d.header_contact_separator_color as string) || H.contactSeparator);
+          } else {
+            setSchoolNameColor(H.schoolName);
+            setSubtitleColor(H.subtitle);
+            setAddressColor(H.address);
+            setContactColor(H.contact);
+            setMottoColor(H.motto);
+            setDividerColor(H.divider);
+            setChipTextColor(H.chipText);
+            setChipBgColor(H.chipBackground);
+            setChipBorderColor(H.chipBorder);
+            setMetaLineColor(H.metaLine);
+            setContactSeparatorColor(H.contactSeparator);
+          }
         }
       } catch (err) {
         console.error('Error loading branding:', err);
@@ -2275,6 +2302,11 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
         updateData.header_contact_color = contactColor;
         updateData.header_motto_color = mottoColor;
         updateData.header_divider_color = dividerColor;
+        updateData.header_chip_text_color = chipTextColor;
+        updateData.header_chip_background_color = chipBgColor;
+        updateData.header_chip_border_color = chipBorderColor;
+        updateData.header_meta_line_color = metaLineColor;
+        updateData.header_contact_separator_color = contactSeparatorColor;
       } catch (e) {
         // Columns might not exist yet - that's okay, we'll update them later
         console.warn('Some columns may not exist yet:', e);
@@ -2516,148 +2548,68 @@ function SchoolBranding({ schoolId }: { schoolId: string | null }) {
       {/* Header Colors Section */}
       <div className="p-6 rounded-xl bg-white/5 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-4">Report Header Colors</h3>
-        <p className="text-sm text-white/60 mb-4">Customize the colors used in report headers. These colors will be applied to all report templates.</p>
+        <p className="text-sm text-white/60 mb-4">
+          Control school name, details, divider, report-title chip, contact separator, and exam line on every report.
+          Defaults use black for main header text; adjust as you like.
+        </p>
         
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">School Name Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={schoolNameColor}
-                  onChange={(e) => setSchoolNameColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={schoolNameColor}
-                  onChange={(e) => setSchoolNameColor(e.target.value)}
-                  placeholder="#1e3a8a"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
+            {[
+              { label: 'School Name Color', value: schoolNameColor, set: setSchoolNameColor },
+              { label: 'Subtitle Color', value: subtitleColor, set: setSubtitleColor },
+              { label: 'Address Color', value: addressColor, set: setAddressColor },
+              { label: 'Contact Info Color', value: contactColor, set: setContactColor },
+              { label: 'Email | Phone Separator', value: contactSeparatorColor, set: setContactSeparatorColor },
+              { label: 'Motto Color', value: mottoColor, set: setMottoColor },
+              { label: 'Divider Line Color', value: dividerColor, set: setDividerColor },
+              { label: 'Report Title Chip — Text', value: chipTextColor, set: setChipTextColor },
+              { label: 'Report Title Chip — Background', value: chipBgColor, set: setChipBgColor },
+              { label: 'Report Title Chip — Border', value: chipBorderColor, set: setChipBorderColor },
+              { label: 'Subtitle Under Chip (exam / year line)', value: metaLineColor, set: setMetaLineColor },
+            ].map(({ label, value, set }) => (
+              <div key={label}>
+                <label className="block text-sm font-medium text-white/80 mb-2">{label}</label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    value={value}
+                    onChange={(e) => set(e.target.value)}
+                    className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => set(e.target.value)}
+                    placeholder={H.schoolName}
+                    className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
+                  />
+                </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Subtitle Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={subtitleColor}
-                  onChange={(e) => setSubtitleColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={subtitleColor}
-                  onChange={(e) => setSubtitleColor(e.target.value)}
-                  placeholder="#3b82f6"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Address Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={addressColor}
-                  onChange={(e) => setAddressColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={addressColor}
-                  onChange={(e) => setAddressColor(e.target.value)}
-                  placeholder="#1e40af"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Contact Info Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={contactColor}
-                  onChange={(e) => setContactColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={contactColor}
-                  onChange={(e) => setContactColor(e.target.value)}
-                  placeholder="#1e40af"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Motto Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={mottoColor}
-                  onChange={(e) => setMottoColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={mottoColor}
-                  onChange={(e) => setMottoColor(e.target.value)}
-                  placeholder="#2563eb"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">Divider Line Color</label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="color"
-                  value={dividerColor}
-                  onChange={(e) => setDividerColor(e.target.value)}
-                  className="w-16 h-10 rounded-lg border border-white/10 bg-white/5 cursor-pointer"
-                />
-                <input
-                  type="text"
-                  value={dividerColor}
-                  onChange={(e) => setDividerColor(e.target.value)}
-                  placeholder="#1e3a8a"
-                  className="flex-1 px-4 py-2 rounded-lg border border-white/10 bg-white/5 text-white placeholder-white/30"
-                />
-              </div>
-            </div>
+            ))}
           </div>
 
           <div className="mt-4 p-4 rounded-lg bg-blue-600/10 border border-blue-500/30">
             <h4 className="text-blue-300 font-medium text-sm mb-2">💡 Color Preview</h4>
             <div className="text-white/60 text-xs space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: schoolNameColor }}></div>
-                <span>School Name</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: subtitleColor }}></div>
-                <span>Subtitle</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: addressColor }}></div>
-                <span>Address & Contact</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: mottoColor }}></div>
-                <span>Motto</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded border border-white/20" style={{ backgroundColor: dividerColor }}></div>
-                <span>Divider Line</span>
-              </div>
+              {[
+                ['School Name', schoolNameColor],
+                ['Subtitle', subtitleColor],
+                ['Address', addressColor],
+                ['Contact', contactColor],
+                ['Contact separator', contactSeparatorColor],
+                ['Motto', mottoColor],
+                ['Divider', dividerColor],
+                ['Chip text', chipTextColor],
+                ['Chip background', chipBgColor],
+                ['Chip border', chipBorderColor],
+                ['Exam / year line', metaLineColor],
+              ].map(([name, c]) => (
+                <div key={String(name)} className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded border border-white/20 shrink-0" style={{ backgroundColor: c as string }} />
+                  <span>{name}</span>
+                </div>
+              ))}
             </div>
           </div>
 

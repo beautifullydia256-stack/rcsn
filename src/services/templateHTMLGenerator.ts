@@ -10,6 +10,7 @@
  */
 
 import { supabase } from '../lib/supabase';
+import { REPORT_HEADER_DEFAULTS } from '../lib/reportHeaderBrandingDefaults';
 import { formatAverageWhole, formatCurrency } from '../lib/reportUtils';
 import { isALevelClass, isOLevelClass } from '../components/reports/templates/helpers';
 import {
@@ -333,12 +334,18 @@ function generateProfessionalHeaderHTML(
   reportTitle: string,
   examSet: any
 ): string {
-  const schoolNameColor = school?.header_school_name_color || '#1e3a8a';
-  const subtitleColor = school?.header_subtitle_color || '#3b82f6';
-  const addressColor = school?.header_address_color || '#1e40af';
-  const contactColor = school?.header_contact_color || '#1e40af';
-  const mottoColor = school?.header_motto_color || '#2563eb';
-  const dividerColor = school?.header_divider_color || '#1e3a8a';
+  const H = REPORT_HEADER_DEFAULTS;
+  const schoolNameColor = school?.header_school_name_color || H.schoolName;
+  const subtitleColor = school?.header_subtitle_color || H.subtitle;
+  const addressColor = school?.header_address_color || H.address;
+  const contactColor = school?.header_contact_color || H.contact;
+  const mottoColor = school?.header_motto_color || H.motto;
+  const dividerColor = school?.header_divider_color || H.divider;
+  const chipText = school?.header_chip_text_color || H.chipText;
+  const chipBg = school?.header_chip_background_color || H.chipBackground;
+  const chipBorder = school?.header_chip_border_color || H.chipBorder;
+  const metaLine = school?.header_meta_line_color || H.metaLine;
+  const contactSep = school?.header_contact_separator_color || H.contactSeparator;
   const dividerGradient = `linear-gradient(to right, ${dividerColor} 0%, ${lightenColor(dividerColor)} 50%, ${dividerColor} 100%)`;
 
   return `
@@ -371,7 +378,7 @@ function generateProfessionalHeaderHTML(
           ` : ''}
           ${(school?.contact_email || school?.contact_phone) ? `
             <div style="font-size: 11pt; font-family: 'Times New Roman', Georgia, serif; font-weight: 600; color: ${contactColor}; margin-bottom: 0.22cm; line-height: 1.4;">
-              ${school?.contact_email || ''}${school?.contact_email && school?.contact_phone ? ' <span style="margin: 0 8px; color: #64748b;">|</span> ' : ''}${school?.contact_phone || ''}
+              ${school?.contact_email || ''}${school?.contact_email && school?.contact_phone ? ` <span style="margin: 0 8px; color: ${contactSep};">|</span> ` : ''}${school?.contact_phone || ''}
             </div>
           ` : ''}
           ${school?.motto ? `
@@ -383,11 +390,11 @@ function generateProfessionalHeaderHTML(
       </div>
       <div style="height: 1px; background: ${dividerGradient}; margin-top: 0.35cm; margin-bottom: 0.12cm; -webkit-print-color-adjust: exact; print-color-adjust: exact;"></div>
       <div style="text-align: center; margin-bottom: 0.15cm;">
-        <div style="display: inline-block; padding: 5px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+        <div style="display: inline-block; padding: 5px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: ${chipText}; background: ${chipBg}; border: 1px solid ${chipBorder}; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
           ${reportTitle}
         </div>
         ${(examSet?.name || examSet?.year) ? `
-          <div style="font-size: 8pt; font-family: Arial, Helvetica, sans-serif; color: #64748b; margin-top: 0.2cm; font-weight: 400;">
+          <div style="font-size: 8pt; font-family: Arial, Helvetica, sans-serif; color: ${metaLine}; margin-top: 0.2cm; font-weight: 400;">
             ${examSet?.name || 'Term Report'} - ${examSet?.year || new Date().getFullYear()}
           </div>
         ` : ''}

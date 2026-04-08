@@ -7,6 +7,8 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 import { createClient } from '@supabase/supabase-js';
+import { REPORT_HEADER_DEFAULTS } from '../../src/lib/reportHeaderBrandingDefaults';
+import { lightenColor } from '../../src/components/reports/templates/helpers';
 
 type Req = { method?: string; body?: Record<string, unknown> };
 type Res = {
@@ -38,6 +40,41 @@ function escapeHtmlText(raw: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
+/** Allow only #rgb / #rrggbb / #rrggbbaa for CSS injection safety */
+function pdfSafeHexColor(raw: unknown, fallback: string): string {
+  const t = raw == null ? '' : String(raw).trim();
+  if (/^#[0-9A-Fa-f]{3}$/.test(t) || /^#[0-9A-Fa-f]{6}$/.test(t) || /^#[0-9A-Fa-f]{8}$/.test(t)) {
+    return t;
+  }
+  const f = String(fallback).trim();
+  return /^#[0-9A-Fa-f]{3}$/.test(f) || /^#[0-9A-Fa-f]{6}$/.test(f) ? f : '#000000';
+}
+
+/**
+ * CSS variables for primary report headers — matches on-screen Lower Section (`Template3KyoteraReport`) branding.
+ */
+function pdfPrimaryHeaderRootVars(school: Record<string, unknown> | undefined | null): string {
+  const s = (school || {}) as Record<string, unknown>;
+  const H = REPORT_HEADER_DEFAULTS;
+  const pick = (val: unknown, def: string) => pdfSafeHexColor(val, def);
+  const divider = pick(s.header_divider_color, H.divider);
+  const divClean = divider.replace(/\s/g, '') || String(H.divider).replace(/\s/g, '');
+  const divMid = lightenColor(divClean);
+  return `:root {
+  --pdf-hdr-name: ${pick(s.header_school_name_color, H.schoolName)};
+  --pdf-hdr-subtitle: ${pick(s.header_subtitle_color, H.subtitle)};
+  --pdf-hdr-address: ${pick(s.header_address_color, H.address)};
+  --pdf-hdr-contact: ${pick(s.header_contact_color, H.contact)};
+  --pdf-hdr-motto: ${pick(s.header_motto_color, H.motto)};
+  --pdf-hdr-divider: ${divider};
+  --pdf-hdr-divider-mid: ${divMid};
+  --pdf-hdr-chip-text: ${pick(s.header_chip_text_color, H.chipText)};
+  --pdf-hdr-chip-bg: ${pick(s.header_chip_background_color, H.chipBackground)};
+  --pdf-hdr-chip-border: ${pick(s.header_chip_border_color, H.chipBorder)};
+  --pdf-hdr-meta: ${pick(s.header_meta_line_color, H.metaLine)};
+}`;
+}
+
 /** Report average as a whole number (matches on-screen reports). */
 function formatAverageForPdf(raw: unknown): string {
   if (raw === null || raw === undefined || raw === '') return '—';
@@ -58,7 +95,8 @@ function schoolContactBlockHtml(school: Record<string, unknown> | undefined | nu
   if (!email && !phone) return '';
   const e = email ? escapeHtmlText(email) : '';
   const p = phone ? escapeHtmlText(phone) : '';
-  const sep = email && phone ? '<span style="margin:0 8px;color:#64748b">|</span>' : '';
+  const sepColor = pdfSafeHexColor(s.header_contact_separator_color, REPORT_HEADER_DEFAULTS.contactSeparator);
+  const sep = email && phone ? `<span style="margin:0 8px;color:${sepColor}">|</span>` : '';
   return `<div class="school-contact">${e}${sep}${p}</div>`;
 }
 
@@ -346,6 +384,8 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     '';
   const hasPhoto = typeof photoUrl === 'string' && photoUrl.trim().length > 0;
 
+  const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -353,6 +393,7 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
   <title>Student Report - Upper Section</title>
   <style>
     @page { size: A4; margin: 0; }
+    ${pdfHdrRoot}
     * { box-sizing: border-box; }
     /* No height:100% — merged class PDFs paginate incorrectly in Chromium. */
     html, body { margin: 0; padding: 0; }
@@ -362,15 +403,15 @@ function buildTemplate4UpperSectionHTML(reportData: any): string {
     .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .school-center { flex: 1; text-align: center; margin-left: 12px; }
-    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
-    .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 2px; }
-    .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: #2563eb; }
-    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 3mm 0 3mm; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: var(--pdf-hdr-subtitle); margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 3mm 0 3mm; }
     .badge-wrap { text-align: center; margin-bottom: 3mm; }
-    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
-    .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7.4pt; color: var(--pdf-hdr-meta); margin-top: 2px; }
     .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
     .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
     .student-grid strong { color: #1e3a8a; }
@@ -655,6 +696,8 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   const endTh = showEndOfTermColumn ? '<th class="tc">END OF TERM</th>' : '';
   const emptyRow = `<tr><td colspan="${colspan}" class="tc">No subject results.</td></tr>`;
 
+  const pdfHdrRoot = pdfPrimaryHeaderRootVars(school as Record<string, unknown>);
+
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -662,6 +705,7 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
   <title>Student Report - Lower Section</title>
   <style>
     @page { size: A4; margin: 0; }
+    ${pdfHdrRoot}
     * { box-sizing: border-box; }
     /* Match Upper Section PDF spacing; no html/body height — breaks merged class pagination in Chromium. */
     html, body { margin: 0; padding: 0; }
@@ -671,15 +715,15 @@ function buildTemplate3LowerSectionHTML(reportData: any): string {
     .logo-cell { width: 132px; height: 132px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; background: #f8fafc; }
     .logo-cell img { max-width: 100%; max-height: 100%; object-fit: contain; }
     .school-center { flex: 1; text-align: center; margin-left: 12px; }
-    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; margin-bottom: 3px; }
-    .school-subtitle { font-size: 11pt; color: #3b82f6; margin-bottom: 2px; }
-    .school-address { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-contact { font-size: 11pt; font-weight: 600; color: #1e40af; margin-bottom: 2px; }
-    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: #2563eb; }
-    .divider { height: 1px; background: linear-gradient(to right, #1e3a8a, #60a5fa 50%, #1e3a8a); margin: 3mm 0 3mm; }
+    .school-name { font-size: 20pt; font-weight: 700; font-family: Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.04em; color: var(--pdf-hdr-name); margin-bottom: 3px; }
+    .school-subtitle { font-size: 11pt; color: var(--pdf-hdr-subtitle); margin-bottom: 2px; }
+    .school-address { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-address); margin-bottom: 2px; }
+    .school-contact { font-size: 11pt; font-weight: 600; color: var(--pdf-hdr-contact); margin-bottom: 2px; }
+    .school-motto { font-size: 9.8pt; font-style: italic; font-weight: 600; color: var(--pdf-hdr-motto); }
+    .divider { height: 1px; background: linear-gradient(to right, var(--pdf-hdr-divider) 0%, var(--pdf-hdr-divider-mid) 50%, var(--pdf-hdr-divider) 100%); margin: 3mm 0 3mm; }
     .badge-wrap { text-align: center; margin-bottom: 3mm; }
-    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; }
-    .exam-sub { font-size: 7.4pt; color: #64748b; margin-top: 2px; }
+    .badge { display: inline-block; padding: 6px 18px; border-radius: 16px; font-size: 9pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--pdf-hdr-chip-text); background: var(--pdf-hdr-chip-bg); border: 1px solid var(--pdf-hdr-chip-border); }
+    .exam-sub { font-size: 7.4pt; color: var(--pdf-hdr-meta); margin-top: 2px; }
     .student-block { display: flex; justify-content: space-between; align-items: flex-start; padding: 6px 10px; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 3mm; background: #f8fafc; min-height: 28mm; }
     .student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 10.2pt; }
     .student-grid strong { color: #1e3a8a; }
