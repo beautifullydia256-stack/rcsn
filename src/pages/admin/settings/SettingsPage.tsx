@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import AdminPageWrapper, { adminCardClass } from '@/components/layout/AdminPageWrapper';
+import { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import SettingsSubjectsPerClass from './tabs/SettingsSubjectsPerClass';
 import SettingsTeacherSubjectClass from './tabs/SettingsTeacherSubjectClass';
 import SettingsFinancial from './tabs/SettingsFinancial';
@@ -159,23 +159,7 @@ export default function SettingsPage() {
   const onBackMobile = () => navigate('/dashboard/admin/settings');
 
   return (
-    <AdminPageWrapper
-      eyebrow={isMobileDetail ? undefined : 'School setup'}
-      title={isMobileDetail ? undefined : 'System Settings'}
-      subtitle={isMobileDetail ? undefined : 'Configure school settings'}
-    >
-      {(!isMobileDetail || !section) && (
-        <div className="mb-4 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/admin')}
-            className="ac-glass-btn-secondary min-h-[44px] rounded-xl px-4 py-2 text-sm font-medium ac-text-primary"
-          >
-            Back to Dashboard
-          </button>
-        </div>
-      )}
-
+    <div className="admin-terminal-page">
       <div className="flex min-h-[min(72vh,920px)] flex-col gap-0 md:flex-row md:gap-8 md:items-start">
         <aside
           className={`md:w-[min(100%,340px)] md:shrink-0 md:sticky md:top-4 md:self-start ${
@@ -254,6 +238,6 @@ export default function SettingsPage() {
           </section>
         )}
       </div>
-    </AdminPageWrapper>
+    </div>
   );
 }
