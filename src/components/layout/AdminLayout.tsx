@@ -295,8 +295,18 @@ export default function AdminLayout() {
           display: none;
         }
         @media (max-width: 768px) {
-          .pw-sidebar { transform: translateX(-100%); }
-          .pw-sidebar.pw-sidebar--open { transform: translateX(0); }
+          /* Drawer must scroll as one column; margin-top:auto on the footer breaks scroll height on mobile */
+          .pw-sidebar {
+            transform: translateX(-100%);
+            padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 20px);
+            -webkit-overflow-scrolling: touch;
+          }
+          .pw-sidebar.pw-sidebar--open {
+            transform: translateX(0);
+          }
+          .pw-sidebar-bottom {
+            margin-top: 0;
+          }
         }
         .pw-brand {
           display: flex;
@@ -471,8 +481,8 @@ export default function AdminLayout() {
         .pw-hamburger {
           display: none;
           position: fixed;
-          top: 14px;
-          right: calc(14px + env(safe-area-inset-right, 0px));
+          top: calc(env(safe-area-inset-top, 0px) + 6px);
+          right: calc(10px + env(safe-area-inset-right, 0px));
           left: auto;
           z-index: 300;
           width: 36px; height: 36px;

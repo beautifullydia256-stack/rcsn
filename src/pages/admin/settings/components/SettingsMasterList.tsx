@@ -72,7 +72,7 @@ export default function SettingsMasterList({
   }, [norm, schoolProfile]);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-[calc(var(--pw-botnav-h,64px)+env(safe-area-inset-bottom,0px)+16px)] md:pb-0">
       <div className="relative">
         <Search
           className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 dark:text-slate-500"
