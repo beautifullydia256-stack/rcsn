@@ -5,11 +5,12 @@ import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
-
-function assignmentRoleLabel(role: string | null | undefined): string {
-  if (role === 'co_teacher') return 'Co-teacher';
-  return 'Subject teacher';
-}
+import {
+  assignmentRoleLabel,
+  buildClassTeacherMap,
+  filterAssignmentsBySearch,
+  groupIntoTeacherCards,
+} from '@/lib/teacherAssignmentCardGrouping';
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -23,21 +24,24 @@ async function fetchTeacherSubjectClassData(userId: string): Promise<{
     subject: string;
     assignment_role?: string | null;
   }[];
+  classTeachers: { teacher_id: string; class_name: string | null }[];
 }> {
   const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [] };
-  const [tchsRes, assignRes] = await Promise.all([
+  if (!u?.school_id) return { schoolId: '', teachers: [], assignments: [], classTeachers: [] };
+  const [tchsRes, assignRes, ctRes] = await Promise.all([
     supabase.from('teachers').select('teacher_id,name').eq('school_id', u.school_id).order('name'),
     supabase
       .from('teacher_class_subjects')
       .select('id, teacher_id, class_name, subject, assignment_role')
       .eq('school_id', u.school_id)
       .order('created_at', { ascending: false }),
+    supabase.from('class_teachers').select('teacher_id, class_name').eq('school_id', u.school_id),
   ]);
   return {
     schoolId: u.school_id,
     teachers: tchsRes.data || [],
     assignments: assignRes.data || [],
+    classTeachers: ctRes.data || [],
   };
 }
 
@@ -76,6 +80,7 @@ export default function SettingsTeacherSubjectClass({
 
   const schoolId = data?.schoolId ?? null;
   const teachers = data?.teachers ?? [];
+  const classTeacherMap = useMemo(() => buildClassTeacherMap(data?.classTeachers ?? []), [data?.classTeachers]);
   const [assignments, setAssignments] = useState<
     {
       id: string;
@@ -105,19 +110,15 @@ export default function SettingsTeacherSubjectClass({
     return m;
   }, [teachers]);
 
-  const filteredAssignments = useMemo(() => {
-    const t = assignmentsQuery.trim().toLowerCase();
-    if (!t) return assignments;
-    return assignments.filter((a) => {
-      const teacherName = teacherNameById[a.teacher_id] || '';
-      return (
-        teacherName.toLowerCase().includes(t) ||
-        (a.class_name || '').toLowerCase().includes(t) ||
-        (a.subject || '').toLowerCase().includes(t) ||
-        assignmentRoleLabel(a.assignment_role).toLowerCase().includes(t)
-      );
-    });
-  }, [assignments, assignmentsQuery, teacherNameById]);
+  const filteredAssignments = useMemo(
+    () => filterAssignmentsBySearch(assignments, assignmentsQuery, teacherNameById, classTeacherMap),
+    [assignments, assignmentsQuery, teacherNameById, classTeacherMap],
+  );
+
+  const groupedTeachers = useMemo(
+    () => groupIntoTeacherCards(filteredAssignments, teacherNameById, classTeacherMap),
+    [filteredAssignments, teacherNameById, classTeacherMap],
+  );
 
   const assign = async () => {
     setError(null);
@@ -302,75 +303,95 @@ export default function SettingsTeacherSubjectClass({
 
       <div className="ac-glass-card overflow-hidden rounded-xl border border-[var(--ac-border)]">
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:p-5 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
               <div
                 key={`sk-${i}`}
-                className="flex min-h-[160px] flex-col rounded-xl border border-[var(--ac-border)] p-3 sm:p-4"
+                className="flex min-h-[180px] flex-col rounded-2xl border border-[var(--ac-border)] p-4"
               >
-                <div className="mb-3 h-3 w-20 rounded ac-skeleton-block animate-pulse" />
-                <div className="mb-2 h-4 w-full rounded ac-skeleton-block animate-pulse" />
-                <div className="mt-auto space-y-2">
-                  <div className="h-3 w-full rounded ac-skeleton-block animate-pulse" />
-                  <div className="h-3 w-4/5 rounded ac-skeleton-block animate-pulse" />
+                <div className="mb-3 h-4 w-32 rounded ac-skeleton-block animate-pulse" />
+                <div className="mb-2 h-3 w-24 rounded ac-skeleton-block animate-pulse" />
+                <div className="mt-4 space-y-3">
+                  <div className="h-16 w-full rounded-lg ac-skeleton-block animate-pulse" />
+                  <div className="h-16 w-full rounded-lg ac-skeleton-block animate-pulse" />
                 </div>
               </div>
             ))}
           </div>
         ) : assignments.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm ac-text-muted">No assignments yet.</div>
-        ) : filteredAssignments.length === 0 ? (
+        ) : groupedTeachers.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm ac-text-muted">No matches for your search.</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-5 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-            {filteredAssignments.map((a) => {
-              const teacherName = teacherNameById[a.teacher_id] || a.teacher_id;
-              const role = assignmentRoleLabel(a.assignment_role);
-              return (
-                <article
-                  key={a.id}
-                  className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--ac-border)] bg-white/[0.03] shadow-sm transition-shadow hover:shadow-md dark:bg-white/[0.04]"
-                >
-                  <div className="border-b border-[var(--ac-border)] px-3 py-3 sm:px-4">
-                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider ac-text-muted">Teacher</p>
-                    <p className="text-[15px] font-semibold leading-snug tracking-tight ac-text-primary line-clamp-2">
-                      {teacherName}
-                    </p>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-2.5 px-3 py-3 text-sm sm:px-4 sm:py-4">
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Class</span>
-                      <span className="font-medium ac-text-secondary break-words">{a.class_name || '—'}</span>
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:gap-5 sm:p-5 md:grid-cols-2">
+            {groupedTeachers.map((card) => (
+              <article
+                key={card.teacherId}
+                className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-[var(--ac-border)] bg-white/[0.03] shadow-md shadow-black/5 transition-shadow hover:shadow-lg dark:bg-white/[0.04]"
+              >
+                <header className="border-b border-[var(--ac-border)] bg-[var(--pw-s2)]/50 px-4 py-4 dark:bg-white/[0.03]">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider ac-text-muted">Teacher</p>
+                  <h3 className="mt-1 text-lg font-bold leading-snug tracking-tight ac-text-primary">{card.teacherName}</h3>
+                  {card.classTeacherOf.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider ac-text-muted">Class teacher</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {card.classTeacherOf.map((c) => (
+                          <span
+                            key={c}
+                            className="inline-flex rounded-full border border-sky-400/40 bg-sky-500/15 px-3 py-1 text-xs font-semibold text-sky-800 dark:text-sky-200"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Subject</span>
-                      <span className="font-medium ac-text-secondary break-words">{a.subject || '—'}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Role</span>
-                      <span
-                        className={
-                          a.assignment_role === 'co_teacher'
-                            ? 'inline-flex w-fit max-w-full rounded-md border border-amber-400/35 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-200'
-                            : 'inline-flex w-fit max-w-full rounded-md border border-emerald-400/35 bg-emerald-600/15 px-2 py-0.5 text-xs font-semibold text-emerald-200'
-                        }
-                      >
-                        {role}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-auto border-t border-[var(--ac-border)] px-3 py-2.5 sm:px-4">
-                    <button
-                      type="button"
-                      className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-3 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
-                      onClick={() => remove(a.id)}
-                    >
-                      Remove assignment
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+                  ) : null}
+                </header>
+                <div className="flex flex-1 flex-col gap-6 p-4">
+                  {card.byClass.map(({ className, rows }) => (
+                    <section key={`${card.teacherId}-${className}`}>
+                      <h4 className="mb-3 border-l-2 border-emerald-500/70 pl-3 text-sm font-bold uppercase tracking-wide ac-text-primary">
+                        {className}
+                      </h4>
+                      <ul className="space-y-2">
+                        {rows.map((a) => {
+                          const role = assignmentRoleLabel(a.assignment_role);
+                          return (
+                            <li
+                              key={a.id}
+                              className="rounded-xl border border-[var(--ac-border)] bg-white/[0.02] p-3 dark:bg-white/[0.02]"
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[15px] font-semibold leading-snug ac-text-primary">{a.subject}</p>
+                                  <p
+                                    className={
+                                      a.assignment_role === 'co_teacher'
+                                        ? 'mt-1 text-xs font-medium text-amber-700 dark:text-amber-300'
+                                        : 'mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300'
+                                    }
+                                  >
+                                    {role}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="shrink-0 rounded-xl bg-rose-600/90 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 sm:min-w-[7rem]"
+                                  onClick={() => remove(a.id)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </div>

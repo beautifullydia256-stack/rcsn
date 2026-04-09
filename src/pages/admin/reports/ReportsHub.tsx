@@ -7,15 +7,17 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 const STALE_TIME_MS = 5 * 60 * 1000;
 
 export async function fetchReportStats(userId: string): Promise<{ today: number; term: number; pending: number }> {
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return { today: 0, term: 0, pending: 0 };
+  const zeros = { today: 0, term: 0, pending: 0 };
+  const { data: u, error: uErr } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (uErr || !u?.school_id) return zeros;
 
-  const { data: snapshotIds } = await supabase
+  const { data: snapshotIds, error: snapErr } = await supabase
     .from('report_snapshots')
     .select('id')
     .eq('school_id', u.school_id);
+  if (snapErr) return zeros;
   const ids = (snapshotIds || []).map((s: { id: string }) => s.id);
-  if (ids.length === 0) return { today: 0, term: 0, pending: 0 };
+  if (ids.length === 0) return zeros;
 
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -32,11 +34,13 @@ export async function fetchReportStats(userId: string): Promise<{ today: number;
     .select('*', { count: 'exact', head: true })
     .in('snapshot_id', ids);
 
-  const { data: pendingSnapshots } = await supabase
+  const { data: pendingSnapshots, error: pendErr } = await supabase
     .from('report_snapshots')
     .select('id')
     .eq('school_id', u.school_id)
     .in('status', ['draft', 'locked']);
+
+  if (pendErr) return { today: today ?? 0, term: term ?? 0, pending: 0 };
 
   return {
     today: today ?? 0,

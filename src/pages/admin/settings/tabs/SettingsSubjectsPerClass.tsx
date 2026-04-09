@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
@@ -6,6 +6,8 @@ import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClass
 import {
   canRemoveClassSubjectRow,
   classSubjectBadge,
+  enrichClassSubjectsWithUaceCatalog,
+  isUacePrincipalCatalogSubject,
   type ClassSubjectRow,
 } from '@/lib/classSubjectRowGuards';
 import SectionHeader from './SectionHeader';
@@ -31,7 +33,7 @@ function SubjectRowsTable({
     <>
       <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
         {rows.map((row) => {
-          const badge = classSubjectBadge(row);
+          const badge = classSubjectBadge(row, selectedClass);
           const rem = canRemoveClassSubjectRow(selectedClass, row);
           return (
             <li key={row.subject} className="px-3 py-3.5">
@@ -72,7 +74,7 @@ function SubjectRowsTable({
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
             {rows.map((row) => {
-              const badge = classSubjectBadge(row);
+              const badge = classSubjectBadge(row, selectedClass);
               const rem = canRemoveClassSubjectRow(selectedClass, row);
               return (
                 <tr key={row.subject} className="border-t border-slate-200/25 dark:border-white/10">
@@ -164,6 +166,59 @@ function OLevelSubjectSplitTables({
   );
 }
 
+function ALevelSubjectSplitTables({
+  selectedClass,
+  subjectRows,
+  onRemove,
+}: {
+  selectedClass: string;
+  subjectRows: ClassSubjectRow[];
+  onRemove: (row: ClassSubjectRow) => void;
+}) {
+  const principal = subjectRows.filter((r) => r.uace_catalog_type === 'principal');
+  const subsidiary = subjectRows.filter((r) => r.uace_catalog_type === 'subsidiary');
+  const other = subjectRows.filter(
+    (r) => r.uace_catalog_type !== 'principal' && r.uace_catalog_type !== 'subsidiary',
+  );
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
+          <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal subjects</div>
+            <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+              UACE principal pool — schools may add or remove principals (must match national catalog names). Learners
+              take up to three.
+            </div>
+          </div>
+          <SubjectRowsTable rows={principal} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+        <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
+          <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
+            <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+              Nationwide UACE subsidiaries — fixed catalog list for this class. Cannot be removed or renamed here.
+            </div>
+          </div>
+          <SubjectRowsTable rows={subsidiary} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+      </div>
+      {other.length > 0 && (
+        <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
+          <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug ac-text-primary">Unclassified</div>
+            <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+              Not found as principal or subsidiary in the UACE catalog — check spelling or remove.
+            </div>
+          </div>
+          <SubjectRowsTable rows={other} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AllSubjectsTableCard({
   title,
   selectedClass,
@@ -220,6 +275,24 @@ export default function SettingsSubjectsPerClass({
     staleTime: STALE_TIME_MS,
   });
 
+  const { data: uaceCatalog = [] } = useQuery({
+    queryKey: ['public', 'uace_subject_catalog'],
+    queryFn: async () => {
+      const { data, error: qErr } = await supabase
+        .from('uace_subject_catalog')
+        .select('subject_name, subject_type')
+        .order('subject_name');
+      if (qErr) throw qErr;
+      return data || [];
+    },
+    staleTime: STALE_TIME_MS,
+  });
+
+  const displayRows = useMemo(
+    () => enrichClassSubjectsWithUaceCatalog(subjectRows, selectedClass, uaceCatalog),
+    [subjectRows, selectedClass, uaceCatalog],
+  );
+
   const loading = isLoading;
 
   const addSubject = async () => {
@@ -228,6 +301,12 @@ export default function SettingsSubjectsPerClass({
     const s = newSubject.trim();
     if (!s) return;
     if (subjectRows.some((r) => r.subject === s)) return;
+    if (isALevelClass(selectedClass) && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
+      setError(
+        'Senior 5–6: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.',
+      );
+      return;
+    }
     setSaving(true);
     const payload: Record<string, unknown> = { school_id: schoolId, class_name: selectedClass, subject: s };
     if (isOLevelClass(selectedClass)) {
@@ -266,7 +345,7 @@ export default function SettingsSubjectsPerClass({
       <SectionHeader
         embedded={embedded}
         title="Subjects per Class"
-        desc="Senior 1–4: default nationwide compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: UACE subsidiaries are fixed."
+        desc="Senior 1–4: default compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: principals vs subsidiaries mirror O-Level layout; only principals can be added; subsidiaries are catalog-fixed."
       />
       <div className={`${settingsInsetSurface} space-y-4 p-3 sm:p-5`}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
@@ -285,7 +364,11 @@ export default function SettingsSubjectsPerClass({
         <input
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
-          placeholder="Add subject (e.g., Mathematics)"
+          placeholder={
+            isALevelClass(selectedClass)
+              ? 'Add principal subject (exact UACE catalog name)'
+              : 'Add subject (e.g., Mathematics)'
+          }
           className="ac-input min-h-[48px] w-full"
         />
         <button
@@ -308,6 +391,12 @@ export default function SettingsSubjectsPerClass({
             <span>Add as compulsory UCE (otherwise subsidiary)</span>
           </label>
         )}
+        {isALevelClass(selectedClass) && (
+          <p className="text-xs leading-relaxed ac-text-secondary sm:col-span-2 lg:col-span-3">
+            Senior 5–6: new rows must be UACE <strong className="font-medium ac-text-primary">principal</strong> catalog
+            subjects only. Subsidiaries are seeded from the national list and cannot be added here.
+          </p>
+        )}
       </div>
       <div>
         {error && (
@@ -327,6 +416,12 @@ export default function SettingsSubjectsPerClass({
           <OLevelSubjectSplitTables
             selectedClass={selectedClass}
             subjectRows={subjectRows}
+            onRemove={removeSubject}
+          />
+        ) : isALevelClass(selectedClass) ? (
+          <ALevelSubjectSplitTables
+            selectedClass={selectedClass}
+            subjectRows={displayRows}
             onRemove={removeSubject}
           />
         ) : (

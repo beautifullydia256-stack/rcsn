@@ -236,6 +236,8 @@ export default function DesignStudentProfile() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const authUserId = useAuthStore((s) => s.user?.id);
+  /** Always set on login in ProtectedRoute; pwezaStore.schoolId is only set for admins (prefetch). */
+  const authSchoolId = useAuthStore((s) => s.schoolId);
   const { student_id: studentIdParam } = useParams<{ student_id: string }>();
   const studentId = Array.isArray(studentIdParam) ? studentIdParam[0] : studentIdParam || '';
 
@@ -373,7 +375,7 @@ export default function DesignStudentProfile() {
         return;
       }
 
-      const schoolId = usePwezaStore.getState().schoolId as string | undefined; // pweza speed system
+      const schoolId = (authSchoolId || usePwezaStore.getState().schoolId || '').trim() || null;
       if (!schoolId) return;
 
       const { data: student, error: stErr } = await supabase
@@ -1107,7 +1109,7 @@ export default function DesignStudentProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, studentId, navigate, reloadToken, editMode]);
+  }, [htmlContent, studentId, navigate, reloadToken, editMode, authSchoolId]);
 
   useEffect(() => {
     const syncLight = () => {

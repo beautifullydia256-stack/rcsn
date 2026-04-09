@@ -8,13 +8,14 @@ import AdminPageWrapper, { adminCardClass } from '../../../components/layout/Adm
 const STALE_TIME_MS = 5 * 60 * 1000;
 
 export async function fetchReportRecords(userId: string): Promise<any[]> {
-  const { data: u } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
-  if (!u?.school_id) return [];
+  const { data: u, error: uErr } = await supabase.from('users').select('school_id').eq('user_id', userId).single();
+  if (uErr || !u?.school_id) return [];
 
-  const { data: snapshots } = await supabase
+  const { data: snapshots, error: snapErr } = await supabase
     .from('report_snapshots')
     .select('id')
     .eq('school_id', u.school_id);
+  if (snapErr) return [];
   const snapshotIds = (snapshots || []).map((s: { id: string }) => s.id);
   if (snapshotIds.length === 0) return [];
 

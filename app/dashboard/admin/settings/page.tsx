@@ -8,15 +8,23 @@ import { downloadTimetablePdf } from "@/lib/timetablePdf";
 import { useRouter } from "next/navigation";
 import LocationSettingsWidget from "../components/LocationSettingsWidget";
 import SettingsUaceClassSubjectPapers from "@/src/components/admin/SettingsUaceClassSubjectPapers";
-import { canRemoveClassSubjectRow, classSubjectBadge, type ClassSubjectRow } from "@/lib/classSubjectRowGuards";
+import {
+  canRemoveClassSubjectRow,
+  classSubjectBadge,
+  enrichClassSubjectsWithUaceCatalog,
+  isUacePrincipalCatalogSubject,
+  type ClassSubjectRow,
+  type UaceCatalogRow,
+} from "@/lib/classSubjectRowGuards";
 import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
 import { REPORT_HEADER_DEFAULTS } from "@/lib/reportHeaderBrandingDefaults";
+import {
+  assignmentRoleLabel,
+  buildClassTeacherMap,
+  filterAssignmentsBySearch,
+  groupIntoTeacherCards,
+} from "@/lib/teacherAssignmentCardGrouping";
 import { Search } from "lucide-react";
-
-function assignmentRoleLabel(role: string | null | undefined): string {
-  if (role === "co_teacher") return "Co-teacher";
-  return "Subject teacher";
-}
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
@@ -197,7 +205,7 @@ function SubjectsPerClassTableRows({
     <>
       <ul className="divide-y divide-white/10 sm:hidden">
         {rows.map((row) => {
-          const badge = classSubjectBadge(row);
+          const badge = classSubjectBadge(row, selectedClass);
           const rem = canRemoveClassSubjectRow(selectedClass, row);
           return (
             <li key={row.subject} className="px-3 py-3.5">
@@ -238,7 +246,7 @@ function SubjectsPerClassTableRows({
           </thead>
           <tbody className="[&>tr:nth-child(even)]:bg-white/5">
             {rows.map((row) => {
-              const badge = classSubjectBadge(row);
+              const badge = classSubjectBadge(row, selectedClass);
               const rem = canRemoveClassSubjectRow(selectedClass, row);
               return (
                 <tr key={row.subject} className="border-t border-white/10">
@@ -324,14 +332,83 @@ function OLevelSubjectsSplitCards({
   );
 }
 
+function ALevelSubjectsSplitCards({
+  selectedClass,
+  subjectRows,
+  onRemove,
+}: {
+  selectedClass: string;
+  subjectRows: ClassSubjectRow[];
+  onRemove: (row: ClassSubjectRow) => void;
+}) {
+  const principal = subjectRows.filter((r) => r.uace_catalog_type === "principal");
+  const subsidiary = subjectRows.filter((r) => r.uace_catalog_type === "subsidiary");
+  const other = subjectRows.filter(
+    (r) => r.uace_catalog_type !== "principal" && r.uace_catalog_type !== "subsidiary",
+  );
+
+  return (
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <div className={subjectsCardShell}>
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Principal subjects</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">
+              UACE principal lines — schools may only add subjects that match the national catalog.
+            </div>
+          </div>
+          <SubjectsPerClassTableRows rows={principal} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+        <div className={subjectsCardShell}>
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Subsidiary subjects</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">
+              Fixed national list — new subsidiary rows cannot be added here.
+            </div>
+          </div>
+          <SubjectsPerClassTableRows rows={subsidiary} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+      </div>
+      {other.length > 0 && (
+        <div className={subjectsCardShell}>
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Unclassified</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">
+              Not tagged as principal or subsidiary in the UACE catalog — check spelling against the catalog.
+            </div>
+          </div>
+          <SubjectsPerClassTableRows rows={other} selectedClass={selectedClass} onRemove={onRemove} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; schoolId: string | null }) {
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [subjectRows, setSubjectRows] = useState<ClassSubjectRow[]>([]);
+  const [uaceCatalog, setUaceCatalog] = useState<UaceCatalogRow[]>([]);
   const [newSubject, setNewSubject] = useState("");
   const [addAsCompulsory, setAddAsCompulsory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadCatalog = async () => {
+      const { data } = await supabase
+        .from('uace_subject_catalog')
+        .select('subject_name, subject_type')
+        .order('subject_name');
+      setUaceCatalog(data || []);
+    };
+    void loadCatalog();
+  }, []);
+
+  const displayRows = useMemo(
+    () => enrichClassSubjectsWithUaceCatalog(subjectRows, selectedClass, uaceCatalog),
+    [subjectRows, selectedClass, uaceCatalog],
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -356,9 +433,14 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
     if (!schoolId || !selectedClass) return;
     const s = newSubject.trim();
     if (!s) return;
-    if (!subjectRows.some((r) => r.subject === s)) {
-      setSubjectRows((prev) => [...prev, { subject: s, uce_offering_type: null, is_non_removable_default: false }]);
+    if (subjectRows.some((r) => r.subject === s)) return;
+    if (isALevelClass(selectedClass) && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
+      setError(
+        "Senior 5–6: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.",
+      );
+      return;
     }
+    setSubjectRows((prev) => [...prev, { subject: s, uce_offering_type: null, is_non_removable_default: false }]);
     setSaving(true);
     const payload: Record<string, unknown> = { school_id: schoolId, class_name: selectedClass, subject: s };
     if (isOLevelClass(selectedClass)) {
@@ -408,7 +490,7 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
     <div>
       <SectionHeader
         title="Subjects per Class"
-        desc="Senior 1–4: nationwide default compulsory subjects cannot be removed; add more compulsory or unlimited subsidiary. Senior 5–6: UACE subsidiaries stay fixed."
+        desc="Senior 1–4: default compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: principals vs subsidiaries mirror O-Level layout; only principals can be added; subsidiaries are catalog-fixed."
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         <select value={selectedClass} onChange={(e)=>setSelectedClass(e.target.value)} className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-500">
@@ -417,13 +499,28 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <input value={newSubject} onChange={(e)=>setNewSubject(e.target.value)} placeholder="Add subject (e.g., Mathematics)" className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60 outline-none focus:ring-2 focus:ring-blue-500" />
+        <input
+          value={newSubject}
+          onChange={(e) => setNewSubject(e.target.value)}
+          placeholder={
+            isALevelClass(selectedClass)
+              ? "Add principal subject (exact UACE catalog name)"
+              : "Add subject (e.g., Mathematics)"
+          }
+          className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60 outline-none focus:ring-2 focus:ring-blue-500"
+        />
         <button disabled={!selectedClass || saving} onClick={addSubject} className="min-h-[48px] w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:col-span-2 lg:col-span-1">{saving? 'Saving...' : 'Add Subject'}</button>
         {isOLevelClass(selectedClass) && (
           <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug text-white/80 sm:col-span-2 lg:col-span-3">
             <input type="checkbox" checked={addAsCompulsory} onChange={(e) => setAddAsCompulsory(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 rounded border-white/30" aria-label="Add as compulsory UCE subject" />
             <span>Add as compulsory UCE (otherwise subsidiary) — default nationwide compulsories are locked.</span>
           </label>
+        )}
+        {isALevelClass(selectedClass) && (
+          <p className="text-xs leading-relaxed text-white/65 sm:col-span-2 lg:col-span-3">
+            Senior 5–6: new rows must be UACE <span className="font-medium text-white/85">principal</span> catalog subjects only. Subsidiaries
+            are seeded from the national list and cannot be added here.
+          </p>
         )}
       </div>
       <div className="mt-4">
@@ -436,13 +533,15 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
           <div className="text-white/80 text-sm">No subjects yet for {selectedClass}. Add one above.</div>
         ) : isOLevelClass(selectedClass) ? (
           <OLevelSubjectsSplitCards selectedClass={selectedClass} subjectRows={subjectRows} onRemove={removeSubject} />
+        ) : isALevelClass(selectedClass) ? (
+          <ALevelSubjectsSplitCards selectedClass={selectedClass} subjectRows={displayRows} onRemove={removeSubject} />
         ) : (
           <div className={subjectsCardShell}>
             <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
               <div className="text-[15px] font-semibold leading-snug text-white">Subjects for this class</div>
               <div className="mt-1 text-xs leading-relaxed text-white/65">{selectedClass}</div>
             </div>
-            <SubjectsPerClassTableRows rows={subjectRows} selectedClass={selectedClass} onRemove={removeSubject} />
+            <SubjectsPerClassTableRows rows={displayRows} selectedClass={selectedClass} onRemove={removeSubject} />
           </div>
         )}
       </div>
@@ -469,6 +568,7 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
   const [assignments, setAssignments] = useState<
     { id: string; teacher_id: string; class_name: string; subject: string; assignment_role?: string | null }[]
   >([]);
+  const [classTeachers, setClassTeachers] = useState<{ teacher_id: string; class_name: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -499,14 +599,22 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
 
   useEffect(() => {
     const loadAssignments = async () => {
-      if (!schoolId) { setAssignments([]); return; }
+      if (!schoolId) {
+        setAssignments([]);
+        setClassTeachers([]);
+        return;
+      }
       setLoading(true);
-      const { data } = await supabase
-        .from('teacher_class_subjects')
-        .select('id, teacher_id, class_name, subject, assignment_role')
-        .eq('school_id', schoolId)
-        .order('created_at', { ascending: false });
-      setAssignments((data || []) as typeof assignments);
+      const [aRes, ctRes] = await Promise.all([
+        supabase
+          .from("teacher_class_subjects")
+          .select("id, teacher_id, class_name, subject, assignment_role")
+          .eq("school_id", schoolId)
+          .order("created_at", { ascending: false }),
+        supabase.from("class_teachers").select("teacher_id, class_name").eq("school_id", schoolId),
+      ]);
+      setAssignments((aRes.data || []) as typeof assignments);
+      setClassTeachers(ctRes.data || []);
       setLoading(false);
     };
     loadAssignments();
@@ -518,19 +626,17 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
     return m;
   }, [teachers]);
 
-  const filteredAssignments = useMemo(() => {
-    const t = assignmentsQuery.trim().toLowerCase();
-    if (!t) return assignments;
-    return assignments.filter((a) => {
-      const teacherName = teacherNameById[a.teacher_id] || "";
-      return (
-        teacherName.toLowerCase().includes(t) ||
-        (a.class_name || "").toLowerCase().includes(t) ||
-        (a.subject || "").toLowerCase().includes(t) ||
-        assignmentRoleLabel(a.assignment_role).toLowerCase().includes(t)
-      );
-    });
-  }, [assignments, assignmentsQuery, teacherNameById]);
+  const classTeacherMap = useMemo(() => buildClassTeacherMap(classTeachers), [classTeachers]);
+
+  const filteredAssignments = useMemo(
+    () => filterAssignmentsBySearch(assignments, assignmentsQuery, teacherNameById, classTeacherMap),
+    [assignments, assignmentsQuery, teacherNameById, classTeacherMap],
+  );
+
+  const groupedTeachers = useMemo(
+    () => groupIntoTeacherCards(filteredAssignments, teacherNameById, classTeacherMap),
+    [filteredAssignments, teacherNameById, classTeacherMap],
+  );
 
   const assign = async () => {
     setError(null);
@@ -681,72 +787,92 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
         className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md"
       >
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={`tsk-${i}`} className="flex min-h-[160px] flex-col rounded-xl border border-white/10 p-3 sm:p-4">
-                <div className="mb-3 h-3 w-20 animate-pulse rounded bg-white/10" />
-                <div className="mb-2 h-4 w-full animate-pulse rounded bg-white/10" />
-                <div className="mt-auto space-y-2">
-                  <div className="h-3 w-full animate-pulse rounded bg-white/10" />
-                  <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:p-5 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={`tsk-${i}`} className="flex min-h-[180px] flex-col rounded-2xl border border-white/10 p-4">
+                <div className="mb-3 h-4 w-32 animate-pulse rounded bg-white/10" />
+                <div className="mb-2 h-3 w-24 animate-pulse rounded bg-white/10" />
+                <div className="mt-4 space-y-3">
+                  <div className="h-16 w-full animate-pulse rounded-lg bg-white/10" />
+                  <div className="h-16 w-full animate-pulse rounded-lg bg-white/10" />
                 </div>
               </div>
             ))}
           </div>
         ) : assignments.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-white/70">No assignments yet.</div>
-        ) : filteredAssignments.length === 0 ? (
+        ) : groupedTeachers.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-white/70">No matches for your search.</div>
         ) : (
-          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-5 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-            {filteredAssignments.map((a) => {
-              const teacherName = teacherNameById[a.teacher_id] || a.teacher_id;
-              const role = assignmentRoleLabel(a.assignment_role);
-              return (
-                <article
-                  key={a.id}
-                  className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.06] shadow-sm transition-shadow hover:shadow-md"
-                >
-                  <div className="border-b border-white/10 px-3 py-3 sm:px-4">
-                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-white/55">Teacher</p>
-                    <p className="text-[15px] font-semibold leading-snug tracking-tight text-white line-clamp-2">
-                      {teacherName}
-                    </p>
-                  </div>
-                  <div className="flex flex-1 flex-col gap-2.5 px-3 py-3 text-sm sm:px-4 sm:py-4">
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Class</span>
-                      <span className="font-medium break-words text-white/90">{a.class_name || "—"}</span>
+          <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-3 sm:gap-5 sm:p-5 md:grid-cols-2">
+            {groupedTeachers.map((card) => (
+              <article
+                key={card.teacherId}
+                className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-white/10 bg-white/[0.07] shadow-lg shadow-black/20 transition-shadow hover:shadow-xl"
+              >
+                <header className="border-b border-white/10 bg-white/[0.04] px-4 py-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">Teacher</p>
+                  <h3 className="mt-1 text-lg font-bold leading-snug tracking-tight text-white">{card.teacherName}</h3>
+                  {card.classTeacherOf.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-white/55">Class teacher</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {card.classTeacherOf.map((c) => (
+                          <span
+                            key={c}
+                            className="inline-flex rounded-full border border-sky-400/45 bg-sky-500/25 px-3 py-1 text-xs font-semibold text-sky-100"
+                          >
+                            {c}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Subject</span>
-                      <span className="font-medium break-words text-white/90">{a.subject || "—"}</span>
-                    </div>
-                    <div className="grid grid-cols-1 gap-0.5">
-                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Role</span>
-                      <span
-                        className={
-                          a.assignment_role === "co_teacher"
-                            ? "inline-flex w-fit max-w-full rounded-md border border-amber-400/40 bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-100"
-                            : "inline-flex w-fit max-w-full rounded-md border border-emerald-400/40 bg-emerald-600/25 px-2 py-0.5 text-xs font-semibold text-emerald-100"
-                        }
-                      >
-                        {role}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-auto border-t border-white/10 px-3 py-2.5 sm:px-4">
-                    <button
-                      type="button"
-                      className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-3 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
-                      onClick={() => remove(a.id)}
-                    >
-                      Remove assignment
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+                  ) : null}
+                </header>
+                <div className="flex flex-1 flex-col gap-6 p-4">
+                  {card.byClass.map(({ className, rows }) => (
+                    <section key={`${card.teacherId}-${className}`}>
+                      <h4 className="mb-3 border-l-2 border-emerald-400/80 pl-3 text-sm font-bold uppercase tracking-wide text-white">
+                        {className}
+                      </h4>
+                      <ul className="space-y-2">
+                        {rows.map((a) => {
+                          const role = assignmentRoleLabel(a.assignment_role);
+                          return (
+                            <li
+                              key={a.id}
+                              className="rounded-xl border border-white/10 bg-white/[0.04] p-3"
+                            >
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[15px] font-semibold leading-snug text-white">{a.subject}</p>
+                                  <p
+                                    className={
+                                      a.assignment_role === "co_teacher"
+                                        ? "mt-1 text-xs font-medium text-amber-200/95"
+                                        : "mt-1 text-xs font-medium text-emerald-200/95"
+                                    }
+                                  >
+                                    {role}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="shrink-0 rounded-xl bg-rose-600/90 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 sm:min-w-[7rem]"
+                                  onClick={() => remove(a.id)}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </motion.div>
