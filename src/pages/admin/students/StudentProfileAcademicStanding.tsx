@@ -24,6 +24,12 @@ export type StudentProfileAcademicStandingProps = {
   onChanged: () => void;
 };
 
+/** Table list card: same border/surface as settings, without an extra drop shadow (profile shell already frames the block). */
+const standingTableShell = `${settingsInsetSurface} flex min-h-0 flex-col overflow-hidden`;
+/** Add-subject controls sit below the inset table, outside the bordered “Subjects” box. */
+const standingAddToolbar =
+  'rounded-xl border border-slate-200/40 bg-slate-50/95 px-3 py-3 dark:border-white/[0.14] dark:bg-[#1c2431] sm:px-4 sm:py-3.5';
+
 function normalizeClassSubjectRows(
   rows: { subject?: string; uce_offering_type?: string | null }[],
 ): { subject: string; uce_offering_type: string | null }[] {
@@ -234,7 +240,7 @@ export default function StudentProfileAcademicStanding({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 lg:items-stretch">
-          <div className={`${settingsInsetSurface} flex min-h-0 flex-col overflow-hidden shadow-lg shadow-black/10`}>
+          <div className={standingTableShell}>
             <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
               <div className="text-[15px] font-semibold leading-snug ac-text-primary">Compulsory subjects</div>
               <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
@@ -249,30 +255,38 @@ export default function StudentProfileAcademicStanding({
                   {compulsorySorted.map((sub) => (
                     <li key={sub} className="px-3 py-3.5">
                       <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{sub}</div>
-                      <div className="mt-2 text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">COMPULSORY locked</div>
+                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                        COMPULSORY · LOCKED
+                      </div>
                     </li>
                   ))}
                 </ul>
                 <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
-                  <table className="min-w-full text-sm">
+                  <table className="min-w-full text-sm table-fixed">
+                    <colgroup>
+                      <col className="min-w-0 sm:w-[46%]" />
+                      <col className="min-w-0 sm:w-[36%]" />
+                      <col className="w-[6.5rem]" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
                         <th className="px-4 py-2 ac-text-secondary">Subject</th>
                         <th className="px-4 py-2 ac-text-secondary">Notes</th>
-                        <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
+                        <th className="px-4 py-2 ac-text-secondary">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
                       {compulsorySorted.map((sub) => (
                         <tr key={sub} className="border-t border-slate-200/25 dark:border-white/10">
-                          <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
+                          <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">
                             {sub}
                           </td>
-                          <td className="px-4 py-2.5">
-                            <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">COMPULSORY</span>
-                            <span className="ml-2 text-xs text-[var(--pw-muted)]">locked</span>
+                          <td className="px-4 py-2.5 align-top whitespace-normal">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                              COMPULSORY · LOCKED
+                            </span>
                           </td>
-                          <td className="px-4 py-2.5">
+                          <td className="px-4 py-2.5 align-top whitespace-nowrap">
                             <span className="text-xs text-[var(--pw-muted)]">—</span>
                           </td>
                         </tr>
@@ -284,83 +298,95 @@ export default function StudentProfileAcademicStanding({
             )}
           </div>
 
-          <div className={`${settingsInsetSurface} flex min-h-0 flex-col overflow-hidden shadow-lg shadow-black/10`}>
-            <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
-              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                Optional pool — learners choose from this list (rules apply in Senior 3–4).
+          <div className="flex min-h-0 flex-col gap-3">
+            <div className={standingTableShell}>
+              <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+                <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
+                <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+                  Optional pool — learners choose from this list (rules apply in Senior 3–4).
+                </div>
+              </div>
+
+              <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
+                {pickedSubs.length === 0 ? (
+                  <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
+                    No subsidiaries on profile yet (up to 3).
+                  </li>
+                ) : (
+                  pickedSubs.map((sub) => (
+                    <li key={sub} className="px-3 py-3.5">
+                      <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{sub}</div>
+                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                        SUBSIDIARY · LEARNER CHOICE
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void removeOlevelSubsidiary(sub)}
+                        className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+
+              <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
+                <table className="min-w-full text-sm table-fixed">
+                  <colgroup>
+                    <col className="min-w-0 sm:w-[46%]" />
+                    <col className="min-w-0 sm:w-[36%]" />
+                    <col className="w-[6.5rem]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
+                      <th className="px-4 py-2 ac-text-secondary">Subject</th>
+                      <th className="px-4 py-2 ac-text-secondary">Notes</th>
+                      <th className="px-4 py-2 ac-text-secondary">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
+                    {pickedSubs.map((sub) => (
+                      <tr key={sub} className="border-t border-slate-200/25 dark:border-white/10">
+                        <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">
+                          {sub}
+                        </td>
+                        <td className="px-4 py-2.5 align-top whitespace-normal">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                            SUBSIDIARY · LEARNER CHOICE
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 align-top whitespace-nowrap">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void removeOlevelSubsidiary(sub)}
+                            className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {pickedSubs.length === 0 ? (
+                      <tr className="border-t border-slate-200/25 dark:border-white/10">
+                        <td colSpan={3} className="px-4 py-6 text-center text-sm ac-text-secondary">
+                          No subsidiaries on profile yet — use <strong className="font-medium ac-text-primary">Add subsidiary</strong> below (up
+                          to 3).
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
-              {pickedSubs.length === 0 ? (
-                <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
-                  No subsidiaries on profile yet — add below (up to 3).
-                </li>
-              ) : (
-                pickedSubs.map((sub) => (
-                  <li key={sub} className="px-3 py-3.5">
-                    <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{sub}</div>
-                    <div className="mt-2 text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">SUBSIDIARY</div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void removeOlevelSubsidiary(sub)}
-                      className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-
-            <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
-                    <th className="px-4 py-2 ac-text-secondary">Subject</th>
-                    <th className="px-4 py-2 ac-text-secondary">Notes</th>
-                    <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
-                  {pickedSubs.map((sub) => (
-                    <tr key={sub} className="border-t border-slate-200/25 dark:border-white/10">
-                      <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
-                        {sub}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">SUBSIDIARY</span>
-                        <span className="ml-2 text-xs text-[var(--pw-muted)]">learner choice</span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void removeOlevelSubsidiary(sub)}
-                          className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {pickedSubs.length === 0 ? (
-                    <tr className="border-t border-slate-200/25 dark:border-white/10">
-                      <td colSpan={3} className="px-4 py-6 text-center text-sm ac-text-secondary">
-                        No subsidiaries on profile yet — use the row below to add (up to 3).
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="shrink-0 border-t border-slate-200/30 p-3 dark:border-white/10 sm:p-4">
+            <div className={standingAddToolbar}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">Add subsidiary</div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1">
-                  <label className="mb-1 block text-xs font-medium ac-text-muted">Add subsidiary from class list</label>
+                  <label className="mb-1 block text-xs font-medium ac-text-muted">Pick from this class list</label>
                   <select
                     value={olevelPick}
                     disabled={!canAddMore || busy}
@@ -452,10 +478,6 @@ export default function StudentProfileAcademicStanding({
         ? `Still needed: ${uaceParts.join(' · ')}.`
         : 'Add principals and one elective subsidiary.';
 
-    const gpNotes = hasGP
-      ? 'AUTOMATIC locked'
-      : 'AUTOMATIC pending';
-
     return (
       <div className="space-y-3 sm:space-y-4">
         <div>
@@ -470,8 +492,7 @@ export default function StudentProfileAcademicStanding({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 lg:items-stretch">
-          {/* Principals — same chrome as Admin → Subjects per class */}
-          <div className={`${settingsInsetSurface} flex min-h-0 flex-col overflow-hidden shadow-lg shadow-black/10`}>
+          <div className={standingTableShell}>
             <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
               <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal subjects</div>
               <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
@@ -487,30 +508,38 @@ export default function StudentProfileAcademicStanding({
                   {principals.map((r) => (
                     <li key={r.id} className="px-3 py-3.5">
                       <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{r.subject_name}</div>
-                      <div className="mt-2 text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">PRINCIPAL locked</div>
+                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                        PRINCIPAL · LOCKED
+                      </div>
                     </li>
                   ))}
                 </ul>
                 <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
-                  <table className="min-w-full text-sm">
+                  <table className="min-w-full text-sm table-fixed">
+                    <colgroup>
+                      <col className="min-w-0 sm:w-[46%]" />
+                      <col className="min-w-0 sm:w-[36%]" />
+                      <col className="w-[6.5rem]" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
                         <th className="px-4 py-2 ac-text-secondary">Subject</th>
                         <th className="px-4 py-2 ac-text-secondary">Notes</th>
-                        <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
+                        <th className="px-4 py-2 ac-text-secondary">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
                       {principals.map((r) => (
                         <tr key={r.id} className="border-t border-slate-200/25 dark:border-white/10">
-                          <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
+                          <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">
                             {r.subject_name}
                           </td>
-                          <td className="px-4 py-2.5">
-                            <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">PRINCIPAL</span>
-                            <span className="ml-2 text-xs text-[var(--pw-muted)]">locked</span>
+                          <td className="px-4 py-2.5 align-top whitespace-normal">
+                            <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                              PRINCIPAL · LOCKED
+                            </span>
                           </td>
-                          <td className="px-4 py-2.5">
+                          <td className="px-4 py-2.5 align-top whitespace-nowrap">
                             <span className="text-xs text-[var(--pw-muted)]">—</span>
                           </td>
                         </tr>
@@ -522,105 +551,112 @@ export default function StudentProfileAcademicStanding({
             )}
           </div>
 
-          {/* Subsidiaries — table + add row, aligned with settings layout */}
-          <div className={`${settingsInsetSurface} flex min-h-0 flex-col overflow-hidden shadow-lg shadow-black/10`}>
-            <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
-              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                General Paper is automatic. Optional pool — choose one elective from the list (Senior 5–6 rules).
+          <div className="flex min-h-0 flex-col gap-3">
+            <div className={standingTableShell}>
+              <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+                <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
+                <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+                  General Paper is automatic. Optional pool — choose one elective from the list (Senior 5–6 rules).
+                </div>
+              </div>
+
+              <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
+                <li className="px-3 py-3.5">
+                  <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">General Paper</div>
+                  <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                    {hasGP ? 'SUBSIDIARY · AUTOMATIC · LOCKED' : 'SUBSIDIARY · AUTOMATIC · PENDING'}
+                  </div>
+                </li>
+                {electiveSubs.length === 0 ? (
+                  <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
+                    No elective on profile yet (max {UACE_MAX_ELECTIVE_SUBSIDIARIES}).
+                  </li>
+                ) : (
+                  electiveSubs.map((r) => (
+                    <li key={r.id} className="px-3 py-3.5">
+                      <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{r.subject_name}</div>
+                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                        SUBSIDIARY · ELECTIVE
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void removeAlevelRow(r.id)}
+                        className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+
+              <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
+                <table className="min-w-full text-sm table-fixed">
+                  <colgroup>
+                    <col className="min-w-0 sm:w-[46%]" />
+                    <col className="min-w-0 sm:w-[36%]" />
+                    <col className="w-[6.5rem]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
+                      <th className="px-4 py-2 ac-text-secondary">Subject</th>
+                      <th className="px-4 py-2 ac-text-secondary">Notes</th>
+                      <th className="px-4 py-2 ac-text-secondary">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
+                    <tr className="border-t border-slate-200/25 dark:border-white/10">
+                      <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">General Paper</td>
+                      <td className="px-4 py-2.5 align-top whitespace-normal">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                          {hasGP ? 'SUBSIDIARY · AUTOMATIC · LOCKED' : 'SUBSIDIARY · AUTOMATIC · PENDING'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 align-top whitespace-nowrap">
+                        <span className="text-xs text-[var(--pw-muted)]">—</span>
+                      </td>
+                    </tr>
+                    {electiveSubs.map((r) => (
+                      <tr key={r.id} className="border-t border-slate-200/25 dark:border-white/10">
+                        <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">
+                          {r.subject_name}
+                        </td>
+                        <td className="px-4 py-2.5 align-top whitespace-normal">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                            SUBSIDIARY · ELECTIVE
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 align-top whitespace-nowrap">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void removeAlevelRow(r.id)}
+                            className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {electiveSubs.length === 0 ? (
+                      <tr className="border-t border-slate-200/25 dark:border-white/10">
+                        <td colSpan={3} className="px-4 py-6 text-center text-sm ac-text-secondary">
+                          No elective on profile yet — use <strong className="font-medium ac-text-primary">Add elective subsidiary</strong> below (max{' '}
+                          {UACE_MAX_ELECTIVE_SUBSIDIARIES}).
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
-              <li className="px-3 py-3.5">
-                <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">General Paper</div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="rounded-md border border-[var(--pw-border)] bg-[var(--pw-s2)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--pw-muted)]">
-                    subsidiary
-                  </span>
-                  <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">{gpNotes}</span>
-                </div>
-              </li>
-              {electiveSubs.length === 0 ? (
-                <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
-                  No elective on profile yet — add below (max {UACE_MAX_ELECTIVE_SUBSIDIARIES}).
-                </li>
-              ) : (
-                electiveSubs.map((r) => (
-                  <li key={r.id} className="px-3 py-3.5">
-                    <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{r.subject_name}</div>
-                    <div className="mt-2 text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">SUBSIDIARY elective</div>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void removeAlevelRow(r.id)}
-                      className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-
-            <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
-                    <th className="px-4 py-2 ac-text-secondary">Subject</th>
-                    <th className="px-4 py-2 ac-text-secondary">Notes</th>
-                    <th className="px-4 py-2 ac-text-secondary w-[6.5rem]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
-                  <tr className="border-t border-slate-200/25 dark:border-white/10">
-                    <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
-                      General Paper
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">SUBSIDIARY</span>
-                      <span className="ml-2 text-xs text-[var(--pw-muted)]">{hasGP ? 'locked' : 'pending'}</span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className="text-xs text-[var(--pw-muted)]">—</span>
-                    </td>
-                  </tr>
-                  {electiveSubs.map((r) => (
-                    <tr key={r.id} className="border-t border-slate-200/25 dark:border-white/10">
-                      <td className="max-w-[12rem] px-4 py-2.5 ac-text-primary font-medium break-words md:max-w-none">
-                        {r.subject_name}
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">SUBSIDIARY</span>
-                        <span className="ml-2 text-xs text-[var(--pw-muted)]">elective</span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void removeAlevelRow(r.id)}
-                          className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {electiveSubs.length === 0 ? (
-                    <tr className="border-t border-slate-200/25 dark:border-white/10">
-                      <td colSpan={3} className="px-4 py-6 text-center text-sm ac-text-secondary">
-                        No elective on profile yet — use the row below to add one (max {UACE_MAX_ELECTIVE_SUBSIDIARIES}).
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="shrink-0 border-t border-slate-200/30 p-3 dark:border-white/10 sm:p-4">
+            <div className={standingAddToolbar}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">Add elective subsidiary</div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1">
-                  <label className="mb-1 block text-xs font-medium ac-text-muted">Add elective subsidiary</label>
+                  <label className="mb-1 block text-xs font-medium ac-text-muted">Pick from class list (UACE catalog)</label>
                   <select
                     value={alevelPick}
                     disabled={
