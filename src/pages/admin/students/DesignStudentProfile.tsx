@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -360,6 +360,14 @@ export default function DesignStudentProfile() {
     cachedInjectedHtml = parseInjectedHtml(templateRaw);
     setHtmlContent(cachedInjectedHtml);
   }, []);
+
+  // Only inject the static shell when the template string changes — never on unrelated re-renders.
+  // Using dangerouslySetInnerHTML in render re-applies the template every time and wipes imperative DOM updates from load().
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !htmlContent) return;
+    el.innerHTML = htmlContent;
+  }, [htmlContent]);
 
   useEffect(() => {
     if (!htmlContent || !studentId) return;
@@ -1127,11 +1135,7 @@ export default function DesignStudentProfile() {
 
   return (
     <>
-      <div
-        ref={containerRef}
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-      />
+      <div ref={containerRef} style={{ width: '100%', minHeight: '100vh', display: 'block' }} />
       {academicPortalData && academicMountRef.current
         ? createPortal(
             <StudentProfileAcademicStanding
