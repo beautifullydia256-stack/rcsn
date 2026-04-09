@@ -187,53 +187,89 @@ function SubjectsPerClassTableRows({
 }) {
   if (rows.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-sm text-white/70">No subjects in this list yet.</div>
+      <div className="px-3 py-8 text-center text-sm text-white/70 sm:px-4">No subjects in this list yet.</div>
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
-        <thead>
-          <tr className="border-b border-white/10 text-left">
-            <th className="px-4 py-2 text-white/80">Subject</th>
-            <th className="px-4 py-2 text-white/80">Notes</th>
-            <th className="px-4 py-2 text-white/80 w-[6.5rem]">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-          {rows.map((row) => {
-            const badge = classSubjectBadge(row);
-            const rem = canRemoveClassSubjectRow(selectedClass, row);
-            return (
-              <tr key={row.subject} className="border-t border-white/10">
-                <td className="px-4 py-2.5 text-white font-medium">{row.subject}</td>
-                <td className="px-4 py-2.5 text-white/85">
-                  {badge ? <span className="text-[10px] uppercase tracking-wide text-white/50">{badge}</span> : null}
-                  {!rem && (
-                    <span className="ml-2 text-xs text-white/50" title="Cannot remove this slot">
-                      locked
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-2.5">
-                  {rem ? (
-                    <button
-                      type="button"
-                      onClick={() => onRemove(row)}
-                      className="rounded-md bg-rose-600/90 px-2 py-1 text-xs font-medium text-white hover:bg-rose-500 transition-transform hover:scale-[1.02]"
-                    >
-                      Remove
-                    </button>
-                  ) : (
-                    <span className="text-xs text-white/50">—</span>
-                  )}
-                </td>
+    <>
+      <ul className="divide-y divide-white/10 sm:hidden">
+        {rows.map((row) => {
+          const badge = classSubjectBadge(row);
+          const rem = canRemoveClassSubjectRow(selectedClass, row);
+          return (
+            <li key={row.subject} className="px-3 py-3.5">
+              <div className="text-[15px] font-semibold leading-snug text-white break-words">{row.subject}</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {badge ? (
+                  <span className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/60">
+                    {badge}
+                  </span>
+                ) : null}
+                {!rem && (
+                  <span className="text-xs text-white/50" title="Cannot remove this slot">
+                    locked
+                  </span>
+                )}
+              </div>
+              {rem ? (
+                <button
+                  type="button"
+                  onClick={() => onRemove(row)}
+                  className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden overflow-x-auto sm:block">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/10 text-left">
+              <th className="px-4 py-2 text-white/80">Subject</th>
+              <th className="px-4 py-2 text-white/80">Notes</th>
+              <th className="px-4 py-2 text-white/80 w-[6.5rem]">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
+            {rows.map((row) => {
+              const badge = classSubjectBadge(row);
+              const rem = canRemoveClassSubjectRow(selectedClass, row);
+              return (
+                <tr key={row.subject} className="border-t border-white/10">
+                  <td className="max-w-[12rem] px-4 py-2.5 font-medium text-white break-words md:max-w-none">
+                    {row.subject}
+                  </td>
+                  <td className="px-4 py-2.5 text-white/85">
+                    {badge ? <span className="text-[10px] uppercase tracking-wide text-white/50">{badge}</span> : null}
+                    {!rem && (
+                      <span className="ml-2 text-xs text-white/50" title="Cannot remove this slot">
+                        locked
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {rem ? (
+                      <button
+                        type="button"
+                        onClick={() => onRemove(row)}
+                        className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+                      >
+                        Remove
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/50">—</span>
+                    )}
+                  </td>
               </tr>
             );
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -253,28 +289,28 @@ function OLevelSubjectsSplitCards({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
         <div className={subjectsCardShell}>
-          <div className="border-b border-white/10 px-4 py-3">
-            <div className="text-[15px] font-semibold text-white">Compulsory subjects</div>
-            <div className="mt-0.5 text-xs text-white/65">UCE core for this class — learners must include all of these.</div>
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Compulsory subjects</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">UCE core for this class — learners must include all of these.</div>
           </div>
           <SubjectsPerClassTableRows rows={compulsory} selectedClass={selectedClass} onRemove={onRemove} />
         </div>
         <div className={subjectsCardShell}>
-          <div className="border-b border-white/10 px-4 py-3">
-            <div className="text-[15px] font-semibold text-white">Subsidiary subjects</div>
-            <div className="mt-0.5 text-xs text-white/65">Optional pool — learners choose from this list.</div>
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Subsidiary subjects</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">Optional pool — learners choose from this list.</div>
           </div>
           <SubjectsPerClassTableRows rows={subsidiary} selectedClass={selectedClass} onRemove={onRemove} />
         </div>
       </div>
       {other.length > 0 && (
         <div className={subjectsCardShell}>
-          <div className="border-b border-white/10 px-4 py-3">
-            <div className="text-[15px] font-semibold text-white">Unclassified</div>
-            <div className="mt-0.5 text-xs text-white/65">
+          <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+            <div className="text-[15px] font-semibold leading-snug text-white">Unclassified</div>
+            <div className="mt-1 text-xs leading-relaxed text-white/65">
               No compulsory/subsidiary tag — remove and re-add using the checkbox above.
             </div>
           </div>
@@ -371,19 +407,19 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
         title="Subjects per Class"
         desc="Senior 1–4: nationwide default compulsory subjects cannot be removed; add more compulsory or unlimited subsidiary. Senior 5–6: UACE subsidiaries stay fixed."
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <select value={selectedClass} onChange={(e)=>setSelectedClass(e.target.value)} className="w-full md:w-64 rounded-xl border border-white/10 bg-white text-black px-3 py-2 outline-none focus:ring-2 focus:ring-blue-500">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+        <select value={selectedClass} onChange={(e)=>setSelectedClass(e.target.value)} className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-500">
           <option value="">Select Class</option>
           {classOptions.map(c => (
             <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <input value={newSubject} onChange={(e)=>setNewSubject(e.target.value)} placeholder="Add subject (e.g., Mathematics)" className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 placeholder:text-white/60" />
-        <button disabled={!selectedClass || saving} onClick={addSubject} className="rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-3 py-2">{saving? 'Saving...' : 'Add Subject'}</button>
+        <input value={newSubject} onChange={(e)=>setNewSubject(e.target.value)} placeholder="Add subject (e.g., Mathematics)" className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60 outline-none focus:ring-2 focus:ring-blue-500" />
+        <button disabled={!selectedClass || saving} onClick={addSubject} className="min-h-[48px] w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:col-span-2 lg:col-span-1">{saving? 'Saving...' : 'Add Subject'}</button>
         {isOLevelClass(selectedClass) && (
-          <label className="flex items-center gap-2 text-white/80 text-sm md:col-span-3 cursor-pointer">
-            <input type="checkbox" checked={addAsCompulsory} onChange={(e) => setAddAsCompulsory(e.target.checked)} className="rounded border-white/30" />
-            Add as compulsory UCE (otherwise subsidiary) — default nationwide compulsories are locked.
+          <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug text-white/80 sm:col-span-2 lg:col-span-3">
+            <input type="checkbox" checked={addAsCompulsory} onChange={(e) => setAddAsCompulsory(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 rounded border-white/30" aria-label="Add as compulsory UCE subject" />
+            <span>Add as compulsory UCE (otherwise subsidiary) — default nationwide compulsories are locked.</span>
           </label>
         )}
       </div>
@@ -399,9 +435,9 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
           <OLevelSubjectsSplitCards selectedClass={selectedClass} subjectRows={subjectRows} onRemove={removeSubject} />
         ) : (
           <div className={subjectsCardShell}>
-            <div className="border-b border-white/10 px-4 py-3">
-              <div className="text-[15px] font-semibold text-white">Subjects for this class</div>
-              <div className="mt-0.5 text-xs text-white/65">{selectedClass}</div>
+            <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
+              <div className="text-[15px] font-semibold leading-snug text-white">Subjects for this class</div>
+              <div className="mt-1 text-xs leading-relaxed text-white/65">{selectedClass}</div>
             </div>
             <SubjectsPerClassTableRows rows={subjectRows} selectedClass={selectedClass} onRemove={removeSubject} />
           </div>
