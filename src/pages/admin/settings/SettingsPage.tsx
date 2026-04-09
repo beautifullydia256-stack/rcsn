@@ -160,7 +160,7 @@ export default function SettingsPage() {
 
   return (
     <div className="admin-terminal-page md:flex md:h-full md:min-h-0 md:flex-col md:overflow-hidden">
-      <div className="flex min-h-[min(72vh,920px)] flex-1 flex-col gap-0 md:min-h-0 md:flex-row md:gap-8 md:items-stretch md:overflow-hidden">
+      <div className="flex w-full max-w-full flex-col gap-0 max-md:min-h-0 md:h-full md:min-h-0 md:flex-1 md:flex-row md:gap-8 md:items-stretch md:overflow-hidden">
         <aside
           className={`md:w-[min(100%,340px)] md:shrink-0 md:min-h-0 md:overflow-y-auto md:overscroll-y-contain ${
             showMaster ? '' : 'hidden'
@@ -181,7 +181,7 @@ export default function SettingsPage() {
 
         {showDetail && activeTab && sectionMeta && (
           <section
-            className={`flex min-h-0 min-w-0 flex-1 flex-col md:overflow-hidden md:overscroll-y-contain ${
+            className={`flex min-w-0 flex-col max-md:flex-none max-md:min-h-0 md:min-h-0 md:flex-1 md:overflow-hidden md:overscroll-y-contain ${
               !isMd && !section ? 'hidden' : ''
             }`}
             aria-label={sectionMeta.title}

@@ -15,7 +15,7 @@ export default function SettingsDetailLayout({
   children: ReactNode;
 }) {
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+    <div className="flex min-w-0 flex-col max-md:flex-none md:min-h-0 md:flex-1">
       {showMobileChrome && (
         <div className="mb-3 flex shrink-0 items-center gap-1 border-b border-slate-200/25 pb-3 dark:border-white/10 md:hidden">
           <button
@@ -52,7 +52,15 @@ export default function SettingsDetailLayout({
       </div>
 
       <div
-        className="min-h-0 flex-1 overflow-x-auto overflow-y-auto overscroll-y-contain pt-4 pb-[calc(var(--pw-botnav-h,64px)+env(safe-area-inset-bottom,0px)+20px)] md:pb-0 md:pt-5"
+        className={[
+          'touch-pan-y pt-4',
+          showMobileChrome
+            ? 'max-md:overflow-visible max-md:flex-none max-md:pb-[calc(var(--pw-botnav-h,64px)+env(safe-area-inset-bottom,0px)+32px)]'
+            : '',
+          'md:min-h-0 md:flex-1 md:overflow-x-auto md:overflow-y-auto md:overscroll-y-contain md:pb-0 md:pt-5',
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
         {children}
       </div>

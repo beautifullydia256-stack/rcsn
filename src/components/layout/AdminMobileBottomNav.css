@@ -5,7 +5,8 @@
 
 @media (max-width: 768px) {
   .pw-layout .pw-main {
-    padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px));
+    /* Extra space so last lines are not tight against the tab bar when scrolling */
+    padding-bottom: calc(var(--pw-botnav-h, 64px) + env(safe-area-inset-bottom, 0px) + 16px);
   }
 
   .pw-botnav {

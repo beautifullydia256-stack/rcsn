@@ -585,6 +585,8 @@ export default function AdminLayout() {
             margin-left: 0;
             width: 100%;
             padding-top: 0;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
           }
         }
         /* System Settings master/detail: lock main scroll on desktop; each pane scrolls independently */
