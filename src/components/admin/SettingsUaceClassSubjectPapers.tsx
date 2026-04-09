@@ -12,12 +12,15 @@ export default function SettingsUaceClassSubjectPapers({
   schoolId,
   variant = 'vite',
   embedded,
+  /** When set (e.g. from Subjects per class), class is fixed and dropdown hidden. Parent should only mount when this is Senior 5–6. */
+  anchorClassName,
 }: {
   classOptions: string[];
   schoolId: string | null;
   variant?: Variant;
   /** When true, shell already shows section title—only show helper copy. */
   embedded?: boolean;
+  anchorClassName?: string;
 }) {
   const alevelClasses = useMemo(() => classOptions.filter((c) => isALevelClass(c)), [classOptions]);
 
@@ -84,6 +87,13 @@ export default function SettingsUaceClassSubjectPapers({
     void loadPapers();
   }, [loadPapers]);
 
+  useEffect(() => {
+    if (anchorClassName === undefined) return;
+    if (!anchorClassName.trim() || !isALevelClass(anchorClassName)) return;
+    setSelectedClass(anchorClassName);
+    setSelectedSubject('');
+  }, [anchorClassName]);
+
   const inputClass =
     variant === 'next'
       ? 'w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60'
@@ -92,6 +102,9 @@ export default function SettingsUaceClassSubjectPapers({
   const labelClass = variant === 'next' ? 'mb-1 block text-sm text-white/80' : 'mb-1 block text-sm ac-text-secondary';
 
   if (!schoolId || alevelClasses.length === 0) return null;
+  if (anchorClassName !== undefined) {
+    if (!anchorClassName.trim() || !isALevelClass(anchorClassName)) return null;
+  }
 
   const addPaper = async () => {
     setError(null);
@@ -154,10 +167,15 @@ export default function SettingsUaceClassSubjectPapers({
           }
         >
           {embedded ? (
-            <span className="font-medium ac-text-primary">UACE papers (Senior 5–6). </span>
-          ) : null}
-          Configure UNEB-style paper codes per class and subject. Teachers pick a paper line when entering A-Level marks;
-          report template4 uses <code className="text-xs">paper_code</code> in the PAPER column.
+            <>
+              <span className={variant === 'next' ? 'font-medium text-white' : 'font-medium ac-text-primary'}>
+                UACE papers (Senior 5–6).{' '}
+              </span>
+              Configure UNEB-style paper codes per class and subject.
+            </>
+          ) : (
+            'Configure UNEB-style paper codes per class and subject.'
+          )}
         </div>
       </div>
 
@@ -176,21 +194,33 @@ export default function SettingsUaceClassSubjectPapers({
       <div className={`grid grid-cols-1 gap-3 p-4 sm:p-5 md:grid-cols-2 lg:grid-cols-4 ${settingsInsetSurface}`}>
         <div>
           <label className={labelClass}>Class (A-Level)</label>
-          <select
-            value={selectedClass}
-            onChange={(e) => {
-              setSelectedClass(e.target.value);
-              setSelectedSubject('');
-            }}
-            className={inputClass}
-          >
-            <option value="">Select class</option>
-            {alevelClasses.map((c) => (
-              <option key={c} value={c} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
-                {c}
-              </option>
-            ))}
-          </select>
+          {anchorClassName !== undefined ? (
+            <div
+              className={
+                variant === 'next'
+                  ? `${inputClass} flex min-h-[44px] items-center text-white/90`
+                  : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
+              }
+            >
+              {anchorClassName}
+            </div>
+          ) : (
+            <select
+              value={selectedClass}
+              onChange={(e) => {
+                setSelectedClass(e.target.value);
+                setSelectedSubject('');
+              }}
+              className={inputClass}
+            >
+              <option value="">Select class</option>
+              {alevelClasses.map((c) => (
+                <option key={c} value={c} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
         <div>
           <label className={labelClass}>Subject</label>

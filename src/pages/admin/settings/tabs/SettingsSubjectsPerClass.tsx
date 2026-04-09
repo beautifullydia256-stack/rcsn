@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { isOLevelClass } from '@/components/reports/templates/helpers';
+import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
+import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
 import {
   canRemoveClassSubjectRow,
   classSubjectBadge,
@@ -338,6 +339,14 @@ export default function SettingsSubjectsPerClass({
         )}
       </div>
       </div>
+      {classOptions.some((c) => isALevelClass(c)) && isALevelClass(selectedClass) && schoolId ? (
+        <SettingsUaceClassSubjectPapers
+          embedded
+          anchorClassName={selectedClass}
+          classOptions={classOptions}
+          schoolId={schoolId}
+        />
+      ) : null}
     </div>
   );
 }

@@ -10,7 +10,6 @@ import SettingsTimetable from './tabs/SettingsTimetable';
 import SettingsTerms from './tabs/SettingsTerms';
 import SettingsExamSets from './tabs/SettingsExamSets';
 import SettingsBranding from './tabs/SettingsBranding';
-import SettingsUaceClassSubjectPapers from '@/components/admin/SettingsUaceClassSubjectPapers';
 import SettingsMasterList from './components/SettingsMasterList';
 import SettingsDetailLayout from './components/SettingsDetailLayout';
 import {
@@ -200,13 +199,6 @@ export default function SettingsPage() {
                       classOptions={classOptions}
                       schoolId={schoolId}
                     />
-                    {schoolType === 'Secondary' && (
-                      <SettingsUaceClassSubjectPapers
-                        embedded
-                        classOptions={classOptions}
-                        schoolId={schoolId}
-                      />
-                    )}
                   </>
                 )}
                 {activeTab === 'assignments' && (

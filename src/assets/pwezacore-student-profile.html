@@ -68,7 +68,7 @@
  *    #sp-exam-results-body        innerHTML — exam result rows or empty-state div
  *    #sp-current-term             textContent
  *    #sp-class-position           textContent
- *    #sp-subjects-enrolled-block  innerHTML — status line + principal/subsidiary tiers (secondary) or flat tags
+ *    #sp-subjects-enrolled-react-root — React portal: Academic Standing (settings-style subject UI)
  *    #sp-report-card-status       textContent
  *
  *  TAB: FEES
@@ -402,6 +402,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-field-value.rose    { color: var(--rose); font-weight: 600; }
 .pw-profile .sp-field-value a       { color: var(--accent); text-decoration: none; }
 .pw-profile .sp-field-value a:hover { text-decoration: underline; }
+.pw-profile .sp-academic-standing-react { width: 100%; min-width: 0; }
 
 /* ── GUARDIAN CARD ── */
 .pw-profile .sp-guardian-card {
@@ -972,7 +973,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
               </div>
               <div class="sp-field">
                 <span class="sp-field-label">Subjects &amp; programme</span>
-                <div id="sp-subjects-enrolled-block">
+                <div id="sp-subjects-enrolled-react-root" class="sp-academic-standing-react">
                   <span class="sp-tag" style="color:var(--text-muted);font-style:italic">Loading…</span>
                 </div>
               </div>

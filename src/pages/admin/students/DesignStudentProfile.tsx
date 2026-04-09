@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
@@ -11,12 +12,10 @@ import { loadStudentBalanceAggAllTerms } from '@/lib/adminFinanceTerm';
 import { studentAttendanceRowIsPresent } from '@/lib/studentAttendanceRow';
 
 import templateRaw from '@/assets/pwezacore-student-profile.html?raw';
-import {
-  isALevelClass,
-  isOLevelClass,
-  isSenior12Class,
-  isSenior34Class,
-} from '@/components/reports/templates/helpers';
+import { isALevelClass, isOLevelClass } from '@/components/reports/templates/helpers';
+import StudentProfileAcademicStanding, {
+  type StudentProfileAcademicStandingProps,
+} from './StudentProfileAcademicStanding';
 
 const STUDENT_PROFILE_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap';
@@ -89,141 +88,6 @@ function fmtShortDate(d: string | null | undefined): string {
 function fmtUGX(n: number | null | undefined): string {
   if (n === null || n === undefined || Number.isNaN(Number(n))) return '—';
   return `UGX ${Number(n).toLocaleString()}`;
-}
-
-function subjectTagsHtml(subjects: string[]): string {
-  if (!subjects.length) {
-    return '<span class="sp-profile-note">None listed</span>';
-  }
-  return `<div class="sp-tag-row">${subjects
-    .map((s) => `<span class="sp-tag">${escapeHtml(s)}</span>`)
-    .join('')}</div>`;
-}
-
-function isGeneralPaperSubject(name: string): boolean {
-  return /general\s*paper/i.test(String(name || '').trim());
-}
-
-/**
- * Academic Standing — subject programme copy for student profile (secondary O-Level / A-Level / primary).
- */
-function buildSubjectsEnrolledBlock(
-  currentClass: string,
-  classSubjectRows: { subject?: string; uce_offering_type?: string | null }[],
-  olevelSaved: string[] | null,
-  alevelRows: { subject_name: string; subject_role: string }[] | null,
-): string {
-  const cls = String(currentClass || '').trim();
-  const rows = (classSubjectRows || [])
-    .map((r) => ({
-      subject: String(r.subject || '').trim(),
-      ot: r.uce_offering_type ?? null,
-    }))
-    .filter((r) => r.subject);
-
-  if (isOLevelClass(cls)) {
-    const compulsory = rows.filter((r) => r.ot === 'compulsory').map((r) => r.subject);
-    const subsidiaryOffered = rows.filter((r) => r.ot === 'subsidiary').map((r) => r.subject);
-    const savedSet = new Set(olevelSaved || []);
-    const subPicked = subsidiaryOffered.filter((s) => savedSet.has(s));
-
-    if (isSenior12Class(cls)) {
-      const allClass = [...new Set(rows.map((r) => r.subject))].sort((a, b) => a.localeCompare(b));
-      const total = allClass.length;
-      const statusClass = total > 0 ? 'ok' : 'warn';
-      const statusText =
-        total > 0
-          ? `Programme: ${total} subject(s). Senior 1–2 learners take the full class set; all appear on report cards.`
-          : 'No subjects on this class timetable. Configure Admin → Subjects per class.';
-      return `
-        <div class="sp-profile-prose ${statusClass}">${escapeHtml(statusText)}</div>
-        <div class="sp-subject-tier-label">All class subjects</div>
-        ${subjectTagsHtml(allClass)}
-        <div class="sp-profile-note">Principal/subsidiary selection does not apply in Senior 1–2.</div>`;
-    }
-
-    if (isSenior34Class(cls)) {
-      let principalsDisplay = [...compulsory].sort((a, b) => a.localeCompare(b));
-      if (!principalsDisplay.length && rows.length) {
-        principalsDisplay = rows
-          .filter((r) => r.ot !== 'subsidiary')
-          .map((r) => r.subject)
-          .sort((a, b) => a.localeCompare(b));
-      }
-      if (!principalsDisplay.length && (olevelSaved?.length || 0) > 0) {
-        const subSet = new Set(subsidiaryOffered);
-        principalsDisplay = [...new Set((olevelSaved || []).filter((s) => !subSet.has(s)))].sort((a, b) =>
-          a.localeCompare(b),
-        );
-      }
-      const total = principalsDisplay.length + subPicked.length;
-      let statusClass: 'ok' | 'warn' | 'bad' = 'ok';
-      let statusText = `Profile: ${total} subject(s) — ${principalsDisplay.length} compulsory + ${subPicked.length} subsidiary (choose 1–3).`;
-      if (subPicked.length === 0 && subsidiaryOffered.length > 0) {
-        statusClass = 'warn';
-        statusText = `Incomplete: add 1–3 subsidiary subject(s). Showing ${principalsDisplay.length} compulsory only (${total} on profile). Edit this student → UCE learner subjects.`;
-      } else if (subPicked.length === 0 && subsidiaryOffered.length === 0) {
-        statusClass = 'warn';
-        statusText = `No subsidiary pool configured for this class. ${total} subject(s) on profile. Check Admin → Subjects per class.`;
-      }
-      if (!rows.length) {
-        statusClass = 'bad';
-        statusText = 'No class subjects found for this class name.';
-      }
-      return `
-        <div class="sp-profile-prose ${statusClass}">${escapeHtml(statusText)}</div>
-        <div class="sp-subject-tier-label">Principal / compulsory</div>
-        ${subjectTagsHtml(principalsDisplay)}
-        <div class="sp-subject-tier-label">Subsidiary (chosen)</div>
-        ${
-          subPicked.length
-            ? subjectTagsHtml([...subPicked].sort((a, b) => a.localeCompare(b)))
-            : `<span class="sp-profile-note">Not selected yet — principals only until 1–3 subsidiaries are chosen.</span>`
-        }`;
-    }
-
-    const flat = [...new Set(rows.map((r) => r.subject))].sort((a, b) => a.localeCompare(b));
-    return `<div class="sp-profile-prose warn">${escapeHtml(`O-Level class "${cls}": ${flat.length} timetable subject(s).`)}</div>${subjectTagsHtml(flat)}`;
-  }
-
-  if (isALevelClass(cls)) {
-    const pr = (alevelRows || [])
-      .filter((r) => r.subject_role === 'principal')
-      .map((r) => r.subject_name)
-      .filter(Boolean);
-    const su = (alevelRows || [])
-      .filter((r) => r.subject_role === 'subsidiary')
-      .map((r) => r.subject_name)
-      .filter(Boolean);
-    const hasGP = su.some(isGeneralPaperSubject);
-    const ok = pr.length === 3 && su.length === 2 && hasGP;
-    const parts: string[] = [];
-    if (pr.length !== 3) parts.push(`principals ${pr.length}/3`);
-    if (su.length !== 2) parts.push(`subsidiaries ${su.length}/2`);
-    if (su.length >= 1 && !hasGP) parts.push('General Paper must be one of the two subsidiaries');
-    const statusText = ok
-      ? 'UACE profile complete: 3 principals + 2 subsidiaries (including General Paper). Five subjects on reports.'
-      : `Incomplete UACE profile${parts.length ? `: ${parts.join('; ')}` : ''}. Saved ${pr.length + su.length}/5. Edit UACE combination on this student.`;
-    let statusClass: 'ok' | 'warn' | 'bad' = ok ? 'ok' : 'warn';
-    if (!ok && pr.length + su.length === 0) statusClass = 'bad';
-    return `
-        <div class="sp-profile-prose ${statusClass}">${escapeHtml(statusText)}</div>
-        <div class="sp-subject-tier-label">Principal (3)</div>
-        ${subjectTagsHtml([...pr].sort((a, b) => a.localeCompare(b)))}
-        <div class="sp-subject-tier-label">Subsidiary (2, incl. General Paper)</div>
-        ${
-          su.length
-            ? subjectTagsHtml([...su].sort((a, b) => a.localeCompare(b)))
-            : '<span class="sp-profile-note">None saved yet — choose 3 principals and 2 subsidiaries (General Paper is required).</span>'
-        }`;
-  }
-
-  const flat = [...new Set(rows.map((r) => r.subject))].sort((a, b) => a.localeCompare(b));
-  const n = flat.length;
-  const statusText = n
-    ? `${n} subject(s) on the class timetable.`
-    : 'No subjects linked to this class yet.';
-  return `<div class="sp-profile-prose ${n ? 'ok' : 'warn'}">${escapeHtml(statusText)}</div>${subjectTagsHtml(flat)}`;
 }
 
 type InvoicePayBadge = { text: string; badgeClass: 'green' | 'amber' | 'rose' | 'muted' };
@@ -379,6 +243,10 @@ export default function DesignStudentProfile() {
   const [htmlContent, setHtmlContent] = useState('');
   const [editMode, setEditMode] = useState(false);
   const [reloadToken, setReloadToken] = useState(0);
+  const academicMountRef = useRef<HTMLDivElement | null>(null);
+  const [academicPortalData, setAcademicPortalData] = useState<
+    Omit<StudentProfileAcademicStandingProps, 'onChanged'> | null
+  >(null);
   const studentCtxRef = useRef<{ schoolId: string } | null>(null);
   const saveStudentRef = useRef<() => Promise<void>>(async () => {});
 
@@ -517,6 +385,7 @@ export default function DesignStudentProfile() {
 
       if (stErr || !student) {
         studentCtxRef.current = null;
+        setAcademicPortalData(null);
         requestAnimationFrame(() => {
           const el = containerRef.current;
           if (!el) return;
@@ -566,7 +435,7 @@ export default function DesignStudentProfile() {
       ]);
 
       let olevelSavedNames: string[] | null = null;
-      let alevelSubjectRows: { subject_name: string; subject_role: string }[] | null = null;
+      let alevelSubjectRows: { id: string; subject_name: string; subject_role: string }[] | null = null;
       if (currentClass && isOLevelClass(currentClass)) {
         const { data: ol } = await supabase
           .from('student_olevel_subjects')
@@ -577,10 +446,10 @@ export default function DesignStudentProfile() {
       } else if (currentClass && isALevelClass(currentClass)) {
         const { data: al } = await supabase
           .from('student_alevel_subjects')
-          .select('subject_name, subject_role')
+          .select('id, subject_name, subject_role')
           .eq('school_id', schoolId)
           .eq('student_id', studentId);
-        alevelSubjectRows = (al || []) as { subject_name: string; subject_role: string }[];
+        alevelSubjectRows = (al || []) as { id: string; subject_name: string; subject_role: string }[];
       }
 
       const [feeBal, paymentQ, invoicesQ] = await Promise.all([
@@ -1017,10 +886,16 @@ export default function DesignStudentProfile() {
 
         set('#sp-current-term', 'Current term');
         set('#sp-class-position', 'Not yet ranked');
-        setHTML(
-          '#sp-subjects-enrolled-block',
-          buildSubjectsEnrolledBlock(currentClass, subjectRows, olevelSavedNames, alevelSubjectRows),
-        );
+        const mountAcademic = el.querySelector('#sp-subjects-enrolled-react-root') as HTMLDivElement | null;
+        academicMountRef.current = mountAcademic;
+        setAcademicPortalData({
+          schoolId,
+          studentId,
+          currentClass,
+          classSubjectRows: subjectRows,
+          initialOlevelNames: olevelSavedNames ?? [],
+          initialAlevelRows: alevelSubjectRows ?? [],
+        });
         set('#sp-report-card-status', 'Not yet generated');
 
         if (examResults.length > 0) {
@@ -1249,10 +1124,21 @@ export default function DesignStudentProfile() {
   }, [htmlContent]);
 
   return (
-    <div
-      ref={containerRef}
-      dangerouslySetInnerHTML={{ __html: htmlContent }}
-      style={{ width: '100%', minHeight: '100vh', display: 'block' }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+        style={{ width: '100%', minHeight: '100vh', display: 'block' }}
+      />
+      {academicPortalData && academicMountRef.current
+        ? createPortal(
+            <StudentProfileAcademicStanding
+              {...academicPortalData}
+              onChanged={() => setReloadToken((t) => t + 1)}
+            />,
+            academicMountRef.current,
+          )
+        : null}
+    </>
   );
 }

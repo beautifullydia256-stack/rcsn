@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
 import SectionHeader from './SectionHeader';
 import { settingsInsetSurface, settingsPrimaryActionClass } from './settingsTabStyles';
+
+function assignmentRoleLabel(role: string | null | undefined): string {
+  if (role === 'co_teacher') return 'Co-teacher';
+  return 'Subject teacher';
+}
 
 const STALE_TIME_MS = 5 * 60 * 1000;
 
@@ -59,6 +65,7 @@ export default function SettingsTeacherSubjectClass({
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assignmentsQuery, setAssignmentsQuery] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'settings', 'teacherSubjectClass', user?.id ?? ''],
@@ -91,6 +98,26 @@ export default function SettingsTeacherSubjectClass({
   });
 
   const loading = isLoading;
+
+  const teacherNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of teachers) m[t.teacher_id] = t.name || '';
+    return m;
+  }, [teachers]);
+
+  const filteredAssignments = useMemo(() => {
+    const t = assignmentsQuery.trim().toLowerCase();
+    if (!t) return assignments;
+    return assignments.filter((a) => {
+      const teacherName = teacherNameById[a.teacher_id] || '';
+      return (
+        teacherName.toLowerCase().includes(t) ||
+        (a.class_name || '').toLowerCase().includes(t) ||
+        (a.subject || '').toLowerCase().includes(t) ||
+        assignmentRoleLabel(a.assignment_role).toLowerCase().includes(t)
+      );
+    });
+  }, [assignments, assignmentsQuery, teacherNameById]);
 
   const assign = async () => {
     setError(null);
@@ -258,56 +285,94 @@ export default function SettingsTeacherSubjectClass({
       </div>
       </div>
 
-      <div className="mb-2 text-sm font-medium ac-text-secondary">Current assignments</div>
-      <div className={`overflow-x-auto ${settingsInsetSurface}`}>
-        <table className="min-w-full text-sm md:min-w-0">
-          <thead>
-            <tr className="border-b border-[var(--pw-border)] bg-[var(--pw-s3)] text-left">
-              <th className="px-4 py-2 ac-text-muted">Teacher</th>
-              <th className="px-4 py-2 ac-text-muted">Class</th>
-              <th className="px-4 py-2 ac-text-muted">Subject</th>
-              <th className="px-4 py-2 ac-text-muted">Role</th>
-              <th className="px-4 py-2 ac-text-muted">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-[var(--pw-s3)]/40">
-            {loading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center ac-text-secondary">
-                  Loading...
-                </td>
-              </tr>
-            ) : assignments.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-center ac-text-secondary">
-                  No assignments yet.
-                </td>
-              </tr>
-            ) : (
-              assignments.map((a) => (
-                <tr key={a.id} className="border-t border-[var(--pw-border)]">
-                  <td className="px-4 py-2 ac-text-primary">
-                    {teachers.find((t) => t.teacher_id === a.teacher_id)?.name || a.teacher_id}
-                  </td>
-                  <td className="px-4 py-2 ac-text-secondary">{a.class_name}</td>
-                  <td className="px-4 py-2 ac-text-secondary">{a.subject}</td>
-                  <td className="px-4 py-2 ac-text-secondary">
-                    {a.assignment_role === 'co_teacher' ? 'Co-teacher' : 'Subject teacher'}
-                  </td>
-                  <td className="px-4 py-2">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm font-medium ac-text-secondary">Current assignments</div>
+        <div className="relative min-w-0 flex-1 sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ac-text-muted" aria-hidden />
+          <input
+            type="search"
+            value={assignmentsQuery}
+            onChange={(e) => setAssignmentsQuery(e.target.value)}
+            placeholder="Search teacher, class, subject…"
+            className="ac-glass-card ac-input min-h-0 w-full rounded-xl border py-2 pl-9 pr-3 text-sm placeholder:ac-text-muted"
+            disabled={loading || assignments.length === 0}
+          />
+        </div>
+      </div>
+
+      <div className="ac-glass-card overflow-hidden rounded-xl border border-[var(--ac-border)]">
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={`sk-${i}`}
+                className="flex min-h-[160px] flex-col rounded-xl border border-[var(--ac-border)] p-3 sm:p-4"
+              >
+                <div className="mb-3 h-3 w-20 rounded ac-skeleton-block animate-pulse" />
+                <div className="mb-2 h-4 w-full rounded ac-skeleton-block animate-pulse" />
+                <div className="mt-auto space-y-2">
+                  <div className="h-3 w-full rounded ac-skeleton-block animate-pulse" />
+                  <div className="h-3 w-4/5 rounded ac-skeleton-block animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : assignments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm ac-text-muted">No assignments yet.</div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm ac-text-muted">No matches for your search.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-5 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
+            {filteredAssignments.map((a) => {
+              const teacherName = teacherNameById[a.teacher_id] || a.teacher_id;
+              const role = assignmentRoleLabel(a.assignment_role);
+              return (
+                <article
+                  key={a.id}
+                  className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-[var(--ac-border)] bg-white/[0.03] shadow-sm transition-shadow hover:shadow-md dark:bg-white/[0.04]"
+                >
+                  <div className="border-b border-[var(--ac-border)] px-3 py-3 sm:px-4">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider ac-text-muted">Teacher</p>
+                    <p className="text-[15px] font-semibold leading-snug tracking-tight ac-text-primary line-clamp-2">
+                      {teacherName}
+                    </p>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-2.5 px-3 py-3 text-sm sm:px-4 sm:py-4">
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Class</span>
+                      <span className="font-medium ac-text-secondary break-words">{a.class_name || '—'}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Subject</span>
+                      <span className="font-medium ac-text-secondary break-words">{a.subject || '—'}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider ac-text-muted">Role</span>
+                      <span
+                        className={
+                          a.assignment_role === 'co_teacher'
+                            ? 'inline-flex w-fit max-w-full rounded-md border border-amber-400/35 bg-amber-500/15 px-2 py-0.5 text-xs font-semibold text-amber-200'
+                            : 'inline-flex w-fit max-w-full rounded-md border border-emerald-400/35 bg-emerald-600/15 px-2 py-0.5 text-xs font-semibold text-emerald-200'
+                        }
+                      >
+                        {role}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-auto border-t border-[var(--ac-border)] px-3 py-2.5 sm:px-4">
                     <button
                       type="button"
-                      className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-400"
+                      className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-3 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
                       onClick={() => remove(a.id)}
                     >
-                      Remove
+                      Remove assignment
                     </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </div>
       {error && (
         <div className="mt-3 rounded-lg border border-red-400/40 bg-red-950/50 px-3 py-2 text-sm text-red-100">

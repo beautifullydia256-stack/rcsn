@@ -9,8 +9,14 @@ import { useRouter } from "next/navigation";
 import LocationSettingsWidget from "../components/LocationSettingsWidget";
 import SettingsUaceClassSubjectPapers from "@/src/components/admin/SettingsUaceClassSubjectPapers";
 import { canRemoveClassSubjectRow, classSubjectBadge, type ClassSubjectRow } from "@/lib/classSubjectRowGuards";
-import { isOLevelClass } from "@/src/components/reports/templates/helpers";
+import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
 import { REPORT_HEADER_DEFAULTS } from "@/lib/reportHeaderBrandingDefaults";
+import { Search } from "lucide-react";
+
+function assignmentRoleLabel(role: string | null | undefined): string {
+  if (role === "co_teacher") return "Co-teacher";
+  return "Subject teacher";
+}
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
 
@@ -102,9 +108,6 @@ export default function AdminSystemSettingsPage() {
           {tab === "subjects" && (
             <>
               <SubjectsPerClass classOptions={classOptions} schoolId={schoolId} />
-              {schoolType === "Secondary" && (
-                <SettingsUaceClassSubjectPapers variant="next" classOptions={classOptions} schoolId={schoolId} />
-              )}
             </>
           )}
           {tab === "assignments" && <TeacherSubjectClass classOptions={classOptions} />}
@@ -443,21 +446,33 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
           </div>
         )}
       </div>
+      {classOptions.some((c) => isALevelClass(c)) && isALevelClass(selectedClass) && schoolId ? (
+        <SettingsUaceClassSubjectPapers
+          embedded
+          variant="next"
+          anchorClassName={selectedClass}
+          classOptions={classOptions}
+          schoolId={schoolId}
+        />
+      ) : null}
     </div>
   );
 }
 
 function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
   const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [teachers, setTeachers] = useState<any[]>([]);
+  const [teachers, setTeachers] = useState<{ teacher_id: string; name: string }[]>([]);
   const [selectedTeacher, setSelectedTeacher] = useState<string>("");
   const [selectedClass, setSelectedClass] = useState<string>("");
   const [classSubjects, setClassSubjects] = useState<string[]>([]);
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [assignments, setAssignments] = useState<any[]>([]);
+  const [assignments, setAssignments] = useState<
+    { id: string; teacher_id: string; class_name: string; subject: string; assignment_role?: string | null }[]
+  >([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [assignmentsQuery, setAssignmentsQuery] = useState("");
 
   useEffect(() => {
     const init = async () => {
@@ -488,38 +503,114 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
       setLoading(true);
       const { data } = await supabase
         .from('teacher_class_subjects')
-        .select('id, teacher_id, class_name, subject')
+        .select('id, teacher_id, class_name, subject, assignment_role')
         .eq('school_id', schoolId)
         .order('created_at', { ascending: false });
-      setAssignments(data || []);
+      setAssignments((data || []) as typeof assignments);
       setLoading(false);
     };
     loadAssignments();
   }, [schoolId]);
 
+  const teacherNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const t of teachers) m[t.teacher_id] = t.name || "";
+    return m;
+  }, [teachers]);
+
+  const filteredAssignments = useMemo(() => {
+    const t = assignmentsQuery.trim().toLowerCase();
+    if (!t) return assignments;
+    return assignments.filter((a) => {
+      const teacherName = teacherNameById[a.teacher_id] || "";
+      return (
+        teacherName.toLowerCase().includes(t) ||
+        (a.class_name || "").toLowerCase().includes(t) ||
+        (a.subject || "").toLowerCase().includes(t) ||
+        assignmentRoleLabel(a.assignment_role).toLowerCase().includes(t)
+      );
+    });
+  }, [assignments, assignmentsQuery, teacherNameById]);
+
   const assign = async () => {
     setError(null);
     if (!schoolId || !selectedTeacher || !selectedClass || selectedSubjects.length === 0) return;
     setSaving(true);
-    const payload = selectedSubjects.map(s => ({ school_id: schoolId, teacher_id: selectedTeacher, class_name: selectedClass, subject: s }));
-    // optimistic
-    const optimistic = payload.map(p => ({ id: `tmp-${Math.random()}`, ...p }));
-    setAssignments(prev => [...optimistic, ...prev]);
-    const { error } = await supabase.from('teacher_class_subjects').insert(payload);
-    setSaving(false);
-    if (error) {
-      setError(error.message);
-      // rollback optimistic
-      setAssignments(prev => prev.filter(a => !String(a.id).startsWith('tmp-')));
+    const thisTeacherName = teacherNameById[selectedTeacher] || "This teacher";
+
+    const payload: {
+      school_id: string;
+      teacher_id: string;
+      class_name: string;
+      subject: string;
+      assignment_role: "subject_teacher" | "co_teacher";
+    }[] = [];
+
+    for (const s of selectedSubjects) {
+      const { data: primary } = await supabase
+        .from("teacher_class_subjects")
+        .select("teacher_id")
+        .eq("school_id", schoolId)
+        .eq("class_name", selectedClass)
+        .eq("subject", s)
+        .eq("assignment_role", "subject_teacher")
+        .maybeSingle();
+
+      const pid = (primary as { teacher_id?: string } | null)?.teacher_id;
+      if (pid && pid === selectedTeacher) {
+        window.alert(`Already assigned as subject teacher: ${s}`);
+        continue;
+      }
+      if (pid && pid !== selectedTeacher) {
+        const otherName = teacherNameById[pid] || "Another teacher";
+        const ok = window.confirm(
+          `${selectedClass} — ${s} already has a subject teacher (${otherName}).\n\nAdd ${thisTeacherName} as a co-teacher?`
+        );
+        if (!ok) continue;
+        payload.push({
+          school_id: schoolId,
+          teacher_id: selectedTeacher,
+          class_name: selectedClass,
+          subject: s,
+          assignment_role: "co_teacher",
+        });
+      } else {
+        payload.push({
+          school_id: schoolId,
+          teacher_id: selectedTeacher,
+          class_name: selectedClass,
+          subject: s,
+          assignment_role: "subject_teacher",
+        });
+      }
+    }
+
+    if (payload.length === 0) {
+      setSaving(false);
       return;
     }
-    // reload to get real IDs
+
+    const optimistic = payload.map((p) => ({
+      id: `tmp-${Math.random()}`,
+      teacher_id: p.teacher_id,
+      class_name: p.class_name,
+      subject: p.subject,
+      assignment_role: p.assignment_role,
+    }));
+    setAssignments((prev) => [...optimistic, ...prev]);
+    const { error: insertError } = await supabase.from("teacher_class_subjects").insert(payload);
+    setSaving(false);
+    if (insertError) {
+      setError(insertError.message);
+      setAssignments((prev) => prev.filter((a) => !String(a.id).startsWith("tmp-")));
+      return;
+    }
     const { data } = await supabase
-      .from('teacher_class_subjects')
-      .select('id, teacher_id, class_name, subject')
-      .eq('school_id', schoolId)
-      .order('created_at', { ascending: false });
-    setAssignments(data || []);
+      .from("teacher_class_subjects")
+      .select("id, teacher_id, class_name, subject, assignment_role")
+      .eq("school_id", schoolId)
+      .order("created_at", { ascending: false });
+    setAssignments((data || []) as typeof assignments);
     setSelectedSubjects([]);
   };
 
@@ -537,7 +628,7 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
     <div>
       <SectionHeader
         title="Teacher ↔ Subject ↔ Class Assignments"
-        desc="Assign teachers to subjects for specific classes. One teacher can handle multiple subjects/classes and one subject can have multiple teachers."
+        desc="Each class+subject has one subject teacher; additional staff can be co-teachers. Class teachers are set under Classes."
       />
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <select value={selectedTeacher} onChange={(e)=>setSelectedTeacher(e.target.value)} className="rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2">
@@ -570,36 +661,94 @@ function TeacherSubjectClass({ classOptions }: { classOptions: string[] }) {
         <button disabled={!selectedTeacher || !selectedClass || selectedSubjects.length===0 || saving} onClick={assign} className="rounded-lg bg-green-600 hover:bg-green-500 disabled:opacity-50 px-3 py-2">{saving ? 'Assigning...' : 'Assign'}</button>
       </div>
 
-      <div className="mt-4 text-white/80 text-sm">Current assignments</div>
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mt-2 rounded-xl border border-white/10 bg-white/10 backdrop-blur-md shadow-lg shadow-black/20 overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="text-left">
-              <th className="px-4 py-2 text-white/80">Teacher</th>
-              <th className="px-4 py-2 text-white/80">Class</th>
-              <th className="px-4 py-2 text-white/80">Subject</th>
-              <th className="px-4 py-2 text-white/80">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="[&>tr:nth-child(even)]:bg-white/5">
-            {loading ? (
-              <tr><td colSpan={4} className="px-4 py-6 text-center text-white/80">Loading...</td></tr>
-            ) : assignments.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-6 text-center text-white/80">No assignments yet.</td></tr>
-            ) : (
-              assignments.map(a => (
-                <tr key={a.id} className="border-t border-white/10">
-                  <td className="px-4 py-2 text-white">{teachers.find(t => t.teacher_id === a.teacher_id)?.name || a.teacher_id}</td>
-                  <td className="px-4 py-2 text-white/90">{a.class_name}</td>
-                  <td className="px-4 py-2 text-white/90">{a.subject}</td>
-                  <td className="px-4 py-2">
-                    <button className="px-2 py-1 text-xs rounded bg-red-500 hover:bg-red-400 transition-transform hover:scale-105 text-white" onClick={() => remove(a.id)}>Remove</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm font-medium text-white/80">Current assignments</div>
+        <div className="relative min-w-0 flex-1 sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" aria-hidden />
+          <input
+            type="search"
+            value={assignmentsQuery}
+            onChange={(e) => setAssignmentsQuery(e.target.value)}
+            placeholder="Search teacher, class, subject…"
+            className="w-full min-h-0 rounded-xl border border-white/10 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder:text-white/50 outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            disabled={loading || assignments.length === 0}
+          />
+        </div>
+      </div>
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mt-3 overflow-hidden rounded-xl border border-white/10 bg-white/10 shadow-lg shadow-black/20 backdrop-blur-md"
+      >
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-4 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={`tsk-${i}`} className="flex min-h-[160px] flex-col rounded-xl border border-white/10 p-3 sm:p-4">
+                <div className="mb-3 h-3 w-20 animate-pulse rounded bg-white/10" />
+                <div className="mb-2 h-4 w-full animate-pulse rounded bg-white/10" />
+                <div className="mt-auto space-y-2">
+                  <div className="h-3 w-full animate-pulse rounded bg-white/10" />
+                  <div className="h-3 w-4/5 animate-pulse rounded bg-white/10" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : assignments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-white/70">No assignments yet.</div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-white/70">No matches for your search.</div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 p-3 sm:gap-4 sm:p-5 md:[grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
+            {filteredAssignments.map((a) => {
+              const teacherName = teacherNameById[a.teacher_id] || a.teacher_id;
+              const role = assignmentRoleLabel(a.assignment_role);
+              return (
+                <article
+                  key={a.id}
+                  className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-white/[0.06] shadow-sm transition-shadow hover:shadow-md"
+                >
+                  <div className="border-b border-white/10 px-3 py-3 sm:px-4">
+                    <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-white/55">Teacher</p>
+                    <p className="text-[15px] font-semibold leading-snug tracking-tight text-white line-clamp-2">
+                      {teacherName}
+                    </p>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-2.5 px-3 py-3 text-sm sm:px-4 sm:py-4">
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Class</span>
+                      <span className="font-medium break-words text-white/90">{a.class_name || "—"}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Subject</span>
+                      <span className="font-medium break-words text-white/90">{a.subject || "—"}</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-0.5">
+                      <span className="text-[10px] font-medium uppercase tracking-wider text-white/55">Role</span>
+                      <span
+                        className={
+                          a.assignment_role === "co_teacher"
+                            ? "inline-flex w-fit max-w-full rounded-md border border-amber-400/40 bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-100"
+                            : "inline-flex w-fit max-w-full rounded-md border border-emerald-400/40 bg-emerald-600/25 px-2 py-0.5 text-xs font-semibold text-emerald-100"
+                        }
+                      >
+                        {role}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-auto border-t border-white/10 px-3 py-2.5 sm:px-4">
+                    <button
+                      type="button"
+                      className="flex min-h-[44px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-3 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700"
+                      onClick={() => remove(a.id)}
+                    >
+                      Remove assignment
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </motion.div>
       {error && <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">{error}</div>}
     </div>
