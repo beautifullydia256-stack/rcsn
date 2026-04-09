@@ -358,6 +358,12 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-grid         { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
 .pw-profile .sp-grid.full    { grid-template-columns: 1fr; }
 .pw-profile .sp-grid.three   { grid-template-columns: 1fr 1fr 1fr; }
+/* Academic tab: wider Academic Standing column so UCE/UACE tables match Subjects-per-class width */
+.pw-profile .sp-grid.sp-grid-academic {
+  grid-template-columns: minmax(280px, 0.95fr) minmax(520px, 1.45fr);
+  gap: 20px;
+  align-items: stretch;
+}
 
 .pw-profile .sp-card {
   background: var(--surface); border: 1px solid var(--border);
@@ -402,6 +408,9 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
 .pw-profile .sp-field-value a       { color: var(--accent); text-decoration: none; }
 .pw-profile .sp-field-value a:hover { text-decoration: underline; }
 .pw-profile .sp-academic-standing-react { width: 100%; min-width: 0; }
+.pw-profile .sp-card-academic-standing .sp-card-body {
+  padding-bottom: 24px;
+}
 
 /* ── GUARDIAN CARD ── */
 .pw-profile .sp-guardian-card {
@@ -937,7 +946,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
     <!-- TAB: ACADEMIC                                      -->
     <!-- ══════════════════════════════════════════════════ -->
     <div id="sp-tab-academic" style="display:none">
-      <div class="sp-grid sp-fu sp-d2">
+      <div class="sp-grid sp-grid-academic sp-fu sp-d2">
         <div class="sp-card">
           <div class="sp-card-head">
             <div class="sp-card-title">
@@ -953,7 +962,7 @@ html.light .pw-profile .sp-topbar { background: rgba(244,246,251,0.92); }
             </div>
           </div>
         </div>
-        <div class="sp-card">
+        <div class="sp-card sp-card-academic-standing">
           <div class="sp-card-head">
             <div class="sp-card-title">
               <div class="sp-card-title-icon" style="background:var(--green-soft)">🏆</div>
