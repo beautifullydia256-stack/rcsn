@@ -115,7 +115,7 @@ LANGUAGE sql
 IMMUTABLE
 SET search_path = public
 AS $$
-  SELECT trim(both ' ' FROM coalesce(p_class, '')) ~* '^(senior\s*[1-6]|s\.?\s*[1-6])\b';
+  SELECT trim(both ' ' FROM coalesce(p_class, '')) ~* '^(senior\s*[1-6]|s\.?\s*[1-6])(\s|$)';
 $$;
 
 CREATE OR REPLACE FUNCTION public.auto_populate_processed_on_exam_insert()

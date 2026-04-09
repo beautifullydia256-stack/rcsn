@@ -116,7 +116,7 @@ SET
   is_non_removable_default = (u.catalog_offering = 'compulsory')
 FROM public.uce_subject_catalog u
 WHERE
-  TRIM(cs.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])\b'
+  TRIM(cs.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])(\s|$)'
   AND TRIM(cs.subject) = TRIM(u.subject_name);
 
 -- 3) Extend class_subjects trigger: UACE subsidiaries + UCE locked compulsories + school CASCADE
@@ -138,7 +138,7 @@ BEGIN
 
     IF COALESCE(OLD.is_non_removable_default, false)
        AND OLD.uce_offering_type = 'compulsory'
-       AND TRIM(OLD.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])\b' THEN
+       AND TRIM(OLD.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])(\s|$)' THEN
       RAISE EXCEPTION
         'Default UCE compulsory subjects cannot be removed for Senior 1–4 (subject: %, class: %).',
         TRIM(OLD.subject), TRIM(OLD.class_name)
@@ -161,7 +161,7 @@ BEGIN
   ELSIF TG_OP = 'UPDATE' THEN
     IF COALESCE(OLD.is_non_removable_default, false)
        AND OLD.uce_offering_type = 'compulsory'
-       AND TRIM(OLD.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])\b' THEN
+       AND TRIM(OLD.class_name) ~* '^(senior\s*[1-4]|s\.?\s*[1-4])(\s|$)' THEN
       IF TRIM(NEW.class_name) IS DISTINCT FROM TRIM(OLD.class_name)
          OR TRIM(NEW.subject) IS DISTINCT FROM TRIM(OLD.subject)
          OR NEW.uce_offering_type IS DISTINCT FROM OLD.uce_offering_type
@@ -344,7 +344,7 @@ BEGIN
     RETURN;
   END IF;
 
-  IF NOT (v_raw_class ~* '^(senior\s*[1-4]|s\.?\s*[1-4])\b') THEN
+  IF NOT (v_raw_class ~* '^(senior\s*[1-4]|s\.?\s*[1-4])(\s|$)') THEN
     RETURN;
   END IF;
 
@@ -393,7 +393,7 @@ BEGIN
 
   SELECT count(*) INTO tot FROM public.student_olevel_subjects WHERE student_id = p_student_id;
 
-  IF v_raw_class ~* '^(senior\s*[34]|s\.?\s*[34])\b' THEN
+  IF v_raw_class ~* '^(senior\s*[34]|s\.?\s*[34])(\s|$)' THEN
     IF sub_cnt > 3 THEN
       RAISE EXCEPTION 'Senior 3–4: at most 3 subsidiary subjects on the learner profile.'
         USING ERRCODE = 'check_violation';

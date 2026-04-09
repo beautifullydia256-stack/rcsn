@@ -78,7 +78,7 @@ BEGIN
   FROM public.students
   WHERE student_id = NEW.student_id;
 
-  IF v_class IS NULL OR v_class !~* '^(senior\s*[56]|s\.?\s*[56])\b' THEN
+  IF v_class IS NULL OR v_class !~* '^(senior\s*[56]|s\.?\s*[56])(\s|$)' THEN
     RAISE EXCEPTION
       'UACE subject combinations apply only to Senior 5 or Senior 6 (current class: %).',
       COALESCE(v_class, '(none)')

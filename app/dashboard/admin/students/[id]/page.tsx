@@ -158,13 +158,28 @@ export default function StudentDetailPage() {
       setOLevelLoading(true);
       setOLevelError(null);
       try {
-        const { data: csRows, error: csErr } = await supabase
+        let csRows: { subject: string; uce_offering_type: string | null; class_name?: string }[] | null = null;
+        const { data: exactRows, error: csErr } = await supabase
           .from("class_subjects")
-          .select("subject, uce_offering_type")
+          .select("subject, uce_offering_type, class_name")
           .eq("school_id", student.school_id)
           .eq("class_name", cls)
           .order("subject");
         if (csErr) throw csErr;
+        if (exactRows && exactRows.length > 0) {
+          csRows = exactRows;
+        } else {
+          const { data: schoolRows, error: schoolErr } = await supabase
+            .from("class_subjects")
+            .select("subject, uce_offering_type, class_name")
+            .eq("school_id", student.school_id)
+            .order("subject");
+          if (schoolErr) throw schoolErr;
+          const norm = (v: string) => v.trim().replace(/\s+/g, " ").toLowerCase();
+          const want = norm(cls);
+          csRows =
+            (schoolRows ?? []).filter((r) => norm(String(r.class_name ?? "")) === want) ?? [];
+        }
         if (cancelled) return;
         setOLevelClassRows((csRows ?? []) as { subject: string; uce_offering_type: string | null }[]);
 
