@@ -7,6 +7,13 @@ import { motion } from "framer-motion";
 import ImageUpload from "@/src/components/ImageUpload";
 import { CompressionResult } from "@/src/lib/imageCompression";
 import { isALevelClass, isOLevelClass, isSenior34Class } from "@/src/components/reports/templates/helpers";
+import {
+  isGeneralPaperSubject,
+  UACE_MAX_ELECTIVE_SUBSIDIARIES,
+  UACE_MAX_PRINCIPALS,
+} from "@/lib/uaceProgrammeRules";
+
+const UACE_GENERAL_PAPER_NAME = "General Paper";
 
 export default function StudentDetailPage() {
   const params = useParams();
@@ -118,7 +125,11 @@ export default function StudentDetailPage() {
         ]);
         if (cancelled) return;
         setUacePrincipalOptions((p ?? []).map((r: { subject_name: string }) => r.subject_name));
-        setUaceSubsidiaryOptions((s ?? []).map((r: { subject_name: string }) => r.subject_name));
+        setUaceSubsidiaryOptions(
+          (s ?? [])
+            .map((r: { subject_name: string }) => r.subject_name)
+            .filter((n: string) => !isGeneralPaperSubject(n)),
+        );
 
         const { data: rows, error } = await supabase
           .from("student_alevel_subjects")
@@ -133,7 +144,7 @@ export default function StudentDetailPage() {
           .filter((r: { subject_role: string }) => r.subject_role === "subsidiary")
           .map((r: { subject_name: string }) => r.subject_name);
         setUacePrincipalsPicked(pr);
-        setUaceSubsPicked(su);
+        setUaceSubsPicked(su.filter((n: string) => !isGeneralPaperSubject(n)));
       } catch (e: unknown) {
         if (!cancelled) setUaceSubjectsError(e instanceof Error ? e.message : "Failed to load UACE subjects");
       } finally {
@@ -256,35 +267,38 @@ export default function StudentDetailPage() {
   const toggleUacePrincipal = (name: string) => {
     setUacePrincipalsPicked((prev) => {
       if (prev.includes(name)) return prev.filter((x) => x !== name);
-      if (prev.length >= 3) return prev;
+      if (prev.length >= UACE_MAX_PRINCIPALS) return prev;
       return [...prev, name];
     });
   };
 
   const toggleUaceSub = (name: string) => {
+    if (isGeneralPaperSubject(name)) return;
     setUaceSubsPicked((prev) => {
       if (prev.includes(name)) return prev.filter((x) => x !== name);
-      if (prev.length >= 2) return prev;
+      if (prev.length >= UACE_MAX_ELECTIVE_SUBSIDIARIES) return prev;
       return [...prev, name];
     });
   };
 
   const saveUaceCombination = async () => {
     if (!student) return;
-    if (uacePrincipalsPicked.length > 3) {
-      alert("At most 3 principal subjects.");
+    if (uacePrincipalsPicked.length > UACE_MAX_PRINCIPALS) {
+      alert(`At most ${UACE_MAX_PRINCIPALS} principal subjects.`);
       return;
     }
-    if (uaceSubsPicked.length > 2) {
-      alert("At most 2 subsidiary subjects.");
+    const elective = uaceSubsPicked.filter((n) => !isGeneralPaperSubject(n));
+    if (elective.length > UACE_MAX_ELECTIVE_SUBSIDIARIES) {
+      alert(`At most ${UACE_MAX_ELECTIVE_SUBSIDIARIES} elective subsidiary (General Paper is automatic).`);
       return;
     }
-    if (uacePrincipalsPicked.length + uaceSubsPicked.length > 5) {
+    const subsidiaryNames = [UACE_GENERAL_PAPER_NAME, ...elective];
+    if (uacePrincipalsPicked.length + subsidiaryNames.length > 5) {
       alert("At most 5 UACE subjects in total.");
       return;
     }
     const seen = new Set<string>();
-    for (const x of [...uacePrincipalsPicked, ...uaceSubsPicked]) {
+    for (const x of [...uacePrincipalsPicked, ...subsidiaryNames]) {
       if (seen.has(x)) {
         alert(`Duplicate subject: ${x}`);
         return;
@@ -303,7 +317,7 @@ export default function StudentDetailPage() {
           subject_name,
           subject_role: "principal" as const,
         })),
-        ...uaceSubsPicked.map((subject_name) => ({
+        ...subsidiaryNames.map((subject_name) => ({
           school_id: student.school_id,
           student_id: student.student_id,
           subject_name,
@@ -688,8 +702,9 @@ export default function StudentDetailPage() {
                 <div className="text-white/90 font-medium col-span-full mt-2">UACE combination (Senior 5–6)</div>
                 <div className="col-span-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm text-white/90">
                   <p className="text-white/70 mb-2">
-                    Admin or head teacher: choose exactly what this learner offers — up to <strong>3 principals</strong> and{" "}
-                    <strong>2 subsidiaries</strong> (max <strong>5</strong> subjects). Teachers only see learners who take each subject when entering A-Level results.
+                    <strong>General Paper</strong> is automatic for every A-Level learner. Choose up to{" "}
+                    <strong>{UACE_MAX_PRINCIPALS} principals</strong> and <strong>{UACE_MAX_ELECTIVE_SUBSIDIARIES} elective subsidiary</strong>{" "}
+                    (five subjects total). Teachers only see learners who take each subject when entering A-Level results.
                   </p>
                   {uaceSubjectsError && (
                     <div className="mb-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-red-200">{uaceSubjectsError}</div>
@@ -699,7 +714,9 @@ export default function StudentDetailPage() {
                   ) : (
                     <>
                       <div className="mb-3">
-                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">Principal ({uacePrincipalsPicked.length}/3)</div>
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">
+                          Principal ({uacePrincipalsPicked.length}/{UACE_MAX_PRINCIPALS})
+                        </div>
                         <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto">
                           {uacePrincipalOptions.map((name) => (
                             <label key={name} className="flex items-center gap-2 cursor-pointer text-xs">
@@ -715,7 +732,16 @@ export default function StudentDetailPage() {
                         </div>
                       </div>
                       <div className="mb-3">
-                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">Subsidiary ({uaceSubsPicked.length}/2)</div>
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">
+                          General Paper <span className="text-white/50 font-normal">(automatic)</span>
+                        </div>
+                        <label className="flex items-center gap-2 text-xs text-white/70 cursor-default mb-3">
+                          <input type="checkbox" checked readOnly disabled className="rounded border-white/20" />
+                          <span>{UACE_GENERAL_PAPER_NAME}</span>
+                        </label>
+                        <div className="text-white font-medium text-xs uppercase tracking-wide mb-1">
+                          Elective subsidiary ({uaceSubsPicked.length}/{UACE_MAX_ELECTIVE_SUBSIDIARIES})
+                        </div>
                         <div className="flex flex-wrap gap-2">
                           {uaceSubsidiaryOptions.map((name) => (
                             <label key={name} className="flex items-center gap-2 cursor-pointer text-xs">

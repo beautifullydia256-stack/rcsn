@@ -895,7 +895,6 @@ export default function DesignStudentProfile() {
         }
 
         set('#sp-current-term', 'Current term');
-        set('#sp-class-position', 'Not yet ranked');
         const mountAcademic = el.querySelector('#sp-subjects-enrolled-react-root') as HTMLDivElement | null;
         academicMountRef.current = mountAcademic;
         setAcademicPortalData({

@@ -7,6 +7,12 @@ import {
   isSenior34Class,
 } from '@/components/reports/templates/helpers';
 import { settingsInsetSurface, settingsPrimaryActionClass } from '@/pages/admin/settings/tabs/settingsTabStyles';
+import {
+  isGeneralPaperSubject,
+  UACE_MAX_ELECTIVE_SUBSIDIARIES,
+  UACE_MAX_PRINCIPALS,
+  uaceProfileIsComplete,
+} from '@/lib/uaceProgrammeRules';
 
 export type StudentProfileAcademicStandingProps = {
   schoolId: string;
@@ -17,10 +23,6 @@ export type StudentProfileAcademicStandingProps = {
   initialAlevelRows: { id: string; subject_name: string; subject_role: string }[];
   onChanged: () => void;
 };
-
-function isGeneralPaperSubject(name: string): boolean {
-  return /general\s*paper/i.test(String(name || '').trim());
-}
 
 function normalizeClassSubjectRows(
   rows: { subject?: string; uce_offering_type?: string | null }[],
@@ -44,28 +46,22 @@ function statusProseS34(
   if (pickedSubs.length === 0 && subsidiaryPool.length > 0) {
     return {
       level: 'warn',
-      text: `Incomplete: add 1–3 subsidiary subject(s). Showing ${compulsory.length} compulsory only (${total} on profile).`,
+      text: `Choose 1–3 subsidiary subject(s) from the list on the right. All ${compulsory.length} compulsory subject(s) for this class are part of the programme automatically — only subsidiaries are picked here.`,
     };
   }
   if (pickedSubs.length === 0 && subsidiaryPool.length === 0) {
     return {
       level: 'warn',
-      text: `No subsidiary pool configured for this class. ${total} subject(s) on profile. Check Admin → Subjects per class.`,
+      text: `No subsidiary pool configured for this class (${total} compulsory subject(s)). Check Admin → Subjects per class.`,
     };
   }
   return {
     level: 'ok',
-    text: `Profile: ${total} subject(s) — ${compulsory.length} compulsory + ${pickedSubs.length} subsidiary (choose 1–3).`,
+    text: `Programme: ${compulsory.length} compulsory (automatic) + ${pickedSubs.length} subsidiary (learner choice).`,
   };
 }
 
-function CompulsoryList({
-  subjects,
-  olevelSet,
-}: {
-  subjects: string[];
-  olevelSet: Set<string>;
-}) {
+function CompulsoryList({ subjects }: { subjects: string[] }) {
   if (subjects.length === 0) {
     return (
       <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">No compulsory rows for this class.</div>
@@ -73,28 +69,19 @@ function CompulsoryList({
   }
   return (
     <ul className="divide-y divide-slate-200/35 dark:divide-white/10">
-      {subjects.map((sub) => {
-        const onProfile = olevelSet.has(sub);
-        return (
-          <li key={sub} className="px-3 py-3.5 sm:px-4">
-            <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{sub}</div>
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="rounded-md border border-[var(--pw-border)] bg-[var(--pw-s2)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--pw-muted)]">
-                compulsory
-              </span>
-              <span
-                className={
-                  onProfile
-                    ? 'text-xs font-medium text-emerald-600 dark:text-emerald-400'
-                    : 'text-xs font-medium text-amber-700 dark:text-amber-300'
-                }
-              >
-                {onProfile ? 'On learner profile' : 'Not on profile yet — adjust learner subjects or save from Admin'}
-              </span>
-            </div>
-          </li>
-        );
-      })}
+      {subjects.map((sub) => (
+        <li key={sub} className="px-3 py-3.5 sm:px-4">
+          <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{sub}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="rounded-md border border-[var(--pw-border)] bg-[var(--pw-s2)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+              compulsory
+            </span>
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              Included automatically (school UCE rules — not chosen here)
+            </span>
+          </div>
+        </li>
+      ))}
     </ul>
   );
 }
@@ -166,7 +153,11 @@ export default function StudentProfileAcademicStanding({
       .eq('subject_type', 'subsidiary')
       .then(({ data }) => {
         if (cancelled) return;
-        setUaceSubsidiaryNames((data || []).map((r) => String((r as { subject_name: string }).subject_name).trim()).filter(Boolean));
+        const names = (data || [])
+          .map((r) => String((r as { subject_name: string }).subject_name).trim())
+          .filter(Boolean)
+          .filter((n) => !isGeneralPaperSubject(n));
+        setUaceSubsidiaryNames(names);
       });
     return () => {
       cancelled = true;
@@ -294,6 +285,13 @@ export default function StudentProfileAcademicStanding({
 
     return (
       <div className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold leading-snug ac-text-primary">UCE programme (Senior 3–4)</h3>
+          <p className="mt-1 text-xs leading-relaxed ac-text-secondary">
+            Two columns: <strong className="font-medium ac-text-primary">compulsory</strong> (automatic from the school list) and{' '}
+            <strong className="font-medium ac-text-primary">subsidiary</strong> (you choose 1–3).
+          </p>
+        </div>
         <div
           className={`rounded-xl border px-3 py-2.5 text-sm leading-snug sm:px-4 ${
             status.level === 'ok'
@@ -306,22 +304,22 @@ export default function StudentProfileAcademicStanding({
           {status.text}
         </div>
 
-        <div className="space-y-3 sm:space-y-4 lg:grid lg:grid-cols-2 lg:gap-4">
+        <div className="space-y-3 sm:space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
           <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
             <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
               <div className="text-[15px] font-semibold leading-snug ac-text-primary">Compulsory subjects</div>
               <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                UCE core for this class — learners must include all of these on their profile.
+                Core papers for this class — always included; they are not selected on this screen.
               </div>
             </div>
-            <CompulsoryList subjects={[...compulsory].sort((a, b) => a.localeCompare(b))} olevelSet={olevelSet} />
+            <CompulsoryList subjects={[...compulsory].sort((a, b) => a.localeCompare(b))} />
           </div>
 
           <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
             <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects (learner)</div>
+              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
               <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                Choose 1–3 from the subsidiary pool configured in Admin → Subjects per class.
+                Learner choice: pick 1–3 from the pool defined in Admin → Subjects per class.
               </div>
             </div>
             <SubsidiaryLearnerList picked={pickedSubs} busy={busy} onRemove={(s) => void removeOlevelSubsidiary(s)} />
@@ -394,25 +392,40 @@ export default function StudentProfileAcademicStanding({
   if (isALevelClass(cls)) {
     const principals = initialAlevelRows.filter((r) => r.subject_role === 'principal').sort((a, b) => a.subject_name.localeCompare(b.subject_name));
     const subsidiaries = initialAlevelRows.filter((r) => r.subject_role === 'subsidiary').sort((a, b) => a.subject_name.localeCompare(b.subject_name));
+    const electiveSubs = subsidiaries.filter((r) => !isGeneralPaperSubject(r.subject_name));
     const classSubjectSet = new Set(rows.map((r) => r.subject));
     const subTaken = new Set(subsidiaries.map((r) => r.subject_name));
     const addAlevelOptions = uaceSubsidiaryNames
       .filter((n) => classSubjectSet.has(n) && !subTaken.has(n))
       .sort((a, b) => a.localeCompare(b));
+    const principalComplete = principals.length === UACE_MAX_PRINCIPALS;
     const hasGP = subsidiaries.some((r) => isGeneralPaperSubject(r.subject_name));
-    const uaceOk = principals.length === 3 && subsidiaries.length === 2 && hasGP;
+    const electiveOk = electiveSubs.length === UACE_MAX_ELECTIVE_SUBSIDIARIES;
+    const uaceOk = uaceProfileIsComplete(
+      principals.map((r) => r.subject_name),
+      subsidiaries.map((r) => r.subject_name),
+    );
+    const uaceParts = [
+      !principalComplete ? `Principals: ${principals.length}/${UACE_MAX_PRINCIPALS}` : '',
+      !hasGP ? 'General Paper (applied automatically — save class or contact admin if missing)' : '',
+      !electiveOk ? `Elective subsidiary: ${electiveSubs.length}/${UACE_MAX_ELECTIVE_SUBSIDIARIES} (choose one besides General Paper)` : '',
+    ].filter(Boolean);
     const uaceMsg = uaceOk
-      ? 'UACE profile complete: 3 principals + 2 subsidiaries (including General Paper). Five subjects on reports.'
-      : `Incomplete UACE profile${[
-          principals.length !== 3 ? `principals ${principals.length}/3` : '',
-          subsidiaries.length !== 2 ? `subsidiaries ${subsidiaries.length}/2` : '',
-          subsidiaries.length >= 1 && !hasGP ? 'General Paper must be one of the two subsidiaries' : '',
-        ]
-          .filter(Boolean)
-          .join('; ')}.`;
+      ? 'UACE profile complete: 3 principals + General Paper + 1 elective subsidiary (5 subjects on reports).'
+      : uaceParts.length > 0
+        ? `Incomplete UACE profile: ${uaceParts.join('; ')}.`
+        : 'Incomplete UACE profile.';
 
     return (
       <div className="space-y-4">
+        <div>
+          <h3 className="text-base font-semibold leading-snug ac-text-primary">UACE programme (Senior 5–6)</h3>
+          <p className="mt-1 text-xs leading-relaxed ac-text-secondary">
+            <strong className="font-medium ac-text-primary">Left:</strong> principal papers (3).{' '}
+            <strong className="font-medium ac-text-primary">Right:</strong> General Paper (automatic) and exactly one elective subsidiary you add
+            from the class list.
+          </p>
+        </div>
         <div
           className={`rounded-xl border px-3 py-2.5 text-sm leading-snug sm:px-4 ${
             uaceOk
@@ -425,14 +438,19 @@ export default function StudentProfileAcademicStanding({
           {uaceMsg}
         </div>
 
-        <div className="space-y-3 sm:space-y-4 lg:grid lg:grid-cols-2 lg:gap-4">
+        <div className="space-y-3 sm:space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
           <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
             <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal (3)</div>
-              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">Configured for this learner — edit only with admin tools if combinations change.</div>
+              <div className="text-[15px] font-semibold leading-snug ac-text-primary">
+                Principal subjects ({principals.length}/{UACE_MAX_PRINCIPALS})
+              </div>
+              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+                Three principal papers for this learner. Configure these in line with your school’s UACE combination rules (same data as other admin
+                A-Level editors).
+              </div>
             </div>
             {principals.length === 0 ? (
-              <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">No principals saved yet.</div>
+              <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">No principal subjects saved yet for this learner.</div>
             ) : (
               <ul className="divide-y divide-slate-200/35 dark:divide-white/10">
                 {principals.map((r) => (
@@ -447,16 +465,35 @@ export default function StudentProfileAcademicStanding({
 
           <div className={`${settingsInsetSurface} overflow-hidden shadow-lg shadow-black/10`}>
             <div className="border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary (2, incl. General Paper)</div>
-              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">Add or remove subsidiaries from subjects offered for this class (UACE catalog + class list).</div>
+              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Subsidiary subjects</div>
+              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+                General Paper is added by the system for every Senior 5–6 learner. You only choose <strong>one</strong> elective subsidiary from
+                subjects offered for this class (must also be in the UACE catalog).
+              </div>
             </div>
-            {subsidiaries.length === 0 ? (
-              <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">None saved yet.</div>
-            ) : (
-              <ul className="divide-y divide-slate-200/35 dark:divide-white/10">
-                {subsidiaries.map((r) => (
+            <ul className="divide-y divide-slate-200/35 dark:divide-white/10">
+              <li className="px-3 py-3.5 sm:px-4">
+                <div className="text-[15px] font-semibold ac-text-primary">General Paper</div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-md border border-[var(--pw-border)] bg-[var(--pw-s2)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                    subsidiary
+                  </span>
+                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    {hasGP ? 'On profile (automatic)' : 'Will appear when profile sync runs — promote to A-Level or save class'}
+                  </span>
+                </div>
+              </li>
+              {electiveSubs.length === 0 ? (
+                <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
+                  No elective subsidiary yet — pick one below (max {UACE_MAX_ELECTIVE_SUBSIDIARIES}).
+                </li>
+              ) : (
+                electiveSubs.map((r) => (
                   <li key={r.id} className="px-3 py-3.5 sm:px-4">
                     <div className="text-[15px] font-semibold ac-text-primary">{r.subject_name}</div>
+                    <div className="mt-2">
+                      <span className="text-[10px] uppercase tracking-wide text-[var(--pw-muted)]">elective subsidiary</span>
+                    </div>
                     <button
                       type="button"
                       disabled={busy}
@@ -466,21 +503,27 @@ export default function StudentProfileAcademicStanding({
                       Remove from learner
                     </button>
                   </li>
-                ))}
-              </ul>
-            )}
+                ))
+              )}
+            </ul>
             <div className="border-t border-slate-200/30 p-3 dark:border-white/10 sm:p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                 <div className="min-w-0 flex-1">
-                  <label className="mb-1 block text-xs font-medium ac-text-muted">Add subsidiary</label>
+                  <label className="mb-1 block text-xs font-medium ac-text-muted">Add elective subsidiary</label>
                   <select
                     value={alevelPick}
-                    disabled={busy || subsidiaries.length >= 2 || addAlevelOptions.length === 0}
+                    disabled={
+                      busy || electiveSubs.length >= UACE_MAX_ELECTIVE_SUBSIDIARIES || addAlevelOptions.length === 0
+                    }
                     onChange={(e) => setAlevelPick(e.target.value)}
                     className="ac-input min-h-[48px] w-full"
                   >
                     <option value="">
-                      {subsidiaries.length >= 2 ? 'Maximum 2 subsidiaries' : addAlevelOptions.length === 0 ? 'No options' : 'Select subject…'}
+                      {electiveSubs.length >= UACE_MAX_ELECTIVE_SUBSIDIARIES
+                        ? `Maximum ${UACE_MAX_ELECTIVE_SUBSIDIARIES} elective subsidiary`
+                        : addAlevelOptions.length === 0
+                          ? 'No options'
+                          : 'Select subject…'}
                     </option>
                     {addAlevelOptions.map((s) => (
                       <option key={s} value={s}>
@@ -491,7 +534,7 @@ export default function StudentProfileAcademicStanding({
                 </div>
                 <button
                   type="button"
-                  disabled={!alevelPick || busy || subsidiaries.length >= 2}
+                  disabled={!alevelPick || busy || electiveSubs.length >= UACE_MAX_ELECTIVE_SUBSIDIARIES}
                   onClick={() => void addAlevelSubsidiary()}
                   className={settingsPrimaryActionClass}
                 >
