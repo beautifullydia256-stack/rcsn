@@ -83,27 +83,47 @@ export default function StudentProfileAcademicStanding({
   const [busy, setBusy] = useState(false);
   const [olevelPick, setOlevelPick] = useState('');
   const [alevelPick, setAlevelPick] = useState('');
+  const [principalPick, setPrincipalPick] = useState('');
   const [uaceSubsidiaryNames, setUaceSubsidiaryNames] = useState<string[]>([]);
+  const [uacePrincipalCatalog, setUacePrincipalCatalog] = useState<string[]>([]);
+  const [uacePrincipalDraft, setUacePrincipalDraft] = useState<string[]>([]);
+  const [uacePrincipalSaving, setUacePrincipalSaving] = useState(false);
 
   useEffect(() => {
     if (!isALevelClass(cls)) return;
     let cancelled = false;
-    void supabase
-      .from('uace_subject_catalog')
-      .select('subject_name')
-      .eq('subject_type', 'subsidiary')
-      .then(({ data }) => {
-        if (cancelled) return;
-        const names = (data || [])
-          .map((r) => String((r as { subject_name: string }).subject_name).trim())
-          .filter(Boolean)
-          .filter((n) => !isGeneralPaperSubject(n));
-        setUaceSubsidiaryNames(names);
-      });
+    void Promise.all([
+      supabase.from('uace_subject_catalog').select('subject_name').eq('subject_type', 'subsidiary'),
+      supabase
+        .from('uace_subject_catalog')
+        .select('subject_name, sort_order')
+        .eq('subject_type', 'principal')
+        .order('sort_order'),
+    ]).then(([subRes, prRes]) => {
+      if (cancelled) return;
+      const subNames = (subRes.data || [])
+        .map((r) => String((r as { subject_name: string }).subject_name).trim())
+        .filter(Boolean)
+        .filter((n) => !isGeneralPaperSubject(n));
+      setUaceSubsidiaryNames(subNames);
+      const pnames = (prRes.data || [])
+        .map((r) => String((r as { subject_name: string }).subject_name).trim())
+        .filter(Boolean);
+      setUacePrincipalCatalog(pnames);
+    });
     return () => {
       cancelled = true;
     };
   }, [cls]);
+
+  useEffect(() => {
+    if (!isALevelClass(cls)) return;
+    const p = initialAlevelRows
+      .filter((r) => r.subject_role === 'principal')
+      .map((r) => r.subject_name.trim())
+      .filter(Boolean);
+    setUacePrincipalDraft([...new Set(p)]);
+  }, [cls, initialAlevelRows]);
 
   const fetchOlevelNames = useCallback(async (): Promise<string[]> => {
     const { data, error } = await supabase
@@ -210,6 +230,67 @@ export default function StudentProfileAcademicStanding({
     },
     [schoolId, onChanged],
   );
+
+  const toggleUacePrincipalDraft = useCallback((name: string) => {
+    setUacePrincipalDraft((prev) => {
+      if (prev.includes(name)) return prev.filter((x) => x !== name);
+      if (prev.length >= UACE_MAX_PRINCIPALS) return prev;
+      return [...prev, name];
+    });
+  }, []);
+
+  const persistUacePrincipals = useCallback(
+    async (draft: string[]): Promise<boolean> => {
+      if (draft.length > UACE_MAX_PRINCIPALS) {
+        window.alert(`At most ${UACE_MAX_PRINCIPALS} principal subjects.`);
+        return false;
+      }
+      setUacePrincipalSaving(true);
+      try {
+        const { error: dErr } = await supabase
+          .from('student_alevel_subjects')
+          .delete()
+          .eq('student_id', studentId)
+          .eq('school_id', schoolId)
+          .eq('subject_role', 'principal');
+        if (dErr) throw dErr;
+        if (draft.length > 0) {
+          const { error: iErr } = await supabase.from('student_alevel_subjects').insert(
+            draft.map((subject_name) => ({
+              school_id: schoolId,
+              student_id: studentId,
+              subject_name,
+              subject_role: 'principal' as const,
+            })),
+          );
+          if (iErr) throw iErr;
+        }
+        setUacePrincipalDraft(draft);
+        onChanged();
+        return true;
+      } catch (e) {
+        window.alert(e instanceof Error ? e.message : 'Failed to save principals');
+        return false;
+      } finally {
+        setUacePrincipalSaving(false);
+      }
+    },
+    [studentId, schoolId, onChanged],
+  );
+
+  const saveUacePrincipals = useCallback(async () => {
+    await persistUacePrincipals(uacePrincipalDraft);
+  }, [persistUacePrincipals, uacePrincipalDraft]);
+
+  const addAlevelPrincipal = useCallback(async () => {
+    const sub = principalPick.trim();
+    if (!sub) return;
+    if (uacePrincipalDraft.includes(sub)) return;
+    if (uacePrincipalDraft.length >= UACE_MAX_PRINCIPALS) return;
+    const next = [...uacePrincipalDraft, sub];
+    const ok = await persistUacePrincipals(next);
+    if (ok) setPrincipalPick('');
+  }, [principalPick, uacePrincipalDraft, persistUacePrincipals]);
 
   if (!cls) {
     return <p className="text-sm ac-text-secondary">Set the student&apos;s class to manage subjects.</p>;
@@ -452,7 +533,6 @@ export default function StudentProfileAcademicStanding({
 
   /* ─── A-Level (UACE) ─── */
   if (isALevelClass(cls)) {
-    const principals = initialAlevelRows.filter((r) => r.subject_role === 'principal').sort((a, b) => a.subject_name.localeCompare(b.subject_name));
     const subsidiaries = initialAlevelRows.filter((r) => r.subject_role === 'subsidiary').sort((a, b) => a.subject_name.localeCompare(b.subject_name));
     const electiveSubs = subsidiaries.filter((r) => !isGeneralPaperSubject(r.subject_name));
     const classSubjectSet = new Set(rows.map((r) => r.subject));
@@ -460,15 +540,24 @@ export default function StudentProfileAcademicStanding({
     const addAlevelOptions = uaceSubsidiaryNames
       .filter((n) => classSubjectSet.has(n) && !subTaken.has(n))
       .sort((a, b) => a.localeCompare(b));
-    const principalComplete = principals.length === UACE_MAX_PRINCIPALS;
+    const addPrincipalOptions = uacePrincipalCatalog
+      .filter((n) => classSubjectSet.has(n) && !uacePrincipalDraft.includes(n))
+      .sort((a, b) => a.localeCompare(b));
+    const canAddMorePrincipals =
+      uacePrincipalDraft.length < UACE_MAX_PRINCIPALS && addPrincipalOptions.length > 0;
+    const savedPrincipalSorted = initialAlevelRows
+      .filter((r) => r.subject_role === 'principal')
+      .map((r) => r.subject_name.trim())
+      .filter(Boolean)
+      .sort();
+    const draftSorted = [...uacePrincipalDraft].map((s) => s.trim()).filter(Boolean).sort();
+    const principalsDirty = draftSorted.join('\0') !== savedPrincipalSorted.join('\0');
+    const principalComplete = uacePrincipalDraft.length === UACE_MAX_PRINCIPALS;
     const hasGP = subsidiaries.some((r) => isGeneralPaperSubject(r.subject_name));
     const electiveOk = electiveSubs.length === UACE_MAX_ELECTIVE_SUBSIDIARIES;
-    const uaceOk = uaceProfileIsComplete(
-      principals.map((r) => r.subject_name),
-      subsidiaries.map((r) => r.subject_name),
-    );
+    const uaceOk = uaceProfileIsComplete(uacePrincipalDraft, subsidiaries.map((r) => r.subject_name));
     const uaceParts = [
-      !principalComplete ? `Principals ${principals.length}/${UACE_MAX_PRINCIPALS}` : '',
+      !principalComplete ? `Principals ${uacePrincipalDraft.length}/${UACE_MAX_PRINCIPALS}` : '',
       !hasGP ? 'General Paper missing — set class to A-Level or contact admin' : '',
       !electiveOk ? `Elective ${electiveSubs.length}/${UACE_MAX_ELECTIVE_SUBSIDIARIES}` : '',
     ].filter(Boolean);
@@ -492,63 +581,99 @@ export default function StudentProfileAcademicStanding({
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2 lg:items-stretch">
-          <div className={standingTableShell}>
-            <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
-              <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal subjects</div>
-              <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                UACE principal pool for this class — learners take up to three (edit in this student profile or other
-                admin UACE screens).
+          <div className="flex min-h-0 flex-col gap-3">
+            <div className={standingTableShell}>
+              <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
+                <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal subjects</div>
+                <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
+                  National UACE catalog: tick up to {UACE_MAX_PRINCIPALS}, then save below.
+                </div>
+              </div>
+              <div className="max-h-72 overflow-y-auto px-3 py-3 sm:px-4 sm:py-3">
+                {uacePrincipalCatalog.length === 0 ? (
+                  <div className="text-sm ac-text-secondary">Loading principal catalog...</div>
+                ) : (
+                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+                    {uacePrincipalCatalog.map((name) => (
+                      <label
+                        key={name}
+                        className="flex min-w-0 cursor-pointer items-center gap-2 text-sm ac-text-primary sm:max-w-[48%]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={uacePrincipalDraft.includes(name)}
+                          onChange={() => toggleUacePrincipalDraft(name)}
+                          disabled={uacePrincipalSaving || busy}
+                          className="shrink-0 rounded border-slate-300 dark:border-white/25"
+                        />
+                        <span className="break-words">{name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-3 text-xs ac-text-secondary">
+                  Selected: {uacePrincipalDraft.length}/{UACE_MAX_PRINCIPALS}
+                  {uacePrincipalDraft.length > UACE_MAX_PRINCIPALS ? (
+                    <span className="text-rose-600 dark:text-rose-300"> (too many - uncheck some)</span>
+                  ) : null}
+                </div>
               </div>
             </div>
-            {principals.length === 0 ? (
-              <div className="px-3 py-8 text-center text-sm ac-text-secondary sm:px-4">No principal subjects saved yet.</div>
-            ) : (
-              <>
-                <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
-                  {principals.map((r) => (
-                    <li key={r.id} className="px-3 py-3.5">
-                      <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{r.subject_name}</div>
-                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
-                        PRINCIPAL · LOCKED
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
-                  <table className="min-w-full text-sm table-fixed">
-                    <colgroup>
-                      <col className="min-w-0 sm:w-[46%]" />
-                      <col className="min-w-0 sm:w-[36%]" />
-                      <col className="w-[6.5rem]" />
-                    </colgroup>
-                    <thead>
-                      <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
-                        <th className="px-4 py-2 ac-text-secondary">Subject</th>
-                        <th className="px-4 py-2 ac-text-secondary">Notes</th>
-                        <th className="px-4 py-2 ac-text-secondary">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
-                      {principals.map((r) => (
-                        <tr key={r.id} className="border-t border-slate-200/25 dark:border-white/10">
-                          <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">
-                            {r.subject_name}
-                          </td>
-                          <td className="px-4 py-2.5 align-top whitespace-normal">
-                            <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
-                              PRINCIPAL · LOCKED
-                            </span>
-                          </td>
-                          <td className="px-4 py-2.5 align-top whitespace-nowrap">
-                            <span className="text-xs text-[var(--pw-muted)]">—</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+            <div className={standingAddToolbar}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">Add principal</div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1">
+                  <label className="mb-1 block text-xs font-medium ac-text-muted">Pick from class list (UACE catalog)</label>
+                  <select
+                    value={principalPick}
+                    disabled={!canAddMorePrincipals || busy || uacePrincipalSaving}
+                    onChange={(e) => setPrincipalPick(e.target.value)}
+                    className="ac-input min-h-[48px] w-full"
+                  >
+                    <option value="">
+                      {uacePrincipalDraft.length >= UACE_MAX_PRINCIPALS
+                        ? `Maximum ${UACE_MAX_PRINCIPALS} principals`
+                        : addPrincipalOptions.length === 0
+                          ? 'No options'
+                          : 'Select subject…'}
+                    </option>
+                    {addPrincipalOptions.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </>
-            )}
+                <button
+                  type="button"
+                  disabled={
+                    !principalPick || !canAddMorePrincipals || busy || uacePrincipalSaving
+                  }
+                  onClick={() => void addAlevelPrincipal()}
+                  className={settingsPrimaryActionClass}
+                >
+                  {uacePrincipalSaving ? 'Saving…' : 'Add principal'}
+                </button>
+              </div>
+            </div>
+            <div className={standingAddToolbar}>
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">
+                Save principal selection
+              </div>
+              <button
+                type="button"
+                disabled={
+                  !principalsDirty ||
+                  uacePrincipalSaving ||
+                  busy ||
+                  uacePrincipalDraft.length > UACE_MAX_PRINCIPALS
+                }
+                onClick={() => void saveUacePrincipals()}
+                className={settingsPrimaryActionClass}
+              >
+                {uacePrincipalSaving ? 'Saving...' : 'Save principals'}
+              </button>
+            </div>
           </div>
 
           <div className="flex min-h-0 flex-col gap-3">
