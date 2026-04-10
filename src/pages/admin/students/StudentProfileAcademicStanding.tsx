@@ -231,14 +231,6 @@ export default function StudentProfileAcademicStanding({
     [schoolId, onChanged],
   );
 
-  const toggleUacePrincipalDraft = useCallback((name: string) => {
-    setUacePrincipalDraft((prev) => {
-      if (prev.includes(name)) return prev.filter((x) => x !== name);
-      if (prev.length >= UACE_MAX_PRINCIPALS) return prev;
-      return [...prev, name];
-    });
-  }, []);
-
   const persistUacePrincipals = useCallback(
     async (draft: string[]): Promise<boolean> => {
       if (draft.length > UACE_MAX_PRINCIPALS) {
@@ -277,10 +269,6 @@ export default function StudentProfileAcademicStanding({
     },
     [studentId, schoolId, onChanged],
   );
-
-  const saveUacePrincipals = useCallback(async () => {
-    await persistUacePrincipals(uacePrincipalDraft);
-  }, [persistUacePrincipals, uacePrincipalDraft]);
 
   const addAlevelPrincipal = useCallback(async () => {
     const sub = principalPick.trim();
@@ -545,13 +533,9 @@ export default function StudentProfileAcademicStanding({
       .sort((a, b) => a.localeCompare(b));
     const canAddMorePrincipals =
       uacePrincipalDraft.length < UACE_MAX_PRINCIPALS && addPrincipalOptions.length > 0;
-    const savedPrincipalSorted = initialAlevelRows
+    const principalRows = initialAlevelRows
       .filter((r) => r.subject_role === 'principal')
-      .map((r) => r.subject_name.trim())
-      .filter(Boolean)
-      .sort();
-    const draftSorted = [...uacePrincipalDraft].map((s) => s.trim()).filter(Boolean).sort();
-    const principalsDirty = draftSorted.join('\0') !== savedPrincipalSorted.join('\0');
+      .sort((a, b) => a.subject_name.localeCompare(b.subject_name));
     const principalComplete = uacePrincipalDraft.length === UACE_MAX_PRINCIPALS;
     const hasGP = subsidiaries.some((r) => isGeneralPaperSubject(r.subject_name));
     const electiveOk = electiveSubs.length === UACE_MAX_ELECTIVE_SUBSIDIARIES;
@@ -586,39 +570,84 @@ export default function StudentProfileAcademicStanding({
               <div className="shrink-0 border-b border-slate-200/30 px-3 py-3 dark:border-white/10 sm:px-4 sm:py-3">
                 <div className="text-[15px] font-semibold leading-snug ac-text-primary">Principal subjects</div>
                 <div className="mt-1 text-xs leading-relaxed ac-text-secondary">
-                  National UACE catalog: tick up to {UACE_MAX_PRINCIPALS}, then save below.
+                  Only subjects saved on this learner&apos;s profile are listed here (up to {UACE_MAX_PRINCIPALS}). Add or remove
+                  below — same idea as subsidiary choices in Senior 3–4.
                 </div>
               </div>
-              <div className="max-h-72 overflow-y-auto px-3 py-3 sm:px-4 sm:py-3">
-                {uacePrincipalCatalog.length === 0 ? (
-                  <div className="text-sm ac-text-secondary">Loading principal catalog...</div>
+
+              <ul className="divide-y divide-slate-200/35 dark:divide-white/10 sm:hidden">
+                {principalRows.length === 0 ? (
+                  <li className="px-3 py-6 text-center text-sm ac-text-secondary sm:px-4">
+                    No principals on profile yet (up to {UACE_MAX_PRINCIPALS}).
+                  </li>
                 ) : (
-                  <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-                    {uacePrincipalCatalog.map((name) => (
-                      <label
-                        key={name}
-                        className="flex min-w-0 cursor-pointer items-center gap-2 text-sm ac-text-primary sm:max-w-[48%]"
+                  principalRows.map((r) => (
+                    <li key={r.id} className="px-3 py-3.5">
+                      <div className="break-words text-[15px] font-semibold leading-snug ac-text-primary">{r.subject_name}</div>
+                      <div className="mt-2 text-xs font-medium uppercase tracking-wide text-[var(--pw-muted)]">
+                        PRINCIPAL · LEARNER CHOICE
+                      </div>
+                      <button
+                        type="button"
+                        disabled={busy || uacePrincipalSaving}
+                        onClick={() => void removeAlevelRow(r.id)}
+                        className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-xl bg-rose-600/90 px-4 text-sm font-semibold text-white hover:bg-rose-500 active:bg-rose-700 disabled:opacity-50"
                       >
-                        <input
-                          type="checkbox"
-                          checked={uacePrincipalDraft.includes(name)}
-                          onChange={() => toggleUacePrincipalDraft(name)}
-                          disabled={uacePrincipalSaving || busy}
-                          className="shrink-0 rounded border-slate-300 dark:border-white/25"
-                        />
-                        <span className="break-words">{name}</span>
-                      </label>
-                    ))}
-                  </div>
+                        Remove
+                      </button>
+                    </li>
+                  ))
                 )}
-                <div className="mt-3 text-xs ac-text-secondary">
-                  Selected: {uacePrincipalDraft.length}/{UACE_MAX_PRINCIPALS}
-                  {uacePrincipalDraft.length > UACE_MAX_PRINCIPALS ? (
-                    <span className="text-rose-600 dark:text-rose-300"> (too many - uncheck some)</span>
-                  ) : null}
-                </div>
+              </ul>
+
+              <div className="hidden min-h-0 flex-1 overflow-x-auto sm:block">
+                <table className="min-w-full text-sm table-fixed">
+                  <colgroup>
+                    <col className="min-w-0 sm:w-[46%]" />
+                    <col className="min-w-0 sm:w-[36%]" />
+                    <col className="w-[6.5rem]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="border-b border-slate-200/30 text-left dark:border-white/10">
+                      <th className="px-4 py-2 ac-text-secondary">Subject</th>
+                      <th className="px-4 py-2 ac-text-secondary">Notes</th>
+                      <th className="px-4 py-2 ac-text-secondary">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="[&>tr:nth-child(even)]:bg-slate-200/40 dark:[&>tr:nth-child(even)]:bg-white/5">
+                    {principalRows.map((r) => (
+                      <tr key={r.id} className="border-t border-slate-200/25 dark:border-white/10">
+                        <td className="px-4 py-2.5 ac-text-primary font-medium break-words align-top">{r.subject_name}</td>
+                        <td className="px-4 py-2.5 align-top whitespace-normal">
+                          <span className="text-[11px] font-semibold uppercase tracking-wide leading-snug text-[var(--pw-muted)]">
+                            PRINCIPAL · LEARNER CHOICE
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 align-top whitespace-nowrap">
+                          <button
+                            type="button"
+                            disabled={busy || uacePrincipalSaving}
+                            onClick={() => void removeAlevelRow(r.id)}
+                            className="min-h-[40px] min-w-[5.5rem] rounded-lg bg-rose-600/90 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
+                          >
+                            Remove
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {principalRows.length === 0 ? (
+                      <tr className="border-t border-slate-200/25 dark:border-white/10">
+                        <td colSpan={3} className="px-4 py-6 text-center text-sm ac-text-secondary">
+                          No principals on profile yet — use <strong className="font-medium ac-text-primary">Add principal</strong>{' '}
+                          below (up to {UACE_MAX_PRINCIPALS}).
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
               </div>
             </div>
+
             <div className={standingAddToolbar}>
               <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">Add principal</div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -626,16 +655,18 @@ export default function StudentProfileAcademicStanding({
                   <label className="mb-1 block text-xs font-medium ac-text-muted">Pick from class list (UACE catalog)</label>
                   <select
                     value={principalPick}
-                    disabled={!canAddMorePrincipals || busy || uacePrincipalSaving}
+                    disabled={!canAddMorePrincipals || busy || uacePrincipalSaving || uacePrincipalCatalog.length === 0}
                     onChange={(e) => setPrincipalPick(e.target.value)}
                     className="ac-input min-h-[48px] w-full"
                   >
                     <option value="">
-                      {uacePrincipalDraft.length >= UACE_MAX_PRINCIPALS
-                        ? `Maximum ${UACE_MAX_PRINCIPALS} principals`
-                        : addPrincipalOptions.length === 0
-                          ? 'No options'
-                          : 'Select subject…'}
+                      {uacePrincipalCatalog.length === 0
+                        ? 'Loading catalog…'
+                        : uacePrincipalDraft.length >= UACE_MAX_PRINCIPALS
+                          ? `Maximum ${UACE_MAX_PRINCIPALS} principals`
+                          : addPrincipalOptions.length === 0
+                            ? 'No options'
+                            : 'Select subject…'}
                     </option>
                     {addPrincipalOptions.map((s) => (
                       <option key={s} value={s}>
@@ -646,33 +677,13 @@ export default function StudentProfileAcademicStanding({
                 </div>
                 <button
                   type="button"
-                  disabled={
-                    !principalPick || !canAddMorePrincipals || busy || uacePrincipalSaving
-                  }
+                  disabled={!principalPick || !canAddMorePrincipals || busy || uacePrincipalSaving}
                   onClick={() => void addAlevelPrincipal()}
                   className={settingsPrimaryActionClass}
                 >
                   {uacePrincipalSaving ? 'Saving…' : 'Add principal'}
                 </button>
               </div>
-            </div>
-            <div className={standingAddToolbar}>
-              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--pw-muted)]">
-                Save principal selection
-              </div>
-              <button
-                type="button"
-                disabled={
-                  !principalsDirty ||
-                  uacePrincipalSaving ||
-                  busy ||
-                  uacePrincipalDraft.length > UACE_MAX_PRINCIPALS
-                }
-                onClick={() => void saveUacePrincipals()}
-                className={settingsPrimaryActionClass}
-              >
-                {uacePrincipalSaving ? 'Saving...' : 'Save principals'}
-              </button>
             </div>
           </div>
 
