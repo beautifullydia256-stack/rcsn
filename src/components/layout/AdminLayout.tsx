@@ -640,7 +640,7 @@ export default function AdminLayout() {
               onPrefetch={onPrefetchNav}
             />
             <NavItem to="/dashboard/admin/students" icon="👨‍🎓" label="Students" badge={studentCount ?? undefined} badgeColor="teal" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
-            <NavItem to="/dashboard/admin/teachers" icon="🧑‍🏫" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
+            <NavItem to="/dashboard/admin/teachers" icon="📚" label="Teachers" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
             <NavItem to="/dashboard/admin/parents" icon="👨‍👩‍👧" label="Parents" onClick={closeSidebar} onPrefetch={onPrefetchNav} />
           </div>
 
