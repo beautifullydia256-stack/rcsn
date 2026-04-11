@@ -10,7 +10,11 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
-import { assertTeacherUpsertRpcResult, throwIfRpcReturnedJsonError } from "@/src/lib/examResultsUtils";
+import {
+  assertTeacherUpsertRpcResult,
+  buildSecondaryOlevelExamResultsMapFromRows,
+  throwIfRpcReturnedJsonError,
+} from "@/src/lib/examResultsUtils";
 import { createServerClient } from '@supabase/ssr';
 import { useRouter, useParams } from "next/navigation";
 import { getSectionForClass } from "@/src/templates/primary";
@@ -1198,23 +1202,12 @@ export default function TeacherExamResultsClassPage() {
           });
           setExamResults(map);
         } else {
-          const map: Record<string, any> = {};
-          rows.forEach(r => {
-            map[r.student_id] = {
-              topic: r.topic || '',
-              activityScore: r.activity_score != null ? String(r.activity_score) : '',
-              formative: r.formative_score != null ? String(r.formative_score) : '',
-              exam: r.exam_score != null ? String(r.exam_score) : '',
-              remark: r.overall_remark || '',
-              initials: r.teacher_initials || ''
-            };
-          });
-          setExamResultsSecondary(map);
+          setExamResultsSecondary(buildSecondaryOlevelExamResultsMapFromRows(rows, topicFilter));
         }
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, students, studentsForAlevelExam, isSecondary, isALevel, className, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, className, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1324,22 +1317,7 @@ export default function TeacherExamResultsClassPage() {
           if (pn) setTopicFilter(pn);
         }
       } else {
-        const map: Record<string, any> = {};
-        rows.forEach(r => {
-          const activity = r.activity_score != null ? Number(r.activity_score) : NaN;
-          const descriptor = r.descriptor || (isNaN(activity) ? '' : calculateDescriptor(activity));
-          map[r.student_id] = {
-            topic: r.topic || '',
-            activityScore: r.activity_score != null ? String(r.activity_score) : '',
-            descriptor,
-            formative: r.formative_score != null ? String(r.formative_score) : '',
-            exam: r.exam_score != null ? String(r.exam_score) : '',
-            final: r.final_score != null ? String(r.final_score) : '',
-            grade: r.grade || '',
-            remark: r.overall_remark || '',
-            initials: r.teacher_initials || ''
-          };
-        });
+        const map = buildSecondaryOlevelExamResultsMapFromRows(rows, topicFilter);
         setExamResultsSecondary(map);
         console.log('reloadSavedResults: Updated examResultsSecondary with', Object.keys(map).length, 'entries');
       }

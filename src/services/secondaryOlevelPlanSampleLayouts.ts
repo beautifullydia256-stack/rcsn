@@ -65,34 +65,32 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 
   const rows: Row[] = results.map((r: any) => {
     const activityNum = parseNum(r.activity_score);
-    const descriptor =
-      (r.descriptor as string) ||
-      (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+    const rawDesc =
+      r.descriptor != null && String(r.descriptor).trim() !== ''
+        ? String(r.descriptor).trim()
+        : Number.isFinite(activityNum)
+          ? activityNum < 1
+            ? 'Missed'
+            : activityNum < 2.5
+              ? 'Moderate'
+              : 'Outstanding'
+          : '';
     const formative = r.formative_score != null ? String(r.formative_score) : '';
     const eoy = r.exam_score != null ? String(r.exam_score) : '';
     const total = r.final_score != null ? String(r.final_score) : '';
     const finalNum = parseNum(r.final_score);
     const grade =
-      (r.grade as string) ||
-      (Number.isFinite(finalNum)
-        ? finalNum >= 80
-          ? 'A'
-          : finalNum >= 70
-            ? 'B'
-            : finalNum >= 60
-              ? 'C'
-              : finalNum >= 50
-                ? 'D'
-                : 'E'
-        : '');
+      r.grade != null && String(r.grade).trim() !== '' ? String(r.grade).trim() : '';
     return {
       subject: String(r.subject ?? ''),
       formative,
       eoy,
       total,
       grade,
-      lo: basicLoBand(descriptor),
-      descriptor: descriptor.charAt(0).toUpperCase() + descriptor.slice(1).toLowerCase(),
+      lo: basicLoBand(rawDesc),
+      descriptor: rawDesc
+        ? rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1).toLowerCase()
+        : '',
       initials: String(r.teacher_initials ?? ''),
       finalNum: Number.isFinite(finalNum) ? finalNum : NaN,
     };

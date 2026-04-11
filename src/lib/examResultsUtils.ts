@@ -250,3 +250,131 @@ export function assertTeacherUpsertRpcResult(data: unknown): void {
     throw new Error('Save was not confirmed. Nothing was saved.');
   }
 }
+
+/** One `exam_results` row (O-Level secondary line); used when picking a row per student for the teacher grid. */
+export type SecondaryOlevelExamResultRow = {
+  student_id: string;
+  topic?: string | null;
+  exam_topic_key?: string | null;
+  activity_score?: unknown;
+  formative_score?: unknown;
+  exam_score?: unknown;
+  final_score?: unknown;
+  marks_obtained?: unknown;
+  descriptor?: string | null;
+  grade?: string | null;
+  overall_remark?: string | null;
+  teacher_initials?: string | null;
+  updated_at?: string | null;
+};
+
+export function trimSecondaryOlevelTopicFilter(v: unknown): string {
+  return String(v ?? '').trim();
+}
+
+function secondaryOlevelRowMatchesTopicFilter(row: SecondaryOlevelExamResultRow, topicFilter: string): boolean {
+  const tf = trimSecondaryOlevelTopicFilter(topicFilter);
+  if (tf === '') return true;
+  const t = trimSecondaryOlevelTopicFilter(row.topic);
+  const ek = trimSecondaryOlevelTopicFilter(row.exam_topic_key);
+  return t === tf || ek === tf;
+}
+
+export function secondaryOlevelRowDataCompleteness(row: SecondaryOlevelExamResultRow): number {
+  let s = 0;
+  const nz = (v: unknown) => v != null && String(v).trim() !== '';
+  if (nz(row.activity_score)) s += 2;
+  if (nz(row.formative_score)) s += 2;
+  if (nz(row.exam_score)) s += 2;
+  if (nz(row.final_score)) s += 1;
+  if (nz(row.marks_obtained)) s += 1;
+  return s;
+}
+
+/** When several line-key rows exist per student, keep the row that matches the global topic filter or the most complete / newest. */
+export function secondaryOlevelDescriptorFromActivity(activityScore: number): string {
+  if (!Number.isFinite(activityScore)) return '';
+  if (activityScore < 1) return 'Missed';
+  if (activityScore < 2.5) return 'Moderate';
+  return 'Outstanding';
+}
+
+export function pickBestSecondaryOlevelExamRow(
+  rows: SecondaryOlevelExamResultRow[],
+  topicFilter: string,
+): SecondaryOlevelExamResultRow | null {
+  if (!rows.length) return null;
+  const filtered = rows.filter((r) => secondaryOlevelRowMatchesTopicFilter(r, topicFilter));
+  const candidates = filtered.length > 0 ? filtered : rows;
+  const sorted = [...candidates].sort((a, b) => {
+    const ds = secondaryOlevelRowDataCompleteness(b) - secondaryOlevelRowDataCompleteness(a);
+    if (ds !== 0) return ds;
+    const ta = new Date(a.updated_at || 0).getTime();
+    const tb = new Date(b.updated_at || 0).getTime();
+    return tb - ta;
+  });
+  return sorted[0] ?? null;
+}
+
+export function buildSecondaryOlevelExamResultsMapFromRows(
+  rows: SecondaryOlevelExamResultRow[],
+  topicFilter: string,
+): Record<
+  string,
+  {
+    topic: string;
+    activityScore: string;
+    descriptor: string;
+    formative: string;
+    exam: string;
+    final: string;
+    grade: string;
+    remark: string;
+    initials: string;
+  }
+> {
+  const byStudent = new Map<string, SecondaryOlevelExamResultRow[]>();
+  for (const r of rows) {
+    const sid = r.student_id;
+    if (!sid) continue;
+    if (!byStudent.has(sid)) byStudent.set(sid, []);
+    byStudent.get(sid)!.push(r);
+  }
+  const map: Record<
+    string,
+    {
+      topic: string;
+      activityScore: string;
+      descriptor: string;
+      formative: string;
+      exam: string;
+      final: string;
+      grade: string;
+      remark: string;
+      initials: string;
+    }
+  > = {};
+  for (const [sid, list] of byStudent) {
+    const r = pickBestSecondaryOlevelExamRow(list, topicFilter);
+    if (!r) continue;
+    const activity = r.activity_score != null && r.activity_score !== '' ? Number(r.activity_score) : NaN;
+    const descriptor =
+      r.descriptor != null && String(r.descriptor).trim() !== ''
+        ? String(r.descriptor).trim()
+        : Number.isFinite(activity)
+          ? secondaryOlevelDescriptorFromActivity(activity)
+          : '';
+    map[sid] = {
+      topic: r.topic != null ? String(r.topic) : '',
+      activityScore: r.activity_score != null && r.activity_score !== '' ? String(r.activity_score) : '',
+      descriptor,
+      formative: r.formative_score != null && r.formative_score !== '' ? String(r.formative_score) : '',
+      exam: r.exam_score != null && r.exam_score !== '' ? String(r.exam_score) : '',
+      final: r.final_score != null && r.final_score !== '' ? String(r.final_score) : '',
+      grade: r.grade != null ? String(r.grade) : '',
+      remark: r.overall_remark != null ? String(r.overall_remark) : '',
+      initials: r.teacher_initials != null ? String(r.teacher_initials) : '',
+    };
+  }
+  return map;
+}
