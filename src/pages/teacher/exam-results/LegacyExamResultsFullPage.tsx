@@ -128,11 +128,13 @@ export default function LegacyExamResultsFullPage() {
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, {
     topic: string;
     activityScore: string; // 0-3 (step 0.1)
-    descriptor: "Missed" | "Moderate" | "Outstanding" | "";
+    /** ECS labels from activity; DB may hold other text after reload */
+    descriptor: string;
     formative: string; // 0-40
     exam: string; // 0-60
     final: string; // read-only (formative+exam)
-    grade: "A"|"B"|"C"|"D"|"E"|"";
+    /** Letter (A–E) or UNEB-style (e.g. D1) from DB */
+    grade: string;
     remark: string;
     initials: string;
   }>>({});
