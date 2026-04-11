@@ -1188,7 +1188,7 @@ export default function LegacyExamResultsFullPage() {
       const aSafe = isNaN(aNum) ? 0 : aNum;
       const fSafe = isNaN(fNum) ? 0 : fNum;
       const eSafe = isNaN(eNum) ? 0 : eNum;
-      next.descriptor = calculateDescriptor(aSafe);
+      next.descriptor = calculateActivityDescriptor(aSafe);
       const finalNum = Math.trunc(fSafe + eSafe);
       next.final = String(finalNum);
       const newGrade = calculateSecondaryGrade(finalNum, selectedSubject);
