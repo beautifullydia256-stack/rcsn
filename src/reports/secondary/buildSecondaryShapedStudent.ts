@@ -15,13 +15,16 @@ export function buildSecondaryShapedStudent(reportData: {
   const comments = raw.comments ?? {};
   const rawResults = raw.results ?? [];
   const results = rawResults.map((r: any) => {
-    const remark = r.overall_remark || r.teacher_remark || r.remarks || r.teacher_comment || '';
+    // Pass through teacher-saved O-Level fields; do not substitute or recalculate.
+    const overall =
+      r.overall_remark != null && String(r.overall_remark).trim() !== ''
+        ? String(r.overall_remark).trim()
+        : '';
     return {
       ...r,
-      final_score: r.final_score ?? r.marks_obtained,
-      overall_remark: remark,
-      remark: remark,
-      teacher_remark: remark,
+      overall_remark: overall,
+      remark: overall || r.remark || r.teacher_remark || r.teacher_comment || r.remarks || '',
+      teacher_remark: overall || r.teacher_remark || r.teacher_comment || '',
     };
   });
 

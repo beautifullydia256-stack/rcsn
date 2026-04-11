@@ -2030,14 +2030,12 @@ export function generateOLevelReportHTML(reportData: any, schoolLogoBase64?: str
           ${student.results.length > 0 ? 
             student.results.map((result: any) => {
               const activity = result.activity_score ?? '';
-              const activityNum = parseFloat(activity) || 0;
-              const descriptor = result.descriptor || (activityNum < 1 ? 'Missed' : activityNum < 2.5 ? 'Moderate' : 'Outstanding');
+              const descriptor = result.descriptor != null && result.descriptor !== '' ? String(result.descriptor) : '';
               const formative = result.formative_score ?? '';
               const exam = result.exam_score ?? '';
               const finalScore = result.final_score ?? '';
-              const finalNum = parseFloat(finalScore) || 0;
-              const gradeText = result.grade || (finalNum >= 80 ? 'A' : finalNum >= 70 ? 'B' : finalNum >= 60 ? 'C' : finalNum >= 50 ? 'D' : 'E');
-              const overallRemark = result.overall_remark ?? '';
+              const gradeText = result.grade != null && result.grade !== '' ? String(result.grade) : '';
+              const overallRemark = result.overall_remark != null ? String(result.overall_remark) : '';
               const teacherInitials = result.teacher_initials ?? '';
               const topic = result.topic || '';
 

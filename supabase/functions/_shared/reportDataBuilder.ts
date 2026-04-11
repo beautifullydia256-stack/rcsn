@@ -5,7 +5,7 @@
  * Position calculation always uses full class; studentIds filter only which report_data to return.
  */
 
-import { calculatePrimaryGrade, calculateDivision, calculateAggregate, calculateGradeOLevel } from './reportUtils.ts';
+import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from './reportUtils.ts';
 
 /** Legacy DB placeholder; show MISSED only on reports like the grade column. */
 function normalizeAutoMissedRemarks(text: unknown): string {
@@ -77,6 +77,8 @@ export interface SnapshotRowForPersist {
   /** Progressive report: Mid Term activity [3] / End of Term activity [3]. */
   continuous_c1?: number | null;
   continuous_c2?: number | null;
+  /** O-Level teacher-entered remark (same as exam_results.overall_remark). */
+  overall_remark?: string | null;
 }
 
 export interface BuildReportResult {
@@ -112,6 +114,25 @@ function numOrUndef(v: unknown): number | undefined {
   if (v == null || v === '') return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/**
+ * Senior O/A-Level: teachers save `final_score` (0–100) via RPC; `marks_obtained` is often NULL.
+ * Primary reports use `marks_obtained` everywhere — align seniors so preview/PDF/snapshots match teacher entry.
+ */
+function seniorMarksTotalForReport(
+  className: string,
+  marksObtained: unknown,
+  finalScore: unknown,
+  totalMarks: unknown,
+): { marks: number; total: number } {
+  const total = Number(totalMarks || 100) || 100;
+  if (!isSeniorSecondaryClassName(className)) {
+    return { marks: Number(marksObtained || 0), total };
+  }
+  const fs = numOrUndef(finalScore);
+  if (fs != null) return { marks: fs, total };
+  return { marks: Number(marksObtained || 0), total };
 }
 
 /**
@@ -155,13 +176,23 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
     const base = eotRow || midRow || group[0];
     const c1 = midRow?.activity_score ?? null;
     const c2 = eotRow?.activity_score ?? null;
-    const marks = Number(eotRow?.marks_obtained ?? eotRow?.final_score ?? midRow?.marks_obtained ?? base.marks_obtained ?? 0);
+    const scoreFromRow = (d: SnapshotRowForPersist | undefined): number | undefined => {
+      if (!d) return undefined;
+      const fs = numOrUndef(d.final_score);
+      if (fs != null) return fs;
+      if (d.marks_obtained != null) {
+        const m = Number(d.marks_obtained);
+        if (!Number.isNaN(m)) return m;
+      }
+      return undefined;
+    };
+    const marks = Number(scoreFromRow(eotRow) ?? scoreFromRow(midRow) ?? scoreFromRow(base) ?? 0);
     const total = Number(eotRow?.total_marks ?? midRow?.total_marks ?? base.total_marks ?? 100);
     merged.push({
       ...base,
       marks_obtained: marks,
       total_marks: total,
-      grade: String(eotRow?.grade ?? base.grade ?? ''),
+      grade: String(eotRow?.grade ?? midRow?.grade ?? base.grade ?? ''),
       remarks: eotRow?.remarks ?? base.remarks,
       teacher_initials: eotRow?.teacher_initials ?? base.teacher_initials,
       teacher_comment: eotRow?.teacher_comment ?? base.teacher_comment,
@@ -172,7 +203,8 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
       formative_score: eotRow?.formative_score ?? midRow?.formative_score ?? base.formative_score,
       exam_score: eotRow?.exam_score ?? midRow?.exam_score ?? base.exam_score,
       final_score: numOrUndef(eotRow?.final_score) ?? numOrUndef(eotRow?.marks_obtained) ?? base.final_score ?? base.marks_obtained ?? null,
-      descriptor: eotRow?.descriptor ?? base.descriptor ?? null,
+      descriptor: eotRow?.descriptor ?? midRow?.descriptor ?? base.descriptor ?? null,
+      overall_remark: eotRow?.overall_remark ?? midRow?.overall_remark ?? base.overall_remark ?? null,
       paper_code: eotRow?.paper_code ?? midRow?.paper_code ?? base.paper_code,
       paper_number: eotRow?.paper_number ?? midRow?.paper_number ?? base.paper_number,
       topic: eotRow?.topic ?? midRow?.topic ?? base.topic,
@@ -199,19 +231,15 @@ function mergeSnapshotRowsByStudent(snapshotData: SnapshotRowForPersist[]): Snap
   return out;
 }
 
-/** Snapshot row grade: primary uses D1–F9 unless DB already holds a non A–F scale; senior uses A–E / DB as stored. */
+/** Snapshot row grade: primary uses D1–F9 unless DB already holds a non A–F scale; senior uses teacher-saved grade only (no recalculation). */
 function gradeInfoForSnapshotRow(
-  result: { grade?: unknown; marks_obtained?: unknown; total_marks?: unknown },
+  result: { grade?: unknown; marks_obtained?: unknown; total_marks?: unknown; final_score?: unknown },
   className: string,
   remarksNorm: string
 ): { grade: string; remark: string } {
   if (isSeniorSecondaryClassName(className)) {
-    const dbGrade = result.grade != null && String(result.grade).trim();
-    if (dbGrade) return { grade: dbGrade, remark: remarksNorm };
-    const marks = Number(result.marks_obtained ?? 0);
-    const total = Number(result.total_marks || 100);
-    const og = calculateGradeOLevel(marks, total);
-    return { grade: og.grade, remark: remarksNorm };
+    const g = result.grade != null ? String(result.grade).trim() : '';
+    return { grade: g, remark: remarksNorm };
   }
   const dbGrade = result.grade != null && String(result.grade).trim();
   const isOldFormat = dbGrade && ['A', 'B', 'C', 'D', 'E', 'F'].includes(String(dbGrade).toUpperCase());
@@ -364,28 +392,69 @@ export async function buildReportDataFromScope(
     const studentAveragesList: { studentId: string; average: number; aggregate: number }[] = [];
     Object.entries(classStudents).forEach(([studentId, results]) => {
       const fromDb = processedByStudent[studentId];
-      let resultsForCalculation = results as { marks_obtained?: number; total_marks?: number; exam_sets?: { id?: string }; exam_set_id?: string }[];
+      let resultsForCalculation = results as {
+        marks_obtained?: number;
+        total_marks?: number;
+        final_score?: unknown;
+        class_name?: string;
+        students?: { current_class?: string };
+        exam_sets?: { id?: string };
+        exam_set_id?: string;
+      }[];
       if (hasMultipleSets && eotExamSetId) {
         resultsForCalculation = resultsForCalculation.filter(
           (r) => (r.exam_set_id ?? r.exam_sets?.id) === eotExamSetId
         );
       }
-      const validResults = resultsForCalculation.filter(
-        (r) => r.marks_obtained != null && r.total_marks != null
+      const classNameForSenior = String(
+        resultsForCalculation[0]?.class_name || resultsForCalculation[0]?.students?.current_class || '',
       );
+      const seniorClass = isSeniorSecondaryClassName(classNameForSenior);
+      const validResults = resultsForCalculation.filter((r) => {
+        if (seniorClass) {
+          const fs = numOrUndef(r.final_score);
+          if (fs != null) return true;
+          return r.marks_obtained != null && r.total_marks != null;
+        }
+        return r.marks_obtained != null && r.total_marks != null;
+      });
       if (validResults.length === 0) {
         studentAverages[studentId] = 0;
         studentAggregates[studentId] = fromDb?.aggregate ?? 0;
         if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
         return;
       }
-      const totalMarks = validResults.reduce((s, r) => s + Number(r.marks_obtained || 0), 0);
+      const totalMarks = validResults.reduce((s, r) => {
+        if (seniorClass) {
+          const { marks } = seniorMarksTotalForReport(
+            classNameForSenior,
+            r.marks_obtained,
+            r.final_score,
+            r.total_marks,
+          );
+          return s + marks;
+        }
+        return s + Number(r.marks_obtained || 0);
+      }, 0);
       const totalPossible = validResults.reduce((s, r) => s + Number(r.total_marks || 100), 0);
       const average = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
       studentAverages[studentId] = average;
       studentAggregates[studentId] =
         fromDb?.aggregate ??
-        calculateAggregate(validResults.map((r) => ({ marks_obtained: Number(r.marks_obtained || 0), total_marks: Number(r.total_marks || 100) })));
+        calculateAggregate(
+          validResults.map((r) => {
+            if (seniorClass) {
+              const { marks, total } = seniorMarksTotalForReport(
+                classNameForSenior,
+                r.marks_obtained,
+                r.final_score,
+                r.total_marks,
+              );
+              return { marks_obtained: marks, total_marks: total };
+            }
+            return { marks_obtained: Number(r.marks_obtained || 0), total_marks: Number(r.total_marks || 100) };
+          }),
+        );
       if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
       studentAveragesList.push({ studentId, average, aggregate: studentAggregates[studentId] });
     });
@@ -431,14 +500,25 @@ export async function buildReportDataFromScope(
     const expectedFee = Number(student?.expected_fee_amount || 0);
     const totalPaid = paidByStudent[result.student_id] || 0;
     const feesBalance = Math.max(0, expectedFee - totalPaid);
-    const remarksNorm = normalizeAutoMissedRemarks(result.remarks);
     const className = (result.class_name || (result.students as { current_class?: string })?.current_class) as string;
-    const gradeInfo = gradeInfoForSnapshotRow(result, className, remarksNorm);
     const raw = result as Record<string, unknown>;
+    const isSeniorRow = isSeniorSecondaryClassName(className);
+    const overallRaw =
+      raw.overall_remark != null && String(raw.overall_remark).trim() !== ''
+        ? String(raw.overall_remark).trim()
+        : '';
+    const remarksNorm = isSeniorRow
+      ? normalizeAutoMissedRemarks(overallRaw || String(result.remarks ?? '').trim())
+      : normalizeAutoMissedRemarks(result.remarks);
+    const final_score_raw = raw.final_score != null && raw.final_score !== '' ? numOrUndef(raw.final_score) ?? null : null;
+    const gradeInfo = gradeInfoForSnapshotRow(
+      { ...result, final_score: final_score_raw ?? raw.final_score },
+      className,
+      remarksNorm,
+    );
     const activity_score = raw.activity_score != null && raw.activity_score !== '' ? numOrUndef(raw.activity_score) ?? null : null;
     const formative_score = raw.formative_score != null && raw.formative_score !== '' ? numOrUndef(raw.formative_score) ?? null : null;
     const exam_score = raw.exam_score != null && raw.exam_score !== '' ? numOrUndef(raw.exam_score) ?? null : null;
-    const final_score_raw = raw.final_score != null && raw.final_score !== '' ? numOrUndef(raw.final_score) ?? null : null;
     const descriptor = raw.descriptor != null && String(raw.descriptor).trim() ? String(raw.descriptor) : null;
     const paper_code = raw.paper_code != null && String(raw.paper_code).trim() ? String(raw.paper_code) : null;
     const paper_number = raw.paper_number != null && String(raw.paper_number).trim() ? String(raw.paper_number) : null;
@@ -449,19 +529,27 @@ export async function buildReportDataFromScope(
     const presentDays = attendance?.presentDays ?? 0;
     const totalDays = attendance?.totalDays ?? 0;
     const absentDays = totalDays - presentDays;
+    const { marks: marksForSnapshot, total: totalMarksForSnapshot } = seniorMarksTotalForReport(
+      className,
+      result.marks_obtained,
+      final_score_raw ?? raw.final_score,
+      result.total_marks,
+    );
     snapshotData.push({
       student_id: result.student_id,
       class_name: className || '',
       subject: String(result.subject || ''),
-      marks_obtained: Number(result.marks_obtained || 0),
-      total_marks: Number(result.total_marks || 100),
-      grade: gradeInfo.grade,
+      marks_obtained: marksForSnapshot,
+      total_marks: totalMarksForSnapshot,
+      grade: isSeniorRow ? String(raw.grade ?? '').trim() : gradeInfo.grade,
       remarks: result.remarks != null ? remarksNorm : undefined,
+      overall_remark: overallRaw || undefined,
       teacher_initials: result.teacher_initials as string | undefined,
-      teacher_comment:
-        (result.teacher_comment && String(result.teacher_comment).trim())
-          ? String(result.teacher_comment)
-          : String(remarksNorm || gradeInfo.remark || ''),
+      teacher_comment: isSeniorRow
+        ? overallRaw || undefined
+        : (result.teacher_comment && String(result.teacher_comment).trim())
+            ? String(result.teacher_comment)
+            : String(remarksNorm || gradeInfo.remark || ''),
       class_teacher_comment: resolvedComments[result.student_id]?.classTeacher || '',
       headteacher_comment: resolvedComments[result.student_id]?.headTeacher || '',
       attendance_percentage: attendance?.percentage,
@@ -576,13 +664,24 @@ function oneReportFromSnapshotRows(
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
   const isSeniorClass = isSeniorSecondaryClassName(firstRecord.class_name);
-  const effectiveRemark = (d: SnapshotRowForPersist) =>
-    normalizeAutoMissedRemarks(
-      (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || '')
+  const effectiveRemark = (d: SnapshotRowForPersist) => {
+    if (isSeniorClass) {
+      const o = d.overall_remark != null && String(d.overall_remark).trim() !== '' ? String(d.overall_remark).trim() : '';
+      if (o !== '') return normalizeAutoMissedRemarks(o);
+    }
+    return normalizeAutoMissedRemarks(
+      (d.teacher_comment && String(d.teacher_comment).trim()) ? d.teacher_comment : (d.remarks || ''),
     );
+  };
   const results = studentData.map((d) => {
     const remark = effectiveRemark(d);
-    const finalScore = numOrUndef(d.final_score) ?? d.marks_obtained;
+    const finalScore = isSeniorClass
+      ? (numOrUndef(d.final_score) ?? null)
+      : (numOrUndef(d.final_score) ?? d.marks_obtained);
+    const overallOut = isSeniorClass
+      ? (d.overall_remark != null ? String(d.overall_remark) : '')
+      : remark;
+    const remarkOut = isSeniorClass ? overallOut : remark;
     return {
       subject: d.subject,
       topic: d.topic ?? '',
@@ -591,11 +690,11 @@ function oneReportFromSnapshotRows(
       grade: d.grade,
       remarks: d.remarks,
       teacher_initials: d.teacher_initials,
-      teacher_comment: remark,
+      teacher_comment: remarkOut,
       exam_set_name: d.exam_set_name ?? examSetName,
-      teacher_remark: remark,
-      overall_remark: remark,
-      remark,
+      teacher_remark: remarkOut,
+      overall_remark: overallOut,
+      remark: remarkOut,
       final_score: finalScore,
       nursery_skill_performance: d.nursery_skill_performance,
       activity_score: d.activity_score,
@@ -807,7 +906,10 @@ function oneReportFromSnapshotRows(
           head_teacher_text: firstRecord.headteacher_comment || '',
         },
         summary: {
-          totalMarks: summaryRows.reduce((s, d) => s + (d.marks_obtained || 0), 0),
+          totalMarks: summaryRows.reduce(
+            (s, d) => s + (numOrUndef(d.final_score) ?? Number(d.marks_obtained || 0)),
+            0,
+          ),
           totalPossibleMarks: summaryRows.reduce((s, d) => s + (d.total_marks || 100), 0),
           average: (() => {
             const v = firstSummaryRecord.average_percentage;
