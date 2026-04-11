@@ -95,7 +95,11 @@ type PreviewInvokeBody = {
 async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
   const { data, error: fnError } = await supabase.functions.invoke('generate-report-preview', { body: payload });
   if (fnError) throw new Error(fnError.message || 'Preview failed');
-  return (data?.reports ?? []) as any[];
+  const body = data as { reports?: unknown[]; error?: string } | null | undefined;
+  if (body && typeof body.error === 'string' && body.error.trim()) {
+    throw new Error(body.error.trim());
+  }
+  return (body?.reports ?? []) as any[];
 }
 
 async function fetchGeneratedReports(snapshotId: string) {
@@ -584,11 +588,12 @@ export default function SecondaryGenerateReportsPage() {
           selectedClass
         );
         const student0 = { ...stub.students[0], current_class: routingClass };
+        /** Real school header + generic demo subjects (Integrated Science, SST, etc.) — label clearly so it is not mistaken for exam_results. */
         const schoolMerged =
           sch ?
             {
               ...stub.school,
-              name: sch.name ?? stub.school.name,
+              name: sch.name ? `${sch.name} [demo marks — not from database]` : stub.school.name,
               phone: sch.contact_phone ?? stub.school.phone,
               email: sch.contact_email ?? stub.school.email,
               address: [sch.address, sch.pobox].filter(Boolean).join(', ') || stub.school.address,
@@ -597,7 +602,10 @@ export default function SecondaryGenerateReportsPage() {
           : stub.school;
         const rawReport: Record<string, unknown> = {
           school: schoolMerged,
-          examSet: stub.examSet,
+          examSet: {
+            ...stub.examSet,
+            name: `${(stub.examSet as { name?: string }).name ?? 'Term'} · layout sample only`,
+          },
           students: [student0],
         };
         if (stub.alevel != null) rawReport.alevel = stub.alevel;
@@ -634,6 +642,11 @@ export default function SecondaryGenerateReportsPage() {
         staleTime: STALE_TIME_MS,
       });
       setPreviewReports(reports);
+      if (!reports.length) {
+        setGenerationError(
+          'No report data returned. Live preview is built from table exam_results by the generate-report-preview edge function (all exam sets in this term except when the selected set is Mid Term only). Confirm results exist for the selected class, that class_name in exam_results matches the class you picked, and the function is deployed with valid Supabase env.',
+        );
+      }
       setGeneratingStep('completed');
     } catch (err: any) {
       setGenerationError(err.message || 'Failed to load preview');
@@ -1039,10 +1052,13 @@ export default function SecondaryGenerateReportsPage() {
                 <span className="font-medium ac-text-primary">Preview card layout with sample data only</span>
                 <span className="block text-xs ac-text-muted">
                   Fills <strong>Standard</strong>, <strong>Basic</strong>, <strong>Progressive</strong>, and{' '}
-                  <strong>Alevel</strong> with demo rows. School name and contacts from settings are merged into the header.
+                  <strong>Alevel</strong> with fixed demo rows (generic subjects such as Integrated Science / Social Studies —
+                  not your Senior class lines from <code className="text-[11px]">exam_results</code>). Header uses your school
+                  name with a <strong>[demo marks]</strong> suffix so it cannot be confused with a real report.
                   <strong className="block mt-1 text-amber-800 dark:text-amber-200">
-                    While this is on: preview is demo-only — Generate &amp; Save and Download PDF are disabled. Turn it off
-                    to use real exam data for preview and PDF (same pipeline as primary reports).
+                    While this is on: preview is layout-only — Generate &amp; Save and Download PDF are disabled. Turn it off
+                    to load real marks: preview then reads <code className="text-[11px]">exam_results</code> for the selected
+                    term, class, and student(s).
                   </strong>
                 </span>
               </span>
