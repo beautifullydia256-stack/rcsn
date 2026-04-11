@@ -5,7 +5,7 @@
  * Position calculation always uses full class; studentIds filter only which report_data to return.
  */
 
-import { calculatePrimaryGrade, calculateDivision, calculateAggregate } from './reportUtils.ts';
+import { calculatePrimaryGrade, calculateDivision, calculateAggregate, calculateGradeOLevel } from './reportUtils.ts';
 
 /** Legacy DB placeholder; show MISSED only on reports like the grade column. */
 function normalizeAutoMissedRemarks(text: unknown): string {
@@ -78,6 +78,10 @@ export interface SnapshotRowForPersist {
   paper_code?: string | null;
   paper_number?: string | null;
   topic?: string | null;
+  /** DB line identity (generated from topic); use for merge with teacher saves. */
+  exam_topic_key?: string | null;
+  /** DB line identity (generated from paper_code / paper_number). */
+  exam_paper_key?: string | null;
   /** Progressive report: Mid Term activity [3] / End of Term activity [3]. */
   continuous_c1?: number | null;
   continuous_c2?: number | null;
@@ -107,6 +111,43 @@ function isEotName(name: string | null | undefined): boolean {
 function isSeniorSecondaryClassName(className: string | null | undefined): boolean {
   const c = String(className || '').trim();
   return /^(senior\s*[1-6]|s\.?\s*[1-6])\b/i.test(c);
+}
+
+/** Senior 1–4 O-Level (not UACE); used to fix primary D1–F9 grades shown on O-Level cards. */
+function isOlevelSeniorClassName(className: string | null | undefined): boolean {
+  const c = String(className || '').trim();
+  return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(c);
+}
+
+const PRIMARY_DIVISION_GRADES = new Set(['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9']);
+
+function looksLikePrimaryDivisionGrade(g: string): boolean {
+  return PRIMARY_DIVISION_GRADES.has((g || '').trim().toUpperCase());
+}
+
+function seniorClassNameFromRows(rows: SnapshotRowForPersist[]): string {
+  for (const r of rows) {
+    const c = (r.class_name || '').trim();
+    if (c) return r.class_name;
+  }
+  return rows[0]?.class_name ?? '';
+}
+
+/** Same grouping as DB unique index (subject + exam_topic_key + exam_paper_key). */
+function seniorResultLineKey(d: SnapshotRowForPersist): string {
+  const tk =
+    d.exam_topic_key != null && String(d.exam_topic_key).trim() !== ''
+      ? String(d.exam_topic_key).trim()
+      : String(d.topic ?? '').trim();
+  let pk = '';
+  if (d.exam_paper_key != null && String(d.exam_paper_key).trim() !== '') {
+    pk = String(d.exam_paper_key).trim();
+  } else {
+    const pc = d.paper_code != null ? String(d.paper_code).trim() : '';
+    const pn = d.paper_number != null ? String(d.paper_number).trim() : '';
+    pk = pc || pn;
+  }
+  return `${String(d.subject || '')}\0${tk}\0${pk}`;
 }
 
 function isALevelClassName(className: string | null | undefined): boolean {
@@ -185,11 +226,9 @@ function coalesceStrFromGroup(
  */
 function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
   if (rows.length === 0) return rows;
-  const lineKey = (d: SnapshotRowForPersist) =>
-    `${d.subject}\0${d.topic ?? ''}\0${d.paper_code ?? ''}\0${d.paper_number ?? ''}`;
   const byKey = new Map<string, SnapshotRowForPersist[]>();
   for (const d of rows) {
-    const k = lineKey(d);
+    const k = seniorResultLineKey(d);
     if (!byKey.has(k)) byKey.set(k, []);
     byKey.get(k)!.push(d);
   }
@@ -236,7 +275,9 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
       overall_remark: coalesceStrFromGroup(sorted, (d) => d.overall_remark) ?? null,
       paper_code: latest.paper_code,
       paper_number: latest.paper_number,
-      topic: latest.topic,
+      topic: coalesceStrFromGroup(sorted, (d) => d.topic) ?? latest.topic ?? null,
+      exam_topic_key: latest.exam_topic_key ?? null,
+      exam_paper_key: latest.exam_paper_key ?? null,
       continuous_c1: c1,
       continuous_c2: c2,
     });
@@ -253,7 +294,7 @@ function mergeSnapshotRowsByStudent(snapshotData: SnapshotRowForPersist[]): Snap
   }
   const out: SnapshotRowForPersist[] = [];
   for (const rows of byStudent.values()) {
-    const cls = rows[0]?.class_name ?? '';
+    const cls = seniorClassNameFromRows(rows);
     if (isSeniorSecondaryClassName(cls)) out.push(...mergeSeniorSecondarySnapshotRows(rows));
     else out.push(...rows);
   }
@@ -552,6 +593,14 @@ export async function buildReportDataFromScope(
     const paper_code = raw.paper_code != null && String(raw.paper_code).trim() ? String(raw.paper_code) : null;
     const paper_number = raw.paper_number != null && String(raw.paper_number).trim() ? String(raw.paper_number) : null;
     const topic = raw.topic != null && String(raw.topic).trim() ? String(raw.topic) : null;
+    const exam_topic_key =
+      raw.exam_topic_key != null && String(raw.exam_topic_key).trim() !== ''
+        ? String(raw.exam_topic_key).trim()
+        : null;
+    const exam_paper_key =
+      raw.exam_paper_key != null && String(raw.exam_paper_key).trim() !== ''
+        ? String(raw.exam_paper_key).trim()
+        : null;
     const average = studentAverages[result.student_id] || 0;
     const fromDb = processedByStudent[result.student_id];
     const division = fromDb?.division ?? calculateDivision(average);
@@ -607,6 +656,8 @@ export async function buildReportDataFromScope(
       paper_code,
       paper_number,
       topic,
+      exam_topic_key,
+      exam_paper_key,
       frozen_data: {
         student_name: (result.students as { name?: string })?.name || '',
         admission_number: (result.students as { admission_number?: string })?.admission_number || '',
@@ -697,7 +748,8 @@ function oneReportFromSnapshotRows(
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
-  const isSeniorClass = isSeniorSecondaryClassName(firstRecord.class_name);
+  const reportClassName = seniorClassNameFromRows(studentData);
+  const isSeniorClass = isSeniorSecondaryClassName(reportClassName);
   const effectiveRemark = (d: SnapshotRowForPersist) => {
     if (isSeniorClass) {
       const o = d.overall_remark != null && String(d.overall_remark).trim() !== '' ? String(d.overall_remark).trim() : '';
@@ -713,15 +765,33 @@ function oneReportFromSnapshotRows(
       ? (numOrUndef(d.final_score) ?? null)
       : (numOrUndef(d.final_score) ?? d.marks_obtained);
     const overallOut = isSeniorClass
-      ? (d.overall_remark != null ? String(d.overall_remark) : '')
+      ? (() => {
+          const rawO =
+            d.overall_remark != null && String(d.overall_remark).trim() !== ''
+              ? String(d.overall_remark).trim()
+              : '';
+          if (rawO !== '') return normalizeAutoMissedRemarks(rawO);
+          const rawR =
+            d.remarks != null && String(d.remarks).trim() !== '' ? String(d.remarks).trim() : '';
+          return rawR !== '' ? normalizeAutoMissedRemarks(rawR) : '';
+        })()
       : remark;
     const remarkOut = isSeniorClass ? overallOut : remark;
+    let gradeDisplay = String(d.grade ?? '').trim();
+    if (
+      isOlevelSeniorClassName(reportClassName) &&
+      looksLikePrimaryDivisionGrade(gradeDisplay)
+    ) {
+      const fs = numOrUndef(d.final_score) ?? numOrUndef(d.marks_obtained);
+      const tot = Number(d.total_marks ?? 100) || 100;
+      if (fs != null) gradeDisplay = calculateGradeOLevel(fs, tot).grade;
+    }
     return {
       subject: d.subject,
       topic: d.topic ?? '',
       marks_obtained: d.marks_obtained,
       total_marks: d.total_marks,
-      grade: d.grade,
+      grade: gradeDisplay,
       remarks: d.remarks,
       teacher_initials: d.teacher_initials,
       teacher_comment: remarkOut,
@@ -844,7 +914,7 @@ function oneReportFromSnapshotRows(
   }
 
   let alevel: { paperRows?: Array<Record<string, unknown>> } | undefined;
-  if (isALevelClassName(firstRecord.class_name)) {
+  if (isALevelClassName(reportClassName)) {
     const paperRows = studentData
       .filter((d) => String(d.subject || '').trim())
       .map((d) => {
@@ -919,7 +989,7 @@ function oneReportFromSnapshotRows(
       {
         student_id: firstRecord.student_id,
         name: frozen.student_name || '',
-        current_class: firstRecord.class_name,
+        current_class: reportClassName || firstRecord.class_name,
         admission_number: frozen.admission_number || '',
         profile_photo: firstRecord.student_photo_url ?? null,
         stream: frozen.student_stream || undefined,
