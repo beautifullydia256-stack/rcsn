@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { calculateGrade } from '@/lib/reportUtils';
+import { calculateUacePrincipalGradeFromMarks } from '@/lib/reportUtils';
 
 type Student = { student_id: string; name: string };
 
@@ -84,7 +84,7 @@ export function SecondaryALevelExamGrid({
 
       for (const { studentId, marks, remark } of toSave) {
         const marksNum = parseFloat(marks) || 0;
-        const { grade, remark: computedRemark } = calculateGrade(marksNum, totalMarks);
+        const { grade, remark: computedRemark } = calculateUacePrincipalGradeFromMarks(marksNum, totalMarks);
         const remarkToSave = remark.trim() || computedRemark;
         const { data, error } = await supabase.rpc('teacher_upsert_exam_result_alevel', {
           p_school_id: schoolId,
@@ -126,7 +126,7 @@ export function SecondaryALevelExamGrid({
   return (
     <div className="space-y-4">
       <p className="ac-text-primary text-sm font-medium">
-        A-Level format: marks out of 100 with secondary grades (A–E). Paper line:{' '}
+        A-Level format: marks out of 100 with UACE principal grades (A–E, O, F). Paper line:{' '}
         <span className="font-semibold">
           {paperCode?.trim() || paperNumber?.trim() || 'default (single line per subject)'}
         </span>
@@ -146,7 +146,7 @@ export function SecondaryALevelExamGrid({
             {students.map((stu) => {
               const { marks, remark } = getRow(stu.student_id);
               const marksNum = parseFloat(marks) || 0;
-              const { grade } = calculateGrade(marksNum, 100);
+              const { grade } = calculateUacePrincipalGradeFromMarks(marksNum, 100);
               return (
                 <tr key={stu.student_id} className="border-b border-[var(--ac-border)]">
                   <td className="p-2 font-medium">{stu.name}</td>

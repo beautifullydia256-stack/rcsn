@@ -66,6 +66,17 @@ You described **typical** percentage → grade mapping (UNEB may adjust year to 
 
 ---
 
+## 3b. Authoritative default % → grade (PwezaCore)
+
+For the **default** national-style bands (before per-school overrides exist), the **same** thresholds must be implemented in:
+
+- **Postgres:** `public.uace_default_grade_from_percent` and `public.uace_default_points_from_grade` (migration `20260602120000_uace_default_grade_server_exam_points.sql`). `teacher_upsert_exam_result_alevel` sets `exam_results.grade` and `exam_results.uace_points` from marks/total using these functions.
+- **App:** `calculateUacePrincipalGradeFromMarks` in `src/lib/reportUtils.ts` (teacher grid preview).
+
+**Future:** per-school UACE % bands will use `teacher_exam_grade_bands` with `scale_kind = 'uace'` (reserved); until then, all schools use the default above.
+
+---
+
 ## 4. Implementation implications (for engineering)
 
 1. **Storage:** For A-Level we need at least: **subject role** (principal vs subsidiary), **per-paper marks (%)** or pre-aggregated **final %**, **final grade** (A–F, O), **points** (0–6 for principals; subsidiaries capped at **1** in your rules), and **totals** (principal sum /18, **grand total /20**).

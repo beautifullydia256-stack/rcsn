@@ -22,21 +22,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
   const avgGrade = student.summary.division ?? '';
   const overallPerf = student.summary.performanceRemark ?? '';
 
-  // O-Level calculation functions (matching exam results page logic)
-  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
-    if (activityScore < 1) return "Missed";
-    if (activityScore < 2.5) return "Moderate";
-    return "Outstanding";
-  };
-
-  const calculateGrade = (finalScore: number): "A"|"B"|"C"|"D"|"E" => {
-    if (finalScore >= 80) return "A";
-    if (finalScore >= 70) return "B";
-    if (finalScore >= 60) return "C";
-    if (finalScore >= 50) return "D";
-    return "E";
-  };
-
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
     chipTitle: `Learner's end of term report card for term ${examSet?.term ?? '2'}, ${examSet?.year ?? '2025'}`,
     metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,

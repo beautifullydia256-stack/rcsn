@@ -1,0 +1,22 @@
+UACE (Senior 5–6) SQL — where everything lives
+==============================================
+
+EASIEST: open this one file (all3 scripts combined):
+  supabase/uace/UACE_all_sql_combined.sql
+  supabase/uace/README.txt  ← Windows paths + Ctrl+P hints
+
+Originals (same content as combined, split for migrations vs ad-hoc checks):
+  supabase/migrations/20260602120000_uace_default_grade_server_exam_points.sql
+  supabase/queries/verify_alevel_exam_grade_matches_uace_default.sql
+  supabase/queries/audit_alevel_grades_not_uace.sql
+
+Absolute paths (default clone location):
+  C:\Pwezacore\pwezacore\supabase\uace\UACE_all_sql_combined.sql
+
+In Cursor: Ctrl+P → type  UACE_all_sql_combined
+
+Apply to hosted DB: prefer `supabase db push` OR paste PART 1 from combined file in SQL Editor.
+
+Fix old rows still showing D1–F9 on Senior 5–6 (after migration applied):
+  supabase/queries/repair_alevel_exam_grades_from_marks_uace_default.sql
+ Run the SELECT first; then uncomment and run the UPDATE block.

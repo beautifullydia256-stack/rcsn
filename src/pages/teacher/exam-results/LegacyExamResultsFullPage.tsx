@@ -21,6 +21,9 @@ import { studentsVisibleForAlevelExam } from "@/lib/studentAlevelExamFilter";
 import type { SchoolUaceClassSubjectPaperRow } from "@/lib/uaceClassSubjectPapers";
 import { fetchUacePapersForClassSubject } from "@/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
+import { calculateActivityDescriptor } from "@/lib/secondaryExamScoring";
+import { calculateUacePrincipalGradeFromMarks } from "@/lib/reportUtils";
+import { UaceExamBandsReminder } from "@/pages/teacher/exam-results/UaceExamBandsReminder";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -254,6 +257,7 @@ export default function LegacyExamResultsFullPage() {
     C: 'Satisfactory, but there is room for improvement. Work harder to meet expectations.',
     D: 'Fair effort. Keep working to improve your understanding and performance.',
     E: 'Your effort needs Improvement. Work diligently to boost your performance.',
+    O: 'Subsidiary pass band. Continue building mastery toward higher grades.',
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
 
@@ -632,6 +636,29 @@ export default function LegacyExamResultsFullPage() {
     }
   };
 
+  /** UACE letter grades (not primary D1–F9). */
+  const getUaceGradeBadgeClass = (grade: string): string => {
+    const g = (grade || '').trim().toUpperCase();
+    switch (g) {
+      case 'A':
+        return 'bg-emerald-600/20 text-emerald-300';
+      case 'B':
+        return 'bg-green-600/20 text-green-300';
+      case 'C':
+        return 'bg-cyan-600/20 text-cyan-300';
+      case 'D':
+        return 'bg-yellow-600/20 text-yellow-300';
+      case 'E':
+        return 'bg-orange-600/20 text-orange-300';
+      case 'O':
+        return 'bg-slate-600/20 text-slate-300';
+      case 'F':
+        return 'bg-red-900/20 text-red-500';
+      default:
+        return 'text-white/60';
+    }
+  };
+
   // Primary grading (Percentage-based) - Subject grading scale
   // Division 1: 75-100, Division 2: 70-74, Credit 3: 65-69, Credit 4: 60-64,
   // Credit 5: 55-59, Credit 6: 50-54, Pass 7: 45-49, Pass 8: 40-44, F9: 0-39
@@ -730,13 +757,6 @@ export default function LegacyExamResultsFullPage() {
     const agg = e + m + s + t;
     const div = getPrimaryDivisionFromAggregate(agg);
     return { agg, div };
-  };
-
-  // Secondary helpers
-  const calculateDescriptor = (activityScore: number): "Missed" | "Moderate" | "Outstanding" => {
-    if (activityScore < 1) return "Missed";
-    if (activityScore < 2.5) return "Moderate";
-    return "Outstanding";
   };
 
   const calculateSecondaryGrade = (finalScore: number, subject: string): "A" | "B" | "C" | "D" | "E" => {
@@ -1069,7 +1089,12 @@ export default function LegacyExamResultsFullPage() {
     const newTotalMarks = '100'; // Always 100
     const marksNum = parseFloat(newMarks) || 0;
     const totalMarksNum = parseFloat(newTotalMarks) || 100;
-    const grade = calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
+    const grade =
+      newMarks.trim() === ''
+        ? ''
+        : isALevel
+          ? calculateUacePrincipalGradeFromMarks(marksNum, totalMarksNum).grade
+          : calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
     const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
     // Auto remark from settings ranges
     const percent = Math.max(0, Math.min(100, marksNum));
@@ -1353,7 +1378,10 @@ export default function LegacyExamResultsFullPage() {
         }
 
         const saves = entries.map(async ([studentId, data]) => {
-          const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
+          const computedGrade = calculateUacePrincipalGradeFromMarks(
+            parseFloat(data.marks),
+            parseFloat(data.totalMarks || '100')
+          ).grade;
           const currentGradeRemarks = gradeRemarksALevel;
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
           
@@ -1415,10 +1443,10 @@ export default function LegacyExamResultsFullPage() {
         // Sequential RPCs: parallel saves on exam_results often deadlock (triggers / index updates).
         for (const { studentId, data } of entries) {
           const activityNum = parseFloat(data.activityScore) || 0;
-          const descriptor = calculateDescriptor(activityNum);
+          const descriptor = calculateActivityDescriptor(activityNum);
           const formativeCap = typeof oLevelFormativeMax === 'number' ? oLevelFormativeMax : 40;
-          const formativeNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
-          const examNum = descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
+          const formativeNum = descriptor === 'Basic' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
+          const examNum = descriptor === 'Basic' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
           const finalNum = formativeNum + examNum;
           const letterGrade = calculateSecondaryGrade(finalNum, (selectedSubject || '').trim());
 
@@ -1510,7 +1538,29 @@ export default function LegacyExamResultsFullPage() {
         if (error) return;
 
         const rows = data || [];
-        if (!isSecondary) {
+        if (isALevel) {
+          const lineRows = rows.filter((r) =>
+            matchesAlevelExamPaperLine(r, selectedAlevelPaperCode, topicFilter)
+          );
+          const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
+          lineRows.forEach((r) => {
+            const marksStr = r.marks_obtained != null ? String(r.marks_obtained) : '';
+            const totalStr = r.total_marks != null ? String(r.total_marks) : '100';
+            const mn = parseFloat(marksStr);
+            const tn = parseFloat(totalStr) || 100;
+            const grade =
+              marksStr.trim() !== '' && !Number.isNaN(mn)
+                ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+                : (r.grade || '');
+            map[r.student_id] = {
+              marks: marksStr,
+              totalMarks: totalStr,
+              grade,
+              remark: (r.remarks ?? r.overall_remark ?? '') as string,
+            };
+          });
+          setExamResults(map);
+        } else if (!isSecondary) {
           const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
           rows.forEach(r => {
             map[r.student_id] = {
@@ -1526,7 +1576,7 @@ export default function LegacyExamResultsFullPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, normalizedClassName, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, normalizedClassName, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1620,10 +1670,18 @@ export default function LegacyExamResultsFullPage() {
         );
         const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
         lineRows.forEach((r) => {
+          const marksStr = r.marks_obtained != null ? String(r.marks_obtained) : '';
+          const totalStr = r.total_marks != null ? String(r.total_marks) : '100';
+          const mn = parseFloat(marksStr);
+          const tn = parseFloat(totalStr) || 100;
+          const grade =
+            marksStr.trim() !== '' && !Number.isNaN(mn)
+              ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+              : (r.grade || '');
           map[r.student_id] = {
-            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || '',
+            marks: marksStr,
+            totalMarks: totalStr,
+            grade,
             remark: (r.remarks ?? r.overall_remark ?? '') as string,
           };
         });
@@ -2213,6 +2271,7 @@ export default function LegacyExamResultsFullPage() {
                     Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile.
                   </div>
                 )}
+                <UaceExamBandsReminder />
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -2239,7 +2298,7 @@ export default function LegacyExamResultsFullPage() {
                             <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
+                            <span className={`px-2 py-1 text-xs rounded ${getUaceGradeBadgeClass(grade)}`}>{grade || '-'}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input type="text" value={remark} onChange={(e) => handleMarksChange(student.student_id, 'remark', e.target.value)} placeholder="Remark" className="w-48 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
@@ -2435,6 +2494,9 @@ export default function LegacyExamResultsFullPage() {
                         — Class {className}. Grade bands below are only for the subject you have selected for exam entry
                         {gradeSettingsSubject ? ` (${gradeSettingsSubject})` : ''}.
                       </span>
+                      <p className="mt-2 text-xs text-amber-100/90">
+                        Default percentage-to-grade rules apply for all schools today. Custom A-Level ranges per school will be configurable in a future update.
+                      </p>
                     </div>
                     <div className="border border-white/10 rounded-lg p-4">
                       <h3 className="text-white font-medium mb-3">Auto Remark</h3>
@@ -2450,7 +2512,7 @@ export default function LegacyExamResultsFullPage() {
                     <div className="border border-white/10 rounded-lg p-4">
                       <h3 className="text-white font-medium mb-3">Grade Remarks (A-Level)</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {(['A', 'B', 'C', 'D', 'E', 'F'] as const).map((g) => (
+                        {(['A', 'B', 'C', 'D', 'E', 'O', 'F'] as const).map((g) => (
                           <div key={g} className="flex flex-col gap-2">
                             <label className="text-white/80 text-sm">Remark for Grade {g}</label>
                             <textarea

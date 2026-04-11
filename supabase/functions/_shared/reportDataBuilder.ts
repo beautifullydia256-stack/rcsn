@@ -61,6 +61,10 @@ export interface SnapshotRowForPersist {
   student_photo_url?: string | null;
   school_logo_url?: string | null;
   exam_set_name?: string;
+  /** Exam set id for ordering merged senior rows (C1/C2 chronological). */
+  exam_set_id?: string;
+  /** ISO timestamp from exam_sets.created_at; earliest/latest in term drive C1/C2 activity. */
+  exam_set_created_at?: string | null;
   exam_set_term?: number;
   exam_set_year?: number;
   frozen_data?: Record<string, unknown>;
@@ -135,15 +139,27 @@ function seniorMarksTotalForReport(
   return { marks: Number(marksObtained || 0), total };
 }
 
+/** Sort exam lines within a subject/topic/paper group: chronological exam set (created_at), then stable id/name. */
+function sortSeniorSnapshotGroupByExamOrder(group: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
+  return [...group].sort((a, b) => {
+    const ta = a.exam_set_created_at ? Date.parse(String(a.exam_set_created_at)) : NaN;
+    const tb = b.exam_set_created_at ? Date.parse(String(b.exam_set_created_at)) : NaN;
+    if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return ta - tb;
+    if (!Number.isNaN(ta) && Number.isNaN(tb)) return -1;
+    if (Number.isNaN(ta) && !Number.isNaN(tb)) return 1;
+    const ida = a.exam_set_id ?? '';
+    const idb = b.exam_set_id ?? '';
+    if (ida && idb && ida !== idb) return ida.localeCompare(idb);
+    return String(a.exam_set_name ?? '').localeCompare(String(b.exam_set_name ?? ''));
+  });
+}
+
 /**
- * One row per subject/topic/paper line: Mid Term activity → continuous_c1, End of Term activity → continuous_c2;
- * scores/grade prefer End of Term row when both exam sets exist.
+ * One row per subject/topic/paper line: earliest exam in term → continuous_c1 activity, latest → continuous_c2;
+ * formative / exam / final / grade / descriptor / remarks come from the latest exam set row in that group.
  */
 function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
   if (rows.length === 0) return rows;
-  const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
-  /** Align with `isEotName` — avoid matching arbitrary "final" in set names. */
-  const isEot = (n: string) => isEotName(n);
   const lineKey = (d: SnapshotRowForPersist) =>
     `${d.subject}\0${d.topic ?? ''}\0${d.paper_code ?? ''}\0${d.paper_number ?? ''}`;
   const byKey = new Map<string, SnapshotRowForPersist[]>();
@@ -154,28 +170,11 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
   }
   const merged: SnapshotRowForPersist[] = [];
   for (const group of byKey.values()) {
-    if (group.length === 1) {
-      const only = group[0];
-      if (only.continuous_c1 != null || only.continuous_c2 != null) {
-        merged.push({ ...only });
-        continue;
-      }
-      const n = only.exam_set_name ?? '';
-      const mid = isMid(n);
-      const eot = isEot(n);
-      const act = only.activity_score;
-      merged.push({
-        ...only,
-        continuous_c1: mid ? act ?? null : null,
-        continuous_c2: eot ? act ?? null : null,
-      });
-      continue;
-    }
-    const midRow = group.find((d) => isMid(d.exam_set_name ?? ''));
-    const eotRow = group.find((d) => isEot(d.exam_set_name ?? ''));
-    const base = eotRow || midRow || group[0];
-    const c1 = midRow?.activity_score ?? null;
-    const c2 = eotRow?.activity_score ?? null;
+    const sorted = sortSeniorSnapshotGroupByExamOrder(group);
+    const earliest = sorted[0];
+    const latest = sorted[sorted.length - 1];
+    const c1 = earliest?.activity_score ?? null;
+    const c2 = latest?.activity_score ?? null;
     const scoreFromRow = (d: SnapshotRowForPersist | undefined): number | undefined => {
       if (!d) return undefined;
       const fs = numOrUndef(d.final_score);
@@ -186,28 +185,30 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
       }
       return undefined;
     };
-    const marks = Number(scoreFromRow(eotRow) ?? scoreFromRow(midRow) ?? scoreFromRow(base) ?? 0);
-    const total = Number(eotRow?.total_marks ?? midRow?.total_marks ?? base.total_marks ?? 100);
+    const marks = Number(scoreFromRow(latest) ?? scoreFromRow(earliest) ?? 0);
+    const total = Number(latest?.total_marks ?? earliest?.total_marks ?? 100);
     merged.push({
-      ...base,
+      ...latest,
       marks_obtained: marks,
       total_marks: total,
-      grade: String(eotRow?.grade ?? midRow?.grade ?? base.grade ?? ''),
-      remarks: eotRow?.remarks ?? base.remarks,
-      teacher_initials: eotRow?.teacher_initials ?? base.teacher_initials,
-      teacher_comment: eotRow?.teacher_comment ?? base.teacher_comment,
-      exam_set_name: eotRow?.exam_set_name ?? midRow?.exam_set_name ?? base.exam_set_name,
-      exam_set_term: eotRow?.exam_set_term ?? base.exam_set_term,
-      exam_set_year: eotRow?.exam_set_year ?? base.exam_set_year,
-      activity_score: eotRow?.activity_score ?? midRow?.activity_score ?? base.activity_score,
-      formative_score: eotRow?.formative_score ?? midRow?.formative_score ?? base.formative_score,
-      exam_score: eotRow?.exam_score ?? midRow?.exam_score ?? base.exam_score,
-      final_score: numOrUndef(eotRow?.final_score) ?? numOrUndef(eotRow?.marks_obtained) ?? base.final_score ?? base.marks_obtained ?? null,
-      descriptor: eotRow?.descriptor ?? midRow?.descriptor ?? base.descriptor ?? null,
-      overall_remark: eotRow?.overall_remark ?? midRow?.overall_remark ?? base.overall_remark ?? null,
-      paper_code: eotRow?.paper_code ?? midRow?.paper_code ?? base.paper_code,
-      paper_number: eotRow?.paper_number ?? midRow?.paper_number ?? base.paper_number,
-      topic: eotRow?.topic ?? midRow?.topic ?? base.topic,
+      grade: String(latest.grade ?? ''),
+      remarks: latest.remarks,
+      teacher_initials: latest.teacher_initials,
+      teacher_comment: latest.teacher_comment,
+      exam_set_name: latest.exam_set_name,
+      exam_set_id: latest.exam_set_id,
+      exam_set_created_at: latest.exam_set_created_at,
+      exam_set_term: latest.exam_set_term,
+      exam_set_year: latest.exam_set_year,
+      activity_score: latest.activity_score,
+      formative_score: latest.formative_score,
+      exam_score: latest.exam_score,
+      final_score: numOrUndef(latest.final_score) ?? numOrUndef(latest.marks_obtained) ?? null,
+      descriptor: latest.descriptor ?? null,
+      overall_remark: latest.overall_remark ?? null,
+      paper_code: latest.paper_code,
+      paper_number: latest.paper_number,
+      topic: latest.topic,
       continuous_c1: c1,
       continuous_c2: c2,
     });
@@ -215,7 +216,7 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
   return merged;
 }
 
-/** After raw exam rows are flattened into snapshot rows, merge Mid/Term activity into C1/C2 for seniors only. */
+/** After raw exam rows are flattened into snapshot rows, merge multi–exam-set senior lines (chronological C1/C2) for seniors only. */
 function mergeSnapshotRowsByStudent(snapshotData: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
   const byStudent = new Map<string, SnapshotRowForPersist[]>();
   for (const row of snapshotData) {
@@ -283,7 +284,7 @@ export async function buildReportDataFromScope(
     .select(
       `*,
       students!inner(student_id, name, current_class, admission_number, expected_fee_amount),
-      exam_sets!inner(id, name, term, year)`
+      exam_sets!inner(id, name, term, year, created_at)`
     )
     .eq('school_id', schoolId)
     .in('exam_set_id', examSetIdsToInclude);
@@ -563,6 +564,11 @@ export async function buildReportDataFromScope(
       student_photo_url: studentPhoto?.photo_url || null,
       school_logo_url: (schoolInfo as { logo_url?: string })?.logo_url || null,
       exam_set_name: (result.exam_sets as { name?: string })?.name || baseExamSet?.name || '',
+      exam_set_id: (result.exam_sets as { id?: string })?.id || undefined,
+      exam_set_created_at:
+        (result.exam_sets as { created_at?: string | null })?.created_at != null
+          ? String((result.exam_sets as { created_at?: string | null }).created_at)
+          : null,
       exam_set_term: (result.exam_sets as { term?: number })?.term ?? baseExamSet?.term ?? term,
       exam_set_year: (result.exam_sets as { year?: number })?.year ?? baseExamSet?.year ?? year,
       activity_score,

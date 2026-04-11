@@ -258,9 +258,9 @@ export function SecondaryOLevelExamGrid({
         const descriptor = calculateActivityDescriptor(activityNum);
         const formativeCap = oLevelFormativeMax;
         const formativeNum =
-          descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
+          descriptor === 'Basic' ? 0 : Math.min(Math.max(parseFloat(data.formative) || 0, 0), formativeCap);
         const examNum =
-          descriptor === 'Missed' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
+          descriptor === 'Basic' ? 0 : Math.min(Math.max(parseFloat(data.exam) || 0, 0), 80);
         const finalNum = Math.trunc(formativeNum + examNum);
         const letterGrade = calculateSecondaryLetterGrade(finalNum);
 
@@ -377,11 +377,11 @@ export function SecondaryOLevelExamGrid({
               const row =
                 examResultsSecondary[student.student_id] ||
                 emptyRow(topicFilter, teacherInitials || defaultTeacherInitials);
-              const missed = row.descriptor === 'Missed';
+              const lowActivity = row.descriptor === 'Basic';
               return (
                 <tr
                   key={student.student_id}
-                  className={`border-b border-[var(--ac-border)] ${missed ? 'opacity-75' : ''}`}
+                  className={`border-b border-[var(--ac-border)] ${lowActivity ? 'opacity-75' : ''}`}
                 >
                   <td className="p-2 font-medium whitespace-nowrap">{student.name}</td>
                   <td className="p-2">

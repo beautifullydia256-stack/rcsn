@@ -23,6 +23,8 @@ import { studentsVisibleForAlevelExam } from "@/src/lib/studentAlevelExamFilter"
 import type { SchoolUaceClassSubjectPaperRow } from "@/src/lib/uaceClassSubjectPapers";
 import { fetchUacePapersForClassSubject } from "@/src/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/src/lib/alevelExamPaperLine";
+import { calculateUacePrincipalGradeFromMarks } from "@/src/lib/reportUtils";
+import { UaceExamBandsReminder } from "@/src/pages/teacher/exam-results/UaceExamBandsReminder";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -169,6 +171,7 @@ export default function TeacherExamResultsClassPage() {
     C: 'Satisfactory, but there is room for improvement. Work harder to meet expectations.',
     D: 'Fair effort. Keep working to improve your understanding and performance.',
     E: 'Your effort needs Improvement. Work diligently to boost your performance.',
+    O: 'Subsidiary pass band. Continue building mastery toward higher grades.',
     F: 'Insufficient performance. Seek support and put in more effort to improve.'
   });
 
@@ -650,6 +653,28 @@ export default function TeacherExamResultsClassPage() {
     }
   };
 
+  const getUaceGradeBadgeClass = (grade: string): string => {
+    const g = (grade || '').trim().toUpperCase();
+    switch (g) {
+      case 'A':
+        return 'bg-emerald-600/20 text-emerald-300';
+      case 'B':
+        return 'bg-green-600/20 text-green-300';
+      case 'C':
+        return 'bg-cyan-600/20 text-cyan-300';
+      case 'D':
+        return 'bg-yellow-600/20 text-yellow-300';
+      case 'E':
+        return 'bg-orange-600/20 text-orange-300';
+      case 'O':
+        return 'bg-slate-600/20 text-slate-300';
+      case 'F':
+        return 'bg-red-900/20 text-red-500';
+      default:
+        return 'text-white/60';
+    }
+  };
+
   // Primary grading (Percentage-based) - Subject grading scale
   // Division 1: 75-100, Division 2: 70-74, Credit 3: 65-69, Credit 4: 60-64,
   // Credit 5: 55-59, Credit 6: 50-54, Pass 7: 45-49, Pass 8: 40-44, F9: 0-39
@@ -761,7 +786,12 @@ export default function TeacherExamResultsClassPage() {
     const newTotalMarks = '100'; // Always 100
     const marksNum = parseFloat(newMarks) || 0;
     const totalMarksNum = parseFloat(newTotalMarks) || 100;
-    const grade = calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
+    const grade =
+      newMarks.trim() === ''
+        ? ''
+        : isALevel
+          ? calculateUacePrincipalGradeFromMarks(marksNum, totalMarksNum).grade
+          : calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
     const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
     // Auto remark from settings ranges
     const percent = Math.max(0, Math.min(100, marksNum));
@@ -1045,7 +1075,10 @@ export default function TeacherExamResultsClassPage() {
         }
 
         const saves = entries.map(async ([studentId, data]) => {
-          const computedGrade = data.grade || calculatePrimaryGrade(parseFloat(data.marks), parseFloat(data.totalMarks || '100'), selectedSubject);
+          const computedGrade = calculateUacePrincipalGradeFromMarks(
+            parseFloat(data.marks),
+            parseFloat(data.totalMarks || '100')
+          ).grade;
           const currentGradeRemarks = gradeRemarksALevel;
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
           
@@ -1191,7 +1224,29 @@ export default function TeacherExamResultsClassPage() {
         if (error) return;
 
         const rows = data || [];
-        if (!isSecondary) {
+        if (isALevel) {
+          const lineRows = rows.filter((r) =>
+            matchesAlevelExamPaperLine(r, selectedAlevelPaperCode, topicFilter)
+          );
+          const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
+          lineRows.forEach((r) => {
+            const marksStr = r.marks_obtained != null ? String(r.marks_obtained) : '';
+            const totalStr = r.total_marks != null ? String(r.total_marks) : '100';
+            const mn = parseFloat(marksStr);
+            const tn = parseFloat(totalStr) || 100;
+            const grade =
+              marksStr.trim() !== '' && !Number.isNaN(mn)
+                ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+                : (r.grade || '');
+            map[r.student_id] = {
+              marks: marksStr,
+              totalMarks: totalStr,
+              grade,
+              remark: (r.remarks ?? r.overall_remark ?? '') as string,
+            };
+          });
+          setExamResults(map);
+        } else if (!isSecondary) {
           const map: Record<string, { marks: string; totalMarks: string; grade: string } > = {};
           rows.forEach(r => {
             map[r.student_id] = {
@@ -1207,7 +1262,7 @@ export default function TeacherExamResultsClassPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, className, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, className, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1301,10 +1356,18 @@ export default function TeacherExamResultsClassPage() {
         );
         const map: Record<string, { marks: string; totalMarks: string; grade: string; remark?: string }> = {};
         lineRows.forEach((r) => {
+          const marksStr = r.marks_obtained != null ? String(r.marks_obtained) : '';
+          const totalStr = r.total_marks != null ? String(r.total_marks) : '100';
+          const mn = parseFloat(marksStr);
+          const tn = parseFloat(totalStr) || 100;
+          const grade =
+            marksStr.trim() !== '' && !Number.isNaN(mn)
+              ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+              : (r.grade || '');
           map[r.student_id] = {
-            marks: r.marks_obtained != null ? String(r.marks_obtained) : '',
-            totalMarks: r.total_marks != null ? String(r.total_marks) : '100',
-            grade: r.grade || '',
+            marks: marksStr,
+            totalMarks: totalStr,
+            grade,
             remark: (r.remarks ?? r.overall_remark ?? '') as string,
           };
         });
@@ -1870,6 +1933,7 @@ export default function TeacherExamResultsClassPage() {
                     Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile. Set combinations on each student in Admin → Students.
                   </div>
                 )}
+                <UaceExamBandsReminder />
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -1896,7 +1960,7 @@ export default function TeacherExamResultsClassPage() {
                             <input type="number" value="100" readOnly className="w-24 rounded border border-white/10 bg-white/5 text-white/60 px-2 py-1 text-sm cursor-not-allowed" />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs rounded ${getPrimaryBadgeClass(grade)}`}>{grade || '-'}</span>
+                            <span className={`px-2 py-1 text-xs rounded ${getUaceGradeBadgeClass(grade)}`}>{grade || '-'}</span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <input type="text" value={remark} onChange={(e) => handleMarksChange(student.student_id, 'remark', e.target.value)} placeholder="Remark" className="w-48 rounded border border-white/10 bg-white/10 text-white px-2 py-1 text-sm" />
@@ -2047,6 +2111,12 @@ export default function TeacherExamResultsClassPage() {
                   </div>
                 </div>
 
+                {isALevel && selectedLevel === 'alevel' && (
+                  <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-xs text-violet-100">
+                    Default UACE percentage-to-grade rules apply for all schools today. Custom A-Level ranges per school will be configurable in a future update.
+                  </div>
+                )}
+
                 {/* Auto Remark - Available for all levels */}
                 <div className="border border-white/10 rounded-lg p-4">
                   <h3 className="text-white font-medium mb-3">Auto Remark</h3>
@@ -2064,7 +2134,7 @@ export default function TeacherExamResultsClassPage() {
                 <div className="border border-white/10 rounded-lg p-4">
                   <h3 className="text-white font-medium mb-3">Grade Remarks ({selectedLevel === 'olevel' ? 'O-Level' : 'A-Level'})</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {(['A','B','C','D','E','F'] as const).map(g => (
+                    {(selectedLevel === 'alevel' ? (['A','B','C','D','E','O','F'] as const) : (['A','B','C','D','E','F'] as const)).map(g => (
                       <div key={g} className="flex flex-col gap-2">
                         <label className="text-white/80 text-sm">Remark for Grade {g}</label>
                         <textarea

@@ -19,13 +19,19 @@ function esc(s: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-/** LEVEL OF ACHIEVEMENT / 3 from ECS-style descriptor (§7.5). */
-function basicLoBand(descriptor: string): string {
-  const d = String(descriptor || '').trim().toLowerCase();
-  if (d === 'missed' || d === '') return '—';
-  if (d === 'outstanding') return '3';
-  if (d === 'moderate') return '2';
-  return '1';
+/** Summary strip: average of stored activity scores → digit1/2/3 (same ECS bands as the key). */
+function bandDigitFromAvgActivity(avg: number): string {
+  if (!Number.isFinite(avg)) return '';
+  if (avg < 1) return '1';
+  if (avg < 2.5) return '2';
+  return '3';
+}
+
+function bandWordFromAvgActivity(avg: number): string {
+  if (!Number.isFinite(avg)) return '';
+  if (avg < 1) return 'Basic';
+  if (avg < 2.5) return 'Moderate';
+  return 'Outstanding';
 }
 
 function parseNum(v: unknown): number {
@@ -64,17 +70,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   };
 
   const rows: Row[] = results.map((r: any) => {
-    const activityNum = parseNum(r.activity_score);
     const rawDesc =
-      r.descriptor != null && String(r.descriptor).trim() !== ''
-        ? String(r.descriptor).trim()
-        : Number.isFinite(activityNum)
-          ? activityNum < 1
-            ? 'Missed'
-            : activityNum < 2.5
-              ? 'Moderate'
-              : 'Outstanding'
-          : '';
+      r.descriptor != null && String(r.descriptor).trim() !== '' ? String(r.descriptor).trim() : '';
+    const lo =
+      r.activity_score != null && String(r.activity_score).trim() !== ''
+        ? String(r.activity_score).trim()
+        : '';
     const formative = r.formative_score != null ? String(r.formative_score) : '';
     const eoy = r.exam_score != null ? String(r.exam_score) : '';
     const total = r.final_score != null ? String(r.final_score) : '';
@@ -87,10 +88,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       eoy,
       total,
       grade,
-      lo: basicLoBand(rawDesc),
-      descriptor: rawDesc
-        ? rawDesc.charAt(0).toUpperCase() + rawDesc.slice(1).toLowerCase()
-        : '',
+      lo,
+      descriptor: rawDesc,
       initials: String(r.teacher_initials ?? ''),
       finalNum: Number.isFinite(finalNum) ? finalNum : NaN,
     };
@@ -98,11 +97,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 
   const finals = rows.map((r) => r.finalNum).filter((n) => Number.isFinite(n));
   const avgFinal = finals.length ? (finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(1) : '';
-  const los = rows.map((r) => parseInt(r.lo, 10)).filter((n) => n >= 1 && n <= 3);
-  const avgLo = los.length ? (los.reduce((a, b) => a + b, 0) / los.length).toFixed(0) : '';
-  const avgLoNum = los.length ? los.reduce((a, b) => a + b, 0) / los.length : 0;
-  const bandWord =
-    avgLoNum >= 2.5 ? 'Outstanding' : avgLoNum >= 1.5 ? 'Moderate' : avgLoNum >= 1 ? 'Basic' : 'Moderate';
+  const activityAvgs = results.map((r: any) => parseNum(r.activity_score)).filter((n) => Number.isFinite(n));
+  const avgActivity = activityAvgs.length
+    ? activityAvgs.reduce((a, b) => a + b, 0) / activityAvgs.length
+    : NaN;
+  const avgLo = Number.isFinite(avgActivity) ? bandDigitFromAvgActivity(avgActivity) : '';
+  const bandWord = Number.isFinite(avgActivity) ? bandWordFromAvgActivity(avgActivity) : '';
 
   const ct =
     student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
@@ -266,11 +266,15 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 </html>`;
 }
 
-function progressiveIdentifier(finalScore: number): string {
-  if (!Number.isFinite(finalScore)) return '';
-  if (finalScore >= 80) return '3';
-  if (finalScore >= 60) return '2';
-  if (finalScore >= 50) return '1';
+/** Progressive template Identifier column: from teacher-saved descriptor (LO key Basic / Moderate / Accomplished; Outstanding → 3). */
+function progressiveIdentifierFromDescriptor(descriptor: string): '1' | '2' | '3' | '' {
+  const raw = String(descriptor ?? '').trim();
+  if (!raw) return '';
+  const d = raw.toLowerCase();
+  const first = (d.split(/[\s–—:]+/)[0] ?? d).trim();
+  if (first === 'outstanding' || first === 'accomplished') return '3';
+  if (first === 'moderate') return '2';
+  if (first === 'basic') return '1';
   return '';
 }
 
@@ -304,15 +308,11 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     const c1raw = r.continuous_c1 ?? r.c1 ?? null;
     const c2raw = r.continuous_c2 ?? r.c2 ?? null;
     const formative = parseNum(r.formative_score);
-    let c1 = c1raw != null ? parseNum(c1raw) : NaN;
-    let c2 = c2raw != null ? parseNum(c2raw) : NaN;
-    if (!Number.isFinite(c1) && Number.isFinite(formative)) {
-      c1 = formative / 2;
-      c2 = formative / 2;
-    }
+    const c1 = c1raw != null ? parseNum(c1raw) : NaN;
+    const c2 = c2raw != null ? parseNum(c2raw) : NaN;
     const c1s = Number.isFinite(c1) ? String(Math.round(c1 * 10) / 10) : '';
     const c2s = Number.isFinite(c2) ? String(Math.round(c2 * 10) / 10) : '';
-    const avg20Num = Number.isFinite(c1) && Number.isFinite(c2) ? (c1 + c2) / 2 : Number.isFinite(formative) ? formative : NaN;
+    const avg20Num = formative;
     const avg20 = Number.isFinite(avg20Num) ? String(Math.round(avg20Num * 10) / 10) : '';
     const exam80 = r.exam_score != null ? String(r.exam_score) : '';
     const total = r.final_score != null ? String(r.final_score) : '';
@@ -324,7 +324,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       avg20,
       exam80,
       total,
-      id: progressiveIdentifier(finalNum),
+      id: progressiveIdentifierFromDescriptor(String(r.descriptor ?? '')),
       init: String(r.teacher_initials ?? ''),
       finalNum: Number.isFinite(finalNum) ? finalNum : NaN,
       avg20Num: Number.isFinite(avg20Num) ? avg20Num : NaN,
@@ -469,7 +469,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   </table>
 
   <p class="overall-line"><strong>Overall Learner Achievement:</strong> ${esc(overallWord)} &nbsp; <strong>Identifier:</strong> ${esc(sumRow.id || '—')}</p>
-  <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> = Continuous assessment component 1; <strong>C2</strong> = component 2 (when not stored separately, formative is split evenly for display).</p>
+  <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
   <table class="lo-key">
     <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>

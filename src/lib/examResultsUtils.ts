@@ -291,10 +291,18 @@ export function secondaryOlevelRowDataCompleteness(row: SecondaryOlevelExamResul
   return s;
 }
 
+/** Normalize stored descriptor (older rows may still say Missed). */
+export function normalizeOlevelDescriptorFromDb(raw: string | null | undefined): string {
+  const s = String(raw ?? '').trim();
+  if (!s) return '';
+  if (s.toLowerCase() === 'missed') return 'Basic';
+  return s;
+}
+
 /** When several line-key rows exist per student, keep the row that matches the global topic filter or the most complete / newest. */
 export function secondaryOlevelDescriptorFromActivity(activityScore: number): string {
   if (!Number.isFinite(activityScore)) return '';
-  if (activityScore < 1) return 'Missed';
+  if (activityScore < 1) return 'Basic';
   if (activityScore < 2.5) return 'Moderate';
   return 'Outstanding';
 }
@@ -360,7 +368,7 @@ export function buildSecondaryOlevelExamResultsMapFromRows(
     const activity = r.activity_score != null && r.activity_score !== '' ? Number(r.activity_score) : NaN;
     const descriptor =
       r.descriptor != null && String(r.descriptor).trim() !== ''
-        ? String(r.descriptor).trim()
+        ? normalizeOlevelDescriptorFromDb(String(r.descriptor).trim())
         : Number.isFinite(activity)
           ? secondaryOlevelDescriptorFromActivity(activity)
           : '';

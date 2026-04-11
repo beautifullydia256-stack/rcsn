@@ -1,9 +1,9 @@
-/** Matches legacy teacher exam UI (Dec 2025 Next app) for O-Level secondary scoring. */
+/** O-Level (Senior 1–4) activity band labels — Basic / Moderate / Outstanding (ECS-style). */
 
-export type SecondaryDescriptor = 'Missed' | 'Moderate' | 'Outstanding';
+export type SecondaryDescriptor = 'Basic' | 'Moderate' | 'Outstanding';
 
 export function calculateActivityDescriptor(activityScore: number): SecondaryDescriptor {
-  if (activityScore < 1) return 'Missed';
+  if (activityScore < 1) return 'Basic';
   if (activityScore < 2.5) return 'Moderate';
   return 'Outstanding';
 }

@@ -55,6 +55,8 @@ function mapSnapshotRowToDb(row: SnapshotRowForPersist, snapshotId: string) {
     topic: row.topic,
     continuous_c1: row.continuous_c1,
     continuous_c2: row.continuous_c2,
+    exam_set_id: row.exam_set_id,
+    exam_set_created_at: row.exam_set_created_at,
   };
   const extClean = Object.fromEntries(
     Object.entries(ext).filter(([, v]) => v !== undefined && v !== null)
@@ -129,6 +131,13 @@ function mapDbRowToSnapshotRow(d: Record<string, unknown>): SnapshotRowForPersis
     fees_expected: d.fees_expected != null ? Number(d.fees_expected) : undefined,
     frozen_data: frozen,
     exam_set_name: (d.exam_set_name as string | undefined) ?? undefined,
+    exam_set_id: ext.exam_set_id !== undefined ? (ext.exam_set_id != null ? String(ext.exam_set_id) : undefined) : undefined,
+    exam_set_created_at:
+      ext.exam_set_created_at !== undefined
+        ? ext.exam_set_created_at != null
+          ? String(ext.exam_set_created_at)
+          : null
+        : undefined,
     exam_set_term: d.exam_set_term != null ? Number(d.exam_set_term) : undefined,
     exam_set_year: d.exam_set_year != null ? Number(d.exam_set_year) : undefined,
     student_photo_url: (d.student_photo_url as string | null | undefined) ?? null,
