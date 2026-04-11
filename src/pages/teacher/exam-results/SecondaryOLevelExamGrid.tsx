@@ -264,7 +264,7 @@ export function SecondaryOLevelExamGrid({
         const finalNum = Math.trunc(formativeNum + examNum);
         const letterGrade = calculateSecondaryLetterGrade(finalNum);
 
-        // p_grade included: DB has two overloads (with/without grade); passing grade picks the uuid+grade variant.
+        // p_grade included: single 17-arg RPC (p_teacher_id coerces from uuid); avoid duplicate DB overloads (PGRST203).
         const { data: rpcData, error } = await supabase.rpc('teacher_upsert_exam_result_secondary', {
           p_school_id: schoolId,
           p_exam_set_id: selectedExamSetId,

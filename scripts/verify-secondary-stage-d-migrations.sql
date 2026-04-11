@@ -1,6 +1,7 @@
 -- Secondary Stage D verification (run on Supabase SQL editor, one section at a time).
 -- Expect these applied: 20260526120000_exam_results_line_keys_uace_papers.sql
---                       20260527120000_fix_alevel_upsert_grant_signature.sql (optional idempotent GRANT)
+--                       20260527120000_teacher_upsert_secondary_sync_marks_obtained.sql
+--                       20260531120000_drop_ambiguous_teacher_upsert_secondary_overload.sql (fixes PostgREST PGRST203)
 
 -- -----------------------------------------------------------------------------
 -- V1) Unique INDEX on exam_results (line-level key) — expect row: exam_results_exam_student_subject_line_uidx
@@ -14,7 +15,7 @@ WHERE schemaname = 'public'
 ORDER BY indexname;
 
 -- -----------------------------------------------------------------------------
--- V2) B6 — teacher_upsert_exam_result_secondary overloads (expect paper/topic args on long form)
+-- V2) B6 — teacher_upsert_exam_result_secondary overloads (expect two: 16-arg uuid teacher wrapper + 17-arg text teacher impl)
 -- -----------------------------------------------------------------------------
 SELECT p.proname,
        pg_get_function_identity_arguments(p.oid) AS args
