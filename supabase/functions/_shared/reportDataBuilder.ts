@@ -154,9 +154,34 @@ function sortSeniorSnapshotGroupByExamOrder(group: SnapshotRowForPersist[]): Sna
   });
 }
 
+/** Prefer latest exam in term, but if that row omitted a field, take the first older row that has it (still teacher-saved). */
+function coalesceNumFromGroup(
+  sorted: SnapshotRowForPersist[],
+  pick: (d: SnapshotRowForPersist) => unknown
+): number | undefined {
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const n = numOrUndef(pick(sorted[i]));
+    if (n !== undefined) return n;
+  }
+  return undefined;
+}
+
+function coalesceStrFromGroup(
+  sorted: SnapshotRowForPersist[],
+  pick: (d: SnapshotRowForPersist) => unknown
+): string | undefined {
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const raw = pick(sorted[i]);
+    if (raw == null) continue;
+    const s = String(raw).trim();
+    if (s !== '') return s;
+  }
+  return undefined;
+}
+
 /**
  * One row per subject/topic/paper line: earliest exam in term → continuous_c1 activity, latest → continuous_c2;
- * formative / exam / final / grade / descriptor / remarks come from the latest exam set row in that group.
+ * other columns prefer the latest exam set row, with per-field fallback to older rows in the same line when latest omitted them.
  */
 function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): SnapshotRowForPersist[] {
   if (rows.length === 0) return rows;
@@ -185,27 +210,30 @@ function mergeSeniorSecondarySnapshotRows(rows: SnapshotRowForPersist[]): Snapsh
       }
       return undefined;
     };
-    const marks = Number(scoreFromRow(latest) ?? scoreFromRow(earliest) ?? 0);
+    const finalCoalesced =
+      coalesceNumFromGroup(sorted, (d) => d.final_score) ?? coalesceNumFromGroup(sorted, (d) => d.marks_obtained);
+    const marks = Number(finalCoalesced ?? scoreFromRow(latest) ?? scoreFromRow(earliest) ?? 0);
     const total = Number(latest?.total_marks ?? earliest?.total_marks ?? 100);
+    const gradeCoalesced = coalesceStrFromGroup(sorted, (d) => d.grade) ?? '';
     merged.push({
       ...latest,
       marks_obtained: marks,
       total_marks: total,
-      grade: String(latest.grade ?? ''),
-      remarks: latest.remarks,
-      teacher_initials: latest.teacher_initials,
-      teacher_comment: latest.teacher_comment,
+      grade: gradeCoalesced,
+      remarks: coalesceStrFromGroup(sorted, (d) => d.remarks) ?? latest.remarks,
+      teacher_initials: coalesceStrFromGroup(sorted, (d) => d.teacher_initials) ?? latest.teacher_initials,
+      teacher_comment: coalesceStrFromGroup(sorted, (d) => d.teacher_comment) ?? latest.teacher_comment,
       exam_set_name: latest.exam_set_name,
       exam_set_id: latest.exam_set_id,
       exam_set_created_at: latest.exam_set_created_at,
       exam_set_term: latest.exam_set_term,
       exam_set_year: latest.exam_set_year,
-      activity_score: latest.activity_score,
-      formative_score: latest.formative_score,
-      exam_score: latest.exam_score,
-      final_score: numOrUndef(latest.final_score) ?? numOrUndef(latest.marks_obtained) ?? null,
-      descriptor: latest.descriptor ?? null,
-      overall_remark: latest.overall_remark ?? null,
+      activity_score: coalesceNumFromGroup(sorted, (d) => d.activity_score) ?? null,
+      formative_score: coalesceNumFromGroup(sorted, (d) => d.formative_score) ?? null,
+      exam_score: coalesceNumFromGroup(sorted, (d) => d.exam_score) ?? null,
+      final_score: finalCoalesced ?? null,
+      descriptor: coalesceStrFromGroup(sorted, (d) => d.descriptor) ?? null,
+      overall_remark: coalesceStrFromGroup(sorted, (d) => d.overall_remark) ?? null,
       paper_code: latest.paper_code,
       paper_number: latest.paper_number,
       topic: latest.topic,

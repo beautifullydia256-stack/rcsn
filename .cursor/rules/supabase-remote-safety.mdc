@@ -1,0 +1,29 @@
+---
+description: Never reset or wipe remote Supabase DB without explicit user request; explain CLI impact first.
+alwaysApply: true
+---
+
+# Supabase CLI and remote database safety
+
+The user requires that **hosted (remote) database data must never be reset or wiped** unless they **explicitly** ask for that operation.
+
+## Do not run without explicit approval
+
+- `supabase db reset --linked` or `db reset` with a **remote** `--db-url`
+- Any command described as dropping all user entities / resetting remote to migrations
+- Destructive repair operations on production unless the user clearly requests them
+
+## Before any Supabase CLI command that changes infrastructure or schema
+
+1. **State what the command does** in plain language (read-only vs writes data vs writes schema vs deploys code only).
+2. **Confirm** it does not reset or delete production data.
+
+## Generally safer (still explain first)
+
+- `supabase projects list`, `supabase migration list`, `supabase functions list`
+- `supabase functions deploy …` (updates Edge Function **code**; does not reset the Postgres database)
+- `supabase login` / `logout` (local token only)
+
+## Local-only reset
+
+`supabase db reset` **without** `--linked` affects **local** Docker Postgres only. Still mention that distinction if suggesting it.
