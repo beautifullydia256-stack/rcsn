@@ -208,6 +208,25 @@ export async function ensureExamResultsConsistency(
   return await backfillMissingExamResultsForClass(schoolId, className);
 }
 
+/**
+ * Readable message from Supabase/PostgREST client errors (saves use HTTPS, not Realtime WebSockets).
+ */
+export function formatSupabaseCallError(
+  err: { message?: string; details?: string; hint?: string; code?: string } | null | undefined,
+): string {
+  if (!err || typeof err !== 'object') return 'Request failed.';
+  const msg = typeof err.message === 'string' ? err.message.trim() : '';
+  const details = typeof err.details === 'string' ? err.details.trim() : '';
+  const hint = typeof err.hint === 'string' ? err.hint.trim() : '';
+  const code = typeof err.code === 'string' ? err.code.trim() : '';
+  const parts: string[] = [];
+  if (msg) parts.push(msg);
+  if (details) parts.push(details);
+  if (hint) parts.push(`Hint: ${hint}`);
+  if (code) parts.push(`[${code}]`);
+  return parts.length > 0 ? parts.join(' — ') : 'Request failed.';
+}
+
 /** Some RPCs return `{ error: string }` in the JSON body with HTTP 200 — treat as failure. */
 export function throwIfRpcReturnedJsonError(data: unknown): void {
   if (data == null || typeof data !== 'object') return;

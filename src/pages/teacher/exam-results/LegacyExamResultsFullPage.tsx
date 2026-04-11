@@ -8,7 +8,11 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { assertTeacherUpsertRpcResult, throwIfRpcReturnedJsonError } from "@/lib/examResultsUtils";
+import {
+  assertTeacherUpsertRpcResult,
+  formatSupabaseCallError,
+  throwIfRpcReturnedJsonError,
+} from "@/lib/examResultsUtils";
 import { resolveTeacherIdForSchool } from "@/lib/resolveTeacherId";
 import { getSectionForClass } from "@/templates/primary";
 import { isALevelClass, isOLevelClass } from "@/components/reports/templates/helpers";
@@ -1442,13 +1446,20 @@ export default function LegacyExamResultsFullPage() {
           console.log('RPC response:', resp);
 
           if (resp.error) {
-            console.error('RPC olevel save error:', {
-              code: resp.error.code,
-              message: resp.error.message,
-              details: resp.error.details,
-              hint: resp.error.hint,
-            });
-            setError(resp.error.message || 'Failed to save exam results');
+            console.error(
+              'RPC olevel save error:',
+              JSON.stringify(
+                {
+                  code: resp.error.code,
+                  message: resp.error.message,
+                  details: resp.error.details,
+                  hint: resp.error.hint,
+                },
+                null,
+                2,
+              ),
+            );
+            setError(formatSupabaseCallError(resp.error));
             throw resp.error;
           }
           assertTeacherUpsertRpcResult(resp.data);
@@ -1468,7 +1479,11 @@ export default function LegacyExamResultsFullPage() {
       
     } catch (err) {
       console.error('Error saving results:', err);
-      setError(err instanceof Error ? err.message : 'Failed to save exam results');
+      const msg =
+        err instanceof Error
+          ? err.message
+          : formatSupabaseCallError(err as { message?: string; details?: string; hint?: string; code?: string });
+      setError(msg);
     } finally {
       setSaving(false);
     }
