@@ -6,8 +6,11 @@
 
 import {
   buildSecondaryLowerSectionHeaderHtml,
+  buildSecondaryOlevelCommentsNextTermPanelHtml,
+  formatNextTermBeginsLongDisplay,
   secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
+  SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
@@ -71,6 +74,25 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     overallAchievementUpper = template1AchievementLevelUpper(averageGradeLetter);
   }
   const performanceSubline = template1PerformanceSubline(student.summary);
+
+  const classTeacherComment =
+    student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
+  const headTeacherComment =
+    student.comments?.headteacher_text ?? student.comments?.head_teacher_text ?? '';
+  const classTeacherName = student.comments?.class_teacher_name ?? '';
+  const headTeacherName = student.comments?.head_teacher_name ?? '';
+  const nextTermRaw =
+    student.nextTermBegins ??
+    student.next_term_begins_date ??
+    student.processed?.nextTermBeginsDate ??
+    '';
+  const commentsNextTermHtml = buildSecondaryOlevelCommentsNextTermPanelHtml({
+    classTeacherComment: String(classTeacherComment),
+    headTeacherComment: String(headTeacherComment),
+    classTeacherName: String(classTeacherName),
+    headTeacherName: String(headTeacherName),
+    nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextTermRaw),
+  });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
     chipTitle: secondaryOlevelStandardReportChipTitle(examSet),
@@ -147,30 +169,8 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         .summary strong {
           font-weight: bold;
         }
-        
-        .comments {
-          margin-bottom: 12px;
-          font-size: 10pt;
-        }
-        
-        .comments h3 {
-          font-size: 11pt;
-          font-weight: bold;
-          margin-bottom: 5px;
-        }
-        
-        .comments p {
-          margin-bottom: 5px;
-        }
-        
-        .next-term {
-          margin-bottom: 20px;
-          font-size: 11pt;
-        }
-        
-        .next-term strong {
-          font-weight: bold;
-        }
+
+        ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
         
         .grading-system {
           margin-bottom: 20px;
@@ -335,16 +335,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         </tbody>
       </table>
 
-      <!-- COMMENTS (Reworked per request) -->
-      <div class="comments">
-        <h3>Class Teacher's Comment</h3>
-        <div style="height: 60px; border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
-        <p>Name: ${student.comments?.class_teacher_name || ''} | Signature: ____________________</p>
-
-        <h3>Head Teacher's Comment</h3>
-        <div style="height: 60px; border-bottom: 1px solid #000; margin-bottom: 8px;"></div>
-        <p>Name: ${student.comments?.head_teacher_name || ''} | Signature: ____________________</p>
-      </div>
+      ${commentsNextTermHtml}
 
       <!-- Grading system & descriptions -->
       <div class="grading-system">

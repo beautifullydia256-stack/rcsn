@@ -6,8 +6,11 @@
 
 import {
   buildSecondaryLowerSectionHeaderHtml,
+  buildSecondaryOlevelCommentsNextTermPanelHtml,
+  formatNextTermBeginsLongDisplay,
   secondaryOlevelProgressiveReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
+  SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
@@ -99,11 +102,20 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
   const ht =
     student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
-  const nextBegins =
+  const classTeacherName = String(student.comments?.class_teacher_name ?? '');
+  const headTeacherName = String(student.comments?.head_teacher_name ?? '');
+  const nextBeginsRaw =
     student.nextTermBegins ??
     student.next_term_begins_date ??
     student.processed?.nextTermBeginsDate ??
-    '____________________';
+    '';
+  const commentsNextTermHtml = buildSecondaryOlevelCommentsNextTermPanelHtml({
+    classTeacherComment: String(ct),
+    headTeacherComment: String(ht),
+    classTeacherName,
+    headTeacherName,
+    nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextBeginsRaw),
+  });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
     chipTitle: `Learner's End of Year Summative Assessment Results ${year}`,
@@ -176,9 +188,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     .key-title { text-align: center; font-weight: 700; margin: 12px 0 6px; text-transform: uppercase; font-size: 10pt; }
     table.key { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
     table.key th, table.key td { border: 1px solid #000; padding: 4px 6px; }
-    .comments { margin-bottom: 10px; font-size: 10pt; }
-    .comments h4 { margin: 10px 0 4px; font-size: 10pt; }
-    .sig { margin-top: 20px; border-top: 1px solid #000; padding-top: 4px; min-height: 28px; }
+    ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .footer-admin { margin-top: 14px; font-size: 9pt; }
     .footer-admin .disc { text-align: center; margin-top: 8px; font-weight: 600; }
     .watermark {
@@ -239,18 +249,9 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     </tbody>
   </table>
 
-  <div class="comments">
-    <h4>Class Teacher's Comment:</h4>
-    <p>${esc(ct) || '—'}</p>
-    <div class="sig">Signature: _________________________</div>
-    <h4>Head Teacher's Comment:</h4>
-    <p>${esc(ht) || '—'}</p>
-    <div class="sig">Signature: _________________________</div>
-  </div>
+  ${commentsNextTermHtml}
 
   <div class="footer-admin">
-    <p><strong>Next Term Begins:</strong> ${esc(typeof nextBegins === 'string' ? nextBegins : new Date(nextBegins).toLocaleDateString('en-GB'))}</p>
-    <p><strong>Ends On:</strong> ____________________</p>
     <p class="disc">This report is not valid without a school stamp</p>
   </div>
 </body>
@@ -345,11 +346,20 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
 
   const ct = student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
   const ht = student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
-  const nextBegins =
+  const classTeacherNameP = String(student.comments?.class_teacher_name ?? '');
+  const headTeacherNameP = String(student.comments?.head_teacher_name ?? '');
+  const nextBeginsRawP =
     student.nextTermBegins ??
     student.next_term_begins_date ??
     student.processed?.nextTermBeginsDate ??
-    '____________________';
+    '';
+  const commentsNextTermHtmlP = buildSecondaryOlevelCommentsNextTermPanelHtml({
+    classTeacherComment: String(ct),
+    headTeacherComment: String(ht),
+    classTeacherName: classTeacherNameP,
+    headTeacherName: headTeacherNameP,
+    nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextBeginsRawP),
+  });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
     chipTitle: secondaryOlevelProgressiveReportChipTitle(examSet),
@@ -416,10 +426,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .lo-key th { background: #e0e0e0; }
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
-    .footer-grid { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 12px; margin-top: 14px; font-size: 9.5pt; }
     .fees { color: #c62828; font-weight: 700; font-size: 11pt; }
-    .comments { flex: 1; min-width: 200px; }
-    .comments h4 { margin: 0 0 4px; font-size: 10pt; }
+    ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.05; z-index: -1; max-width: 55%; }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
@@ -477,20 +485,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
 
-  <div class="footer-grid">
-    <div>
-      <p><strong>NEXT TERM BEGINS ON:</strong> ${esc(typeof nextBegins === 'string' ? nextBegins : new Date(nextBegins).toLocaleDateString('en-GB'))}</p>
-      <p class="fees">Fees Balance: ${feesLabel}</p>
-    </div>
-    <div class="comments">
-      <h4>Class Teacher</h4>
-      <p>${esc(ct) || '—'}</p>
-      <p>Signature: ____________________</p>
-      <h4>Head Teacher</h4>
-      <p>${esc(ht) || '—'}</p>
-      <p>Signature: ____________________</p>
-    </div>
-  </div>
+  ${commentsNextTermHtmlP}
+  <p class="fees" style="margin-top:10px">Fees Balance: ${feesLabel}</p>
 </body>
 </html>`;
 }

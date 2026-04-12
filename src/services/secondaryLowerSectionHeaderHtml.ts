@@ -246,3 +246,134 @@ export function buildSecondaryLowerSectionHeaderHtml(
       </div>
     </div>`;
 }
+
+/** Escape text for secondary built-in HTML fragments (body text, not attributes). */
+export function secondaryReportEscHtml(s: unknown): string {
+  return escText(s);
+}
+
+/**
+ * Long UK-style date for "Next term begins" line, e.g. Saturday, 13 September, 2025.
+ * If parsing fails, returns the original string (or empty).
+ */
+export function formatNextTermBeginsLongDisplay(raw: unknown): string {
+  if (raw == null) return '';
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime())
+      ? ''
+      : raw.toLocaleDateString('en-GB', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        });
+  }
+  const s = String(raw).trim();
+  if (!s) return '';
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return d.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }
+  return s;
+}
+
+/** Mint panel: class / head comments + next term (no date fields in signature rows). */
+export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
+        .secondary-ol-comments-panel {
+          font-family: Arial, Helvetica, 'Segoe UI', sans-serif;
+          font-size: 10pt;
+          line-height: 1.35;
+          background: #f0f9f0;
+          border: 1px solid #c8e6c9;
+          padding: 12px 14px;
+          margin-bottom: 14px;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .secondary-ol-comment-block {
+          margin-bottom: 14px;
+        }
+        .secondary-ol-comment-block:last-child {
+          margin-bottom: 0;
+        }
+        .secondary-ol-comment-label {
+          font-weight: bold;
+          margin-bottom: 4px;
+        }
+        .secondary-ol-comment-line {
+          border-bottom: 1px solid #000;
+          min-height: 1.35em;
+          padding-bottom: 3px;
+          margin-bottom: 8px;
+        }
+        .secondary-ol-comment-text {
+          font-style: italic;
+        }
+        .secondary-ol-comment-meta {
+          display: flex;
+          flex-direction: row;
+          flex-wrap: wrap;
+          gap: 12px 20px;
+          align-items: flex-end;
+        }
+        .secondary-ol-meta-field {
+          flex: 1;
+          min-width: 160px;
+          display: flex;
+          align-items: baseline;
+          gap: 6px;
+        }
+        .secondary-ol-dotted {
+          flex: 1;
+          border-bottom: 1px dotted #000;
+          min-height: 1.15em;
+          min-width: 72px;
+        }
+`;
+
+export type SecondaryOlevelCommentsNextTermPanelInput = {
+  classTeacherComment: string;
+  headTeacherComment: string;
+  classTeacherName: string;
+  headTeacherName: string;
+  nextTermBeginsDisplay: string;
+};
+
+export function buildSecondaryOlevelCommentsNextTermPanelHtml(
+  opts: SecondaryOlevelCommentsNextTermPanelInput,
+): string {
+  const ct = secondaryReportEscHtml(opts.classTeacherComment);
+  const ht = secondaryReportEscHtml(opts.headTeacherComment);
+  const ctn = secondaryReportEscHtml(opts.classTeacherName);
+  const htn = secondaryReportEscHtml(opts.headTeacherName);
+  const ntd = secondaryReportEscHtml(opts.nextTermBeginsDisplay);
+  const blank = '&nbsp;';
+  return `
+      <div class="secondary-ol-comments-panel">
+        <div class="secondary-ol-comment-block">
+          <div class="secondary-ol-comment-label">Class Teacher's Comment:</div>
+          <div class="secondary-ol-comment-line"><span class="secondary-ol-comment-text">${ct || blank}</span></div>
+          <div class="secondary-ol-comment-meta">
+            <div class="secondary-ol-meta-field"><strong>Name:</strong> <span class="secondary-ol-dotted">${ctn || blank}</span></div>
+            <div class="secondary-ol-meta-field"><strong>Signature:</strong> <span class="secondary-ol-dotted">${blank}</span></div>
+          </div>
+        </div>
+        <div class="secondary-ol-comment-block">
+          <div class="secondary-ol-comment-label">Head Teacher's Comment:</div>
+          <div class="secondary-ol-comment-line"><span class="secondary-ol-comment-text">${ht || blank}</span></div>
+          <div class="secondary-ol-comment-meta">
+            <div class="secondary-ol-meta-field"><strong>Name:</strong> <span class="secondary-ol-dotted">${htn || blank}</span></div>
+            <div class="secondary-ol-meta-field"><strong>Signature:</strong> <span class="secondary-ol-dotted">${blank}</span></div>
+          </div>
+        </div>
+        <div class="secondary-ol-comment-block">
+          <div class="secondary-ol-comment-label">Next Term Begins:</div>
+          <div class="secondary-ol-comment-line"><span class="secondary-ol-comment-text">${ntd || blank}</span></div>
+        </div>
+      </div>`;
+}
