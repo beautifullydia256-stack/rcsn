@@ -99,6 +99,64 @@ function escAttr(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 
+function examSetNameNorm(examSet: { name?: string } | null | undefined): string {
+  return String(examSet?.name ?? '').trim().toLowerCase();
+}
+
+/**
+ * Standard O-Level (template1) blue chip: wording follows `exam_set.name` (BoT / Mid / EOT),
+ * so we do not show "end of term" when the selected set is Beginning of term.
+ */
+export function secondaryOlevelStandardReportChipTitle(
+  examSet: { name?: string; term?: number; year?: number } | null | undefined,
+): string {
+  const term = examSet?.term ?? 1;
+  const year = examSet?.year ?? new Date().getFullYear();
+  const n = examSetNameNorm(examSet);
+  if (/beginning|(^|\s)bot(\s|$)|b\.?\s*o\.?\s*t\b/.test(n)) {
+    return `Learner's beginning of term report card for term ${term}, ${year}`;
+  }
+  if (/mid\s*term|midterm|mid-term/.test(n) || /\bmid\b/.test(n)) {
+    return `Learner's mid term report card for term ${term}, ${year}`;
+  }
+  if (/\bend\s+of\s+term\b|\beot\b/.test(n) || (/\bend\b/.test(n) && /\bterm\b/.test(n))) {
+    return `Learner's end of term report card for term ${term}, ${year}`;
+  }
+  const name = String(examSet?.name ?? '').trim();
+  if (name) {
+    return `Learner's report card — ${name} (term ${term}, ${year})`;
+  }
+  return `Learner's report card for term ${term}, ${year}`;
+}
+
+function progressiveTermWord(term: unknown): string {
+  const num = parseInt(String(term), 10);
+  if (num === 1) return 'One';
+  if (num === 2) return 'Two';
+  if (num === 3) return 'Three';
+  const s = String(term ?? '').trim();
+  return s || '—';
+}
+
+/**
+ * Progressive (template3) chip: exam phase from `exam_set.name` (not always "End of Term").
+ */
+export function secondaryOlevelProgressiveReportChipTitle(
+  examSet: { name?: string; term?: number } | null | undefined,
+): string {
+  const n = examSetNameNorm(examSet);
+  let phase: string;
+  if (/beginning|(^|\s)bot(\s|$)|b\.?\s*o\.?\s*t\b/.test(n)) phase = 'Beginning of term';
+  else if (/mid\s*term|midterm|mid-term/.test(n) || /\bmid\b/.test(n)) phase = 'Mid term';
+  else if (/\bend\s+of\s+term\b|\beot\b/.test(n) || (/\bend\b/.test(n) && /\bterm\b/.test(n)))
+    phase = 'End of term';
+  else if (String(examSet?.name ?? '').trim()) phase = String(examSet?.name).trim();
+  else phase = 'Term report';
+
+  const tw = progressiveTermWord(examSet?.term);
+  return `${phase} Term ${tw} Student's Progressive Report`;
+}
+
 export type SecondaryLowerHeaderBanner = {
   chipTitle: string;
   metaLine?: string;

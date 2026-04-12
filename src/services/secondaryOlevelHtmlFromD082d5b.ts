@@ -6,10 +6,49 @@
 
 import {
   buildSecondaryLowerSectionHeaderHtml,
+  secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
+
+/** Matches the Standard template legend: 80 - A | 70 - B | 50 - C | 40 - D | 0 - E */
+function template1StandardGradeFromPct(percentage: number): string {
+  if (percentage >= 80) return 'A';
+  if (percentage >= 70) return 'B';
+  if (percentage >= 50) return 'C';
+  if (percentage >= 40) return 'D';
+  return 'E';
+}
+
+function template1AchievementLevelUpper(letter: string): string {
+  const u = String(letter || '').trim().toUpperCase();
+  const map: Record<string, string> = {
+    A: 'EXCEPTIONAL',
+    B: 'OUTSTANDING',
+    C: 'SATISFACTORY',
+    D: 'BASIC',
+    E: 'ELEMENTARY',
+  };
+  return map[u] || '';
+}
+
+function template1PerformanceSubline(summary: { division?: unknown; aggregate?: unknown; classPosition?: unknown } | null | undefined): string {
+  if (!summary) return '';
+  const divRaw = summary.division;
+  if (divRaw != null && String(divRaw).trim() !== '' && String(divRaw).trim().toUpperCase() !== 'N/A') {
+    return String(divRaw).trim();
+  }
+  const agg = summary.aggregate;
+  if (agg != null && agg !== '' && Number.isFinite(Number(agg))) {
+    return `Aggregate: ${Number(agg).toFixed(2)}`;
+  }
+  const pos = summary.classPosition;
+  if (pos != null && pos !== '') {
+    return `Class position: ${pos}`;
+  }
+  return '';
+}
 
 export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
@@ -18,12 +57,23 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
   const daysPresent = attendance.presentDays ?? '';
   const totalDays = attendance.totalSchoolDays ?? '';
   const daysAbsent = (typeof totalDays === 'number' && typeof daysPresent === 'number') ? Math.max(totalDays - daysPresent, 0) : '';
-  const avg = student.summary.average ?? '';
-  const avgGrade = student.summary.division ?? '';
-  const overallPerf = student.summary.performanceRemark ?? '';
+
+  const finalScores = (student.results || [])
+    .map((r: { final_score?: unknown }) => parseFloat(String(r.final_score ?? '')))
+    .filter((n: number) => Number.isFinite(n));
+  let averageFinalDisplay = '';
+  let averageGradeLetter = '';
+  let overallAchievementUpper = '';
+  if (finalScores.length > 0) {
+    const mean = finalScores.reduce((a: number, b: number) => a + b, 0) / finalScores.length;
+    averageFinalDisplay = mean.toFixed(2);
+    averageGradeLetter = template1StandardGradeFromPct(mean);
+    overallAchievementUpper = template1AchievementLevelUpper(averageGradeLetter);
+  }
+  const performanceSubline = template1PerformanceSubline(student.summary);
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
-    chipTitle: `Learner's end of term report card for term ${examSet?.term ?? '2'}, ${examSet?.year ?? '2025'}`,
+    chipTitle: secondaryOlevelStandardReportChipTitle(examSet),
     metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,
   });
 
@@ -73,6 +123,16 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         
         .center {
           text-align: center;
+        }
+
+        tr.summary-avg-row td {
+          background: #fff;
+          font-weight: bold;
+        }
+
+        tr.summary-perf-row td {
+          background: #cfe2f3;
+          font-weight: bold;
         }
         
         .summary {
@@ -249,6 +309,28 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
                 <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
               </tr>
             `
+          }
+          ${
+            finalScores.length > 0
+              ? `
+          <tr class="summary-avg-row">
+            <td colspan="5">AVERAGE SCORES</td>
+            <td class="center">${averageFinalDisplay}</td>
+            <td class="center">${averageGradeLetter}</td>
+            <td></td>
+            <td></td>
+          </tr>
+          <tr class="summary-perf-row">
+            <td colspan="5">OVERALL PERFORMANCE</td>
+            <td colspan="2" class="center">${overallAchievementUpper}</td>
+            <td colspan="2"></td>
+          </tr>
+          <tr class="summary-perf-row">
+            <td colspan="5"></td>
+            <td colspan="2" class="center">${performanceSubline}</td>
+            <td colspan="2"></td>
+          </tr>`
+              : ''
           }
         </tbody>
       </table>

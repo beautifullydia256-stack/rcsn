@@ -6,6 +6,7 @@
 
 import {
   buildSecondaryLowerSectionHeaderHtml,
+  secondaryOlevelProgressiveReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
@@ -37,16 +38,6 @@ function bandWordFromAvgActivity(avg: number): string {
 function parseNum(v: unknown): number {
   const n = parseFloat(String(v ?? ''));
   return Number.isFinite(n) ? n : NaN;
-}
-
-/** Maps term index to words for progressive title (plan §3 O-3). */
-function termWord(term: unknown): string {
-  const n = parseInt(String(term), 10);
-  if (n === 1) return 'ONE';
-  if (n === 2) return 'TWO';
-  if (n === 3) return 'THREE';
-  const s = String(term ?? '').trim();
-  return s ? s.toUpperCase() : '—';
 }
 
 export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
@@ -361,7 +352,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     '____________________';
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
-    chipTitle: `End of Term ${termWord(examSet?.term)} Student's Progressive Report`,
+    chipTitle: secondaryOlevelProgressiveReportChipTitle(examSet),
     metaLine: `Report No. ${reportNo} · Year ${year}${examSet?.name ? ` · ${examSet.name}` : ''}`,
   });
 
