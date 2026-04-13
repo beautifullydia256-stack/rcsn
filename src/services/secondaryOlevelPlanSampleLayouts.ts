@@ -290,7 +290,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   </table>
 
   <div class="grades">
-    <strong>Letter-grade scale</strong>
+    <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
 
@@ -519,7 +519,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   </table>
 
   <div class="grades">
-    <strong>Letter-grade scale</strong>
+    <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
 
