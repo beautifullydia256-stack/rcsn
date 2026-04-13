@@ -124,12 +124,21 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           border-collapse: collapse;
           margin-bottom: 12px;
           font-size: 9.5pt;
+          position: relative;
+          z-index: 0;
+          background: #ffffff;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         
         th, td {
           border: 1px solid #000;
           padding: 4px;
           text-align: left;
+        }
+        
+        tbody td {
+          background: #ffffff;
         }
         
         th {
@@ -211,6 +220,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           width: 900px;
           height: 900px;
           object-fit: contain;
+          display: block;
         }
         
         .watermark-placeholder {

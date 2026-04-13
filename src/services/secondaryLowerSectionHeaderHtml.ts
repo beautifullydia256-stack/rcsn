@@ -152,6 +152,11 @@ export const SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS = `
           margin-bottom: 3mm;
           font-family: 'Times New Roman', Times, serif;
           table-layout: auto;
+          position: relative;
+          z-index: 0;
+          background: #ffffff;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
         }
         table.upper-results th,
         table.upper-results td {
@@ -160,10 +165,15 @@ export const SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS = `
           vertical-align: middle;
         }
         table.upper-results thead tr {
-          background: #dbeafe;
           color: #1e3a8a;
           text-transform: uppercase;
           font-weight: 600;
+        }
+        table.upper-results thead th {
+          background: #dbeafe;
+        }
+        table.upper-results tbody td {
+          background: #ffffff;
         }
         table.upper-results th {
           text-align: left;
@@ -186,16 +196,13 @@ export const SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS = `
           color: #475569;
           text-align: center;
         }
-        table.upper-results tbody tr:nth-child(even) {
+        table.upper-results tbody tr:nth-child(even) td {
           background: #f0f9ff;
         }
         table.upper-results tbody tr.sum td {
           background: #e0f2fe;
           color: #1e3a8a;
           font-weight: 600;
-        }
-        table.upper-results tbody tr.sum:nth-child(even) td {
-          background: #e0f2fe;
         }
 `;
 
