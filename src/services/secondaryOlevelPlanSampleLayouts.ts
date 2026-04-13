@@ -7,12 +7,13 @@
 import {
   buildSecondaryLowerSectionHeaderHtml,
   buildSecondaryOlevelCommentsNextTermPanelHtml,
+  buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
   secondaryOlevelProgressiveReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
+  SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
-  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 function esc(s: unknown): string {
@@ -122,6 +123,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     metaLine: [examSet?.name, String(year)].filter(Boolean).join(' · '),
   });
 
+  const studentBlockHtml = buildSecondaryUpperSectionStyleStudentBlockHtml(
+    student,
+    examSet,
+    studentPhotoBase64 ?? null,
+  );
+
   const tbody =
     rows.length > 0
       ? rows
@@ -158,8 +165,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
-    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
-    .student-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 10pt; }
+    ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     table.main { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
     table.main th, table.main td { border: 1px solid #000; padding: 5px 4px; vertical-align: middle; }
     table.main th {
@@ -202,17 +208,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
-  <div class="student-row">
-    <div>
-      <div><strong>Name:</strong> ${esc(student.name)}</div>
-      <div><strong>Class:</strong> ${esc(student.current_class)}</div>
-      <div><strong>Admission:</strong> ${esc(student.admission_number || student.student_id)}</div>
-      <div><strong>Term:</strong> ${esc(examSet?.term)} &nbsp; <strong>Year:</strong> ${esc(year)}</div>
-    </div>
-    <div class="student-photo">
-      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
-    </div>
-  </div>
+  ${studentBlockHtml}
 
   <table class="main">
     <thead>
@@ -278,11 +274,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   const year = examSet?.year ?? new Date().getFullYear();
   const results: any[] = Array.isArray(student.results) ? student.results : [];
   const reportNo = student.report_serial ?? student.admission_number ?? student.student_id ?? '—';
-  const stream = student.stream ?? student.current_stream ?? student.stream_name ?? '—';
-  const examDate =
-    examSet?.date ??
-    examSet?.exam_date ??
-    new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   type PRow = {
     subject: string;
     c1: string;
@@ -366,6 +357,12 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     metaLine: `Report No. ${reportNo} · Year ${year}${examSet?.name ? ` · ${examSet.name}` : ''}`,
   });
 
+  const studentBlockHtmlP = buildSecondaryUpperSectionStyleStudentBlockHtml(
+    student,
+    examSet,
+    studentPhotoBase64 ?? null,
+  );
+
   const tbody =
     rows.length > 0
       ? rows
@@ -402,16 +399,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
-    ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
-    .secondary-report-progressive .student-photo {
-      float: right;
-      margin-left: 10px;
-    }
-    .meta-band {
-      background: #b71c1c; color: #fff; padding: 8px 10px; margin-bottom: 10px;
-      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 9.5pt;
-    }
-    .meta-band strong { color: #ffeb3b; }
+    ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
     table.grid th, table.grid td { border: 1px solid #000; padding: 4px 3px; }
     table.grid th { background: #eeeeee; font-weight: 700; text-align: center; vertical-align: bottom; line-height: 1.15; }
@@ -432,24 +420,11 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
-<body class="secondary-report-progressive">
+<body>
   ${schoolLogoBase64 ? `<div class="watermark"><img src="${schoolLogoBase64}" alt="" /></div>` : ''}
   ${headerHtml}
 
-  <div class="meta-band">
-    <div><strong>STUDENT'S NAME:</strong> ${esc(student.name)}</div>
-    <div><strong>YEAR:</strong> ${esc(year)}</div>
-    <div><strong>CLASS:</strong> ${esc(student.current_class)}</div>
-    <div><strong>STREAM:</strong> ${esc(stream)}</div>
-    <div><strong>DATE:</strong> ${esc(examDate)}</div>
-    <div><strong>LIN:</strong> ${esc(student.lin ?? '__________')}</div>
-  </div>
-
-  <div style="overflow:hidden">
-    <div class="student-photo">
-      ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
-    </div>
-  </div>
+  ${studentBlockHtmlP}
 
   <table class="grid">
     <thead>

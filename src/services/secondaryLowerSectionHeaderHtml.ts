@@ -88,6 +88,128 @@ export const SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS = `
         }
 `;
 
+/**
+ * Student details strip matching primary "Report for Upper Section" / Template 4 PDF (`student-block` in api/pdf/generate.ts):
+ * flex row, 2-column grid of fields, passport photo right (2.1×2.9 cm).
+ */
+export const SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS = `
+        .secondary-upper-student-block {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          padding: 6px 10px;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          margin-bottom: 3mm;
+          background: #f8fafc;
+          min-height: 28mm;
+          font-size: 10.2pt;
+          line-height: 1.3;
+          color: #1e293b;
+          font-family: 'Times New Roman', Times, serif;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        .secondary-upper-student-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          column-gap: 10px;
+          row-gap: 4px;
+          font-size: 10.2pt;
+          flex: 1;
+        }
+        .secondary-upper-student-grid strong {
+          color: #1e3a8a;
+        }
+        .secondary-upper-photo-cell {
+          width: 2.1cm;
+          height: 2.9cm;
+          border: 1px solid #bfdbfe;
+          border-radius: 4px;
+          background: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+        .secondary-upper-photo-cell img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+`;
+
+export function streamDisplayForSecondaryStudentBlock(student: any): string {
+  return String(
+    student?.stream ??
+      student?.current_stream ??
+      student?.stream_name ??
+      student?.class_stream ??
+      student?.section ??
+      'N/A',
+  );
+}
+
+/** Same rule as `Template4UpperSectionReport` report date line (en-GB short month). */
+export function formatSecondaryReportDateDisplayForStudentBlock(examSet: any, student: any): string {
+  const raw = examSet?.date ?? examSet?.exam_date ?? student?.report_date ?? student?.summary?.reportDate;
+  if (raw == null || raw === '') return 'N/A';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return String(raw);
+  return parsed.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function studentBlockPhotoInnerHtml(
+  student: any,
+  studentPhotoBase64: string | null | undefined,
+  escAttrFn: (s: string) => string,
+): string {
+  const fromArg =
+    studentPhotoBase64 != null && String(studentPhotoBase64).trim() !== ''
+      ? String(studentPhotoBase64)
+      : '';
+  const fromProfile =
+    student?.profile_photo != null && String(student.profile_photo).trim() !== ''
+      ? String(student.profile_photo)
+      : '';
+  const raw = fromArg || fromProfile;
+  if (raw) {
+    return `<img src="${escAttrFn(raw)}" alt="Student Photo" />`;
+  }
+  return '<span style="font-size:8pt;color:#94a3b8">Photo</span>';
+}
+
+export function buildSecondaryUpperSectionStyleStudentBlockHtml(
+  student: any,
+  examSet: any,
+  studentPhotoBase64: string | null | undefined,
+): string {
+  const name = escText(student?.name ?? '');
+  const cls = escText(student?.current_class ?? '');
+  const adm = escText(student?.admission_number ?? student?.student_id ?? 'N/A');
+  const term = examSet?.term ?? 'N/A';
+  const year = examSet?.year ?? new Date().getFullYear();
+  const stream = escText(streamDisplayForSecondaryStudentBlock(student));
+  const dateStr = escText(formatSecondaryReportDateDisplayForStudentBlock(examSet, student));
+  const photo = studentBlockPhotoInnerHtml(student, studentPhotoBase64, escAttr);
+
+  return `
+      <div class="secondary-upper-student-block" style="margin-top:0.08cm;">
+        <div class="secondary-upper-student-grid">
+          <div><strong>Name:</strong> ${name}</div>
+          <div><strong>Class:</strong> ${cls}</div>
+          <div><strong>Admission No:</strong> ${adm}</div>
+          <div><strong>Term:</strong> ${escText(term)} / ${escText(year)}</div>
+          <div><strong>Stream:</strong> ${stream}</div>
+          <div><strong>Date:</strong> ${dateStr}</div>
+        </div>
+        <div class="secondary-upper-photo-cell">
+          ${photo}
+        </div>
+      </div>`;
+}
+
 function escText(s: unknown): string {
   return String(s ?? '')
     .replace(/&/g, '&amp;')

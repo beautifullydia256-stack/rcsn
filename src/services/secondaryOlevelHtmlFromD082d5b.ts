@@ -7,12 +7,13 @@
 import {
   buildSecondaryLowerSectionHeaderHtml,
   buildSecondaryOlevelCommentsNextTermPanelHtml,
+  buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
   secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
+  SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
-  SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 /** Matches the Standard template legend: 80 - A | 70 - B | 50 - C | 40 - D | 0 - E */
@@ -99,6 +100,12 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,
   });
 
+  const studentBlockHtml = buildSecondaryUpperSectionStyleStudentBlockHtml(
+    student,
+    examSet,
+    studentPhotoBase64 ?? null,
+  );
+
   return `
     <!DOCTYPE html>
     <html>
@@ -108,20 +115,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
-        ${SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS}
-        
-        .student-info {
-          margin-bottom: 12px;
-          font-size: 11pt;
-        }
-        
-        .student-info div {
-          margin-bottom: 5px;
-        }
-        
-        .student-info strong {
-          font-weight: bold;
-        }
+        ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
         
         table {
           width: 100%;
@@ -243,20 +237,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       
       ${headerHtml}
 
-      <!-- Student Info and Photo - Side by side -->
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-        <!-- LEARNER INFO - Left side -->
-        <div class="student-info" style="margin-bottom: 0;">
-          <div><strong>LNo.:</strong> ${student.admission_number || student.student_id}</div>
-          <div><strong>NAME:</strong> ${student.name}</div>
-          <div><strong>CLASS & STREAM:</strong> ${student.current_class}</div>
-        </div>
-        
-        <!-- Student Photo - Right side -->
-        <div class="student-photo">
-          ${studentPhotoBase64 ? `<img src="${studentPhotoBase64}" alt="Student Photo" />` : '<span style="font-size:8pt;color:#94a3b8">Photo</span>'}
-        </div>
-      </div>
+      ${studentBlockHtml}
 
       <!-- SUBJECTS TABLE -->
       <table>
