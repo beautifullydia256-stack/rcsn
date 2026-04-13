@@ -9,6 +9,7 @@ import {
   buildSecondaryOlevelCommentsNextTermPanelHtml,
   buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
+  formatSecondaryFeesBalanceForReport,
   secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
@@ -93,6 +94,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     classTeacherName: String(classTeacherName),
     headTeacherName: String(headTeacherName),
     nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextTermRaw),
+    feesBalanceDisplay: formatSecondaryFeesBalanceForReport(student),
   });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {

@@ -9,6 +9,7 @@ import {
   buildSecondaryOlevelCommentsNextTermPanelHtml,
   buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
+  formatSecondaryFeesBalanceForReport,
   secondaryOlevelProgressiveReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
@@ -116,6 +117,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     classTeacherName,
     headTeacherName,
     nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextBeginsRaw),
+    feesBalanceDisplay: formatSecondaryFeesBalanceForReport(student),
   });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
@@ -327,14 +329,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   const overallWord =
     parseFloat(sumRow.id) >= 2.5 ? 'Accomplished' : parseFloat(sumRow.id) >= 1.5 ? 'Moderate' : 'Basic';
 
-  const feesRaw = student.progressiveFeesBalance ?? student.feesBalance ?? student.fees?.balance ?? 0;
-  const feesLabel =
-    typeof feesRaw === 'number'
-      ? new Intl.NumberFormat('en-UG', { style: 'currency', currency: 'UGX', maximumFractionDigits: 0 }).format(
-          feesRaw
-        )
-      : esc(feesRaw);
-
   const ct = student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
   const ht = student.comments?.head_teacher_text ?? student.comments?.headteacher_text ?? '';
   const classTeacherNameP = String(student.comments?.class_teacher_name ?? '');
@@ -350,6 +344,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     classTeacherName: classTeacherNameP,
     headTeacherName: headTeacherNameP,
     nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextBeginsRawP),
+    feesBalanceDisplay: formatSecondaryFeesBalanceForReport(student),
   });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
@@ -414,7 +409,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .lo-key th { background: #e0e0e0; }
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
-    .fees { color: #c62828; font-weight: 700; font-size: 11pt; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.05; z-index: -1; max-width: 55%; }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
@@ -461,7 +455,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   </div>
 
   ${commentsNextTermHtmlP}
-  <p class="fees" style="margin-top:10px">Fees Balance: ${feesLabel}</p>
 </body>
 </html>`;
 }

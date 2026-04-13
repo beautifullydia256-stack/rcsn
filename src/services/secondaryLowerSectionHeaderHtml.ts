@@ -404,6 +404,31 @@ export function formatNextTermBeginsLongDisplay(raw: unknown): string {
   return s;
 }
 
+/** UGX display for report footers (matches Progressive template). */
+export function formatSecondaryFeesBalanceForReport(student: any): string {
+  const raw =
+    student?.progressiveFeesBalance ?? student?.feesBalance ?? student?.fees?.balance;
+  if (raw === undefined || raw === null || raw === '') {
+    return '—';
+  }
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: 'UGX',
+      maximumFractionDigits: 0,
+    }).format(raw);
+  }
+  const n = Number(String(raw).replace(/,/g, ''));
+  if (Number.isFinite(n)) {
+    return new Intl.NumberFormat('en-UG', {
+      style: 'currency',
+      currency: 'UGX',
+      maximumFractionDigits: 0,
+    }).format(n);
+  }
+  return String(raw).trim() || '—';
+}
+
 /** Mint panel: class / head comments + next term (no date fields in signature rows). */
 export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
         .secondary-ol-comments-panel {
@@ -456,6 +481,28 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
           min-height: 1.15em;
           min-width: 72px;
         }
+        .secondary-ol-next-term-row {
+          display: flex;
+          flex-direction: row;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 12px 20px;
+          flex-wrap: wrap;
+        }
+        .secondary-ol-next-term-col {
+          flex: 1;
+          min-width: 180px;
+        }
+        .secondary-ol-fees-balance {
+          font-weight: 700;
+          font-size: 11pt;
+          color: #c62828;
+          white-space: nowrap;
+          padding-bottom: 3px;
+        }
+        .secondary-ol-fees-balance strong {
+          color: #c62828;
+        }
 `;
 
 export type SecondaryOlevelCommentsNextTermPanelInput = {
@@ -464,6 +511,8 @@ export type SecondaryOlevelCommentsNextTermPanelInput = {
   classTeacherName: string;
   headTeacherName: string;
   nextTermBeginsDisplay: string;
+  /** Pre-formatted balance text (e.g. UGX from formatSecondaryFeesBalanceForReport). */
+  feesBalanceDisplay: string;
 };
 
 export function buildSecondaryOlevelCommentsNextTermPanelHtml(
@@ -474,6 +523,7 @@ export function buildSecondaryOlevelCommentsNextTermPanelHtml(
   const ctn = secondaryReportEscHtml(opts.classTeacherName);
   const htn = secondaryReportEscHtml(opts.headTeacherName);
   const ntd = secondaryReportEscHtml(opts.nextTermBeginsDisplay);
+  const fees = secondaryReportEscHtml(opts.feesBalanceDisplay);
   const blank = '&nbsp;';
   return `
       <div class="secondary-ol-comments-panel">
@@ -494,8 +544,13 @@ export function buildSecondaryOlevelCommentsNextTermPanelHtml(
           </div>
         </div>
         <div class="secondary-ol-comment-block">
-          <div class="secondary-ol-comment-label">Next Term Begins:</div>
-          <div class="secondary-ol-comment-line"><span class="secondary-ol-comment-text">${ntd || blank}</span></div>
+          <div class="secondary-ol-next-term-row">
+            <div class="secondary-ol-next-term-col">
+              <div class="secondary-ol-comment-label">Next Term Begins:</div>
+              <div class="secondary-ol-comment-line"><span class="secondary-ol-comment-text">${ntd || blank}</span></div>
+            </div>
+            <div class="secondary-ol-fees-balance"><strong>Fees Balance:</strong> <span>${fees || '—'}</span></div>
+          </div>
         </div>
       </div>`;
 }
