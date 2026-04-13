@@ -413,9 +413,24 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .muted { color: #555; }
     .overall-line { margin: 10px 0; font-size: 10pt; }
     .overall-line strong { font-size: 11pt; }
-    .lo-key { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 9pt; }
-    .lo-key th, .lo-key td { border: 1px solid #000; padding: 4px 6px; }
-    .lo-key th { background: #e0e0e0; }
+    table.upper-results.lo-key {
+      margin: 10px 0;
+    }
+    table.upper-results.lo-key thead th {
+      text-align: center;
+    }
+    table.upper-results.lo-key tbody td:first-child {
+      width: 4.5em;
+      text-align: center;
+      font-weight: 700;
+      color: #1e3a8a;
+      vertical-align: middle;
+    }
+    table.upper-results.lo-key tbody td:last-child {
+      text-align: left;
+      font-size: 9.2pt;
+      color: #475569;
+    }
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
@@ -462,7 +477,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <p class="overall-line"><strong>Overall Learner Achievement:</strong> ${esc(overallWord)} &nbsp; <strong>Identifier:</strong> ${esc(sumRow.id || '—')}</p>
   <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
-  <table class="lo-key">
+  <table class="upper-results lo-key">
     <thead><tr><th colspan="2">Learning Outcomes Key</th></tr></thead>
     <tbody>
       <tr><td>—</td><td>No Learning outcomes achieved (Learner was absent)</td></tr>
