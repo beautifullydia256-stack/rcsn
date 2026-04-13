@@ -196,6 +196,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     .key-title { text-align: center; font-weight: 700; margin: 12px 0 6px; text-transform: uppercase; font-size: 10pt; }
     table.key { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
     table.key th, table.key td { border: 1px solid #000; padding: 4px 6px; }
+    .grades { margin: 10px 0; font-size: 9pt; }
+    .grades strong { display: block; margin-bottom: 4px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .footer-admin { margin-top: 14px; font-size: 9pt; }
     .footer-admin .disc { text-align: center; margin-top: 8px; font-weight: 600; }
@@ -246,6 +248,11 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       <tr><td>2.5–3.00</td><td><strong>(Outstanding):</strong> Most or all learning outcomes achieved</td></tr>
     </tbody>
   </table>
+
+  <div class="grades">
+    <strong>Letter-grade scale</strong>
+    A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
+  </div>
 
   ${commentsNextTermHtml}
 
