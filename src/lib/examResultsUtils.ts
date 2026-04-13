@@ -307,6 +307,35 @@ export function secondaryOlevelDescriptorFromActivity(activityScore: number): st
   return 'Outstanding';
 }
 
+function olevelNumericOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** True when two lines are the same assessment (avoids showing blank-topic + topic duplicates as two different rows). */
+export function secondaryOlevelRowsHaveIdenticalMarks(
+  a: SecondaryOlevelExamResultRow,
+  b: SecondaryOlevelExamResultRow,
+): boolean {
+  const fields: (keyof SecondaryOlevelExamResultRow)[] = [
+    'activity_score',
+    'formative_score',
+    'exam_score',
+    'final_score',
+  ];
+  for (const k of fields) {
+    const na = olevelNumericOrNull(a[k]);
+    const nb = olevelNumericOrNull(b[k]);
+    if (na === null && nb === null) continue;
+    if (na === null || nb === null) return false;
+    if (Math.abs(na - nb) > 1e-9) return false;
+  }
+  const da = normalizeOlevelDescriptorFromDb(a.descriptor);
+  const db = normalizeOlevelDescriptorFromDb(b.descriptor);
+  return da === db;
+}
+
 export function pickBestSecondaryOlevelExamRow(
   rows: SecondaryOlevelExamResultRow[],
   topicFilter: string,
@@ -317,9 +346,15 @@ export function pickBestSecondaryOlevelExamRow(
   const sorted = [...candidates].sort((a, b) => {
     const ds = secondaryOlevelRowDataCompleteness(b) - secondaryOlevelRowDataCompleteness(a);
     if (ds !== 0) return ds;
-    const ta = new Date(a.updated_at || 0).getTime();
-    const tb = new Date(b.updated_at || 0).getTime();
-    return tb - ta;
+    if (secondaryOlevelRowsHaveIdenticalMarks(a, b)) {
+      const ta = trimSecondaryOlevelTopicFilter(a.topic);
+      const tb = trimSecondaryOlevelTopicFilter(b.topic);
+      if (ta !== '' && tb === '') return -1;
+      if (ta === '' && tb !== '') return 1;
+    }
+    const ua = new Date(a.updated_at || 0).getTime();
+    const ub = new Date(b.updated_at || 0).getTime();
+    return ub - ua;
   });
   return sorted[0] ?? null;
 }

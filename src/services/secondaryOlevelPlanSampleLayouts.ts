@@ -498,8 +498,42 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .muted { color: #555; }
     tr.olevel-row-missing-results td { background: #fffbeb; }
     .olevel-missing-subline { font-size: 8.5pt; font-style: italic; color: #92400e; margin-top: 2px; }
-    .overall-line { margin: 10px 0; font-size: 10pt; }
-    .overall-line strong { font-size: 11pt; }
+    .summary-strip {
+      display: grid;
+      grid-template-columns: 92px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      font-size: 10pt;
+      font-family: 'Times New Roman', Times, serif;
+      background: #ffffff;
+      position: relative;
+      z-index: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .summary-strip .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+    .summary-strip .id-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; }
+    .summary-strip .id-box {
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      background: #f0f9ff;
+      width: 100%;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14pt;
+      color: #1e3a8a;
+      padding: 6px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .summary-strip .italic-note { font-style: italic; font-size: 9.2pt; color: #475569; }
+    .summary-strip .bold-word { font-weight: 700; font-size: 11pt; color: #1e3a8a; }
     table.upper-results.lo-key {
       margin: 10px 0;
     }
@@ -561,7 +595,14 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     <tbody>${tbody}</tbody>
   </table>
 
-  <p class="overall-line"><strong>Overall Learner Achievement:</strong> ${esc(overallWord)} &nbsp; <strong>Identifier:</strong> ${esc(sumRow.id || '—')}</p>
+  <div class="summary-strip">
+    <div class="id-cell">
+      <div class="id-label">Identifier</div>
+      <div class="id-box">${esc(sumRow.id || '—')}</div>
+    </div>
+    <div class="italic-note">Overall Learner's achievements for the subjects attended:</div>
+    <div class="bold-word">${esc(overallWord)}</div>
+  </div>
   <p style="font-size:8.5pt;margin:4px 0"><strong>LO</strong> = Learning Outcomes. <strong>C1</strong> / <strong>C2</strong> = activity scores from the earliest and latest exam set in the term for that line (merged report row). <strong>Avg Score /20</strong> is the saved formative score on that merged row.</p>
 
   <table class="upper-results lo-key">

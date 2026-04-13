@@ -4,7 +4,11 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { assertTeacherUpsertRpcResult } from '@/lib/examResultsUtils';
+import {
+  assertTeacherUpsertRpcResult,
+  pickBestSecondaryOlevelExamRow,
+  type SecondaryOlevelExamResultRow,
+} from '@/lib/examResultsUtils';
 import {
   calculateActivityDescriptor,
   calculateSecondaryLetterGrade,
@@ -20,7 +24,9 @@ export type SecondaryOLevelExistingRow = {
   overall_remark?: string | null;
   teacher_initials?: string | null;
   topic?: string | null;
+  exam_topic_key?: string | null;
   grade?: string | null;
+  updated_at?: string | null;
 };
 
 type Student = { student_id: string; name: string };
@@ -107,8 +113,8 @@ export function SecondaryOLevelExamGrid({
   );
 
   const mapDbToRow = useCallback(
-    (r: SecondaryOLevelExistingRow, topicFb: string): OLevelSecondaryRow => {
-      const act = r.activity_score != null ? String(r.activity_score) : '';
+    (r: SecondaryOlevelExamResultRow, topicFb: string): OLevelSecondaryRow => {
+      const act = r.activity_score != null && r.activity_score !== '' ? String(r.activity_score) : '';
       const form = r.formative_score != null ? String(Math.trunc(Number(r.formative_score))) : '';
       const ex = r.exam_score != null ? String(Math.trunc(Number(r.exam_score))) : '';
       const fin = r.final_score != null ? String(Math.trunc(Number(r.final_score))) : '';
@@ -134,12 +140,20 @@ export function SecondaryOLevelExamGrid({
   );
 
   useEffect(() => {
-    const byStudent = new Map<string, SecondaryOLevelExistingRow>();
-    existingRows.forEach((row) => byStudent.set(row.student_id, row));
+    const byStudent = new Map<string, SecondaryOLevelExistingRow[]>();
+    for (const row of existingRows) {
+      const sid = row.student_id;
+      if (!byStudent.has(sid)) byStudent.set(sid, []);
+      byStudent.get(sid)!.push(row);
+    }
     const next: Record<string, OLevelSecondaryRow> = {};
     const tf = topicFilterRef.current.trim();
     for (const stu of students) {
-      const db = byStudent.get(stu.student_id);
+      const list = byStudent.get(stu.student_id) ?? [];
+      const db =
+        list.length === 0
+          ? null
+          : pickBestSecondaryOlevelExamRow(list as SecondaryOlevelExamResultRow[], tf);
       next[stu.student_id] = db
         ? mapDbToRow(db, '')
         : emptyRow(tf, defaultTeacherInitials);
