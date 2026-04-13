@@ -132,8 +132,13 @@ function normalizeReportSubjectKey(name: string): string {
     .toLowerCase();
 }
 
-/** Shown on report rows when a profile subject has no `exam_results` line for this scope. */
-export const OLEVEL_REPORT_MISSING_RESULT_LABEL = 'Missing result';
+/**
+ * Shown on report rows when a profile subject has no `exam_results` line for this scope.
+ * Keep in sync with `src/lib/secondaryOlevelReportCopy.ts`.
+ */
+export const OLEVEL_REPORT_MISSING_RESULT_LABEL =
+  'Missing results for this exam. No marks have been entered yet.';
+export const OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL = 'Missing results — no marks entered.';
 
 function dedupeOlevelSubjectNamesPreserveOrder(names: string[]): string[] {
   const seen = new Set<string>();
@@ -145,6 +150,55 @@ function dedupeOlevelSubjectNamesPreserveOrder(names: string[]): string[] {
     out.push(String(n).trim());
   }
   return out;
+}
+
+/**
+ * Band1–4 from labels like "Senior 1", "Senior1", "S1", "S.1" (for matching `class_subjects.class_name`).
+ */
+export function olevelSeniorBandNumber(className: string | null | undefined): number | null {
+  const c = String(className || '').trim();
+  const m = c.match(/^senior\s*([1-4])(?:\s|$)|^s\.?\s*([1-4])(?:\s|$)/i);
+  if (!m) return null;
+  return parseInt(m[1] || m[2], 10);
+}
+
+/** Expand class labels so `class_subjects` fetch hits DB rows (e.g. UI/exam uses "S1", table has "Senior 1"). */
+export function expandOlevelClassNamesForSubjectsQuery(names: string[]): string[] {
+  const out = new Set<string>();
+  for (const raw of names || []) {
+    const t = String(raw || '').trim();
+    if (!t) continue;
+    out.add(t);
+    const n = olevelSeniorBandNumber(t);
+    if (n != null) {
+      out.add(`Senior ${n}`);
+      out.add(`Senior${n}`);
+      out.add(`S${n}`);
+      out.add(`S.${n}`);
+      out.add(`s${n}`);
+    }
+  }
+  return [...out];
+}
+
+function resolveOlevelClassSubjectsFromMap(
+  clsRaw: string,
+  subjectsByClass: Map<string, string[]>,
+): string[] {
+  const trimClass = (s: string) => s.trim().replace(/\s+/g, ' ');
+  let list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
+  if (!list.length) {
+    const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
+    if (hit) list = hit[1];
+  }
+  if (!list.length) {
+    const num = olevelSeniorBandNumber(clsRaw);
+    if (num != null) {
+      const hit = [...subjectsByClass.entries()].find(([k]) => olevelSeniorBandNumber(k) === num);
+      if (hit) list = hit[1];
+    }
+  }
+  return list;
 }
 
 /**
@@ -184,19 +238,11 @@ export function buildExpectedOlevelSubjectsByStudentIdForReports(
     if (!isOlevelSeniorClassName(clsRaw)) continue;
     let list: string[] = [];
     if (isOlevelSenior12ClassName(clsRaw)) {
-      list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
-      if (!list.length) {
-        const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
-        if (hit) list = hit[1];
-      }
+      list = resolveOlevelClassSubjectsFromMap(clsRaw, subjectsByClass);
     } else {
       list = dedupeOlevelSubjectNamesPreserveOrder(olevelByStudent.get(sid) ?? []);
       if (!list.length) {
-        list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
-        if (!list.length) {
-          const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
-          if (hit) list = hit[1];
-        }
+        list = resolveOlevelClassSubjectsFromMap(clsRaw, subjectsByClass);
       }
     }
     if (list.length) out[sid] = list;
@@ -223,13 +269,14 @@ function mergeOlevelReportResultsWithExpectedSubjects(
   const out: OlevelReportResultRow[] = [];
   const placeholder = (subject: string): OlevelReportResultRow => {
     const msg = OLEVEL_REPORT_MISSING_RESULT_LABEL;
+    const desc = OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL;
     return {
       subject,
       topic: '',
       marks_obtained: '',
       total_marks: 100,
       grade: '',
-      remarks: '',
+      remarks: msg,
       teacher_initials: '',
       teacher_comment: msg,
       exam_set_name: examSetName,
@@ -241,7 +288,7 @@ function mergeOlevelReportResultsWithExpectedSubjects(
       activity_score: null,
       formative_score: null,
       exam_score: null,
-      descriptor: '',
+      descriptor: desc,
       paper_code: '',
       paper_number: '',
       continuous_c1: undefined,
@@ -831,7 +878,7 @@ export async function buildReportDataFromScope(
     });
   });
 
-  const classNamesForSubjectQuery = [
+  const classNamesForSubjectQuery = expandOlevelClassNamesForSubjectsQuery([
     ...new Set(
       [
         ...classNamesFromResults,
@@ -841,7 +888,7 @@ export async function buildReportDataFromScope(
           .filter(Boolean),
       ].filter(Boolean),
     ),
-  ];
+  ]);
 
   let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
   if (allStudentIdsInClass.length > 0 && classNamesForSubjectQuery.length > 0) {

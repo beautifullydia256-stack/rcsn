@@ -17,6 +17,10 @@ import {
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
 } from './secondaryLowerSectionHeaderHtml';
+import {
+  OLEVEL_MISSING_RESULTS_DESCRIPTOR,
+  OLEVEL_MISSING_RESULTS_REMARK,
+} from '../lib/secondaryOlevelReportCopy';
 
 function esc(s: unknown): string {
   return String(s ?? '')
@@ -64,9 +68,31 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     descriptor: string;
     initials: string;
     finalNum: number;
+    missing?: boolean;
   };
 
+  const dash = '—';
   const rows: Row[] = results.map((r: any) => {
+    const isMissing =
+      r.result_missing_placeholder === true || r.result_missing_placeholder === 'true';
+    if (isMissing) {
+      const rawDesc =
+        r.descriptor != null && String(r.descriptor).trim() !== ''
+          ? String(r.descriptor).trim()
+          : OLEVEL_MISSING_RESULTS_DESCRIPTOR;
+      return {
+        subject: String(r.subject ?? ''),
+        formative: dash,
+        eoy: dash,
+        total: dash,
+        grade: dash,
+        lo: dash,
+        descriptor: rawDesc,
+        initials: dash,
+        finalNum: NaN,
+        missing: true,
+      };
+    }
     const rawDesc =
       r.descriptor != null && String(r.descriptor).trim() !== '' ? String(r.descriptor).trim() : '';
     const lo =
@@ -137,8 +163,12 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       ? rows
           .map(
             (r) => `
-          <tr>
-            <td class="subj">${esc(r.subject)}</td>
+          <tr${r.missing ? ' class="olevel-row-missing-results"' : ''}>
+            <td class="subj">${esc(r.subject)}${
+              r.missing
+                ? `<div class="olevel-missing-subline">${esc(OLEVEL_MISSING_RESULTS_REMARK)}</div>`
+                : ''
+            }</td>
             <td class="c">${esc(r.formative)}</td>
             <td class="c">${esc(r.eoy)}</td>
             <td class="c">${esc(r.total)}</td>
@@ -171,6 +201,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
     ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
+    tr.olevel-row-missing-results td { background: #fffbeb; }
+    .olevel-missing-subline { font-size: 9pt; font-style: italic; color: #92400e; margin-top: 2px; }
     .muted { color: #555; }
     .summary-strip {
       display: grid;
@@ -330,9 +362,27 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     init: string;
     finalNum: number;
     avg20Num: number;
+    missing?: boolean;
   };
 
   const rows: PRow[] = results.map((r: any) => {
+    const isMissing =
+      r.result_missing_placeholder === true || r.result_missing_placeholder === 'true';
+    if (isMissing) {
+      return {
+        subject: String(r.subject ?? ''),
+        c1: '—',
+        c2: '—',
+        avg20: '—',
+        exam80: '—',
+        total: '—',
+        id: '—',
+        init: '—',
+        finalNum: NaN,
+        avg20Num: NaN,
+        missing: true,
+      };
+    }
     const c1raw = r.continuous_c1 ?? r.c1 ?? null;
     const c2raw = r.continuous_c2 ?? r.c2 ?? null;
     const formative = parseNum(r.formative_score);
@@ -406,8 +456,12 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
       ? rows
           .map(
             (r) => `
-        <tr>
-          <td class="subj">${esc(r.subject)}</td>
+        <tr${r.missing ? ' class="olevel-row-missing-results"' : ''}>
+          <td class="subj">${esc(r.subject)}${
+            r.missing
+              ? `<div class="olevel-missing-subline">${esc(OLEVEL_MISSING_RESULTS_REMARK)}</div>`
+              : ''
+          }</td>
           <td class="c">${esc(r.c1)}</td>
           <td class="c">${esc(r.c2)}</td>
           <td class="c">${esc(r.avg20)}</td>
@@ -442,6 +496,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .c { text-align: center; }
     .sum-hint { font-size: 7pt; font-weight: 400; text-transform: none; margin-top: 2px; }
     .muted { color: #555; }
+    tr.olevel-row-missing-results td { background: #fffbeb; }
+    .olevel-missing-subline { font-size: 8.5pt; font-style: italic; color: #92400e; margin-top: 2px; }
     .overall-line { margin: 10px 0; font-size: 10pt; }
     .overall-line strong { font-size: 11pt; }
     table.upper-results.lo-key {

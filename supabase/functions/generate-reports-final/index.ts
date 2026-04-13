@@ -9,6 +9,7 @@ import {
   buildReportDataFromScope,
   buildReportDataFromSnapshotRows,
   buildExpectedOlevelSubjectsByStudentIdForReports,
+  expandOlevelClassNamesForSubjectsQuery,
   type BuildReportPayload,
   type SnapshotRowForPersist,
 } from '../_shared/reportDataBuilder.ts';
@@ -265,13 +266,13 @@ serve(async (req) => {
         .select('student_id, current_class')
         .eq('school_id', schoolId)
         .in('student_id', uniqueStudentIds);
-      const classNamesForOlevelReports = [
+      const classNamesForOlevelReports = expandOlevelClassNamesForSubjectsQuery([
         ...new Set(
           (stuRowsForSubjects || [])
             .map((s: { current_class?: string }) => String(s.current_class || '').trim())
             .filter(Boolean),
         ),
-      ];
+      ]);
       let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
       if (uniqueStudentIds.length > 0 && classNamesForOlevelReports.length > 0) {
         const [{ data: csRows }, { data: olRows }] = await Promise.all([

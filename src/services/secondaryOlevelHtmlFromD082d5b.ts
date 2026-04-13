@@ -17,6 +17,10 @@ import {
   SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
 } from './secondaryLowerSectionHeaderHtml';
+import {
+  OLEVEL_MISSING_RESULTS_DESCRIPTOR,
+  OLEVEL_MISSING_RESULTS_REMARK,
+} from '../lib/secondaryOlevelReportCopy';
 
 /** Matches the Standard template legend: 80 - A | 70 - B | 50 - C | 40 - D | 0 - E */
 function template1StandardGradeFromPct(percentage: number): string {
@@ -141,6 +145,14 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
           font-weight: 600;
         }
 
+        tr.olevel-row-missing-results td {
+          background: #fffbeb;
+        }
+        .olevel-missing-hint {
+          font-style: italic;
+          color: #92400e;
+        }
+
         .muted { color: #555; }
 
         ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
@@ -261,23 +273,40 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
         <tbody>
           ${(student.results || []).length > 0 ? 
             (student.results || []).map((result: any) => {
-              const activity = result.activity_score ?? '';
-              const descriptor = result.descriptor != null && result.descriptor !== '' ? String(result.descriptor) : '';
-              const formative = result.formative_score ?? '';
-              const exam = result.exam_score ?? '';
-              const finalScore = result.final_score ?? '';
-              const gradeText = result.grade != null && result.grade !== '' ? String(result.grade) : '';
-              const overallRemark = result.overall_remark != null ? String(result.overall_remark) : '';
-              const teacherInitials = result.teacher_initials ?? '';
+              const isMissing =
+                result.result_missing_placeholder === true ||
+                result.result_missing_placeholder === 'true';
+              const dash = '—';
+              const activity = isMissing ? dash : (result.activity_score ?? '');
+              const descriptor =
+                result.descriptor != null && result.descriptor !== ''
+                  ? String(result.descriptor)
+                  : '';
+              const formative = isMissing ? dash : (result.formative_score ?? '');
+              const exam = isMissing ? dash : (result.exam_score ?? '');
+              const finalScore = isMissing ? dash : (result.final_score ?? '');
+              const gradeText = isMissing
+                ? dash
+                : result.grade != null && result.grade !== ''
+                  ? String(result.grade)
+                  : '';
+              const overallRemark = isMissing
+                ? OLEVEL_MISSING_RESULTS_REMARK
+                : result.overall_remark != null && String(result.overall_remark).trim() !== ''
+                  ? String(result.overall_remark)
+                  : '';
+              const teacherInitials = isMissing ? dash : (result.teacher_initials ?? '');
               const topic = result.topic || '';
+              const topicBlock = isMissing
+                ? `<div class="standard-topic olevel-missing-hint">${OLEVEL_MISSING_RESULTS_DESCRIPTOR}</div>`
+                : `<div class="standard-topic">${topic}</div>`;
+              const rowClass = isMissing ? ' class="olevel-row-missing-results"' : '';
 
               return `
-                <tr>
+                <tr${rowClass}>
                   <td>
                     <strong>${result.subject}</strong>
-                    <div class="standard-topic">
-                      ${topic}
-                    </div>
+                    ${topicBlock}
                   </td>
                   <td class="center">${activity}</td>
                   <td class="center note-cell">${descriptor}</td>
