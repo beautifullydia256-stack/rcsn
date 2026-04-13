@@ -332,6 +332,40 @@ function mergeOlevelReportResultsWithExpectedSubjects(
   return out;
 }
 
+/** Mean % over expected subjects after merge (placeholders = 0); one value per subject = mean of topic lines. */
+function olevelMeanPercentOverExpectedFromMergedRows(
+  resultsOut: OlevelReportResultRow[],
+  expectedOrdered: string[],
+): number | null {
+  if (!expectedOrdered.length) return null;
+  const byKey = new Map<string, OlevelReportResultRow[]>();
+  for (const r of resultsOut) {
+    const k = normalizeReportSubjectKey(String(r.subject ?? ''));
+    if (!k) continue;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k)!.push(r);
+  }
+  let sum = 0;
+  for (const subj of expectedOrdered) {
+    const k = normalizeReportSubjectKey(subj);
+    const rows = byKey.get(k) ?? [];
+    const vals: number[] = [];
+    for (const r of rows) {
+      if (r.result_missing_placeholder === true) continue;
+      const fs = numOrUndef(r.final_score);
+      if (fs != null) {
+        vals.push(fs);
+        continue;
+      }
+      const m = numOrUndef(r.marks_obtained);
+      const t = Number(r.total_marks ?? 100) || 100;
+      if (m != null && t > 0) vals.push((m / t) * 100);
+    }
+    sum += vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+  }
+  return sum / expectedOrdered.length;
+}
+
 const PRIMARY_DIVISION_GRADES = new Set(['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9']);
 
 function looksLikePrimaryDivisionGrade(g: string): boolean {
@@ -670,6 +704,15 @@ export async function buildReportDataFromScope(
     studentResultsByClass[className as string][studentId].push(result);
   });
 
+  let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
+  if (allStudentIdsInClass.length > 0) {
+    expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
+      supabase,
+      schoolId,
+      allStudentIdsInClass,
+    );
+  }
+
   const studentPositions: Record<string, number> = {};
   const studentAverages: Record<string, number> = {};
   const studentAggregates: Record<string, number> = {};
@@ -683,6 +726,7 @@ export async function buildReportDataFromScope(
         total_marks?: number;
         final_score?: unknown;
         class_name?: string;
+        subject?: string;
         students?: { current_class?: string };
         exam_sets?: { id?: string };
         exam_set_id?: string;
@@ -704,43 +748,74 @@ export async function buildReportDataFromScope(
         }
         return r.marks_obtained != null && r.total_marks != null;
       });
-      if (validResults.length === 0) {
-        studentAverages[studentId] = 0;
-        studentAggregates[studentId] = fromDb?.aggregate ?? 0;
-        if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
-        return;
-      }
-      const totalMarks = validResults.reduce((s, r) => {
-        if (seniorClass) {
-          const { marks } = seniorMarksTotalForReport(
-            classNameForSenior,
-            r.marks_obtained,
-            r.final_score,
-            r.total_marks,
+
+      const expectedList = dedupeOlevelSubjectNamesPreserveOrder(
+        expectedOlevelSubjectsByStudentId[studentId] ?? [],
+      );
+      let average: number;
+      if (seniorClass && isOlevelSeniorClassName(classNameForSenior) && expectedList.length > 0) {
+        let sumPct = 0;
+        for (const subj of expectedList) {
+          const sk = normalizeReportSubjectKey(subj);
+          const matching = resultsForCalculation.filter(
+            (r) => normalizeReportSubjectKey(String(r.subject || '')) === sk,
           );
-          return s + marks;
+          if (!matching.length) continue;
+          const linePcts: number[] = [];
+          for (const r of matching) {
+            const { marks, total } = seniorMarksTotalForReport(
+              classNameForSenior,
+              r.marks_obtained,
+              r.final_score,
+              r.total_marks,
+            );
+            const t = Number(total) || 100;
+            const m = Number(marks);
+            if (Number.isFinite(m) && t > 0) linePcts.push((m / t) * 100);
+          }
+          sumPct += linePcts.length > 0 ? linePcts.reduce((a, b) => a + b, 0) / linePcts.length : 0;
         }
-        return s + Number(r.marks_obtained || 0);
-      }, 0);
-      const totalPossible = validResults.reduce((s, r) => s + Number(r.total_marks || 100), 0);
-      const average = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
+        average = sumPct / expectedList.length;
+      } else if (validResults.length === 0) {
+        average = 0;
+      } else {
+        const totalMarks = validResults.reduce((s, r) => {
+          if (seniorClass) {
+            const { marks } = seniorMarksTotalForReport(
+              classNameForSenior,
+              r.marks_obtained,
+              r.final_score,
+              r.total_marks,
+            );
+            return s + marks;
+          }
+          return s + Number(r.marks_obtained || 0);
+        }, 0);
+        const totalPossible = validResults.reduce((s, r) => s + Number(r.total_marks || 100), 0);
+        average = totalPossible > 0 ? (totalMarks / totalPossible) * 100 : 0;
+      }
+
       studentAverages[studentId] = average;
-      studentAggregates[studentId] =
-        fromDb?.aggregate ??
-        calculateAggregate(
-          validResults.map((r) => {
-            if (seniorClass) {
-              const { marks, total } = seniorMarksTotalForReport(
-                classNameForSenior,
-                r.marks_obtained,
-                r.final_score,
-                r.total_marks,
-              );
-              return { marks_obtained: marks, total_marks: total };
-            }
-            return { marks_obtained: Number(r.marks_obtained || 0), total_marks: Number(r.total_marks || 100) };
-          }),
-        );
+      if (validResults.length === 0) {
+        studentAggregates[studentId] = fromDb?.aggregate ?? 0;
+      } else {
+        studentAggregates[studentId] =
+          fromDb?.aggregate ??
+          calculateAggregate(
+            validResults.map((r) => {
+              if (seniorClass) {
+                const { marks, total } = seniorMarksTotalForReport(
+                  classNameForSenior,
+                  r.marks_obtained,
+                  r.final_score,
+                  r.total_marks,
+                );
+                return { marks_obtained: marks, total_marks: total };
+              }
+              return { marks_obtained: Number(r.marks_obtained || 0), total_marks: Number(r.total_marks || 100) };
+            }),
+          );
+      }
       if (fromDb?.class_position != null) studentPositions[studentId] = fromDb.class_position;
       studentAveragesList.push({ studentId, average, aggregate: studentAggregates[studentId] });
     });
@@ -900,15 +975,6 @@ export async function buildReportDataFromScope(
     });
   });
 
-  let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
-  if (allStudentIdsInClass.length > 0) {
-    expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
-      supabase,
-      schoolId,
-      allStudentIdsInClass,
-    );
-  }
-
   const reportDataList = buildReportDataListFromSnapshotRows(
     snapshotData,
     schoolInfo as Record<string, unknown>,
@@ -1063,6 +1129,21 @@ function oneReportFromSnapshotRows(
       examSetName,
     );
   }
+
+  const olevelRecalcMeanPct = (() => {
+    if (
+      !isOlevelSeniorClassName(reportClassName) ||
+      !expectedOlevelSubjectNames ||
+      expectedOlevelSubjectNames.length === 0
+    ) {
+      return null;
+    }
+    return olevelMeanPercentOverExpectedFromMergedRows(resultsOut, expectedOlevelSubjectNames);
+  })();
+  const summaryDivisionFromOlevelRecalc =
+    olevelRecalcMeanPct != null && Number.isFinite(olevelRecalcMeanPct)
+      ? calculateDivision(olevelRecalcMeanPct)
+      : null;
 
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
   const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
@@ -1266,17 +1347,20 @@ function oneReportFromSnapshotRows(
           ),
           totalPossibleMarks: summaryRows.reduce((s, d) => s + (d.total_marks || 100), 0),
           average: (() => {
+            if (olevelRecalcMeanPct != null && Number.isFinite(olevelRecalcMeanPct)) {
+              return Math.round(olevelRecalcMeanPct * 100) / 100;
+            }
             const v = firstSummaryRecord.average_percentage;
             if (v === null || v === undefined || v === '') return null;
             const n = Number(v);
             return Number.isNaN(n) ? null : Math.round(n);
           })(),
           aggregate: firstSummaryRecord.aggregate ?? null,
-          division: firstSummaryRecord.division ?? null,
+          division: summaryDivisionFromOlevelRecalc ?? firstSummaryRecord.division ?? null,
           attendancePercentage: firstSummaryRecord.attendance_percentage ?? null,
           classPosition: firstSummaryRecord.position ?? null,
           totalStudents: frozen.total_students_in_class ?? null,
-          performanceRemark: firstSummaryRecord.division || 'N/A',
+          performanceRemark: summaryDivisionFromOlevelRecalc ?? firstSummaryRecord.division || 'N/A',
           ...(reportDate && { reportDate }),
           ...(attendanceDetails && { attendanceDetails }),
         },

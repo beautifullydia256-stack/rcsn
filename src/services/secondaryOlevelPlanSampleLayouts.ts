@@ -118,12 +118,15 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     };
   });
 
-  const finals = rows.map((r) => r.finalNum).filter((n) => Number.isFinite(n));
-  const avgFinal = finals.length ? (finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(1) : '';
-  const activityAvgs = results.map((r: any) => parseNum(r.activity_score)).filter((n) => Number.isFinite(n));
-  const avgActivity = activityAvgs.length
-    ? activityAvgs.reduce((a, b) => a + b, 0) / activityAvgs.length
-    : NaN;
+  const nRows = rows.length;
+  const sumFinalAll = rows.reduce((s, r) => s + (Number.isFinite(r.finalNum) ? r.finalNum : 0), 0);
+  const avgFinal = nRows ? (sumFinalAll / nRows).toFixed(1) : '';
+  const sumActivityAll = results.reduce((s, r: any) => {
+    if (r.result_missing_placeholder === true || r.result_missing_placeholder === 'true') return s;
+    const a = parseNum(r.activity_score);
+    return s + (Number.isFinite(a) ? a : 0);
+  }, 0);
+  const avgActivity = nRows ? sumActivityAll / nRows : NaN;
   const avgLo = Number.isFinite(avgActivity) ? bandDigitFromAvgActivity(avgActivity) : '';
   const bandWord = Number.isFinite(avgActivity) ? bandWordFromAvgActivity(avgActivity) : '';
 
@@ -409,14 +412,18 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     };
   });
 
-  const finals = rows.map((r) => r.finalNum).filter((n) => Number.isFinite(n));
-  const avgs20 = rows.map((r) => r.avg20Num).filter((n) => Number.isFinite(n));
-  const ids = rows.map((r) => parseInt(r.id, 10)).filter((n) => n >= 1 && n <= 3);
+  const nProg = rows.length;
+  const sumFinalProg = rows.reduce((s, r) => s + (Number.isFinite(r.finalNum) ? r.finalNum : 0), 0);
+  const sum20Prog = rows.reduce((s, r) => s + (Number.isFinite(r.avg20Num) ? r.avg20Num : 0), 0);
+  const sumIdProg = rows.reduce((s, r) => {
+    const id = parseInt(String(r.id), 10);
+    return s + (r.missing || !Number.isFinite(id) ? 0 : id);
+  }, 0);
 
   const sumRow = {
-    avgScore: finals.length ? (finals.reduce((a, b) => a + b, 0) / finals.length).toFixed(1) : '',
-    pts20: avgs20.length ? (avgs20.reduce((a, b) => a + b, 0) / avgs20.length).toFixed(1) : '',
-    id: ids.length ? (ids.reduce((a, b) => a + b, 0) / ids.length).toFixed(0) : '',
+    avgScore: nProg ? (sumFinalProg / nProg).toFixed(1) : '',
+    pts20: nProg ? (sum20Prog / nProg).toFixed(1) : '',
+    id: nProg ? (sumIdProg / nProg).toFixed(0) : '',
   };
 
   const overallWord =

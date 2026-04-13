@@ -54,10 +54,19 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
   const finalScores = (student.results || [])
     .map((r: { final_score?: unknown }) => parseFloat(String(r.final_score ?? '')))
     .filter((n: number) => Number.isFinite(n));
+  const summaryAvgRaw = student.summary?.average;
+  const summaryMean =
+    summaryAvgRaw != null && summaryAvgRaw !== ''
+      ? Number(summaryAvgRaw)
+      : Number.NaN;
   let averageFinalDisplay = '';
   let averageGradeLetter = '';
   let overallAchievementUpper = '';
-  if (finalScores.length > 0) {
+  if (Number.isFinite(summaryMean)) {
+    averageFinalDisplay = summaryMean.toFixed(2);
+    averageGradeLetter = template1StandardGradeFromPct(summaryMean);
+    overallAchievementUpper = template1AchievementLevelUpper(averageGradeLetter);
+  } else if (finalScores.length > 0) {
     const mean = finalScores.reduce((a: number, b: number) => a + b, 0) / finalScores.length;
     averageFinalDisplay = mean.toFixed(2);
     averageGradeLetter = template1StandardGradeFromPct(mean);
@@ -325,7 +334,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
             `
           }
           ${
-            finalScores.length > 0
+            averageFinalDisplay !== ''
               ? `
           <tr class="summary-avg-row">
             <td colspan="5">AVERAGE SCORES</td>

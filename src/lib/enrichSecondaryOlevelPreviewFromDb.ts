@@ -10,6 +10,8 @@ import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
   OLEVEL_MISSING_RESULTS_REMARK,
 } from './secondaryOlevelReportCopy';
+import { computeOlevelMeanPercentOverExpectedFromResultRows } from './olevelReportAverage';
+import { calculateDivision } from './reportUtils';
 
 function normalizeReportSubjectKey(name: string): string {
   return String(name || '')
@@ -172,9 +174,20 @@ export async function enrichSecondaryOlevelPreviewReportsFromDb(
       names,
       examSetName,
     );
+    const recalc = computeOlevelMeanPercentOverExpectedFromResultRows(merged, names);
+    const prevSummary = (st.summary as Record<string, unknown> | undefined) ?? {};
+    const summary =
+      recalc != null && Number.isFinite(recalc)
+        ? {
+            ...prevSummary,
+            average: Math.round(recalc * 100) / 100,
+            division: calculateDivision(recalc),
+            performanceRemark: calculateDivision(recalc),
+          }
+        : prevSummary;
     const nextInner = {
       ...rep,
-      students: [{ ...st, results: merged }],
+      students: [{ ...st, results: merged, summary }],
     };
     return wrapIfNeeded(item, nextInner);
   });
