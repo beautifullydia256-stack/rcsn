@@ -15,6 +15,7 @@ import {
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
+  SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
 function esc(s: unknown): string {
@@ -137,19 +138,19 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
           .map(
             (r) => `
           <tr>
-            <td>${esc(r.subject)}</td>
+            <td class="subj">${esc(r.subject)}</td>
             <td class="c">${esc(r.formative)}</td>
             <td class="c">${esc(r.eoy)}</td>
             <td class="c">${esc(r.total)}</td>
-            <td class="c">${esc(r.grade)}</td>
+            <td class="c grade-col">${esc(r.grade)}</td>
             <td class="c">${esc(r.lo)}</td>
-            <td class="c desc">${esc(r.descriptor)}</td>
-            <td class="c">${esc(r.initials)}</td>
+            <td class="note-cell">${esc(r.descriptor)}</td>
+            <td class="c note-cell">${esc(r.initials)}</td>
           </tr>`
           )
           .join('') +
         `
-          <tr class="foot-row">
+          <tr class="sum">
             <td colspan="3"><strong>OVERALL AVERAGE</strong></td>
             <td class="c"><strong>${esc(avgFinal)}</strong></td>
             <td class="c"></td>
@@ -168,14 +169,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
-    table.main { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
-    table.main th, table.main td { border: 1px solid #000; padding: 5px 4px; vertical-align: middle; }
-    table.main th {
-      background: #e8e8e8; font-weight: 700; text-align: center; font-size: 8.5pt;
-      text-transform: uppercase; line-height: 1.2;
-    }
-    table.main td:first-child { font-weight: 600; text-align: left; }
-    table.main td.desc { text-align: center; }
+    ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
     .muted { color: #555; }
     .summary-strip {
@@ -225,17 +219,17 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 
   ${studentBlockHtml}
 
-  <table class="main">
+  <table class="upper-results">
     <thead>
       <tr>
         <th>Subject</th>
-        <th>Formative Score (20%)</th>
-        <th>EOY Summative Assessment (80%)</th>
-        <th>Total 100%</th>
-        <th>Grade</th>
-        <th>Level of Achievement/3</th>
-        <th>Descriptor</th>
-        <th>TR'S Initial</th>
+        <th class="c">Formative Score (20%)</th>
+        <th class="c">EOY Summative Assessment (80%)</th>
+        <th class="c">Total 100%</th>
+        <th class="c">Grade</th>
+        <th class="c">Level of Achievement/3</th>
+        <th class="c">Descriptor</th>
+        <th class="c">TR'S Initial</th>
       </tr>
     </thead>
     <tbody>${tbody}</tbody>
@@ -382,14 +376,14 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
           .map(
             (r) => `
         <tr>
-          <td>${esc(r.subject)}</td>
+          <td class="subj">${esc(r.subject)}</td>
           <td class="c">${esc(r.c1)}</td>
           <td class="c">${esc(r.c2)}</td>
           <td class="c">${esc(r.avg20)}</td>
           <td class="c">${esc(r.exam80)}</td>
           <td class="c">${esc(r.total)}</td>
-          <td class="c">${esc(r.id)}</td>
-          <td class="c">${esc(r.init)}</td>
+          <td class="c grade-col">${esc(r.id)}</td>
+          <td class="c note-cell">${esc(r.init)}</td>
         </tr>`
           )
           .join('') +
@@ -413,11 +407,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
-    table.grid { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt; }
-    table.grid th, table.grid td { border: 1px solid #000; padding: 4px 3px; }
-    table.grid th { background: #eeeeee; font-weight: 700; text-align: center; vertical-align: bottom; line-height: 1.15; }
+    ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
     .c { text-align: center; }
-    tr.sum td { background: #f5f5f5; font-weight: 600; }
     .sum-hint { font-size: 7pt; font-weight: 400; text-transform: none; margin-top: 2px; }
     .muted { color: #555; }
     .overall-line { margin: 10px 0; font-size: 10pt; }
@@ -452,17 +443,17 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
 
   ${studentBlockHtmlP}
 
-  <table class="grid">
+  <table class="upper-results">
     <thead>
       <tr>
         <th>Subject</th>
-        <th>C1</th>
-        <th>C2</th>
-        <th>Avg Score /20</th>
-        <th>Final Exam /80</th>
-        <th>Total Score 100%</th>
-        <th>Identifier</th>
-        <th>Init</th>
+        <th class="c">C1</th>
+        <th class="c">C2</th>
+        <th class="c">Avg Score /20</th>
+        <th class="c">Final Exam /80</th>
+        <th class="c">Total Score 100%</th>
+        <th class="c">Identifier</th>
+        <th class="c">Init</th>
       </tr>
     </thead>
     <tbody>${tbody}</tbody>

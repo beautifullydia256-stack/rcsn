@@ -140,6 +140,65 @@ export const SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS = `
         }
 `;
 
+/**
+ * Subject results table — same typography and colors as primary "Report for Upper Section"
+ * PDF (`api/pdf/generate.ts`: table / thead / th,td borders #bfdbfe, header #dbeafe).
+ */
+export const SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS = `
+        table.upper-results {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9.8pt;
+          margin-bottom: 3mm;
+          font-family: 'Times New Roman', Times, serif;
+          table-layout: auto;
+        }
+        table.upper-results th,
+        table.upper-results td {
+          border: 1px solid #bfdbfe;
+          padding: 4px 6px;
+          vertical-align: middle;
+        }
+        table.upper-results thead tr {
+          background: #dbeafe;
+          color: #1e3a8a;
+          text-transform: uppercase;
+          font-weight: 600;
+        }
+        table.upper-results th {
+          text-align: left;
+        }
+        table.upper-results th.c,
+        table.upper-results td.c {
+          text-align: center;
+        }
+        table.upper-results tbody td.subj {
+          font-weight: 600;
+          color: #0f172a;
+          text-align: left;
+        }
+        table.upper-results td.grade-col {
+          font-weight: 700;
+          color: #1e3a8a;
+        }
+        table.upper-results td.note-cell {
+          font-size: 9.2pt;
+          color: #475569;
+          text-align: center;
+        }
+        table.upper-results tbody tr:nth-child(even) {
+          background: #f0f9ff;
+        }
+        table.upper-results tbody tr.sum td {
+          background: #e0f2fe;
+          color: #1e3a8a;
+          font-weight: 600;
+        }
+        table.upper-results tbody tr.sum:nth-child(even) td {
+          background: #e0f2fe;
+        }
+`;
+
 export function streamDisplayForSecondaryStudentBlock(student: any): string {
   return String(
     student?.stream ??
