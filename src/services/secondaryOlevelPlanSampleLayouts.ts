@@ -202,8 +202,19 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     .footer-admin { margin-top: 14px; font-size: 9pt; }
     .footer-admin .disc { text-align: center; margin-top: 8px; font-weight: 600; }
     .watermark {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      opacity: 0.06; z-index: -1; pointer-events: none; max-width: 70%;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.1;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .watermark img {
+      width: 900px;
+      height: 900px;
+      object-fit: contain;
+      display: block;
     }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
@@ -417,7 +428,21 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
-    .watermark { position: fixed; top: 40%; left: 50%; transform: translate(-50%,-50%); opacity: 0.05; z-index: -1; max-width: 55%; }
+    .watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.1;
+      z-index: -1;
+      pointer-events: none;
+    }
+    .watermark img {
+      width: 900px;
+      height: 900px;
+      object-fit: contain;
+      display: block;
+    }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
