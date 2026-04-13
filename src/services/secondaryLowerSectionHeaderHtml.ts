@@ -502,8 +502,8 @@ export function formatSecondaryFeesBalanceForReport(student: any): string {
 export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
         .secondary-ol-comments-panel {
           font-family: 'Times New Roman', Times, serif;
-          font-size: 8.5pt;
-          line-height: 1.26;
+          font-size: 10.2pt;
+          line-height: 1.32;
           background: #ffffff;
           border: 1px solid #bfdbfe;
           border-radius: 8px;
@@ -525,7 +525,7 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
           border-bottom: none;
         }
         .secondary-ol-comment-label {
-          font-size: 9pt;
+          font-size: 10.6pt;
           font-weight: 600;
           text-transform: uppercase;
           margin-bottom: 3px;
@@ -551,7 +551,7 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
         }
         .secondary-ol-comment-meta .secondary-ol-meta-field strong {
           color: #1e3a8a;
-          font-size: 8pt;
+          font-size: 9.6pt;
           font-weight: 600;
         }
         .secondary-ol-meta-field {
@@ -560,7 +560,7 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
           display: flex;
           align-items: baseline;
           gap: 6px;
-          font-size: 8pt;
+          font-size: 9.6pt;
           color: #64748b;
         }
         .secondary-ol-dotted {
@@ -585,7 +585,7 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
         }
         .secondary-ol-fees-balance {
           font-weight: 600;
-          font-size: 8.1pt;
+          font-size: 10pt;
           color: #334155;
           white-space: nowrap;
           padding-bottom: 3px;
