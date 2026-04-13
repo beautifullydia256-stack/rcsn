@@ -8,7 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildReportDataFromScope,
   buildReportDataFromSnapshotRows,
-  buildExpectedOlevelSubjectsByStudentIdForReports,
+  fetchOlevelExpectedSubjectsByStudentId,
   expandOlevelClassNamesForSubjectsQuery,
   type BuildReportPayload,
   type SnapshotRowForPersist,
@@ -264,36 +264,12 @@ serve(async (req) => {
       const { data: school } = await supabase.from('schools').select('*').eq('school_id', schoolId).single();
       const { data: examSet } = await supabase.from('exam_sets').select('*').eq('id', examSetId).single();
 
-      const { data: stuRowsForSubjects } = await supabase
-        .from('students')
-        .select('student_id, current_class')
-        .eq('school_id', schoolId)
-        .in('student_id', uniqueStudentIds);
-      const reportClassByStudentId: Record<string, string> = {};
-      for (const row of snapshotRows) {
-        const sid = row.student_id;
-        const cn = String(row.class_name || '').trim();
-        if (!sid || !cn) continue;
-        if (!reportClassByStudentId[sid]) reportClassByStudentId[sid] = cn;
-      }
       let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
       if (uniqueStudentIds.length > 0) {
-        const [{ data: csRows }, { data: olRows }] = await Promise.all([
-          supabase.from('class_subjects').select('class_name, subject').eq('school_id', schoolId).order('subject'),
-          supabase
-            .from('student_olevel_subjects')
-            .select('student_id, subject_name')
-            .eq('school_id', schoolId)
-            .in('student_id', uniqueStudentIds)
-            .order('subject_name'),
-        ]);
-        expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
-          (stuRowsForSubjects || []).map((s: { student_id: string; current_class?: string | null }) => ({
-            student_id: s.student_id,
-            current_class: reportClassByStudentId[s.student_id] ?? s.current_class,
-          })) as { student_id: string; current_class?: string | null }[],
-          (csRows || []) as { class_name: string; subject: string }[],
-          (olRows || []) as { student_id: string; subject_name: string }[],
+        expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
+          supabase,
+          schoolId,
+          uniqueStudentIds,
         );
       }
 

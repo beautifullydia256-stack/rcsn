@@ -204,6 +204,40 @@ function subjectsForOlevelSeniorBand(
  * S1–2 → all `class_subjects` in the same senior band as the learner's class; S3–4 → `student_olevel_subjects`, else same band from `class_subjects`.
  * Pass `current_class` from exam/snapshot when it is the source of truth (can differ from `students.current_class`).
  */
+/**
+ * Expected O-Level subjects per student from Postgres view `olevel_student_expected_subjects`
+ * (same rules as `olevel_subject_exam_coverage`). Edge preview/final must use this so the card
+ * cannot drift from what you verify in SQL.
+ */
+export async function fetchOlevelExpectedSubjectsByStudentId(
+  supabase: SupabaseClient,
+  schoolId: string,
+  studentIds: string[],
+): Promise<Record<string, string[]>> {
+  if (!studentIds.length) return {};
+  const { data, error } = await supabase
+    .from('olevel_student_expected_subjects')
+    .select('student_id, subject_name')
+    .eq('school_id', schoolId)
+    .in('student_id', studentIds)
+    .order('subject_name');
+  if (error) throw new Error(error.message);
+  const out: Record<string, string[]> = {};
+  for (const row of data || []) {
+    const r = row as { student_id?: string; subject_name?: string };
+    const sid = r.student_id;
+    const sub = String(r.subject_name || '').trim();
+    if (!sid || !sub) continue;
+    if (!out[sid]) out[sid] = [];
+    out[sid].push(sub);
+  }
+  for (const sid of Object.keys(out)) {
+    out[sid] = dedupeOlevelSubjectNamesPreserveOrder(out[sid]);
+  }
+  return out;
+}
+
+/** @deprecated Prefer `fetchOlevelExpectedSubjectsByStudentId` (DB view); kept for reference. */
 export function buildExpectedOlevelSubjectsByStudentIdForReports(
   students: { student_id: string; current_class?: string | null }[],
   classSubjectsRows: { class_name: string; subject: string }[],
@@ -552,20 +586,6 @@ export async function buildReportDataFromScope(
   const allStudentIdsInClass = [...new Set((examResults || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResults || []).map((r: { class_name: string }) => r.class_name))];
 
-  /** Prefer class on exam rows (matches report) over `students.current_class`, which can lag or differ in spelling. */
-  const reportClassByStudentId: Record<string, string> = {};
-  for (const r of examResults || []) {
-    const row = r as {
-      student_id: string;
-      class_name?: string | null;
-      students?: { current_class?: string | null };
-    };
-    const sid = row.student_id;
-    const cn = String(row.class_name ?? row.students?.current_class ?? '').trim();
-    if (!sid || !cn) continue;
-    if (!reportClassByStudentId[sid]) reportClassByStudentId[sid] = cn;
-  }
-
   let commentSettingsQuery = supabase
     .from('class_teacher_comments_settings')
     .select('*')
@@ -886,22 +906,10 @@ export async function buildReportDataFromScope(
 
   let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
   if (allStudentIdsInClass.length > 0) {
-    const [{ data: classSubjectsForReports }, { data: olevelForReports }] = await Promise.all([
-      supabase.from('class_subjects').select('class_name, subject').eq('school_id', schoolId).order('subject'),
-      supabase
-        .from('student_olevel_subjects')
-        .select('student_id, subject_name')
-        .eq('school_id', schoolId)
-        .in('student_id', allStudentIdsInClass)
-        .order('subject_name'),
-    ]);
-    expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
-      (students || []).map((s: { student_id: string; current_class?: string | null }) => ({
-        student_id: s.student_id,
-        current_class: reportClassByStudentId[s.student_id] ?? s.current_class,
-      })) as { student_id: string; current_class?: string | null }[],
-      (classSubjectsForReports || []) as { class_name: string; subject: string }[],
-      (olevelForReports || []) as { student_id: string; subject_name: string }[],
+    expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
+      supabase,
+      schoolId,
+      allStudentIdsInClass,
     );
   }
 
