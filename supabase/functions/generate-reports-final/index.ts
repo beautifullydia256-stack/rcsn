@@ -249,7 +249,10 @@ serve(async (req) => {
         .from('report_snapshot_data')
         .select('*')
         .eq('snapshot_id', snapshotId);
-      if (classNames?.length) snapshotDataQuery = snapshotDataQuery.in('class_name', classNames);
+      if (classNames?.length) {
+        const expanded = [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))];
+        snapshotDataQuery = snapshotDataQuery.in('class_name', expanded);
+      }
       const { data: allRows, error: dataErr } = await snapshotDataQuery;
       if (dataErr) throw dataErr;
 
@@ -266,22 +269,17 @@ serve(async (req) => {
         .select('student_id, current_class')
         .eq('school_id', schoolId)
         .in('student_id', uniqueStudentIds);
-      const classNamesForOlevelReports = expandOlevelClassNamesForSubjectsQuery([
-        ...new Set(
-          (stuRowsForSubjects || [])
-            .map((s: { current_class?: string }) => String(s.current_class || '').trim())
-            .filter(Boolean),
-        ),
-      ]);
+      const reportClassByStudentId: Record<string, string> = {};
+      for (const row of snapshotRows) {
+        const sid = row.student_id;
+        const cn = String(row.class_name || '').trim();
+        if (!sid || !cn) continue;
+        if (!reportClassByStudentId[sid]) reportClassByStudentId[sid] = cn;
+      }
       let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
-      if (uniqueStudentIds.length > 0 && classNamesForOlevelReports.length > 0) {
+      if (uniqueStudentIds.length > 0) {
         const [{ data: csRows }, { data: olRows }] = await Promise.all([
-          supabase
-            .from('class_subjects')
-            .select('class_name, subject')
-            .eq('school_id', schoolId)
-            .in('class_name', classNamesForOlevelReports)
-            .order('subject'),
+          supabase.from('class_subjects').select('class_name, subject').eq('school_id', schoolId).order('subject'),
           supabase
             .from('student_olevel_subjects')
             .select('student_id, subject_name')
@@ -290,7 +288,10 @@ serve(async (req) => {
             .order('subject_name'),
         ]);
         expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
-          (stuRowsForSubjects || []) as { student_id: string; current_class?: string | null }[],
+          (stuRowsForSubjects || []).map((s: { student_id: string; current_class?: string | null }) => ({
+            student_id: s.student_id,
+            current_class: reportClassByStudentId[s.student_id] ?? s.current_class,
+          })) as { student_id: string; current_class?: string | null }[],
           (csRows || []) as { class_name: string; subject: string }[],
           (olRows || []) as { student_id: string; subject_name: string }[],
         );

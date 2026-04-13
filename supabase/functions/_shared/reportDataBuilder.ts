@@ -181,47 +181,34 @@ export function expandOlevelClassNamesForSubjectsQuery(names: string[]): string[
   return [...out];
 }
 
-function resolveOlevelClassSubjectsFromMap(
-  clsRaw: string,
-  subjectsByClass: Map<string, string[]>,
+/**
+ * All `class_subjects` rows whose class label matches the same O-Level senior band (e.g. S1 / Senior 1 / Senior 1 Science).
+ * Matches `public.olevel_subject_exam_coverage` / `olevel_class_senior_band` semantics so we do not depend on exact UI strings.
+ */
+function subjectsForOlevelSeniorBand(
+  band: number,
+  classSubjectsRows: { class_name: string; subject: string }[],
 ): string[] {
-  const trimClass = (s: string) => s.trim().replace(/\s+/g, ' ');
-  let list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
-  if (!list.length) {
-    const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
-    if (hit) list = hit[1];
+  const acc: string[] = [];
+  for (const row of classSubjectsRows || []) {
+    const cn = String(row.class_name || '').trim().replace(/\s+/g, ' ');
+    const sub = String(row.subject || '').trim();
+    if (!cn || !sub) continue;
+    if (olevelSeniorBandNumber(cn) === band) acc.push(sub);
   }
-  if (!list.length) {
-    const num = olevelSeniorBandNumber(clsRaw);
-    if (num != null) {
-      const hit = [...subjectsByClass.entries()].find(([k]) => olevelSeniorBandNumber(k) === num);
-      if (hit) list = hit[1];
-    }
-  }
-  return list;
+  return dedupeOlevelSubjectNamesPreserveOrder(acc);
 }
 
 /**
  * Expected O-Level (S1–S4) subject names per student for reports:
- * S1–2 → all `class_subjects` for `current_class`; S3–4 → `student_olevel_subjects`, else fallback to class list.
+ * S1–2 → all `class_subjects` in the same senior band as the learner's class; S3–4 → `student_olevel_subjects`, else same band from `class_subjects`.
+ * Pass `current_class` from exam/snapshot when it is the source of truth (can differ from `students.current_class`).
  */
 export function buildExpectedOlevelSubjectsByStudentIdForReports(
   students: { student_id: string; current_class?: string | null }[],
   classSubjectsRows: { class_name: string; subject: string }[],
   olevelRows: { student_id: string; subject_name: string }[],
 ): Record<string, string[]> {
-  const trimClass = (s: string) => s.trim().replace(/\s+/g, ' ');
-  const subjectsByClass = new Map<string, string[]>();
-  for (const row of classSubjectsRows || []) {
-    const cn = trimClass(String(row.class_name || ''));
-    const sub = String(row.subject || '').trim();
-    if (!cn || !sub) continue;
-    if (!subjectsByClass.has(cn)) subjectsByClass.set(cn, []);
-    subjectsByClass.get(cn)!.push(sub);
-  }
-  for (const [cn, arr] of subjectsByClass) {
-    subjectsByClass.set(cn, dedupeOlevelSubjectNamesPreserveOrder(arr));
-  }
   const olevelByStudent = new Map<string, string[]>();
   for (const r of olevelRows || []) {
     const sid = r.student_id;
@@ -236,13 +223,15 @@ export function buildExpectedOlevelSubjectsByStudentIdForReports(
     const clsRaw = String(st.current_class || '').trim();
     if (!sid || !clsRaw) continue;
     if (!isOlevelSeniorClassName(clsRaw)) continue;
+    const band = olevelSeniorBandNumber(clsRaw);
+    if (band == null) continue;
     let list: string[] = [];
     if (isOlevelSenior12ClassName(clsRaw)) {
-      list = resolveOlevelClassSubjectsFromMap(clsRaw, subjectsByClass);
+      list = subjectsForOlevelSeniorBand(band, classSubjectsRows);
     } else {
       list = dedupeOlevelSubjectNamesPreserveOrder(olevelByStudent.get(sid) ?? []);
       if (!list.length) {
-        list = resolveOlevelClassSubjectsFromMap(clsRaw, subjectsByClass);
+        list = subjectsForOlevelSeniorBand(band, classSubjectsRows);
       }
     }
     if (list.length) out[sid] = list;
@@ -542,6 +531,9 @@ export async function buildReportDataFromScope(
     ? (examSetsForTerm || []).find((es: { id: string; name?: string }) => isEotName(es.name))?.id ?? null
     : null;
 
+  const expandedClassNamesForExam =
+    classNames.length > 0 ? [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))] : classNames;
+
   let examResultsQuery = supabase
     .from('exam_results')
     .select(
@@ -551,14 +543,28 @@ export async function buildReportDataFromScope(
     )
     .eq('school_id', schoolId)
     .in('exam_set_id', examSetIdsToInclude);
-  if (classNames.length > 0) {
-    examResultsQuery = examResultsQuery.in('class_name', classNames);
+  if (expandedClassNamesForExam.length > 0) {
+    examResultsQuery = examResultsQuery.in('class_name', expandedClassNamesForExam);
   }
   const { data: examResults, error: resultsError } = await examResultsQuery;
   if (resultsError) throw new Error(resultsError.message);
 
   const allStudentIdsInClass = [...new Set((examResults || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResults || []).map((r: { class_name: string }) => r.class_name))];
+
+  /** Prefer class on exam rows (matches report) over `students.current_class`, which can lag or differ in spelling. */
+  const reportClassByStudentId: Record<string, string> = {};
+  for (const r of examResults || []) {
+    const row = r as {
+      student_id: string;
+      class_name?: string | null;
+      students?: { current_class?: string | null };
+    };
+    const sid = row.student_id;
+    const cn = String(row.class_name ?? row.students?.current_class ?? '').trim();
+    if (!sid || !cn) continue;
+    if (!reportClassByStudentId[sid]) reportClassByStudentId[sid] = cn;
+  }
 
   let commentSettingsQuery = supabase
     .from('class_teacher_comments_settings')
@@ -878,27 +884,10 @@ export async function buildReportDataFromScope(
     });
   });
 
-  const classNamesForSubjectQuery = expandOlevelClassNamesForSubjectsQuery([
-    ...new Set(
-      [
-        ...classNamesFromResults,
-        ...classNames,
-        ...(students || [])
-          .map((s: { current_class?: string }) => String(s.current_class || '').trim())
-          .filter(Boolean),
-      ].filter(Boolean),
-    ),
-  ]);
-
   let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
-  if (allStudentIdsInClass.length > 0 && classNamesForSubjectQuery.length > 0) {
+  if (allStudentIdsInClass.length > 0) {
     const [{ data: classSubjectsForReports }, { data: olevelForReports }] = await Promise.all([
-      supabase
-        .from('class_subjects')
-        .select('class_name, subject')
-        .eq('school_id', schoolId)
-        .in('class_name', classNamesForSubjectQuery)
-        .order('subject'),
+      supabase.from('class_subjects').select('class_name, subject').eq('school_id', schoolId).order('subject'),
       supabase
         .from('student_olevel_subjects')
         .select('student_id, subject_name')
@@ -907,7 +896,10 @@ export async function buildReportDataFromScope(
         .order('subject_name'),
     ]);
     expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
-      (students || []) as { student_id: string; current_class?: string | null }[],
+      (students || []).map((s: { student_id: string; current_class?: string | null }) => ({
+        student_id: s.student_id,
+        current_class: reportClassByStudentId[s.student_id] ?? s.current_class,
+      })) as { student_id: string; current_class?: string | null }[],
       (classSubjectsForReports || []) as { class_name: string; subject: string }[],
       (olevelForReports || []) as { student_id: string; subject_name: string }[],
     );
