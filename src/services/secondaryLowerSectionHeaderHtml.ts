@@ -495,37 +495,52 @@ export function formatSecondaryFeesBalanceForReport(student: any): string {
   return String(raw).trim() || '—';
 }
 
-/** Mint panel: class / head comments + next term (no date fields in signature rows). */
+/**
+ * Class / head comments + next term — same visual language as primary Upper Section PDF
+ * (`api/pdf/generate.ts` `.comments-box`, `.next-term-fees`).
+ */
 export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
         .secondary-ol-comments-panel {
-          font-family: Arial, Helvetica, 'Segoe UI', sans-serif;
-          font-size: 10pt;
-          line-height: 1.35;
-          background: #f0f9f0;
-          border: 1px solid #c8e6c9;
-          padding: 12px 14px;
-          margin-bottom: 14px;
+          font-family: 'Times New Roman', Times, serif;
+          font-size: 8.5pt;
+          line-height: 1.26;
+          background: #ffffff;
+          border: 1px solid #bfdbfe;
+          border-radius: 8px;
+          padding: 8px 10px;
+          margin-bottom: 3mm;
+          position: relative;
+          z-index: 0;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         .secondary-ol-comment-block {
-          margin-bottom: 14px;
+          padding-bottom: 8px;
+          margin-bottom: 8px;
+          border-bottom: 1px solid #bfdbfe;
         }
         .secondary-ol-comment-block:last-child {
           margin-bottom: 0;
+          padding-bottom: 0;
+          border-bottom: none;
         }
         .secondary-ol-comment-label {
-          font-weight: bold;
-          margin-bottom: 4px;
+          font-size: 9pt;
+          font-weight: 600;
+          text-transform: uppercase;
+          margin-bottom: 3px;
+          color: #1e3a8a;
+          letter-spacing: 0.02em;
         }
         .secondary-ol-comment-line {
-          border-bottom: 1px solid #000;
+          border-bottom: 1px solid #cbd5e1;
           min-height: 1.35em;
           padding-bottom: 3px;
           margin-bottom: 8px;
         }
         .secondary-ol-comment-text {
           font-style: italic;
+          color: #334155;
         }
         .secondary-ol-comment-meta {
           display: flex;
@@ -534,16 +549,23 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
           gap: 12px 20px;
           align-items: flex-end;
         }
+        .secondary-ol-comment-meta .secondary-ol-meta-field strong {
+          color: #1e3a8a;
+          font-size: 8pt;
+          font-weight: 600;
+        }
         .secondary-ol-meta-field {
           flex: 1;
           min-width: 160px;
           display: flex;
           align-items: baseline;
           gap: 6px;
+          font-size: 8pt;
+          color: #64748b;
         }
         .secondary-ol-dotted {
           flex: 1;
-          border-bottom: 1px dotted #000;
+          border-bottom: 1px dotted #94a3b8;
           min-height: 1.15em;
           min-width: 72px;
         }
@@ -554,20 +576,23 @@ export const SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS = `
           justify-content: space-between;
           gap: 12px 20px;
           flex-wrap: wrap;
+          padding-top: 0;
+          margin-top: 0;
         }
         .secondary-ol-next-term-col {
           flex: 1;
           min-width: 180px;
         }
         .secondary-ol-fees-balance {
-          font-weight: 700;
-          font-size: 11pt;
-          color: #c62828;
+          font-weight: 600;
+          font-size: 8.1pt;
+          color: #334155;
           white-space: nowrap;
           padding-bottom: 3px;
         }
         .secondary-ol-fees-balance strong {
-          color: #c62828;
+          color: #1e3a8a;
+          font-weight: 600;
         }
 `;
 
