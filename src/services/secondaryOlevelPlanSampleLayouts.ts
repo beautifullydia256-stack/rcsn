@@ -230,8 +230,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
-    .footer-admin { margin-top: 14px; font-size: 9pt; }
-    .footer-admin .disc { text-align: center; margin-top: 8px; font-weight: 600; }
     .watermark {
       position: fixed;
       top: 50%;
@@ -297,10 +295,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   </div>
 
   ${commentsNextTermHtml}
-
-  <div class="footer-admin">
-    <p class="disc">This report is not valid without a school stamp</p>
-  </div>
 </body>
 </html>`;
 }
