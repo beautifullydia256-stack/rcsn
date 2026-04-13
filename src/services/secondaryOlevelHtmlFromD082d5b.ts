@@ -38,19 +38,6 @@ function template1AchievementLevelUpper(letter: string): string {
   return map[u] || '';
 }
 
-function template1PerformanceSubline(summary: { aggregate?: unknown; classPosition?: unknown } | null | undefined): string {
-  if (!summary) return '';
-  const agg = summary.aggregate;
-  if (agg != null && agg !== '' && Number.isFinite(Number(agg))) {
-    return `Aggregate: ${Number(agg).toFixed(2)}`;
-  }
-  const pos = summary.classPosition;
-  if (pos != null && pos !== '') {
-    return `Class position: ${pos}`;
-  }
-  return '';
-}
-
 export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: string | null, studentPhotoBase64?: string | null) {
   const { school, examSet, students } = reportData;
   const student = students[0];
@@ -71,7 +58,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
     averageGradeLetter = template1StandardGradeFromPct(mean);
     overallAchievementUpper = template1AchievementLevelUpper(averageGradeLetter);
   }
-  const performanceSubline = template1PerformanceSubline(student.summary);
 
   const classTeacherComment =
     student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
@@ -314,16 +300,6 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
             <td colspan="2" class="center">${overallAchievementUpper}</td>
             <td colspan="2"></td>
           </tr>
-          ${
-            performanceSubline.trim() !== ''
-              ? `
-          <tr class="summary-perf-row">
-            <td colspan="5"></td>
-            <td colspan="2" class="center">${performanceSubline}</td>
-            <td colspan="2"></td>
-          </tr>`
-              : ''
-          }
 `
               : ''
           }
