@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildReportDataFromScope,
   buildReportDataFromSnapshotRows,
+  buildExpectedOlevelSubjectsByStudentIdForReports,
   type BuildReportPayload,
   type SnapshotRowForPersist,
 } from '../_shared/reportDataBuilder.ts';
@@ -259,11 +260,47 @@ serve(async (req) => {
       const { data: school } = await supabase.from('schools').select('*').eq('school_id', schoolId).single();
       const { data: examSet } = await supabase.from('exam_sets').select('*').eq('id', examSetId).single();
 
+      const { data: stuRowsForSubjects } = await supabase
+        .from('students')
+        .select('student_id, current_class')
+        .eq('school_id', schoolId)
+        .in('student_id', uniqueStudentIds);
+      const classNamesForOlevelReports = [
+        ...new Set(
+          (stuRowsForSubjects || [])
+            .map((s: { current_class?: string }) => String(s.current_class || '').trim())
+            .filter(Boolean),
+        ),
+      ];
+      let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
+      if (uniqueStudentIds.length > 0 && classNamesForOlevelReports.length > 0) {
+        const [{ data: csRows }, { data: olRows }] = await Promise.all([
+          supabase
+            .from('class_subjects')
+            .select('class_name, subject')
+            .eq('school_id', schoolId)
+            .in('class_name', classNamesForOlevelReports)
+            .order('subject'),
+          supabase
+            .from('student_olevel_subjects')
+            .select('student_id, subject_name')
+            .eq('school_id', schoolId)
+            .in('student_id', uniqueStudentIds)
+            .order('subject_name'),
+        ]);
+        expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
+          (stuRowsForSubjects || []) as { student_id: string; current_class?: string | null }[],
+          (csRows || []) as { class_name: string; subject: string }[],
+          (olRows || []) as { student_id: string; subject_name: string }[],
+        );
+      }
+
       const reportDataList = buildReportDataFromSnapshotRows(
         snapshotRows,
         (school || {}) as Record<string, unknown>,
         (examSet || { id: examSetId }) as { id: string; name?: string; term?: number; year?: number },
-        snapshotId
+        snapshotId,
+        expectedOlevelSubjectsByStudentId,
       ) as Record<string, unknown>[];
 
       const toInsert = reportDataList

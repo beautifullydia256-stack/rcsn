@@ -119,6 +119,153 @@ function isOlevelSeniorClassName(className: string | null | undefined): boolean 
   return /^(senior\s*[1-4]|s\.?\s*[1-4])\b/i.test(c);
 }
 
+/** Senior 1–2: class offers full subject list; every learner should mirror `class_subjects`. */
+function isOlevelSenior12ClassName(className: string | null | undefined): boolean {
+  const c = String(className || '').trim();
+  return /^(senior\s*[12]|s\.?\s*[12])\b/i.test(c);
+}
+
+function normalizeReportSubjectKey(name: string): string {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+/** Shown on report rows when a profile subject has no `exam_results` line for this scope. */
+export const OLEVEL_REPORT_MISSING_RESULT_LABEL = 'Missing result';
+
+function dedupeOlevelSubjectNamesPreserveOrder(names: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const n of names) {
+    const k = normalizeReportSubjectKey(n);
+    if (!k || seen.has(k)) continue;
+    seen.add(k);
+    out.push(String(n).trim());
+  }
+  return out;
+}
+
+/**
+ * Expected O-Level (S1–S4) subject names per student for reports:
+ * S1–2 → all `class_subjects` for `current_class`; S3–4 → `student_olevel_subjects`, else fallback to class list.
+ */
+export function buildExpectedOlevelSubjectsByStudentIdForReports(
+  students: { student_id: string; current_class?: string | null }[],
+  classSubjectsRows: { class_name: string; subject: string }[],
+  olevelRows: { student_id: string; subject_name: string }[],
+): Record<string, string[]> {
+  const trimClass = (s: string) => s.trim().replace(/\s+/g, ' ');
+  const subjectsByClass = new Map<string, string[]>();
+  for (const row of classSubjectsRows || []) {
+    const cn = trimClass(String(row.class_name || ''));
+    const sub = String(row.subject || '').trim();
+    if (!cn || !sub) continue;
+    if (!subjectsByClass.has(cn)) subjectsByClass.set(cn, []);
+    subjectsByClass.get(cn)!.push(sub);
+  }
+  for (const [cn, arr] of subjectsByClass) {
+    subjectsByClass.set(cn, dedupeOlevelSubjectNamesPreserveOrder(arr));
+  }
+  const olevelByStudent = new Map<string, string[]>();
+  for (const r of olevelRows || []) {
+    const sid = r.student_id;
+    const sn = String(r.subject_name || '').trim();
+    if (!sid || !sn) continue;
+    if (!olevelByStudent.has(sid)) olevelByStudent.set(sid, []);
+    olevelByStudent.get(sid)!.push(sn);
+  }
+  const out: Record<string, string[]> = {};
+  for (const st of students || []) {
+    const sid = st.student_id;
+    const clsRaw = String(st.current_class || '').trim();
+    if (!sid || !clsRaw) continue;
+    if (!isOlevelSeniorClassName(clsRaw)) continue;
+    let list: string[] = [];
+    if (isOlevelSenior12ClassName(clsRaw)) {
+      list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
+      if (!list.length) {
+        const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
+        if (hit) list = hit[1];
+      }
+    } else {
+      list = dedupeOlevelSubjectNamesPreserveOrder(olevelByStudent.get(sid) ?? []);
+      if (!list.length) {
+        list = subjectsByClass.get(trimClass(clsRaw)) ?? [];
+        if (!list.length) {
+          const hit = [...subjectsByClass.entries()].find(([k]) => k.toLowerCase() === clsRaw.toLowerCase());
+          if (hit) list = hit[1];
+        }
+      }
+    }
+    if (list.length) out[sid] = list;
+  }
+  return out;
+}
+
+type OlevelReportResultRow = Record<string, unknown>;
+
+function mergeOlevelReportResultsWithExpectedSubjects(
+  results: OlevelReportResultRow[],
+  expectedOrdered: string[],
+  examSetName: string,
+): OlevelReportResultRow[] {
+  if (!expectedOrdered.length) return results;
+  const byKey = new Map<string, OlevelReportResultRow[]>();
+  for (const r of results) {
+    const k = normalizeReportSubjectKey(String(r.subject ?? ''));
+    if (!k) continue;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k)!.push(r);
+  }
+  const used = new Set<string>();
+  const out: OlevelReportResultRow[] = [];
+  const placeholder = (subject: string): OlevelReportResultRow => {
+    const msg = OLEVEL_REPORT_MISSING_RESULT_LABEL;
+    return {
+      subject,
+      topic: '',
+      marks_obtained: '',
+      total_marks: 100,
+      grade: '',
+      remarks: '',
+      teacher_initials: '',
+      teacher_comment: msg,
+      exam_set_name: examSetName,
+      teacher_remark: msg,
+      overall_remark: msg,
+      remark: msg,
+      final_score: null,
+      nursery_skill_performance: undefined,
+      activity_score: null,
+      formative_score: null,
+      exam_score: null,
+      descriptor: '',
+      paper_code: '',
+      paper_number: '',
+      continuous_c1: undefined,
+      continuous_c2: undefined,
+      c1: undefined,
+      c2: undefined,
+      result_missing_placeholder: true,
+    };
+  };
+  for (const subj of expectedOrdered) {
+    const k = normalizeReportSubjectKey(subj);
+    if (!k) continue;
+    used.add(k);
+    const rows = byKey.get(k);
+    if (rows?.length) out.push(...rows);
+    else out.push(placeholder(subj));
+  }
+  for (const [k, rows] of byKey) {
+    if (used.has(k)) continue;
+    out.push(...rows);
+  }
+  return out;
+}
+
 const PRIMARY_DIVISION_GRADES = new Set(['D1', 'D2', 'C3', 'C4', 'C5', 'C6', 'P7', 'P8', 'F9']);
 
 function looksLikePrimaryDivisionGrade(g: string): boolean {
@@ -684,11 +831,47 @@ export async function buildReportDataFromScope(
     });
   });
 
+  const classNamesForSubjectQuery = [
+    ...new Set(
+      [
+        ...classNamesFromResults,
+        ...classNames,
+        ...(students || [])
+          .map((s: { current_class?: string }) => String(s.current_class || '').trim())
+          .filter(Boolean),
+      ].filter(Boolean),
+    ),
+  ];
+
+  let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
+  if (allStudentIdsInClass.length > 0 && classNamesForSubjectQuery.length > 0) {
+    const [{ data: classSubjectsForReports }, { data: olevelForReports }] = await Promise.all([
+      supabase
+        .from('class_subjects')
+        .select('class_name, subject')
+        .eq('school_id', schoolId)
+        .in('class_name', classNamesForSubjectQuery)
+        .order('subject'),
+      supabase
+        .from('student_olevel_subjects')
+        .select('student_id, subject_name')
+        .eq('school_id', schoolId)
+        .in('student_id', allStudentIdsInClass)
+        .order('subject_name'),
+    ]);
+    expectedOlevelSubjectsByStudentId = buildExpectedOlevelSubjectsByStudentIdForReports(
+      (students || []) as { student_id: string; current_class?: string | null }[],
+      (classSubjectsForReports || []) as { class_name: string; subject: string }[],
+      (olevelForReports || []) as { student_id: string; subject_name: string }[],
+    );
+  }
+
   const reportDataList = buildReportDataListFromSnapshotRows(
     snapshotData,
     schoolInfo as Record<string, unknown>,
     baseExamSet as { id: string; name?: string; term?: number; year?: number },
-    examSetId
+    examSetId,
+    expectedOlevelSubjectsByStudentId,
   );
 
   const toReturn = studentIds?.length
@@ -709,13 +892,15 @@ export function buildReportDataFromSnapshotRows(
   allSnapshotData: SnapshotRowForPersist[],
   school: Record<string, unknown>,
   examSet: { id: string; name?: string; term?: number; year?: number },
-  snapshotId: string
+  snapshotId: string,
+  expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
 ): unknown[] {
   return buildReportDataListFromSnapshotRows(
     allSnapshotData,
     school,
     examSet,
-    snapshotId
+    snapshotId,
+    expectedOlevelSubjectsByStudentId,
   );
 }
 
@@ -723,7 +908,8 @@ function buildReportDataListFromSnapshotRows(
   snapshotData: SnapshotRowForPersist[],
   school: Record<string, unknown>,
   baseExamSet: { id: string; name?: string; term?: number; year?: number },
-  examSetId: string
+  examSetId: string,
+  expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -733,7 +919,14 @@ function buildReportDataListFromSnapshotRows(
   for (const studentId of uniqueStudentIds) {
     const studentData = mergedSnapshot.filter((d) => d.student_id === studentId);
     if (studentData.length === 0) continue;
-    const reportData = oneReportFromSnapshotRows(studentData, school, baseExamSet, examSetId, examSetName);
+    const reportData = oneReportFromSnapshotRows(
+      studentData,
+      school,
+      baseExamSet,
+      examSetId,
+      examSetName,
+      expectedOlevelSubjectsByStudentId?.[studentId],
+    );
     list.push(reportData);
   }
   return list;
@@ -744,7 +937,8 @@ function oneReportFromSnapshotRows(
   school: Record<string, unknown>,
   examSet: { id: string; name?: string; term?: number; year?: number },
   _snapshotOrExamSetId: string,
-  examSetName: string
+  examSetName: string,
+  expectedOlevelSubjectNames?: string[],
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -813,6 +1007,19 @@ function oneReportFromSnapshotRows(
       c2: d.continuous_c2,
     };
   });
+
+  let resultsOut: OlevelReportResultRow[] = results;
+  if (
+    isOlevelSeniorClassName(reportClassName) &&
+    expectedOlevelSubjectNames &&
+    expectedOlevelSubjectNames.length > 0
+  ) {
+    resultsOut = mergeOlevelReportResultsWithExpectedSubjects(
+      results,
+      expectedOlevelSubjectNames,
+      examSetName,
+    );
+  }
 
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
   const isMid = (n: string) => /mid|midterm|mid-term/i.test(String(n || '').trim());
@@ -996,7 +1203,7 @@ function oneReportFromSnapshotRows(
         current_stream: frozen.student_stream || undefined,
         stream_name: frozen.student_stream || undefined,
         next_term_begins_date: frozen.next_term_begins_date || undefined,
-        results,
+        results: resultsOut,
         subjects,
         attendance: [],
         fees: {
