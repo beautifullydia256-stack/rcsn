@@ -8,6 +8,7 @@ import { useAuthStore } from '../../../store/authStore';
 import { useSchoolType } from '@/hooks/useSchoolType';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
+import { enrichSecondaryOlevelPreviewReportsFromDb } from '../../../lib/enrichSecondaryOlevelPreviewFromDb';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
@@ -99,7 +100,12 @@ async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
   if (body && typeof body.error === 'string' && body.error.trim()) {
     throw new Error(body.error.trim());
   }
-  return (body?.reports ?? []) as any[];
+  const raw = (body?.reports ?? []) as unknown[];
+  return (await enrichSecondaryOlevelPreviewReportsFromDb(
+    supabase,
+    payload.schoolId,
+    raw,
+  )) as any[];
 }
 
 async function fetchGeneratedReports(snapshotId: string) {
