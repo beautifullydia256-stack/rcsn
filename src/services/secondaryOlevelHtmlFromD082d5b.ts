@@ -38,12 +38,8 @@ function template1AchievementLevelUpper(letter: string): string {
   return map[u] || '';
 }
 
-function template1PerformanceSubline(summary: { division?: unknown; aggregate?: unknown; classPosition?: unknown } | null | undefined): string {
+function template1PerformanceSubline(summary: { aggregate?: unknown; classPosition?: unknown } | null | undefined): string {
   if (!summary) return '';
-  const divRaw = summary.division;
-  if (divRaw != null && String(divRaw).trim() !== '' && String(divRaw).trim().toUpperCase() !== 'N/A') {
-    return String(divRaw).trim();
-  }
   const agg = summary.aggregate;
   if (agg != null && agg !== '' && Number.isFinite(Number(agg))) {
     return `Aggregate: ${Number(agg).toFixed(2)}`;
@@ -318,11 +314,17 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
             <td colspan="2" class="center">${overallAchievementUpper}</td>
             <td colspan="2"></td>
           </tr>
+          ${
+            performanceSubline.trim() !== ''
+              ? `
           <tr class="summary-perf-row">
             <td colspan="5"></td>
             <td colspan="2" class="center">${performanceSubline}</td>
             <td colspan="2"></td>
           </tr>`
+              : ''
+          }
+`
               : ''
           }
         </tbody>
