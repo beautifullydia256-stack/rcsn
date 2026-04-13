@@ -14,6 +14,7 @@ import {
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
+  SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 
@@ -100,91 +101,100 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       <style>
         ${SECONDARY_A4_PAGE_SHELL_CSS}
         ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
-        
-        table {
-          width: 100%;
-          border-collapse: collapse;
-          margin-bottom: 12px;
-          font-size: 9.5pt;
-          position: relative;
-          z-index: 0;
-          background: #ffffff;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
+        ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
+
+        /* Template Standard: same table design language as Basic (upper-results); 9-column layout unchanged */
+        table.upper-results.o-level-standard {
+          margin-bottom: 3mm;
         }
-        
-        th, td {
-          border: 1px solid #000;
-          padding: 4px;
+        table.upper-results.o-level-standard thead th:first-child {
           text-align: left;
         }
-        
-        tbody td {
-          background: #ffffff;
-        }
-        
-        th {
-          background: #4CAF50;
-          color: white;
-          font-weight: bold;
+        table.upper-results.o-level-standard thead th {
           text-align: center;
         }
-        
-        .center {
+        table.upper-results.o-level-standard td.center,
+        table.upper-results.o-level-standard th.center {
           text-align: center;
         }
-
-        tr.summary-avg-row td {
-          background: #fff;
-          font-weight: bold;
+        table.upper-results.o-level-standard tbody td:first-child strong {
+          font-weight: 600;
+          color: #0f172a;
+        }
+        table.upper-results.o-level-standard .standard-topic {
+          font-size: 9.2pt;
+          line-height: 1.2;
+          margin-top: 2px;
+          color: #475569;
+          font-weight: 400;
+        }
+        table.upper-results.o-level-standard td.remark-cell {
+          font-size: 9.2pt;
+          color: #475569;
+          text-align: left;
+          vertical-align: middle;
+        }
+        table.upper-results.o-level-standard tbody tr.summary-avg-row td,
+        table.upper-results.o-level-standard tbody tr.summary-perf-row td {
+          background: #e0f2fe;
+          color: #1e3a8a;
+          font-weight: 600;
         }
 
-        tr.summary-perf-row td {
-          background: #cfe2f3;
-          font-weight: bold;
-        }
-        
-        .summary {
-          margin-bottom: 10px;
-          font-size: 10.5pt;
-        }
-        
-        .summary p {
-          margin-bottom: 5px;
-        }
-        
-        .summary strong {
-          font-weight: bold;
-        }
+        .muted { color: #555; }
 
         ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
-        
+
         .grading-system {
           margin-bottom: 20px;
+          font-family: 'Times New Roman', Times, serif;
         }
-        
+
         .grading-system h3 {
           font-size: 11pt;
-          font-weight: bold;
+          font-weight: 700;
           margin-bottom: 5px;
+          color: #1e3a8a;
         }
-        
+
         .grading-system p {
           font-size: 10pt;
-          font-weight: bold;
+          font-weight: 700;
           margin-bottom: 10px;
+          color: #0f172a;
         }
-        
-        .description-table th {
-          background: #f0f0f0;
-          color: black;
+
+        .grading-system .description-table {
+          border-collapse: collapse;
+          width: 100%;
+          font-size: 9.8pt;
         }
-        
+        .grading-system .description-table th,
+        .grading-system .description-table td {
+          border: 1px solid #bfdbfe;
+          padding: 4px 6px;
+          vertical-align: middle;
+        }
+        .grading-system .description-table thead th {
+          background: #dbeafe;
+          color: #1e3a8a;
+          text-transform: uppercase;
+          font-weight: 600;
+        }
+        .grading-system .description-table tbody td {
+          background: #ffffff;
+        }
+        .grading-system .description-table tbody tr:nth-child(even) td {
+          background: #f0f9ff;
+        }
+
         .footer {
           display: flex;
           justify-content: space-between;
           align-items: center;
           font-size: 9pt;
+          font-family: 'Times New Roman', Times, serif;
+          color: #475569;
           margin-top: 20px;
         }
         
@@ -234,7 +244,7 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
       ${studentBlockHtml}
 
       <!-- SUBJECTS TABLE -->
-      <table>
+      <table class="upper-results o-level-standard">
         <thead>
           <tr>
             <th>Subjects & Topics Covered</th>
@@ -265,23 +275,23 @@ export function generateTemplate1OLevelHTML(reportData: any, schoolLogoBase64?: 
                 <tr>
                   <td>
                     <strong>${result.subject}</strong>
-                    <div style="font-size: 9pt; line-height: 1.2; margin-top: 2px;">
+                    <div class="standard-topic">
                       ${topic}
                     </div>
                   </td>
                   <td class="center">${activity}</td>
-                  <td class="center">${descriptor}</td>
+                  <td class="center note-cell">${descriptor}</td>
                   <td class="center">${formative}</td>
                   <td class="center">${exam}</td>
                   <td class="center">${finalScore}</td>
-                  <td class="center">${gradeText}</td>
-                  <td style="font-size: 9pt;">${overallRemark}</td>
-                  <td class="center">${teacherInitials}</td>
+                  <td class="center grade-col">${gradeText}</td>
+                  <td class="remark-cell">${overallRemark}</td>
+                  <td class="center note-cell">${teacherInitials}</td>
                 </tr>
               `;
             }).join('') : `
               <tr>
-                <td colspan="9" class="center" style="color: #555;">N/A - Student did not sit for this term</td>
+                <td colspan="9" class="center muted">N/A - Student did not sit for this term</td>
               </tr>
             `
           }
