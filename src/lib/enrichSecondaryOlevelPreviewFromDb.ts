@@ -127,10 +127,12 @@ export async function enrichSecondaryOlevelPreviewReportsFromDb(
 
   const { data: expRows, error } = await supabase
     .from('olevel_student_expected_subjects')
-    .select('student_id, subject_name')
+    .select('student_id, subject_name, offering_sort')
     .eq('school_id', schoolId)
     .in('student_id', uniqueSids)
-    .order('subject_name');
+    .order('student_id', { ascending: true })
+    .order('offering_sort', { ascending: true })
+    .order('subject_name', { ascending: true });
 
   if (error) {
     console.warn('[enrichSecondaryOlevelPreviewFromDb]', error.message);

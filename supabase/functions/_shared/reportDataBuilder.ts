@@ -136,9 +136,8 @@ function normalizeReportSubjectKey(name: string): string {
  * Shown on report rows when a profile subject has no `exam_results` line for this scope.
  * Keep in sync with `src/lib/secondaryOlevelReportCopy.ts`.
  */
-export const OLEVEL_REPORT_MISSING_RESULT_LABEL =
-  'Missing results for this exam. No marks have been entered yet.';
-export const OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL = 'Missing results — no marks entered.';
+export const OLEVEL_REPORT_MISSING_RESULT_LABEL = 'Missing';
+export const OLEVEL_REPORT_MISSING_DESCRIPTOR_LABEL = 'Missing';
 
 function dedupeOlevelSubjectNamesPreserveOrder(names: string[]): string[] {
   const seen = new Set<string>();
@@ -200,14 +199,9 @@ function subjectsForOlevelSeniorBand(
 }
 
 /**
- * Expected O-Level (S1–S4) subject names per student for reports:
- * S1–2 → all `class_subjects` in the same senior band as the learner's class; S3–4 → `student_olevel_subjects`, else same band from `class_subjects`.
- * Pass `current_class` from exam/snapshot when it is the source of truth (can differ from `students.current_class`).
- */
-/**
  * Expected O-Level subjects per student from Postgres view `olevel_student_expected_subjects`
- * (same rules as `olevel_subject_exam_coverage`). Edge preview/final must use this so the card
- * cannot drift from what you verify in SQL.
+ * (compulsory first via offering_sort, then subsidiary). Edge preview/final uses this so the card
+ * matches SQL.
  */
 export async function fetchOlevelExpectedSubjectsByStudentId(
   supabase: SupabaseClient,
@@ -217,10 +211,12 @@ export async function fetchOlevelExpectedSubjectsByStudentId(
   if (!studentIds.length) return {};
   const { data, error } = await supabase
     .from('olevel_student_expected_subjects')
-    .select('student_id, subject_name')
+    .select('student_id, subject_name, offering_sort')
     .eq('school_id', schoolId)
     .in('student_id', studentIds)
-    .order('subject_name');
+    .order('student_id', { ascending: true })
+    .order('offering_sort', { ascending: true })
+    .order('subject_name', { ascending: true });
   if (error) throw new Error(error.message);
   const out: Record<string, string[]> = {};
   for (const row of data || []) {
