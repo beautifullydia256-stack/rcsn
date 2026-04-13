@@ -177,19 +177,56 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
       grid-template-columns: 92px 1fr auto;
       gap: 8px;
       align-items: center;
-      border: 1px solid #000;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
       margin-bottom: 10px;
-      padding: 8px;
+      padding: 8px 10px;
       font-size: 10pt;
+      font-family: 'Times New Roman', Times, serif;
+      background: #ffffff;
+      position: relative;
+      z-index: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
     .id-cell { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-    .id-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-    .id-box { border: 1px solid #000; width: 100%; text-align: center; font-weight: 700; font-size: 14pt; padding: 6px; min-height: 44px; display: flex; align-items: center; justify-content: center; }
-    .italic-note { font-style: italic; }
-    .bold-word { font-weight: 700; font-size: 11pt; }
-    .key-title { text-align: center; font-weight: 700; margin: 12px 0 6px; text-transform: uppercase; font-size: 10pt; }
-    table.key { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 9pt; }
-    table.key th, table.key td { border: 1px solid #000; padding: 4px 6px; }
+    .id-label { font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #1e3a8a; }
+    .id-box {
+      border: 1px solid #bfdbfe;
+      border-radius: 6px;
+      background: #f0f9ff;
+      width: 100%;
+      text-align: center;
+      font-weight: 700;
+      font-size: 14pt;
+      color: #1e3a8a;
+      padding: 6px;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .italic-note { font-style: italic; font-size: 9.2pt; color: #475569; }
+    .bold-word { font-weight: 700; font-size: 11pt; color: #1e3a8a; }
+    table.upper-results.terms-key {
+      margin: 10px 0;
+    }
+    table.upper-results.terms-key thead th {
+      text-align: center;
+    }
+    table.upper-results.terms-key tbody td:first-child {
+      width: 18%;
+      min-width: 4.5em;
+      text-align: center;
+      font-weight: 700;
+      color: #1e3a8a;
+      vertical-align: middle;
+    }
+    table.upper-results.terms-key tbody td:last-child {
+      text-align: left;
+      font-size: 9.2pt;
+      color: #475569;
+    }
     .grades { margin: 10px 0; font-size: 9pt; }
     .grades strong { display: block; margin-bottom: 4px; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
@@ -244,10 +281,10 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     <div class="bold-word">${esc(bandWord)}</div>
   </div>
 
-  <div class="key-title">Key to Terms Used</div>
-  <table class="key">
+  <table class="upper-results terms-key">
+    <thead><tr><th colspan="2">Key to Terms Used</th></tr></thead>
     <tbody>
-      <tr><td style="width:18%">—</td><td>Learner does not do the subject/was absent</td></tr>
+      <tr><td>—</td><td>Learner does not do the subject/was absent</td></tr>
       <tr><td>0.9–1.49</td><td><strong>(Basic):</strong> Few learning outcomes achieved but not sufficient for overall learning achievement</td></tr>
       <tr><td>1.5–2.49</td><td><strong>(Moderate):</strong> Many learning outcomes achieved, enough for overall learning achievement</td></tr>
       <tr><td>2.5–3.00</td><td><strong>(Outstanding):</strong> Most or all learning outcomes achieved</td></tr>
