@@ -15,10 +15,8 @@ import {
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 import {
-  UACE_REPORT_DEFAULT_BANDS,
   formatUaceSavedBandPercentRange,
   uaceGradingSummaryLegendFromBands,
-  uaceGradingSummaryLegendLine,
   type UacePercentBandLike,
 } from '../lib/uaceReportGradingFootnote';
 import { uacePointsFromGrade } from '../lib/uaceGradeBands';
@@ -214,31 +212,14 @@ export function generateTemplate4AlevelHTML(
         .filter((x): x is UacePercentBandLike => x != null)
     : [];
 
-  const gradingLegendLine =
-    savedBands.length > 0 ? uaceGradingSummaryLegendFromBands(savedBands) : uaceGradingSummaryLegendLine();
-  const gradingHeading =
-    savedBands.length > 0 ? 'Grading System (UACE — this class)' : 'Grading System (UACE — default % bands)';
-
-  const gradingBandsNote =
+  const gradingSectionHtml =
     savedBands.length > 0
-      ? 'The table lists the percentage bands stored for this class (same order as the database; first matching range applies). Points follow standard UACE letter weighting. The last column shows only remarks your school saved for that grade, if any — not preset UNEB text.'
-      : 'Descriptors use each class’s A-Level remark text from Grading System when saved; otherwise the defaults below match exam entry. Percent bands follow UNEB-style defaults until your school saves custom bands for this class.';
-
-  const savedBandsTableHtml =
-    savedBands.length > 0
-      ? `
-      <h3>Percentage bands (stored for this class)</h3>
-      <table class="description-table">
-        <thead>
-          <tr>
-            <th>Final %</th>
-            <th>Grade</th>
-            <th>Points</th>
-            <th>School remark (optional)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${savedBands
+      ? (() => {
+          const gradingLegendLine = uaceGradingSummaryLegendFromBands(savedBands);
+          const gradingHeading = 'Grading System (UACE — this class)';
+          const gradingBandsNote =
+            'The table lists the percentage bands stored for this class (same order as the database; first matching range applies). Points follow standard UACE letter weighting. The last column shows only remarks your school saved for that grade, if any.';
+          const bandsRows = savedBands
             .map((b) => {
               const g = String(b.grade || '').trim().toUpperCase();
               const key = g;
@@ -254,39 +235,28 @@ export function generateTemplate4AlevelHTML(
               <td>${escapeHtml(schoolRemark || '—')}</td>
             </tr>`;
             })
-            .join('')}
-        </tbody>
-      </table>`
-      : '';
-
-  const defaultDescriptionRowsHtml = UACE_REPORT_DEFAULT_BANDS.map((row) => {
-    const key = row.grade.toUpperCase();
-    const desc =
-      String(customGradeRemarks[row.grade] || customGradeRemarks[key] || '').trim() ||
-      row.defaultDescriptor;
-    return ` <tr>
-              <td>${escapeHtml(row.grade)}</td>
-              <td>${escapeHtml(row.achievementLevel)}</td>
-              <td>${escapeHtml(desc)}</td>
-            </tr>`;
-  }).join('');
-
-  const defaultBandsTableHtml =
-    savedBands.length === 0
-      ? `
-      <h3>Description</h3>
+            .join('');
+          return `
+    <div class="grading-system">
+      <h3>${escapeHtml(gradingHeading)}</h3>
+      <p class="legend"><strong>${escapeHtml(gradingLegendLine)}</strong></p>
+      <p class="uace-bands-note">${escapeHtml(gradingBandsNote)}</p>
+      <h3>Percentage bands (stored for this class)</h3>
       <table class="description-table">
         <thead>
           <tr>
+            <th>Final %</th>
             <th>Grade</th>
-            <th>Achievement level</th>
-            <th>Descriptor</th>
+            <th>Points</th>
+            <th>School remark (optional)</th>
           </tr>
         </thead>
         <tbody>
-          ${defaultDescriptionRowsHtml}
+          ${bandsRows}
         </tbody>
-      </table>`
+      </table>
+    </div>`;
+        })()
       : '';
 
   return `<!DOCTYPE html>
@@ -485,13 +455,7 @@ export function generateTemplate4AlevelHTML(
 
     ${commentsNextTermHtml}
 
-    <div class="grading-system">
-      <h3>${escapeHtml(gradingHeading)}</h3>
-      <p class="legend"><strong>${escapeHtml(gradingLegendLine)}</strong></p>
-      <p class="uace-bands-note">${escapeHtml(gradingBandsNote)}</p>
-      ${savedBandsTableHtml}
-      ${defaultBandsTableHtml}
-    </div>
+    ${gradingSectionHtml}
   </div>
 </body>
 </html>`;

@@ -30,7 +30,8 @@ describe('template4 A-Level HTML', () => {
     const html = generateTemplate4AlevelHTML(reportData, null, null);
     expect(html).toContain('ACADEMIC REPORT FORM');
     expect(html).toContain('Geography');
-    expect(html).toContain('UACE');
+    expect(html).not.toContain('Achievement level');
+    expect(html).not.toContain('Demonstrates an excellent level of competence');
     expect(html).toContain("Class Teacher's Comment");
     expect(html).toContain('P250/1');
   });
