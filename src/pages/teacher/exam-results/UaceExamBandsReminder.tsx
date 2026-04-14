@@ -32,7 +32,7 @@ export function UaceExamBandsReminder({ variant = "exam" }: { variant?: "exam" |
     <div className={boxClass}>
       <p className={titleClass}>Default UACE-style bands (typical UNEB ranges)</p>
       <p className={bodyClass}>
-        Marks out of 100 are converted to a letter grade using these bands. UNEB may adjust boundaries by year; this is the default for all schools until custom ranges are supported.
+        Marks out of 100 are converted to a letter grade using these bands. UNEB may adjust boundaries by year; new schools use this mapping until a class teacher saves custom ranges in Grading System.
       </p>
       <div className="mt-2 overflow-x-auto">
         <table className="w-full min-w-[280px] border-collapse text-left text-xs">
@@ -55,7 +55,9 @@ export function UaceExamBandsReminder({ variant = "exam" }: { variant?: "exam" |
         </table>
       </div>
       <p className={footClass}>
-        Coming later: schools will be able to edit percentage ranges for A-Level grading to match their policy.
+        {isGrading
+          ? 'To use custom % ranges for your class, set them under Grading System → A-Level UACE bands.'
+          : 'Default bands apply unless your school sets custom ranges in Grading System (per A-Level class).'}
       </p>
     </div>
   );

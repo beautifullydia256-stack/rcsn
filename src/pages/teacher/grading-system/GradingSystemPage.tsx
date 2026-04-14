@@ -25,6 +25,13 @@ import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
 import { supabase } from '@/lib/supabase';
 import { UGANDA_GRADE_SCALE, PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
 import { UaceExamBandsReminder } from '@/pages/teacher/exam-results/UaceExamBandsReminder';
+import { isALevelClass } from '@/components/reports/templates/helpers';
+import {
+  DEFAULT_UACE_PERCENT_BANDS,
+  parseUaceBandsFromDb,
+  uacePointsFromGrade,
+  type UacePercentBand,
+} from '@/lib/uaceGradeBands';
 
 const SECONDARY_GRADE_CODES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -90,6 +97,15 @@ async function fetchClasses(schoolId: string) {
   return (data || []).map((r: { class_name: string }) => r.class_name);
 }
 
+async function fetchUaceGradeBands(schoolId: string) {
+  const { data, error } = await supabase
+    .from('school_class_uace_grade_bands')
+    .select('class_name, bands, updated_at')
+    .eq('school_id', schoolId);
+  if (error) throw error;
+  return (data || []) as { class_name: string; bands: unknown; updated_at?: string }[];
+}
+
 export default function GradingSystemPage() {
   const schoolId = useAuthStore((s) => s.schoolId);
   const userId = useAuthStore((s) => s.user?.id);
@@ -148,7 +164,12 @@ export default function GradingSystemPage() {
     queryClient.invalidateQueries({ queryKey: ['teacher', 'grading-scale-secondary', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'teacher-remarks-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''] });
+    queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId ?? ''] });
   };
+
+  const alevelClassNamesForGrading = (canSeeAll ? classesList : assignedClasses)
+    .filter((c) => isALevelClass(String(c || '').trim()))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 
   const copyDefaultPrimaryScale = useMutation({
     mutationFn: async () => {
@@ -248,7 +269,7 @@ export default function GradingSystemPage() {
       <p className="ac-text-muted">
         {isPrimary
           ? 'Manage your grading scale (D1–F9), Teacher\'s Remarks per subject, and Class Teacher\'s Comments per class. Changes apply to new and updated exam results and reports.'
-          : 'Manage your secondary grading scale (A–E) and Class Teacher\'s Comments per class (report comments from overall average). Each school has its own rows in the database; defaults may be created at setup—edit or add bands here.'}
+          : 'Manage your secondary grading scale (A–E), A-Level (UACE) % → grade bands per class, and Class Teacher\'s Comments per class (report comments from overall average). Each school stores its own settings; new schools start from defaults until you save custom bands.'}
       </p>
 
       {isPrimary && (
@@ -438,9 +459,18 @@ export default function GradingSystemPage() {
                   <h3 className="text-base font-semibold ac-text-primary">A-Level (Senior 5–6): UACE exam bands</h3>
                 </div>
                 <p className="ac-text-muted text-sm mb-4">
-                  Reference for principal papers marked out of 100. This is the default mapping used when saving A-Level exam results.
+                  Principal papers marked out of 100: percentage maps to a letter grade using bands below. Your school can override the UNEB-style defaults per A-Level class; exam entry, reports, and the database use the same bands.
                 </p>
-                <UaceExamBandsReminder variant="grading" />
+                {schoolId ? (
+                  <SecondaryUaceBandsEditor
+                    schoolId={schoolId}
+                    alevelClassNames={alevelClassNamesForGrading}
+                    onSaved={invalidate}
+                  />
+                ) : null}
+                <div className="mt-4">
+                  <UaceExamBandsReminder variant="grading" />
+                </div>
               </div>
             </>
           )}
@@ -461,6 +491,239 @@ export default function GradingSystemPage() {
         />
       )}
     </motion.div>
+  );
+}
+
+function SecondaryUaceBandsEditor({
+  schoolId,
+  alevelClassNames,
+  onSaved,
+}: {
+  schoolId: string;
+  alevelClassNames: string[];
+  onSaved: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [selectedClass, setSelectedClass] = useState('');
+  const [draft, setDraft] = useState<UacePercentBand[]>([]);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['teacher', 'uace-grade-bands', schoolId],
+    queryFn: () => fetchUaceGradeBands(schoolId),
+    enabled: !!schoolId,
+  });
+
+  useEffect(() => {
+    if (!selectedClass && alevelClassNames.length > 0) {
+      setSelectedClass(alevelClassNames[0]);
+    }
+  }, [alevelClassNames, selectedClass]);
+
+  useEffect(() => {
+    if (!selectedClass) return;
+    const row = rows.find((r) => String(r.class_name || '').trim() === selectedClass.trim());
+    const parsed = parseUaceBandsFromDb(row?.bands);
+    const base =
+      parsed && parsed.length > 0 ? parsed : DEFAULT_UACE_PERCENT_BANDS.map((b) => ({ ...b }));
+    setDraft(base.map((b) => ({ ...b })));
+    setLocalError(null);
+  }, [selectedClass, rows]);
+
+  const upsertBands = useMutation({
+    mutationFn: async (bands: UacePercentBand[]) => {
+      const { error } = await supabase.from('school_class_uace_grade_bands').upsert(
+        {
+          school_id: schoolId,
+          class_name: selectedClass.trim(),
+          bands: bands.map((b) => ({
+            grade: String(b.grade || '').trim().toUpperCase(),
+            min_pct: Number(b.min_pct),
+            max_pct: Number(b.max_pct),
+          })),
+        },
+        { onConflict: 'school_id,class_name' },
+      );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId] });
+      onSaved();
+    },
+  });
+
+  const deleteBands = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('school_class_uace_grade_bands')
+        .delete()
+        .eq('school_id', schoolId)
+        .eq('class_name', selectedClass.trim());
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId] });
+      onSaved();
+    },
+  });
+
+  const validateDraft = (): string | null => {
+    if (!selectedClass.trim()) return 'Select a class.';
+    for (const b of draft) {
+      const mn = Number(b.min_pct);
+      const mx = Number(b.max_pct);
+      if (!Number.isFinite(mn) || !Number.isFinite(mx)) return 'Min and max % must be numbers.';
+      if (mn > mx) return `For grade ${b.grade}, min % cannot be greater than max %.`;
+      if (mn < 0 || mx > 100) return 'Keep percentages between 0 and 100.';
+    }
+    return null;
+  };
+
+  const hasCustomRow =
+    !!selectedClass &&
+    rows.some((r) => String(r.class_name || '').trim() === selectedClass.trim());
+
+  if (alevelClassNames.length === 0) {
+    return (
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-3 text-sm ac-text-primary">
+        No A-Level classes found for your account. Add Senior 5–6 (or equivalent) under school classes, and ensure you are assigned to teach at least one A-Level class to edit UACE bands.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-[var(--ac-border)] bg-[var(--ac-card-bg)] px-3 py-4 text-sm ac-text-primary space-y-3">
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs ac-text-muted">A-Level class</span>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="ac-input rounded-lg px-3 py-2 min-w-[160px]"
+          >
+            {alevelClassNames.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="text-xs ac-text-muted pb-2">
+          {hasCustomRow ? 'Using saved bands for this class.' : 'No saved row — showing UNEB-style defaults until you save.'}
+        </span>
+      </div>
+
+      <p className="text-xs ac-text-muted">
+        Bands are checked from top to bottom; the first range that contains the student&apos;s % wins (same as the database). Use high grades first (e.g. A, then B, …).
+      </p>
+
+      {isLoading ? (
+        <div className="flex items-center gap-2 py-2">
+          <Loader2 className="w-5 h-5 animate-spin" /> Loading…
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border border-[var(--ac-border)]">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-[var(--ac-border)] ac-text-muted">
+                  <th className="p-2 font-medium">Min %</th>
+                  <th className="p-2 font-medium">Max %</th>
+                  <th className="p-2 font-medium">Grade</th>
+                  <th className="p-2 font-medium">Points</th>
+                </tr>
+              </thead>
+              <tbody>
+                {draft.map((row, idx) => (
+                  <tr key={`${row.grade}-${idx}`} className="border-b border-[var(--ac-border)] last:border-0">
+                    <td className="p-2">
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="ac-input w-24 rounded px-2 py-1"
+                        value={row.min_pct}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          setDraft((d) => {
+                            const next = [...d];
+                            next[idx] = { ...next[idx], min_pct: Number.isFinite(v) ? v : next[idx].min_pct };
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="ac-input w-24 rounded px-2 py-1"
+                        value={row.max_pct}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          setDraft((d) => {
+                            const next = [...d];
+                            next[idx] = { ...next[idx], max_pct: Number.isFinite(v) ? v : next[idx].max_pct };
+                            return next;
+                          });
+                        }}
+                      />
+                    </td>
+                    <td className="p-2 font-semibold">{row.grade}</td>
+                    <td className="p-2">{uacePointsFromGrade(row.grade)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {localError && <p className="text-sm text-red-600 dark:text-red-400">{localError}</p>}
+          {(upsertBands.error || deleteBands.error) && (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {(upsertBands.error || deleteBands.error) instanceof Error
+                ? (upsertBands.error || deleteBands.error)!.message
+                : 'Could not save. Check that you are assigned to this class or ask an admin.'}
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const err = validateDraft();
+                if (err) {
+                  setLocalError(err);
+                  return;
+                }
+                setLocalError(null);
+                upsertBands.mutate(draft);
+              }}
+              disabled={upsertBands.isPending || !selectedClass}
+              className="px-4 py-2 rounded-lg bg-violet-600 text-white text-sm font-medium hover:bg-violet-700 disabled:opacity-50 flex items-center gap-1"
+            >
+              <Save className="w-4 h-4" />
+              {upsertBands.isPending ? 'Saving…' : 'Save bands for this class'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                if (!hasCustomRow) {
+                  setDraft(DEFAULT_UACE_PERCENT_BANDS.map((b) => ({ ...b })));
+                  setLocalError(null);
+                  return;
+                }
+                if (!window.confirm('Remove custom bands for this class? Exam results will use UNEB-style defaults until you save again.')) return;
+                setLocalError(null);
+                deleteBands.mutate();
+              }}
+              disabled={deleteBands.isPending || !selectedClass}
+              className="px-4 py-2 rounded-lg border border-[var(--ac-border)] ac-text-primary text-sm hover:bg-[var(--ac-border)] disabled:opacity-50"
+            >
+              {hasCustomRow ? 'Reset to defaults (remove custom)' : 'Reset editor to defaults'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

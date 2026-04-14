@@ -76,3 +76,25 @@ export const UACE_REPORT_DEFAULT_BANDS: UaceReportBandRow[] = [
 export function uaceGradingSummaryLegendLine(): string {
   return '80 - A | 70 - B | 60 - C | 50 - D | 45 - E | 40 - O | 0 - F';
 }
+
+export type UacePercentBandLike = { grade: string; min_pct: number; max_pct: number };
+
+function fmtPctBound(n: number): string {
+  if (!Number.isFinite(n)) return '';
+  const r = Math.round(n * 1000) / 1000;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1).replace(/\.0$/, '');
+}
+
+/** Final % column for a row as stored in `school_class_uace_grade_bands.bands` (min–max). */
+export function formatUaceSavedBandPercentRange(b: UacePercentBandLike): string {
+  const lo = fmtPctBound(b.min_pct);
+  const hi = fmtPctBound(b.max_pct);
+  return lo && hi ? `${lo}–${hi}%` : '';
+}
+
+/** Legend from saved bands (same order as stored; first match wins on server). */
+export function uaceGradingSummaryLegendFromBands(bands: UacePercentBandLike[]): string {
+  return bands
+    .map((b) => `${fmtPctBound(b.min_pct)} - ${String(b.grade || '').trim().toUpperCase()}`)
+    .join(' | ');
+}

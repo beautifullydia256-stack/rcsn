@@ -180,6 +180,66 @@ export function expandOlevelClassNamesForSubjectsQuery(names: string[]): string[
   return [...out];
 }
 
+/** Alias labels for A-Level class_name matching (e.g. Senior 5 vs S.5). */
+function expandAlevelClassNamesForBandsQuery(names: string[]): string[] {
+  const out = new Set<string>();
+  const isALevelLabel = (label: string) => /^(senior\s*[56]|s\.?\s*[56])\b/i.test(String(label || '').trim());
+  for (const raw of names || []) {
+    const t = String(raw || '').trim();
+    if (!t) continue;
+    out.add(t);
+    if (!isALevelLabel(t)) continue;
+    const m = t.match(/^senior\s*([56])(?:\s|$)|^s\.?\s*([56])(?:\s|$)/i);
+    const n = m ? parseInt(m[1] || m[2], 10) : null;
+    if (n === 5 || n === 6) {
+      out.add(`Senior ${n}`);
+      out.add(`Senior${n}`);
+      out.add(`S${n}`);
+      out.add(`S.${n}`);
+      out.add(`s${n}`);
+    }
+  }
+  return [...out];
+}
+
+type UacePctBand = { grade: string; min_pct: number; max_pct: number };
+
+function parseUaceBandsJson(b: unknown): UacePctBand[] | null {
+  if (b == null || !Array.isArray(b)) return null;
+  const out: UacePctBand[] = [];
+  for (const el of b) {
+    if (!el || typeof el !== 'object') continue;
+    const o = el as Record<string, unknown>;
+    const grade = String(o.grade ?? '').trim();
+    const min_pct = Number(o.min_pct);
+    const max_pct = Number(o.max_pct);
+    if (!grade || !Number.isFinite(min_pct) || !Number.isFinite(max_pct)) continue;
+    out.push({ grade: grade.toUpperCase(), min_pct, max_pct });
+  }
+  return out.length ? out : null;
+}
+
+function uaceBandsForReportClass(reportCls: string, byKey: Map<string, UacePctBand[]>): UacePctBand[] | undefined {
+  const t = String(reportCls || '').trim();
+  if (!t) return undefined;
+  const candidates = new Set<string>([t, ...expandAlevelClassNamesForBandsQuery([t])]);
+  for (const [key, bands] of byKey) {
+    const k = String(key || '').trim();
+    if (candidates.has(k)) return bands;
+  }
+  for (const [key, bands] of byKey) {
+    const keyCands = new Set<string>([String(key || '').trim(), ...expandAlevelClassNamesForBandsQuery([key])]);
+    for (const c of candidates) {
+      if (keyCands.has(c)) return bands;
+    }
+  }
+  if (byKey.size === 1) {
+    const first = [...byKey.values()][0];
+    if (first?.length) return first;
+  }
+  return undefined;
+}
+
 /**
  * All `class_subjects` rows whose class label matches the same O-Level senior band (e.g. S1 / Senior 1 / Senior 1 Science).
  * Matches `public.olevel_subject_exam_coverage` / `olevel_class_senior_band` semantics so we do not depend on exact UI strings.
@@ -668,6 +728,22 @@ export async function buildReportDataFromScope(
     }
   }
 
+  const uacePercentBandsByClass = new Map<string, UacePctBand[]>();
+  {
+    const { data: allBandRows, error: bandErr } = await supabase
+      .from('school_class_uace_grade_bands')
+      .select('class_name, bands')
+      .eq('school_id', schoolId);
+    if (!bandErr) {
+      for (const row of allBandRows || []) {
+        const r = row as { class_name?: string; bands?: unknown };
+        const cn = String(r.class_name || '').trim();
+        const parsed = parseUaceBandsJson(r.bands);
+        if (cn && parsed?.length) uacePercentBandsByClass.set(cn, parsed);
+      }
+    }
+  }
+
   const allStudentIdsInClass = [...new Set((examResultsRaw || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResultsRaw || []).map((r: { class_name: string }) => r.class_name))];
 
@@ -1143,6 +1219,7 @@ export async function buildReportDataFromScope(
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
     alevelGradeRemarksByClass,
+    uacePercentBandsByClass,
   );
 
   const toReturn = studentIds?.length
@@ -1167,6 +1244,7 @@ export function buildReportDataFromSnapshotRows(
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
+  uacePercentBandsByClass?: Map<string, UacePctBand[]>,
 ): unknown[] {
   return buildReportDataListFromSnapshotRows(
     allSnapshotData,
@@ -1176,6 +1254,7 @@ export function buildReportDataFromSnapshotRows(
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
     alevelGradeRemarksByClass,
+    uacePercentBandsByClass,
   );
 }
 
@@ -1187,6 +1266,7 @@ function buildReportDataListFromSnapshotRows(
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
+  uacePercentBandsByClass?: Map<string, UacePctBand[]>,
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -1205,6 +1285,7 @@ function buildReportDataListFromSnapshotRows(
       expectedOlevelSubjectsByStudentId?.[studentId],
       expectedAlevelSubjectsByStudentId?.[studentId],
       alevelGradeRemarksByClass,
+      uacePercentBandsByClass,
     );
     list.push(reportData);
   }
@@ -1220,6 +1301,7 @@ function oneReportFromSnapshotRows(
   expectedOlevelSubjectNames?: string[],
   expectedAlevelSubjectNames?: string[],
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
+  uacePercentBandsByClass?: Map<string, UacePctBand[]>,
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -1596,6 +1678,11 @@ function oneReportFromSnapshotRows(
     if (gra && Object.keys(gra).length > 0) {
       baseReport.grade_remarks_alevel = gra;
     }
+  }
+  if (isALevelClassName(reportClassName) && uacePercentBandsByClass?.size) {
+    const cls = String(reportClassName || '').trim();
+    const bands = uaceBandsForReportClass(cls, uacePercentBandsByClass);
+    if (bands?.length) baseReport.uace_percent_bands = bands;
   }
   return baseReport;
 }

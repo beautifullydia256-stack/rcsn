@@ -6,6 +6,7 @@
  */
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isALevelClass } from '../components/reports/templates/helpers';
+import { parseUaceBandsFromDb, resolveUaceBandsForClass, type UacePercentBand } from './uaceGradeBands';
 import { calculateDivision } from './reportUtils';
 import { computeOlevelMeanPercentOverExpectedFromResultRows } from './olevelReportAverage';
 import {
@@ -356,6 +357,24 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     ),
   ];
   const prefsByClass = new Map<string, Record<string, string>>();
+  const uaceBandsByClass = new Map<string, UacePercentBand[]>();
+  try {
+    const { data: bandRows, error: bandErr } = await supabase
+      .from('school_class_uace_grade_bands')
+      .select('class_name, bands')
+      .eq('school_id', schoolId);
+    if (!bandErr) {
+      for (const row of bandRows || []) {
+        const rr = row as { class_name?: string; bands?: unknown };
+        const cn = String(rr.class_name || '').trim();
+        const parsed = parseUaceBandsFromDb(rr.bands);
+        if (cn && parsed?.length) uaceBandsByClass.set(cn, parsed);
+      }
+    }
+  } catch (e) {
+    console.warn('[enrichSecondaryAlevelPreviewFromDb] school_class_uace_grade_bands', e);
+  }
+
   const expandedPrefLabels = [...new Set(expandClassNamesForExamQuery(alevelClassLabels))];
   if (expandedPrefLabels.length > 0) {
     try {
@@ -439,11 +458,14 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
       prefGra = [...prefsByClass.values()][0];
     }
 
+    const uaceBands = resolveUaceBandsForClass(classForPrefs, uaceBandsByClass);
+
     const nextInner: Record<string, unknown> = {
       ...rep,
       alevel: nextAlevel,
       students: [{ ...st, results: resultsOut, summary }],
       ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
+      ...(uaceBands?.length ? { uace_percent_bands: uaceBands } : {}),
     };
     return wrapIfNeeded(item, nextInner);
   });

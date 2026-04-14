@@ -1,6 +1,10 @@
 // Utility functions for student report generation
 
 import { studentAttendanceRowIsPresent } from './studentAttendanceRow';
+import type { UacePercentBand } from './uaceGradeBands';
+import { uaceGradeAndPointsFromMarks } from './uaceGradeBands';
+
+export type { UacePercentBand };
 
 function attendanceRowDayMs(a: { date?: string | null; attendance_date?: string | null }): number {
   const raw = a.attendance_date ?? a.date;
@@ -50,22 +54,16 @@ export function calculatePrimaryGrade(marks: number, totalMarks: number): { grad
  * UACE principal subject: percentage (marks / total × 100) → letter + points.
  * Not primary D1–F9. See docs/UACE_ALEVEL_GRADING_LOGIC.md.
  *
- * Must stay in sync with Postgres: public.uace_default_grade_from_percent and
- * public.uace_default_points_from_grade (see migration 20260602120000_uace_default_grade_server_exam_points.sql).
+ * When `customBands` is set (from school_class_uace_grade_bands), must match Postgres
+ * public.uace_grade_from_percent_for_class. Otherwise uses default bands aligned with
+ * uace_default_grade_from_percent.
  */
 export function calculateUacePrincipalGradeFromMarks(
   marks: number,
-  totalMarks: number
+  totalMarks: number,
+  customBands?: UacePercentBand[] | null,
 ): { grade: string; points: number; remark: string } {
-  const denom = totalMarks || 100;
-  const percentage = (marks / denom) * 100;
-  if (percentage >= 80) return { grade: 'A', points: 6, remark: 'Excellent' };
-  if (percentage >= 70) return { grade: 'B', points: 5, remark: 'Very Good' };
-  if (percentage >= 60) return { grade: 'C', points: 4, remark: 'Good' };
-  if (percentage >= 50) return { grade: 'D', points: 3, remark: 'Pass' };
-  if (percentage >= 45) return { grade: 'E', points: 2, remark: 'Minimum pass' };
-  if (percentage >= 40) return { grade: 'O', points: 1, remark: 'Subsidiary pass' };
-  return { grade: 'F', points: 0, remark: 'Fail' };
+  return uaceGradeAndPointsFromMarks(marks, totalMarks, customBands);
 }
 
 export function calculateGrade(marks: number, totalMarks: number): { grade: string; points: number; remark: string } {

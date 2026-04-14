@@ -307,6 +307,29 @@ serve(async (req) => {
         }
       }
 
+      const uacePercentBandsByClass = new Map<string, { grade: string; min_pct: number; max_pct: number }[]>();
+      const { data: uaceBandRows } = await supabase
+        .from('school_class_uace_grade_bands')
+        .select('class_name, bands')
+        .eq('school_id', schoolId);
+      for (const row of uaceBandRows || []) {
+        const r = row as { class_name?: string; bands?: unknown };
+        const cn = String(r.class_name || '').trim();
+        const raw = r.bands;
+        if (!cn || raw == null || !Array.isArray(raw)) continue;
+        const parsed: { grade: string; min_pct: number; max_pct: number }[] = [];
+        for (const el of raw) {
+          if (!el || typeof el !== 'object') continue;
+          const o = el as Record<string, unknown>;
+          const grade = String(o.grade ?? '').trim();
+          const min_pct = Number(o.min_pct);
+          const max_pct = Number(o.max_pct);
+          if (!grade || !Number.isFinite(min_pct) || !Number.isFinite(max_pct)) continue;
+          parsed.push({ grade: grade.toUpperCase(), min_pct, max_pct });
+        }
+        if (parsed.length) uacePercentBandsByClass.set(cn, parsed);
+      }
+
       const reportDataList = buildReportDataFromSnapshotRows(
         snapshotRows,
         (school || {}) as Record<string, unknown>,
@@ -315,6 +338,7 @@ serve(async (req) => {
         expectedOlevelSubjectsByStudentId,
         expectedAlevelSubjectsByStudentId,
         alevelGradeRemarksByClass,
+        uacePercentBandsByClass,
       ) as Record<string, unknown>[];
 
       const toInsert = reportDataList

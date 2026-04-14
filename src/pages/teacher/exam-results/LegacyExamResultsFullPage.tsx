@@ -24,6 +24,7 @@ import { fetchUacePapersForClassSubject, uacePaperSelectOptionValue } from "@/li
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
 import { calculateActivityDescriptor } from "@/lib/secondaryExamScoring";
 import { calculateUacePrincipalGradeFromMarks } from "@/lib/reportUtils";
+import { parseUaceBandsFromDb, type UacePercentBand } from "@/lib/uaceGradeBands";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -145,6 +146,8 @@ export default function LegacyExamResultsFullPage() {
   const [topicFilter, setTopicFilter] = useState<string>("");
   /** UNEB paper line from `school_uace_class_subject_papers`; empty = free-text `topicFilter` only. */
   const [uacePaperOptions, setUacePaperOptions] = useState<SchoolUaceClassSubjectPaperRow[]>([]);
+  /** When set, A-Level % → grade uses school_class_uace_grade_bands for this class (SPA preview matches server). */
+  const [uacePercentBands, setUacePercentBands] = useState<UacePercentBand[] | null>(null);
   const [selectedAlevelPaperCode, setSelectedAlevelPaperCode] = useState<string>("");
   const [teacherInitials, setTeacherInitials] = useState<string>("");
   const [showGradeSettings, setShowGradeSettings] = useState(false);
@@ -888,15 +891,24 @@ export default function LegacyExamResultsFullPage() {
         return { ...next, ...secondary };
       });
 
-      const { data: prefRow, error: prefErr } = await supabase
-        .from("teacher_exam_class_prefs")
-        .select(
-          "o_level_formative_max, auto_remark_enabled, primary_division_settings, grade_remarks_olevel, grade_remarks_alevel"
-        )
-        .eq("school_id", resolvedSchoolId)
-        .eq("class_name", normalizedClassName)
-        .maybeSingle();
+      const [{ data: prefRow, error: prefErr }, { data: uaceBandRow }] = await Promise.all([
+        supabase
+          .from("teacher_exam_class_prefs")
+          .select(
+            "o_level_formative_max, auto_remark_enabled, primary_division_settings, grade_remarks_olevel, grade_remarks_alevel"
+          )
+          .eq("school_id", resolvedSchoolId)
+          .eq("class_name", normalizedClassName)
+          .maybeSingle(),
+        supabase
+          .from("school_class_uace_grade_bands")
+          .select("bands")
+          .eq("school_id", resolvedSchoolId)
+          .eq("class_name", normalizedClassName)
+          .maybeSingle(),
+      ]);
       if (prefErr) throw prefErr;
+      setUacePercentBands(parseUaceBandsFromDb(uaceBandRow?.bands));
 
       if (prefRow) {
         const p = prefRow as Record<string, unknown>;
@@ -948,6 +960,7 @@ export default function LegacyExamResultsFullPage() {
       }
     } catch (e) {
       console.error("loadTeacherExamGradeSettingsFromSupabase", e);
+      setUacePercentBands(null);
     } finally {
       setExamGradeSettingsLoading(false);
     }
@@ -1127,7 +1140,7 @@ export default function LegacyExamResultsFullPage() {
       newMarks.trim() === ''
         ? ''
         : isALevel
-          ? calculateUacePrincipalGradeFromMarks(marksNum, totalMarksNum).grade
+          ? calculateUacePrincipalGradeFromMarks(marksNum, totalMarksNum, uacePercentBands).grade
           : calculatePrimaryGrade(marksNum, totalMarksNum, selectedSubject);
     const currentGradeRemarks = selectedLevel === 'olevel' ? gradeRemarksOLevel : gradeRemarksALevel;
     // Auto remark from settings ranges
@@ -1415,7 +1428,8 @@ export default function LegacyExamResultsFullPage() {
         const saves = entries.map(async ([studentId, data]) => {
           const computedGrade = calculateUacePrincipalGradeFromMarks(
             parseFloat(data.marks),
-            parseFloat(data.totalMarks || '100')
+            parseFloat(data.totalMarks || '100'),
+            uacePercentBands,
           ).grade;
           const currentGradeRemarks = gradeRemarksALevel;
           const computedRemark = autoRemarkEnabled ? (currentGradeRemarks[computedGrade as keyof typeof currentGradeRemarks] || '') : (data.remark || '');
@@ -1591,7 +1605,7 @@ export default function LegacyExamResultsFullPage() {
             const tn = parseFloat(totalStr) || 100;
             const grade =
               marksStr.trim() !== '' && !Number.isNaN(mn)
-                ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+                ? calculateUacePrincipalGradeFromMarks(mn, tn, uacePercentBands).grade
                 : (r.grade || '');
             map[r.student_id] = {
               marks: marksStr,
@@ -1617,7 +1631,7 @@ export default function LegacyExamResultsFullPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, studentsForOlevelExam, isSecondary, isALevel, normalizedClassName, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, studentsForOlevelExam, isSecondary, isALevel, normalizedClassName, isNursery, uacePercentBands]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -1717,7 +1731,7 @@ export default function LegacyExamResultsFullPage() {
           const tn = parseFloat(totalStr) || 100;
           const grade =
             marksStr.trim() !== '' && !Number.isNaN(mn)
-              ? calculateUacePrincipalGradeFromMarks(mn, tn).grade
+              ? calculateUacePrincipalGradeFromMarks(mn, tn, uacePercentBands).grade
               : (r.grade || '');
           map[r.student_id] = {
             marks: marksStr,
