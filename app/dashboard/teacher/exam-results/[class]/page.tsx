@@ -1785,12 +1785,9 @@ export default function TeacherExamResultsClassPage() {
                       {uacePaperOptions.map((p) => {
                         const optVal = uacePaperSelectOptionValue(p);
                         const label = p.paper_label ?? `Paper ${p.paper_slot}`;
-                        const w = Number(p.weight_percent);
-                        const wPart = Number.isFinite(w) ? ` (${w}% of subject)` : "";
                         return (
                           <option key={p.id} value={optVal} className="bg-slate-800">
                             {label}
-                            {wPart}
                           </option>
                         );
                       })}
