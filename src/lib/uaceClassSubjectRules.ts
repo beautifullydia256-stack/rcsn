@@ -6,7 +6,6 @@ export const UACE_SUBSIDIARY_SUBJECT_NAMES = [
   'General Paper',
   'Subsidiary Mathematics',
   'Subsidiary ICT',
-  'Subsidiary Computer Studies',
   'Subsidiary Economics',
 ] as const;
 
