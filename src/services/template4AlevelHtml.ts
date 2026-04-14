@@ -22,6 +22,7 @@ import {
   uaceBandFinalPercentDisplayForReport,
   uacePointsFromGrade,
 } from '../lib/uaceGradeBands';
+import { formatTeacherShortNameForReport } from '../lib/secondarySubjectTeacherDisplay';
 
 export function generateTemplate4AlevelHTML(
   reportData: any,
@@ -81,7 +82,12 @@ export function generateTemplate4AlevelHTML(
             : null,
         gradeDisplay: String(r.grade ?? '—'),
         comment: (r.overall_remark ?? r.remarks ?? r.teacher_comment ?? '') as string,
-        teacherDisplayName: (r.teacher_initials ?? r.teacher_name ?? '') as string,
+        teacherDisplayName: (() => {
+          const raw = String(r.teacher_initials ?? r.teacher_name ?? '').trim();
+          if (!raw) return '';
+          if (raw.includes(' ')) return formatTeacherShortNameForReport(raw);
+          return raw;
+        })(),
       }));
 
   const rowHtml = tableRows

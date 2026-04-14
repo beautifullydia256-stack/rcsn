@@ -202,6 +202,92 @@ function expandAlevelClassNamesForBandsQuery(names: string[]): string[] {
   return [...out];
 }
 
+export type TeacherClassSubjectAssignmentRow = {
+  class_name: string;
+  subject: string;
+  assignment_role: string;
+  teacher_name: string;
+};
+
+/** A-Level report Teacher column: “Firstname L”. Keep in sync with `src/lib/secondarySubjectTeacherDisplay.ts`. */
+function formatTeacherShortNameForReport(raw: string): string {
+  const s = String(raw ?? '')
+    .trim()
+    .replace(/\s+/g, ' ');
+  if (!s) return '';
+  const parts = s.split(' ').filter(Boolean);
+  const cap = (w: string) =>
+    w.length === 0 ? '' : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+  if (parts.length === 1) return cap(parts[0]!);
+  return `${cap(parts[0]!)} ${parts[parts.length - 1]!.charAt(0).toUpperCase()}`;
+}
+
+function expandClassNameAliasesForTeacherLookup(raw: string): Set<string> {
+  const out = new Set<string>();
+  const t = String(raw || '').trim();
+  if (!t) return out;
+  out.add(t);
+  const m = t.match(/^senior\s*([1-6])(?:\s|$)|^s\.?\s*([1-6])(?:\s|$)/i);
+  if (!m) return out;
+  const n = parseInt(m[1] || m[2], 10);
+  if (!Number.isFinite(n)) return out;
+  out.add(`Senior ${n}`);
+  out.add(`Senior${n}`);
+  out.add(`S${n}`);
+  out.add(`S.${n}`);
+  out.add(`s${n}`);
+  return out;
+}
+
+function resolveSubjectTeacherShortNameFromAssignments(
+  assignments: TeacherClassSubjectAssignmentRow[],
+  studentClass: string,
+  rowSubject: string,
+): string | null {
+  const subKey = normalizeReportSubjectKey(String(rowSubject ?? ''));
+  if (!subKey) return null;
+  const classCandidates = expandClassNameAliasesForTeacherLookup(String(studentClass || '').trim());
+  const matches = (r: TeacherClassSubjectAssignmentRow) =>
+    normalizeReportSubjectKey(r.subject) === subKey &&
+    classCandidates.has(String(r.class_name || '').trim());
+  const primary = assignments.find((r) => r.assignment_role === 'subject_teacher' && matches(r));
+  const pn = primary?.teacher_name?.trim();
+  if (pn) return formatTeacherShortNameForReport(pn);
+  const anyRow = assignments.find((r) => matches(r));
+  const an = anyRow?.teacher_name?.trim();
+  if (an) return formatTeacherShortNameForReport(an);
+  return null;
+}
+
+export async function fetchTeacherClassSubjectAssignmentsForSchool(
+  supabase: SupabaseClient,
+  schoolId: string,
+): Promise<TeacherClassSubjectAssignmentRow[]> {
+  const { data: tcsRows, error: tcsErr } = await supabase
+    .from('teacher_class_subjects')
+    .select('class_name, subject, assignment_role, teacher_id')
+    .eq('school_id', schoolId);
+  if (tcsErr || !tcsRows?.length) return [];
+  const ids = [...new Set(tcsRows.map((r: { teacher_id: string }) => r.teacher_id).filter(Boolean))];
+  const { data: teacherNameRows } = ids.length
+    ? await supabase.from('teachers').select('teacher_id, name').in('teacher_id', ids)
+    : { data: [] as { teacher_id: string; name?: string }[] };
+  const nameById = new Map(
+    (teacherNameRows || []).map((t: { teacher_id: string; name?: string }) => [
+      t.teacher_id,
+      String(t.name || '').trim(),
+    ]),
+  );
+  return (tcsRows as { class_name?: string; subject?: string; assignment_role?: string; teacher_id: string }[])
+    .map((r) => ({
+      class_name: String(r.class_name || '').trim(),
+      subject: String(r.subject || '').trim(),
+      assignment_role: String(r.assignment_role || 'subject_teacher'),
+      teacher_name: nameById.get(r.teacher_id) || '',
+    }))
+    .filter((r) => r.class_name && r.subject && r.teacher_name);
+}
+
 type UacePctBand = { grade: string; min_pct: number; max_pct: number };
 
 function parseUaceBandsJson(b: unknown): UacePctBand[] | null {
@@ -376,6 +462,7 @@ function mergeOlevelReportResultsWithExpectedSubjects(
   results: OlevelReportResultRow[],
   expectedOrdered: string[],
   examSetName: string,
+  placeholderClassName?: string,
 ): OlevelReportResultRow[] {
   if (!expectedOrdered.length) return results;
   const byKey = new Map<string, OlevelReportResultRow[]>();
@@ -415,6 +502,7 @@ function mergeOlevelReportResultsWithExpectedSubjects(
       continuous_c2: undefined,
       c1: undefined,
       c2: undefined,
+      class_name: placeholderClassName,
       result_missing_placeholder: true,
     };
   };
@@ -743,6 +831,8 @@ export async function buildReportDataFromScope(
       }
     }
   }
+
+  const teacherClassSubjectAssignments = await fetchTeacherClassSubjectAssignmentsForSchool(supabase, schoolId);
 
   const allStudentIdsInClass = [...new Set((examResultsRaw || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResultsRaw || []).map((r: { class_name: string }) => r.class_name))];
@@ -1220,6 +1310,7 @@ export async function buildReportDataFromScope(
     expectedAlevelSubjectsByStudentId,
     alevelGradeRemarksByClass,
     uacePercentBandsByClass,
+    teacherClassSubjectAssignments,
   );
 
   const toReturn = studentIds?.length
@@ -1245,6 +1336,7 @@ export function buildReportDataFromSnapshotRows(
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
+  teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
 ): unknown[] {
   return buildReportDataListFromSnapshotRows(
     allSnapshotData,
@@ -1255,6 +1347,7 @@ export function buildReportDataFromSnapshotRows(
     expectedAlevelSubjectsByStudentId,
     alevelGradeRemarksByClass,
     uacePercentBandsByClass,
+    teacherClassSubjectAssignments,
   );
 }
 
@@ -1267,6 +1360,7 @@ function buildReportDataListFromSnapshotRows(
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
+  teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -1286,6 +1380,7 @@ function buildReportDataListFromSnapshotRows(
       expectedAlevelSubjectsByStudentId?.[studentId],
       alevelGradeRemarksByClass,
       uacePercentBandsByClass,
+      teacherClassSubjectAssignments,
     );
     list.push(reportData);
   }
@@ -1302,6 +1397,7 @@ function oneReportFromSnapshotRows(
   expectedAlevelSubjectNames?: string[],
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
+  teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -1346,6 +1442,7 @@ function oneReportFromSnapshotRows(
     return {
       subject: d.subject,
       topic: d.topic ?? '',
+      class_name: d.class_name ?? reportClassName,
       marks_obtained: d.marks_obtained,
       total_marks: d.total_marks,
       grade: gradeDisplay,
@@ -1381,6 +1478,7 @@ function oneReportFromSnapshotRows(
       results,
       expectedOlevelSubjectNames,
       examSetName,
+      reportClassName,
     );
   } else if (
     isALevelClassName(reportClassName) &&
@@ -1391,6 +1489,7 @@ function oneReportFromSnapshotRows(
       results,
       expectedAlevelSubjectNames,
       examSetName,
+      reportClassName,
     );
   }
 
@@ -1525,6 +1624,7 @@ function oneReportFromSnapshotRows(
 
   let alevel: { paperRows?: Array<Record<string, unknown>> } | undefined;
   if (isALevelClassName(reportClassName)) {
+    const assign = teacherClassSubjectAssignments ?? [];
     const paperRows = resultsOut
       .filter((row) => String(row.subject ?? '').trim())
       .map((row) => {
@@ -1535,6 +1635,14 @@ function oneReportFromSnapshotRows(
         const remark = String(
           (r.overall_remark ?? r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '') as string,
         ).trim();
+        const cls = String(r.class_name ?? reportClassName ?? '').trim();
+        const subj = String(r.subject ?? '');
+        const fromRoster =
+          assign.length > 0 && cls
+            ? resolveSubjectTeacherShortNameFromAssignments(assign, cls, subj)
+            : null;
+        const initialsRaw = (r.teacher_initials as string | null | undefined)?.trim();
+        const teacherDisplayName = fromRoster ?? (initialsRaw || null);
         return {
           subjectLabel: String(r.subject ?? ''),
           paperCode: String(
@@ -1546,7 +1654,7 @@ function oneReportFromSnapshotRows(
             missing || mo == null || !Number.isFinite(mo) || tm <= 0 ? null : (mo / tm) * 100,
           gradeDisplay: missing ? '—' : String(r.grade ?? '—'),
           comment: remark,
-          teacherDisplayName: (r.teacher_initials as string | null | undefined) ?? null,
+          teacherDisplayName,
         };
       });
     if (paperRows.length) alevel = { paperRows };

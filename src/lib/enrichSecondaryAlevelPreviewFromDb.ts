@@ -13,6 +13,11 @@ import {
   OLEVEL_MISSING_RESULTS_DESCRIPTOR,
   OLEVEL_MISSING_RESULTS_REMARK,
 } from './secondaryOlevelReportCopy';
+import {
+  fetchTeacherClassSubjectAssignments,
+  resolveSubjectTeacherShortName,
+  type TeacherClassSubjectAssignment,
+} from './secondarySubjectTeacherDisplay';
 
 type ResultRow = Record<string, unknown>;
 
@@ -92,6 +97,7 @@ function mergeResultsWithExpectedOrdered(
   results: ResultRow[],
   expectedOrdered: string[],
   examSetName: string,
+  placeholderClassName?: string,
 ): ResultRow[] {
   if (!expectedOrdered.length) return results;
   const byKey = new Map<string, ResultRow[]>();
@@ -129,6 +135,7 @@ function mergeResultsWithExpectedOrdered(
     continuous_c2: undefined,
     c1: undefined,
     c2: undefined,
+    class_name: placeholderClassName,
     result_missing_placeholder: true,
   });
   for (const subj of expectedOrdered) {
@@ -172,6 +179,7 @@ function examResultRowToAlevelResultRow(
     teacher_remark: overallOut,
     overall_remark: overallOut,
     remark: overallOut,
+    class_name: row.class_name != null ? String(row.class_name) : undefined,
     final_score: finalScore ?? mo ?? null,
     nursery_skill_performance: undefined,
     activity_score: row.activity_score,
@@ -187,7 +195,14 @@ function examResultRowToAlevelResultRow(
   };
 }
 
-function buildAlevelPaperRowsFromResults(resultsOut: ResultRow[]): Array<Record<string, unknown>> {
+function buildAlevelPaperRowsFromResults(
+  resultsOut: ResultRow[],
+  opts?: {
+    defaultClassName?: string;
+    teacherAssignments?: TeacherClassSubjectAssignment[];
+  },
+): Array<Record<string, unknown>> {
+  const assignments = opts?.teacherAssignments ?? [];
   return resultsOut
     .filter((row) => String(row.subject ?? '').trim())
     .map((row) => {
@@ -200,6 +215,14 @@ function buildAlevelPaperRowsFromResults(resultsOut: ResultRow[]): Array<Record<
       const pc = row.paper_code != null ? String(row.paper_code).trim() : '';
       const pn = row.paper_number != null ? String(row.paper_number).trim() : '';
       const paperBits = pc || pn;
+      const cls = String(row.class_name ?? opts?.defaultClassName ?? '').trim();
+      const subj = String(row.subject ?? '');
+      const fromRoster =
+        assignments.length > 0 && cls
+          ? resolveSubjectTeacherShortName(assignments, cls, subj)
+          : null;
+      const initials = row.teacher_initials != null ? String(row.teacher_initials).trim() : '';
+      const teacherDisplayName = fromRoster ?? (initials || null);
       return {
         subjectLabel: String(row.subject ?? ''),
         paperCode: String(missing ? '—' : paperBits ? paperBits : '—'),
@@ -207,7 +230,7 @@ function buildAlevelPaperRowsFromResults(resultsOut: ResultRow[]): Array<Record<
           missing || mo == null || !Number.isFinite(mo) || tm <= 0 ? null : (mo / tm) * 100,
         gradeDisplay: missing ? '—' : String(row.grade ?? '—'),
         comment: remark,
-        teacherDisplayName: (row.teacher_initials as string | null | undefined) ?? null,
+        teacherDisplayName,
       };
     });
 }
@@ -327,6 +350,13 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     return reports;
   }
 
+  let teacherAssignments: TeacherClassSubjectAssignment[] = [];
+  try {
+    teacherAssignments = await fetchTeacherClassSubjectAssignments(supabase, schoolId);
+  } catch (e) {
+    console.warn('[enrichSecondaryAlevelPreviewFromDb] teacher_class_subjects fetch failed', e);
+  }
+
   let expectedByStudent: Record<string, string[]> = {};
   try {
     expectedByStudent = await fetchAlevelExpectedSubjectsByStudentId(supabase, schoolId, uniqueSids);
@@ -443,7 +473,7 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const examSetName = String(examSet?.name ?? displayExamSetName);
     const resultsOut =
       expected.length > 0
-        ? mergeResultsWithExpectedOrdered(fromRpc, expected, examSetName)
+        ? mergeResultsWithExpectedOrdered(fromRpc, expected, examSetName, classForPrefs)
         : fromRpc;
 
     const recalc =
@@ -461,7 +491,10 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
           }
         : prevSummary;
 
-    const paperRows = buildAlevelPaperRowsFromResults(resultsOut);
+    const paperRows = buildAlevelPaperRowsFromResults(resultsOut, {
+      defaultClassName: classForPrefs,
+      teacherAssignments,
+    });
     const prevAlevel = (rep.alevel as Record<string, unknown> | undefined) ?? {};
     const nextAlevel =
       paperRows.length > 0 ? { ...prevAlevel, paperRows } : { ...prevAlevel, paperRows: [] };

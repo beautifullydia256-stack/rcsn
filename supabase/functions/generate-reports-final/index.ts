@@ -10,6 +10,7 @@ import {
   buildReportDataFromSnapshotRows,
   fetchAlevelExpectedSubjectsByStudentId,
   fetchOlevelExpectedSubjectsByStudentId,
+  fetchTeacherClassSubjectAssignmentsForSchool,
   expandOlevelClassNamesForSubjectsQuery,
   type BuildReportPayload,
   type SnapshotRowForPersist,
@@ -330,6 +331,11 @@ serve(async (req) => {
         if (parsed.length) uacePercentBandsByClass.set(cn, parsed);
       }
 
+      const teacherClassSubjectAssignments = await fetchTeacherClassSubjectAssignmentsForSchool(
+        supabase,
+        schoolId,
+      );
+
       const reportDataList = buildReportDataFromSnapshotRows(
         snapshotRows,
         (school || {}) as Record<string, unknown>,
@@ -339,6 +345,7 @@ serve(async (req) => {
         expectedAlevelSubjectsByStudentId,
         alevelGradeRemarksByClass,
         uacePercentBandsByClass,
+        teacherClassSubjectAssignments,
       ) as Record<string, unknown>[];
 
       const toInsert = reportDataList
