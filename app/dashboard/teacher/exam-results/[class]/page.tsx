@@ -2003,15 +2003,6 @@ export default function TeacherExamResultsClassPage() {
                 </table>
                 </>
               ) : (
-                <>
-                {selectedSubject.trim() &&
-                  students.length > 0 &&
-                  studentsForOlevelExam.length < students.length &&
-                  Object.values(olevelSubjectsByStudent).some((l) => l.length > 0) && (
-                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                    Showing {studentsForOlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UCE programme. Set subjects on each learner in Admin → Students → academic standing.
-                  </div>
-                )}
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -2060,7 +2051,6 @@ export default function TeacherExamResultsClassPage() {
                     })}
                   </tbody>
                 </table>
-                </>
               )}
             </div>
             
