@@ -113,6 +113,11 @@ export function buildSecondaryShapedStudent(reportData: {
       ...comments,
       head_teacher_text: comments.head_teacher_text ?? comments.headteacher_text ?? '',
       class_teacher_text: comments.class_teacher_text ?? comments.class_teacher_comment ?? '',
+      head_teacher_name:
+        (comments as { head_teacher_name?: string }).head_teacher_name ??
+        (comments as { headteacher_name?: string }).headteacher_name ??
+        '',
+      class_teacher_name: (comments as { class_teacher_name?: string }).class_teacher_name ?? '',
     },
     feesBalance: raw.fees?.balance ?? raw.feesBalance ?? 0,
   };

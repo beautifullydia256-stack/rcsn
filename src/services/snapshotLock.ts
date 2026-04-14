@@ -104,6 +104,16 @@ export async function createSnapshotFromExamSet(
   if (classNamesFromResults.length > 0) {
     commentSettingsQuery = commentSettingsQuery.in('class_name', classNamesFromResults);
   }
+  let classTeachersForSnapshotNamesQuery = supabase
+    .from('class_teachers')
+    .select('class_name, teachers(name)')
+    .eq('school_id', schoolId);
+  if (classNamesFromResults.length > 0) {
+    classTeachersForSnapshotNamesQuery = classTeachersForSnapshotNamesQuery.in(
+      'class_name',
+      classNamesFromResults,
+    );
+  }
   const [
     { data: students },
     { data: attendanceData },
@@ -113,6 +123,8 @@ export async function createSnapshotFromExamSet(
     { data: schoolInfo },
     { data: commentSettings },
     { data: headteacherSettingsRows },
+    { data: classTeachersForSnapshotNames },
+    { data: headTeacherUserForSnapshot },
   ] = await Promise.all([
     supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', studentIds),
@@ -122,7 +134,25 @@ export async function createSnapshotFromExamSet(
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
     commentSettingsQuery,
     supabase.from('headteacher_comments_settings').select('*').eq('school_id', schoolId),
+    classTeachersForSnapshotNamesQuery,
+    supabase.from('users').select('name').eq('school_id', schoolId).eq('role', 'head_teacher').limit(1).maybeSingle(),
   ]);
+
+  const classTeacherDisplayNameByClass: Record<string, string> = {};
+  for (const row of classTeachersForSnapshotNames || []) {
+    const r = row as { class_name?: string; teachers?: { name?: string } | { name?: string }[] | null };
+    const cn = String(r.class_name || '').trim();
+    if (!cn) continue;
+    const t = r.teachers;
+    let nm = '';
+    if (Array.isArray(t) && t[0]?.name != null) nm = String(t[0].name).trim();
+    else if (t && typeof t === 'object' && !Array.isArray(t) && 'name' in t)
+      nm = String((t as { name?: string }).name || '').trim();
+    if (nm) classTeacherDisplayNameByClass[cn] = nm;
+  }
+  const headTeacherDisplayNameForSnapshot = String(
+    (headTeacherUserForSnapshot as { name?: string } | null)?.name || '',
+  ).trim();
   const classTeacherCommentSettings = commentSettings;
   const headTeacherCommentSettings = headteacherSettingsRows;
 
@@ -305,9 +335,10 @@ export async function createSnapshotFromExamSet(
     const fromDb = processedByStudent[result.student_id];
     const division = fromDb?.division ?? calculateDivision(average);
 
+    const snapClassName = result.class_name || student?.current_class || '';
     snapshotData.push({
       student_id: result.student_id,
-      class_name: result.class_name || student?.current_class || '',
+      class_name: snapClassName,
       subject: result.subject,
       marks_obtained: Number(result.marks_obtained || 0),
       total_marks: Number(result.total_marks || 100),
@@ -344,7 +375,9 @@ export async function createSnapshotFromExamSet(
         school_phone: schoolInfo?.phone || schoolInfo?.contact_phone || '',
         school_email: schoolInfo?.email || schoolInfo?.contact_email || '',
         school_motto: schoolInfo?.motto || '',
-        total_students_in_class: Object.keys(studentResultsByClass[result.class_name] || {}).length,
+        total_students_in_class: Object.keys(studentResultsByClass[snapClassName] || {}).length,
+        class_teacher_name: classTeacherDisplayNameByClass[String(snapClassName).trim()] || '',
+        head_teacher_name: headTeacherDisplayNameForSnapshot,
         ...(attendance
           ? {
               present_days: attendance.presentDays,

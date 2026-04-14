@@ -623,6 +623,13 @@ export async function buildReportDataFromScope(
   if (classNamesFromResults.length > 0) {
     commentSettingsQuery = commentSettingsQuery.in('class_name', classNamesFromResults);
   }
+  let classTeachersForReportNamesQuery = supabase
+    .from('class_teachers')
+    .select('class_name, teachers(name)')
+    .eq('school_id', schoolId);
+  if (classNamesFromResults.length > 0) {
+    classTeachersForReportNamesQuery = classTeachersForReportNamesQuery.in('class_name', classNamesFromResults);
+  }
   const [
     { data: processedRows },
     { data: students },
@@ -633,6 +640,8 @@ export async function buildReportDataFromScope(
     { data: commentSettings },
     { data: headteacherCommentSettings },
     { data: reportCommentsRows },
+    { data: classTeachersForReportNames },
+    { data: headTeacherUserForReport },
   ] = await Promise.all([
     supabase
       .from('processed_primary_exam_results')
@@ -654,7 +663,25 @@ export async function buildReportDataFromScope(
       .eq('term', term)
       .eq('year', year)
       .in('student_id', allStudentIdsInClass),
+    classTeachersForReportNamesQuery,
+    supabase.from('users').select('name').eq('school_id', schoolId).eq('role', 'head_teacher').limit(1).maybeSingle(),
   ]);
+
+  const classTeacherDisplayNameByClass: Record<string, string> = {};
+  for (const row of classTeachersForReportNames || []) {
+    const r = row as { class_name?: string; teachers?: { name?: string } | { name?: string }[] | null };
+    const cn = String(r.class_name || '').trim();
+    if (!cn) continue;
+    const t = r.teachers;
+    let nm = '';
+    if (Array.isArray(t) && t[0]?.name != null) nm = String(t[0].name).trim();
+    else if (t && typeof t === 'object' && !Array.isArray(t) && 'name' in t)
+      nm = String((t as { name?: string }).name || '').trim();
+    if (nm) classTeacherDisplayNameByClass[cn] = nm;
+  }
+  const headTeacherDisplayNameForReport = String(
+    (headTeacherUserForReport as { name?: string } | null)?.name || '',
+  ).trim();
 
   const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
   (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number }) => {
@@ -977,6 +1004,8 @@ export async function buildReportDataFromScope(
         school_subtitle: (schoolInfo as { subtitle?: string })?.subtitle ?? '',
         school_pobox: (schoolInfo as { pobox?: string })?.pobox ?? '',
         report_date: new Date().toISOString().slice(0, 10),
+        class_teacher_name: classTeacherDisplayNameByClass[className] || '',
+        head_teacher_name: headTeacherDisplayNameForReport,
       },
       nursery_skill_performance: (() => {
         const raw = (result as { nursery_skill_performance?: unknown }).nursery_skill_performance;
@@ -1350,6 +1379,8 @@ function oneReportFromSnapshotRows(
           class_teacher_text: firstRecord.class_teacher_comment || '',
           headteacher_text: firstRecord.headteacher_comment || '',
           head_teacher_text: firstRecord.headteacher_comment || '',
+          class_teacher_name: String(frozen.class_teacher_name || ''),
+          head_teacher_name: String(frozen.head_teacher_name || ''),
         },
         summary: {
           totalMarks: summaryRows.reduce(

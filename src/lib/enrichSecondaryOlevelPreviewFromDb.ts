@@ -173,6 +173,46 @@ async function resolveSecondaryCommentsForPreviewAverage(
   }
 }
 
+/** Class teacher from `class_teachers` → `teachers`; head teacher from `users` role head_teacher. */
+async function fetchReportSignatureTeacherNames(
+  supabase: SupabaseClient,
+  schoolId: string,
+  className: string,
+): Promise<{ class_teacher_name: string; head_teacher_name: string }> {
+  const cn = String(className || '').trim();
+  try {
+    const [ctRes, htRes] = await Promise.all([
+      cn
+        ? supabase
+            .from('class_teachers')
+            .select('teachers(name)')
+            .eq('school_id', schoolId)
+            .eq('class_name', cn)
+            .maybeSingle()
+        : Promise.resolve({ data: null as { teachers?: { name?: string } | { name?: string }[] } | null }),
+      supabase
+        .from('users')
+        .select('name')
+        .eq('school_id', schoolId)
+        .eq('role', 'head_teacher')
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    let classTeacherName = '';
+    const ctRow = ctRes.data as { teachers?: { name?: string } | { name?: string }[] | null } | null;
+    if (ctRow?.teachers) {
+      const t = ctRow.teachers;
+      if (Array.isArray(t) && t[0]?.name != null) classTeacherName = String(t[0].name).trim();
+      else if (t && typeof t === 'object' && 'name' in t)
+        classTeacherName = String((t as { name?: string }).name || '').trim();
+    }
+    const headName = String((htRes.data as { name?: string } | null)?.name || '').trim();
+    return { class_teacher_name: classTeacherName, head_teacher_name: headName };
+  } catch {
+    return { class_teacher_name: '', head_teacher_name: '' };
+  }
+}
+
 export async function enrichSecondaryOlevelPreviewReportsFromDb(
   supabase: SupabaseClient,
   schoolId: string,
@@ -285,6 +325,16 @@ export async function enrichSecondaryOlevelPreviewReportsFromDb(
           headteacher_comment: resolved.head_teacher_text,
         };
       }
+
+      const currentClassForNames = String(st.current_class ?? '');
+      const sigNames = await fetchReportSignatureTeacherNames(supabase, schoolId, currentClassForNames);
+      nextComments = {
+        ...nextComments,
+        class_teacher_name:
+          sigNames.class_teacher_name || String(nextComments.class_teacher_name || '').trim(),
+        head_teacher_name:
+          sigNames.head_teacher_name || String(nextComments.head_teacher_name || '').trim(),
+      };
 
       const nextInner = {
         ...rep,
