@@ -1,5 +1,5 @@
 /**
- * A-Level (template4) HTML — multi-paper subject table + optional `reportData.alevel` stats/charts.
+ * A-Level (template4) HTML — subject marks table + optional `reportData.alevel` stats/charts.
  * Visual target: Gangu-style academic report (cream paper, teal/cyan bands, green table header)
  * per docs/SECONDARY_REPORT_CARD_TEMPLATES_PLAN.md §3 A-1. Preview/PDF via `renderTemplateHTML`.
  */
@@ -88,7 +88,6 @@ export function generateTemplate4AlevelHTML(
       (row) => `
           <tr>
             <td>${escapeHtml(row.subjectLabel)}</td>
-            <td class="tc mono">${escapeHtml(row.paperCode)}</td>
             <td class="tc">${row.marksPercent != null && !Number.isNaN(row.marksPercent) ? `${Math.round(row.marksPercent)}%` : '—'}</td>
             <td class="tc">${escapeHtml(row.gradeDisplay)}</td>
             <td class="comment">${escapeHtml(row.comment ?? '')}</td>
@@ -348,7 +347,6 @@ export function generateTemplate4AlevelHTML(
     }
     table.marks td.tc { text-align: center; }
     table.marks td.comment { font-size: 8pt; line-height: 1.25; }
-    table.marks td.mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .uace-exam-bands-block {
       margin-top: 10px;
@@ -419,7 +417,6 @@ export function generateTemplate4AlevelHTML(
       <thead>
         <tr>
           <th>Subjects</th>
-          <th>Paper</th>
           <th>Marks</th>
           <th>Grade</th>
           <th>Comment</th>
@@ -427,7 +424,7 @@ export function generateTemplate4AlevelHTML(
         </tr>
       </thead>
       <tbody>
-        ${rowHtml || '<tr><td colspan="6" class="tc">No results</td></tr>'}
+        ${rowHtml || '<tr><td colspan="5" class="tc">No results</td></tr>'}
       </tbody>
     </table>
 

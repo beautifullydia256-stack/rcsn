@@ -37,6 +37,6 @@ describe('template4 A-Level HTML', () => {
     expect(html).not.toContain('Achievement level');
     expect(html).not.toContain('Demonstrates an excellent level of competence');
     expect(html).toContain("Class Teacher's Comment");
-    expect(html).toContain('P250/1');
+    expect(html).not.toContain('<th>Paper</th>');
   });
 });
