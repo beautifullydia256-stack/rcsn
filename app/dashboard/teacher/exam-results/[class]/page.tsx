@@ -989,7 +989,8 @@ export default function TeacherExamResultsClassPage() {
         return;
       }
 
-        if (!isSecondary) {
+        // A-Level (S5–6) is not O-Level secondary; exclude it from nursery/primary marks path.
+        if (!isSecondary && !isALevel) {
           if (isNursery) {
           const dirtyStudentIds = Object.keys(nurseryDirtyStudents).filter(Boolean);
         const studentsToPersist = dirtyStudentIds.length > 0
