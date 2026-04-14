@@ -18,6 +18,7 @@ import { resolveTeacherIdForSchool } from "@/lib/resolveTeacherId";
 import { getSectionForClass } from "@/templates/primary";
 import { isALevelClass, isOLevelClass } from "@/components/reports/templates/helpers";
 import { studentsVisibleForAlevelExam } from "@/lib/studentAlevelExamFilter";
+import { studentsVisibleForOlevelExam } from "@/lib/studentOlevelExamFilter";
 import type { SchoolUaceClassSubjectPaperRow } from "@/lib/uaceClassSubjectPapers";
 import { fetchUacePapersForClassSubject } from "@/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
@@ -88,6 +89,7 @@ export default function LegacyExamResultsFullPage() {
   const [examSets, setExamSets] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [alevelSubjectsByStudent, setAlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
+  const [olevelSubjectsByStudent, setOlevelSubjectsByStudent] = useState<Record<string, string[]>>({});
   const [teacherSubjects, setTeacherSubjects] = useState<string[]>([]);
   const displaySubjects = useMemo(() => {
     if (!lockedSubject) return teacherSubjects;
@@ -264,6 +266,11 @@ export default function LegacyExamResultsFullPage() {
   const studentsForAlevelExam = useMemo(
     () => studentsVisibleForAlevelExam(isALevel, selectedSubject, students, alevelSubjectsByStudent),
     [isALevel, selectedSubject, students, alevelSubjectsByStudent],
+  );
+
+  const studentsForOlevelExam = useMemo(
+    () => studentsVisibleForOlevelExam(isSecondary, selectedSubject, students, olevelSubjectsByStudent),
+    [isSecondary, selectedSubject, students, olevelSubjectsByStudent],
   );
 
   useEffect(() => {
@@ -539,6 +546,23 @@ export default function LegacyExamResultsFullPage() {
           setAlevelSubjectsByStudent({});
         }
 
+        if (isSecondary && (studentsData?.length ?? 0) > 0) {
+          const ids = studentsData.map((s: { student_id: string }) => s.student_id);
+          const { data: orows } = await supabase
+            .from("student_olevel_subjects")
+            .select("student_id, subject_name")
+            .in("student_id", ids);
+          const omap: Record<string, string[]> = {};
+          for (const row of orows || []) {
+            const sid = row.student_id as string;
+            if (!omap[sid]) omap[sid] = [];
+            omap[sid].push(row.subject_name as string);
+          }
+          setOlevelSubjectsByStudent(omap);
+        } else {
+          setOlevelSubjectsByStudent({});
+        }
+
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(`Failed to load data: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -548,7 +572,7 @@ export default function LegacyExamResultsFullPage() {
     };
 
     fetchData();
-  }, [normalizedClassName, className, navigate, isNursery, isALevel]);
+  }, [normalizedClassName, className, navigate, isNursery, isALevel, isSecondary]);
 
   useEffect(() => {
     if (lockedSubject) setSelectedSubject(lockedSubject);
@@ -1425,9 +1449,11 @@ export default function LegacyExamResultsFullPage() {
           return;
         }
 
+        const allowedOlevelIds = new Set(studentsForOlevelExam.map((s) => s.student_id));
         // Build and filter valid rows (at least one numeric > 0 or non-empty text)
         const entries = Object.entries(examResultsSecondary)
           .map(([studentId, data]) => ({ studentId, data }))
+          .filter(({ studentId }) => allowedOlevelIds.has(studentId))
           .filter(({ data }) => {
             const a = parseFloat(data.activityScore);
             const f = parseFloat(data.formative);
@@ -1524,7 +1550,11 @@ export default function LegacyExamResultsFullPage() {
   useEffect(() => {
     const prefill = async () => {
       if (isNursery) return;
-      const rosterForPrefill = isALevel ? studentsForAlevelExam : students;
+      const rosterForPrefill = isALevel
+        ? studentsForAlevelExam
+        : isSecondary
+          ? studentsForOlevelExam
+          : students;
       if (!resolvedSchoolId || !resolvedTeacherId || !selectedExamSet || !selectedSubject || rosterForPrefill.length === 0) return;
       try {
         const { data, error } = await supabase
@@ -1576,7 +1606,7 @@ export default function LegacyExamResultsFullPage() {
       } catch {}
     };
     prefill();
-  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, isSecondary, isALevel, normalizedClassName, isNursery]);
+  }, [resolvedSchoolId, resolvedTeacherId, selectedExamSet, selectedSubject, selectedAlevelPaperCode, topicFilter, students, studentsForAlevelExam, studentsForOlevelExam, isSecondary, isALevel, normalizedClassName, isNursery]);
 
   // Allow manual refresh of saved results after save
   const reloadSavedResults = async () => {
@@ -2310,6 +2340,15 @@ export default function LegacyExamResultsFullPage() {
                 </table>
                 </>
               ) : (
+                <>
+                {selectedSubject.trim() &&
+                  students.length > 0 &&
+                  studentsForOlevelExam.length < students.length &&
+                  Object.values(olevelSubjectsByStudent).some((l) => l.length > 0) && (
+                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                    Showing {studentsForOlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UCE programme. Set subjects on each learner in Admin → Students → academic standing.
+                  </div>
+                )}
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -2326,7 +2365,7 @@ export default function LegacyExamResultsFullPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/10">
-                    {students.map(student => {
+                    {studentsForOlevelExam.map(student => {
                       const row = examResultsSecondary[student.student_id] || { topic: topicFilter || '', activityScore: '', descriptor: '', formative: '', exam: '', final: '', grade: '', remark: '', initials: teacherInitials };
                       const missed = row.descriptor === 'Missed';
                       return (
@@ -2358,6 +2397,7 @@ export default function LegacyExamResultsFullPage() {
                     })}
                   </tbody>
                 </table>
+                </>
               )}
             </div>
             
