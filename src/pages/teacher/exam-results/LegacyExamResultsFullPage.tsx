@@ -20,7 +20,7 @@ import { isALevelClass, isOLevelClass } from "@/components/reports/templates/hel
 import { studentsVisibleForAlevelExam } from "@/lib/studentAlevelExamFilter";
 import { studentsVisibleForOlevelExam } from "@/lib/studentOlevelExamFilter";
 import type { SchoolUaceClassSubjectPaperRow } from "@/lib/uaceClassSubjectPapers";
-import { fetchUacePapersForClassSubject } from "@/lib/uaceClassSubjectPapers";
+import { fetchUacePapersForClassSubject, uacePaperSelectOptionValue } from "@/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
 import { calculateActivityDescriptor } from "@/lib/secondaryExamScoring";
 import { calculateUacePrincipalGradeFromMarks } from "@/lib/reportUtils";
@@ -294,6 +294,16 @@ export default function LegacyExamResultsFullPage() {
       cancelled = true;
     };
   }, [isALevel, resolvedSchoolId, normalizedClassName, selectedSubject]);
+
+  const alevelPaperSelectValue = useMemo(() => {
+    const code = selectedAlevelPaperCode.trim();
+    if (code && uacePaperOptions.some((p) => (p.paper_code ?? "").trim() === code)) return code;
+    const t = topicFilter.trim();
+    const row = uacePaperOptions.find(
+      (p) => !(p.paper_code ?? "").trim() && (p.paper_label ?? "").trim() === t
+    );
+    return row ? uacePaperSelectOptionValue(row) : "";
+  }, [selectedAlevelPaperCode, topicFilter, uacePaperOptions]);
 
   useEffect(() => {
     if (isNursery) {
@@ -2092,22 +2102,38 @@ export default function LegacyExamResultsFullPage() {
                   <label className="block text-white/80 text-sm mb-2">UNEB paper (school config)</label>
                   {uacePaperOptions.length > 0 ? (
                     <select
-                      value={selectedAlevelPaperCode}
+                      value={alevelPaperSelectValue}
                       onChange={(e) => {
                         const v = e.target.value;
+                        if (!v) {
+                          setSelectedAlevelPaperCode("");
+                          return;
+                        }
+                        if (v.startsWith(":")) {
+                          const id = v.slice(1);
+                          const row = uacePaperOptions.find((p) => p.id === id);
+                          setSelectedAlevelPaperCode("");
+                          setTopicFilter(row?.paper_label ?? "");
+                          return;
+                        }
                         setSelectedAlevelPaperCode(v);
-                        const row = uacePaperOptions.find((p) => p.paper_code === v);
+                        const row = uacePaperOptions.find((p) => (p.paper_code ?? "").trim() === v);
                         if (row?.paper_label) setTopicFilter(row.paper_label);
                       }}
                       className="w-full rounded-lg border border-white/10 bg-white/10 text-white px-3 py-2"
                     >
                       <option value="">— Optional label only (no official code) —</option>
-                      {uacePaperOptions.map((p) => (
-                        <option key={p.id} value={p.paper_code} className="bg-slate-800">
-                          {p.paper_code}
-                          {p.paper_label ? ` — ${p.paper_label}` : ''}
-                        </option>
-                      ))}
+                      {uacePaperOptions.map((p) => {
+                        const optVal = uacePaperSelectOptionValue(p);
+                        const codePart = (p.paper_code ?? "").trim() || "—";
+                        const labelPart = p.paper_label ? ` — ${p.paper_label}` : "";
+                        return (
+                          <option key={p.id} value={optVal} className="bg-slate-800">
+                            {codePart}
+                            {labelPart}
+                          </option>
+                        );
+                      })}
                     </select>
                   ) : (
                     <p className="text-white/60 text-xs">

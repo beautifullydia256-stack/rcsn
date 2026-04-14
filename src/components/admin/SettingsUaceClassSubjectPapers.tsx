@@ -35,8 +35,7 @@ export default function SettingsUaceClassSubjectPapers({
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [paperCode, setPaperCode] = useState('');
-  const [paperLabel, setPaperLabel] = useState('');
-  /** Paper 1 / 2 / 3 — saved as `paper_label` when the text label is empty (logic can evolve). */
+  /** Paper 1 / 2 / 3 — stored as `paper_label`. */
   const [paperSlot, setPaperSlot] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -139,8 +138,9 @@ export default function SettingsUaceClassSubjectPapers({
     setError(null);
     if (!schoolId || !selectedSubject.trim()) return;
     const code = paperCode.trim();
-    if (!code) {
-      setError('Paper code is required (e.g. P250/1).');
+    const slot = paperSlot.trim();
+    if (!code && !slot) {
+      setError('Enter a UNEB paper code and/or select Paper 1, 2, or 3.');
       return;
     }
     setSaving(true);
@@ -148,8 +148,8 @@ export default function SettingsUaceClassSubjectPapers({
       school_id: schoolId,
       class_name: UACE_PAPERS_STORAGE_CLASS,
       subject_name: selectedSubject.trim(),
-      paper_code: code,
-      paper_label: paperLabel.trim() || paperSlot.trim() || null,
+      paper_code: code || null,
+      paper_label: slot || null,
       sort_order: 0,
       teacher_id: null,
     };
@@ -160,7 +160,6 @@ export default function SettingsUaceClassSubjectPapers({
       return;
     }
     setPaperCode('');
-    setPaperLabel('');
     setPaperSlot('');
     void loadPapers();
   };
@@ -250,7 +249,7 @@ export default function SettingsUaceClassSubjectPapers({
           </select>
         </div>
         <div>
-          <label className={labelClass}>Paper code (UNEB)</label>
+          <label className={labelClass}>Paper code (UNEB, optional)</label>
           <input
             value={paperCode}
             onChange={(e) => setPaperCode(e.target.value)}
@@ -259,21 +258,14 @@ export default function SettingsUaceClassSubjectPapers({
           />
         </div>
         <div>
-          <label className={labelClass}>Label (optional)</label>
-          <input
-            value={paperLabel}
-            onChange={(e) => setPaperLabel(e.target.value)}
-            placeholder="Paper 1"
-            className={inputClass}
-          />
-          <label className={`${labelClass} mt-3`}>Paper</label>
+          <label className={labelClass}>Paper</label>
           <select
             value={paperSlot}
             onChange={(e) => setPaperSlot(e.target.value)}
             className={inputClass}
             aria-label="Paper number"
           >
-            <option value="">Select Paper 1,2, or 3</option>
+            <option value="">Select Paper 1, 2, or 3</option>
             {UACE_PAPER_SLOT_OPTIONS.map((p) => (
               <option key={p} value={p} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
                 {p}
@@ -338,7 +330,7 @@ export default function SettingsUaceClassSubjectPapers({
                         : 'ac-text-primary border-b border-[var(--pw-border)]'
                     }
                   >
-                    <td className="p-2 font-medium">{r.paper_code}</td>
+                    <td className="p-2 font-medium">{r.paper_code?.trim() ? r.paper_code : '—'}</td>
                     <td className="p-2">{r.paper_label ?? '—'}</td>
                     <td className="p-2">
                       <button

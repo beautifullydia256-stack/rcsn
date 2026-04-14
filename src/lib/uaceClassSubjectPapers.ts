@@ -6,11 +6,17 @@ export type SchoolUaceClassSubjectPaperRow = {
   school_id: string;
   class_name: string;
   subject_name: string;
-  paper_code: string;
+  paper_code: string | null;
   paper_label: string | null;
   sort_order: number;
   teacher_id: string | null;
 };
+
+/** `<select>` value: real UNEB code, or `:${row.id}` when code is absent (unique per row). */
+export function uacePaperSelectOptionValue(p: SchoolUaceClassSubjectPaperRow): string {
+  const c = (p.paper_code ?? '').trim();
+  return c ? c : `:${p.id}`;
+}
 
 /** Single bucket for configured UACE papers (Senior 5 & 6 share subjects). Legacy rows may use Senior 5 / Senior 6. */
 export const UACE_PAPERS_STORAGE_CLASS = 'A-Level';
@@ -52,16 +58,22 @@ export async function fetchUacePapersForClassSubject(
     if (cn === 'Senior 6') return 2;
     return 3;
   };
+  const codeKey = (r: SchoolUaceClassSubjectPaperRow) => (r.paper_code ?? '').trim();
   const sorted = [...rows].sort((a, b) => {
     const dr = rank(a.class_name) - rank(b.class_name);
     if (dr !== 0) return dr;
-    return a.paper_code.localeCompare(b.paper_code);
+    return codeKey(a).localeCompare(codeKey(b));
   });
-  const byCode = new Map<string, SchoolUaceClassSubjectPaperRow>();
+  const byDedupe = new Map<string, SchoolUaceClassSubjectPaperRow>();
   for (const r of sorted) {
-    if (!byCode.has(r.paper_code)) byCode.set(r.paper_code, r);
+    const ck = codeKey(r);
+    const key = ck ? `code:${ck}` : `id:${r.id}`;
+    if (!byDedupe.has(key)) byDedupe.set(key, r);
   }
-  return Array.from(byCode.values()).sort(
-    (a, b) => a.sort_order - b.sort_order || a.paper_code.localeCompare(b.paper_code),
+  return Array.from(byDedupe.values()).sort(
+    (a, b) =>
+      a.sort_order - b.sort_order ||
+      codeKey(a).localeCompare(codeKey(b)) ||
+      (a.paper_label ?? '').localeCompare(b.paper_label ?? ''),
   );
 }

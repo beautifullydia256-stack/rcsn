@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import {
+  adminSettingsSchoolRowQueryKey,
+  ADMIN_SETTINGS_SCHOOL_ROW_STALE_MS,
+  fetchAdminSettingsSchoolRow,
+} from '@/lib/adminSettingsSchoolContext';
+import { useAuthStore } from '@/store/authStore';
 import { adminCardClass } from '@/components/layout/AdminPageWrapper';
 import SettingsSubjectsPerClass from './tabs/SettingsSubjectsPerClass';
 import SettingsTeacherSubjectClass from './tabs/SettingsTeacherSubjectClass';
@@ -37,66 +44,79 @@ function useIsMd() {
   return isMd;
 }
 
+function classOptionsFromSchoolType(type: string | null | undefined): string[] {
+  if (type === 'Nursery/Primary') {
+    const opts: string[] = ['Baby Class', 'Middle Class', 'Top Class'];
+    for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
+    return opts;
+  }
+  if (type === 'Secondary') {
+    const opts: string[] = [];
+    for (let i = 1; i <= 6; i++) opts.push(`Senior ${i}`);
+    return opts;
+  }
+  return [];
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { section } = useParams<{ section?: string }>();
   const isMd = useIsMd();
 
-  const [schoolType, setSchoolType] = useState<'Nursery/Primary' | 'Secondary' | null>(null);
-  const [schoolId, setSchoolId] = useState<string | null>(null);
-  const [classOptions, setClassOptions] = useState<string[]>([]);
-  const [schoolProfile, setSchoolProfile] = useState<{
-    name: string;
-    logoUrl: string | null;
-    subtitle: string | null;
-  } | null>(null);
+  const schoolIdFromStore = useAuthStore((s) => s.schoolId);
+  const user = useAuthStore((s) => s.user);
+  const setSchoolIdStore = useAuthStore((s) => s.setSchoolId);
 
+  const effectiveSchoolId =
+    schoolIdFromStore ?? (user?.user_metadata?.school_id as string | undefined) ?? null;
+
+  /** If the session store has not rehydrated yet (rare), resolve once — same source as ProtectedRoute. */
   useEffect(() => {
-    const run = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data } = await supabase
-        .from('users')
-        .select('school_id')
-        .eq('user_id', user.id)
-        .single();
-      if (!data?.school_id) return;
-      setSchoolId(data.school_id);
-      const { data: sch } = await supabase
-        .from('schools')
-        .select('type, name, logo_url, subtitle')
-        .eq('school_id', data.school_id)
-        .single();
-      if (sch) {
-        const row = sch as {
-          type?: string;
-          name?: string;
-          logo_url?: string | null;
-          subtitle?: string | null;
-        };
-        setSchoolProfile({
-          name: row.name?.trim() || 'Your school',
-          logoUrl: row.logo_url || null,
-          subtitle: row.subtitle?.trim() || null,
-        });
+    if (effectiveSchoolId) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const {
+          data: { user: u },
+        } = await supabase.auth.getUser();
+        if (cancelled || !u) return;
+        const { data } = await supabase.from('users').select('school_id').eq('user_id', u.id).maybeSingle();
+        const sid = data?.school_id;
+        if (sid) setSchoolIdStore(sid);
+      } catch {
+        /* ignore */
       }
-      if (sch?.type) {
-        setSchoolType(sch.type as 'Nursery/Primary' | 'Secondary');
-        const opts: string[] = [];
-        if (sch.type === 'Nursery/Primary') {
-          opts.push('Baby Class', 'Middle Class', 'Top Class');
-          for (let i = 1; i <= 7; i++) opts.push(`Primary ${i}`);
-        } else if (sch.type === 'Secondary') {
-          for (let i = 1; i <= 6; i++) opts.push(`Senior ${i}`);
-        }
-        setClassOptions(opts);
-      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    run();
-  }, []);
+  }, [effectiveSchoolId, setSchoolIdStore]);
+
+  const { data: schRow } = useQuery({
+    queryKey: adminSettingsSchoolRowQueryKey(effectiveSchoolId ?? ''),
+    queryFn: () => fetchAdminSettingsSchoolRow(effectiveSchoolId!),
+    enabled: !!effectiveSchoolId,
+    staleTime: ADMIN_SETTINGS_SCHOOL_ROW_STALE_MS,
+  });
+
+  const schoolId = effectiveSchoolId;
+
+  const schoolProfile = useMemo(() => {
+    if (!schRow) return null;
+    return {
+      name: schRow.name?.trim() || 'Your school',
+      logoUrl: schRow.logo_url || null,
+      subtitle: schRow.subtitle?.trim() || null,
+    };
+  }, [schRow]);
+
+  const schoolType =
+    schRow?.type === 'Nursery/Primary' || schRow?.type === 'Secondary'
+      ? schRow.type
+      : null;
+
+  const classOptions = useMemo(() => classOptionsFromSchoolType(schoolType), [schoolType]);
 
   useEffect(() => {
     if (section && !isSettingsTabKey(section)) {

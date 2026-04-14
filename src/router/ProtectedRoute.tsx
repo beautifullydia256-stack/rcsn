@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { queryClient } from '../lib/queryClient';
+import {
+  adminSettingsSchoolRowQueryKey,
+  ADMIN_SETTINGS_SCHOOL_ROW_STALE_MS,
+  fetchAdminSettingsSchoolRow,
+} from '../lib/adminSettingsSchoolContext';
 import { markChatPresenceOffline } from '../lib/schoolChatApi';
 import { useAuthStore } from '../store/authStore';
 import { userMustChangePassword } from '../lib/postAuthRedirect';
@@ -48,6 +54,13 @@ export default function ProtectedRoute() {
           setUser(session.user);
           setRole(userData.role);
           setSchoolId(userData.school_id); // Set schoolId in store
+          if (userData.school_id) {
+            void queryClient.prefetchQuery({
+              queryKey: adminSettingsSchoolRowQueryKey(userData.school_id),
+              queryFn: () => fetchAdminSettingsSchoolRow(userData.school_id as string),
+              staleTime: ADMIN_SETTINGS_SCHOOL_ROW_STALE_MS,
+            });
+          }
           if (userData.school_id && String(userData.role).toLowerCase() === 'admin') {
             initPweza(userData.school_id, session.user.id); // pweza speed system
           }
