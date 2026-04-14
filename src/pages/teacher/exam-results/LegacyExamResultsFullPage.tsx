@@ -24,7 +24,6 @@ import { fetchUacePapersForClassSubject } from "@/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
 import { calculateActivityDescriptor } from "@/lib/secondaryExamScoring";
 import { calculateUacePrincipalGradeFromMarks } from "@/lib/reportUtils";
-import { UaceExamBandsReminder } from "@/pages/teacher/exam-results/UaceExamBandsReminder";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -2301,7 +2300,6 @@ export default function LegacyExamResultsFullPage() {
                     Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile.
                   </div>
                 )}
-                <UaceExamBandsReminder />
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>

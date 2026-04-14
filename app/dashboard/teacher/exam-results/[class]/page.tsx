@@ -25,7 +25,6 @@ import type { SchoolUaceClassSubjectPaperRow } from "@/src/lib/uaceClassSubjectP
 import { fetchUacePapersForClassSubject } from "@/src/lib/uaceClassSubjectPapers";
 import { matchesAlevelExamPaperLine } from "@/src/lib/alevelExamPaperLine";
 import { calculateUacePrincipalGradeFromMarks } from "@/src/lib/reportUtils";
-import { UaceExamBandsReminder } from "@/src/pages/teacher/exam-results/UaceExamBandsReminder";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -1964,7 +1963,6 @@ export default function TeacherExamResultsClassPage() {
                     Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile. Set combinations on each student in Admin → Students.
                   </div>
                 )}
-                <UaceExamBandsReminder />
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>

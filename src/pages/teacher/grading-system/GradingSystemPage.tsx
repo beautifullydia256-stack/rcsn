@@ -24,6 +24,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
 import { supabase } from '@/lib/supabase';
 import { UGANDA_GRADE_SCALE, PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
+import { UaceExamBandsReminder } from '@/pages/teacher/exam-results/UaceExamBandsReminder';
 
 const SECONDARY_GRADE_CODES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -429,6 +430,17 @@ export default function GradingSystemPage() {
               <div className="mt-4 p-3 rounded-lg bg-[var(--ac-card-bg)] border border-[var(--ac-border)]">
                 <p className="ac-text-muted text-xs font-medium uppercase tracking-wide mb-1">Divisions (by average)</p>
                 <p className="ac-text-primary text-sm">Division 1: 80%+ · Division 2: 60–79% · Division 3: 40–59% · Division 4: 20–39% · Ungraded: below 20%</p>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-[var(--ac-border)]">
+                <div className="flex items-center gap-2 mb-2">
+                  <GraduationCap className="w-6 h-6 text-violet-400" />
+                  <h3 className="text-base font-semibold ac-text-primary">A-Level (Senior 5–6): UACE exam bands</h3>
+                </div>
+                <p className="ac-text-muted text-sm mb-4">
+                  Reference for principal papers marked out of 100. This is the default mapping used when saving A-Level exam results.
+                </p>
+                <UaceExamBandsReminder variant="grading" />
               </div>
             </>
           )}
