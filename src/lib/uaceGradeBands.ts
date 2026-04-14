@@ -30,6 +30,43 @@ const UACE_REMARKS: Record<string, string> = {
   F: 'Fail',
 };
 
+/** Final % labels matching the Grading System / UaceExamBandsReminder table when the band matches defaults. */
+const DEFAULT_UACE_FINAL_PCT_LABELS: Record<string, string> = {
+  A: '80–100%',
+  B: '70–79%',
+  C: '60–69%',
+  D: '50–59%',
+  E: '45–49%',
+  O: '40–44%',
+  F: 'Below 40%',
+};
+
+function formatUaceMinMaxRangeForReport(min_pct: number, max_pct: number): string {
+  if (!Number.isFinite(min_pct) || !Number.isFinite(max_pct)) return '';
+  if (max_pct < 40 && min_pct <= 0.001) return 'Below 40%';
+  const rlo = Math.round(min_pct * 1000) / 1000;
+  const rhi = Math.round(max_pct * 1000) / 1000;
+  const fmt = (n: number) =>
+    Number.isInteger(n) ? String(Math.round(n)) : n.toFixed(2).replace(/\.?0+$/, '');
+  return `${fmt(rlo)}–${fmt(rhi)}%`;
+}
+
+/**
+ * Final % cell for A-Level report PDF — same wording as the teacher Grading System reference when * the row matches `DEFAULT_UACE_PERCENT_BANDS`; otherwise the school’s stored min–max.
+ */
+export function uaceBandFinalPercentDisplayForReport(b: UacePercentBand): string {
+  const g = String(b.grade || '').trim().toUpperCase();
+  const defRow = DEFAULT_UACE_PERCENT_BANDS.find((d) => d.grade === g);
+  if (
+    defRow &&
+    Math.abs(Number(b.min_pct) - defRow.min_pct) < 0.02 &&
+    Math.abs(Number(b.max_pct) - defRow.max_pct) < 0.02
+  ) {
+    return DEFAULT_UACE_FINAL_PCT_LABELS[g] ?? formatUaceMinMaxRangeForReport(b.min_pct, b.max_pct);
+  }
+  return formatUaceMinMaxRangeForReport(b.min_pct, b.max_pct);
+}
+
 export function uacePointsFromGrade(grade: string): number {
   const g = String(grade || '').trim().toUpperCase();
   switch (g) {

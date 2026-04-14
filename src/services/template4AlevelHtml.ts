@@ -14,12 +14,12 @@ import {
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
 } from './secondaryLowerSectionHeaderHtml';
+import type { UacePercentBandLike } from '../lib/uaceReportGradingFootnote';
 import {
-  formatUaceSavedBandPercentRange,
-  uaceGradingSummaryLegendFromBands,
-  type UacePercentBandLike,
-} from '../lib/uaceReportGradingFootnote';
-import { uacePointsFromGrade } from '../lib/uaceGradeBands';
+  DEFAULT_UACE_PERCENT_BANDS,
+  uaceBandFinalPercentDisplayForReport,
+  uacePointsFromGrade,
+} from '../lib/uaceGradeBands';
 
 export function generateTemplate4AlevelHTML(
   reportData: any,
@@ -195,8 +195,6 @@ export function generateTemplate4AlevelHTML(
     feesBalanceDisplay: formatSecondaryFeesBalanceForReport(student),
   });
 
-  const customGradeRemarks = (reportData?.grade_remarks_alevel || {}) as Record<string, string>;
-
   const savedBandsRaw = reportData?.uace_percent_bands;
   const savedBands: UacePercentBandLike[] = Array.isArray(savedBandsRaw)
     ? (savedBandsRaw as unknown[])
@@ -212,52 +210,58 @@ export function generateTemplate4AlevelHTML(
         .filter((x): x is UacePercentBandLike => x != null)
     : [];
 
-  const gradingSectionHtml =
-    savedBands.length > 0
-      ? (() => {
-          const gradingLegendLine = uaceGradingSummaryLegendFromBands(savedBands);
-          const gradingHeading = 'Grading System (UACE — this class)';
-          const gradingBandsNote =
-            'The table lists the percentage bands stored for this class (same order as the database; first matching range applies). Points follow standard UACE letter weighting. The last column shows only remarks your school saved for that grade, if any.';
-          const bandsRows = savedBands
-            .map((b) => {
-              const g = String(b.grade || '').trim().toUpperCase();
-              const key = g;
-              const schoolRemark = String(
-                customGradeRemarks[g] || customGradeRemarks[b.grade] || customGradeRemarks[key] || '',
-              ).trim();
-              const pct = formatUaceSavedBandPercentRange(b);
-              const pts = uacePointsFromGrade(g);
-              return `<tr>
+  const displayBands: UacePercentBandLike[] =
+    savedBands.length > 0 ? savedBands : DEFAULT_UACE_PERCENT_BANDS.map((b) => ({ ...b }));
+  const usingSchoolBands = savedBands.length > 0;
+
+  const bandsRowsHtml = displayBands
+    .map((b) => {
+      const g = String(b.grade || '').trim().toUpperCase();
+      const pct = uaceBandFinalPercentDisplayForReport({
+        grade: g,
+        min_pct: b.min_pct,
+        max_pct: b.max_pct,
+      });
+      const pts = uacePointsFromGrade(g);
+      return `<tr>
               <td>${escapeHtml(pct)}</td>
-              <td>${escapeHtml(g)}</td>
-              <td style="text-align:center">${escapeHtml(String(pts))}</td>
-              <td>${escapeHtml(schoolRemark || '—')}</td>
+              <td class="col-grade">${escapeHtml(g)}</td>
+              <td class="col-points">${escapeHtml(String(pts))}</td>
             </tr>`;
-            })
-            .join('');
-          return `
-    <div class="grading-system">
-      <h3>${escapeHtml(gradingHeading)}</h3>
-      <p class="legend"><strong>${escapeHtml(gradingLegendLine)}</strong></p>
-      <p class="uace-bands-note">${escapeHtml(gradingBandsNote)}</p>
-      <h3>Percentage bands (stored for this class)</h3>
-      <table class="description-table">
-        <thead>
-          <tr>
-            <th>Final %</th>
-            <th>Grade</th>
-            <th>Points</th>
-            <th>School remark (optional)</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${bandsRows}
-        </tbody>
-      </table>
+    })
+    .join('');
+
+  const innerTitle = usingSchoolBands
+    ? (classLine.trim() || 'This class')
+    : 'Default UACE-style bands (typical UNEB ranges)';
+  const innerBody = usingSchoolBands
+    ? 'Marks out of 100 are converted to a letter grade using these bands.'
+    : 'Marks out of 100 are converted to a letter grade using these bands. UNEB may adjust boundaries by year; new schools use this mapping until a class teacher saves custom ranges in Grading System.';
+
+  const gradingSectionHtml = `
+    <div class="uace-exam-bands-block">
+      <div class="uace-section-heading">
+        <span class="uace-section-icon" aria-hidden="true">&#127891;</span>
+        <span class="uace-section-title">A-Level (Senior 5–6): UACE exam bands</span>
+      </div>
+      <p class="uace-section-sub">Reference for principal papers marked out of 100. This is the default mapping used when saving A-Level exam results.</p>
+      <div class="uace-bands-card">
+        <p class="uace-bands-card-title">${escapeHtml(innerTitle)}</p>
+        <p class="uace-bands-card-body">${escapeHtml(innerBody)}</p>
+        <table class="uace-bands-table">
+          <thead>
+            <tr>
+              <th>Final %</th>
+              <th>Grade</th>
+              <th>Points</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bandsRowsHtml}
+          </tbody>
+        </table>
+      </div>
     </div>`;
-        })()
-      : '';
 
   return `<!DOCTYPE html>
 <html>
@@ -363,50 +367,69 @@ export function generateTemplate4AlevelHTML(
     table.marks td.comment { font-size: 8pt; line-height: 1.25; }
     table.marks td.mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
-    .grading-system {
+    .uace-exam-bands-block {
+      margin-top: 10px;
       margin-bottom: 12px;
       font-family: 'Times New Roman', Times, serif;
     }
-    .grading-system h3 {
+    .uace-section-heading {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+    .uace-section-icon { font-size: 12pt; line-height: 1; }
+    .uace-section-title {
       font-size: 11pt;
       font-weight: 700;
-      margin-bottom: 5px;
       color: #1e3a8a;
     }
-    .grading-system p.legend {
-      font-size: 10pt;
-      font-weight: 700;
-      margin-bottom: 8px;
-      color: #0f172a;
-    }
-    .grading-system .uace-bands-note {
-      font-size: 8.5pt;
+    .uace-section-sub {
+      font-size: 9pt;
       color: #475569;
+      margin: 0 0 10px;
+      line-height: 1.35;
+    }
+    .uace-bands-card {
+      border: 1px solid #00897b;
+      background: #f0fdfa;
+      padding: 10px 12px;
+      border-radius: 2px;
+    }
+    .uace-bands-card-title {
+      font-size: 9.5pt;
+      font-weight: 600;
+      color: #006064;
+      margin: 0 0 6px;
+    }
+    .uace-bands-card-body {
+      font-size: 8.5pt;
+      color: #37474f;
       margin: 0 0 8px;
+      line-height: 1.35;
     }
-    .grading-system .description-table {
-      border-collapse: collapse;
+    .uace-bands-table {
       width: 100%;
-      font-size: 9.8pt;
+      border-collapse: collapse;
+      font-size: 9pt;
     }
-    .grading-system .description-table th,
-    .grading-system .description-table td {
-      border: 1px solid #bfdbfe;
-      padding: 4px 6px;
+    .uace-bands-table th,
+    .uace-bands-table td {
+      border: 1px solid #90cbc4;
+      padding: 4px 8px;
+      text-align: left;
       vertical-align: top;
     }
-    .grading-system .description-table thead th {
-      background: #dbeafe;
-      color: #1e3a8a;
-      text-transform: uppercase;
+    .uace-bands-table thead th {
+      background: #e0f2f1;
+      color: #004d40;
       font-weight: 600;
     }
-    .grading-system .description-table tbody td {
-      background: #ffffff;
+    .uace-bands-table tbody tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.75);
     }
-    .grading-system .description-table tbody tr:nth-child(even) td {
-      background: #f0f9ff;
-    }
+    .uace-bands-table td.col-grade { font-weight: 700; }
+    .uace-bands-table td.col-points { text-align: center; }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
