@@ -1,7 +1,7 @@
 /**
  * Teacher Grading System page.
  * - Primary (Nursery/Primary): grading scale (D1–F9) + Teacher's Remarks + Class Teacher's Comments. Full CRUD.
- * - Secondary: grading scale (A–E) + Class Teacher's Comments (same DB as primary: class_teacher_comments_settings).
+ * - Secondary: A-Level (UACE) % → grade bands per class + Class Teacher's Comments (same DB as primary: class_teacher_comments_settings).
  * Primary teachers never see secondary scale; secondary teachers never see primary-only remarks settings.
  */
 import { useState, useEffect } from 'react';
@@ -23,7 +23,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useTeacherContext } from '@/pages/teacher/useTeacherContext';
 import { supabase } from '@/lib/supabase';
-import { UGANDA_GRADE_SCALE, PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
+import { PRIMARY_GRADE_SCALE } from '@/lib/reportUtils';
 import { UaceExamBandsReminder } from '@/pages/teacher/exam-results/UaceExamBandsReminder';
 import { isALevelClass } from '@/components/reports/templates/helpers';
 import {
@@ -56,18 +56,6 @@ async function fetchPrimaryGradingScale(schoolId: string) {
     (r: { grade_code?: string }) => r.grade_code && !SECONDARY_GRADE_CODES.includes(r.grade_code)
   );
   return rows as { id: string; school_id: string | null; grade_code: string; min_pct: string; max_pct: string }[];
-}
-
-// Secondary: rows where grade_code in A–E
-async function fetchSecondaryGradingScale(schoolId: string) {
-  const { data, error } = await supabase
-    .from('grading_scale')
-    .select('id, school_id, grade_code, min_pct, max_pct')
-    .eq('school_id', schoolId)
-    .in('grade_code', SECONDARY_GRADE_CODES)
-    .order('min_pct', { ascending: false });
-  if (error) throw error;
-  return (data || []) as { id: string; school_id: string; grade_code: string; min_pct: string; max_pct: string }[];
 }
 
 async function fetchTeacherRemarksSettings(schoolId: string) {
@@ -135,12 +123,6 @@ export default function GradingSystemPage() {
     enabled: !!schoolId && isPrimary,
   });
 
-  const { data: secondaryScale = [], isLoading: secondaryScaleLoading } = useQuery({
-    queryKey: ['teacher', 'grading-scale-secondary', schoolId ?? ''],
-    queryFn: () => fetchSecondaryGradingScale(schoolId!),
-    enabled: !!schoolId && isSecondary,
-  });
-
   const { data: remarksSettings = [], isLoading: remarksLoading } = useQuery({
     queryKey: ['teacher', 'teacher-remarks-settings', schoolId ?? ''],
     queryFn: () => fetchTeacherRemarksSettings(schoolId!),
@@ -161,7 +143,6 @@ export default function GradingSystemPage() {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['teacher', 'grading-scale-primary', schoolId ?? ''] });
-    queryClient.invalidateQueries({ queryKey: ['teacher', 'grading-scale-secondary', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'teacher-remarks-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'class-teacher-comments-settings', schoolId ?? ''] });
     queryClient.invalidateQueries({ queryKey: ['teacher', 'uace-grade-bands', schoolId ?? ''] });
@@ -211,25 +192,9 @@ export default function GradingSystemPage() {
     onSuccess: invalidate,
   });
 
-  const copyDefaultSecondaryScale = useMutation({
-    mutationFn: async () => {
-      if (!schoolId) throw new Error('No school');
-      const rows = UGANDA_GRADE_SCALE.map((r) => ({
-        school_id: schoolId,
-        grade_code: r.grade,
-        min_pct: String(r.min),
-        max_pct: String(r.max),
-      }));
-      const { error } = await supabase.from('grading_scale').insert(rows);
-      if (error) throw error;
-    },
-    onSuccess: invalidate,
-  });
-
   const primarySchoolRows = primaryScale.filter((r) => r.school_id === schoolId);
   const primaryDefaultRows = primaryScale.filter((r) => r.school_id === null);
   const displayPrimaryScale = primarySchoolRows.length > 0 ? primarySchoolRows : primaryDefaultRows.length > 0 ? primaryDefaultRows : PRIMARY_GRADE_SCALE.map((r) => ({ grade_code: r.grade, min_pct: String(r.min), max_pct: String(r.max), id: '', school_id: null as string | null }));
-  const effectiveSecondaryScale = secondaryScale.length > 0 ? secondaryScale : UGANDA_GRADE_SCALE;
 
   const remarksBySubject = remarksSettings.reduce((acc, r) => {
     if (!acc[r.subject]) acc[r.subject] = [];
@@ -269,7 +234,7 @@ export default function GradingSystemPage() {
       <p className="ac-text-muted">
         {isPrimary
           ? 'Manage your grading scale (D1–F9), Teacher\'s Remarks per subject, and Class Teacher\'s Comments per class. Changes apply to new and updated exam results and reports.'
-          : 'Manage your secondary grading scale (A–E), A-Level (UACE) % → grade bands per class, and Class Teacher\'s Comments per class (report comments from overall average). Each school stores its own settings; new schools start from defaults until you save custom bands.'}
+          : 'Manage A-Level (UACE) percentage → grade bands per Senior 5–6 class and Class Teacher\'s Comments per class (report comments from overall average). Each school stores its own settings; new schools start from defaults until you save custom bands.'}
       </p>
 
       {isPrimary && (
@@ -401,79 +366,26 @@ export default function GradingSystemPage() {
         />
       )}
 
-      {/* ----- SECONDARY: Grading scale ----- */}
+      {/* ----- SECONDARY: A-Level UACE bands (Grading scale tab) ----- */}
       {isSecondary && activeTab === 'scale' && (
         <div className="ac-glass-card p-6 border border-[var(--ac-border)]">
-          <div className="flex items-center gap-2 mb-4">
-            <GraduationCap className="w-6 h-6 text-blue-400" />
-            <h2 className="text-lg font-semibold ac-text-primary">Secondary Grading Scale (A – E)</h2>
+          <div className="flex items-center gap-2 mb-2">
+            <GraduationCap className="w-6 h-6 text-violet-400" />
+            <h2 className="text-lg font-semibold ac-text-primary">A-Level (Senior 5–6): UACE exam bands</h2>
           </div>
-          <p className="ac-text-muted text-sm mb-4">Used for Senior 1 – Senior 4 (O-Level). Scale is A to E only (no F). You can use the default or copy it to your school to customize.</p>
-          {secondaryScaleLoading ? (
-            <div className="flex items-center gap-2 py-4"><Loader2 className="w-5 h-5 animate-spin" /> Loading...</div>
-          ) : (
-            <>
-              {secondaryScale.length === 0 && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm">
-                  <p className="ac-text-primary">Copy the default A–E scale to your school to customize ranges.</p>
-                  <button
-                    type="button"
-                    onClick={() => copyDefaultSecondaryScale.mutate()}
-                    disabled={copyDefaultSecondaryScale.isPending}
-                    className="mt-2 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-sm font-medium hover:bg-amber-700 disabled:opacity-50"
-                  >
-                    {copyDefaultSecondaryScale.isPending ? 'Copying...' : 'Copy scale to my school'}
-                  </button>
-                </div>
-              )}
-              <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--ac-border)] ac-text-muted">
-                      <th className="p-3 font-medium">Grade</th>
-                      <th className="p-3 font-medium">Marks (%)</th>
-                      <th className="p-3 font-medium">Points</th>
-                      <th className="p-3 font-medium">Remark</th>
-                    </tr>
-                  </thead>
-                  <tbody className="ac-text-primary">
-                    {(secondaryScale.length > 0 ? secondaryScale.map((r) => ({ ...r, points: UGANDA_GRADE_SCALE.find(s => s.grade === r.grade_code)?.points ?? 0, remark: UGANDA_GRADE_SCALE.find(s => s.grade === r.grade_code)?.remark ?? '' })) : effectiveSecondaryScale).map((row: any) => (
-                      <tr key={row.grade_code ?? row.grade} className="border-b border-[var(--ac-border)] last:border-0">
-                        <td className="p-3 font-medium">{row.grade_code ?? row.grade}</td>
-                        <td className="p-3">{row.min_pct ?? row.min} – {row.max_pct ?? row.max}</td>
-                        <td className="p-3">{row.points ?? 0}</td>
-                        <td className="p-3">{row.remark ?? ''}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-4 p-3 rounded-lg bg-[var(--ac-card-bg)] border border-[var(--ac-border)]">
-                <p className="ac-text-muted text-xs font-medium uppercase tracking-wide mb-1">Divisions (by average)</p>
-                <p className="ac-text-primary text-sm">Division 1: 80%+ · Division 2: 60–79% · Division 3: 40–59% · Division 4: 20–39% · Ungraded: below 20%</p>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-[var(--ac-border)]">
-                <div className="flex items-center gap-2 mb-2">
-                  <GraduationCap className="w-6 h-6 text-violet-400" />
-                  <h3 className="text-base font-semibold ac-text-primary">A-Level (Senior 5–6): UACE exam bands</h3>
-                </div>
-                <p className="ac-text-muted text-sm mb-4">
-                  Principal papers marked out of 100: percentage maps to a letter grade using bands below. Your school can override the UNEB-style defaults per A-Level class; exam entry, reports, and the database use the same bands.
-                </p>
-                {schoolId ? (
-                  <SecondaryUaceBandsEditor
-                    schoolId={schoolId}
-                    alevelClassNames={alevelClassNamesForGrading}
-                    onSaved={invalidate}
-                  />
-                ) : null}
-                <div className="mt-4">
-                  <UaceExamBandsReminder variant="grading" />
-                </div>
-              </div>
-            </>
-          )}
+          <p className="ac-text-muted text-sm mb-6">
+            Principal papers marked out of 100: percentage maps to a letter grade using bands below. Your school can override the UNEB-style defaults per A-Level class; exam entry, reports, and the database use the same bands.
+          </p>
+          {schoolId ? (
+            <SecondaryUaceBandsEditor
+              schoolId={schoolId}
+              alevelClassNames={alevelClassNamesForGrading}
+              onSaved={invalidate}
+            />
+          ) : null}
+          <div className="mt-4">
+            <UaceExamBandsReminder variant="grading" />
+          </div>
         </div>
       )}
 
