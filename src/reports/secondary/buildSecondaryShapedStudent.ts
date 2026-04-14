@@ -125,3 +125,26 @@ export function buildSecondaryShapedStudent(reportData: {
 
 /** Alias matching plan naming (shaped student is merged into `reportData` for `renderTemplateHTML`). */
 export const buildSecondaryShapedReportData = buildSecondaryShapedStudent;
+
+/**
+ * Fields on full `report_data` that must be passed to `renderTemplateHTML` alongside `students[0]`
+ * (they are not copied onto the shaped student row). Used by secondary HTML preview iframes.
+ */
+export function pickSecondaryTemplateRootFields(
+  reportData: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | undefined {
+  if (!reportData || typeof reportData !== 'object') return undefined;
+  const out: Record<string, unknown> = {};
+  const bands = reportData.uace_percent_bands;
+  if (Array.isArray(bands) && bands.length > 0) {
+    out.uace_percent_bands = bands;
+  }
+  const gra = reportData.grade_remarks_alevel;
+  if (gra && typeof gra === 'object' && !Array.isArray(gra)) {
+    out.grade_remarks_alevel = gra;
+  }
+  if (reportData.alevel != null && typeof reportData.alevel === 'object') {
+    out.alevel = reportData.alevel;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}

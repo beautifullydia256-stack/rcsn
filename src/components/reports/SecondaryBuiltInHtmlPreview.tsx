@@ -24,6 +24,11 @@ export type SecondaryBuiltInHtmlPreviewProps = {
   usePlaceholderData?: boolean;
   /** Shorter iframe for grid previews (placeholder gallery). */
   compact?: boolean;
+  /**
+   * Top-level `report_data` fields that are not on `students[0]` but required by HTML templates
+   * (e.g. `uace_percent_bands`, `grade_remarks_alevel`, `alevel` stats from Edge / enricher).
+   */
+  extraTemplateFields?: Record<string, unknown>;
 };
 
 export function SecondaryBuiltInHtmlPreview({
@@ -33,6 +38,7 @@ export function SecondaryBuiltInHtmlPreview({
   templateKey,
   usePlaceholderData = false,
   compact = false,
+  extraTemplateFields,
 }: SecondaryBuiltInHtmlPreviewProps) {
   const [html, setHtml] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +52,7 @@ export function SecondaryBuiltInHtmlPreview({
         school,
         examSet,
         students: [student],
+        ...(extraTemplateFields && Object.keys(extraTemplateFields).length > 0 ? extraTemplateFields : {}),
       };
     }
     const stub = getSecondaryPlaceholderReportData(key as SecondaryTemplateKey) as {
@@ -62,7 +69,7 @@ export function SecondaryBuiltInHtmlPreview({
     };
     const shaped = buildSecondaryShapedStudent(merged);
     return { ...merged, students: [shaped] };
-  }, [usePlaceholderData, school, examSet, student, key]);
+  }, [usePlaceholderData, school, examSet, student, key, extraTemplateFields]);
 
   const photoPayloadStudent = useMemo(() => {
     if (!usePlaceholderData) return student;

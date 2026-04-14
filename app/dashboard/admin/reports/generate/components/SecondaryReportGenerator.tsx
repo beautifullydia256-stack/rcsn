@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { useRouter } from "next/navigation";
 import { SecondaryBuiltInHtmlPreview } from "@/src/components/reports/SecondaryBuiltInHtmlPreview";
+import { pickSecondaryTemplateRootFields } from "@/src/reports/secondary/buildSecondaryShapedStudent";
 
 // A4 Print Styles
 const printStyles = `
@@ -1444,6 +1445,7 @@ export function SecondaryReportGenerator() {
                   template={selectedTemplate}
                   reportTitleSettings={reportTitleSettings}
                   currentTermInfo={currentTermInfo}
+                  extraTemplateFields={pickSecondaryTemplateRootFields(reportData as Record<string, unknown>)}
                 />
               </div>
             ))}
@@ -1480,12 +1482,12 @@ function isALevelClass(className: string): boolean {
 }
 
 // Report Preview Component
-function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any }) {
+function ReportPreview({ student, examSet, school, template, reportTitleSettings, currentTermInfo, extraTemplateFields }: { student: any; examSet: any; school: any; template: string; reportTitleSettings: any; currentTermInfo: any; extraTemplateFields?: Record<string, unknown> }) {
   void reportTitleSettings;
   void currentTermInfo;
   if (isOLevelClass(student.current_class) || isALevelClass(student.current_class)) {
     return (
-      <SecondaryBuiltInHtmlPreview student={student} examSet={examSet} school={school} templateKey={template} />
+      <SecondaryBuiltInHtmlPreview student={student} examSet={examSet} school={school} templateKey={template} extraTemplateFields={extraTemplateFields} />
     );
   }
   return <SecondaryReportPreview student={student} examSet={examSet} school={school} />;

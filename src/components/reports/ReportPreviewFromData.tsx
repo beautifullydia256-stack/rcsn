@@ -10,7 +10,10 @@ import { buildReportAttendanceDetails } from '../../lib/reportAttendanceDetails'
 import type { NurseryDetailedObservationRow } from '../../templates/primary/prePrimaryDetailedCommentMapping';
 import { isALevelClass, isOLevelClass } from './templates/helpers';
 import { SecondaryBuiltInHtmlPreview } from './SecondaryBuiltInHtmlPreview';
-import { buildSecondaryShapedStudent } from '../../reports/secondary/buildSecondaryShapedStudent';
+import {
+  buildSecondaryShapedStudent,
+  pickSecondaryTemplateRootFields,
+} from '../../reports/secondary/buildSecondaryShapedStudent';
 
 type ReportPreviewFromDataProps = {
   reportData: any;
@@ -40,6 +43,7 @@ export function ReportPreviewFromData({
     const school = (reportData.school || {}) as Record<string, unknown>;
     const examSet = (reportData.examSet || {}) as Record<string, unknown>;
     const template = templateKey || getDefaultSecondaryTemplateKey(classNameEarly);
+    const extraTemplateFields = pickSecondaryTemplateRootFields(reportData as Record<string, unknown>);
     return (
       <div className="report-preview-pdf-fonts-primary">
         <SecondaryBuiltInHtmlPreview
@@ -47,6 +51,7 @@ export function ReportPreviewFromData({
           examSet={examSet}
           school={school}
           templateKey={template}
+          extraTemplateFields={extraTemplateFields}
         />
       </div>
     );

@@ -406,8 +406,31 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     if (!st?.student_id || !isALevelClass(String(st.current_class ?? ''))) return item;
 
     const sid = String(st.student_id);
+    const classForPrefs = String(st.current_class ?? '').trim();
+    let prefGra = prefsByClass.get(classForPrefs);
+    if (!prefGra) {
+      for (const alt of expandClassNamesForExamQuery([classForPrefs])) {
+        const hit = prefsByClass.get(alt);
+        if (hit) {
+          prefGra = hit;
+          break;
+        }
+      }
+    }
+    if (!prefGra && prefsByClass.size === 1) {
+      prefGra = [...prefsByClass.values()][0];
+    }
+    const uaceBands = resolveUaceBandsForClass(classForPrefs, uaceBandsByClass);
+
     const rawRpc = rpcByStudent.get(sid);
-    if (!rawRpc?.length) return item;
+    if (!rawRpc?.length) {
+      const nextInner: Record<string, unknown> = {
+        ...rep,
+        ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
+        ...(uaceBands?.length ? { uace_percent_bands: uaceBands } : {}),
+      };
+      return wrapIfNeeded(item, nextInner);
+    }
 
     const fromRpc: ResultRow[] = rawRpc.map((row) => {
       const esid = row.exam_set_id != null ? String(row.exam_set_id) : '';
@@ -442,23 +465,6 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const prevAlevel = (rep.alevel as Record<string, unknown> | undefined) ?? {};
     const nextAlevel =
       paperRows.length > 0 ? { ...prevAlevel, paperRows } : { ...prevAlevel, paperRows: [] };
-
-    const classForPrefs = String(st.current_class ?? '').trim();
-    let prefGra = prefsByClass.get(classForPrefs);
-    if (!prefGra) {
-      for (const alt of expandClassNamesForExamQuery([classForPrefs])) {
-        const hit = prefsByClass.get(alt);
-        if (hit) {
-          prefGra = hit;
-          break;
-        }
-      }
-    }
-    if (!prefGra && prefsByClass.size === 1) {
-      prefGra = [...prefsByClass.values()][0];
-    }
-
-    const uaceBands = resolveUaceBandsForClass(classForPrefs, uaceBandsByClass);
 
     const nextInner: Record<string, unknown> = {
       ...rep,

@@ -23,7 +23,10 @@ import {
   type SecondaryTemplateKey,
 } from '../../../templates/secondary';
 import { SecondaryBuiltInHtmlPreview } from '../../../components/reports/SecondaryBuiltInHtmlPreview';
-import { buildSecondaryShapedStudent } from '../../../reports/secondary/buildSecondaryShapedStudent';
+import {
+  buildSecondaryShapedStudent,
+  pickSecondaryTemplateRootFields,
+} from '../../../reports/secondary/buildSecondaryShapedStudent';
 import {
   ALL_SECONDARY_TEMPLATE_KEYS,
   getSecondaryPlaceholderReportData,
@@ -35,9 +38,16 @@ function SecondaryReportPreviewBlock({ reportData, templateKey }: { reportData: 
   const student = buildSecondaryShapedStudent(reportData);
   const school = (reportData.school || {}) as Record<string, unknown>;
   const examSet = (reportData.examSet || {}) as Record<string, unknown>;
+  const extraTemplateFields = pickSecondaryTemplateRootFields(reportData as Record<string, unknown>);
   return (
     <div className="report-preview-pdf-fonts-primary">
-      <SecondaryBuiltInHtmlPreview student={student} examSet={examSet} school={school} templateKey={templateKey} />
+      <SecondaryBuiltInHtmlPreview
+        student={student}
+        examSet={examSet}
+        school={school}
+        templateKey={templateKey}
+        extraTemplateFields={extraTemplateFields}
+      />
     </div>
   );
 }
