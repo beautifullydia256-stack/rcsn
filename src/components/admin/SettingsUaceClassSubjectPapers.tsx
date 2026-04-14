@@ -3,9 +3,14 @@ import { supabase } from '../../lib/supabase';
 import { isALevelClass } from '../reports/templates/helpers';
 import { settingsInsetSurface, settingsPrimaryActionClass } from '@/pages/admin/settings/tabs/settingsTabStyles';
 import type { SchoolUaceClassSubjectPaperRow } from '../../lib/uaceClassSubjectPapers';
-import { fetchUacePapersForClassSubject } from '../../lib/uaceClassSubjectPapers';
+import {
+  fetchUacePapersForClassSubject,
+  UACE_PAPERS_STORAGE_CLASS,
+} from '../../lib/uaceClassSubjectPapers';
 
 type Variant = 'vite' | 'next';
+
+const UACE_PAPER_SLOT_OPTIONS = ['Paper 1', 'Paper 2', 'Paper 3'] as const;
 
 export default function SettingsUaceClassSubjectPapers({
   classOptions,
@@ -24,7 +29,6 @@ export default function SettingsUaceClassSubjectPapers({
 }) {
   const alevelClasses = useMemo(() => classOptions.filter((c) => isALevelClass(c)), [classOptions]);
 
-  const [selectedClass, setSelectedClass] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [subjectNames, setSubjectNames] = useState<string[]>([]);
   const [paperRows, setPaperRows] = useState<SchoolUaceClassSubjectPaperRow[]>([]);
@@ -32,42 +36,70 @@ export default function SettingsUaceClassSubjectPapers({
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [paperCode, setPaperCode] = useState('');
   const [paperLabel, setPaperLabel] = useState('');
+  /** Paper 1 / 2 / 3 — saved as `paper_label` when the text label is empty (logic can evolve). */
+  const [paperSlot, setPaperSlot] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const loadSubjects = useCallback(async () => {
-    if (!schoolId || !selectedClass) {
+    if (!schoolId) {
       setSubjectNames([]);
       return;
     }
     setLoadingSubjects(true);
     setError(null);
     try {
+      if (anchorClassName !== undefined) {
+        const cn = anchorClassName.trim();
+        if (!cn || !isALevelClass(cn)) {
+          setSubjectNames([]);
+          return;
+        }
+        const { data, error: qErr } = await supabase
+          .from('class_subjects')
+          .select('subject')
+          .eq('school_id', schoolId)
+          .eq('class_name', cn)
+          .order('subject');
+        if (qErr) throw qErr;
+        setSubjectNames((data || []).map((r) => r.subject as string));
+        return;
+      }
+      if (alevelClasses.length === 0) {
+        setSubjectNames([]);
+        return;
+      }
       const { data, error: qErr } = await supabase
         .from('class_subjects')
-        .select('subject')
+        .select('subject, class_name')
         .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
+        .in('class_name', alevelClasses);
       if (qErr) throw qErr;
-      setSubjectNames((data || []).map((r) => r.subject as string));
+      const uniq = [...new Set((data || []).map((r) => r.subject as string))].sort((a, b) =>
+        a.localeCompare(b),
+      );
+      setSubjectNames(uniq);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load subjects');
       setSubjectNames([]);
     } finally {
       setLoadingSubjects(false);
     }
-  }, [schoolId, selectedClass]);
+  }, [schoolId, anchorClassName, alevelClasses]);
 
   const loadPapers = useCallback(async () => {
-    if (!schoolId || !selectedClass || !selectedSubject) {
+    if (!schoolId || !selectedSubject.trim()) {
       setPaperRows([]);
       return;
     }
     setLoadingPapers(true);
     setError(null);
     try {
-      const rows = await fetchUacePapersForClassSubject(schoolId, selectedClass, selectedSubject);
+      const rows = await fetchUacePapersForClassSubject(
+        schoolId,
+        UACE_PAPERS_STORAGE_CLASS,
+        selectedSubject,
+      );
       setPaperRows(rows);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load papers');
@@ -75,7 +107,7 @@ export default function SettingsUaceClassSubjectPapers({
     } finally {
       setLoadingPapers(false);
     }
-  }, [schoolId, selectedClass, selectedSubject]);
+  }, [schoolId, selectedSubject]);
 
   useEffect(() => {
     void loadSubjects();
@@ -88,7 +120,6 @@ export default function SettingsUaceClassSubjectPapers({
   useEffect(() => {
     if (anchorClassName === undefined) return;
     if (!anchorClassName.trim() || !isALevelClass(anchorClassName)) return;
-    setSelectedClass(anchorClassName);
     setSelectedSubject('');
   }, [anchorClassName]);
 
@@ -106,7 +137,7 @@ export default function SettingsUaceClassSubjectPapers({
 
   const addPaper = async () => {
     setError(null);
-    if (!schoolId || !selectedClass || !selectedSubject) return;
+    if (!schoolId || !selectedSubject.trim()) return;
     const code = paperCode.trim();
     if (!code) {
       setError('Paper code is required (e.g. P250/1).');
@@ -115,10 +146,10 @@ export default function SettingsUaceClassSubjectPapers({
     setSaving(true);
     const payload = {
       school_id: schoolId,
-      class_name: selectedClass,
+      class_name: UACE_PAPERS_STORAGE_CLASS,
       subject_name: selectedSubject.trim(),
       paper_code: code,
-      paper_label: paperLabel.trim() || null,
+      paper_label: paperLabel.trim() || paperSlot.trim() || null,
       sort_order: 0,
       teacher_id: null,
     };
@@ -130,6 +161,7 @@ export default function SettingsUaceClassSubjectPapers({
     }
     setPaperCode('');
     setPaperLabel('');
+    setPaperSlot('');
     void loadPapers();
   };
 
@@ -154,7 +186,7 @@ export default function SettingsUaceClassSubjectPapers({
       <div className="mb-4">
         {!embedded && (
           <div className={variant === 'next' ? 'font-medium text-white' : 'ac-text-primary font-medium'}>
-            UACE papers (Senior 5–6)
+            UACE papers (A-Level)
           </div>
         )}
         <div
@@ -165,12 +197,12 @@ export default function SettingsUaceClassSubjectPapers({
           {embedded ? (
             <>
               <span className={variant === 'next' ? 'font-medium text-white' : 'font-medium ac-text-primary'}>
-                UACE papers (Senior 5–6).{' '}
+                UACE papers (A-Level).{' '}
               </span>
-              Configure UNEB-style paper codes per class and subject.
+              Senior 5 and Senior 6 share the same subjects; paper codes are stored once for A-Level.
             </>
           ) : (
-            'Configure UNEB-style paper codes per class and subject.'
+            'Configure UNEB-style paper codes per A-Level subject (shared by Senior 5 and Senior 6).'
           )}
         </div>
       </div>
@@ -190,40 +222,22 @@ export default function SettingsUaceClassSubjectPapers({
       <div className={`p-4 sm:p-5 ${settingsInsetSurface}`}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <div>
-          <label className={labelClass}>Class (A-Level)</label>
-          {anchorClassName !== undefined ? (
-            <div
-              className={
-                variant === 'next'
-                  ? `${inputClass} flex min-h-[44px] items-center text-white/90`
-                  : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
-              }
-            >
-              {anchorClassName}
-            </div>
-          ) : (
-            <select
-              value={selectedClass}
-              onChange={(e) => {
-                setSelectedClass(e.target.value);
-                setSelectedSubject('');
-              }}
-              className={inputClass}
-            >
-              <option value="">Select class</option>
-              {alevelClasses.map((c) => (
-                <option key={c} value={c} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
+          <label className={labelClass}>Level</label>
+          <div
+            className={
+              variant === 'next'
+                ? `${inputClass} flex min-h-[44px] items-center text-white/90`
+                : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
+            }
+          >
+            A-Level
+          </div>
         </div>
         <div>
           <label className={labelClass}>Subject</label>
           <select
             value={selectedSubject}
-            disabled={!selectedClass || loadingSubjects}
+            disabled={loadingSubjects || subjectNames.length === 0}
             onChange={(e) => setSelectedSubject(e.target.value)}
             className={inputClass}
           >
@@ -252,12 +266,26 @@ export default function SettingsUaceClassSubjectPapers({
             placeholder="Paper 1"
             className={inputClass}
           />
+          <label className={`${labelClass} mt-3`}>Paper</label>
+          <select
+            value={paperSlot}
+            onChange={(e) => setPaperSlot(e.target.value)}
+            className={inputClass}
+            aria-label="Paper number"
+          >
+            <option value="">Select Paper 1,2, or 3</option>
+            {UACE_PAPER_SLOT_OPTIONS.map((p) => (
+              <option key={p} value={p} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
+                {p}
+              </option>
+            ))}
+          </select>
         </div>
         </div>
         <div className="mt-3">
           <button
             type="button"
-            disabled={!selectedClass || !selectedSubject || saving}
+            disabled={!selectedSubject.trim() || saving}
             onClick={() => void addPaper()}
             className={
               variant === 'next'
@@ -271,9 +299,9 @@ export default function SettingsUaceClassSubjectPapers({
       </div>
 
       <div className="mt-6">
-        {!selectedClass || !selectedSubject ? (
+        {!selectedSubject.trim() ? (
           <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
-            Choose class and subject to list configured papers.
+            Choose a subject to list configured papers.
           </div>
         ) : loadingPapers ? (
           <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>

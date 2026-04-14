@@ -1,7 +1,7 @@
 "use client";
 /* Production dashboard uses the Vite SPA (vercel.json → framework: vite). Canonical UI: src/pages/admin/settings/SettingsPage.tsx */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/src/lib/supabase";
 import { downloadTimetablePdf } from "@/lib/timetablePdf";
@@ -17,6 +17,14 @@ import {
   type UaceCatalogRow,
 } from "@/lib/classSubjectRowGuards";
 import { isALevelClass, isOLevelClass } from "@/src/components/reports/templates/helpers";
+import {
+  classNamesForProgrammeBand,
+  fetchClassSubjectsForClasses,
+  mergeBandClassSubjectRows,
+  nonBandClassOptions,
+  representativeClassNameForBand,
+  type ProgrammeBand,
+} from "@/lib/programmeBandClassSubjects";
 import { REPORT_HEADER_DEFAULTS } from "@/lib/reportHeaderBrandingDefaults";
 import {
   assignmentRoleLabel,
@@ -27,6 +35,9 @@ import {
 import { Search } from "lucide-react";
 
 type TabKey = "subjects" | "assignments" | "finance" | "requirements" | "timetable" | "terms" | "exams" | "branding";
+
+/** Stable empty list — avoid new `[]` each render (useCallback/useEffect deps). */
+const NO_CLASS_NAMES: string[] = [];
 
 export default function AdminSystemSettingsPage() {
   const router = useRouter();
@@ -384,8 +395,27 @@ function ALevelSubjectsSplitCards({
   );
 }
 
+type SubjectSelection =
+  | { mode: "none" }
+  | { mode: "band"; band: ProgrammeBand }
+  | { mode: "single"; className: string };
+
+function selectionSelectValue(s: SubjectSelection): string {
+  if (s.mode === "none") return "";
+  if (s.mode === "band") return `band:${s.band}`;
+  return `single:${s.className}`;
+}
+
+function parseSubjectSelection(raw: string): SubjectSelection {
+  if (!raw) return { mode: "none" };
+  if (raw === "band:olevel") return { mode: "band", band: "olevel" };
+  if (raw === "band:alevel") return { mode: "band", band: "alevel" };
+  if (raw.startsWith("single:")) return { mode: "single", className: raw.slice(7) };
+  return { mode: "none" };
+}
+
 function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; schoolId: string | null }) {
-  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [selection, setSelection] = useState<SubjectSelection>({ mode: "none" });
   const [subjectRows, setSubjectRows] = useState<ClassSubjectRow[]>([]);
   const [uaceCatalog, setUaceCatalog] = useState<UaceCatalogRow[]>([]);
   const [newSubject, setNewSubject] = useState("");
@@ -393,6 +423,30 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const olevelClassNames = useMemo(() => classNamesForProgrammeBand(classOptions, "olevel"), [classOptions]);
+  const alevelClassNames = useMemo(() => classNamesForProgrammeBand(classOptions, "alevel"), [classOptions]);
+  const otherClassNames = useMemo(() => nonBandClassOptions(classOptions), [classOptions]);
+
+  const bandTargets =
+    selection.mode === "band"
+      ? selection.band === "olevel"
+        ? olevelClassNames
+        : alevelClassNames
+      : NO_CLASS_NAMES;
+  const singleClassName = selection.mode === "single" ? selection.className : "";
+  const queryClassNames = useMemo(() => {
+    if (selection.mode === "band") return bandTargets;
+    if (selection.mode === "single") return [selection.className];
+    return NO_CLASS_NAMES;
+  }, [selection, bandTargets]);
+
+  const representativeClass =
+    selection.mode === "band"
+      ? representativeClassNameForBand(bandTargets, selection.band)
+      : selection.mode === "single"
+        ? singleClassName
+        : "";
 
   useEffect(() => {
     const loadCatalog = async () => {
@@ -406,153 +460,275 @@ function SubjectsPerClass({ classOptions, schoolId }: { classOptions: string[]; 
   }, []);
 
   const displayRows = useMemo(
-    () => enrichClassSubjectsWithUaceCatalog(subjectRows, selectedClass, uaceCatalog),
-    [subjectRows, selectedClass, uaceCatalog],
+    () => enrichClassSubjectsWithUaceCatalog(subjectRows, representativeClass, uaceCatalog),
+    [subjectRows, representativeClass, uaceCatalog],
   );
 
-  useEffect(() => {
-    const load = async () => {
-      setError(null);
-      if (!schoolId || !selectedClass) { setSubjectRows([]); return; }
-      setLoading(true);
-      const { data, error: qErr } = await supabase
-        .from('class_subjects')
-        .select('subject, uce_offering_type, is_non_removable_default')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      if (qErr) setError(qErr.message);
-      setSubjectRows((data || []) as ClassSubjectRow[]);
+  const loadSubjectsForSelection = useCallback(async () => {
+    setError(null);
+    if (!schoolId || selection.mode === "none" || queryClassNames.length === 0) {
+      setSubjectRows([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const raw = await fetchClassSubjectsForClasses(schoolId, queryClassNames);
+      if (selection.mode === "band") {
+        setSubjectRows(mergeBandClassSubjectRows(raw));
+      } else {
+        setSubjectRows(
+          raw.map((r) => ({
+            subject: r.subject,
+            uce_offering_type: r.uce_offering_type,
+            is_non_removable_default: r.is_non_removable_default,
+          })) as ClassSubjectRow[],
+        );
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to load subjects";
+      setError(msg);
+      setSubjectRows([]);
+    } finally {
       setLoading(false);
-    };
-    load();
-  }, [schoolId, selectedClass]);
+    }
+  }, [schoolId, selection, queryClassNames]);
+
+  useEffect(() => {
+    void loadSubjectsForSelection();
+  }, [loadSubjectsForSelection]);
 
   const addSubject = async () => {
     setError(null);
-    if (!schoolId || !selectedClass) return;
+    if (!schoolId || selection.mode === "none") return;
     const s = newSubject.trim();
     if (!s) return;
-    if (subjectRows.some((r) => r.subject === s)) return;
-    if (isALevelClass(selectedClass) && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
+    if (subjectRows.some((r) => String(r.subject).trim() === s)) return;
+
+    if (selection.mode === "band" && selection.band === "alevel" && !isUacePrincipalCatalogSubject(s, uaceCatalog)) {
       setError(
-        "Senior 5–6: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.",
+        "A-Level: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.",
       );
       return;
     }
-    setSubjectRows((prev) => [...prev, { subject: s, uce_offering_type: null, is_non_removable_default: false }]);
-    setSaving(true);
-    const payload: Record<string, unknown> = { school_id: schoolId, class_name: selectedClass, subject: s };
-    if (isOLevelClass(selectedClass)) {
-      payload.uce_offering_type = addAsCompulsory ? 'compulsory' : 'subsidiary';
-      payload.is_non_removable_default = false;
-    }
-    const { error: insertError } = await supabase.from('class_subjects').insert(payload);
-    setSaving(false);
-    if (insertError) {
-      setError(insertError.message || 'Failed to add subject');
-      const { data } = await supabase
-        .from('class_subjects')
-        .select('subject, uce_offering_type, is_non_removable_default')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      setSubjectRows((data || []) as ClassSubjectRow[]);
+    if (
+      selection.mode === "single" &&
+      isALevelClass(selection.className) &&
+      !isUacePrincipalCatalogSubject(s, uaceCatalog)
+    ) {
+      setError(
+        "A-Level: only UACE principal subjects from the national catalog can be added. Subsidiary lines are fixed — schools cannot add new subsidiary subjects.",
+      );
       return;
     }
+
+    setSaving(true);
+    try {
+      if (selection.mode === "band") {
+        const targets = selection.band === "olevel" ? olevelClassNames : alevelClassNames;
+        if (targets.length === 0) {
+          setError(
+            selection.band === "olevel"
+              ? "No O-Level classes found in your class list. Add Senior 1–4 (or equivalent) under Classes first."
+              : "No A-Level classes found. Add Senior 5–6 (or equivalent) under Classes first.",
+          );
+          return;
+        }
+        const raw = await fetchClassSubjectsForClasses(schoolId, targets);
+        const have = new Set(
+          raw.filter((r) => String(r.subject).trim() === s).map((r) => r.class_name),
+        );
+        const missing = targets.filter((c) => !have.has(c));
+        if (missing.length === 0) return;
+        const rows = missing.map((class_name) => {
+          const base: Record<string, unknown> = {
+            school_id: schoolId,
+            class_name,
+            subject: s,
+          };
+          if (selection.band === "olevel") {
+            base.uce_offering_type = addAsCompulsory ? "compulsory" : "subsidiary";
+            base.is_non_removable_default = false;
+          }
+          return base;
+        });
+        const { error: insertError } = await supabase.from("class_subjects").insert(rows);
+        if (insertError) {
+          setError(insertError.message || "Failed to add subject");
+          return;
+        }
+      } else {
+        const cn = selection.className;
+        const payload: Record<string, unknown> = { school_id: schoolId, class_name: cn, subject: s };
+        if (isOLevelClass(cn)) {
+          payload.uce_offering_type = addAsCompulsory ? "compulsory" : "subsidiary";
+          payload.is_non_removable_default = false;
+        }
+        const { error: insertError } = await supabase.from("class_subjects").insert(payload);
+        if (insertError) {
+          setError(insertError.message || "Failed to add subject");
+          return;
+        }
+      }
+    } finally {
+      setSaving(false);
+    }
     setNewSubject("");
+    await loadSubjectsForSelection();
   };
 
   const removeSubject = async (row: ClassSubjectRow) => {
     setError(null);
-    if (!schoolId || !selectedClass) return;
-    if (!canRemoveClassSubjectRow(selectedClass, row)) return;
-    setSubjectRows((prev) => prev.filter((r) => r.subject !== row.subject));
-    const { error: delErr } = await supabase
-      .from('class_subjects')
-      .delete()
-      .eq('school_id', schoolId)
-      .eq('class_name', selectedClass)
-      .eq('subject', row.subject);
-    if (delErr) {
-      setError(delErr.message || 'Failed to remove subject');
-      const { data } = await supabase
-        .from('class_subjects')
-        .select('subject, uce_offering_type, is_non_removable_default')
-        .eq('school_id', schoolId)
-        .eq('class_name', selectedClass)
-        .order('subject');
-      setSubjectRows((data || []) as ClassSubjectRow[]);
+    if (!schoolId || selection.mode === "none") return;
+    if (!canRemoveClassSubjectRow(representativeClass, row)) return;
+    let delErr: { message: string } | null = null;
+    if (selection.mode === "band") {
+      const targets = selection.band === "olevel" ? olevelClassNames : alevelClassNames;
+      const { error: err } = await supabase
+        .from("class_subjects")
+        .delete()
+        .eq("school_id", schoolId)
+        .eq("subject", row.subject)
+        .in("class_name", targets);
+      delErr = err;
+    } else {
+      const { error: err } = await supabase
+        .from("class_subjects")
+        .delete()
+        .eq("school_id", schoolId)
+        .eq("class_name", selection.className)
+        .eq("subject", row.subject);
+      delErr = err;
     }
+    if (delErr) {
+      setError(delErr.message || "Failed to remove subject");
+      return;
+    }
+    await loadSubjectsForSelection();
   };
 
   return (
     <div>
       <SectionHeader
         title="Subjects per Class"
-        desc="Senior 1–4: default compulsory rows are locked; add optional compulsory or subsidiary. Senior 5–6: principals vs subsidiaries mirror O-Level layout; only principals can be added; subsidiaries are catalog-fixed."
+        desc="Choose O-Level or A-Level to add or remove a subject for every class in that programme at once (one class_subjects row per class). Non-secondary classes use a per-class option below."
       />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-        <select value={selectedClass} onChange={(e)=>setSelectedClass(e.target.value)} className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-500">
-          <option value="">Select Class</option>
-          {classOptions.map(c => (
-            <option key={c} value={c}>{c}</option>
-          ))}
+        <select
+          value={selectionSelectValue(selection)}
+          onChange={(e) => setSelection(parseSubjectSelection(e.target.value))}
+          className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-black outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Select programme or class</option>
+          {olevelClassNames.length > 0 ? (
+            <option value="band:olevel">O-Level — all O-Level classes ({olevelClassNames.length})</option>
+          ) : null}
+          {alevelClassNames.length > 0 ? (
+            <option value="band:alevel">A-Level — all A-Level classes ({alevelClassNames.length})</option>
+          ) : null}
+          {otherClassNames.length > 0 ? (
+            <optgroup label="Other (single class)">
+              {otherClassNames.map((c) => (
+                <option key={c} value={`single:${c}`}>
+                  {c}
+                </option>
+              ))}
+            </optgroup>
+          ) : null}
         </select>
         <input
           value={newSubject}
           onChange={(e) => setNewSubject(e.target.value)}
           placeholder={
-            isALevelClass(selectedClass)
+            selection.mode === "band" && selection.band === "alevel"
               ? "Add principal subject (exact UACE catalog name)"
-              : "Add subject (e.g., Mathematics)"
+              : selection.mode === "single" && isALevelClass(selection.className)
+                ? "Add principal subject (exact UACE catalog name)"
+                : "Add subject (e.g., Mathematics)"
           }
           className="min-h-[48px] w-full rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60 outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <button disabled={!selectedClass || saving} onClick={addSubject} className="min-h-[48px] w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:col-span-2 lg:col-span-1">{saving? 'Saving...' : 'Add Subject'}</button>
-        {isOLevelClass(selectedClass) && (
+        <button
+          disabled={selection.mode === "none" || saving}
+          onClick={addSubject}
+          className="min-h-[48px] w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 sm:col-span-2 lg:col-span-1"
+        >
+          {saving ? "Saving..." : "Add Subject"}
+        </button>
+        {selection.mode === "band" && selection.band === "olevel" && (
           <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug text-white/80 sm:col-span-2 lg:col-span-3">
-            <input type="checkbox" checked={addAsCompulsory} onChange={(e) => setAddAsCompulsory(e.target.checked)} className="mt-1 h-5 w-5 shrink-0 rounded border-white/30" aria-label="Add as compulsory UCE subject" />
+            <input
+              type="checkbox"
+              checked={addAsCompulsory}
+              onChange={(e) => setAddAsCompulsory(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 rounded border-white/30"
+              aria-label="Add as compulsory UCE subject"
+            />
+            <span>Add as compulsory UCE for every O-Level class (otherwise subsidiary) — default nationwide compulsories are locked.</span>
+          </label>
+        )}
+        {selection.mode === "single" && isOLevelClass(singleClassName) && (
+          <label className="flex min-h-[48px] cursor-pointer items-start gap-3 text-sm leading-snug text-white/80 sm:col-span-2 lg:col-span-3">
+            <input
+              type="checkbox"
+              checked={addAsCompulsory}
+              onChange={(e) => setAddAsCompulsory(e.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 rounded border-white/30"
+              aria-label="Add as compulsory UCE subject"
+            />
             <span>Add as compulsory UCE (otherwise subsidiary) — default nationwide compulsories are locked.</span>
           </label>
         )}
-        {isALevelClass(selectedClass) && (
+        {(selection.mode === "band" && selection.band === "alevel") ||
+        (selection.mode === "single" && isALevelClass(singleClassName)) ? (
           <p className="text-xs leading-relaxed text-white/65 sm:col-span-2 lg:col-span-3">
-            Senior 5–6: new rows must be UACE <span className="font-medium text-white/85">principal</span> catalog subjects only. Subsidiaries
-            are seeded from the national list and cannot be added here.
+            A-Level: new rows must be UACE <span className="font-medium text-white/85">principal</span> catalog subjects only.
+            Subsidiaries are seeded from the national list and cannot be added here.
           </p>
-        )}
+        ) : null}
       </div>
       <div className="mt-4">
         {error && <div className="mb-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-200 px-3 py-2 text-sm">{error}</div>}
         {loading ? (
           <div className="text-white/80 text-sm">Loading subjects...</div>
-        ) : !selectedClass ? (
-          <div className="text-white/80 text-sm">Select a class to view its subjects.</div>
+        ) : selection.mode === "none" ? (
+          <div className="text-white/80 text-sm">Select a programme or class to view subjects.</div>
         ) : subjectRows.length === 0 ? (
-          <div className="text-white/80 text-sm">No subjects yet for {selectedClass}. Add one above.</div>
-        ) : isOLevelClass(selectedClass) ? (
-          <OLevelSubjectsSplitCards selectedClass={selectedClass} subjectRows={subjectRows} onRemove={removeSubject} />
-        ) : isALevelClass(selectedClass) ? (
-          <ALevelSubjectsSplitCards selectedClass={selectedClass} subjectRows={displayRows} onRemove={removeSubject} />
+          <div className="text-white/80 text-sm">
+            {selection.mode === "band"
+              ? `No subjects yet for this ${selection.band === "olevel" ? "O-Level" : "A-Level"} programme. Add one above.`
+              : `No subjects yet for ${singleClassName}. Add one above.`}
+          </div>
+        ) : selection.mode === "band" && selection.band === "olevel" ? (
+          <OLevelSubjectsSplitCards
+            selectedClass={representativeClass}
+            subjectRows={subjectRows}
+            onRemove={removeSubject}
+          />
+        ) : selection.mode === "band" && selection.band === "alevel" ? (
+          <ALevelSubjectsSplitCards
+            selectedClass={representativeClass}
+            subjectRows={displayRows}
+            onRemove={removeSubject}
+          />
+        ) : selection.mode === "single" && isOLevelClass(singleClassName) ? (
+          <OLevelSubjectsSplitCards selectedClass={singleClassName} subjectRows={subjectRows} onRemove={removeSubject} />
+        ) : selection.mode === "single" && isALevelClass(singleClassName) ? (
+          <ALevelSubjectsSplitCards selectedClass={singleClassName} subjectRows={displayRows} onRemove={removeSubject} />
         ) : (
           <div className={subjectsCardShell}>
             <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3">
               <div className="text-[15px] font-semibold leading-snug text-white">Subjects for this class</div>
-              <div className="mt-1 text-xs leading-relaxed text-white/65">{selectedClass}</div>
+              <div className="mt-1 text-xs leading-relaxed text-white/65">{singleClassName}</div>
             </div>
-            <SubjectsPerClassTableRows rows={displayRows} selectedClass={selectedClass} onRemove={removeSubject} />
+            <SubjectsPerClassTableRows rows={displayRows} selectedClass={singleClassName} onRemove={removeSubject} />
           </div>
         )}
       </div>
-      {classOptions.some((c) => isALevelClass(c)) && isALevelClass(selectedClass) && schoolId ? (
-        <SettingsUaceClassSubjectPapers
-          embedded
-          variant="next"
-          anchorClassName={selectedClass}
-          classOptions={classOptions}
-          schoolId={schoolId}
-        />
+      {alevelClassNames.length > 0 &&
+        schoolId &&
+        ((selection.mode === "band" && selection.band === "alevel") ||
+          (selection.mode === "single" && isALevelClass(singleClassName))) ? (
+        <SettingsUaceClassSubjectPapers embedded variant="next" classOptions={classOptions} schoolId={schoolId} />
       ) : null}
     </div>
   );
