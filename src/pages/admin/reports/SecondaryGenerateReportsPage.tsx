@@ -9,6 +9,7 @@ import { useSchoolType } from '@/hooks/useSchoolType';
 import { Navigate } from 'react-router-dom';
 import { supabase } from '../../../lib/supabase';
 import { enrichSecondaryOlevelPreviewReportsFromDb } from '../../../lib/enrichSecondaryOlevelPreviewFromDb';
+import { enrichSecondaryAlevelPreviewReportsFromDb } from '../../../lib/enrichSecondaryAlevelPreviewFromDb';
 import AdminPageWrapper, { adminCardClass } from '../../../components/layout/AdminPageWrapper';
 import { getCurrentTerm } from '../../../lib/termStructure';
 import { pdfDownloadFilenameFromResponse } from '../../../lib/pdfAttachmentFilename';
@@ -101,11 +102,13 @@ async function invokeReportPreview(payload: PreviewInvokeBody): Promise<any[]> {
     throw new Error(body.error.trim());
   }
   const raw = (body?.reports ?? []) as unknown[];
-  return (await enrichSecondaryOlevelPreviewReportsFromDb(
-    supabase,
-    payload.schoolId,
-    raw,
-  )) as any[];
+  const afterOlevel = await enrichSecondaryOlevelPreviewReportsFromDb(supabase, payload.schoolId, raw);
+  return (await enrichSecondaryAlevelPreviewReportsFromDb(supabase, payload.schoolId, {
+    term: payload.term,
+    year: payload.year,
+    examSetId: payload.examSetId,
+    classNames: [payload.className].filter(Boolean),
+  }, afterOlevel)) as any[];
 }
 
 async function fetchGeneratedReports(snapshotId: string) {
@@ -642,10 +645,12 @@ export default function SecondaryGenerateReportsPage() {
     setCompletedSnapshotId(null);
     setGeneratingStep('creating');
     try {
+      await queryClient.cancelQueries({ queryKey: ctx.key });
+      queryClient.removeQueries({ queryKey: ctx.key });
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: STALE_TIME_MS,
+        staleTime: 0,
       });
       setPreviewReports(reports);
       if (!reports.length) {
@@ -699,10 +704,12 @@ export default function SecondaryGenerateReportsPage() {
         Array.isArray(cached) && cached.length > 0 ? 'Preparing PDF…' : 'Generating reports…'
       );
 
+      await queryClient.cancelQueries({ queryKey: ctx.key });
+      queryClient.removeQueries({ queryKey: ctx.key });
       const reports = await queryClient.fetchQuery({
         queryKey: ctx.key,
         queryFn: () => invokeReportPreview(ctx.payload),
-        staleTime: STALE_TIME_MS,
+        staleTime: 0,
       });
       if (!reports.length) throw new Error('No reports to download');
 
