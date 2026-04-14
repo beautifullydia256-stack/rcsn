@@ -13,6 +13,7 @@ import {
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
+  SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS,
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
 } from './secondaryLowerSectionHeaderHtml';
 import type { UacePercentBandLike } from '../lib/uaceReportGradingFootnote';
@@ -87,11 +88,11 @@ export function generateTemplate4AlevelHTML(
     .map(
       (row) => `
           <tr>
-            <td>${escapeHtml(row.subjectLabel)}</td>
-            <td class="tc">${row.marksPercent != null && !Number.isNaN(row.marksPercent) ? `${Math.round(row.marksPercent)}%` : '—'}</td>
-            <td class="tc">${escapeHtml(row.gradeDisplay)}</td>
-            <td class="comment">${escapeHtml(row.comment ?? '')}</td>
-            <td class="tc">${escapeHtml(row.teacherDisplayName ?? '')}</td>
+            <td><strong>${escapeHtml(row.subjectLabel)}</strong></td>
+            <td class="center">${row.marksPercent != null && !Number.isNaN(row.marksPercent) ? `${Math.round(row.marksPercent)}%` : '—'}</td>
+            <td class="center grade-col">${escapeHtml(row.gradeDisplay)}</td>
+            <td class="remark-cell">${escapeHtml(row.comment ?? '')}</td>
+            <td class="center note-cell">${escapeHtml(row.teacherDisplayName ?? '')}</td>
           </tr>`
     )
     .join('');
@@ -266,6 +267,32 @@ export function generateTemplate4AlevelHTML(
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     ${SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS}
+    ${SECONDARY_UPPER_SECTION_RESULTS_TABLE_CSS}
+    /* A-Level marks table: same header/body rules as Template Standard (.o-level-standard) */
+    table.upper-results.alevel-marks {
+      margin-bottom: 3mm;
+    }
+    table.upper-results.alevel-marks thead th:first-child {
+      text-align: left;
+    }
+    table.upper-results.alevel-marks thead th {
+      text-align: center;
+    }
+    table.upper-results.alevel-marks td.center,
+    table.upper-results.alevel-marks th.center {
+      text-align: center;
+    }
+    table.upper-results.alevel-marks tbody td:first-child strong {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    table.upper-results.alevel-marks td.remark-cell {
+      font-size: 9.2pt;
+      color: #475569;
+      text-align: left;
+      vertical-align: middle;
+    }
+    .muted { color: #555; }
     .sheet {
       width: 100%;
       min-height: 0;
@@ -325,28 +352,6 @@ export function generateTemplate4AlevelHTML(
       color: #004d40;
     }
     .stat-pill strong { color: #006064; margin-right: 6px; }
-    table.marks {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 12px;
-      font-size: 8.5pt;
-      background: #fff;
-    }
-    table.marks th, table.marks td {
-      border: 1px solid #1b5e20;
-      padding: 4px 5px;
-      vertical-align: top;
-    }
-    table.marks th {
-      background: linear-gradient(180deg, #2e7d32 0%, #1b5e20 100%);
-      color: #fff;
-      font-weight: 700;
-      text-align: center;
-      text-transform: uppercase;
-      letter-spacing: .03em;
-    }
-    table.marks td.tc { text-align: center; }
-    table.marks td.comment { font-size: 8pt; line-height: 1.25; }
     ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
     .uace-exam-bands-block {
       margin-top: 10px;
@@ -413,7 +418,7 @@ export function generateTemplate4AlevelHTML(
       ${barSection}
     </div>
 
-    <table class="marks">
+    <table class="upper-results alevel-marks">
       <thead>
         <tr>
           <th>Subjects</th>
@@ -424,7 +429,7 @@ export function generateTemplate4AlevelHTML(
         </tr>
       </thead>
       <tbody>
-        ${rowHtml || '<tr><td colspan="5" class="tc">No results</td></tr>'}
+        ${rowHtml || '<tr><td colspan="5" class="center muted">No results</td></tr>'}
       </tbody>
     </table>
 
