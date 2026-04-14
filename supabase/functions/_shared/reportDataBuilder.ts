@@ -576,7 +576,7 @@ export async function buildReportDataFromScope(
 
   const { data: examSetsForTerm, error: examSetsError } = await supabase
     .from('exam_sets')
-    .select('id, name, term, year')
+    .select('id, name, term, year, created_at')
     .eq('school_id', schoolId)
     .eq('term', term)
     .eq('year', year);
@@ -598,23 +598,15 @@ export async function buildReportDataFromScope(
   const expandedClassNamesForExam =
     classNames.length > 0 ? [...new Set(expandOlevelClassNamesForSubjectsQuery(classNames))] : classNames;
 
-  let examResultsQuery = supabase
-    .from('exam_results')
-    .select(
-      `*,
-      students!inner(student_id, name, current_class, admission_number, expected_fee_amount),
-      exam_sets!inner(id, name, term, year, created_at)`
-    )
-    .eq('school_id', schoolId)
-    .in('exam_set_id', examSetIdsToInclude);
-  if (expandedClassNamesForExam.length > 0) {
-    examResultsQuery = examResultsQuery.in('class_name', expandedClassNamesForExam);
-  }
-  const { data: examResults, error: resultsError } = await examResultsQuery;
+  const { data: examResultsRaw, error: resultsError } = await supabase.rpc('exam_results_for_secondary_report', {
+    p_school_id: schoolId,
+    p_exam_set_ids: examSetIdsToInclude,
+    p_class_names: expandedClassNamesForExam.length > 0 ? expandedClassNamesForExam : null,
+  });
   if (resultsError) throw new Error(resultsError.message);
 
-  const allStudentIdsInClass = [...new Set((examResults || []).map((r: { student_id: string }) => r.student_id))];
-  const classNamesFromResults = [...new Set((examResults || []).map((r: { class_name: string }) => r.class_name))];
+  const allStudentIdsInClass = [...new Set((examResultsRaw || []).map((r: { student_id: string }) => r.student_id))];
+  const classNamesFromResults = [...new Set((examResultsRaw || []).map((r: { class_name: string }) => r.class_name))];
 
   let commentSettingsQuery = supabase
     .from('class_teacher_comments_settings')
@@ -630,6 +622,22 @@ export async function buildReportDataFromScope(
   if (classNamesFromResults.length > 0) {
     classTeachersForReportNamesQuery = classTeachersForReportNamesQuery.in('class_name', classNamesFromResults);
   }
+  const examSetById = new Map<
+    string,
+    { id: string; name?: string; term?: number; year?: number; created_at?: string | null }
+  >(
+    (examSetsForTerm || []).map((es: { id: string; name?: string; term?: number; year?: number; created_at?: string | null }) => [
+      es.id,
+      {
+        id: es.id,
+        name: es.name,
+        term: es.term,
+        year: es.year,
+        created_at: es.created_at ?? null,
+      },
+    ]),
+  );
+
   const [
     { data: processedRows },
     { data: students },
@@ -682,6 +690,23 @@ export async function buildReportDataFromScope(
   const headTeacherDisplayNameForReport = String(
     (headTeacherUserForReport as { name?: string } | null)?.name || '',
   ).trim();
+
+  const studentById = new Map<string, Record<string, unknown>>();
+  (students || []).forEach((s: { student_id: string }) => {
+    if (s?.student_id) studentById.set(s.student_id, s as Record<string, unknown>);
+  });
+
+  const examResults = (examResultsRaw || [])
+    .map((row: Record<string, unknown> & { student_id: string; exam_set_id: string }) => {
+      const st = studentById.get(row.student_id);
+      const es = examSetById.get(row.exam_set_id);
+      return {
+        ...row,
+        students: st,
+        exam_sets: es,
+      };
+    })
+    .filter((r) => r.students && r.exam_sets);
 
   const processedByStudent: Record<string, { aggregate?: number; division?: string; class_position?: number }> = {};
   (processedRows || []).forEach((row: { student_id: string; exam_set_id?: string; aggregate?: number; division?: string; class_position?: number }) => {
