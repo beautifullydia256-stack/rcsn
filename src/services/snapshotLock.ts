@@ -112,6 +112,7 @@ export async function createSnapshotFromExamSet(
     { data: studentPhotos },
     { data: schoolInfo },
     { data: commentSettings },
+    { data: headteacherSettingsRows },
   ] = await Promise.all([
     supabase.from('students').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('student_attendance').select('*').eq('school_id', schoolId).in('student_id', studentIds),
@@ -120,9 +121,10 @@ export async function createSnapshotFromExamSet(
     supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', studentIds),
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
     commentSettingsQuery,
+    supabase.from('headteacher_comments_settings').select('*').eq('school_id', schoolId),
   ]);
   const classTeacherCommentSettings = commentSettings;
-  const headTeacherCommentSettings = commentSettings;
+  const headTeacherCommentSettings = headteacherSettingsRows;
 
   // Per-student comments from report_comments (comment_type + comment_text) for this term/year
   type StudentComment = {
@@ -247,40 +249,33 @@ export async function createSnapshotFromExamSet(
     const average = studentAverages[studentId] || 0;
     const boundedAverage = Math.max(0, Math.min(100, average));
 
-    // Class teacher comment
-    let classTeacherComment = '';
-    const classTeacherSetting = classTeacherCommentSettings?.find((s: any) =>
-      s.class_name === student.current_class &&
-      boundedAverage >= Number(s.min_percent) &&
-      boundedAverage <= Number(s.max_percent)
-    );
-    if (classTeacherSetting?.comment_text) {
-      classTeacherComment = classTeacherSetting.comment_text;
-    } else {
-      const studentComment = studentComments?.find((c: any) => c.student_id === studentId);
-      if (studentComment?.class_teacher_text) {
-        classTeacherComment = studentComment.class_teacher_text;
-      } else if (studentComment?.class_teacher_comment) {
-        classTeacherComment = studentComment.class_teacher_comment;
-      }
+    const studentComment = studentComments?.find((c: any) => c.student_id === studentId);
+    const savedCt =
+      String(studentComment?.class_teacher_text || '').trim() ||
+      String(studentComment?.class_teacher_comment || '').trim();
+    const savedHt =
+      String(studentComment?.headteacher_text || '').trim() ||
+      String(studentComment?.headteacher_comment || '').trim();
+
+    // Class teacher comment: saved report_comments override template bands
+    let classTeacherComment = savedCt;
+    if (!classTeacherComment) {
+      const classTeacherSetting = classTeacherCommentSettings?.find((s: any) =>
+        s.class_name === student.current_class &&
+        boundedAverage >= Number(s.min_percent) &&
+        boundedAverage <= Number(s.max_percent)
+      );
+      if (classTeacherSetting?.comment_text) classTeacherComment = String(classTeacherSetting.comment_text);
     }
 
-    // Head teacher comment
-    let headTeacherComment = '';
-    const headTeacherSetting = headTeacherCommentSettings?.find((s: any) =>
-      s.class_name === student.current_class &&
-      boundedAverage >= Number(s.min_percent) &&
-      boundedAverage <= Number(s.max_percent)
-    );
-    if (headTeacherSetting?.comment_text) {
-      headTeacherComment = headTeacherSetting.comment_text;
-    } else {
-      const studentComment = studentComments?.find((c: any) => c.student_id === studentId);
-      if (studentComment?.headteacher_text) {
-        headTeacherComment = studentComment.headteacher_text;
-      } else if (studentComment?.headteacher_comment) {
-        headTeacherComment = studentComment.headteacher_comment;
-      }
+    // Head teacher comment: school-wide bands (no class_name on table); saved comments override
+    let headTeacherComment = savedHt;
+    if (!headTeacherComment) {
+      const headTeacherSetting = headTeacherCommentSettings?.find((s: any) =>
+        boundedAverage >= Number(s.min_percent) &&
+        boundedAverage <= Number(s.max_percent)
+      );
+      if (headTeacherSetting?.comment_text) headTeacherComment = String(headTeacherSetting.comment_text);
     }
 
     resolvedComments[studentId] = {

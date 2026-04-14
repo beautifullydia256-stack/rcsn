@@ -482,6 +482,15 @@ export function SecondaryReportGenerator() {
           const studentAttendance = attendanceData?.filter(a => a.student_id === student.student_id) || [];
           const studentFees = feesData?.filter(f => f.student_id === student.student_id) || [];
           const studentProjects = projectsData.filter(p => p.student_id === student.student_id);
+          const normCommentType = (t: unknown) => String(t || '').toLowerCase().replace(/\s+/g, '_');
+          const classTeacherRows = commentsData
+            .filter((c) => {
+              if (c.student_id !== student.student_id) return false;
+              const ty = normCommentType(c.comment_type);
+              return ty === 'class_teacher' || ty === 'class_teacher_comment';
+            })
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const savedClassTeacherFromReport = String(classTeacherRows[0]?.comment_text || '').trim();
           const studentComments = commentsData
             .filter(c => c.student_id === student.student_id)
             .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0] || null;
@@ -496,7 +505,7 @@ export function SecondaryReportGenerator() {
           const attendanceDetails = getAttendanceDetails(studentAttendance, referenceExamSet, examSets);
           const attendancePercentage = attendanceDetails.percentage;
 
-          // Teacher comment from rules
+          // Fallback when no per-student comment: teacher_comment_rules (avg bands)
           const teacherComment = (() => {
             const avg = average != null ? Math.max(0, Math.min(100, average)) : null;
             if (avg == null || commentRules.length === 0) return '';
@@ -513,7 +522,11 @@ export function SecondaryReportGenerator() {
             comments: {
               ...studentComments,
               class_teacher_name: classTeacherName || (studentComments?.class_teacher_name || ''),
-              class_teacher_text: teacherComment || (studentComments?.class_teacher_text || ''),
+              class_teacher_text:
+                savedClassTeacherFromReport ||
+                String(studentComments?.class_teacher_text || '').trim() ||
+                teacherComment ||
+                '',
             },
             profile_photo: studentPhoto?.photo_url || null,
             summary: {

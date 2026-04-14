@@ -631,6 +631,7 @@ export async function buildReportDataFromScope(
     { data: studentPhotos },
     { data: schoolInfo },
     { data: commentSettings },
+    { data: headteacherCommentSettings },
     { data: reportCommentsRows },
   ] = await Promise.all([
     supabase
@@ -645,6 +646,7 @@ export async function buildReportDataFromScope(
     supabase.from('student_photos').select('*').eq('school_id', schoolId).in('student_id', allStudentIdsInClass),
     supabase.from('schools').select('*').eq('school_id', schoolId).single(),
     commentSettingsQuery,
+    supabase.from('headteacher_comments_settings').select('*').eq('school_id', schoolId),
     supabase
       .from('report_comments')
       .select('student_id, comment_type, comment_text')
@@ -846,10 +848,19 @@ export async function buildReportDataFromScope(
       (s: { class_name?: string; min_percent?: number; max_percent?: number; comment_text?: string }) =>
         s.class_name === student.current_class && bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
     );
+    const headSetting = (headteacherCommentSettings || []).find(
+      (s: { min_percent?: number; max_percent?: number; comment_text?: string }) =>
+        bounded >= Number(s.min_percent || 0) && bounded <= Number(s.max_percent || 100)
+    );
     const studentComment = studentComments.find((c) => c.student_id === student.student_id);
+    const savedClassTeacher = String(studentComment?.class_teacher_text || '').trim();
+    const savedHeadTeacher = String(studentComment?.headteacher_text || '').trim();
+    const bandClassTeacher = String(classSetting?.comment_text || '').trim();
+    const bandHeadTeacher = String(headSetting?.comment_text || '').trim();
+    // Per-student comments from class teachers (report_comments) must override template bands.
     resolvedComments[student.student_id] = {
-      classTeacher: classSetting?.comment_text || studentComment?.class_teacher_text || '',
-      headTeacher: classSetting?.comment_text || studentComment?.headteacher_text || '',
+      classTeacher: savedClassTeacher || bandClassTeacher,
+      headTeacher: savedHeadTeacher || bandHeadTeacher,
     };
   });
 
