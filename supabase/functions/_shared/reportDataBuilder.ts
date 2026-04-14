@@ -5,7 +5,14 @@
  * Position calculation always uses full class; studentIds filter only which report_data to return.
  */
 
-import { calculatePrimaryGrade, calculateDivision, calculateAggregate, calculateGradeOLevel } from './reportUtils.ts';
+import {
+  calculatePrimaryGrade,
+  calculateDivision,
+  calculateAggregate,
+  calculateGradeOLevel,
+  uaceGradeFromPercentDefault,
+  uacePointsFromGrade,
+} from './reportUtils.ts';
 
 /** Legacy DB placeholder; show MISSED only on reports like the grade column. */
 function normalizeAutoMissedRemarks(text: unknown): string {
@@ -420,6 +427,36 @@ export async function fetchAlevelExpectedSubjectsByStudentId(
   return out;
 }
 
+/**
+ * A-Level: principal vs subsidiary per subject from `student_alevel_subjects.subject_role`.
+ * Keys are `normalizeReportSubjectKey(subject_name)`.
+ */
+export async function fetchAlevelSubjectRolesByStudentId(
+  supabase: SupabaseClient,
+  schoolId: string,
+  studentIds: string[],
+): Promise<Record<string, Record<string, 'principal' | 'subsidiary'>>> {
+  if (!studentIds.length) return {};
+  const { data, error } = await supabase
+    .from('student_alevel_subjects')
+    .select('student_id, subject_name, subject_role')
+    .eq('school_id', schoolId)
+    .in('student_id', studentIds);
+  if (error) throw new Error(error.message);
+  const out: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
+  for (const r of data || []) {
+    const row = r as { student_id?: string; subject_name?: string; subject_role?: string };
+    const sid = String(row.student_id || '');
+    const sub = String(row.subject_name || '').trim();
+    if (!sid || !sub) continue;
+    const roleRaw = String(row.subject_role || '').toLowerCase();
+    const role: 'principal' | 'subsidiary' = roleRaw === 'subsidiary' ? 'subsidiary' : 'principal';
+    if (!out[sid]) out[sid] = {};
+    out[sid][normalizeReportSubjectKey(sub)] = role;
+  }
+  return out;
+}
+
 /** @deprecated Prefer `fetchOlevelExpectedSubjectsByStudentId` (DB view); kept for reference. */
 export function buildExpectedOlevelSubjectsByStudentIdForReports(
   students: { student_id: string; current_class?: string | null }[],
@@ -595,6 +632,88 @@ function numOrUndef(v: unknown): number | undefined {
   if (v == null || v === '') return undefined;
   const n = Number(v);
   return Number.isFinite(n) ? n : undefined;
+}
+
+function uaceGradeFromPercentWithOptionalBands(pct: number, bands: UacePctBand[] | undefined): string {
+  if (bands?.length) {
+    const p = Number(pct);
+    if (!Number.isFinite(p)) return 'F';
+    for (const row of bands) {
+      if (p >= row.min_pct && p <= row.max_pct) {
+        return String(row.grade || '')
+          .trim()
+          .toUpperCase();
+      }
+    }
+    return 'F';
+  }
+  return uaceGradeFromPercentDefault(pct);
+}
+
+/**
+ * Principal passes: principals with grade ≠ F. Subsidiary passes: subsidiaries with grade O.
+ * Total points: sum of principal UACE points +1 per subsidiary O (max 20). See UACE_ALEVEL_GRADING_LOGIC.md.
+ */
+function computeAlevelUaceReportStats(
+  resultsOut: OlevelReportResultRow[],
+  expectedOrdered: string[] | undefined,
+  roles: Record<string, 'principal' | 'subsidiary'> | undefined,
+  uaceBands: UacePctBand[] | undefined,
+): {
+  principalPasses: number;
+  subsidiaryPasses: number;
+  totalPointsNumerator: number;
+  totalPointsDenominator: number;
+} {
+  const denom = 20;
+  if (!expectedOrdered?.length) {
+    return { principalPasses: 0, subsidiaryPasses: 0, totalPointsNumerator: 0, totalPointsDenominator: denom };
+  }
+  let principalPasses = 0;
+  let subsidiaryPasses = 0;
+  let totalPoints = 0;
+  const roleOf = (subj: string): 'principal' | 'subsidiary' => {
+    const k = normalizeReportSubjectKey(subj);
+    return roles?.[k] === 'subsidiary' ? 'subsidiary' : 'principal';
+  };
+
+  for (const subj of expectedOrdered) {
+    const k = normalizeReportSubjectKey(subj);
+    if (!k) continue;
+    const rows = resultsOut.filter((r) => normalizeReportSubjectKey(String(r.subject ?? '')) === k);
+    if (rows.length === 0) continue;
+    const vals: number[] = [];
+    for (const r of rows) {
+      if (r.result_missing_placeholder === true) continue;
+      const fs = numOrUndef(r.final_score);
+      if (fs != null) {
+        vals.push(fs);
+        continue;
+      }
+      const m = numOrUndef(r.marks_obtained);
+      const t = Number(r.total_marks ?? 100) || 100;
+      if (m != null && t > 0) vals.push((m / t) * 100);
+    }
+    const grade =
+      vals.length > 0
+        ? uaceGradeFromPercentWithOptionalBands(vals.reduce((a, b) => a + b, 0) / vals.length, uaceBands)
+        : 'F';
+    const role = roleOf(subj);
+    if (role === 'principal') {
+      if (grade !== 'F') principalPasses += 1;
+      totalPoints += uacePointsFromGrade(grade);
+    } else {
+      if (grade === 'O') subsidiaryPasses += 1;
+      totalPoints += grade === 'O' ? 1 : 0;
+    }
+  }
+
+  return {
+    principalPasses,
+    subsidiaryPasses,
+    totalPointsNumerator: totalPoints,
+    totalPointsDenominator: denom,
+  };
 }
 
 /**
@@ -989,6 +1108,7 @@ export async function buildReportDataFromScope(
 
   let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
   let expectedAlevelSubjectsByStudentId: Record<string, string[]> = {};
+  let alevelSubjectRolesByStudentId: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
   if (allStudentIdsInClass.length > 0) {
     expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
       supabase,
@@ -996,6 +1116,11 @@ export async function buildReportDataFromScope(
       allStudentIdsInClass,
     );
     expectedAlevelSubjectsByStudentId = await fetchAlevelExpectedSubjectsByStudentId(
+      supabase,
+      schoolId,
+      allStudentIdsInClass,
+    );
+    alevelSubjectRolesByStudentId = await fetchAlevelSubjectRolesByStudentId(
       supabase,
       schoolId,
       allStudentIdsInClass,
@@ -1308,6 +1433,7 @@ export async function buildReportDataFromScope(
     examSetId,
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
+    alevelSubjectRolesByStudentId,
     alevelGradeRemarksByClass,
     uacePercentBandsByClass,
     teacherClassSubjectAssignments,
@@ -1334,6 +1460,7 @@ export function buildReportDataFromSnapshotRows(
   snapshotId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
+  alevelSubjectRolesByStudentId?: Record<string, Record<string, 'principal' | 'subsidiary'>>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
   teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
@@ -1345,6 +1472,7 @@ export function buildReportDataFromSnapshotRows(
     snapshotId,
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
+    alevelSubjectRolesByStudentId,
     alevelGradeRemarksByClass,
     uacePercentBandsByClass,
     teacherClassSubjectAssignments,
@@ -1358,6 +1486,7 @@ function buildReportDataListFromSnapshotRows(
   examSetId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
+  alevelSubjectRolesByStudentId?: Record<string, Record<string, 'principal' | 'subsidiary'>>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
   teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
@@ -1378,6 +1507,7 @@ function buildReportDataListFromSnapshotRows(
       examSetName,
       expectedOlevelSubjectsByStudentId?.[studentId],
       expectedAlevelSubjectsByStudentId?.[studentId],
+      alevelSubjectRolesByStudentId?.[studentId],
       alevelGradeRemarksByClass,
       uacePercentBandsByClass,
       teacherClassSubjectAssignments,
@@ -1395,6 +1525,7 @@ function oneReportFromSnapshotRows(
   examSetName: string,
   expectedOlevelSubjectNames?: string[],
   expectedAlevelSubjectNames?: string[],
+  alevelSubjectRolesForStudent?: Record<string, 'principal' | 'subsidiary'>,
   alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
   uacePercentBandsByClass?: Map<string, UacePctBand[]>,
   teacherClassSubjectAssignments?: TeacherClassSubjectAssignmentRow[],
@@ -1622,9 +1753,27 @@ function oneReportFromSnapshotRows(
     );
   }
 
-  let alevel: { paperRows?: Array<Record<string, unknown>> } | undefined;
+  let alevel:
+    | {
+        paperRows?: Array<Record<string, unknown>>;
+        principalPasses?: number;
+        subsidiaryPasses?: number;
+        totalPointsNumerator?: number;
+        totalPointsDenominator?: number;
+      }
+    | undefined;
   if (isALevelClassName(reportClassName)) {
     const assign = teacherClassSubjectAssignments ?? [];
+    const clsTrim = String(reportClassName || '').trim();
+    const uaceBandsForStudent = uacePercentBandsByClass?.size
+      ? uaceBandsForReportClass(clsTrim, uacePercentBandsByClass)
+      : undefined;
+    const uaceStats = computeAlevelUaceReportStats(
+      resultsOut,
+      expectedAlevelSubjectNames,
+      alevelSubjectRolesForStudent,
+      uaceBandsForStudent,
+    );
     const paperRows = resultsOut
       .filter((row) => String(row.subject ?? '').trim())
       .map((row) => {
@@ -1657,7 +1806,11 @@ function oneReportFromSnapshotRows(
           teacherDisplayName,
         };
       });
-    if (paperRows.length) alevel = { paperRows };
+    if (paperRows.length) {
+      alevel = { paperRows, ...uaceStats };
+    } else {
+      alevel = { ...uaceStats };
+    }
   }
 
   const frozen = frozenData as {

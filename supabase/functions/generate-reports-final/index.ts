@@ -9,6 +9,7 @@ import {
   buildReportDataFromScope,
   buildReportDataFromSnapshotRows,
   fetchAlevelExpectedSubjectsByStudentId,
+  fetchAlevelSubjectRolesByStudentId,
   fetchOlevelExpectedSubjectsByStudentId,
   fetchTeacherClassSubjectAssignmentsForSchool,
   expandOlevelClassNamesForSubjectsQuery,
@@ -268,6 +269,7 @@ serve(async (req) => {
 
       let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
       let expectedAlevelSubjectsByStudentId: Record<string, string[]> = {};
+      let alevelSubjectRolesByStudentId: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
       if (uniqueStudentIds.length > 0) {
         expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
           supabase,
@@ -275,6 +277,11 @@ serve(async (req) => {
           uniqueStudentIds,
         );
         expectedAlevelSubjectsByStudentId = await fetchAlevelExpectedSubjectsByStudentId(
+          supabase,
+          schoolId,
+          uniqueStudentIds,
+        );
+        alevelSubjectRolesByStudentId = await fetchAlevelSubjectRolesByStudentId(
           supabase,
           schoolId,
           uniqueStudentIds,
@@ -343,6 +350,7 @@ serve(async (req) => {
         snapshotId,
         expectedOlevelSubjectsByStudentId,
         expectedAlevelSubjectsByStudentId,
+        alevelSubjectRolesByStudentId,
         alevelGradeRemarksByClass,
         uacePercentBandsByClass,
         teacherClassSubjectAssignments,

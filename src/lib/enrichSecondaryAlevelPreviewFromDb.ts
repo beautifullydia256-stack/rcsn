@@ -22,6 +22,7 @@ import {
   fetchReportSignatureTeacherNames,
   resolveSecondaryCommentsForPreviewAverage,
 } from './secondaryPreviewCommentsFromDb';
+import { computeAlevelUaceReportStats, type AlevelReportResultRowLike } from './alevelUaceReportStats';
 
 type ResultRow = Record<string, unknown>;
 
@@ -278,6 +279,32 @@ async function fetchAlevelExpectedSubjectsByStudentId(
   return out;
 }
 
+async function fetchAlevelSubjectRolesByStudentId(
+  supabase: SupabaseClient,
+  schoolId: string,
+  studentIds: string[],
+): Promise<Record<string, Record<string, 'principal' | 'subsidiary'>>> {
+  if (!studentIds.length) return {};
+  const { data, error } = await supabase
+    .from('student_alevel_subjects')
+    .select('student_id, subject_name, subject_role')
+    .eq('school_id', schoolId)
+    .in('student_id', studentIds);
+  if (error) throw new Error(error.message);
+  const out: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
+  for (const r of data || []) {
+    const row = r as { student_id?: string; subject_name?: string; subject_role?: string };
+    const sid = String(row.student_id || '');
+    const sub = String(row.subject_name || '').trim();
+    if (!sid || !sub) continue;
+    const roleRaw = String(row.subject_role || '').toLowerCase();
+    const role: 'principal' | 'subsidiary' = roleRaw === 'subsidiary' ? 'subsidiary' : 'principal';
+    if (!out[sid]) out[sid] = {};
+    out[sid][normalizeReportSubjectKey(sub)] = role;
+  }
+  return out;
+}
+
 export type AlevelPreviewEnrichMeta = {
   term: number;
   year: number;
@@ -362,10 +389,16 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
   }
 
   let expectedByStudent: Record<string, string[]> = {};
+  let rolesByStudent: Record<string, Record<string, 'principal' | 'subsidiary'>> = {};
   try {
     expectedByStudent = await fetchAlevelExpectedSubjectsByStudentId(supabase, schoolId, uniqueSids);
   } catch (e) {
     console.warn('[enrichSecondaryAlevelPreviewFromDb] expected subjects fetch failed', e);
+  }
+  try {
+    rolesByStudent = await fetchAlevelSubjectRolesByStudentId(supabase, schoolId, uniqueSids);
+  } catch (e) {
+    console.warn('[enrichSecondaryAlevelPreviewFromDb] alevel subject roles fetch failed', e);
   }
 
   const rpcByStudent = new Map<string, Record<string, unknown>[]>();
@@ -458,6 +491,13 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const uaceBands = resolveUaceBandsForClass(classForPrefs, uaceBandsByClass);
 
     const rawRpc = rpcByStudent.get(sid);
+    const expectedEarly = expectedByStudent[sid] ?? [];
+    const uaceStatsEarly = computeAlevelUaceReportStats(
+      Array.isArray(st.results) ? (st.results as AlevelReportResultRowLike[]) : [],
+      expectedEarly.length > 0 ? expectedEarly : undefined,
+      rolesByStudent[sid],
+      uaceBands ?? null,
+    );
     if (!rawRpc?.length) {
       const prevSummaryEarly = (st.summary as Record<string, unknown> | undefined) ?? {};
       const avgEarly =
@@ -499,8 +539,10 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
         head_teacher_name:
           sigEarly.head_teacher_name || String(commentsEarly.head_teacher_name || '').trim(),
       };
+      const prevAlevelEarly = (rep.alevel as Record<string, unknown> | undefined) ?? {};
       const nextInner: Record<string, unknown> = {
         ...rep,
+        alevel: { ...prevAlevelEarly, ...uaceStatsEarly },
         students: [{ ...st, comments: commentsEarly }],
         ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
         ...(uaceBands?.length ? { uace_percent_bands: uaceBands } : {}),
@@ -514,7 +556,7 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
       return examResultRowToAlevelResultRow(row, esn);
     });
 
-    const expected = expectedByStudent[sid] ?? [];
+    const expected = expectedEarly;
     const examSet = rep.examSet as Record<string, unknown> | undefined;
     const examSetName = String(examSet?.name ?? displayExamSetName);
     const resultsOut =
@@ -542,8 +584,16 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
       teacherAssignments,
     });
     const prevAlevel = (rep.alevel as Record<string, unknown> | undefined) ?? {};
+    const uaceStats = computeAlevelUaceReportStats(
+      resultsOut as AlevelReportResultRowLike[],
+      expected.length > 0 ? expected : undefined,
+      rolesByStudent[sid],
+      uaceBands ?? null,
+    );
     const nextAlevel =
-      paperRows.length > 0 ? { ...prevAlevel, paperRows } : { ...prevAlevel, paperRows: [] };
+      paperRows.length > 0
+        ? { ...prevAlevel, paperRows, ...uaceStats }
+        : { ...prevAlevel, paperRows: [], ...uaceStats };
 
     const prevComments = (st.comments as Record<string, unknown> | undefined) ?? {};
     let nextComments: Record<string, unknown> = { ...prevComments };

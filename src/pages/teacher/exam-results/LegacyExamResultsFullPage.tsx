@@ -24,7 +24,11 @@ import { fetchUacePapersForClassSubject, uacePaperSelectOptionValue } from "@/li
 import { matchesAlevelExamPaperLine } from "@/lib/alevelExamPaperLine";
 import { calculateActivityDescriptor } from "@/lib/secondaryExamScoring";
 import { calculateUacePrincipalGradeFromMarks } from "@/lib/reportUtils";
-import { parseUaceBandsFromDb, type UacePercentBand } from "@/lib/uaceGradeBands";
+import {
+  parseUaceBandsFromDb,
+  DEFAULT_UACE_PERCENT_BANDS,
+  type UacePercentBand,
+} from "@/lib/uaceGradeBands";
 import {
   getReadableTextColor as getNurseryReadableTextColor,
   applyAlphaToHex,
@@ -43,6 +47,19 @@ import {
 
 /** Per-student map of skillKey → rating label (pre-primary holistic colour grid). */
 type NurseryPerformanceRecord = Record<string, PrePrimaryHolisticRating | string>;
+
+function normalizeUaceBandsEditorState(bands: UacePercentBand[]): UacePercentBand[] {
+  const byGrade = new Map<string, UacePercentBand>();
+  for (const b of bands) {
+    const g = String(b.grade || "").trim().toUpperCase();
+    if (!g) continue;
+    byGrade.set(g, { grade: g, min_pct: Number(b.min_pct), max_pct: Number(b.max_pct) });
+  }
+  return DEFAULT_UACE_PERCENT_BANDS.map((d) => {
+    const g = d.grade.toUpperCase();
+    return byGrade.get(g) ?? { grade: g, min_pct: d.min_pct, max_pct: d.max_pct };
+  });
+}
 
 const DEFAULT_TEACHER_REMARKS_RANGES: Array<{
   id?: string;
@@ -194,7 +211,7 @@ export default function LegacyExamResultsFullPage() {
   const [gradeSettings, setGradeSettings] = useState<Record<string, Array<{ min: number; max: number; grade: string }>>>(
     {}
   );
-  /** O-Level / A-Level final-score bands (A–E) per subject — kept separate from primary D1–F9. */
+  /** O-Level final-score bands (A–E) per subject — kept separate from primary D1–F9. */
   const [secondaryGradeSettings, setSecondaryGradeSettings] = useState<
     Record<string, Array<{ min: number; max: number; grade: string }>>
   >({});
@@ -203,6 +220,10 @@ export default function LegacyExamResultsFullPage() {
     if (!sk) return "null";
     return JSON.stringify(secondaryGradeSettings[scopedGradeKey(sk)] ?? null);
   }, [secondaryGradeSettings, selectedSubject, scopedGradeKey]);
+  const uaceBandsSignature = useMemo(
+    () => JSON.stringify(uacePercentBands ?? null),
+    [uacePercentBands],
+  );
 
   useEffect(() => {
     const prefix = `${normalizedClassName}::`;
@@ -839,6 +860,29 @@ export default function LegacyExamResultsFullPage() {
     });
   }, [isSecondary, selectedSubject, secondaryBandsSignature]);
 
+  // When UACE % bands change (settings modal), refresh computed letter grades for A-Level marks already entered.
+  useEffect(() => {
+    if (!isALevel) return;
+    setExamResults((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const sid of Object.keys(next)) {
+        const row = next[sid];
+        const marksStr = row.marks ?? "";
+        if (marksStr.trim() === "") continue;
+        const mn = parseFloat(marksStr);
+        if (Number.isNaN(mn)) continue;
+        const tn = parseFloat(row.totalMarks || "100") || 100;
+        const g = calculateUacePrincipalGradeFromMarks(mn, tn, uacePercentBands).grade;
+        if (row.grade !== g) {
+          next[sid] = { ...row, grade: g };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [isALevel, uaceBandsSignature, uacePercentBands]);
+
   const loadTeacherExamGradeSettingsFromSupabase = useCallback(async () => {
     if (!resolvedSchoolId || !normalizedClassName) return;
     setExamGradeSettingsLoading(true);
@@ -887,6 +931,9 @@ export default function LegacyExamResultsFullPage() {
         const next = { ...prev };
         for (const k of Object.keys(next)) {
           if (k.startsWith(prefix)) delete next[k];
+        }
+        if (isALevelClass(normalizedClassName)) {
+          return { ...next };
         }
         return { ...next, ...secondary };
       });
@@ -991,6 +1038,33 @@ export default function LegacyExamResultsFullPage() {
       );
       if (prefErr) throw prefErr;
 
+      if (isALevel) {
+        const { error: delStaleSec } = await supabase
+          .from("teacher_exam_grade_bands")
+          .delete()
+          .eq("school_id", resolvedSchoolId)
+          .eq("class_name", normalizedClassName)
+          .eq("scale_kind", "secondary");
+        if (delStaleSec) throw delStaleSec;
+
+        const bandsPayload = normalizeUaceBandsEditorState(
+          uacePercentBands && uacePercentBands.length > 0 ? uacePercentBands : DEFAULT_UACE_PERCENT_BANDS,
+        );
+        const { error: uaceErr } = await supabase.from("school_class_uace_grade_bands").upsert(
+          {
+            school_id: resolvedSchoolId,
+            class_name: normalizedClassName,
+            bands: bandsPayload,
+          },
+          { onConflict: "school_id,class_name" },
+        );
+        if (uaceErr) throw uaceErr;
+
+        void loadTeacherExamGradeSettingsFromSupabase();
+        alert("Grade settings saved.");
+        return;
+      }
+
       const gsSubj = gradeSettingsSubject.trim();
       const primaryMap: Record<string, Array<{ min: number; max: number; grade: string }>> = {
         ...gradeSettings,
@@ -1005,7 +1079,7 @@ export default function LegacyExamResultsFullPage() {
           if (!cur || cur.length === 0) {
             primaryMap[sk] = getDefaultGrades().map((g) => ({ ...g }));
           }
-        } else if (isSecondary || isALevel) {
+        } else if (isSecondary) {
           const cur = secondaryMap[sk];
           if (!cur || cur.length === 0) {
             secondaryMap[sk] = getDefaultSecondaryGradeBands().map((g) => ({ ...g }));
@@ -1116,6 +1190,7 @@ export default function LegacyExamResultsFullPage() {
     getDefaultGrades,
     getDefaultSecondaryGradeBands,
     loadTeacherExamGradeSettingsFromSupabase,
+    uacePercentBands,
   ]);
 
   // Primary change handler (existing)
@@ -2540,15 +2615,13 @@ export default function LegacyExamResultsFullPage() {
                 {isALevel && (
                   <>
                     <div className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">
-                      <span className="font-medium">A-Level</span>
+                      <span className="font-medium">A-Level (UACE)</span>
                       <span className="text-white/80">
                         {' '}
-                        — Class {className}. Grade bands below are only for the subject you have selected for exam entry
-                        {gradeSettingsSubject ? ` (${gradeSettingsSubject})` : ''}.
+                        — Class {className}. Final percentage → letter grades (A–F including O) below apply to{' '}
+                        <span className="text-violet-200 font-medium">every A-Level subject</span> in this class, not only{' '}
+                        {gradeSettingsSubject ? `“${gradeSettingsSubject}”.` : 'one subject.'}
                       </span>
-                      <p className="mt-2 text-xs text-amber-100/90">
-                        Default percentage-to-grade rules apply for all schools today. Custom A-Level ranges per school will be configurable in a future update.
-                      </p>
                     </div>
                     <div className="border border-white/10 rounded-lg p-4">
                       <h3 className="text-white font-medium mb-3">Auto Remark</h3>
@@ -2647,13 +2720,12 @@ export default function LegacyExamResultsFullPage() {
                   </p>
                 )}
 
-                {/* Secondary final score → A–E for the current subject only (not primary D1–F9) */}
-                {(isSecondary || isALevel) && gradeSettingsSubject && (
+                {/* O-Level: final score → A–E for the current subject only */}
+                {isSecondary && gradeSettingsSubject && (
                   <div className="border border-white/10 rounded-lg p-4">
                     <h3 className="text-white font-medium mb-3">Final score bands — {gradeSettingsSubject}</h3>
                     <p className="text-white/60 text-xs mb-3">
-                      Final score is out of 100. Use letters A–E only (O-Level / A-Level). Adjust percentages per subject as
-                      needed.
+                      Final score is out of 100. Use letters A–E only. Adjust percentages for this subject as needed.
                     </p>
                     <div className="space-y-2">
                       {(
@@ -2718,9 +2790,76 @@ export default function LegacyExamResultsFullPage() {
                   </div>
                 )}
 
-                {(isSecondary || isALevel) && !gradeSettingsSubject && (
+                {/* A-Level (UACE): class-wide % bands — same letters as UNEB principal grades */}
+                {isALevel && gradeSettingsSubject && (
+                  <div className="border border-white/10 rounded-lg p-4">
+                    <h3 className="text-white font-medium mb-3">UACE final score bands — {className}</h3>
+                    <p className="text-white/60 text-xs mb-3">
+                      Percentage is (marks / total marks) times 100. Bands run from A down to F; the first range that contains
+                      the percentage wins. Defaults match UNEB-style cut-offs (including E, O, and F); edit min/max if your
+                      school uses different thresholds.
+                    </p>
+                    <div className="space-y-2">
+                      {normalizeUaceBandsEditorState(uacePercentBands ?? DEFAULT_UACE_PERCENT_BANDS).map((row) => {
+                        const g = row.grade.toUpperCase();
+                        const patchBand = (patch: Partial<Pick<UacePercentBand, "min_pct" | "max_pct">>) => {
+                          const base = (uacePercentBands ?? DEFAULT_UACE_PERCENT_BANDS).map((b) => ({
+                            ...b,
+                            grade: String(b.grade || "").trim().toUpperCase(),
+                          }));
+                          const i = base.findIndex((b) => b.grade === g);
+                          if (i < 0) return;
+                          base[i] = { ...base[i], ...patch };
+                          setUacePercentBands(normalizeUaceBandsEditorState(base));
+                        };
+                        return (
+                          <div key={g} className="flex items-center gap-3 flex-wrap">
+                            <input
+                              type="number"
+                              step="any"
+                              min={0}
+                              max={100}
+                              value={row.min_pct}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!Number.isFinite(v)) return;
+                                patchBand({ min_pct: v });
+                              }}
+                              className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                            />
+                            <span className="text-white/80">to</span>
+                            <input
+                              type="number"
+                              step="any"
+                              min={0}
+                              max={100}
+                              value={row.max_pct}
+                              onChange={(e) => {
+                                const v = parseFloat(e.target.value);
+                                if (!Number.isFinite(v)) return;
+                                patchBand({ max_pct: v });
+                              }}
+                              className="w-24 px-2 py-1 rounded border border-white/20 bg-white/10 text-white text-sm"
+                            />
+                            <span className="text-white/80">%</span>
+                            <span className="text-white/80">=</span>
+                            <span className="w-8 text-white font-medium">{row.grade}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {isSecondary && !gradeSettingsSubject && (
                   <p className="text-amber-200/90 text-sm">
-                    Select a subject above to edit A–E percentage bands for that subject.
+                    Select a subject above to edit O-Level A–E percentage bands for that subject.
+                  </p>
+                )}
+                {isALevel && !gradeSettingsSubject && (
+                  <p className="text-amber-200/90 text-sm">
+                    Select a subject on the main page to open these settings. UACE bands still apply to the whole class once
+                    you save.
                   </p>
                 )}
               </div>

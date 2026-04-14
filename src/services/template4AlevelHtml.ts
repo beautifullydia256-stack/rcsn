@@ -10,6 +10,7 @@ import {
   buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
   formatSecondaryFeesBalanceForReport,
+  secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
@@ -35,8 +36,7 @@ export function generateTemplate4AlevelHTML(
     throw new Error('generateTemplate4AlevelHTML: no student in reportData');
   }
 
-  const term = examSet?.term ?? '';
-  const year = examSet?.year ?? '';
+  const year = examSet?.year ?? new Date().getFullYear();
 
   const results: any[] = Array.isArray(student.results) ? student.results : [];
   const sorted = [...results].sort((a, b) => {
@@ -113,9 +113,6 @@ export function generateTemplate4AlevelHTML(
       ? `${alevel.totalPointsNumerator}/${alevel.totalPointsDenominator}`
       : '—';
 
-  const classLine = String(student.current_class ?? '').trim();
-  const stream = String(student.stream ?? student.stream_name ?? '').trim();
-
   const chartSection = (() => {
     const line = alevel?.lineChartStudentVsClass;
     if (!line || line.length === 0) return '';
@@ -162,13 +159,9 @@ export function generateTemplate4AlevelHTML(
       </div>`;
   })();
 
-  const sessionMeta = [classLine, stream || null, year !== '' || term !== '' ? `${year} Term ${term}`.trim() : null]
-    .filter(Boolean)
-    .join(' — ');
-
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
-    chipTitle: 'ACADEMIC REPORT FORM',
-    metaLine: sessionMeta,
+    chipTitle: secondaryOlevelStandardReportChipTitle(examSet),
+    metaLine: `${examSet?.name || 'Term Report'} - ${year}`,
   });
 
   const studentBlockHtml = buildSecondaryUpperSectionStyleStudentBlockHtml(
@@ -247,8 +240,9 @@ export function generateTemplate4AlevelHTML(
     })
     .join('');
 
+  const classLineForBands = String(student.current_class ?? '').trim();
   const innerTitle = usingSchoolBands
-    ? (classLine.trim() || 'This class')
+    ? (classLineForBands || 'This class')
     : 'Default UACE-style bands (typical UNEB ranges)';
   const innerBody = usingSchoolBands
     ? 'Marks out of 100 are converted to a letter grade using these bands.'

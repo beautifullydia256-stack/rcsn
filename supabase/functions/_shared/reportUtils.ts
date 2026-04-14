@@ -53,3 +53,46 @@ export function calculateAggregate(results: { marks_obtained: number; total_mark
   }
   return totalSubjects > 0 ? totalPoints / totalSubjects : 0;
 }
+
+/** Default UNEB-style UACE % → letter (matches `uace_default_grade_from_percent` / app DEFAULT_UACE_PERCENT_BANDS). */
+const UACE_DEFAULT_PCT_BANDS: { min: number; max: number; grade: string }[] = [
+  { min: 80, max: 100, grade: 'A' },
+  { min: 70, max: 79.999, grade: 'B' },
+  { min: 60, max: 69.999, grade: 'C' },
+  { min: 50, max: 59.999, grade: 'D' },
+  { min: 45, max: 49.999, grade: 'E' },
+  { min: 40, max: 44.999, grade: 'O' },
+  { min: 0, max: 39.999, grade: 'F' },
+];
+
+export function uaceGradeFromPercentDefault(percentage: number): string {
+  const p = Number(percentage);
+  if (!Number.isFinite(p)) return 'F';
+  for (const row of UACE_DEFAULT_PCT_BANDS) {
+    if (p >= row.min && p <= row.max) return row.grade;
+  }
+  return 'F';
+}
+
+/** UACE principal grade points; F = 0, O = 1 (subsidiary band letter). */
+export function uacePointsFromGrade(grade: string): number {
+  const g = String(grade || '')
+    .trim()
+    .toUpperCase();
+  switch (g) {
+    case 'A':
+      return 6;
+    case 'B':
+      return 5;
+    case 'C':
+      return 4;
+    case 'D':
+      return 3;
+    case 'E':
+      return 2;
+    case 'O':
+      return 1;
+    default:
+      return 0;
+  }
+}
