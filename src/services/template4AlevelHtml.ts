@@ -240,11 +240,6 @@ export function generateTemplate4AlevelHTML(
 
   const gradingSectionHtml = `
     <div class="uace-exam-bands-block">
-      <div class="uace-section-heading">
-        <span class="uace-section-icon" aria-hidden="true">&#127891;</span>
-        <span class="uace-section-title">A-Level (Senior 5–6): UACE exam bands</span>
-      </div>
-      <p class="uace-section-sub">Reference for principal papers marked out of 100. This is the default mapping used when saving A-Level exam results.</p>
       <div class="uace-bands-card">
         <p class="uace-bands-card-title">${escapeHtml(innerTitle)}</p>
         <p class="uace-bands-card-body">${escapeHtml(innerBody)}</p>
@@ -371,24 +366,6 @@ export function generateTemplate4AlevelHTML(
       margin-top: 10px;
       margin-bottom: 12px;
       font-family: 'Times New Roman', Times, serif;
-    }
-    .uace-section-heading {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-bottom: 4px;
-    }
-    .uace-section-icon { font-size: 12pt; line-height: 1; }
-    .uace-section-title {
-      font-size: 11pt;
-      font-weight: 700;
-      color: #1e3a8a;
-    }
-    .uace-section-sub {
-      font-size: 9pt;
-      color: #475569;
-      margin: 0 0 10px;
-      line-height: 1.35;
     }
     .uace-bands-card {
       border: 1px solid #00897b;
