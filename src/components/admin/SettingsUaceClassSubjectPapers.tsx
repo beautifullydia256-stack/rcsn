@@ -19,6 +19,23 @@ function equalSplitWeights(count: 1 | 2 | 3): number[] {
   return [third, third, Number((100 - 2 * third).toFixed(2))];
 }
 
+/** Draft strings for papers 1..(n−1); paper n is always 100% minus the sum of these (shown read-only). */
+function equalSplitDraftsForFirstPapers(count: 1 | 2 | 3): string[] {
+  if (count === 1) return [];
+  const nums = equalSplitWeights(count);
+  if (count === 2) return [String(nums[0])];
+  return [String(nums[0]), String(nums[1])];
+}
+
+function draftLooksLikePartialNumber(value: string): boolean {
+  return value === '' || /^\d*\.?\d*$/.test(value);
+}
+
+function draftStringFromStoredWeight(n: number): string {
+  if (!Number.isFinite(n)) return '';
+  return String(Math.round(n * 100) / 100);
+}
+
 export default function SettingsUaceClassSubjectPapers({
   classOptions,
   schoolId,
@@ -40,7 +57,8 @@ export default function SettingsUaceClassSubjectPapers({
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [paperCount, setPaperCount] = useState<1 | 2 | 3>(1);
-  const [weights, setWeights] = useState<number[]>([100]);
+  /** Editable % for Paper 1 .. Paper (n−1). Last paper is computed so total = 100%. */
+  const [weightDrafts, setWeightDrafts] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -107,17 +125,24 @@ export default function SettingsUaceClassSubjectPapers({
       if (rows.length > 0) {
         const sorted = [...rows].sort((a, b) => a.paper_slot - b.paper_slot);
         const n = sorted.length;
-        setPaperCount((n >= 3 ? 3 : n >= 2 ? 2 : 1) as 1 | 2 | 3);
-        setWeights(sorted.map((r) => Number(r.weight_percent)));
+        const clamped = (n >= 3 ? 3 : n >= 2 ? 2 : 1) as 1 | 2 | 3;
+        setPaperCount(clamped);
+        if (clamped === 1) {
+          setWeightDrafts([]);
+        } else {
+          setWeightDrafts(
+            sorted.slice(0, clamped - 1).map((r) => draftStringFromStoredWeight(Number(r.weight_percent))),
+          );
+        }
       } else {
         setPaperCount(1);
-        setWeights([100]);
+        setWeightDrafts([]);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load papers');
       setPaperRows([]);
       setPaperCount(1);
-      setWeights([100]);
+      setWeightDrafts([]);
     } finally {
       setLoadingPapers(false);
     }
@@ -137,8 +162,35 @@ export default function SettingsUaceClassSubjectPapers({
     setSelectedSubject('');
   }, [anchorClassName]);
 
-  const weightTotal = useMemo(() => weights.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0), [weights]);
-  const weightsValid = Math.abs(weightTotal - 100) <= WEIGHT_SUM_TOLERANCE;
+  const editablePaperCount = paperCount > 1 ? paperCount - 1 : 0;
+
+  const sumEditableParsed = useMemo(() => {
+    return weightDrafts.slice(0, editablePaperCount).reduce((acc, s) => {
+      const v = parseFloat(s);
+      return acc + (Number.isFinite(v) ? v : 0);
+    }, 0);
+  }, [weightDrafts, editablePaperCount]);
+
+  const remainderPercent = useMemo(() => {
+    const r = 100 - sumEditableParsed;
+    return Math.round(r * 100) / 100;
+  }, [sumEditableParsed]);
+
+  const weightsValid =
+    paperCount === 1 ||
+    (sumEditableParsed <= 100 + WEIGHT_SUM_TOLERANCE && remainderPercent >= -WEIGHT_SUM_TOLERANCE);
+
+  const overflowEditable = sumEditableParsed > 100 + WEIGHT_SUM_TOLERANCE;
+
+  const buildWeightsToSave = (): number[] => {
+    if (paperCount === 1) return [100];
+    const first = weightDrafts.slice(0, paperCount - 1).map((s) => {
+      const v = parseFloat(s);
+      return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0;
+    });
+    const last = Number((100 - first.reduce((a, b) => a + b, 0)).toFixed(2));
+    return [...first, Math.max(0, last)];
+  };
 
   const inputClass =
     variant === 'next'
@@ -154,14 +206,15 @@ export default function SettingsUaceClassSubjectPapers({
 
   const setPaperCountAndDefaults = (n: 1 | 2 | 3) => {
     setPaperCount(n);
-    setWeights(equalSplitWeights(n));
+    setWeightDrafts(equalSplitDraftsForFirstPapers(n));
   };
 
-  const setWeightAt = (index: number, raw: string) => {
-    const v = parseFloat(raw);
-    setWeights((prev) => {
-      const next = [...prev];
-      next[index] = Number.isFinite(v) ? v : 0;
+  const setWeightDraftAt = (index: number, raw: string) => {
+    if (!draftLooksLikePartialNumber(raw)) return;
+    setWeightDrafts((prev) => {
+      const next = prev.length >= editablePaperCount ? [...prev] : equalSplitDraftsForFirstPapers(paperCount);
+      while (next.length < editablePaperCount) next.push('');
+      next[index] = raw;
       return next;
     });
   };
@@ -169,10 +222,17 @@ export default function SettingsUaceClassSubjectPapers({
   const saveConfiguration = async () => {
     setError(null);
     if (!schoolId || !selectedSubject.trim()) return;
-    if (!weightsValid) {
-      setError(`Paper weights must add up to 100% (currently ${weightTotal.toFixed(2)}%).`);
+    if (overflowEditable) {
+      setError(
+        `The editable papers add up to ${sumEditableParsed.toFixed(2)}%, which is over 100%. Reduce a value so the last paper can fill the remainder.`,
+      );
       return;
     }
+    if (!weightsValid || remainderPercent < -WEIGHT_SUM_TOLERANCE) {
+      setError('Paper weights must add up to 100%. Check the values you entered.');
+      return;
+    }
+    const weights = buildWeightsToSave();
     if (weights.length !== paperCount) {
       setError('Weight count does not match number of papers.');
       return;
@@ -222,7 +282,7 @@ export default function SettingsUaceClassSubjectPapers({
         .eq('subject_name', selectedSubject.trim());
       if (delErr) throw delErr;
       setPaperCount(1);
-      setWeights([100]);
+      setWeightDrafts([]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to clear papers');
     } finally {
@@ -296,7 +356,7 @@ export default function SettingsUaceClassSubjectPapers({
               onChange={(e) => {
                 setSelectedSubject(e.target.value);
                 setPaperCount(1);
-                setWeights([100]);
+                setWeightDrafts([]);
               }}
               className={inputClass}
             >
@@ -326,30 +386,79 @@ export default function SettingsUaceClassSubjectPapers({
 
         {selectedSubject.trim() ? (
           <div className="mt-4 space-y-3">
-            <div className={labelClass}>Weight of each paper in final subject % (sum = 100%)</div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: paperCount }, (_, i) => (
-                <div key={i}>
-                  <label className={labelClass}>{`Paper ${i + 1}`}</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step={0.01}
-                      value={weights[i] ?? ''}
-                      onChange={(e) => setWeightAt(i, e.target.value)}
-                      className={inputClass}
-                      aria-label={`Weight percent for paper ${i + 1}`}
-                    />
-                    <span className={variant === 'next' ? 'text-sm text-white/80' : 'ac-text-secondary text-sm'}>%</span>
-                  </div>
-                </div>
-              ))}
+            <div className={labelClass}>
+              Weight of each paper in final subject % (total 100%).{' '}
+              {paperCount === 2 ? (
+                <>
+                  Edit <strong className="font-medium">Paper 1</strong>;{' '}
+                  <strong className="font-medium">Paper 2</strong> is the remainder (100% − Paper 1).
+                </>
+              ) : paperCount === 3 ? (
+                <>
+                  Edit <strong className="font-medium">Papers 1 and 2</strong>;{' '}
+                  <strong className="font-medium">Paper 3</strong> is the remainder so the three always sum to 100%.
+                </>
+              ) : null}
             </div>
+            {paperCount === 1 ? (
+              <div
+                className={
+                  variant === 'next'
+                    ? 'rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/85'
+                    : 'rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-3 py-2 text-sm ac-text-primary'
+                }
+              >
+                One paper uses <strong className="font-medium">100%</strong> of the subject mark (no split).
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {Array.from({ length: paperCount - 1 }, (_, i) => (
+                  <div key={i}>
+                    <label className={labelClass}>{`Paper ${i + 1}`}</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        value={weightDrafts[i] ?? ''}
+                        onChange={(e) => setWeightDraftAt(i, e.target.value)}
+                        className={inputClass}
+                        placeholder="e.g. 20"
+                        aria-label={`Weight percent for paper ${i + 1}`}
+                      />
+                      <span className={variant === 'next' ? 'text-sm text-white/80' : 'ac-text-secondary text-sm'}>
+                        %
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                <div>
+                  <label className={labelClass}>{`Paper ${paperCount} (auto)`}</label>
+                  <div
+                    className={
+                      variant === 'next'
+                        ? `${inputClass} flex min-h-[44px] items-center text-white/90`
+                        : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
+                    }
+                    aria-live="polite"
+                  >
+                    {overflowEditable ? '—' : `${remainderPercent.toFixed(2)}%`}
+                  </div>
+                  <p
+                    className={
+                      variant === 'next' ? 'mt-1 text-xs text-white/55' : 'mt-1 text-xs ac-text-secondary'
+                    }
+                  >
+                    {overflowEditable
+                      ? 'Reduce the values above — they cannot exceed 100% in total.'
+                      : `100% − (${sumEditableParsed.toFixed(2)}% above) = ${remainderPercent.toFixed(2)}%`}
+                  </p>
+                </div>
+              </div>
+            )}
             <div
               className={
-                weightsValid
+                weightsValid && !overflowEditable
                   ? variant === 'next'
                     ? 'text-sm text-emerald-300/90'
                     : 'text-sm text-emerald-600 dark:text-emerald-400'
@@ -358,12 +467,16 @@ export default function SettingsUaceClassSubjectPapers({
                     : 'text-sm text-amber-700 dark:text-amber-300'
               }
             >
-              Total: {weightTotal.toFixed(2)}% {weightsValid ? '(valid)' : '— must be 100%'}
+              {paperCount === 1
+                ? 'Total: 100% (single paper).'
+                : overflowEditable
+                  ? `Total would exceed 100% (you entered ${sumEditableParsed.toFixed(2)}% across editable papers).`
+                  : `Total: ${(sumEditableParsed + (overflowEditable ? 0 : remainderPercent)).toFixed(2)}% ${weightsValid ? '(valid)' : '— fix values'}`}
             </div>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={!weightsValid || saving}
+                disabled={!weightsValid || saving || overflowEditable || (paperCount > 1 && remainderPercent < 0)}
                 onClick={() => void saveConfiguration()}
                 className={
                   variant === 'next'
