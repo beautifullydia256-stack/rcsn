@@ -8,6 +8,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import {
   buildReportDataFromScope,
   buildReportDataFromSnapshotRows,
+  fetchAlevelExpectedSubjectsByStudentId,
   fetchOlevelExpectedSubjectsByStudentId,
   expandOlevelClassNamesForSubjectsQuery,
   type BuildReportPayload,
@@ -265,8 +266,14 @@ serve(async (req) => {
       const { data: examSet } = await supabase.from('exam_sets').select('*').eq('id', examSetId).single();
 
       let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
+      let expectedAlevelSubjectsByStudentId: Record<string, string[]> = {};
       if (uniqueStudentIds.length > 0) {
         expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
+          supabase,
+          schoolId,
+          uniqueStudentIds,
+        );
+        expectedAlevelSubjectsByStudentId = await fetchAlevelExpectedSubjectsByStudentId(
           supabase,
           schoolId,
           uniqueStudentIds,
@@ -279,6 +286,7 @@ serve(async (req) => {
         (examSet || { id: examSetId }) as { id: string; name?: string; term?: number; year?: number },
         snapshotId,
         expectedOlevelSubjectsByStudentId,
+        expectedAlevelSubjectsByStudentId,
       ) as Record<string, unknown>[];
 
       const toInsert = reportDataList

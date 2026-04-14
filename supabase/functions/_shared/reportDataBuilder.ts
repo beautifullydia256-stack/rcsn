@@ -233,6 +233,47 @@ export async function fetchOlevelExpectedSubjectsByStudentId(
   return out;
 }
 
+/**
+ * A-Level (Senior 5–6): subjects on the student’s profile (`student_alevel_subjects`).
+ * Principals first, then subsidiaries; same placeholder merge as O-Level reports.
+ */
+export async function fetchAlevelExpectedSubjectsByStudentId(
+  supabase: SupabaseClient,
+  schoolId: string,
+  studentIds: string[],
+): Promise<Record<string, string[]>> {
+  if (!studentIds.length) return {};
+  const { data, error } = await supabase
+    .from('student_alevel_subjects')
+    .select('student_id, subject_name, subject_role')
+    .eq('school_id', schoolId)
+    .in('student_id', studentIds);
+  if (error) throw new Error(error.message);
+  type Row = { student_id?: string; subject_name?: string; subject_role?: string };
+  const rows = [...(data || [])] as Row[];
+  rows.sort((a, b) => {
+    const sa = String(a.student_id || '');
+    const sb = String(b.student_id || '');
+    if (sa !== sb) return sa.localeCompare(sb);
+    const ra = a.subject_role === 'principal' ? 0 : 1;
+    const rb = b.subject_role === 'principal' ? 0 : 1;
+    if (ra !== rb) return ra - rb;
+    return String(a.subject_name || '').localeCompare(String(b.subject_name || ''), undefined, { sensitivity: 'base' });
+  });
+  const out: Record<string, string[]> = {};
+  for (const r of rows) {
+    const sid = r.student_id;
+    const sub = String(r.subject_name || '').trim();
+    if (!sid || !sub) continue;
+    if (!out[sid]) out[sid] = [];
+    out[sid].push(sub);
+  }
+  for (const sid of Object.keys(out)) {
+    out[sid] = dedupeOlevelSubjectNamesPreserveOrder(out[sid]);
+  }
+  return out;
+}
+
 /** @deprecated Prefer `fetchOlevelExpectedSubjectsByStudentId` (DB view); kept for reference. */
 export function buildExpectedOlevelSubjectsByStudentIdForReports(
   students: { student_id: string; current_class?: string | null }[],
@@ -759,8 +800,14 @@ export async function buildReportDataFromScope(
   });
 
   let expectedOlevelSubjectsByStudentId: Record<string, string[]> = {};
+  let expectedAlevelSubjectsByStudentId: Record<string, string[]> = {};
   if (allStudentIdsInClass.length > 0) {
     expectedOlevelSubjectsByStudentId = await fetchOlevelExpectedSubjectsByStudentId(
+      supabase,
+      schoolId,
+      allStudentIdsInClass,
+    );
+    expectedAlevelSubjectsByStudentId = await fetchAlevelExpectedSubjectsByStudentId(
       supabase,
       schoolId,
       allStudentIdsInClass,
@@ -806,6 +853,9 @@ export async function buildReportDataFromScope(
       const expectedList = dedupeOlevelSubjectNamesPreserveOrder(
         expectedOlevelSubjectsByStudentId[studentId] ?? [],
       );
+      const expectedAlevelList = dedupeOlevelSubjectNamesPreserveOrder(
+        expectedAlevelSubjectsByStudentId[studentId] ?? [],
+      );
       let average: number;
       if (seniorClass && isOlevelSeniorClassName(classNameForSenior) && expectedList.length > 0) {
         let sumPct = 0;
@@ -830,6 +880,29 @@ export async function buildReportDataFromScope(
           sumPct += linePcts.length > 0 ? linePcts.reduce((a, b) => a + b, 0) / linePcts.length : 0;
         }
         average = sumPct / expectedList.length;
+      } else if (seniorClass && isALevelClassName(classNameForSenior) && expectedAlevelList.length > 0) {
+        let sumPct = 0;
+        for (const subj of expectedAlevelList) {
+          const sk = normalizeReportSubjectKey(subj);
+          const matching = resultsForCalculation.filter(
+            (r) => normalizeReportSubjectKey(String(r.subject || '')) === sk,
+          );
+          if (!matching.length) continue;
+          const linePcts: number[] = [];
+          for (const r of matching) {
+            const { marks, total } = seniorMarksTotalForReport(
+              classNameForSenior,
+              r.marks_obtained,
+              r.final_score,
+              r.total_marks,
+            );
+            const t = Number(total) || 100;
+            const m = Number(marks);
+            if (Number.isFinite(m) && t > 0) linePcts.push((m / t) * 100);
+          }
+          sumPct += linePcts.length > 0 ? linePcts.reduce((a, b) => a + b, 0) / linePcts.length : 0;
+        }
+        average = sumPct / expectedAlevelList.length;
       } else if (validResults.length === 0) {
         average = 0;
       } else {
@@ -1046,6 +1119,7 @@ export async function buildReportDataFromScope(
     baseExamSet as { id: string; name?: string; term?: number; year?: number },
     examSetId,
     expectedOlevelSubjectsByStudentId,
+    expectedAlevelSubjectsByStudentId,
   );
 
   const toReturn = studentIds?.length
@@ -1068,6 +1142,7 @@ export function buildReportDataFromSnapshotRows(
   examSet: { id: string; name?: string; term?: number; year?: number },
   snapshotId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
+  expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
 ): unknown[] {
   return buildReportDataListFromSnapshotRows(
     allSnapshotData,
@@ -1075,6 +1150,7 @@ export function buildReportDataFromSnapshotRows(
     examSet,
     snapshotId,
     expectedOlevelSubjectsByStudentId,
+    expectedAlevelSubjectsByStudentId,
   );
 }
 
@@ -1084,6 +1160,7 @@ function buildReportDataListFromSnapshotRows(
   baseExamSet: { id: string; name?: string; term?: number; year?: number },
   examSetId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
+  expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -1100,6 +1177,7 @@ function buildReportDataListFromSnapshotRows(
       examSetId,
       examSetName,
       expectedOlevelSubjectsByStudentId?.[studentId],
+      expectedAlevelSubjectsByStudentId?.[studentId],
     );
     list.push(reportData);
   }
@@ -1113,6 +1191,7 @@ function oneReportFromSnapshotRows(
   _snapshotOrExamSetId: string,
   examSetName: string,
   expectedOlevelSubjectNames?: string[],
+  expectedAlevelSubjectNames?: string[],
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -1193,6 +1272,16 @@ function oneReportFromSnapshotRows(
       expectedOlevelSubjectNames,
       examSetName,
     );
+  } else if (
+    isALevelClassName(reportClassName) &&
+    expectedAlevelSubjectNames &&
+    expectedAlevelSubjectNames.length > 0
+  ) {
+    resultsOut = mergeOlevelReportResultsWithExpectedSubjects(
+      results,
+      expectedAlevelSubjectNames,
+      examSetName,
+    );
   }
 
   const olevelRecalcMeanPct = (() => {
@@ -1208,6 +1297,21 @@ function oneReportFromSnapshotRows(
   const summaryDivisionFromOlevelRecalc =
     olevelRecalcMeanPct != null && Number.isFinite(olevelRecalcMeanPct)
       ? calculateDivision(olevelRecalcMeanPct)
+      : null;
+
+  const alevelRecalcMeanPct = (() => {
+    if (
+      !isALevelClassName(reportClassName) ||
+      !expectedAlevelSubjectNames ||
+      expectedAlevelSubjectNames.length === 0
+    ) {
+      return null;
+    }
+    return olevelMeanPercentOverExpectedFromMergedRows(resultsOut, expectedAlevelSubjectNames);
+  })();
+  const summaryDivisionFromAlevelRecalc =
+    alevelRecalcMeanPct != null && Number.isFinite(alevelRecalcMeanPct)
+      ? calculateDivision(alevelRecalcMeanPct)
       : null;
 
   const isBot = (n: string) => /beginning|bot/i.test(String(n || '').trim());
@@ -1311,19 +1415,28 @@ function oneReportFromSnapshotRows(
 
   let alevel: { paperRows?: Array<Record<string, unknown>> } | undefined;
   if (isALevelClassName(reportClassName)) {
-    const paperRows = studentData
-      .filter((d) => String(d.subject || '').trim())
-      .map((d) => {
-        const remark = effectiveRemark(d);
-        const tm = Number(d.total_marks ?? 100) || 100;
-        const mo = Number(d.marks_obtained ?? 0);
+    const paperRows = resultsOut
+      .filter((row) => String(row.subject ?? '').trim())
+      .map((row) => {
+        const r = row as OlevelReportResultRow;
+        const missing = r.result_missing_placeholder === true;
+        const mo = numOrUndef(r.final_score) ?? numOrUndef(r.marks_obtained);
+        const tm = Number(r.total_marks ?? 100) || 100;
+        const remark = String(
+          (r.overall_remark ?? r.teacher_remark ?? r.remarks ?? r.teacher_comment ?? '') as string,
+        ).trim();
         return {
-          subjectLabel: String(d.subject ?? ''),
-          paperCode: String(d.paper_code ?? d.paper_number ?? '—'),
-          marksPercent: tm > 0 ? (mo / tm) * 100 : null,
-          gradeDisplay: String(d.grade ?? '—'),
+          subjectLabel: String(r.subject ?? ''),
+          paperCode: String(
+            missing ? '—' : (r.paper_code ?? r.paper_number) != null && String(r.paper_code ?? r.paper_number).trim()
+              ? String(r.paper_code ?? r.paper_number)
+              : '—',
+          ),
+          marksPercent:
+            missing || mo == null || !Number.isFinite(mo) || tm <= 0 ? null : (mo / tm) * 100,
+          gradeDisplay: missing ? '—' : String(r.grade ?? '—'),
           comment: remark,
-          teacherDisplayName: d.teacher_initials ?? null,
+          teacherDisplayName: (r.teacher_initials as string | null | undefined) ?? null,
         };
       });
     if (paperRows.length) alevel = { paperRows };
@@ -1417,17 +1530,28 @@ function oneReportFromSnapshotRows(
             if (olevelRecalcMeanPct != null && Number.isFinite(olevelRecalcMeanPct)) {
               return Math.round(olevelRecalcMeanPct * 100) / 100;
             }
+            if (alevelRecalcMeanPct != null && Number.isFinite(alevelRecalcMeanPct)) {
+              return Math.round(alevelRecalcMeanPct * 100) / 100;
+            }
             const v = firstSummaryRecord.average_percentage;
             if (v === null || v === undefined || v === '') return null;
             const n = Number(v);
             return Number.isNaN(n) ? null : Math.round(n);
           })(),
           aggregate: firstSummaryRecord.aggregate ?? null,
-          division: summaryDivisionFromOlevelRecalc ?? firstSummaryRecord.division ?? null,
+          division:
+            summaryDivisionFromOlevelRecalc ??
+            summaryDivisionFromAlevelRecalc ??
+            firstSummaryRecord.division ??
+            null,
           attendancePercentage: firstSummaryRecord.attendance_percentage ?? null,
           classPosition: firstSummaryRecord.position ?? null,
           totalStudents: frozen.total_students_in_class ?? null,
-          performanceRemark: summaryDivisionFromOlevelRecalc ?? firstSummaryRecord.division || 'N/A',
+          performanceRemark:
+            summaryDivisionFromOlevelRecalc ??
+            summaryDivisionFromAlevelRecalc ??
+            firstSummaryRecord.division ||
+            'N/A',
           ...(reportDate && { reportDate }),
           ...(attendanceDetails && { attendanceDetails }),
         },
