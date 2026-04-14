@@ -27,11 +27,6 @@ import {
   buildSecondaryShapedStudent,
   pickSecondaryTemplateRootFields,
 } from '../../../reports/secondary/buildSecondaryShapedStudent';
-import {
-  ALL_SECONDARY_TEMPLATE_KEYS,
-  getSecondaryPlaceholderReportData,
-  placeholderRoutingClassForTemplate,
-} from '../../../reports/secondary/secondaryTemplatePlaceholderData';
 import JSZip from 'jszip';
 
 function SecondaryReportPreviewBlock({ reportData, templateKey }: { reportData: any; templateKey: string }) {
@@ -267,8 +262,6 @@ export default function SecondaryGenerateReportsPage() {
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [downloadPdfStatus, setDownloadPdfStatus] = useState('');
   const [reportTemplateKey, setReportTemplateKey] = useState<string>('template1');
-  /** Stage F: same `renderTemplateHTML` as PDF, using plan placeholder rows (no `generate-report-preview` call). */
-  const [layoutPreviewUsesSampleData, setLayoutPreviewUsesSampleData] = useState(false);
   const prevClassForTemplateRef = useRef<string | null>(null);
   /** Selection used when we last generated; snapshot is only reused when current selection matches */
   const [lastGenerateFingerprint, setLastGenerateFingerprint] = useState<{
@@ -415,13 +408,13 @@ export default function SecondaryGenerateReportsPage() {
   }, [selectedClass]);
 
   useEffect(() => {
-    if (!selectedClass || layoutPreviewUsesSampleData) return;
+    if (!selectedClass) return;
     if (!isOLevelClass(selectedClass) && !isALevelClass(selectedClass)) return;
     const allowed = getSecondaryTemplateKeysForClass(selectedClass);
     setReportTemplateKey((prev) =>
       allowed.includes(prev as SecondaryTemplateKey) ? prev : allowed[0]
     );
-  }, [selectedClass, layoutPreviewUsesSampleData]);
+  }, [selectedClass]);
 
   const { data: classesForExamSet = [] } = useQuery({
     queryKey: ['admin', 'classes-for-exam-set', pageData?.schoolId ?? '', effectiveExamSetId ?? ''],
@@ -445,12 +438,10 @@ export default function SecondaryGenerateReportsPage() {
     );
   }, [studentsInClass, studentSearch]);
 
-  /** Sample mode: list all four layouts (Standard, Basic, Progressive, Alevel) for layout QA. */
   const templateKeysForSelect = useMemo(() => {
     if (!selectedClass) return [] as SecondaryTemplateKey[];
-    if (layoutPreviewUsesSampleData) return ALL_SECONDARY_TEMPLATE_KEYS;
     return getSecondaryTemplateKeysForClass(selectedClass);
-  }, [selectedClass, layoutPreviewUsesSampleData]);
+  }, [selectedClass]);
 
   const getEffectiveExamSet = (): any => {
     if (!pageData?.schoolId || !selectedClass) return undefined;
@@ -505,7 +496,6 @@ export default function SecondaryGenerateReportsPage() {
   /** Debounced prefetch for single-student reports once class + student + exam context are known. */
   useEffect(() => {
     if (!pageData?.schoolId || !selectedClass) return;
-    if (layoutPreviewUsesSampleData) return;
     if (reportType !== 'single' || !selectedStudent) return;
     const ctx = getPreviewKeyAndPayload();
     if (!ctx) return;
@@ -530,7 +520,6 @@ export default function SecondaryGenerateReportsPage() {
     queryClient,
     pageData?.currentTerm,
     selectedTerm,
-    layoutPreviewUsesSampleData,
   ]);
 
   const handleGenerateAndSave = async () => {
@@ -584,61 +573,6 @@ export default function SecondaryGenerateReportsPage() {
       setError('Please select a class');
       return;
     }
-    if (layoutPreviewUsesSampleData) {
-      setPreviewing(true);
-      setError('');
-      setGenerationError('');
-      setCompletedSnapshotId(null);
-      setGeneratingStep('creating');
-      try {
-        const { data: sch } = await supabase
-          .from('schools')
-          .select('name, contact_phone, contact_email, address, pobox, motto')
-          .eq('school_id', pageData.schoolId)
-          .maybeSingle();
-        const stub = getSecondaryPlaceholderReportData(reportTemplateKey as SecondaryTemplateKey) as {
-          school: Record<string, unknown>;
-          examSet: Record<string, unknown>;
-          students: Record<string, unknown>[];
-          alevel?: unknown;
-        };
-        const routingClass = placeholderRoutingClassForTemplate(
-          reportTemplateKey as SecondaryTemplateKey,
-          selectedClass
-        );
-        const student0 = { ...stub.students[0], current_class: routingClass };
-        /** Real school header + generic demo subjects (Integrated Science, SST, etc.) — label clearly so it is not mistaken for exam_results. */
-        const schoolMerged =
-          sch ?
-            {
-              ...stub.school,
-              name: sch.name ? `${sch.name} [demo marks — not from database]` : stub.school.name,
-              phone: sch.contact_phone ?? stub.school.phone,
-              email: sch.contact_email ?? stub.school.email,
-              address: [sch.address, sch.pobox].filter(Boolean).join(', ') || stub.school.address,
-              motto: sch.motto ?? stub.school.motto,
-            }
-          : stub.school;
-        const rawReport: Record<string, unknown> = {
-          school: schoolMerged,
-          examSet: {
-            ...stub.examSet,
-            name: `${(stub.examSet as { name?: string }).name ?? 'Term'} · layout sample only`,
-          },
-          students: [student0],
-        };
-        if (stub.alevel != null) rawReport.alevel = stub.alevel;
-        setPreviewReports([{ report_data: rawReport }]);
-        setGeneratingStep('completed');
-      } catch (err: unknown) {
-        setGenerationError(err instanceof Error ? err.message : 'Failed to build sample preview');
-        setGeneratingStep('error');
-        setPreviewReports([]);
-      } finally {
-        setPreviewing(false);
-      }
-      return;
-    }
     if (reportType === 'single' && !selectedStudent) {
       setError('Please select a student');
       return;
@@ -684,10 +618,6 @@ export default function SecondaryGenerateReportsPage() {
 
   const handleDownloadSavedPdf = async () => {
     if (!pageData?.schoolId || !selectedClass) return;
-    if (layoutPreviewUsesSampleData) {
-      setGenerationError('Turn off “Preview card layout with sample data only” to download a PDF from live exam data.');
-      return;
-    }
     if (reportType === 'single' && !selectedStudent) {
       setError('Please select a student');
       return;
@@ -1034,7 +964,7 @@ export default function SecondaryGenerateReportsPage() {
                 <span>Report template</span>
                 {selectedClass && (
                   <span className="text-xs font-normal text-emerald-600 dark:text-emerald-400">
-                    {layoutPreviewUsesSampleData ? 'All four layouts (sample)' : 'Secondary layout'}
+                    Secondary layout
                   </span>
                 )}
               </label>
@@ -1057,35 +987,6 @@ export default function SecondaryGenerateReportsPage() {
                 </select>
               )}
             </div>
-          </div>
-
-          <div className="mb-6 flex flex-col gap-2 rounded-lg border border-[var(--ac-border)] bg-[var(--ac-surface-2,theme(colors.slate.50))] px-3 py-3 dark:bg-white/5">
-            <label className="flex cursor-pointer items-start gap-3 text-sm ac-text-secondary">
-              <input
-                type="checkbox"
-                className="mt-1 rounded border-[var(--ac-border)]"
-                checked={layoutPreviewUsesSampleData}
-                onChange={(e) => {
-                  setLayoutPreviewUsesSampleData(e.target.checked);
-                  setPreviewReports([]);
-                  setGeneratingStep('idle');
-                }}
-              />
-              <span>
-                <span className="font-medium ac-text-primary">Preview card layout with sample data only</span>
-                <span className="block text-xs ac-text-muted">
-                  Fills <strong>Standard</strong>, <strong>Basic</strong>, <strong>Progressive</strong>, and{' '}
-                  <strong>Alevel</strong> with fixed demo rows (generic subjects such as Integrated Science / Social Studies —
-                  not your Senior class lines from <code className="text-[11px]">exam_results</code>). Header uses your school
-                  name with a <strong>[demo marks]</strong> suffix so it cannot be confused with a real report.
-                  <strong className="block mt-1 text-amber-800 dark:text-amber-200">
-                    While this is on: preview is layout-only — Generate &amp; Save and Download PDF are disabled. Turn it off
-                    to load real marks: preview then reads <code className="text-[11px]">exam_results</code> for the selected
-                    term, class, and student(s).
-                  </strong>
-                </span>
-              </span>
-            </label>
           </div>
 
           {/* Student – only when Single Student */}
@@ -1149,7 +1050,7 @@ export default function SecondaryGenerateReportsPage() {
               disabled={
                 previewing ||
                 !selectedClass ||
-                (!layoutPreviewUsesSampleData && reportType === 'single' && !selectedStudent)
+                (reportType === 'single' && !selectedStudent)
               }
               className="flex items-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-md shadow-emerald-900/25 transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-emerald-500 dark:hover:bg-emerald-400"
             >
@@ -1160,7 +1061,6 @@ export default function SecondaryGenerateReportsPage() {
               onClick={handleGenerateAndSave}
               disabled={
                 saving ||
-                layoutPreviewUsesSampleData ||
                 !selectedClass ||
                 (reportType === 'single' && !selectedStudent)
               }
@@ -1174,7 +1074,6 @@ export default function SecondaryGenerateReportsPage() {
               disabled={
                 downloadingPdf ||
                 saving ||
-                layoutPreviewUsesSampleData ||
                 !selectedClass ||
                 (reportType === 'single' && !selectedStudent)
               }
@@ -1205,11 +1104,6 @@ export default function SecondaryGenerateReportsPage() {
                   </h2>
                   <div className="flex flex-col items-end gap-1 text-sm ac-text-secondary sm:text-right">
                     {templateDisplayName && <span>Template: {templateDisplayName}</span>}
-                    {layoutPreviewUsesSampleData && (
-                      <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                        Sample marks only — not from the selected exam set
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="ac-glass-card max-h-[80vh] overflow-x-hidden overflow-y-auto rounded-lg border border-[var(--ac-border)] p-4">
