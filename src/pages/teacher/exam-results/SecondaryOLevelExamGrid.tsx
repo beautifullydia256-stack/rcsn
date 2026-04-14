@@ -43,13 +43,6 @@ export type OLevelSecondaryRow = {
   initials: string;
 };
 
-const DEFAULT_REMARK_RANGES: { min_percent: number; max_percent: number; comment_text: string }[] = [
-  { min_percent: 0, max_percent: 40, comment_text: 'Needs more effort. Try harder next time.' },
-  { min_percent: 41, max_percent: 60, comment_text: 'Fair work. You can do better.' },
-  { min_percent: 61, max_percent: 80, comment_text: 'Good work. Keep it up!' },
-  { min_percent: 81, max_percent: 100, comment_text: 'Excellent! Keep shining!' },
-];
-
 const emptyRow = (topicFallback: string, initials: string): OLevelSecondaryRow => ({
   topic: topicFallback,
   activityScore: '',
@@ -87,7 +80,10 @@ export function SecondaryOLevelExamGrid({
   const [teacherInitials, setTeacherInitials] = useState(defaultTeacherInitials);
   const [oLevelFormativeMax, setOLevelFormativeMax] = useState(20);
   const [autoRemarkEnabled, setAutoRemarkEnabled] = useState(true);
-  const [teacherRemarksRanges] = useState(DEFAULT_REMARK_RANGES);
+  const [teacherRemarksRanges, setTeacherRemarksRanges] = useState<
+    { min_percent: number; max_percent: number; comment_text: string }[]
+  >([]);
+  const [remarkBandsSource, setRemarkBandsSource] = useState<'subject' | 'class' | 'none'>('none');
   const [examResultsSecondary, setExamResultsSecondary] = useState<Record<string, OLevelSecondaryRow>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -111,6 +107,68 @@ export function SecondaryOLevelExamGrid({
       ),
     [existingRows]
   );
+
+  const pickAutoRemark = useCallback(
+    (finalPercent: number, ranges: typeof teacherRemarksRanges) => {
+      const rule = ranges.find((r) => finalPercent >= r.min_percent && finalPercent <= r.max_percent);
+      return rule?.comment_text ?? '';
+    },
+    []
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!schoolId || !subject.trim()) {
+        if (!cancelled) {
+          setTeacherRemarksRanges([]);
+          setRemarkBandsSource('none');
+        }
+        return;
+      }
+      const { data: subjectRows, error: trErr } = await supabase
+        .from('teacher_remarks_settings')
+        .select('min_percent, max_percent, comment_text')
+        .eq('school_id', schoolId)
+        .ilike('subject', subject.trim())
+        .order('min_percent', { ascending: true });
+      if (cancelled) return;
+      if (!trErr && subjectRows && subjectRows.length > 0) {
+        setTeacherRemarksRanges(
+          subjectRows.map((r) => ({
+            min_percent: Number(r.min_percent),
+            max_percent: Number(r.max_percent),
+            comment_text: String(r.comment_text || ''),
+          }))
+        );
+        setRemarkBandsSource('subject');
+        return;
+      }
+      const { data: classRows, error: ctErr } = await supabase
+        .from('class_teacher_comments_settings')
+        .select('min_percent, max_percent, comment_text')
+        .eq('school_id', schoolId)
+        .eq('class_name', className)
+        .order('min_percent', { ascending: true });
+      if (cancelled) return;
+      if (!ctErr && classRows && classRows.length > 0) {
+        setTeacherRemarksRanges(
+          classRows.map((r) => ({
+            min_percent: Number(r.min_percent),
+            max_percent: Number(r.max_percent),
+            comment_text: String(r.comment_text || ''),
+          }))
+        );
+        setRemarkBandsSource('class');
+        return;
+      }
+      setTeacherRemarksRanges([]);
+      setRemarkBandsSource('none');
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId, subject, className]);
 
   const mapDbToRow = useCallback(
     (r: SecondaryOlevelExamResultRow, topicFb: string): OLevelSecondaryRow => {
@@ -204,8 +262,7 @@ export function SecondaryOLevelExamGrid({
       next.final = String(finalNum);
       next.grade = calculateSecondaryLetterGrade(finalNum);
       if (autoRemarkEnabled) {
-        const trRule = teacherRemarksRanges.find((r) => finalNum >= r.min_percent && finalNum <= r.max_percent);
-        next.remark = trRule?.comment_text || '';
+        next.remark = pickAutoRemark(finalNum, teacherRemarksRanges);
       }
       next.initials = teacherInitials || next.initials;
       return { ...prev, [studentId]: next };
@@ -238,8 +295,12 @@ export function SecondaryOLevelExamGrid({
       const fnum = parseFloat(next.formative) || 0;
       const enum_ = parseFloat(next.exam) || 0;
       next.final = String(trunc0(fnum + enum_));
-      next.grade = calculateSecondaryLetterGrade(trunc0(fnum + enum_));
+      const finalN = trunc0(fnum + enum_);
+      next.grade = calculateSecondaryLetterGrade(finalN);
       next.descriptor = calculateActivityDescriptor(parseFloat(next.activityScore) || 0);
+      if (autoRemarkEnabled) {
+        next.remark = pickAutoRemark(finalN, teacherRemarksRanges);
+      }
       return { ...prev, [studentId]: next };
     });
   };
@@ -368,6 +429,19 @@ export function SecondaryOLevelExamGrid({
           />
           Auto remark from % bands
         </label>
+        {remarkBandsSource === 'subject' && (
+          <span className="text-xs ac-text-muted">Bands: Teacher&apos;s Remarks settings for this subject.</span>
+        )}
+        {remarkBandsSource === 'class' && (
+          <span className="text-xs ac-text-muted">
+            Bands: Class Teacher Comments for {className} (no per-subject remarks found).
+          </span>
+        )}
+        {remarkBandsSource === 'none' && (
+          <span className="text-xs text-amber-600 dark:text-amber-400">
+            No remark bands in the database for this subject or class — auto remark is off until you add them under Grading.
+          </span>
+        )}
       </div>
 
       <div className="overflow-x-auto rounded-xl border border-[var(--ac-border)]">

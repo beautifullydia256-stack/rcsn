@@ -1693,7 +1693,7 @@ function Template2KasoziReport({ student, examSet, school }: { student: any; exa
       <div className="mb-4 text-[10pt]">
         <h3 className="text-[11pt] font-semibold mb-1">Teacher's Comments</h3>
         <div className="mb-3">
-          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || 'Can do even better.'}</p>
+          <p><strong>Class Teacher's Comment:</strong> {student.comments?.class_teacher_text || '—'}</p>
           <p className="mt-1">Signature: {student.comments?.class_teacher_signature || '__________'}</p>
         </div>
         
