@@ -10,7 +10,7 @@ import {
   buildSecondaryUpperSectionStyleStudentBlockHtml,
   formatNextTermBeginsLongDisplay,
   formatSecondaryFeesBalanceForReport,
-  secondaryOlevelProgressiveReportChipTitle,
+  secondaryOlevelStandardReportChipTitle,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
   SECONDARY_UPPER_SECTION_STYLE_STUDENT_BLOCK_CSS,
@@ -55,7 +55,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   const student = students?.[0];
   if (!student) return '<html><body>Missing student</body></html>';
 
-  const year = examSet?.year ?? new Date().getFullYear();
   const results: any[] = Array.isArray(student.results) ? student.results : [];
 
   type Row = {
@@ -151,8 +150,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
   });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
-    chipTitle: `Learner's End of Year Summative Assessment Results ${year}`,
-    metaLine: [examSet?.name, String(year)].filter(Boolean).join(' · '),
+    chipTitle: secondaryOlevelStandardReportChipTitle(examSet),
+    metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,
   });
 
   const studentBlockHtml = buildSecondaryUpperSectionStyleStudentBlockHtml(
@@ -197,7 +196,7 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Learner Summative Assessment</title>
+  <title>Student Report</title>
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
@@ -293,8 +292,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     <thead>
       <tr>
         <th>Subject</th>
-        <th class="c">Formative Score (20%)</th>
-        <th class="c">EOY Summative Assessment (80%)</th>
+        <th class="c">Formative Score [20%]</th>
+        <th class="c">Exam Score [80%]</th>
         <th class="c">Total 100%</th>
         <th class="c">Grade</th>
         <th class="c">Level of Achievement/3</th>
@@ -351,9 +350,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   const student = students?.[0];
   if (!student) return '<html><body>Missing student</body></html>';
 
-  const year = examSet?.year ?? new Date().getFullYear();
   const results: any[] = Array.isArray(student.results) ? student.results : [];
-  const reportNo = student.report_serial ?? student.admission_number ?? student.student_id ?? '—';
   type PRow = {
     subject: string;
     c1: string;
@@ -448,8 +445,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
   });
 
   const headerHtml = buildSecondaryLowerSectionHeaderHtml(school, schoolLogoBase64 ?? null, {
-    chipTitle: secondaryOlevelProgressiveReportChipTitle(examSet),
-    metaLine: `Report No. ${reportNo} · Year ${year}${examSet?.name ? ` · ${examSet.name}` : ''}`,
+    chipTitle: secondaryOlevelStandardReportChipTitle(examSet),
+    metaLine: `${examSet?.name || 'Term Report'} - ${examSet?.year ?? new Date().getFullYear()}`,
   });
 
   const studentBlockHtmlP = buildSecondaryUpperSectionStyleStudentBlockHtml(
@@ -494,7 +491,7 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Progressive Report</title>
+  <title>Student Report</title>
   <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
