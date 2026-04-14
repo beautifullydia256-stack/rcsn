@@ -43,6 +43,105 @@ function escapeHtml(s: string) {
     .replace(/"/g, '&quot;');
 }
 
+type TeacherClassSubjectAssignment = {
+  id: string;
+  class_name: string;
+  subject: string;
+  assignment_role?: string | null;
+};
+
+function teacherSubjectAssignmentsBodyHtml(
+  assignments: TeacherClassSubjectAssignment[],
+  classTeacherNames: Set<string>,
+): string {
+  if (assignments.length === 0) {
+    return `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No subject rows yet. Use <strong>Subject teaching</strong> above to pick a class and subjects.</div>`;
+  }
+  return assignments
+    .map((a) => {
+      const ar = (a.assignment_role || 'subject_teacher') as 'subject_teacher' | 'co_teacher';
+      const isCt = classTeacherNames.has(a.class_name);
+      const roleLabel =
+        ar === 'co_teacher'
+          ? 'Co-teacher'
+          : isCt
+            ? 'Class Teacher'
+            : 'Subject Teacher';
+      const roleBg =
+        ar === 'co_teacher'
+          ? 'background:var(--violet-s);color:var(--violet)'
+          : isCt
+            ? 'background:var(--teal-s);color:var(--teal)'
+            : 'background:var(--blue-s);color:var(--blue)';
+      const subs = String(a.subject || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map(
+          (s) =>
+            `<span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">${escapeHtml(
+              s,
+            )}</span>`,
+        )
+        .join(' ');
+      return `
+                <div class="tp-assign-row">
+                  <div class="tp-assign-col">${escapeHtml(a.class_name)}</div>
+                  <div class="tp-assign-col"><div style="display:flex;gap:4px;flex-wrap:wrap">${
+                    subs || '<span style="color:var(--t3);font-style:italic">—</span>'
+                  }</div></div>
+                  <div class="tp-assign-col"><span style="${roleBg};padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">${escapeHtml(
+                    roleLabel,
+                  )}</span></div>
+                  <div class="tp-assign-actions">
+                    <button type="button" class="tp-remove-btn" data-assign-id="${escapeHtml(a.id)}">Remove</button>
+                  </div>
+                </div>`;
+    })
+    .join('');
+}
+
+function patchTeacherSubjectAssignmentsInDom(
+  root: HTMLElement | Element,
+  assignments: TeacherClassSubjectAssignment[],
+  classTeacherNames: Set<string>,
+  classNamesForMeta: string[],
+  onAfterRemove: () => void | Promise<void>,
+) {
+  const set = (id: string, val: string) => {
+    const n = root.querySelector(id);
+    if (n) n.textContent = val;
+  };
+  const setHTML = (id: string, html: string) => {
+    const n = root.querySelector(id);
+    if (n) (n as HTMLElement).innerHTML = html;
+  };
+  setHTML('#tp-assignments-body', teacherSubjectAssignmentsBodyHtml(assignments, classTeacherNames));
+  set(
+    '#tp-meta-classes-count',
+    `${classNamesForMeta.length} class${classNamesForMeta.length !== 1 ? 'es' : ''}`,
+  );
+  const roleChip = root.querySelector('#tp-chip-role') as HTMLElement | null;
+  if (roleChip) {
+    const isClassTeacher = classTeacherNames.size > 0;
+    roleChip.textContent = isClassTeacher ? '👨‍🏫 Class Teacher' : '📚 Subject Teacher';
+    roleChip.className = `tp-chip ${isClassTeacher ? 'teal' : 'blue'}`;
+  }
+  root.querySelectorAll('[data-assign-id]').forEach((btn) => {
+    (btn as HTMLButtonElement).onclick = async (e) => {
+      e.stopPropagation();
+      const id = (btn as HTMLElement).dataset.assignId;
+      if (!id) return;
+      const { error } = await supabase.from('teacher_class_subjects').delete().eq('id', id);
+      if (error) {
+        window.alert(error.message);
+        return;
+      }
+      await onAfterRemove();
+    };
+  });
+}
+
 function fmtDate(d: string | null | undefined): string {
   if (!d) return '—';
   const x = new Date(d);
@@ -265,8 +364,11 @@ export default function DesignTeacherProfile() {
   const teacherId = teacherIdParam || '';
   const containerRef = useRef<HTMLDivElement>(null);
   const [htmlContent, setHtmlContent] = useState('');
-  const [reloadToken, setReloadToken] = useState(0);
   const [editMode, setEditMode] = useState(false);
+  /** Re-runs the full profile fetch + DOM (heavy). Used after save, class-teacher changes, etc. */
+  const runFullProfileLoadRef = useRef<null | (() => Promise<void>)>(null);
+  /** Re-fetches only teacher_class_subjects + class_teachers and patches the assignments table (light). */
+  const refreshSubjectAssignmentsRef = useRef<null | (() => Promise<void>)>(null);
   const saveTeacherRef = useRef<() => Promise<void>>(async () => {});
 
   const saveTeacher = useCallback(async () => {
@@ -359,7 +461,7 @@ export default function DesignTeacherProfile() {
     }
     if (photoInp) photoInp.value = '';
     setEditMode(false);
-    setReloadToken((x) => x + 1);
+    await runFullProfileLoadRef.current?.();
   }, [teacherId, authUserId, queryClient]);
 
   saveTeacherRef.current = saveTeacher;
@@ -410,6 +512,10 @@ export default function DesignTeacherProfile() {
 
       const t = teacher as Record<string, unknown>;
       const school_id = String(t.school_id ?? '');
+
+      runFullProfileLoadRef.current = async () => {
+        await load();
+      };
 
       const [
         { data: schRow },
@@ -673,6 +779,39 @@ export default function DesignTeacherProfile() {
         submissionTotal > 0 ? Math.round((markedAssignCount / submissionTotal) * 100) : null;
 
       if (cancelled) return;
+
+      const refreshSubjectAssignments = async () => {
+        const [{ data: ctRowsFresh }, { data: tcsRowsFresh }] = await Promise.all([
+          supabase.from('class_teachers').select('class_name').eq('school_id', school_id).eq('teacher_id', teacherId),
+          supabase
+            .from('teacher_class_subjects')
+            .select('id, class_name, subject, assignment_role')
+            .eq('school_id', school_id)
+            .eq('teacher_id', teacherId)
+            .order('class_name'),
+        ]);
+        const classTeacherNamesFresh = new Set(
+          (ctRowsFresh || [])
+            .map((r) => String((r as { class_name?: string }).class_name || '').trim())
+            .filter(Boolean),
+        );
+        const assignmentsFresh = (tcsRowsFresh || []) as TeacherClassSubjectAssignment[];
+        const classFromTcsFresh = [...new Set(assignmentsFresh.map((a) => a.class_name).filter(Boolean))];
+        const classNamesFresh = [...new Set([...classTeacherNamesFresh, ...classFromTcsFresh])];
+        requestAnimationFrame(() => {
+          const el = containerRef.current;
+          if (!el) return;
+          const rootEl = el.querySelector('.pw-teacher-profile') || el;
+          patchTeacherSubjectAssignmentsInDom(
+            rootEl,
+            assignmentsFresh,
+            classTeacherNamesFresh,
+            classNamesFresh,
+            refreshSubjectAssignments,
+          );
+        });
+      };
+      refreshSubjectAssignmentsRef.current = refreshSubjectAssignments;
 
       requestAnimationFrame(() => {
         const el = containerRef.current;
@@ -960,7 +1099,7 @@ export default function DesignTeacherProfile() {
                   .eq('teacher_id', teacherId)
                   .eq('class_name', cname);
                 if (delErr) window.alert(delErr.message);
-                else setReloadToken((x) => x + 1);
+                else void runFullProfileLoadRef.current?.();
               };
             });
           }
@@ -993,67 +1132,17 @@ export default function DesignTeacherProfile() {
               window.alert(insErr.message);
               return;
             }
-            setReloadToken((x) => x + 1);
+            void runFullProfileLoadRef.current?.();
           };
         }
 
-        setHTML(
-          '#tp-assignments-body',
-          assignments.length === 0
-            ? `<div style="padding:24px;text-align:center;color:var(--t3);font-size:13px">No subject rows yet. Use <strong>Subject teaching</strong> above to pick a class and subjects.</div>`
-            : assignments
-                .map((a) => {
-                  const ar = (a.assignment_role || 'subject_teacher') as 'subject_teacher' | 'co_teacher';
-                  const isCt = classTeacherNames.has(a.class_name);
-                  const roleLabel =
-                    ar === 'co_teacher'
-                      ? 'Co-teacher'
-                      : isCt
-                        ? 'Class Teacher'
-                        : 'Subject Teacher';
-                  const roleBg =
-                    ar === 'co_teacher'
-                      ? 'background:var(--violet-s);color:var(--violet)'
-                      : isCt
-                        ? 'background:var(--teal-s);color:var(--teal)'
-                        : 'background:var(--blue-s);color:var(--blue)';
-                  const subs = String(a.subject || '')
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .map(
-                      (s) =>
-                        `<span style="background:var(--amber-s);color:var(--amber);padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:600">${escapeHtml(
-                          s
-                        )}</span>`
-                    )
-                    .join(' ');
-                  return `
-                <div class="tp-assign-row">
-                  <div class="tp-assign-col">${escapeHtml(a.class_name)}</div>
-                  <div class="tp-assign-col"><div style="display:flex;gap:4px;flex-wrap:wrap">${
-                    subs || '<span style="color:var(--t3);font-style:italic">—</span>'
-                  }</div></div>
-                  <div class="tp-assign-col"><span style="${roleBg};padding:2px 8px;border-radius:5px;font-size:11.5px;font-weight:600">${escapeHtml(
-                    roleLabel
-                  )}</span></div>
-                  <div class="tp-assign-actions">
-                    <button type="button" class="tp-remove-btn" data-assign-id="${escapeHtml(a.id)}">Remove</button>
-                  </div>
-                </div>`;
-                })
-                .join('')
+        patchTeacherSubjectAssignmentsInDom(
+          root,
+          assignments,
+          classTeacherNames,
+          classNames,
+          refreshSubjectAssignments,
         );
-
-        root.querySelectorAll('[data-assign-id]').forEach((btn) => {
-          (btn as HTMLButtonElement).onclick = async (e) => {
-            e.stopPropagation();
-            const id = (btn as HTMLElement).dataset.assignId;
-            if (!id) return;
-            await supabase.from('teacher_class_subjects').delete().eq('id', id);
-            setReloadToken((x) => x + 1);
-          };
-        });
 
         const doAssign = root.querySelector('#tp-btn-do-assign') as HTMLButtonElement | null;
         if (doAssign) {
@@ -1133,7 +1222,7 @@ export default function DesignTeacherProfile() {
               window.alert(error.message);
               return;
             }
-            setReloadToken((x) => x + 1);
+            void refreshSubjectAssignments();
           };
         }
 
@@ -1319,7 +1408,7 @@ export default function DesignTeacherProfile() {
               return;
             }
             await supabase.storage.from(TEACHER_DOC_BUCKET).remove([path]);
-            setReloadToken((x) => x + 1);
+            void runFullProfileLoadRef.current?.();
             if (authUserId) {
               void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
             }
@@ -1427,7 +1516,7 @@ export default function DesignTeacherProfile() {
               await supabase.storage.from(TEACHER_DOC_BUCKET).remove([path]);
             }
           }
-          setReloadToken((x) => x + 1);
+          void runFullProfileLoadRef.current?.();
           if (authUserId) {
             void queryClient.invalidateQueries({ queryKey: adminQueryKeys.teachersDesign(authUserId) });
           }
@@ -1528,7 +1617,7 @@ export default function DesignTeacherProfile() {
     return () => {
       cancelled = true;
     };
-  }, [htmlContent, teacherId, navigate, reloadToken, editMode]);
+  }, [htmlContent, teacherId, navigate, editMode]);
 
   useEffect(() => {
     if (!containerRef.current) return;

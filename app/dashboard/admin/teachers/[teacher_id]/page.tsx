@@ -97,7 +97,8 @@ export default function TeacherProfilePage() {
       setLoading(false);
     };
     if (teacherId) run();
-  }, [teacherId, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid re-fetch when `router` identity changes (no impact on data)
+  }, [teacherId]);
 
   const name = row?.name || '';
   const subjects = (row?.subjects as string[] | null) || [];
