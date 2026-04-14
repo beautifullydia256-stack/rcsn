@@ -646,6 +646,28 @@ export async function buildReportDataFromScope(
   });
   if (resultsError) throw new Error(resultsError.message);
 
+  const classNamesForAlevelPrefs = [...new Set([...classNames, ...expandedClassNamesForExam])].filter((c) =>
+    isALevelClassName(String(c || '').trim()),
+  );
+  const alevelGradeRemarksByClass = new Map<string, Record<string, string>>();
+  if (classNamesForAlevelPrefs.length > 0) {
+    const { data: prefRows, error: prefErr } = await supabase
+      .from('teacher_exam_class_prefs')
+      .select('class_name, grade_remarks_alevel')
+      .eq('school_id', schoolId)
+      .in('class_name', classNamesForAlevelPrefs);
+    if (!prefErr) {
+      for (const row of prefRows || []) {
+        const r = row as { class_name?: string; grade_remarks_alevel?: unknown };
+        const cn = String(r.class_name || '').trim();
+        const gra = r.grade_remarks_alevel;
+        if (cn && gra && typeof gra === 'object' && gra !== null && !Array.isArray(gra)) {
+          alevelGradeRemarksByClass.set(cn, gra as Record<string, string>);
+        }
+      }
+    }
+  }
+
   const allStudentIdsInClass = [...new Set((examResultsRaw || []).map((r: { student_id: string }) => r.student_id))];
   const classNamesFromResults = [...new Set((examResultsRaw || []).map((r: { class_name: string }) => r.class_name))];
 
@@ -1120,6 +1142,7 @@ export async function buildReportDataFromScope(
     examSetId,
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
+    alevelGradeRemarksByClass,
   );
 
   const toReturn = studentIds?.length
@@ -1143,6 +1166,7 @@ export function buildReportDataFromSnapshotRows(
   snapshotId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
+  alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
 ): unknown[] {
   return buildReportDataListFromSnapshotRows(
     allSnapshotData,
@@ -1151,6 +1175,7 @@ export function buildReportDataFromSnapshotRows(
     snapshotId,
     expectedOlevelSubjectsByStudentId,
     expectedAlevelSubjectsByStudentId,
+    alevelGradeRemarksByClass,
   );
 }
 
@@ -1161,6 +1186,7 @@ function buildReportDataListFromSnapshotRows(
   examSetId: string,
   expectedOlevelSubjectsByStudentId?: Record<string, string[]>,
   expectedAlevelSubjectsByStudentId?: Record<string, string[]>,
+  alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
 ): unknown[] {
   const mergedSnapshot = mergeSnapshotRowsByStudent(snapshotData);
   const uniqueStudentIds = [...new Set(mergedSnapshot.map((d) => d.student_id))];
@@ -1178,6 +1204,7 @@ function buildReportDataListFromSnapshotRows(
       examSetName,
       expectedOlevelSubjectsByStudentId?.[studentId],
       expectedAlevelSubjectsByStudentId?.[studentId],
+      alevelGradeRemarksByClass,
     );
     list.push(reportData);
   }
@@ -1192,6 +1219,7 @@ function oneReportFromSnapshotRows(
   examSetName: string,
   expectedOlevelSubjectNames?: string[],
   expectedAlevelSubjectNames?: string[],
+  alevelGradeRemarksByClass?: Map<string, Record<string, string>>,
 ): unknown {
   const firstRecord = studentData[0];
   const frozenData = firstRecord.frozen_data || {};
@@ -1559,5 +1587,15 @@ function oneReportFromSnapshotRows(
     ],
   };
   if (alevel) baseReport.alevel = alevel;
+  if (isALevelClassName(reportClassName) && alevelGradeRemarksByClass?.size) {
+    const cls = String(reportClassName || '').trim();
+    let gra = alevelGradeRemarksByClass.get(cls);
+    if (!gra && alevelGradeRemarksByClass.size === 1) {
+      gra = [...alevelGradeRemarksByClass.values()][0];
+    }
+    if (gra && Object.keys(gra).length > 0) {
+      baseReport.grade_remarks_alevel = gra;
+    }
+  }
   return baseReport;
 }

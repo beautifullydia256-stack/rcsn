@@ -28,8 +28,10 @@ describe('template4 A-Level HTML', () => {
       ],
     };
     const html = generateTemplate4AlevelHTML(reportData, null, null);
-    expect(html).toContain('A-LEVEL');
+    expect(html).toContain('ACADEMIC REPORT FORM');
     expect(html).toContain('Geography');
+    expect(html).toContain('UACE');
+    expect(html).toContain("Class Teacher's Comment");
     expect(html).toContain('P250/1');
   });
 });

@@ -343,6 +343,42 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     rpcByStudent.get(sid)!.push(row);
   }
 
+  const alevelClassLabels = [
+    ...new Set(
+      reports.flatMap((item) => {
+        const r = unwrapReportData(item);
+        const studentsArr = r?.students as unknown[] | undefined;
+        const st = studentsArr?.[0] as Record<string, unknown> | undefined;
+        if (!st?.student_id || !isALevelClass(String(st.current_class ?? ''))) return [];
+        const c = String(st.current_class ?? '').trim();
+        return c ? [c] : [];
+      }),
+    ),
+  ];
+  const prefsByClass = new Map<string, Record<string, string>>();
+  const expandedPrefLabels = [...new Set(expandClassNamesForExamQuery(alevelClassLabels))];
+  if (expandedPrefLabels.length > 0) {
+    try {
+      const { data: pRows, error: pErr } = await supabase
+        .from('teacher_exam_class_prefs')
+        .select('class_name, grade_remarks_alevel')
+        .eq('school_id', schoolId)
+        .in('class_name', expandedPrefLabels);
+      if (!pErr) {
+        for (const row of pRows || []) {
+          const rr = row as { class_name?: string; grade_remarks_alevel?: unknown };
+          const cn = String(rr.class_name || '').trim();
+          const gra = rr.grade_remarks_alevel;
+          if (cn && gra && typeof gra === 'object' && gra !== null && !Array.isArray(gra)) {
+            prefsByClass.set(cn, gra as Record<string, string>);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[enrichSecondaryAlevelPreviewFromDb] teacher_exam_class_prefs', e);
+    }
+  }
+
   return reports.map((item) => {
     const rep = unwrapReportData(item);
     if (!rep) return item;
@@ -388,10 +424,26 @@ export async function enrichSecondaryAlevelPreviewReportsFromDb(
     const nextAlevel =
       paperRows.length > 0 ? { ...prevAlevel, paperRows } : { ...prevAlevel, paperRows: [] };
 
+    const classForPrefs = String(st.current_class ?? '').trim();
+    let prefGra = prefsByClass.get(classForPrefs);
+    if (!prefGra) {
+      for (const alt of expandClassNamesForExamQuery([classForPrefs])) {
+        const hit = prefsByClass.get(alt);
+        if (hit) {
+          prefGra = hit;
+          break;
+        }
+      }
+    }
+    if (!prefGra && prefsByClass.size === 1) {
+      prefGra = [...prefsByClass.values()][0];
+    }
+
     const nextInner: Record<string, unknown> = {
       ...rep,
       alevel: nextAlevel,
       students: [{ ...st, results: resultsOut, summary }],
+      ...(prefGra && Object.keys(prefGra).length > 0 ? { grade_remarks_alevel: prefGra } : {}),
     };
     return wrapIfNeeded(item, nextInner);
   });

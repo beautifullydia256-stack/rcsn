@@ -280,6 +280,33 @@ serve(async (req) => {
         );
       }
 
+      const expandedSnapshotClasses = [
+        ...new Set(
+          expandOlevelClassNamesForSubjectsQuery([
+            ...new Set(snapshotRows.map((r) => String(r.class_name || '').trim()).filter(Boolean)),
+          ]),
+        ),
+      ];
+      const alevelClassNamesForPrefs = expandedSnapshotClasses.filter((c) =>
+        /^(senior\s*[56]|s\.?\s*[56])\b/i.test(c),
+      );
+      const alevelGradeRemarksByClass = new Map<string, Record<string, string>>();
+      if (alevelClassNamesForPrefs.length > 0) {
+        const { data: prefRows } = await supabase
+          .from('teacher_exam_class_prefs')
+          .select('class_name, grade_remarks_alevel')
+          .eq('school_id', schoolId)
+          .in('class_name', alevelClassNamesForPrefs);
+        for (const row of prefRows || []) {
+          const r = row as { class_name?: string; grade_remarks_alevel?: unknown };
+          const cn = String(r.class_name || '').trim();
+          const gra = r.grade_remarks_alevel;
+          if (cn && gra && typeof gra === 'object' && gra !== null && !Array.isArray(gra)) {
+            alevelGradeRemarksByClass.set(cn, gra as Record<string, string>);
+          }
+        }
+      }
+
       const reportDataList = buildReportDataFromSnapshotRows(
         snapshotRows,
         (school || {}) as Record<string, unknown>,
@@ -287,6 +314,7 @@ serve(async (req) => {
         snapshotId,
         expectedOlevelSubjectsByStudentId,
         expectedAlevelSubjectsByStudentId,
+        alevelGradeRemarksByClass,
       ) as Record<string, unknown>[];
 
       const toInsert = reportDataList

@@ -6,10 +6,15 @@
 
 import {
   buildSecondaryLowerSectionHeaderHtml,
+  buildSecondaryOlevelCommentsNextTermPanelHtml,
+  formatNextTermBeginsLongDisplay,
+  formatSecondaryFeesBalanceForReport,
   SECONDARY_A4_PAGE_SHELL_CSS,
   SECONDARY_LOWER_HEADER_PRINT_CSS,
   SECONDARY_LOWER_SECTION_STUDENT_PHOTO_CSS,
+  SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS,
 } from './secondaryLowerSectionHeaderHtml';
+import { UACE_REPORT_DEFAULT_BANDS, uaceGradingSummaryLegendLine } from '../lib/uaceReportGradingFootnote';
 
 export function generateTemplate4AlevelHTML(
   reportData: any,
@@ -54,10 +59,6 @@ export function generateTemplate4AlevelHTML(
         }>;
         classTeacherName?: string;
         principalName?: string;
-        closingDate?: string;
-        openingDate?: string;
-        zorakiUsername?: string;
-        zorakiQrImageUrl?: string;
       }
     | undefined;
 
@@ -100,29 +101,12 @@ export function generateTemplate4AlevelHTML(
       ? `${alevel.totalPointsNumerator}/${alevel.totalPointsDenominator}`
       : '—';
 
-  const ctName =
-    alevel?.classTeacherName ?? (student.comments?.class_teacher_name as string) ?? '';
-  const prName = alevel?.principalName ?? (student.comments?.head_teacher_name as string) ?? '';
-  const ctText =
-    (student.comments?.class_teacher_text as string) ??
-    (student.comments?.class_teacher_comment as string) ??
-    '';
-  const prText =
-    (student.comments?.head_teacher_text as string) ??
-    (student.comments?.headteacher_text as string) ??
-    '';
-
-  const closing = alevel?.closingDate ?? (student.closing_date as string) ?? '—';
-  const opening = alevel?.openingDate ?? (student.opening_date as string) ?? '—';
   const combination =
     (student.combination as string) ??
     (student.subject_combination as string) ??
     (student.alevel_combination as string) ??
     '';
   const admNo = String(student.admission_number ?? student.student_id ?? '');
-
-  const zorakiUser = alevel?.zorakiUsername ?? '';
-  const zorakiQr = alevel?.zorakiQrImageUrl ?? '';
 
   const classLine = String(student.current_class ?? '').trim();
   const stream = String(student.stream ?? student.stream_name ?? '').trim();
@@ -173,15 +157,6 @@ export function generateTemplate4AlevelHTML(
       </div>`;
   })();
 
-  const qrBlock =
-    zorakiQr ?
-      `<div class="qr-img-wrap"><img src="${escapeHtml(zorakiQr)}" alt="QR" class="qr-img" /></div>`
-    : `<div class="qr-placeholder">QR</div>`;
-
-  const zorakiLine = zorakiUser ?
-    `Scan to access your interactive student profile on Zoraki Analytics — <strong>${escapeHtml(zorakiUser)}</strong>`
-  : 'Scan to access your interactive student profile on Zoraki Analytics';
-
   const sessionMeta = [classLine, stream || null, year !== '' || term !== '' ? `${year} Term ${term}`.trim() : null]
     .filter(Boolean)
     .join(' — ');
@@ -191,11 +166,49 @@ export function generateTemplate4AlevelHTML(
     metaLine: sessionMeta,
   });
 
+  const classTeacherComment =
+    student.comments?.class_teacher_text ?? student.comments?.class_teacher_comment ?? '';
+  const headTeacherComment =
+    student.comments?.headteacher_text ?? student.comments?.head_teacher_text ?? '';
+  const classTeacherNamePanel = String(
+    alevel?.classTeacherName ?? student.comments?.class_teacher_name ?? '',
+  );
+  const headTeacherNamePanel = String(
+    alevel?.principalName ?? student.comments?.head_teacher_name ?? '',
+  );
+  const nextTermRaw =
+    student.nextTermBegins ??
+    student.next_term_begins_date ??
+    student.processed?.nextTermBeginsDate ??
+    '';
+  const commentsNextTermHtml = buildSecondaryOlevelCommentsNextTermPanelHtml({
+    classTeacherComment: String(classTeacherComment),
+    headTeacherComment: String(headTeacherComment),
+    classTeacherName: classTeacherNamePanel,
+    headTeacherName: headTeacherNamePanel,
+    nextTermBeginsDisplay: formatNextTermBeginsLongDisplay(nextTermRaw),
+    feesBalanceDisplay: formatSecondaryFeesBalanceForReport(student),
+  });
+
+  const customGradeRemarks = (reportData?.grade_remarks_alevel || {}) as Record<string, string>;
+  const descriptionRowsHtml = UACE_REPORT_DEFAULT_BANDS.map((row) => {
+    const key = row.grade.toUpperCase();
+    const desc =
+      String(customGradeRemarks[row.grade] || customGradeRemarks[key] || '').trim() ||
+      row.defaultDescriptor;
+    return ` <tr>
+              <td>${escapeHtml(row.grade)}</td>
+              <td>${escapeHtml(row.achievementLevel)}</td>
+              <td>${escapeHtml(desc)}</td>
+            </tr>`;
+  }).join('');
+
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <title>A-Level Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Times+New+Roman:wght@400;700&display=swap" rel="stylesheet">
   <style>
     ${SECONDARY_A4_PAGE_SHELL_CSS}
     .sheet {
@@ -293,73 +306,51 @@ export function generateTemplate4AlevelHTML(
     table.marks td.tc { text-align: center; }
     table.marks td.comment { font-size: 8pt; line-height: 1.25; }
     table.marks td.mono { font-family: Consolas, 'Courier New', monospace; font-size: 8pt; }
-    .remarks {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+    ${SECONDARY_OLEVEL_COMMENTS_NEXT_TERM_PANEL_CSS}
+    .grading-system {
       margin-bottom: 12px;
+      font-family: 'Times New Roman', Times, serif;
     }
-    .remark-box {
-      background: #fff;
-      border: 1px solid #546e7a;
-      padding: 8px 10px;
-      min-height: 100px;
+    .grading-system h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #1e3a8a;
     }
-    .remark-box h4 {
-      margin: 0 0 6px;
-      font-size: 9.5pt;
-      color: #37474f;
+    .grading-system p.legend {
+      font-size: 10pt;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #0f172a;
+    }
+    .grading-system .uace-bands-note {
+      font-size: 8.5pt;
+      color: #475569;
+      margin: 0 0 8px;
+    }
+    .grading-system .description-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 9.8pt;
+    }
+    .grading-system .description-table th,
+    .grading-system .description-table td {
+      border: 1px solid #bfdbfe;
+      padding: 4px 6px;
+      vertical-align: top;
+    }
+    .grading-system .description-table thead th {
+      background: #dbeafe;
+      color: #1e3a8a;
       text-transform: uppercase;
-      letter-spacing: .05em;
-    }
-    .remark-box .who { font-size: 8.5pt; font-weight: 700; color: #006064; margin-bottom: 6px; }
-    .dates {
-      display: flex;
-      gap: 24px;
-      margin-bottom: 12px;
-      font-size: 9.5pt;
       font-weight: 600;
     }
-    .zoraki {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 12px;
-      padding: 10px;
-      background: rgba(227, 242, 253, .5);
-      border: 1px dashed #0277bd;
-      font-size: 8.5pt;
+    .grading-system .description-table tbody td {
+      background: #ffffff;
     }
-    .qr-img-wrap { flex-shrink: 0; }
-    .qr-img { width: 72px; height: 72px; display: block; }
-    .qr-placeholder {
-      width: 72px; height: 72px;
-      border: 1px solid #90caf9;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 8pt; color: #1565c0; background: #fff;
+    .grading-system .description-table tbody tr:nth-child(even) td {
+      background: #f0f9ff;
     }
-    .stamp-row {
-      display: flex;
-      align-items: flex-end;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 10px;
-    }
-    .stamp {
-      flex: 1;
-      min-height: 56px;
-      border: 2px solid #1565c0;
-      background: linear-gradient(180deg, rgba(227,242,253,.4) 0%, rgba(255,255,255,.8) 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 8pt;
-      font-weight: 700;
-      color: #0d47a1;
-      text-align: center;
-      padding: 8px;
-    }
-    .print-tag { text-align: center; font-size: 7.5pt; color: #78909c; margin-top: 8px; }
     ${SECONDARY_LOWER_HEADER_PRINT_CSS}
   </style>
 </head>
@@ -406,34 +397,26 @@ export function generateTemplate4AlevelHTML(
       </tbody>
     </table>
 
-    <div class="remarks">
-      <div class="remark-box">
-        <h4>Class Teacher</h4>
-        ${ctName ? `<div class="who">${escapeHtml(ctName)}</div>` : ''}
-        <div>${escapeHtml(ctText) || '—'}</div>
-      </div>
-      <div class="remark-box">
-        <h4>Principal</h4>
-        ${prName ? `<div class="who">${escapeHtml(prName)}</div>` : ''}
-        <div>${escapeHtml(prText) || '—'}</div>
-      </div>
-    </div>
+    ${commentsNextTermHtml}
 
-    <div class="dates">
-      <div><strong>Closing Date:</strong> ${escapeHtml(String(closing))}</div>
-      <div><strong>Opening Date:</strong> ${escapeHtml(String(opening))}</div>
+    <div class="grading-system">
+      <h3>Grading System (UACE — default % bands)</h3>
+      <p class="legend"><strong>${escapeHtml(uaceGradingSummaryLegendLine())}</strong></p>
+      <p class="uace-bands-note">Descriptors use each class’s A-Level remark text from Grading System when saved; otherwise the defaults below match exam entry and the database.</p>
+      <h3>Description</h3>
+      <table class="description-table">
+        <thead>
+          <tr>
+            <th>Grade</th>
+            <th>Achievement level</th>
+            <th>Descriptor</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${descriptionRowsHtml}
+        </tbody>
+      </table>
     </div>
-
-    <div class="zoraki">
-      ${qrBlock}
-      <div>${zorakiLine}</div>
-    </div>
-
-    <div class="stamp-row">
-      <div class="stamp">Official stamp &amp; signature</div>
-    </div>
-
-    <div class="print-tag">Generated report — A-Level template</div>
   </div>
 </body>
 </html>`;

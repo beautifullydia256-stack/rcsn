@@ -30,7 +30,7 @@ export const SECONDARY_TEMPLATES = {
     id: 'secondary_template4',
     name: 'Alevel',
     description:
-      'A-1 · A-Level S.5–S.6 only. Spec: alevel-template.png — charts, multi-paper table, passes/points, remarks, Zoraki QR line.',
+      'A-1 · A-Level S.5–S.6 only. Spec: alevel-template.png — charts, multi-paper table, passes/points.',
     schoolType: 'Secondary' as const
   }
 };
