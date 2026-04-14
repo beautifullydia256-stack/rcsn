@@ -1954,15 +1954,6 @@ export default function TeacherExamResultsClassPage() {
                   </table>
                 )
               ) : isALevel ? (
-                <>
-                {selectedSubject.trim() &&
-                  students.length > 0 &&
-                  studentsForAlevelExam.length < students.length &&
-                  Object.values(alevelSubjectsByStudent).some((l) => l.length > 0) && (
-                  <div className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                    Showing {studentsForAlevelExam.length} of {students.length} students — only those with <strong>{selectedSubject}</strong> on their UACE profile. Set combinations on each student in Admin → Students.
-                  </div>
-                )}
                 <table className="min-w-full">
                   <thead className="bg-white/5">
                     <tr>
@@ -1999,7 +1990,6 @@ export default function TeacherExamResultsClassPage() {
                     })}
                   </tbody>
                 </table>
-                </>
               ) : (
                 <table className="min-w-full">
                   <thead className="bg-white/5">

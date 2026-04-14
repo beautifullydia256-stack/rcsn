@@ -32,8 +32,6 @@ export default function SettingsUaceClassSubjectPapers({
   const [loadingPapers, setLoadingPapers] = useState(false);
   const [paperCode, setPaperCode] = useState('');
   const [paperLabel, setPaperLabel] = useState('');
-  const [sortOrder, setSortOrder] = useState(0);
-  const [teacherId, setTeacherId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,8 +119,8 @@ export default function SettingsUaceClassSubjectPapers({
       subject_name: selectedSubject.trim(),
       paper_code: code,
       paper_label: paperLabel.trim() || null,
-      sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
-      teacher_id: teacherId.trim() || null,
+      sort_order: 0,
+      teacher_id: null,
     };
     const { error: insErr } = await supabase.from('school_uace_class_subject_papers').insert(payload);
     setSaving(false);
@@ -132,8 +130,6 @@ export default function SettingsUaceClassSubjectPapers({
     }
     setPaperCode('');
     setPaperLabel('');
-    setSortOrder(0);
-    setTeacherId('');
     void loadPapers();
   };
 
@@ -191,7 +187,8 @@ export default function SettingsUaceClassSubjectPapers({
         </div>
       )}
 
-      <div className={`grid grid-cols-1 gap-3 p-4 sm:p-5 md:grid-cols-2 lg:grid-cols-4 ${settingsInsetSurface}`}>
+      <div className={`p-4 sm:p-5 ${settingsInsetSurface}`}>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className={labelClass}>Class (A-Level)</label>
           {anchorClassName !== undefined ? (
@@ -256,33 +253,16 @@ export default function SettingsUaceClassSubjectPapers({
             className={inputClass}
           />
         </div>
-        <div>
-          <label className={labelClass}>Sort order</label>
-          <input
-            type="number"
-            value={sortOrder}
-            onChange={(e) => setSortOrder(parseInt(e.target.value, 10) || 0)}
-            className={inputClass}
-          />
         </div>
-        <div>
-          <label className={labelClass}>Teacher id (optional)</label>
-          <input
-            value={teacherId}
-            onChange={(e) => setTeacherId(e.target.value)}
-            placeholder="UUID or staff ref"
-            className={inputClass}
-          />
-        </div>
-        <div className="flex items-end">
+        <div className="mt-3">
           <button
             type="button"
             disabled={!selectedClass || !selectedSubject || saving}
             onClick={() => void addPaper()}
             className={
               variant === 'next'
-                ? 'min-h-[44px] w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50'
-                : settingsPrimaryActionClass
+                ? 'min-h-[44px] w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 sm:w-auto'
+                : `${settingsPrimaryActionClass} w-full sm:w-auto`
             }
           >
             {saving ? 'Saving…' : 'Add paper'}
@@ -317,8 +297,6 @@ export default function SettingsUaceClassSubjectPapers({
                 >
                   <th className="p-2">Code</th>
                   <th className="p-2">Label</th>
-                  <th className="p-2">Order</th>
-                  <th className="p-2">Teacher</th>
                   <th className="w-20 p-2" />
                 </tr>
               </thead>
@@ -334,8 +312,6 @@ export default function SettingsUaceClassSubjectPapers({
                   >
                     <td className="p-2 font-medium">{r.paper_code}</td>
                     <td className="p-2">{r.paper_label ?? '—'}</td>
-                    <td className="p-2">{r.sort_order}</td>
-                    <td className="p-2 text-xs">{r.teacher_id ?? '—'}</td>
                     <td className="p-2">
                       <button
                         type="button"
