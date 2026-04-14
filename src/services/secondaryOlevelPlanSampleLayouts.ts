@@ -305,6 +305,8 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     <tbody>${tbody}</tbody>
   </table>
 
+  ${commentsNextTermHtml}
+
   <div class="summary-strip">
     <div class="id-cell">
       <div class="id-label">Identified</div>
@@ -328,8 +330,6 @@ export function generateTemplate2KasoziHTML(reportData: any, schoolLogoBase64?: 
     <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
-
-  ${commentsNextTermHtml}
 </body>
 </html>`;
 }
@@ -602,6 +602,8 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     <tbody>${tbody}</tbody>
   </table>
 
+  ${commentsNextTermHtmlP}
+
   <div class="summary-strip">
     <div class="id-cell">
       <div class="id-label">Identifier</div>
@@ -626,8 +628,6 @@ export function generateTemplate3KyoteraHTML(reportData: any, schoolLogoBase64?:
     <strong>Grade Scale</strong>
     A: 80+ &nbsp;|&nbsp; B: 70+ &nbsp;|&nbsp; C: 60+ &nbsp;|&nbsp; D: 50+ &nbsp;|&nbsp; E: 0–49
   </div>
-
-  ${commentsNextTermHtmlP}
 </body>
 </html>`;
 }
