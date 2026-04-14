@@ -10,20 +10,25 @@ import {
 
 type Variant = 'vite' | 'next';
 
-const UACE_PAPER_SLOT_OPTIONS = ['Paper 1', 'Paper 2', 'Paper 3'] as const;
+const WEIGHT_SUM_TOLERANCE = 0.02;
+
+function equalSplitWeights(count: 1 | 2 | 3): number[] {
+  if (count === 1) return [100];
+  if (count === 2) return [50, 50];
+  const third = Number((100 / 3).toFixed(2));
+  return [third, third, Number((100 - 2 * third).toFixed(2))];
+}
 
 export default function SettingsUaceClassSubjectPapers({
   classOptions,
   schoolId,
   variant = 'vite',
   embedded,
-  /** When set (e.g. from Subjects per class), class is fixed and dropdown hidden. Parent should only mount when this is Senior 5–6. */
   anchorClassName,
 }: {
   classOptions: string[];
   schoolId: string | null;
   variant?: Variant;
-  /** When true, shell already shows section title—only show helper copy. */
   embedded?: boolean;
   anchorClassName?: string;
 }) {
@@ -34,9 +39,8 @@ export default function SettingsUaceClassSubjectPapers({
   const [paperRows, setPaperRows] = useState<SchoolUaceClassSubjectPaperRow[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingPapers, setLoadingPapers] = useState(false);
-  const [paperCode, setPaperCode] = useState('');
-  /** Paper 1 / 2 / 3 — stored as `paper_label`. */
-  const [paperSlot, setPaperSlot] = useState('');
+  const [paperCount, setPaperCount] = useState<1 | 2 | 3>(1);
+  const [weights, setWeights] = useState<number[]>([100]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,9 +104,20 @@ export default function SettingsUaceClassSubjectPapers({
         selectedSubject,
       );
       setPaperRows(rows);
+      if (rows.length > 0) {
+        const sorted = [...rows].sort((a, b) => a.paper_slot - b.paper_slot);
+        const n = sorted.length;
+        setPaperCount((n >= 3 ? 3 : n >= 2 ? 2 : 1) as 1 | 2 | 3);
+        setWeights(sorted.map((r) => Number(r.weight_percent)));
+      } else {
+        setPaperCount(1);
+        setWeights([100]);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load papers');
       setPaperRows([]);
+      setPaperCount(1);
+      setWeights([100]);
     } finally {
       setLoadingPapers(false);
     }
@@ -122,6 +137,9 @@ export default function SettingsUaceClassSubjectPapers({
     setSelectedSubject('');
   }, [anchorClassName]);
 
+  const weightTotal = useMemo(() => weights.reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0), [weights]);
+  const weightsValid = Math.abs(weightTotal - 100) <= WEIGHT_SUM_TOLERANCE;
+
   const inputClass =
     variant === 'next'
       ? 'w-full rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-white placeholder:text-white/60'
@@ -134,44 +152,83 @@ export default function SettingsUaceClassSubjectPapers({
     if (!anchorClassName.trim() || !isALevelClass(anchorClassName)) return null;
   }
 
-  const addPaper = async () => {
+  const setPaperCountAndDefaults = (n: 1 | 2 | 3) => {
+    setPaperCount(n);
+    setWeights(equalSplitWeights(n));
+  };
+
+  const setWeightAt = (index: number, raw: string) => {
+    const v = parseFloat(raw);
+    setWeights((prev) => {
+      const next = [...prev];
+      next[index] = Number.isFinite(v) ? v : 0;
+      return next;
+    });
+  };
+
+  const saveConfiguration = async () => {
     setError(null);
     if (!schoolId || !selectedSubject.trim()) return;
-    const code = paperCode.trim();
-    const slot = paperSlot.trim();
-    if (!code && !slot) {
-      setError('Enter a UNEB paper code and/or select Paper 1, 2, or 3.');
+    if (!weightsValid) {
+      setError(`Paper weights must add up to 100% (currently ${weightTotal.toFixed(2)}%).`);
+      return;
+    }
+    if (weights.length !== paperCount) {
+      setError('Weight count does not match number of papers.');
       return;
     }
     setSaving(true);
-    const payload = {
-      school_id: schoolId,
-      class_name: UACE_PAPERS_STORAGE_CLASS,
-      subject_name: selectedSubject.trim(),
-      paper_code: code || null,
-      paper_label: slot || null,
-      sort_order: 0,
-      teacher_id: null,
-    };
-    const { error: insErr } = await supabase.from('school_uace_class_subject_papers').insert(payload);
-    setSaving(false);
-    if (insErr) {
-      setError(insErr.message || 'Failed to add paper');
-      return;
+    try {
+      const { error: delErr } = await supabase
+        .from('school_uace_class_subject_papers')
+        .delete()
+        .eq('school_id', schoolId)
+        .eq('class_name', UACE_PAPERS_STORAGE_CLASS)
+        .eq('subject_name', selectedSubject.trim());
+      if (delErr) throw delErr;
+
+      const rows = weights.map((w, i) => ({
+        school_id: schoolId,
+        class_name: UACE_PAPERS_STORAGE_CLASS,
+        subject_name: selectedSubject.trim(),
+        paper_slot: i + 1,
+        paper_label: `Paper ${i + 1}`,
+        weight_percent: Number(Math.min(100, Math.max(0, w)).toFixed(2)),
+        paper_code: null,
+        sort_order: i,
+        teacher_id: null,
+      }));
+
+      const { error: insErr } = await supabase.from('school_uace_class_subject_papers').insert(rows);
+      if (insErr) throw insErr;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to save papers');
+    } finally {
+      setSaving(false);
+      void loadPapers();
     }
-    setPaperCode('');
-    setPaperSlot('');
-    void loadPapers();
   };
 
-  const removePaper = async (row: SchoolUaceClassSubjectPaperRow) => {
+  const clearConfiguration = async () => {
     setError(null);
-    const { error: delErr } = await supabase.from('school_uace_class_subject_papers').delete().eq('id', row.id);
-    if (delErr) {
-      setError(delErr.message || 'Failed to delete');
-      return;
+    if (!schoolId || !selectedSubject.trim()) return;
+    setSaving(true);
+    try {
+      const { error: delErr } = await supabase
+        .from('school_uace_class_subject_papers')
+        .delete()
+        .eq('school_id', schoolId)
+        .eq('class_name', UACE_PAPERS_STORAGE_CLASS)
+        .eq('subject_name', selectedSubject.trim());
+      if (delErr) throw delErr;
+      setPaperCount(1);
+      setWeights([100]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to clear papers');
+    } finally {
+      setSaving(false);
+      void loadPapers();
     }
-    void loadPapers();
   };
 
   return (
@@ -188,20 +245,19 @@ export default function SettingsUaceClassSubjectPapers({
             UACE papers (A-Level)
           </div>
         )}
-        <div
-          className={
-            variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'
-          }
-        >
+        <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
           {embedded ? (
             <>
               <span className={variant === 'next' ? 'font-medium text-white' : 'font-medium ac-text-primary'}>
-                UACE papers (A-Level).{' '}
+                A-Level paper split (optional).{' '}
               </span>
-              Senior 5 and Senior 6 share the same subjects; paper codes are stored once for A-Level.
+              Choose how many papers this subject uses (1–3) and set each paper&apos;s share of the final subject mark
+              (must total 100%). Each paper is marked out of 100; the weighted combination is used for the subject
+              percentage. Senior 5 and 6 share this configuration. Clear all papers to use a single exam line with no
+              paper split (legacy).
             </>
           ) : (
-            'Configure UNEB-style paper codes per A-Level subject (shared by Senior 5 and Senior 6).'
+            'Configure A-Level papers per subject: count, weights (sum 100%), optional single-line mode when cleared.'
           )}
         </div>
       </div>
@@ -219,94 +275,138 @@ export default function SettingsUaceClassSubjectPapers({
       )}
 
       <div className={`p-4 sm:p-5 ${settingsInsetSurface}`}>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <label className={labelClass}>Level</label>
-          <div
-            className={
-              variant === 'next'
-                ? `${inputClass} flex min-h-[44px] items-center text-white/90`
-                : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
-            }
-          >
-            A-Level
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div>
+            <label className={labelClass}>Level</label>
+            <div
+              className={
+                variant === 'next'
+                  ? `${inputClass} flex min-h-[44px] items-center text-white/90`
+                  : `${inputClass} flex min-h-[44px] items-center ac-text-primary`
+              }
+            >
+              A-Level
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Subject</label>
+            <select
+              value={selectedSubject}
+              disabled={loadingSubjects || subjectNames.length === 0}
+              onChange={(e) => {
+                setSelectedSubject(e.target.value);
+                setPaperCount(1);
+                setWeights([100]);
+              }}
+              className={inputClass}
+            >
+              <option value="">Select subject</option>
+              {subjectNames.map((s) => (
+                <option key={s} value={s} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelClass}>Number of papers</label>
+            <select
+              value={paperCount}
+              disabled={!selectedSubject.trim()}
+              onChange={(e) => setPaperCountAndDefaults(Number(e.target.value) as 1 | 2 | 3)}
+              className={inputClass}
+              aria-label="Number of papers for this subject"
+            >
+              <option value={1}>1 paper</option>
+              <option value={2}>2 papers</option>
+              <option value={3}>3 papers</option>
+            </select>
           </div>
         </div>
-        <div>
-          <label className={labelClass}>Subject</label>
-          <select
-            value={selectedSubject}
-            disabled={loadingSubjects || subjectNames.length === 0}
-            onChange={(e) => setSelectedSubject(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Select subject</option>
-            {subjectNames.map((s) => (
-              <option key={s} value={s} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={labelClass}>Paper code (UNEB, optional)</label>
-          <input
-            value={paperCode}
-            onChange={(e) => setPaperCode(e.target.value)}
-            placeholder="e.g. P250/1"
-            className={inputClass}
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Paper</label>
-          <select
-            value={paperSlot}
-            onChange={(e) => setPaperSlot(e.target.value)}
-            className={inputClass}
-            aria-label="Paper number"
-          >
-            <option value="">Select Paper 1, 2, or 3</option>
-            {UACE_PAPER_SLOT_OPTIONS.map((p) => (
-              <option key={p} value={p} className={variant === 'next' ? 'bg-slate-900 text-white' : ''}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-        </div>
-        <div className="mt-3">
-          <button
-            type="button"
-            disabled={!selectedSubject.trim() || saving}
-            onClick={() => void addPaper()}
-            className={
-              variant === 'next'
-                ? 'min-h-[44px] w-full rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50 sm:w-auto'
-                : `${settingsPrimaryActionClass} w-full sm:w-auto`
-            }
-          >
-            {saving ? 'Saving…' : 'Add paper'}
-          </button>
-        </div>
+
+        {selectedSubject.trim() ? (
+          <div className="mt-4 space-y-3">
+            <div className={labelClass}>Weight of each paper in final subject % (sum = 100%)</div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: paperCount }, (_, i) => (
+                <div key={i}>
+                  <label className={labelClass}>{`Paper ${i + 1}`}</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={weights[i] ?? ''}
+                      onChange={(e) => setWeightAt(i, e.target.value)}
+                      className={inputClass}
+                      aria-label={`Weight percent for paper ${i + 1}`}
+                    />
+                    <span className={variant === 'next' ? 'text-sm text-white/80' : 'ac-text-secondary text-sm'}>%</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              className={
+                weightsValid
+                  ? variant === 'next'
+                    ? 'text-sm text-emerald-300/90'
+                    : 'text-sm text-emerald-600 dark:text-emerald-400'
+                  : variant === 'next'
+                    ? 'text-sm text-amber-200'
+                    : 'text-sm text-amber-700 dark:text-amber-300'
+              }
+            >
+              Total: {weightTotal.toFixed(2)}% {weightsValid ? '(valid)' : '— must be 100%'}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!weightsValid || saving}
+                onClick={() => void saveConfiguration()}
+                className={
+                  variant === 'next'
+                    ? 'min-h-[44px] rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50'
+                    : `${settingsPrimaryActionClass}`
+                }
+              >
+                {saving ? 'Saving…' : 'Save papers for this subject'}
+              </button>
+              <button
+                type="button"
+                disabled={saving || paperRows.length === 0}
+                onClick={() => void clearConfiguration()}
+                className={
+                  variant === 'next'
+                    ? 'min-h-[44px] rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-50'
+                    : 'min-h-[44px] rounded-lg border border-[var(--pw-border)] bg-[var(--pw-s2)] px-4 py-2 text-sm ac-text-primary disabled:opacity-50'
+                }
+              >
+                Clear paper split (single line)
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-6">
         {!selectedSubject.trim() ? (
           <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
-            Choose a subject to list configured papers.
+            Choose a subject to configure or review papers.
           </div>
         ) : loadingPapers ? (
           <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
-            Loading papers…
+            Loading…
           </div>
         ) : paperRows.length === 0 ? (
           <div className={variant === 'next' ? 'text-sm text-white/70' : 'ac-text-secondary text-sm'}>
-            No papers yet. Add at least one for multi-paper subjects, or teachers can use the free “paper” text field
-            only.
+            No paper split configured — this subject uses a single exam line (teachers enter marks without choosing Paper
+            1/2/3). Use the form above to add 1–3 papers if needed.
           </div>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-white/10">
-            <table className="w-full min-w-[480px] border-collapse text-sm">
+            <table className="w-full min-w-[420px] border-collapse text-sm">
               <thead>
                 <tr
                   className={
@@ -315,9 +415,8 @@ export default function SettingsUaceClassSubjectPapers({
                       : 'ac-text-primary border-b border-[var(--pw-border)] bg-[var(--pw-s2)] text-left'
                   }
                 >
-                  <th className="p-2">Code</th>
-                  <th className="p-2">Label</th>
-                  <th className="w-20 p-2" />
+                  <th className="p-2">Paper</th>
+                  <th className="p-2">Weight</th>
                 </tr>
               </thead>
               <tbody>
@@ -330,17 +429,8 @@ export default function SettingsUaceClassSubjectPapers({
                         : 'ac-text-primary border-b border-[var(--pw-border)]'
                     }
                   >
-                    <td className="p-2 font-medium">{r.paper_code?.trim() ? r.paper_code : '—'}</td>
-                    <td className="p-2">{r.paper_label ?? '—'}</td>
-                    <td className="p-2">
-                      <button
-                        type="button"
-                        onClick={() => void removePaper(r)}
-                        className="text-rose-400 hover:text-rose-300"
-                      >
-                        Delete
-                      </button>
-                    </td>
+                    <td className="p-2 font-medium">{r.paper_label ?? `Paper ${r.paper_slot}`}</td>
+                    <td className="p-2">{Number(r.weight_percent).toFixed(2)}%</td>
                   </tr>
                 ))}
               </tbody>

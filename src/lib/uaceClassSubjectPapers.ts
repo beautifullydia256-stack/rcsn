@@ -8,14 +8,15 @@ export type SchoolUaceClassSubjectPaperRow = {
   subject_name: string;
   paper_code: string | null;
   paper_label: string | null;
+  paper_slot: number;
+  weight_percent: number;
   sort_order: number;
   teacher_id: string | null;
 };
 
-/** `<select>` value: real UNEB code, or `:${row.id}` when code is absent (unique per row). */
+/** `<select>` option value — row id (line key uses `paper_label` in `exam_results.paper_number`). */
 export function uacePaperSelectOptionValue(p: SchoolUaceClassSubjectPaperRow): string {
-  const c = (p.paper_code ?? '').trim();
-  return c ? c : `:${p.id}`;
+  return p.id;
 }
 
 /** Single bucket for configured UACE papers (Senior 5 & 6 share subjects). Legacy rows may use Senior 5 / Senior 6. */
@@ -47,10 +48,20 @@ export async function fetchUacePapersForClassSubject(
     .eq('school_id', schoolId)
     .eq('subject_name', subject)
     .in('class_name', classNames)
-    .order('sort_order', { ascending: true })
-    .order('paper_code', { ascending: true });
+    .order('paper_slot', { ascending: true })
+    .order('sort_order', { ascending: true });
   if (error) throw error;
-  const rows = (data || []) as SchoolUaceClassSubjectPaperRow[];
+  const rows = (data || []).map((raw: Record<string, unknown>) => {
+    const r = raw as unknown as SchoolUaceClassSubjectPaperRow;
+    return {
+      ...r,
+      paper_slot: Number(raw.paper_slot) > 0 ? Number(raw.paper_slot) : 1,
+      weight_percent:
+        raw.weight_percent != null && raw.weight_percent !== ''
+          ? Number(raw.weight_percent)
+          : 100,
+    };
+  });
 
   const rank = (cn: string) => {
     if (cn === UACE_PAPERS_STORAGE_CLASS) return 0;
@@ -58,22 +69,15 @@ export async function fetchUacePapersForClassSubject(
     if (cn === 'Senior 6') return 2;
     return 3;
   };
-  const codeKey = (r: SchoolUaceClassSubjectPaperRow) => (r.paper_code ?? '').trim();
   const sorted = [...rows].sort((a, b) => {
     const dr = rank(a.class_name) - rank(b.class_name);
     if (dr !== 0) return dr;
-    return codeKey(a).localeCompare(codeKey(b));
+    return (a.paper_slot ?? 0) - (b.paper_slot ?? 0);
   });
-  const byDedupe = new Map<string, SchoolUaceClassSubjectPaperRow>();
+  const bySlot = new Map<number, SchoolUaceClassSubjectPaperRow>();
   for (const r of sorted) {
-    const ck = codeKey(r);
-    const key = ck ? `code:${ck}` : `id:${r.id}`;
-    if (!byDedupe.has(key)) byDedupe.set(key, r);
+    const slot = r.paper_slot ?? 0;
+    if (slot > 0 && !bySlot.has(slot)) bySlot.set(slot, r);
   }
-  return Array.from(byDedupe.values()).sort(
-    (a, b) =>
-      a.sort_order - b.sort_order ||
-      codeKey(a).localeCompare(codeKey(b)) ||
-      (a.paper_label ?? '').localeCompare(b.paper_label ?? ''),
-  );
+  return Array.from(bySlot.values()).sort((a, b) => a.paper_slot - b.paper_slot);
 }

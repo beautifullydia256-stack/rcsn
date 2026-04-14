@@ -212,12 +212,13 @@ export default function TeacherExamResultsClassPage() {
 
   const alevelPaperSelectValue = useMemo(() => {
     const code = selectedAlevelPaperCode.trim();
-    if (code && uacePaperOptions.some((p) => (p.paper_code ?? "").trim() === code)) return code;
+    if (code) {
+      const byCode = uacePaperOptions.find((p) => (p.paper_code ?? "").trim() === code);
+      if (byCode) return byCode.id;
+    }
     const t = topicFilter.trim();
-    const row = uacePaperOptions.find(
-      (p) => !(p.paper_code ?? "").trim() && (p.paper_label ?? "").trim() === t
-    );
-    return row ? uacePaperSelectOptionValue(row) : "";
+    const row = uacePaperOptions.find((p) => (p.paper_label ?? "").trim() === t);
+    return row?.id ?? "";
   }, [selectedAlevelPaperCode, topicFilter, uacePaperOptions]);
 
   useEffect(() => {
@@ -1763,7 +1764,7 @@ export default function TeacherExamResultsClassPage() {
             {isALevel && (
               <>
                 <div>
-                  <label className="block text_white/80 text-sm mb-2">UNEB paper (school config)</label>
+                  <label className="block text_white/80 text-sm mb-2">Paper (school config)</label>
                   {uacePaperOptions.length > 0 ? (
                     <select
                       value={alevelPaperSelectValue}
@@ -1771,30 +1772,25 @@ export default function TeacherExamResultsClassPage() {
                         const v = e.target.value;
                         if (!v) {
                           setSelectedAlevelPaperCode("");
+                          setTopicFilter("");
                           return;
                         }
-                        if (v.startsWith(":")) {
-                          const id = v.slice(1);
-                          const row = uacePaperOptions.find((p) => p.id === id);
-                          setSelectedAlevelPaperCode("");
-                          setTopicFilter(row?.paper_label ?? "");
-                          return;
-                        }
-                        setSelectedAlevelPaperCode(v);
-                        const row = uacePaperOptions.find((p) => (p.paper_code ?? "").trim() === v);
-                        if (row?.paper_label) setTopicFilter(row.paper_label);
+                        const row = uacePaperOptions.find((p) => p.id === v);
+                        setSelectedAlevelPaperCode("");
+                        setTopicFilter(row?.paper_label ?? "");
                       }}
                       className="w-full rounded-lg border border_white/10 bg-white/10 text-white px-3 py-2"
                     >
-                      <option value="">— Optional label only (no official code) —</option>
+                      <option value="">— Single line / type label below —</option>
                       {uacePaperOptions.map((p) => {
                         const optVal = uacePaperSelectOptionValue(p);
-                        const codePart = (p.paper_code ?? "").trim() || "—";
-                        const labelPart = p.paper_label ? ` — ${p.paper_label}` : "";
+                        const label = p.paper_label ?? `Paper ${p.paper_slot}`;
+                        const w = Number(p.weight_percent);
+                        const wPart = Number.isFinite(w) ? ` (${w}% of subject)` : "";
                         return (
                           <option key={p.id} value={optVal} className="bg-slate-800">
-                            {codePart}
-                            {labelPart}
+                            {label}
+                            {wPart}
                           </option>
                         );
                       })}
